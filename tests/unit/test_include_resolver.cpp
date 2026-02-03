@@ -91,6 +91,25 @@ TEST_CASE("resolves include from include path") {
   CHECK(source.find("INCLUDE_ROOT_MARKER") != std::string::npos);
 }
 
+TEST_CASE("resolves relative include from include path") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_relative_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_relative_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "lib.prime", "// INCLUDE_RELATIVE_MARKER\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "include<\"lib.prime\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_RELATIVE_MARKER") != std::string::npos);
+}
+
 TEST_CASE("resolves exact include version") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_exact";
   std::filesystem::remove_all(baseDir);
