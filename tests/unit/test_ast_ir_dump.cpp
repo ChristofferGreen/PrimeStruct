@@ -149,6 +149,44 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints float literals") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.25f)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<float>] /main() {\n"
+      "    return 1.25f32\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints float literals") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.25f)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): f32 {\n"
+      "    return 1.25f32\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]

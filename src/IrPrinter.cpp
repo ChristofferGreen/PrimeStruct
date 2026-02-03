@@ -5,7 +5,7 @@
 namespace primec {
 
 namespace {
-enum class ReturnKind { Int, Void };
+enum class ReturnKind { Int, Float32, Float64, Void };
 
 std::string bindingTypeName(const Expr &expr) {
   std::string typeName;
@@ -19,6 +19,12 @@ std::string bindingTypeName(const Expr &expr) {
   }
   if (typeName == "int" || typeName == "i32") {
     return "i32";
+  }
+  if (typeName == "float" || typeName == "f32") {
+    return "f32";
+  }
+  if (typeName == "f64") {
+    return "f64";
   }
   return "";
 }
@@ -62,12 +68,30 @@ ReturnKind getReturnKind(const Definition &def) {
     if (*transform.templateArg == "int") {
       return ReturnKind::Int;
     }
+    if (*transform.templateArg == "i32") {
+      return ReturnKind::Int;
+    }
+    if (*transform.templateArg == "float" || *transform.templateArg == "f32") {
+      return ReturnKind::Float32;
+    }
+    if (*transform.templateArg == "f64") {
+      return ReturnKind::Float64;
+    }
   }
   return ReturnKind::Int;
 }
 
 const char *returnTypeName(ReturnKind kind) {
-  return kind == ReturnKind::Void ? "void" : "i32";
+  if (kind == ReturnKind::Void) {
+    return "void";
+  }
+  if (kind == ReturnKind::Float32) {
+    return "f32";
+  }
+  if (kind == ReturnKind::Float64) {
+    return "f64";
+  }
+  return "i32";
 }
 
 void indent(std::ostringstream &out, int depth) {
@@ -80,6 +104,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
   switch (expr.kind) {
   case Expr::Kind::Literal:
     out << expr.literalValue;
+    break;
+  case Expr::Kind::FloatLiteral:
+    out << expr.floatValue << (expr.floatWidth == 64 ? "f64" : "f32");
     break;
   case Expr::Kind::StringLiteral:
     out << expr.stringValue;

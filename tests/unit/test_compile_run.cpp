@@ -311,6 +311,22 @@ main() {
   CHECK(runCommand(exePath) == 42);
 }
 
+TEST_CASE("compiles and runs float binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [float] value(1.5f)
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_float.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("implicit suffix can be disabled") {
   const std::string source = R"(
 [return<int>]

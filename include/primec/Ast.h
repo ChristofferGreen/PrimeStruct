@@ -12,8 +12,10 @@ struct Transform {
 };
 
 struct Expr {
-  enum class Kind { Literal, StringLiteral, Call, Name } kind = Kind::Literal;
+  enum class Kind { Literal, FloatLiteral, StringLiteral, Call, Name } kind = Kind::Literal;
   int literalValue = 0;
+  std::string floatValue;
+  int floatWidth = 32;
   std::string stringValue;
   std::string name;
   std::vector<Expr> args;

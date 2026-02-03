@@ -6,7 +6,7 @@
 
 namespace primec {
 namespace {
-enum class ReturnKind { Int, Void };
+enum class ReturnKind { Int, Float32, Float64, Void };
 
 struct BindingInfo {
   std::string typeName;
@@ -23,6 +23,15 @@ ReturnKind getReturnKind(const Definition &def) {
     }
     if (*transform.templateArg == "int") {
       return ReturnKind::Int;
+    }
+    if (*transform.templateArg == "i32") {
+      return ReturnKind::Int;
+    }
+    if (*transform.templateArg == "float" || *transform.templateArg == "f32") {
+      return ReturnKind::Float32;
+    }
+    if (*transform.templateArg == "f64") {
+      return ReturnKind::Float64;
     }
   }
   return ReturnKind::Int;
@@ -48,6 +57,12 @@ BindingInfo getBindingInfo(const Expr &expr) {
 std::string bindingTypeToCpp(const std::string &typeName) {
   if (typeName == "i32" || typeName == "int") {
     return "int";
+  }
+  if (typeName == "float" || typeName == "f32") {
+    return "float";
+  }
+  if (typeName == "f64") {
+    return "double";
   }
   return "int";
 }
@@ -240,6 +255,12 @@ std::string Emitter::emitExpr(const Expr &expr,
   if (expr.kind == Expr::Kind::Literal) {
     return std::to_string(expr.literalValue);
   }
+  if (expr.kind == Expr::Kind::FloatLiteral) {
+    if (expr.floatWidth == 64) {
+      return expr.floatValue;
+    }
+    return expr.floatValue + "f";
+  }
   if (expr.kind == Expr::Kind::StringLiteral) {
     return expr.stringValue;
   }
@@ -318,8 +339,15 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "}\n";
   for (const auto &def : program.definitions) {
     ReturnKind returnKind = getReturnKind(def);
-    out << "static " << (returnKind == ReturnKind::Void ? "void" : "int") << " " << nameMap[def.fullPath]
-        << "(";
+    std::string returnType = "int";
+    if (returnKind == ReturnKind::Void) {
+      returnType = "void";
+    } else if (returnKind == ReturnKind::Float32) {
+      returnType = "float";
+    } else if (returnKind == ReturnKind::Float64) {
+      returnType = "double";
+    }
+    out << "static " << returnType << " " << nameMap[def.fullPath] << "(";
     for (size_t i = 0; i < def.parameters.size(); ++i) {
       if (i > 0) {
         out << ", ";
@@ -391,8 +419,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   }
   if (entryReturn == ReturnKind::Void) {
     out << "int main() { " << nameMap.at(entryPath) << "(); return 0; }\n";
-  } else {
+  } else if (entryReturn == ReturnKind::Int) {
     out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";
+  } else {
+    out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
   }
   return out.str();
 }

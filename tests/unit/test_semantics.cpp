@@ -119,7 +119,7 @@ execute_repeat(3i32) { 1i32 }
 
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
-[return<float>]
+[return<bool>]
 main() {
   return(1i32)
 }
@@ -127,6 +127,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported return type") != std::string::npos);
+}
+
+TEST_CASE("float return type validates") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.5f)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("builtin arithmetic calls validate") {
@@ -424,13 +436,26 @@ TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [float] value(1i32)
+  [bool] value(1i32)
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported binding type") != std::string::npos);
+}
+
+TEST_CASE("float binding validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [float] value(1.5f)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("assign to mutable binding succeeds") {

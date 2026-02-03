@@ -34,6 +34,26 @@ TEST_CASE("rewrites plus operator without spaces") {
   CHECK(output.find("plus(a, b)") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus operator with float literals") {
+  const std::string source = "main(){ return(1.5f+2.5f) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(1.5f, 2.5f)") != std::string::npos);
+}
+
+TEST_CASE("rewrites plus operator with negative literal") {
+  const std::string source = "main(){ return(-1+2) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(-1i32, 2i32)") != std::string::npos);
+}
+
 TEST_CASE("rewrites minus operator without spaces") {
   const std::string source = "main(){ return(a-b) }\n";
   primec::TextFilterPipeline pipeline;
@@ -306,6 +326,26 @@ TEST_CASE("does not rewrite numbers inside strings") {
 
 TEST_CASE("does not rewrite numbers inside raw strings") {
   const std::string source = "main(){ log(R\"(42+7)\") }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not add suffix to float literal") {
+  const std::string source = "main(){ return(1.5f) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not add suffix to float literal without suffix") {
+  const std::string source = "main(){ return(2.5) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;

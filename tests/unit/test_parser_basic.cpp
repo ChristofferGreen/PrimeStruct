@@ -118,6 +118,51 @@ main() {
   CHECK(program.definitions[0].returnExpr->literalValue == 42);
 }
 
+TEST_CASE("parses float literals") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.25f)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1.25");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses float literals without suffix") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(2.5)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "2.5");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses double literals") {
+  const std::string source = R"(
+[return<f64>]
+main() {
+  return(3.0f64)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "3.0");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 64);
+}
+
 TEST_CASE("parses string literal arguments") {
   const std::string source = R"(
 [return<void>]

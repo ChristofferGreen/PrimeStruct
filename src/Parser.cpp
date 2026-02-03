@@ -15,6 +15,34 @@ bool isReservedKeyword(const std::string &text) {
 bool isHexDigitChar(char c) {
   return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
+
+bool isValidFloatLiteral(const std::string &text) {
+  if (text.empty()) {
+    return false;
+  }
+  size_t start = 0;
+  if (text[0] == '-') {
+    start = 1;
+  }
+  if (start >= text.size()) {
+    return false;
+  }
+  bool sawDigit = false;
+  bool sawDot = false;
+  for (size_t i = start; i < text.size(); ++i) {
+    char c = text[i];
+    if (std::isdigit(static_cast<unsigned char>(c))) {
+      sawDigit = true;
+      continue;
+    }
+    if (c == '.' && !sawDot) {
+      sawDot = true;
+      continue;
+    }
+    return false;
+  }
+  return sawDigit;
+}
 } // namespace
 
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
@@ -642,12 +670,39 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (number.kind == TokenKind::End) {
       return false;
     }
-    expr.kind = Expr::Kind::Literal;
     expr.namespacePrefix = namespacePrefix;
     std::string text = number.text;
     if (text.size() < 3 || text.compare(text.size() - 3, 3, "i32") != 0) {
-      return fail("integer literal requires i32 suffix");
+      int floatWidth = 32;
+      bool isFloat = false;
+      if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f64") == 0) {
+        floatWidth = 64;
+        isFloat = true;
+        text = text.substr(0, text.size() - 3);
+      } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f32") == 0) {
+        floatWidth = 32;
+        isFloat = true;
+        text = text.substr(0, text.size() - 3);
+      } else if (!text.empty() && text.back() == 'f') {
+        floatWidth = 32;
+        isFloat = true;
+        text.pop_back();
+      } else if (text.find('.') != std::string::npos) {
+        floatWidth = 32;
+        isFloat = true;
+      }
+      if (!isFloat) {
+        return fail("integer literal requires i32 suffix");
+      }
+      if (!isValidFloatLiteral(text)) {
+        return fail("invalid float literal");
+      }
+      expr.kind = Expr::Kind::FloatLiteral;
+      expr.floatValue = text;
+      expr.floatWidth = floatWidth;
+      return true;
     }
+    expr.kind = Expr::Kind::Literal;
     text = text.substr(0, text.size() - 3);
     if (text.empty()) {
       return fail("invalid integer literal");

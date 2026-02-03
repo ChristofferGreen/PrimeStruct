@@ -84,7 +84,9 @@ Token Lexer::readNumber() {
   if (source_[pos_] == '-') {
     advance();
   }
+  bool isHex = false;
   if (pos_ + 1 < source_.size() && source_[pos_] == '0' && (source_[pos_ + 1] == 'x' || source_[pos_ + 1] == 'X')) {
+    isHex = true;
     advance();
     advance();
     while (pos_ < source_.size() && isHexDigitChar(source_[pos_])) {
@@ -92,6 +94,26 @@ Token Lexer::readNumber() {
     }
   } else {
     while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
+      advance();
+    }
+    if (pos_ + 1 < source_.size() && source_[pos_] == '.' &&
+        std::isdigit(static_cast<unsigned char>(source_[pos_ + 1]))) {
+      advance();
+      while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
+        advance();
+      }
+    }
+  }
+  if (!isHex) {
+    if (source_.compare(pos_, 3, "f64") == 0) {
+      advance();
+      advance();
+      advance();
+    } else if (source_.compare(pos_, 3, "f32") == 0) {
+      advance();
+      advance();
+      advance();
+    } else if (pos_ < source_.size() && source_[pos_] == 'f') {
       advance();
     }
   }

@@ -5,7 +5,7 @@
 
 namespace primec {
 namespace {
-enum class ReturnKind { Unknown, Int, Void };
+enum class ReturnKind { Unknown, Int, Float32, Float64, Void };
 
 struct BindingInfo {
   std::string typeName;
@@ -29,12 +29,30 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
         return ReturnKind::Unknown;
       }
       kind = ReturnKind::Int;
+    } else if (arg == "i32") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Int) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Int;
     } else if (arg == "void") {
       if (kind != ReturnKind::Unknown && kind != ReturnKind::Void) {
         error = "conflicting return types on " + def.fullPath;
         return ReturnKind::Unknown;
       }
       kind = ReturnKind::Void;
+    } else if (arg == "float" || arg == "f32") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Float32) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Float32;
+    } else if (arg == "f64") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Float64) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Float64;
     } else {
       error = "unsupported return type on " + def.fullPath;
       return ReturnKind::Unknown;
@@ -163,7 +181,8 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
     error = "binding requires a type";
     return false;
   }
-  if (typeName != "int" && typeName != "i32") {
+  if (typeName != "int" && typeName != "i32" && typeName != "float" && typeName != "f32" &&
+      typeName != "f64") {
     error = "unsupported binding type: " + typeName;
     return false;
   }
@@ -227,6 +246,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                          const std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &expr) -> bool {
     if (expr.kind == Expr::Kind::Literal) {
+      return true;
+    }
+    if (expr.kind == Expr::Kind::FloatLiteral) {
       return true;
     }
     if (expr.kind == Expr::Kind::StringLiteral) {

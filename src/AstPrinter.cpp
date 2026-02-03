@@ -32,6 +32,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
   case Expr::Kind::Literal:
     out << expr.literalValue;
     break;
+  case Expr::Kind::FloatLiteral:
+    out << expr.floatValue << (expr.floatWidth == 64 ? "f64" : "f32");
+    break;
   case Expr::Kind::StringLiteral:
     out << expr.stringValue;
     break;

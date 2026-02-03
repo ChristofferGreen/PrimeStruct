@@ -13,6 +13,10 @@ bool isTokenChar(char c) {
   return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
 }
 
+bool isOperatorTokenChar(char c) {
+  return isTokenChar(c) || c == '.';
+}
+
 bool isDigitChar(char c) {
   return std::isdigit(static_cast<unsigned char>(c)) != 0;
 }
@@ -173,12 +177,15 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (input[index] != first || index == 0 || index + 1 >= input.size() || input[index + 1] != second) {
       return false;
     }
-    if (!isTokenChar(input[index - 1]) || index + 2 >= input.size() || !isTokenChar(input[index + 2])) {
+    if (!isOperatorTokenChar(input[index - 1]) || index + 2 >= input.size() || !isOperatorTokenChar(input[index + 2])) {
       return false;
     }
     size_t end = output.size();
     size_t start = end;
-    while (start > 0 && isTokenChar(output[start - 1])) {
+    while (start > 0 && isOperatorTokenChar(output[start - 1])) {
+      --start;
+    }
+    if (start > 0 && output[start - 1] == '-' && isUnaryPrefixPosition(output, start - 1)) {
       --start;
     }
     if (start == end) {
@@ -190,7 +197,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     size_t rightStart = index + 2;
     size_t rightEnd = rightStart;
-    while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+    while (rightEnd < input.size() && isOperatorTokenChar(input[rightEnd])) {
       ++rightEnd;
     }
     if (rightEnd == rightStart) {
@@ -215,12 +222,15 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (input[index] != op || index == 0 || index + 1 >= input.size()) {
       return false;
     }
-    if (!isTokenChar(input[index - 1]) || !isTokenChar(input[index + 1])) {
+    if (!isOperatorTokenChar(input[index - 1]) || !isOperatorTokenChar(input[index + 1])) {
       return false;
     }
     size_t end = output.size();
     size_t start = end;
-    while (start > 0 && isTokenChar(output[start - 1])) {
+    while (start > 0 && isOperatorTokenChar(output[start - 1])) {
+      --start;
+    }
+    if (start > 0 && output[start - 1] == '-' && isUnaryPrefixPosition(output, start - 1)) {
       --start;
     }
     if (start == end) {
@@ -232,7 +242,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     size_t rightStart = index + 1;
     size_t rightEnd = rightStart;
-    while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+    while (rightEnd < input.size() && isOperatorTokenChar(input[rightEnd])) {
       ++rightEnd;
     }
     if (rightEnd == rightStart) {
@@ -327,7 +337,9 @@ bool TextFilterPipeline::apply(const std::string &input,
           ++i;
         }
         size_t digitsStart = i;
+        bool isHex = false;
         if (i + 1 < input.size() && input[i] == '0' && (input[i + 1] == 'x' || input[i + 1] == 'X')) {
+          isHex = true;
           i += 2;
           digitsStart = i;
           while (i < input.size() && isHexDigitChar(input[i])) {
@@ -339,27 +351,56 @@ bool TextFilterPipeline::apply(const std::string &input,
           }
         }
         size_t digitsEnd = i;
+        if (!isHex && i + 1 < input.size() && input[i] == '.' && isDigitChar(input[i + 1])) {
+          ++i;
+          while (i < input.size() && isDigitChar(input[i])) {
+            ++i;
+          }
+        }
+        size_t literalEnd = i;
         if (digitsStart == digitsEnd) {
           output.push_back(input[start]);
           i = start;
           continue;
         }
-        if (digitsEnd + 2 < input.size() && input.compare(digitsEnd, 3, "i32") == 0) {
-          output.append(input.substr(start, digitsEnd - start + 3));
-          i = digitsEnd + 2;
+        bool hasFloatSuffix = false;
+        size_t floatSuffixLen = 0;
+        if (literalEnd + 2 < input.size() && input.compare(literalEnd, 3, "f64") == 0) {
+          hasFloatSuffix = true;
+          floatSuffixLen = 3;
+        } else if (literalEnd + 2 < input.size() && input.compare(literalEnd, 3, "f32") == 0) {
+          hasFloatSuffix = true;
+          floatSuffixLen = 3;
+        } else if (literalEnd < input.size() && input[literalEnd] == 'f') {
+          hasFloatSuffix = true;
+          floatSuffixLen = 1;
+        }
+        if (hasFloatSuffix) {
+          output.append(input.substr(start, (literalEnd + floatSuffixLen) - start));
+          i = literalEnd + floatSuffixLen - 1;
           continue;
         }
-        if (digitsEnd < input.size()) {
-          char next = input[digitsEnd];
+        if (literalEnd > digitsEnd) {
+          output.append(input.substr(start, literalEnd - start));
+          i = literalEnd - 1;
+          continue;
+        }
+        if (literalEnd + 2 < input.size() && input.compare(literalEnd, 3, "i32") == 0) {
+          output.append(input.substr(start, literalEnd - start + 3));
+          i = literalEnd + 2;
+          continue;
+        }
+        if (literalEnd < input.size()) {
+          char next = input[literalEnd];
           if (std::isalpha(static_cast<unsigned char>(next)) || next == '_' || next == '.') {
-            output.append(input.substr(start, digitsEnd - start));
-            i = digitsEnd - 1;
+            output.append(input.substr(start, literalEnd - start));
+            i = literalEnd - 1;
             continue;
           }
         }
-        output.append(input.substr(start, digitsEnd - start));
+        output.append(input.substr(start, literalEnd - start));
         output.append("i32");
-        i = digitsEnd - 1;
+        i = literalEnd - 1;
         continue;
       }
     }
