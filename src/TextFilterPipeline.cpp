@@ -12,6 +12,22 @@ bool isSeparator(char c) {
 bool isTokenChar(char c) {
   return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
 }
+
+bool isDigitChar(char c) {
+  return std::isdigit(static_cast<unsigned char>(c)) != 0;
+}
+
+std::string maybeAppendI32(const std::string &token) {
+  if (token.empty()) {
+    return token;
+  }
+  for (char c : token) {
+    if (!isDigitChar(c)) {
+      return token;
+    }
+  }
+  return token + "i32";
+}
 } // namespace
 
 bool TextFilterPipeline::apply(const std::string &input, std::string &output, std::string &error) const {
@@ -34,7 +50,7 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
     if (start == end) {
       return false;
     }
-    std::string left = output.substr(start, end - start);
+    std::string left = maybeAppendI32(output.substr(start, end - start));
     size_t rightStart = index + 1;
     size_t rightEnd = rightStart;
     while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
@@ -43,7 +59,7 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
     if (rightEnd == rightStart) {
       return false;
     }
-    std::string right = input.substr(rightStart, rightEnd - rightStart);
+    std::string right = maybeAppendI32(input.substr(rightStart, rightEnd - rightStart));
     output.erase(start);
     output.append(name);
     output.append("(");
@@ -66,6 +82,25 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
       continue;
     }
 
+    if (input[i] == '"' || input[i] == '\'') {
+      char quote = input[i];
+      size_t end = i + 1;
+      while (end < input.size()) {
+        if (input[end] == '\\' && end + 1 < input.size()) {
+          end += 2;
+          continue;
+        }
+        if (input[end] == quote) {
+          ++end;
+          break;
+        }
+        ++end;
+      }
+      output.append(input.substr(i, end - i));
+      i = end > 0 ? end - 1 : i;
+      continue;
+    }
+
     if (input[i] == '/' && (i == 0 || isSeparator(input[i - 1]))) {
       size_t start = i;
       size_t end = i + 1;
@@ -74,6 +109,47 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
       }
       output.append(input.substr(start, end - start));
       i = end - 1;
+      continue;
+    }
+
+    bool startsNumber = false;
+    if (isDigitChar(input[i]) && (i == 0 || (!isTokenChar(input[i - 1]) && input[i - 1] != '.'))) {
+      startsNumber = true;
+    } else if (input[i] == '-' && i + 1 < input.size() && isDigitChar(input[i + 1]) &&
+               (i == 0 || isSeparator(input[i - 1]))) {
+      startsNumber = true;
+    }
+    if (startsNumber) {
+      size_t start = i;
+      if (input[i] == '-') {
+        ++i;
+      }
+      size_t digitsStart = i;
+      while (i < input.size() && isDigitChar(input[i])) {
+        ++i;
+      }
+      size_t digitsEnd = i;
+      if (digitsStart == digitsEnd) {
+        output.push_back(input[start]);
+        i = start;
+        continue;
+      }
+      if (digitsEnd + 2 < input.size() && input.compare(digitsEnd, 3, "i32") == 0) {
+        output.append(input.substr(start, digitsEnd - start + 3));
+        i = digitsEnd + 2;
+        continue;
+      }
+      if (digitsEnd < input.size()) {
+        char next = input[digitsEnd];
+        if (std::isalpha(static_cast<unsigned char>(next)) || next == '_' || next == '.') {
+          output.append(input.substr(start, digitsEnd - start));
+          i = digitsEnd - 1;
+          continue;
+        }
+      }
+      output.append(input.substr(start, digitsEnd - start));
+      output.append("i32");
+      i = digitsEnd - 1;
       continue;
     }
 

@@ -98,6 +98,21 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs implicit i32 suffix") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(8)
+}
+)";
+  const std::string srcPath = writeTemp("compile_suffix.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]

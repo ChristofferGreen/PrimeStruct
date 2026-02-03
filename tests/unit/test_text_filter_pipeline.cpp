@@ -94,4 +94,44 @@ TEST_CASE("does not rewrite line comments") {
   CHECK(output == source);
 }
 
+TEST_CASE("adds i32 suffix to bare integer literal") {
+  const std::string source = "main(){ return(42) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("42i32") != std::string::npos);
+}
+
+TEST_CASE("adds i32 suffix to negative integer literal") {
+  const std::string source = "main(){ return(-7) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("-7i32") != std::string::npos);
+}
+
+TEST_CASE("does not change suffixed integer literals") {
+  const std::string source = "main(){ return(42i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not rewrite numbers inside strings") {
+  const std::string source = "main(){ log(\"42\") }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_SUITE_END();
