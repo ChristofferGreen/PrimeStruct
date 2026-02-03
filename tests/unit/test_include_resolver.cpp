@@ -110,6 +110,50 @@ TEST_CASE("resolves relative include from include path") {
   CHECK(source.find("INCLUDE_RELATIVE_MARKER") != std::string::npos);
 }
 
+TEST_CASE("resolves versioned absolute include from include path") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_VERSION_ABS_120\n");
+  writeFile(includeRoot / "1.2.9" / "lib.prime", "// INCLUDE_VERSION_ABS_129\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_VERSION_ABS_129") != std::string::npos);
+  CHECK(source.find("INCLUDE_VERSION_ABS_120") == std::string::npos);
+}
+
+TEST_CASE("resolves versioned relative include from include path") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "2.0.0" / "lib.prime", "// INCLUDE_VERSION_REL_200\n");
+  writeFile(includeRoot / "2.1.0" / "lib.prime", "// INCLUDE_VERSION_REL_210\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"lib.prime\", version=\"2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_VERSION_REL_210") != std::string::npos);
+  CHECK(source.find("INCLUDE_VERSION_REL_200") == std::string::npos);
+}
+
 TEST_CASE("resolves exact include version") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_exact";
   std::filesystem::remove_all(baseDir);
