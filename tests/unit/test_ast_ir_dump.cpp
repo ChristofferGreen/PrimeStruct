@@ -11,7 +11,7 @@ primec::Program parseProgram(const std::string &source) {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK(parser.parse(program.definitions, program.executions, error));
+  CHECK(parser.parse(program, error));
   CHECK(error.empty());
   return program;
 }

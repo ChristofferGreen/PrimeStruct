@@ -17,7 +17,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("expected '}' after return statement") != std::string::npos);
 }
 
@@ -32,7 +32,7 @@ return() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
@@ -47,7 +47,7 @@ main(mut) {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
@@ -61,7 +61,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("definitions must declare [return<int>]") != std::string::npos);
 }
 
@@ -76,7 +76,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
 }
 
@@ -91,7 +91,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
 }
 
@@ -106,7 +106,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
 }
 
@@ -121,7 +121,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
@@ -136,7 +136,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
@@ -151,7 +151,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("missing return statement in definition body") != std::string::npos);
 }
 
@@ -166,7 +166,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("integer literal out of range") != std::string::npos);
 }
 
@@ -181,7 +181,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK(parser.parse(program.definitions, program.executions, error));
+  CHECK(parser.parse(program, error));
   CHECK(error.empty());
 }
 
@@ -196,7 +196,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("integer literal out of range") != std::string::npos);
 }
 

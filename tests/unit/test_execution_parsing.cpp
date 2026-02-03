@@ -18,7 +18,7 @@ execute_task(1i32) { }
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 
@@ -35,7 +35,7 @@ execute_repeat(3i32) { main(), main() }
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 

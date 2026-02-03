@@ -14,15 +14,15 @@ bool isReservedKeyword(const std::string &text) {
 
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
-bool Parser::parse(std::vector<Definition> &defs, std::vector<Execution> &execs, std::string &error) {
+bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
   while (!match(TokenKind::End)) {
     if (match(TokenKind::KeywordNamespace)) {
-      if (!parseNamespace(defs, execs)) {
+      if (!parseNamespace(program.definitions)) {
         return false;
       }
     } else {
-      if (!parseDefinitionOrExecution(defs, execs)) {
+      if (!parseDefinition(program.definitions)) {
         return false;
       }
     }
@@ -30,7 +30,7 @@ bool Parser::parse(std::vector<Definition> &defs, std::vector<Execution> &execs,
   return true;
 }
 
-bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs) {
+bool Parser::parseNamespace(std::vector<Definition> &defs) {
   if (!expect(TokenKind::KeywordNamespace, "expected 'namespace'")) {
     return false;
   }
@@ -50,10 +50,10 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
       return fail("unexpected end of file inside namespace block");
     }
     if (match(TokenKind::KeywordNamespace)) {
-      if (!parseNamespace(defs, execs)) {
+      if (!parseNamespace(defs)) {
         return false;
       }
-    } else if (!parseDefinitionOrExecution(defs, execs)) {
+    } else if (!parseDefinition(defs)) {
       return false;
     }
   }
@@ -62,8 +62,7 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   return true;
 }
 
-bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs) {
-  (void)execs;
+bool Parser::parseDefinition(std::vector<Definition> &defs) {
   std::vector<Transform> transforms;
   if (match(TokenKind::LBracket)) {
     if (!parseTransformList(transforms)) {

@@ -16,7 +16,7 @@ main( {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("at 3:7") != std::string::npos);
 }
 

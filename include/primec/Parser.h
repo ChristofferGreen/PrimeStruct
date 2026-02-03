@@ -12,11 +12,11 @@ class Parser {
 public:
   explicit Parser(std::vector<Token> tokens);
 
-  bool parse(std::vector<Definition> &defs, std::vector<Execution> &execs, std::string &error);
+  bool parse(Program &program, std::string &error);
 
 private:
-  bool parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs);
-  bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
+  bool parseNamespace(std::vector<Definition> &defs);
+  bool parseDefinition(std::vector<Definition> &defs);
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
   bool parseIdentifierList(std::vector<std::string> &out);

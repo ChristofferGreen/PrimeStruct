@@ -37,11 +37,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     defMap[def.fullPath] = &def;
   }
 
-  if (!program.executions.empty()) {
-    error = "executions are not supported in v0.1";
-    return false;
-  }
-
   auto resolveCalleePath = [&](const Expr &expr) -> std::string {
     if (expr.name.empty()) {
       return "";

@@ -9,7 +9,7 @@ primec::Program parseProgram(const std::string &source) {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK(parser.parse(program.definitions, program.executions, error));
+  CHECK(parser.parse(program, error));
   CHECK(error.empty());
   return program;
 }
@@ -28,7 +28,6 @@ main() {
   const auto program = parseProgram(source);
   CHECK(program.definitions.size() == 1);
   CHECK(program.definitions[0].fullPath == "/main");
-  CHECK(program.executions.empty());
 }
 
 TEST_CASE("rejects execution with arguments and body") {
@@ -44,7 +43,7 @@ execute_repeat(3i32) { main() }
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 

@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
-  if (!parser.parse(program.definitions, program.executions, error)) {
+  if (!parser.parse(program, error)) {
     std::cerr << "Parse error: " << error << "\n";
     return 2;
   }
