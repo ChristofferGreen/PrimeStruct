@@ -16,6 +16,14 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       error = "templates are not supported in definitions: " + def.fullPath;
       return false;
     }
+    if (def.transforms.empty()) {
+      error = "definitions must declare [return<int>]: " + def.fullPath;
+      return false;
+    }
+    if (def.transforms.size() > 1) {
+      error = "only one return transform is supported in v0.1: " + def.fullPath;
+      return false;
+    }
     for (const auto &transform : def.transforms) {
       if (transform.name != "return") {
         error = "unsupported transform on " + def.fullPath + ": " + transform.name;

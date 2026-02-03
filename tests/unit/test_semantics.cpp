@@ -99,7 +99,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("entry definition must declare") != std::string::npos);
+  CHECK(error.find("definitions must declare") != std::string::npos);
 }
 
 TEST_CASE("non return transform fails") {
@@ -112,6 +112,22 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported transform") != std::string::npos);
+}
+
+TEST_CASE("helper definition requires return transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(helper())
+}
+
+helper() {
+  return(2i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("definitions must declare") != std::string::npos);
 }
 
 TEST_SUITE_END();
