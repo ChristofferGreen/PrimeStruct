@@ -30,7 +30,10 @@ std::string maybeAppendI32(const std::string &token) {
 }
 } // namespace
 
-bool TextFilterPipeline::apply(const std::string &input, std::string &output, std::string &error) const {
+bool TextFilterPipeline::apply(const std::string &input,
+                               std::string &output,
+                               std::string &error,
+                               const TextFilterOptions &options) const {
   output.clear();
   output.reserve(input.size());
   error.clear();
@@ -50,7 +53,10 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
     if (start == end) {
       return false;
     }
-    std::string left = maybeAppendI32(output.substr(start, end - start));
+    std::string left = output.substr(start, end - start);
+    if (options.implicitI32Suffix) {
+      left = maybeAppendI32(left);
+    }
     size_t rightStart = index + 1;
     size_t rightEnd = rightStart;
     while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
@@ -59,7 +65,10 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
     if (rightEnd == rightStart) {
       return false;
     }
-    std::string right = maybeAppendI32(input.substr(rightStart, rightEnd - rightStart));
+    std::string right = input.substr(rightStart, rightEnd - rightStart);
+    if (options.implicitI32Suffix) {
+      right = maybeAppendI32(right);
+    }
     output.erase(start);
     output.append(name);
     output.append("(");
@@ -112,45 +121,47 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
       continue;
     }
 
-    bool startsNumber = false;
-    if (isDigitChar(input[i]) && (i == 0 || (!isTokenChar(input[i - 1]) && input[i - 1] != '.'))) {
-      startsNumber = true;
-    } else if (input[i] == '-' && i + 1 < input.size() && isDigitChar(input[i + 1]) &&
-               (i == 0 || isSeparator(input[i - 1]))) {
-      startsNumber = true;
-    }
-    if (startsNumber) {
-      size_t start = i;
-      if (input[i] == '-') {
-        ++i;
+    if (options.implicitI32Suffix) {
+      bool startsNumber = false;
+      if (isDigitChar(input[i]) && (i == 0 || (!isTokenChar(input[i - 1]) && input[i - 1] != '.'))) {
+        startsNumber = true;
+      } else if (input[i] == '-' && i + 1 < input.size() && isDigitChar(input[i + 1]) &&
+                 (i == 0 || isSeparator(input[i - 1]))) {
+        startsNumber = true;
       }
-      size_t digitsStart = i;
-      while (i < input.size() && isDigitChar(input[i])) {
-        ++i;
-      }
-      size_t digitsEnd = i;
-      if (digitsStart == digitsEnd) {
-        output.push_back(input[start]);
-        i = start;
-        continue;
-      }
-      if (digitsEnd + 2 < input.size() && input.compare(digitsEnd, 3, "i32") == 0) {
-        output.append(input.substr(start, digitsEnd - start + 3));
-        i = digitsEnd + 2;
-        continue;
-      }
-      if (digitsEnd < input.size()) {
-        char next = input[digitsEnd];
-        if (std::isalpha(static_cast<unsigned char>(next)) || next == '_' || next == '.') {
-          output.append(input.substr(start, digitsEnd - start));
-          i = digitsEnd - 1;
+      if (startsNumber) {
+        size_t start = i;
+        if (input[i] == '-') {
+          ++i;
+        }
+        size_t digitsStart = i;
+        while (i < input.size() && isDigitChar(input[i])) {
+          ++i;
+        }
+        size_t digitsEnd = i;
+        if (digitsStart == digitsEnd) {
+          output.push_back(input[start]);
+          i = start;
           continue;
         }
+        if (digitsEnd + 2 < input.size() && input.compare(digitsEnd, 3, "i32") == 0) {
+          output.append(input.substr(start, digitsEnd - start + 3));
+          i = digitsEnd + 2;
+          continue;
+        }
+        if (digitsEnd < input.size()) {
+          char next = input[digitsEnd];
+          if (std::isalpha(static_cast<unsigned char>(next)) || next == '_' || next == '.') {
+            output.append(input.substr(start, digitsEnd - start));
+            i = digitsEnd - 1;
+            continue;
+          }
+        }
+        output.append(input.substr(start, digitsEnd - start));
+        output.append("i32");
+        i = digitsEnd - 1;
+        continue;
       }
-      output.append(input.substr(start, digitsEnd - start));
-      output.append("i32");
-      i = digitsEnd - 1;
-      continue;
     }
 
     if (input[i] == '/' && rewriteBinary(i, '/', "divide")) {

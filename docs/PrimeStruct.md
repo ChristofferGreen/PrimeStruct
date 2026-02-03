@@ -260,7 +260,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ## Literals & Composite Construction (draft)
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42u32`, `1.0f64`).
-  - v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing.
+  - v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; the default compiler pipeline enables implicit `i32` suffixing unless `--no-implicit-i32` is passed.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean & null:** keywords `true`, `false`, `null` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation.

@@ -9,5 +9,6 @@ struct Options {
   std::string outputPath;
   std::string entryPath = "/main";
   std::string dumpStage;
+  bool implicitI32Suffix = true;
 };
 } // namespace primec

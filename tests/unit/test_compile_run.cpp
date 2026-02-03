@@ -113,6 +113,21 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
+TEST_CASE("implicit suffix can be disabled") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(8)
+}
+)";
+  const std::string srcPath = writeTemp("compile_suffix_off.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_off_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-implicit-i32";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]

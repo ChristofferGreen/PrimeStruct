@@ -134,4 +134,16 @@ TEST_CASE("does not rewrite numbers inside strings") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not add suffix when disabled") {
+  const std::string source = "main(){ return(42) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.implicitI32Suffix = false;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_SUITE_END();

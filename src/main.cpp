@@ -31,6 +31,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.dumpStage = argv[++i];
     } else if (arg.rfind("--dump-stage=", 0) == 0) {
       out.dumpStage = arg.substr(std::string("--dump-stage=").size());
+    } else if (arg == "--no-implicit-i32") {
+      out.implicitI32Suffix = false;
     } else if (!arg.empty() && arg[0] == '-') {
       return false;
     } else {
@@ -95,8 +97,10 @@ int main(int argc, char **argv) {
   }
 
   primec::TextFilterPipeline textPipeline;
+  primec::TextFilterOptions textOptions;
+  textOptions.implicitI32Suffix = options.implicitI32Suffix;
   std::string filteredSource;
-  if (!textPipeline.apply(source, filteredSource, error)) {
+  if (!textPipeline.apply(source, filteredSource, error, textOptions)) {
     std::cerr << "Transform error: " << error << "\n";
     return 2;
   }
