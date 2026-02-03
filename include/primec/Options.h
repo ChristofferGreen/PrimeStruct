@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace primec {
 struct Options {
@@ -10,5 +11,6 @@ struct Options {
   std::string entryPath = "/main";
   std::string dumpStage;
   bool implicitI32Suffix = true;
+  std::vector<std::string> includePaths;
 };
 } // namespace primec

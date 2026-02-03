@@ -31,6 +31,14 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.dumpStage = argv[++i];
     } else if (arg.rfind("--dump-stage=", 0) == 0) {
       out.dumpStage = arg.substr(std::string("--dump-stage=").size());
+    } else if (arg == "--include-path" && i + 1 < argc) {
+      out.includePaths.push_back(argv[++i]);
+    } else if (arg.rfind("--include-path=", 0) == 0) {
+      out.includePaths.push_back(arg.substr(std::string("--include-path=").size()));
+    } else if (arg == "-I" && i + 1 < argc) {
+      out.includePaths.push_back(argv[++i]);
+    } else if (arg.rfind("-I", 0) == 0 && arg.size() > 2) {
+      out.includePaths.push_back(arg.substr(2));
     } else if (arg == "--no-implicit-i32") {
       out.implicitI32Suffix = false;
     } else if (!arg.empty() && arg[0] == '-') {
@@ -84,14 +92,15 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] [--dump-stage pre_ast|ast|ir]\n";
+    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] "
+                 "[--include-path <dir>] [--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
 
   std::string source;
   std::string error;
   primec::IncludeResolver includeResolver;
-  if (!includeResolver.expandIncludes(options.inputPath, source, error)) {
+  if (!includeResolver.expandIncludes(options.inputPath, source, error, options.includePaths)) {
     std::cerr << "Include error: " << error << "\n";
     return 2;
   }

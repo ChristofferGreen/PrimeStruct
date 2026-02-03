@@ -109,6 +109,18 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
     return false;
   }
 
+  if (!std::filesystem::exists(baseDir) || !std::filesystem::is_directory(baseDir)) {
+    std::ostringstream requestedText;
+    for (size_t i = 0; i < requested.size(); ++i) {
+      if (i > 0) {
+        requestedText << ".";
+      }
+      requestedText << requested[i];
+    }
+    error = "include version not found: " + requestedText.str();
+    return false;
+  }
+
   bool found = false;
   std::vector<int> bestParts;
   std::string bestName;
@@ -148,7 +160,10 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
 
 } // namespace
 
-bool IncludeResolver::expandIncludes(const std::string &inputPath, std::string &source, std::string &error) {
+bool IncludeResolver::expandIncludes(const std::string &inputPath,
+                                     std::string &source,
+                                     std::string &error,
+                                     const std::vector<std::string> &includePaths) {
   std::filesystem::path input = std::filesystem::absolute(inputPath);
   std::string content;
   if (!readFile(input.string(), content)) {
@@ -157,14 +172,23 @@ bool IncludeResolver::expandIncludes(const std::string &inputPath, std::string &
   }
   source = std::move(content);
   std::string baseDir = input.parent_path().string();
+  std::vector<std::filesystem::path> includeRoots;
+  includeRoots.reserve(includePaths.size());
+  for (const auto &path : includePaths) {
+    if (path.empty()) {
+      continue;
+    }
+    includeRoots.push_back(std::filesystem::absolute(path));
+  }
   std::unordered_set<std::string> expanded;
-  return expandIncludesInternal(baseDir, source, expanded, error);
+  return expandIncludesInternal(baseDir, source, expanded, error, includeRoots);
 }
 
 bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
                                              std::string &source,
                                              std::unordered_set<std::string> &expanded,
-                                             std::string &error) {
+                                             std::string &error,
+                                             const std::vector<std::filesystem::path> &includeRoots) {
   bool changed = true;
 
   while (changed) {
@@ -235,30 +259,99 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           return false;
         }
 
-        std::optional<std::filesystem::path> versionRoot;
+        std::optional<std::vector<int>> requestedVersion;
         if (versionTag) {
-          std::vector<int> requested;
-          if (!parseVersionParts(*versionTag, requested, error)) {
+          std::vector<int> parsed;
+          if (!parseVersionParts(*versionTag, parsed, error)) {
             return false;
           }
-          std::string selected;
-          if (!selectVersionDirectory(baseDir, requested, selected, error)) {
-            return false;
-          }
-          versionRoot = std::filesystem::path(baseDir) / selected;
+          requestedVersion = std::move(parsed);
         }
 
-        for (const auto &path : paths) {
-          std::filesystem::path resolved(path);
-          if (versionRoot) {
-            if (resolved.is_absolute()) {
-              resolved = resolved.relative_path();
+        auto resolveIncludePath = [&](const std::string &path, std::filesystem::path &resolved) -> bool {
+          std::filesystem::path requested(path);
+          bool isAbsolute = requested.is_absolute();
+          std::filesystem::path logicalPath = isAbsolute ? requested.relative_path() : requested;
+          if (requestedVersion) {
+            std::vector<std::filesystem::path> roots;
+            if (isAbsolute) {
+              roots = includeRoots;
+            } else {
+              roots.push_back(std::filesystem::path(baseDir));
+              for (const auto &root : includeRoots) {
+                roots.push_back(root);
+              }
             }
-            resolved = *versionRoot / resolved;
-          } else if (resolved.is_relative()) {
-            resolved = std::filesystem::path(baseDir) / resolved;
+            if (roots.empty()) {
+              roots.push_back(std::filesystem::path(baseDir));
+            }
+            std::string versionError;
+            bool foundVersion = false;
+            std::filesystem::path lastCandidate;
+            for (const auto &root : roots) {
+              std::string selected;
+              std::string rootError;
+              if (!selectVersionDirectory(root, *requestedVersion, selected, rootError)) {
+                versionError = rootError;
+                continue;
+              }
+              foundVersion = true;
+              std::filesystem::path candidate = root / selected / logicalPath;
+              if (std::filesystem::exists(candidate)) {
+                resolved = std::filesystem::absolute(candidate);
+                return true;
+              }
+              lastCandidate = candidate;
+            }
+            if (!foundVersion) {
+              error = versionError.empty() ? "include version not found" : versionError;
+              return false;
+            }
+            if (!lastCandidate.empty()) {
+              error = "failed to read include: " + std::filesystem::absolute(lastCandidate).string();
+            } else {
+              error = "failed to read include: " + logicalPath.string();
+            }
+            return false;
           }
-          resolved = std::filesystem::absolute(resolved);
+
+          if (!isAbsolute) {
+            std::filesystem::path candidate = std::filesystem::path(baseDir) / requested;
+            if (std::filesystem::exists(candidate)) {
+              resolved = std::filesystem::absolute(candidate);
+              return true;
+            }
+            for (const auto &root : includeRoots) {
+              candidate = root / requested;
+              if (std::filesystem::exists(candidate)) {
+                resolved = std::filesystem::absolute(candidate);
+                return true;
+              }
+            }
+            error = "failed to read include: " + std::filesystem::absolute(std::filesystem::path(baseDir) / requested).string();
+            return false;
+          }
+
+          if (std::filesystem::exists(requested)) {
+            resolved = std::filesystem::absolute(requested);
+            return true;
+          }
+          for (const auto &root : includeRoots) {
+            std::filesystem::path candidate = root / logicalPath;
+            if (std::filesystem::exists(candidate)) {
+              resolved = std::filesystem::absolute(candidate);
+              return true;
+            }
+          }
+          error = "failed to read include: " + std::filesystem::absolute(requested).string();
+          return false;
+        };
+
+        for (const auto &path : paths) {
+          std::filesystem::path resolved;
+          if (!resolveIncludePath(path, resolved)) {
+            return false;
+          }
           std::string resolvedText = resolved.string();
           if (expanded.count(resolvedText) > 0) {
             continue;
@@ -269,7 +362,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             return false;
           }
           expanded.insert(resolvedText);
-          if (!expandIncludesInternal(resolved.parent_path().string(), included, expanded, error)) {
+          if (!expandIncludesInternal(resolved.parent_path().string(), included, expanded, error, includeRoots)) {
             return false;
           }
           result.append(included);
