@@ -5,6 +5,13 @@
 
 namespace primec {
 
+namespace {
+bool isReservedKeyword(const std::string &text) {
+  return text == "mut" || text == "return" || text == "include" || text == "namespace" || text == "true" ||
+         text == "false" || text == "null";
+}
+} // namespace
+
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
 bool Parser::parse(std::vector<Definition> &defs, std::vector<Execution> &execs, std::string &error) {
@@ -30,6 +37,9 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   Token name = consume(TokenKind::Identifier, "expected namespace identifier");
   if (name.kind == TokenKind::End) {
     return false;
+  }
+  if (isReservedKeyword(name.text)) {
+    return fail("reserved keyword cannot be used as identifier: " + name.text);
   }
   if (!expect(TokenKind::LBrace, "expected '{' after namespace")) {
     return false;
@@ -64,6 +74,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   Token name = consume(TokenKind::Identifier, "expected identifier");
   if (name.kind == TokenKind::End) {
     return false;
+  }
+  if (isReservedKeyword(name.text)) {
+    return fail("reserved keyword cannot be used as identifier: " + name.text);
   }
 
   if (match(TokenKind::LAngle)) {
@@ -168,6 +181,9 @@ bool Parser::parseIdentifierList(std::vector<std::string> &out) {
   if (first.kind == TokenKind::End) {
     return false;
   }
+  if (isReservedKeyword(first.text)) {
+    return fail("reserved keyword cannot be used as identifier: " + first.text);
+  }
   out.push_back(first.text);
   if (!match(TokenKind::RParen)) {
     while (match(TokenKind::Comma)) {
@@ -175,6 +191,9 @@ bool Parser::parseIdentifierList(std::vector<std::string> &out) {
       Token next = consume(TokenKind::Identifier, "expected parameter identifier");
       if (next.kind == TokenKind::End) {
         return false;
+      }
+      if (isReservedKeyword(next.text)) {
+        return fail("reserved keyword cannot be used as identifier: " + next.text);
       }
       out.push_back(next.text);
     }
@@ -270,6 +289,9 @@ bool Parser::parseDefinitionBody(Definition &def) {
       }
       return true;
     }
+    if (isReservedKeyword(name.text)) {
+      return fail("reserved keyword cannot be used as identifier: " + name.text);
+    }
 
     Expr callExpr;
     callExpr.kind = Expr::Kind::Call;
@@ -331,6 +353,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     Token name = consume(TokenKind::Identifier, "expected identifier");
     if (name.kind == TokenKind::End) {
       return false;
+    }
+    if (isReservedKeyword(name.text)) {
+      return fail("reserved keyword cannot be used as identifier: " + name.text);
     }
     if (match(TokenKind::LAngle)) {
       return fail("templates are not supported in v0.1");

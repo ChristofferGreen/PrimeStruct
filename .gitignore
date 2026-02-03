@@ -2,3 +2,5 @@ build-debug/
 build-release/
 .githooks/
 workspaces/
+out
+out.cpp
