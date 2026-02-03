@@ -178,6 +178,21 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs less_than") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(less_than(1i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_less_than.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_lt_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs clamp") {
   const std::string source = R"(
 [return<int>]

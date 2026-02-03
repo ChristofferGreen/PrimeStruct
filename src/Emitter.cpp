@@ -97,6 +97,10 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
     out = ">";
     return true;
   }
+  if (name == "less_than") {
+    out = "<";
+    return true;
+  }
   return false;
 }
 
