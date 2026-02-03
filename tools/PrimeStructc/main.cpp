@@ -83,6 +83,8 @@ enum class TokenKind {
 struct Token {
   TokenKind kind;
   std::string text;
+  int line = 1;
+  int column = 1;
 };
 
 struct Transform {
@@ -123,7 +125,7 @@ public:
     while (true) {
       skipWhitespace();
       if (pos_ >= source_.size()) {
-        tokens.push_back({TokenKind::End, ""});
+        tokens.push_back({TokenKind::End, "", line_, column_});
         break;
       }
       char c = source_[pos_];
@@ -151,64 +153,88 @@ private:
 
   void skipWhitespace() {
     while (pos_ < source_.size() && std::isspace(static_cast<unsigned char>(source_[pos_]))) {
-      ++pos_;
+      advance();
     }
+  }
+
+  void advance() {
+    if (pos_ >= source_.size()) {
+      return;
+    }
+    if (source_[pos_] == '\n') {
+      ++line_;
+      column_ = 1;
+    } else {
+      ++column_;
+    }
+    ++pos_;
   }
 
   Token readIdentifier() {
+    int startLine = line_;
+    int startColumn = column_;
     size_t start = pos_;
     while (pos_ < source_.size() && isIdentifierBody(source_[pos_])) {
-      ++pos_;
+      advance();
     }
     std::string text = source_.substr(start, pos_ - start);
     if (text == "namespace") {
-      return {TokenKind::KeywordNamespace, text};
+      return {TokenKind::KeywordNamespace, text, startLine, startColumn};
     }
-    return {TokenKind::Identifier, text};
+    return {TokenKind::Identifier, text, startLine, startColumn};
   }
 
   Token readNumber() {
+    int startLine = line_;
+    int startColumn = column_;
     size_t start = pos_;
     if (source_[pos_] == '-') {
-      ++pos_;
+      advance();
     }
     while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
-      ++pos_;
+      advance();
     }
     if (source_.compare(pos_, 3, "i32") == 0) {
-      pos_ += 3;
+      advance();
+      advance();
+      advance();
     }
-    return {TokenKind::Number, source_.substr(start, pos_ - start)};
+    return {TokenKind::Number, source_.substr(start, pos_ - start), startLine, startColumn};
   }
 
   Token readPunct() {
-    char c = source_[pos_++];
+    int startLine = line_;
+    int startColumn = column_;
+    char c = source_[pos_];
+    advance();
     switch (c) {
     case '[':
-      return {TokenKind::LBracket, "["};
+      return {TokenKind::LBracket, "[", startLine, startColumn};
     case ']':
-      return {TokenKind::RBracket, "]"};
+      return {TokenKind::RBracket, "]", startLine, startColumn};
     case '(':
-      return {TokenKind::LParen, "("};
+      return {TokenKind::LParen, "(", startLine, startColumn};
     case ')':
-      return {TokenKind::RParen, ")"};
+      return {TokenKind::RParen, ")", startLine, startColumn};
     case '{':
-      return {TokenKind::LBrace, "{"};
+      return {TokenKind::LBrace, "{", startLine, startColumn};
     case '}':
-      return {TokenKind::RBrace, "}"};
+      return {TokenKind::RBrace, "}", startLine, startColumn};
     case '<':
-      return {TokenKind::LAngle, "<"};
+      return {TokenKind::LAngle, "<", startLine, startColumn};
     case '>':
-      return {TokenKind::RAngle, ">"};
+      return {TokenKind::RAngle, ">", startLine, startColumn};
     case ',':
-      return {TokenKind::Comma, ","};
+      return {TokenKind::Comma, ",", startLine, startColumn};
     default:
-      return {TokenKind::End, ""};
+      return {TokenKind::End, "", startLine, startColumn};
     }
   }
 
   const std::string &source_;
   size_t pos_ = 0;
+  int line_ = 1;
+  int column_ = 1;
 };
 
 class Parser {
@@ -494,7 +520,10 @@ private:
 
   bool fail(const std::string &message) {
     if (error_) {
-      *error_ = message;
+      const Token &token = tokens_[pos_];
+      std::ostringstream out;
+      out << message << " at " << token.line << ":" << token.column;
+      *error_ = out.str();
     }
     return false;
   }
