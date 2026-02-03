@@ -240,6 +240,12 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (rewriteBinaryPair(i, '!', '=', "not_equal")) {
       continue;
     }
+    if (rewriteBinaryPair(i, '>', '=', "greater_equal")) {
+      continue;
+    }
+    if (rewriteBinaryPair(i, '<', '=', "less_equal")) {
+      continue;
+    }
     if (input[i] == '<' && !looksLikeTemplateList(input, i) && rewriteBinary(i, '<', "less_than")) {
       continue;
     }

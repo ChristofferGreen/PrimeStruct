@@ -191,6 +191,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin greater_equal calls validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_equal(2i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin less_equal calls validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(less_equal(2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("builtin clamp calls validate") {
   const std::string source = R"(
 [return<int>]
@@ -249,6 +273,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for builtin equal") != std::string::npos);
+}
+
+TEST_CASE("builtin greater_equal arity mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_equal(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin greater_equal") != std::string::npos);
 }
 
 TEST_CASE("builtin clamp arity mismatch fails") {

@@ -72,7 +72,8 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal") {
+  if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal" ||
+      name == "greater_equal" || name == "less_equal") {
     out = name;
     return true;
   }

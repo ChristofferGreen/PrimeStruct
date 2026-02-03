@@ -94,6 +94,26 @@ TEST_CASE("rewrites less_than operator without spaces") {
   CHECK(output.find("less_than(a, b)") != std::string::npos);
 }
 
+TEST_CASE("rewrites greater_equal operator without spaces") {
+  const std::string source = "main(){ return(a>=b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("greater_equal(a, b)") != std::string::npos);
+}
+
+TEST_CASE("rewrites less_equal operator without spaces") {
+  const std::string source = "main(){ return(a<=b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("less_equal(a, b)") != std::string::npos);
+}
+
 TEST_CASE("does not rewrite template list syntax") {
   const std::string source = "if<bool>(cond, then{ }, else{ })\n";
   primec::TextFilterPipeline pipeline;
