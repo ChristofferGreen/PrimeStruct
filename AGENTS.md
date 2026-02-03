@@ -24,12 +24,11 @@ build and layout solidify.
   example and expected IR snippet.
 
 ## Build/test workflow
-- **Current state:** no standardized build/test scripts yet.
-- If you add build tooling (CMake, scripts, etc.), update this section with:
-  - the primary entry command
-  - debug/release variants
-  - coverage or IR-dump commands
-  - where outputs land
+- **Primary entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
+- **Release build:** `./scripts/compile.sh --release` (Release build in `build-release`).
+- **Configure only:** `./scripts/compile.sh --configure` (regenerates build dir only).
+- **Skip tests:** `./scripts/compile.sh --skip-tests` (build only).
+- **CTest:** from `build-debug/` run `ctest --output-on-failure`.
 
 ## Tests
 - Prefer deterministic, snapshot-style tests for parser/IR/transform stages.

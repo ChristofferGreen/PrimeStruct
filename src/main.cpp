@@ -49,17 +49,6 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
   return !out.emitKind.empty() && !out.outputPath.empty();
 }
 
-bool readFile(const std::string &path, std::string &out) {
-  std::ifstream file(path);
-  if (!file) {
-    return false;
-  }
-  std::ostringstream buffer;
-  buffer << file.rdbuf();
-  out = buffer.str();
-  return true;
-}
-
 bool writeFile(const std::string &path, const std::string &contents) {
   std::ofstream file(path);
   if (!file) {
