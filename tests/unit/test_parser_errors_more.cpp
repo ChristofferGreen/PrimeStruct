@@ -21,6 +21,65 @@ main() {
   CHECK(error.find("expected '}' after return statement") != std::string::npos);
 }
 
+TEST_CASE("missing return transform fails") {
+  const std::string source = R"(
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("definitions must declare [return<int>]") != std::string::npos);
+}
+
+TEST_CASE("non return transform fails") {
+  const std::string source = R"(
+[effects]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
+}
+
+TEST_CASE("wrong return type fails") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
+}
+
+TEST_CASE("multiple transforms fail") {
+  const std::string source = R"(
+[return<int>, effects]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
+}
+
 TEST_CASE("return without argument fails") {
   const std::string source = R"(
 [return<int>]

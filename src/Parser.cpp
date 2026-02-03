@@ -86,6 +86,13 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!match(TokenKind::LBrace)) {
     return fail("executions are not supported in v0.1");
   }
+  if (transforms.empty()) {
+    return fail("definitions must declare [return<int>]");
+  }
+  if (transforms.size() != 1 || transforms[0].name != "return" ||
+      !transforms[0].templateArg || *transforms[0].templateArg != "int") {
+    return fail("only [return<int>] transform is supported in v0.1");
+  }
   Definition def;
   def.name = name.text;
   def.namespacePrefix = currentNamespacePrefix();
