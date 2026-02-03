@@ -117,6 +117,52 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints early return") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32) {
+    return(5i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<int>] /main() {\n"
+      "    if(1, then() { return(5) }, else() { return(2) })\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints early return") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32) {
+    return(5i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    call if(1, then() { return(5) }, else() { return(2) })\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints execution transforms") {
   const std::string source = R"(
 [return<int>]
