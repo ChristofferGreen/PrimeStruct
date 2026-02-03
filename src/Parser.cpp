@@ -275,7 +275,9 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     out.push_back(std::move(arg));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
-    } else {
+      continue;
+    }
+    if (match(TokenKind::RBrace)) {
       break;
     }
   }

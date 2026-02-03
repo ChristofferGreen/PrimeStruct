@@ -69,7 +69,10 @@ TEST_CASE("parses if with block arguments") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(1i32, then{ [i32] temp(2i32), assign(value, temp) }, else{ assign(value, 3i32) })
+  if(1i32, then{
+    [i32] temp(2i32)
+    assign(value, temp)
+  }, else{ assign(value, 3i32) })
   return(value)
 }
 )";

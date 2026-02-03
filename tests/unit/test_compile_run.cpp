@@ -133,7 +133,10 @@ TEST_CASE("compiles and runs if") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(0i32, then{ [i32] temp(4i32), assign(value, temp) }, else{ assign(value, 9i32) })
+  if(0i32, then{
+    [i32] temp(4i32)
+    assign(value, temp)
+  }, else{ assign(value, 9i32) })
   return(value)
 }
 )";
