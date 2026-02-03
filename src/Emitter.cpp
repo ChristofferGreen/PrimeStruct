@@ -82,6 +82,24 @@ bool getBuiltinOperator(const Expr &expr, char &out) {
   return false;
 }
 
+bool getBuiltinComparison(const Expr &expr, const char *&out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "greater_than") {
+    out = ">";
+    return true;
+  }
+  return false;
+}
+
 std::string resolveExprPath(const Expr &expr) {
   if (!expr.name.empty() && expr.name[0] == '/') {
     return expr.name;
@@ -168,6 +186,13 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
       std::ostringstream out;
       out << "(" << emitExpr(expr.args[0], nameMap) << " " << op << " "
+          << emitExpr(expr.args[1], nameMap) << ")";
+      return out.str();
+    }
+    const char *cmp = nullptr;
+    if (getBuiltinComparison(expr, cmp) && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "(" << emitExpr(expr.args[0], nameMap) << " " << cmp << " "
           << emitExpr(expr.args[1], nameMap) << ")";
       return out.str();
     }

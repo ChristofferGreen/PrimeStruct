@@ -143,6 +143,18 @@ namespace demo {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin comparison calls validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(2i32, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("builtin arithmetic arity mismatch fails") {
   const std::string source = R"(
 [return<int>]
@@ -153,6 +165,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for builtin plus") != std::string::npos);
+}
+
+TEST_CASE("builtin comparison arity mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin greater_than") != std::string::npos);
 }
 
 TEST_CASE("void return can omit return statement") {

@@ -61,6 +61,24 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "greater_than") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool isAssignCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -213,6 +231,18 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       if (it == defMap.end()) {
         std::string builtinName;
         if (getBuiltinOperatorName(expr, builtinName)) {
+          if (expr.args.size() != 2) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
+            }
+          }
+          return true;
+        }
+        if (getBuiltinComparisonName(expr, builtinName)) {
           if (expr.args.size() != 2) {
             error = "argument count mismatch for builtin " + builtinName;
             return false;
