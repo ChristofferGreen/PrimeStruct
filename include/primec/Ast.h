@@ -37,6 +37,7 @@ struct Execution {
   std::string namespacePrefix;
   std::vector<std::string> templateArgs;
   std::vector<Expr> arguments;
+  std::vector<Expr> bodyArguments;
 };
 
 struct Program {

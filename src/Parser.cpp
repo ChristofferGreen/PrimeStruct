@@ -74,7 +74,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }
-  bool isDefinition = isDefinitionAfterParamList();
+  bool isDefinition = isDefinitionSignature();
   if (isDefinition) {
     std::vector<std::string> parameters;
     if (!parseIdentifierList(parameters)) {
@@ -119,7 +119,17 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return true;
   }
 
-  return fail("executions cannot have a body");
+  Execution exec;
+  exec.name = name.text;
+  exec.namespacePrefix = currentNamespacePrefix();
+  exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
+  exec.templateArgs = std::move(templateArgs);
+  exec.arguments = std::move(arguments);
+  if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
+    return false;
+  }
+  execs.push_back(std::move(exec));
+  return true;
 }
 
 bool Parser::parseTransformList(std::vector<Transform> &out) {
@@ -216,9 +226,36 @@ bool Parser::parseExprList(std::vector<Expr> &out, const std::string &namespaceP
   return true;
 }
 
-bool Parser::isDefinitionAfterParamList() const {
+bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+  if (!expect(TokenKind::LBrace, "expected '{'")) {
+    return false;
+  }
+  if (match(TokenKind::RBrace)) {
+    expect(TokenKind::RBrace, "expected '}'");
+    return true;
+  }
+  while (true) {
+    Expr arg;
+    if (!parseExpr(arg, namespacePrefix)) {
+      return false;
+    }
+    out.push_back(std::move(arg));
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+    } else {
+      break;
+    }
+  }
+  if (!expect(TokenKind::RBrace, "expected '}'")) {
+    return false;
+  }
+  return true;
+}
+
+bool Parser::isDefinitionSignature() const {
   size_t index = pos_;
   int depth = 1;
+  bool paramsAreIdentifiers = true;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
     if (kind == TokenKind::LParen) {
@@ -226,13 +263,43 @@ bool Parser::isDefinitionAfterParamList() const {
     } else if (kind == TokenKind::RParen) {
       --depth;
       if (depth == 0) {
-        if (index + 1 < tokens_.size()) {
-          return tokens_[index + 1].kind == TokenKind::LBrace;
-        }
-        return false;
+        break;
+      }
+    } else if (depth == 1) {
+      if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+        paramsAreIdentifiers = false;
       }
     }
     ++index;
+  }
+  if (depth != 0) {
+    return false;
+  }
+  if (!paramsAreIdentifiers) {
+    return false;
+  }
+  if (index + 1 >= tokens_.size()) {
+    return false;
+  }
+  if (tokens_[index + 1].kind != TokenKind::LBrace) {
+    return false;
+  }
+
+  size_t braceIndex = index + 1;
+  int braceDepth = 0;
+  while (braceIndex < tokens_.size()) {
+    TokenKind kind = tokens_[braceIndex].kind;
+    if (kind == TokenKind::LBrace) {
+      ++braceDepth;
+    } else if (kind == TokenKind::RBrace) {
+      --braceDepth;
+      if (braceDepth == 0) {
+        break;
+      }
+    } else if (kind == TokenKind::Identifier && tokens_[braceIndex].text == "return") {
+      return true;
+    }
+    ++braceIndex;
   }
   return false;
 }
