@@ -73,7 +73,7 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal" ||
-      name == "greater_equal" || name == "less_equal" || name == "and" || name == "or") {
+      name == "greater_equal" || name == "less_equal" || name == "and" || name == "or" || name == "not") {
     out = name;
     return true;
   }
@@ -270,7 +270,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           return true;
         }
         if (getBuiltinComparisonName(expr, builtinName)) {
-          if (expr.args.size() != 2) {
+          size_t expectedArgs = builtinName == "not" ? 1 : 2;
+          if (expr.args.size() != expectedArgs) {
             error = "argument count mismatch for builtin " + builtinName;
             return false;
           }

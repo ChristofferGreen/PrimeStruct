@@ -53,6 +53,41 @@ std::string maybeAppendI32(const std::string &token) {
   }
   return token + "i32";
 }
+
+bool rewriteUnaryNot(const std::string &input,
+                     std::string &output,
+                     size_t &index,
+                     const TextFilterOptions &options) {
+  if (input[index] != '!') {
+    return false;
+  }
+  if (index + 1 >= input.size()) {
+    return false;
+  }
+  if (input[index + 1] == '=') {
+    return false;
+  }
+  if (index > 0 && isTokenChar(input[index - 1])) {
+    return false;
+  }
+  size_t rightStart = index + 1;
+  size_t rightEnd = rightStart;
+  while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+    ++rightEnd;
+  }
+  if (rightEnd == rightStart) {
+    return false;
+  }
+  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  if (options.implicitI32Suffix) {
+    right = maybeAppendI32(right);
+  }
+  output.append("not(");
+  output.append(right);
+  output.append(")");
+  index = rightEnd - 1;
+  return true;
+}
 } // namespace
 
 bool TextFilterPipeline::apply(const std::string &input,
@@ -250,6 +285,9 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
     if (rewriteBinaryPair(i, '|', '|', "or")) {
+      continue;
+    }
+    if (rewriteUnaryNot(input, output, i, options)) {
       continue;
     }
     if (input[i] == '<' && !looksLikeTemplateList(input, i) && rewriteBinary(i, '<', "less_than")) {

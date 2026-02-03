@@ -239,6 +239,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin not calls validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(not(0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("builtin clamp calls validate") {
   const std::string source = R"(
 [return<int>]
@@ -321,6 +333,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for builtin and") != std::string::npos);
+}
+
+TEST_CASE("builtin not arity mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(not(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin not") != std::string::npos);
 }
 
 TEST_CASE("builtin clamp arity mismatch fails") {

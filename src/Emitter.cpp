@@ -125,6 +125,10 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
     out = "||";
     return true;
   }
+  if (name == "not") {
+    out = "!";
+    return true;
+  }
   return false;
 }
 
@@ -236,11 +240,17 @@ std::string Emitter::emitExpr(const Expr &expr,
       return out.str();
     }
     const char *cmp = nullptr;
-    if (getBuiltinComparison(expr, cmp) && expr.args.size() == 2) {
+    if (getBuiltinComparison(expr, cmp)) {
       std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap) << " " << cmp << " "
-          << emitExpr(expr.args[1], nameMap) << ")";
-      return out.str();
+      if (expr.args.size() == 1) {
+        out << "(" << cmp << emitExpr(expr.args[0], nameMap) << ")";
+        return out.str();
+      }
+      if (expr.args.size() == 2) {
+        out << "(" << emitExpr(expr.args[0], nameMap) << " " << cmp << " "
+            << emitExpr(expr.args[1], nameMap) << ")";
+        return out.str();
+      }
     }
     if (isBuiltinClamp(expr) && expr.args.size() == 3) {
       std::ostringstream out;
