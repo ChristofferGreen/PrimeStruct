@@ -176,6 +176,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (rewriteBinary(i, '*', "multiply")) {
       continue;
     }
+    if (rewriteBinary(i, '>', "greater_than")) {
+      continue;
+    }
 
     output.push_back(input[i]);
   }

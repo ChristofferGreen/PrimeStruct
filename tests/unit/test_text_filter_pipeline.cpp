@@ -54,6 +54,16 @@ TEST_CASE("rewrites multiply operator without spaces") {
   CHECK(output.find("multiply(a, b)") != std::string::npos);
 }
 
+TEST_CASE("rewrites greater_than operator without spaces") {
+  const std::string source = "main(){ return(a>b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("greater_than(a, b)") != std::string::npos);
+}
+
 TEST_CASE("does not rewrite spaced slash") {
   const std::string source = "main(){ return(a / b) }\n";
   primec::TextFilterPipeline pipeline;
