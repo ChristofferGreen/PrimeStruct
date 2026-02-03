@@ -385,6 +385,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (rewriteBinaryPair(i, '|', '|', "or")) {
       continue;
     }
+    if (rewriteBinary(i, '=', "assign")) {
+      continue;
+    }
     if (rewriteUnaryNot(input, output, i, options)) {
       continue;
     }

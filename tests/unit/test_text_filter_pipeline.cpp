@@ -44,6 +44,16 @@ TEST_CASE("rewrites minus operator without spaces") {
   CHECK(output.find("minus(a, b)") != std::string::npos);
 }
 
+TEST_CASE("rewrites assign operator without spaces") {
+  const std::string source = "main(){ value=2i32 }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(value, 2i32)") != std::string::npos);
+}
+
 TEST_CASE("rewrites multiply operator without spaces") {
   const std::string source = "main(){ return(a*b) }\n";
   primec::TextFilterPipeline pipeline;
