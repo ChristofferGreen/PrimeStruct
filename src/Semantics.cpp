@@ -73,7 +73,7 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal" ||
-      name == "greater_equal" || name == "less_equal") {
+      name == "greater_equal" || name == "less_equal" || name == "and" || name == "or") {
     out = name;
     return true;
   }

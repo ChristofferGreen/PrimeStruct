@@ -117,6 +117,14 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
     out = "<=";
     return true;
   }
+  if (name == "and") {
+    out = "&&";
+    return true;
+  }
+  if (name == "or") {
+    out = "||";
+    return true;
+  }
   return false;
 }
 

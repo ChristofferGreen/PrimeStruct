@@ -158,6 +158,36 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs and operator rewrite") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32&&1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_and_op.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_and_op_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs or operator rewrite") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32||1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_or_op.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_or_op_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs equality operator rewrite") {
   const std::string source = R"(
 [return<int>]
