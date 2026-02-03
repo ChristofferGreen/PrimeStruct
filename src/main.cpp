@@ -1,5 +1,6 @@
 #include "primec/AstPrinter.h"
 #include "primec/Emitter.h"
+#include "primec/IncludeResolver.h"
 #include "primec/Lexer.h"
 #include "primec/Options.h"
 #include "primec/Parser.h"
@@ -95,15 +96,16 @@ int main(int argc, char **argv) {
   }
 
   std::string source;
-  if (!readFile(options.inputPath, source)) {
-    std::cerr << "Failed to read input: " << options.inputPath << "\n";
+  std::string error;
+  primec::IncludeResolver includeResolver;
+  if (!includeResolver.expandIncludes(options.inputPath, source, error)) {
+    std::cerr << "Include error: " << error << "\n";
     return 2;
   }
 
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
-  std::string error;
   if (!parser.parse(program.definitions, program.executions, error)) {
     std::cerr << "Parse error: " << error << "\n";
     return 2;
