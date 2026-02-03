@@ -31,6 +31,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_parser_basic.cpp
     tests/unit/test_include_resolver.cpp
     tests/unit/test_semantics.cpp
+    tests/unit/test_ast_ir_dump.cpp
+    tests/unit/test_parser_errors.cpp
   )
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
