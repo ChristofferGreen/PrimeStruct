@@ -114,6 +114,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
     }
     for (const auto &arg : exec.bodyArguments) {
+      if (arg.kind != Expr::Kind::Call) {
+        error = "execution body arguments must be calls";
+        return false;
+      }
       if (!validateExpr({}, arg)) {
         return false;
       }

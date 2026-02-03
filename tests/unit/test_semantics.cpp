@@ -98,6 +98,25 @@ task()
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
+TEST_CASE("execution body arguments must be calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+execute_repeat(x) {
+  return(x)
+}
+
+execute_repeat(3i32) { 1i32 }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("execution body arguments must be calls") != std::string::npos);
+}
+
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
 [return<float>]
