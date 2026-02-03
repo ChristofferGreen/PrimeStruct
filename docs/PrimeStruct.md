@@ -157,7 +157,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ### Slash paths & textual operator filters
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the uniform envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
-- Textual metafunction filters run before the AST exists. Operator filters (e.g., divide) scan the raw character stream: when a `/` is sandwiched between non-whitespace characters they rewrite the surrounding text (`/foo / /bar` → `divide(/foo, /bar)`), but when `/` begins a path segment (start of line or immediately after whitespace/delimiters) the filter leaves it untouched (`/foo/bar/lol()` stays intact). Other operators follow the same no-whitespace rule (`a>b` → `greater_than(a, b)`, `a==b` → `equal(a, b)`, `a!=b` → `not_equal(a, b)`).
+- Textual metafunction filters run before the AST exists. Operator filters (e.g., divide) scan the raw character stream: when a `/` is sandwiched between non-whitespace characters they rewrite the surrounding text (`/foo / /bar` → `divide(/foo, /bar)`), but when `/` begins a path segment (start of line or immediately after whitespace/delimiters) the filter leaves it untouched (`/foo/bar/lol()` stays intact). Other operators follow the same no-whitespace rule (`a>b` → `greater_than(a, b)`, `a<b` → `less_than(a, b)`, `a==b` → `equal(a, b)`, `a!=b` → `not_equal(a, b)`).
 - Because includes expand first, slash paths survive every filter untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
 
 ### Struct & type categories (draft)

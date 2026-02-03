@@ -17,6 +17,31 @@ bool isDigitChar(char c) {
   return std::isdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+bool looksLikeTemplateList(const std::string &input, size_t index) {
+  if (index >= input.size() || input[index] != '<') {
+    return false;
+  }
+  size_t pos = index + 1;
+  bool sawToken = false;
+  while (pos < input.size()) {
+    char c = input[pos];
+    if (c == '>') {
+      return sawToken;
+    }
+    if (isTokenChar(c)) {
+      sawToken = true;
+      ++pos;
+      continue;
+    }
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
+      ++pos;
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
 std::string maybeAppendI32(const std::string &token) {
   if (token.empty()) {
     return token;
@@ -213,6 +238,9 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
     if (rewriteBinaryPair(i, '!', '=', "not_equal")) {
+      continue;
+    }
+    if (input[i] == '<' && !looksLikeTemplateList(input, i) && rewriteBinary(i, '<', "less_than")) {
       continue;
     }
     if (rewriteBinary(i, '+', "plus")) {
