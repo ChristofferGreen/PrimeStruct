@@ -64,12 +64,12 @@ main() {
   CHECK(stmt.transforms[0].name == "i32");
 }
 
-TEST_CASE("parses execute_if with block arguments") {
+TEST_CASE("parses if with block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(1i32, then_block{ [i32] temp(2i32), assign(value, temp) }, else_block{ assign(value, 3i32) })
+  if(1i32, then{ [i32] temp(2i32), assign(value, temp) }, else{ assign(value, 3i32) })
   return(value)
 }
 )";
@@ -78,10 +78,10 @@ main() {
   REQUIRE(program.definitions[0].statements.size() == 2);
   const auto &stmt = program.definitions[0].statements[1];
   CHECK(stmt.kind == primec::Expr::Kind::Call);
-  CHECK(stmt.name == "execute_if");
+  CHECK(stmt.name == "if");
   REQUIRE(stmt.args.size() == 3);
-  CHECK(stmt.args[1].name == "then_block");
-  CHECK(stmt.args[2].name == "else_block");
+  CHECK(stmt.args[1].name == "then");
+  CHECK(stmt.args[2].name == "else");
   CHECK(stmt.args[1].bodyArguments.size() == 2);
   CHECK(stmt.args[2].bodyArguments.size() == 1);
   CHECK(stmt.args[1].bodyArguments[0].isBinding);

@@ -132,7 +132,7 @@ module {
 - **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical.
 - **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_stdout)]`. Standard library routines permit stdout/stderr logging; backends reject unsupported effects (e.g., GPU code requesting filesystem access).
 - **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private.
-- **Transform-driven control flow:** control structures desugar into prefix calls (`if(cond, then_block{…}, else_block{…})`). Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
+- **Transform-driven control flow:** control structures desugar into prefix calls (`if(cond, then{…}, else{…})`). Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure(42)`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
 ### Example function syntax
@@ -207,7 +207,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time.
 - **`plus`, `minus`, `multiply`, `divide`:** arithmetic wrappers used after operator desugaring.
 - **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts.
-- **`execute_if<Bool>(cond, then_block{…}, else_block{…})`:** canonical conditional form after control-flow desugaring.
+- **`if<Bool>(cond, then{…}, else{…})`:** canonical conditional form after control-flow desugaring.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; implicit `return(void)` fires at end-of-body when omitted.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
@@ -296,10 +296,10 @@ include<"/std/io", version="1.2.0">
 [default_operators] execute_add<int>(x, y)
 
 clamp_exposure(img) {
-  execute_if<bool>(
+  if<bool>(
     greater_than(img.exposure, 1.0f),
-    then_block{ notify("/warn/exposure", img.exposure); },
-    else_block{ }
+    then{ notify("/warn/exposure", img.exposure); },
+    else{ }
   );
 }
 
@@ -321,10 +321,10 @@ float blend(float a, float b) {
 // Canonical, post-transform form
 [return<float>] blend<float>(a, b) {
   assign(result, multiply(plus(a, b), 0.5f));
-  execute_if<bool>(
+  if<bool>(
     greater_than(result, 1.0f),
-    then_block{ assign(result, 1.0f); },
-    else_block{ }
+    then{ assign(result, 1.0f); },
+    else{ }
   );
   return(result);
 }

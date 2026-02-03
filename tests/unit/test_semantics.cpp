@@ -233,12 +233,12 @@ main() {
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
-TEST_CASE("execute_if validates block arguments") {
+TEST_CASE("if validates block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(1i32, then_block{ [i32] temp(2i32), assign(value, temp) }, else_block{ assign(value, 3i32) })
+  if(1i32, then{ [i32] temp(2i32), assign(value, temp) }, else{ assign(value, 3i32) })
   return(value)
 }
 )";
@@ -247,18 +247,18 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("execute_if missing else fails") {
+TEST_CASE("if missing else fails") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(1i32, then_block{ assign(value, 2i32) })
+  if(1i32, then{ assign(value, 2i32) })
   return(value)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("execute_if requires condition") != std::string::npos);
+  CHECK(error.find("if requires condition") != std::string::npos);
 }
 
 TEST_CASE("binding not allowed in expression") {

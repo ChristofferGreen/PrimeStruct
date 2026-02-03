@@ -89,16 +89,16 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   return name == nameToMatch;
 }
 
-bool isExecuteIfCall(const Expr &expr) {
-  return isSimpleCallName(expr, "execute_if");
+bool isIfCall(const Expr &expr) {
+  return isSimpleCallName(expr, "if");
 }
 
-bool isThenBlockCall(const Expr &expr) {
-  return isSimpleCallName(expr, "then_block");
+bool isThenCall(const Expr &expr) {
+  return isSimpleCallName(expr, "then");
 }
 
-bool isElseBlockCall(const Expr &expr) {
-  return isSimpleCallName(expr, "else_block");
+bool isElseCall(const Expr &expr) {
+  return isSimpleCallName(expr, "else");
 }
 
 bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
@@ -201,10 +201,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         return false;
       }
       if (!expr.bodyArguments.empty()) {
-        error = "block arguments are only supported on execute_if blocks";
+        error = "block arguments are only supported on if blocks";
         return false;
       }
-      if (isExecuteIfCall(expr) || isThenBlockCall(expr) || isElseBlockCall(expr)) {
+      if (isIfCall(expr) || isThenCall(expr) || isElseCall(expr)) {
         error = "control-flow blocks cannot appear in expressions";
         return false;
       }
@@ -288,13 +288,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       error = "statements must be calls";
       return false;
     }
-    if (isExecuteIfCall(stmt)) {
+    if (isIfCall(stmt)) {
       if (!stmt.bodyArguments.empty()) {
-        error = "execute_if does not accept trailing block arguments";
+        error = "if does not accept trailing block arguments";
         return false;
       }
       if (stmt.args.size() != 3) {
-        error = "execute_if requires condition, then_block, else_block";
+        error = "if requires condition, then, else";
         return false;
       }
       const Expr &cond = stmt.args[0];
@@ -308,8 +308,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           error = std::string(label) + " must be a call";
           return false;
         }
-        if ((std::string(label) == "then_block" && !isThenBlockCall(block)) ||
-            (std::string(label) == "else_block" && !isElseBlockCall(block))) {
+        if ((std::string(label) == "then" && !isThenCall(block)) ||
+            (std::string(label) == "else" && !isElseCall(block))) {
           error = std::string(label) + " must use the " + label + " wrapper";
           return false;
         }
@@ -325,16 +325,16 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         return true;
       };
-      if (!validateBlock(thenBlock, "then_block")) {
+      if (!validateBlock(thenBlock, "then")) {
         return false;
       }
-      if (!validateBlock(elseBlock, "else_block")) {
+      if (!validateBlock(elseBlock, "else")) {
         return false;
       }
       return true;
     }
     if (!stmt.bodyArguments.empty()) {
-      error = "block arguments are only supported on execute_if";
+      error = "block arguments are only supported on if";
       return false;
     }
     return validateExpr(params, locals, stmt);

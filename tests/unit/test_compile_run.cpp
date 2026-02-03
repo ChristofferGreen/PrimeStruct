@@ -128,17 +128,17 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs execute_if") {
+TEST_CASE("compiles and runs if") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(0i32, then_block{ [i32] temp(4i32), assign(value, temp) }, else_block{ assign(value, 9i32) })
+  if(0i32, then{ [i32] temp(4i32), assign(value, temp) }, else{ assign(value, 9i32) })
   return(value)
 }
 )";
-  const std::string srcPath = writeTemp("compile_execute_if.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_execute_if_exe").string();
+  const std::string srcPath = writeTemp("compile_if.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

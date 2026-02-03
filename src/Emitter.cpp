@@ -124,20 +124,20 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   return name == nameToMatch;
 }
 
-bool isBuiltinExecuteIf(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
+bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
   std::string full = resolveExprPath(expr);
   if (nameMap.count(full) > 0) {
     return false;
   }
-  return isSimpleCallName(expr, "execute_if");
+  return isSimpleCallName(expr, "if");
 }
 
-bool isThenBlockCall(const Expr &expr) {
-  return isSimpleCallName(expr, "then_block");
+bool isThenCall(const Expr &expr) {
+  return isSimpleCallName(expr, "then");
 }
 
-bool isElseBlockCall(const Expr &expr) {
-  return isSimpleCallName(expr, "else_block");
+bool isElseCall(const Expr &expr) {
+  return isSimpleCallName(expr, "else");
 }
 } // namespace
 
@@ -222,18 +222,18 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << ";\n";
         return;
       }
-      if (isBuiltinExecuteIf(stmt, nameMap) && stmt.args.size() == 3) {
+      if (isBuiltinIf(stmt, nameMap) && stmt.args.size() == 3) {
         const Expr &cond = stmt.args[0];
         const Expr &thenBlock = stmt.args[1];
         const Expr &elseBlock = stmt.args[2];
         out << pad << "if (" << emitExpr(cond, nameMap) << ") {\n";
-        if (isThenBlockCall(thenBlock)) {
+        if (isThenCall(thenBlock)) {
           for (const auto &bodyStmt : thenBlock.bodyArguments) {
             emitStatement(bodyStmt, indent + 1);
           }
         }
         out << pad << "} else {\n";
-        if (isElseBlockCall(elseBlock)) {
+        if (isElseCall(elseBlock)) {
           for (const auto &bodyStmt : elseBlock.bodyArguments) {
             emitStatement(bodyStmt, indent + 1);
           }
