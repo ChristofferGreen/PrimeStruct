@@ -54,4 +54,34 @@ main() {
   CHECK(error.find("integer literal out of range") != std::string::npos);
 }
 
+TEST_CASE("minimum i32 literal succeeds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(-2147483648i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("below minimum i32 literal fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(-2147483649i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("integer literal out of range") != std::string::npos);
+}
+
 TEST_SUITE_END();
