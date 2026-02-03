@@ -133,6 +133,22 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs operator rewrite with unary minus operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(2i32)
+  return(3i32+-value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_ops_unary_minus.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ops_unary_minus_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs assignment operator rewrite") {
   const std::string source = R"(
 [return<int>]

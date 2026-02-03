@@ -74,6 +74,46 @@ TEST_CASE("rewrites plus operator with negative literal") {
   CHECK(output.find("plus(-1i32, 2i32)") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus operator with unary minus operand") {
+  const std::string source = "main(){ return(a+-b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(a, negate(b))") != std::string::npos);
+}
+
+TEST_CASE("rewrites multiply operator with unary minus operand") {
+  const std::string source = "main(){ return(a*-b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("multiply(a, negate(b))") != std::string::npos);
+}
+
+TEST_CASE("rewrites assign with unary minus operand") {
+  const std::string source = "main(){ value=-b }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(value, negate(b))") != std::string::npos);
+}
+
+TEST_CASE("rewrites multiply with negative numeric literal") {
+  const std::string source = "main(){ return(1i32*-2i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("multiply(1i32, -2i32)") != std::string::npos);
+}
+
 TEST_CASE("rewrites minus operator without spaces") {
   const std::string source = "main(){ return(a-b) }\n";
   primec::TextFilterPipeline pipeline;

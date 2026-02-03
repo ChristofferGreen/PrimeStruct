@@ -37,7 +37,23 @@ bool isUnaryPrefixPosition(const std::string &input, size_t index) {
   if (prev == ')' || prev == ']' || prev == '}') {
     return false;
   }
-  return isSeparator(prev);
+  if (isSeparator(prev)) {
+    return true;
+  }
+  switch (prev) {
+  case '+':
+  case '-':
+  case '*':
+  case '/':
+  case '=':
+  case '<':
+  case '>':
+  case '&':
+  case '|':
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool isRightOperandStartChar(const std::string &input, size_t index) {
@@ -291,6 +307,15 @@ std::string stripOuterParens(const std::string &text) {
   return text.substr(1, text.size() - 2);
 }
 
+std::string normalizeUnaryOperand(const std::string &operand) {
+  if (operand.size() > 1 && operand[0] == '-' && !isDigitChar(operand[1])) {
+    std::string inner = operand.substr(1);
+    inner = stripOuterParens(inner);
+    return "negate(" + inner + ")";
+  }
+  return operand;
+}
+
 bool looksLikeTemplateList(const std::string &input, size_t index) {
   if (index >= input.size() || input[index] != '<') {
     return false;
@@ -467,6 +492,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     std::string left = output.substr(start, end - start);
     left = stripOuterParens(left);
+    left = normalizeUnaryOperand(left);
     if (options.implicitI32Suffix) {
       left = maybeAppendI32(left);
     }
@@ -477,6 +503,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     std::string right = input.substr(rightStart, rightEnd - rightStart);
     right = stripOuterParens(right);
+    right = normalizeUnaryOperand(right);
     if (options.implicitI32Suffix) {
       right = maybeAppendI32(right);
     }
@@ -505,6 +532,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     std::string left = output.substr(start, end - start);
     left = stripOuterParens(left);
+    left = normalizeUnaryOperand(left);
     if (options.implicitI32Suffix) {
       left = maybeAppendI32(left);
     }
@@ -515,6 +543,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     std::string right = input.substr(rightStart, rightEnd - rightStart);
     right = stripOuterParens(right);
+    right = normalizeUnaryOperand(right);
     if (options.implicitI32Suffix) {
       right = maybeAppendI32(right);
     }
@@ -594,7 +623,7 @@ bool TextFilterPipeline::apply(const std::string &input,
       if (isDigitChar(input[i]) && (i == 0 || (!isTokenChar(input[i - 1]) && input[i - 1] != '.'))) {
         startsNumber = true;
       } else if (input[i] == '-' && i + 1 < input.size() && isDigitChar(input[i + 1]) &&
-                 (i == 0 || isSeparator(input[i - 1]))) {
+                 isUnaryPrefixPosition(input, i)) {
         startsNumber = true;
       }
       if (startsNumber) {
