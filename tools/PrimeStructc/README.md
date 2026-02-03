@@ -13,6 +13,7 @@ clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 ```
 ./primec --emit=cpp input.prime -o build/hello.cpp
 ./primec --emit=exe input.prime -o build/hello --entry /main
+./primec --dump-stage ast input.prime -o /tmp/ignored
 ```
 
 ## Supported subset
@@ -25,6 +26,7 @@ clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 - Calls to other definitions with matching argument counts.
 - Template lists (`<...>`) are parsed and preserved but ignored by codegen.
 - Executions parse argument expressions and `{...}` body argument lists (ignored by codegen).
+- `--dump-stage ast` prints a simple AST dump and exits.
 - `namespace` blocks for path prefixes.
 - `--entry /path` selects the entry definition (defaults to `/main`).
 

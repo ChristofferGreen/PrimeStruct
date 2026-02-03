@@ -8,5 +8,6 @@ struct Options {
   std::string inputPath;
   std::string outputPath;
   std::string entryPath = "/main";
+  std::string dumpStage;
 };
 } // namespace primec

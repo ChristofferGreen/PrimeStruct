@@ -1,3 +1,4 @@
+#include "primec/AstPrinter.h"
 #include "primec/Emitter.h"
 #include "primec/Lexer.h"
 #include "primec/Options.h"
@@ -23,6 +24,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.entryPath = argv[++i];
     } else if (arg.rfind("--entry=", 0) == 0) {
       out.entryPath = arg.substr(std::string("--entry=").size());
+    } else if (arg == "--dump-stage" && i + 1 < argc) {
+      out.dumpStage = argv[++i];
+    } else if (arg.rfind("--dump-stage=", 0) == 0) {
+      out.dumpStage = arg.substr(std::string("--dump-stage=").size());
     } else if (!arg.empty() && arg[0] == '-') {
       return false;
     } else {
@@ -34,7 +39,13 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
   } else if (out.entryPath[0] != '/') {
     out.entryPath = "/" + out.entryPath;
   }
-  return !out.emitKind.empty() && !out.inputPath.empty() && !out.outputPath.empty();
+  if (out.inputPath.empty()) {
+    return false;
+  }
+  if (!out.dumpStage.empty()) {
+    return true;
+  }
+  return !out.emitKind.empty() && !out.outputPath.empty();
 }
 
 bool readFile(const std::string &path, std::string &out) {
@@ -79,7 +90,7 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path]\n";
+    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] [--dump-stage ast]\n";
     return 2;
   }
 
@@ -96,6 +107,16 @@ int main(int argc, char **argv) {
   if (!parser.parse(program.definitions, program.executions, error)) {
     std::cerr << "Parse error: " << error << "\n";
     return 2;
+  }
+
+  if (!options.dumpStage.empty()) {
+    if (options.dumpStage != "ast") {
+      std::cerr << "Unsupported dump stage: " << options.dumpStage << "\n";
+      return 2;
+    }
+    primec::AstPrinter printer;
+    std::cout << printer.print(program);
+    return 0;
   }
 
   primec::Semantics semantics;
