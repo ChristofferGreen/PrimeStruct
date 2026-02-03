@@ -193,6 +193,36 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs equal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(equal(3i32, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_equal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_equal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs not_equal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(not_equal(3i32, 4i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_not_equal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_not_equal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs clamp") {
   const std::string source = R"(
 [return<int>]

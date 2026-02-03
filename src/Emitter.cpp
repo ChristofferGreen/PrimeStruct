@@ -101,6 +101,14 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
     out = "<";
     return true;
   }
+  if (name == "equal") {
+    out = "==";
+    return true;
+  }
+  if (name == "not_equal") {
+    out = "!=";
+    return true;
+  }
   return false;
 }
 
