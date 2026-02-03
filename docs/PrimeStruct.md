@@ -33,7 +33,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
-- Integer literal support (signed 32-bit).
+- Integer literal support (signed 32-bit, requires `i32` suffix).
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 
@@ -76,7 +76,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
-- Integer literal support (signed 32-bit).
+- Integer literal support (signed 32-bit, requires `i32` suffix).
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 
@@ -260,6 +260,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ## Literals & Composite Construction (draft)
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42u32`, `1.0f64`).
+  - v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean & null:** keywords `true`, `false`, `null` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation.

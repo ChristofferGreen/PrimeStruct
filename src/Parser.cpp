@@ -502,9 +502,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     expr.kind = Expr::Kind::Literal;
     expr.namespacePrefix = namespacePrefix;
     std::string text = number.text;
-    if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i32") == 0) {
-      text = text.substr(0, text.size() - 3);
+    if (text.size() < 3 || text.compare(text.size() - 3, 3, "i32") != 0) {
+      return fail("integer literal requires i32 suffix");
     }
+    text = text.substr(0, text.size() - 3);
     try {
       long long value = std::stoll(text);
       if (value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) {

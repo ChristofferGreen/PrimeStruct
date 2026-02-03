@@ -156,4 +156,19 @@ main() {
   CHECK(error.find("integer literal out of range") != std::string::npos);
 }
 
+TEST_CASE("integer literal requires suffix") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(42)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("integer literal requires i32 suffix") != std::string::npos);
+}
+
 TEST_SUITE_END();
