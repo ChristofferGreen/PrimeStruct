@@ -8,7 +8,7 @@ namespace primec {
 namespace {
 bool isReservedKeyword(const std::string &text) {
   return text == "mut" || text == "return" || text == "include" || text == "namespace" || text == "true" ||
-         text == "false" || text == "null";
+         text == "false";
 }
 } // namespace
 
@@ -571,7 +571,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (name.kind == TokenKind::End) {
       return false;
     }
-    if (name.text == "true" || name.text == "false" || name.text == "null") {
+    if (name.text == "true" || name.text == "false") {
       expr.kind = Expr::Kind::Literal;
       expr.namespacePrefix = namespacePrefix;
       expr.literalValue = name.text == "true" ? 1 : 0;

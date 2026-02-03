@@ -122,7 +122,7 @@ module {
 - **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 
 ## Language Design Highlights
-- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, `false`, and `null` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
+- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
 - **Uniform envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
@@ -262,7 +262,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42u32`, `1.0f64`).
   - v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; the default compiler pipeline enables implicit `i32` suffixing unless `--no-implicit-i32` is passed.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
-- **Boolean & null:** keywords `true`, `false`, `null` map to backend equivalents.
+- **Boolean:** keywords `true`, `false` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation.
 - **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms.
