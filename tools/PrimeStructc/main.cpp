@@ -106,7 +106,8 @@ struct Definition {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   std::vector<std::string> parameters;
-  Expr returnExpr;
+  std::vector<Expr> statements;
+  std::optional<Expr> returnExpr;
 };
 
 struct Execution {
@@ -389,32 +390,70 @@ private:
     if (!expect(TokenKind::LBrace, "expected '{' to start body")) {
       return false;
     }
-    Token name = consume(TokenKind::Identifier, "expected statement");
-    if (name.kind == TokenKind::End) {
-      return false;
+    while (!match(TokenKind::RBrace)) {
+      if (match(TokenKind::End)) {
+        return fail("unexpected end of file inside definition body");
+      }
+      Token name = consume(TokenKind::Identifier, "expected statement");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      if (name.text == "return") {
+        if (def.returnExpr) {
+          return fail("multiple return statements are not supported");
+        }
+        Expr returnCall = {};
+        returnCall.kind = Expr::Kind::Call;
+        returnCall.name = name.text;
+        returnCall.namespacePrefix = def.namespacePrefix;
+        if (!expect(TokenKind::LParen, "expected '(' after return")) {
+          return false;
+        }
+        Expr arg;
+        if (!parseExpr(arg, def.namespacePrefix)) {
+          return false;
+        }
+        returnCall.args.push_back(std::move(arg));
+        if (!expect(TokenKind::RParen, "expected ')' after return argument")) {
+          return false;
+        }
+        def.returnExpr = returnCall.args.front();
+        if (!expect(TokenKind::RBrace, "expected '}' after return statement")) {
+          return false;
+        }
+        return true;
+      }
+
+      Expr callExpr;
+      callExpr.kind = Expr::Kind::Call;
+      callExpr.name = name.text;
+      callExpr.namespacePrefix = def.namespacePrefix;
+      if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
+        return false;
+      }
+      if (!match(TokenKind::RParen)) {
+        while (true) {
+          Expr arg;
+          if (!parseExpr(arg, def.namespacePrefix)) {
+            return false;
+          }
+          callExpr.args.push_back(std::move(arg));
+          if (match(TokenKind::Comma)) {
+            expect(TokenKind::Comma, "expected ','");
+          } else {
+            break;
+          }
+        }
+      }
+      if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
+        return false;
+      }
+      def.statements.push_back(std::move(callExpr));
     }
-    if (name.text != "return") {
-      return fail("only return(...) is supported inside definitions");
+    expect(TokenKind::RBrace, "expected '}' to close body");
+    if (!def.returnExpr) {
+      return fail("missing return statement in definition body");
     }
-    Expr returnCall = {};
-    returnCall.kind = Expr::Kind::Call;
-    returnCall.name = name.text;
-    returnCall.namespacePrefix = def.namespacePrefix;
-    if (!expect(TokenKind::LParen, "expected '(' after return")) {
-      return false;
-    }
-    Expr arg;
-    if (!parseExpr(arg, def.namespacePrefix)) {
-      return false;
-    }
-    returnCall.args.push_back(std::move(arg));
-    if (!expect(TokenKind::RParen, "expected ')' after return argument")) {
-      return false;
-    }
-    if (!expect(TokenKind::RBrace, "expected '}' to close body")) {
-      return false;
-    }
-    def.returnExpr = returnCall.args.front();
     return true;
   }
 
@@ -612,7 +651,16 @@ bool validateProgram(const Program &program, const std::string &entryPath, std::
   };
 
   for (const auto &def : program.definitions) {
-    if (!validateExpr(def, def.returnExpr)) {
+    for (const auto &stmt : def.statements) {
+      if (!validateExpr(def, stmt)) {
+        return false;
+      }
+    }
+    if (!def.returnExpr) {
+      error = "missing return statement in " + def.fullPath;
+      return false;
+    }
+    if (!validateExpr(def, *def.returnExpr)) {
       return false;
     }
   }
@@ -683,7 +731,12 @@ std::string emitCpp(const Program &program, const std::string &entryPath) {
       }
       out << "int " << def.parameters[i];
     }
-    out << ") { return " << emitExpr(def.returnExpr, nameMap) << "; }\n";
+    out << ") {\n";
+    for (const auto &stmt : def.statements) {
+      out << "  " << emitExpr(stmt, nameMap) << ";\n";
+    }
+    out << "  return " << emitExpr(*def.returnExpr, nameMap) << ";\n";
+    out << "}\n";
   }
 
   out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";

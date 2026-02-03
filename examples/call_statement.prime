@@ -1,0 +1,10 @@
+[return<int>]
+helper() {
+  return(3i32)
+}
+
+[return<int>]
+main() {
+  helper()
+  return(7i32)
+}
