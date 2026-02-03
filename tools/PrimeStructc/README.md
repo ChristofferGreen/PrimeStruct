@@ -17,7 +17,7 @@ clang++ -std=c++23 -O2 tools/PrimeStructc/main.cpp -o tools/PrimeStructc/PrimeSt
 
 ## Supported subset
 
-- `[return<int>]` on definitions.
+- Optional `[return<int>]` on definitions (only `int` supported so far).
 - Integer literals with optional `i32` suffix.
 - `return(<expr>)` where `<expr>` is a literal, name, or call.
 - Definitions with zero or more parameters (all `int` for now).

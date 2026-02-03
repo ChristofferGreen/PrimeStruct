@@ -517,16 +517,13 @@ bool validateProgram(const Program &program, const std::string &entryPath, std::
       error = "duplicate definition: " + def.fullPath;
       return false;
     }
-    bool hasReturnTransform = false;
     for (const auto &transform : def.transforms) {
-      if (transform.name == "return" && transform.templateArg && *transform.templateArg == "int") {
-        hasReturnTransform = true;
-        break;
+      if (transform.name == "return") {
+        if (!transform.templateArg || *transform.templateArg != "int") {
+          error = "unsupported return type on " + def.fullPath;
+          return false;
+        }
       }
-    }
-    if (!hasReturnTransform) {
-      error = "missing [return<int>] on " + def.fullPath;
-      return false;
     }
     defMap[def.fullPath] = &def;
   }
