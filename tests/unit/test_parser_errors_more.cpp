@@ -51,7 +51,7 @@ main() {
   CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
-TEST_CASE("missing return turns into execution") {
+TEST_CASE("missing return fails in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -62,11 +62,8 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK(parser.parse(program.definitions, program.executions, error));
-  CHECK(error.empty());
-  CHECK(program.definitions.empty());
-  CHECK(program.executions.size() == 1);
-  CHECK(program.executions[0].fullPath == "/main");
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("missing return statement in definition body") != std::string::npos);
 }
 
 TEST_CASE("out of range literal fails") {

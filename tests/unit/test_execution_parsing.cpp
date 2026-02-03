@@ -3,21 +3,9 @@
 
 #include "third_party/doctest.h"
 
-namespace {
-primec::Program parseProgram(const std::string &source) {
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK(parser.parse(program.definitions, program.executions, error));
-  CHECK(error.empty());
-  return program;
-}
-} // namespace
-
 TEST_SUITE_BEGIN("primestruct.parser.executions");
 
-TEST_CASE("parses execution with empty body") {
+TEST_CASE("rejects execution with empty body") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -26,13 +14,15 @@ main() {
 
 execute_task(1i32) { }
 )";
-  const auto program = parseProgram(source);
-  REQUIRE(program.executions.size() == 1);
-  CHECK(program.executions[0].arguments.size() == 1);
-  CHECK(program.executions[0].bodyArguments.empty());
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 
-TEST_CASE("parses execution with body arguments") {
+TEST_CASE("rejects execution with body arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -41,10 +31,12 @@ main() {
 
 execute_repeat(3i32) { main(), main() }
 )";
-  const auto program = parseProgram(source);
-  REQUIRE(program.executions.size() == 1);
-  CHECK(program.executions[0].arguments.size() == 1);
-  CHECK(program.executions[0].bodyArguments.size() == 2);
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 
 TEST_SUITE_END();

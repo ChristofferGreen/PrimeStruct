@@ -31,7 +31,7 @@ main() {
   CHECK(program.executions.empty());
 }
 
-TEST_CASE("parses execution with arguments and body") {
+TEST_CASE("rejects execution with arguments and body") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -40,12 +40,12 @@ main() {
 
 execute_repeat(3i32) { main() }
 )";
-
-  const auto program = parseProgram(source);
-  CHECK(program.executions.size() == 1);
-  CHECK(program.executions[0].fullPath == "/execute_repeat");
-  CHECK(program.executions[0].arguments.size() == 1);
-  CHECK(program.executions[0].bodyArguments.size() == 1);
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 
 TEST_SUITE_END();

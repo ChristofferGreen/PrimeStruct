@@ -53,6 +53,7 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
 }
 
 bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs) {
+  (void)execs;
   std::vector<Transform> transforms;
   if (match(TokenKind::LBracket)) {
     if (!parseTransformList(transforms)) {
@@ -72,61 +73,30 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }
-  bool isDefinition = isDefinitionSignature();
-  if (isDefinition) {
-    std::vector<std::string> parameters;
-    if (!parseIdentifierList(parameters)) {
-      return false;
-    }
-    if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
-      return false;
-    }
-    if (!match(TokenKind::LBrace)) {
-      return fail("definitions must have a body");
-    }
-    Definition def;
-    def.name = name.text;
-    def.namespacePrefix = currentNamespacePrefix();
-    def.fullPath = makeFullPath(def.name, def.namespacePrefix);
-    def.transforms = std::move(transforms);
-    def.templateArgs = {};
-    def.parameters = std::move(parameters);
-    if (!parseDefinitionBody(def)) {
-      return false;
-    }
-    defs.push_back(std::move(def));
-    return true;
+  if (!match(TokenKind::Identifier) && !match(TokenKind::RParen)) {
+    return fail("executions are not supported in v0.1");
   }
-
-  std::vector<Expr> arguments;
-  if (!parseExprList(arguments, currentNamespacePrefix())) {
+  std::vector<std::string> parameters;
+  if (!parseIdentifierList(parameters)) {
     return false;
   }
-  if (!expect(TokenKind::RParen, "expected ')' after arguments")) {
+  if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
     return false;
   }
-
   if (!match(TokenKind::LBrace)) {
-    Execution exec;
-    exec.name = name.text;
-    exec.namespacePrefix = currentNamespacePrefix();
-    exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
-    exec.templateArgs = {};
-    exec.arguments = std::move(arguments);
-    execs.push_back(std::move(exec));
-    return true;
+    return fail("executions are not supported in v0.1");
   }
-
-  Execution exec;
-  exec.name = name.text;
-  exec.namespacePrefix = currentNamespacePrefix();
-  exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
-  exec.templateArgs = {};
-  exec.arguments = std::move(arguments);
-  if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
+  Definition def;
+  def.name = name.text;
+  def.namespacePrefix = currentNamespacePrefix();
+  def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+  def.transforms = std::move(transforms);
+  def.templateArgs = {};
+  def.parameters = std::move(parameters);
+  if (!parseDefinitionBody(def)) {
     return false;
   }
-  execs.push_back(std::move(exec));
+  defs.push_back(std::move(def));
   return true;
 }
 
@@ -248,58 +218,6 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     return false;
   }
   return true;
-}
-
-bool Parser::isDefinitionSignature() const {
-  size_t index = pos_;
-  int depth = 1;
-  bool paramsAreIdentifiers = true;
-  while (index < tokens_.size()) {
-    TokenKind kind = tokens_[index].kind;
-    if (kind == TokenKind::LParen) {
-      ++depth;
-    } else if (kind == TokenKind::RParen) {
-      --depth;
-      if (depth == 0) {
-        break;
-      }
-    } else if (depth == 1) {
-      if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
-        paramsAreIdentifiers = false;
-      }
-    }
-    ++index;
-  }
-  if (depth != 0) {
-    return false;
-  }
-  if (!paramsAreIdentifiers) {
-    return false;
-  }
-  if (index + 1 >= tokens_.size()) {
-    return false;
-  }
-  if (tokens_[index + 1].kind != TokenKind::LBrace) {
-    return false;
-  }
-
-  size_t braceIndex = index + 1;
-  int braceDepth = 0;
-  while (braceIndex < tokens_.size()) {
-    TokenKind kind = tokens_[braceIndex].kind;
-    if (kind == TokenKind::LBrace) {
-      ++braceDepth;
-    } else if (kind == TokenKind::RBrace) {
-      --braceDepth;
-      if (braceDepth == 0) {
-        break;
-      }
-    } else if (kind == TokenKind::Identifier && tokens_[braceIndex].text == "return") {
-      return true;
-    }
-    ++braceIndex;
-  }
-  return false;
 }
 
 bool Parser::parseDefinitionBody(Definition &def) {
