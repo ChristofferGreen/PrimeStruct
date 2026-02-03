@@ -87,4 +87,18 @@ main() {
   CHECK(stmt.args[1].bodyArguments[0].isBinding);
 }
 
+TEST_CASE("parses boolean literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(true)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(program.definitions[0].returnExpr->literalValue == 1);
+}
+
 TEST_SUITE_END();

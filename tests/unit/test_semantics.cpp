@@ -273,4 +273,16 @@ main() {
   CHECK(error.find("binding not allowed in expression") != std::string::npos);
 }
 
+TEST_CASE("boolean literal validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(false)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

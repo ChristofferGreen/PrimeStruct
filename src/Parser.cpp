@@ -571,6 +571,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (name.kind == TokenKind::End) {
       return false;
     }
+    if (name.text == "true" || name.text == "false" || name.text == "null") {
+      expr.kind = Expr::Kind::Literal;
+      expr.namespacePrefix = namespacePrefix;
+      expr.literalValue = name.text == "true" ? 1 : 0;
+      return true;
+    }
     if (isReservedKeyword(name.text)) {
       return fail("reserved keyword cannot be used as identifier: " + name.text);
     }

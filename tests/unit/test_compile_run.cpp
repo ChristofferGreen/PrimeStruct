@@ -145,6 +145,21 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs boolean literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(true)
+}
+)";
+  const std::string srcPath = writeTemp("compile_bool.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_bool_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]
