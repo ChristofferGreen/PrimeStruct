@@ -238,7 +238,7 @@ TEST_CASE("execute_if validates block arguments") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(1i32, then_block{ assign(value, 2i32) }, else_block{ assign(value, 3i32) })
+  execute_if(1i32, then_block{ [i32] temp(2i32), assign(value, temp) }, else_block{ assign(value, 3i32) })
   return(value)
 }
 )";
@@ -259,6 +259,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("execute_if requires condition") != std::string::npos);
+}
+
+TEST_CASE("binding not allowed in expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([i32] value(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding not allowed in expression") != std::string::npos);
 }
 
 TEST_SUITE_END();

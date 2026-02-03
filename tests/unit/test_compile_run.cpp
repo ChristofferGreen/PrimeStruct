@@ -133,7 +133,7 @@ TEST_CASE("compiles and runs execute_if") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(0i32, then_block{ assign(value, 4i32) }, else_block{ assign(value, 9i32) })
+  execute_if(0i32, then_block{ [i32] temp(4i32), assign(value, temp) }, else_block{ assign(value, 9i32) })
   return(value)
 }
 )";

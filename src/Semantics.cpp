@@ -196,6 +196,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     if (expr.kind == Expr::Kind::Call) {
+      if (expr.isBinding) {
+        error = "binding not allowed in expression context";
+        return false;
+      }
       if (!expr.bodyArguments.empty()) {
         error = "block arguments are only supported on execute_if blocks";
         return false;
@@ -257,11 +261,29 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   };
 
-  std::function<bool(const std::vector<std::string> &, const std::unordered_map<std::string, BindingInfo> &,
-                     const Expr &)>
+  std::function<bool(const std::vector<std::string> &, std::unordered_map<std::string, BindingInfo> &, const Expr &)>
       validateStatement = [&](const std::vector<std::string> &params,
-                              const std::unordered_map<std::string, BindingInfo> &locals,
+                              std::unordered_map<std::string, BindingInfo> &locals,
                               const Expr &stmt) -> bool {
+    if (stmt.isBinding) {
+      if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
+        error = "duplicate binding name: " + stmt.name;
+        return false;
+      }
+      BindingInfo info;
+      if (!parseBindingInfo(stmt, info, error)) {
+        return false;
+      }
+      if (stmt.args.size() != 1) {
+        error = "binding requires exactly one argument";
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front())) {
+        return false;
+      }
+      locals.emplace(stmt.name, info);
+      return true;
+    }
     if (stmt.kind != Expr::Kind::Call) {
       error = "statements must be calls";
       return false;
@@ -295,8 +317,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           error = std::string(label) + " does not accept arguments";
           return false;
         }
+        std::unordered_map<std::string, BindingInfo> blockLocals = locals;
         for (const auto &bodyExpr : block.bodyArguments) {
-          if (!validateStatement(params, locals, bodyExpr)) {
+          if (!validateStatement(params, blockLocals, bodyExpr)) {
             return false;
           }
         }
@@ -325,27 +348,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       kind = kindIt->second;
     }
     for (const auto &stmt : def.statements) {
-      if (stmt.isBinding) {
-        if (isParam(def.parameters, stmt.name) || locals.count(stmt.name) > 0) {
-          error = "duplicate binding name: " + stmt.name;
-          return false;
-        }
-        BindingInfo info;
-        if (!parseBindingInfo(stmt, info, error)) {
-          return false;
-        }
-        if (stmt.args.size() != 1) {
-          error = "binding requires exactly one argument";
-          return false;
-        }
-        if (!validateExpr(def.parameters, locals, stmt.args.front())) {
-          return false;
-        }
-        locals.emplace(stmt.name, info);
-      } else {
-        if (!validateStatement(def.parameters, locals, stmt)) {
-          return false;
-        }
+      if (!validateStatement(def.parameters, locals, stmt)) {
+        return false;
       }
     }
     if (kind == ReturnKind::Void) {
@@ -380,12 +384,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         return false;
       }
     }
+    std::unordered_map<std::string, BindingInfo> execLocals;
     for (const auto &arg : exec.bodyArguments) {
       if (arg.kind != Expr::Kind::Call) {
         error = "execution body arguments must be calls";
         return false;
       }
-      if (!validateStatement({}, std::unordered_map<std::string, BindingInfo>{}, arg)) {
+      if (!validateStatement({}, execLocals, arg)) {
         return false;
       }
     }

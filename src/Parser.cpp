@@ -494,6 +494,55 @@ bool Parser::parseDefinitionBody(Definition &def) {
 }
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
+  if (match(TokenKind::LBracket)) {
+    std::vector<Transform> transforms;
+    if (!parseTransformList(transforms)) {
+      return false;
+    }
+    Token name = consume(TokenKind::Identifier, "expected identifier");
+    if (name.kind == TokenKind::End) {
+      return false;
+    }
+    if (isReservedKeyword(name.text)) {
+      return fail("reserved keyword cannot be used as identifier: " + name.text);
+    }
+    std::vector<std::string> templateArgs;
+    if (match(TokenKind::LAngle)) {
+      if (!parseTemplateList(templateArgs)) {
+        return false;
+      }
+    }
+    if (!match(TokenKind::LParen)) {
+      return fail("binding requires argument list");
+    }
+    expect(TokenKind::LParen, "expected '(' after identifier");
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = name.text;
+    call.namespacePrefix = namespacePrefix;
+    call.templateArgs = std::move(templateArgs);
+    call.transforms = std::move(transforms);
+    call.isBinding = true;
+    if (!match(TokenKind::RParen)) {
+      while (true) {
+        Expr arg;
+        if (!parseExpr(arg, namespacePrefix)) {
+          return false;
+        }
+        call.args.push_back(std::move(arg));
+        if (match(TokenKind::Comma)) {
+          expect(TokenKind::Comma, "expected ','");
+        } else {
+          break;
+        }
+      }
+    }
+    if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+      return false;
+    }
+    expr = std::move(call);
+    return true;
+  }
   if (match(TokenKind::Number)) {
     Token number = consume(TokenKind::Number, "expected number");
     if (number.kind == TokenKind::End) {

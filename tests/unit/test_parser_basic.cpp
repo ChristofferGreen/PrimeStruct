@@ -69,7 +69,7 @@ TEST_CASE("parses execute_if with block arguments") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  execute_if(1i32, then_block{ assign(value, 2i32) }, else_block{ assign(value, 3i32) })
+  execute_if(1i32, then_block{ [i32] temp(2i32), assign(value, temp) }, else_block{ assign(value, 3i32) })
   return(value)
 }
 )";
@@ -82,8 +82,9 @@ main() {
   REQUIRE(stmt.args.size() == 3);
   CHECK(stmt.args[1].name == "then_block");
   CHECK(stmt.args[2].name == "else_block");
-  CHECK(stmt.args[1].bodyArguments.size() == 1);
+  CHECK(stmt.args[1].bodyArguments.size() == 2);
   CHECK(stmt.args[2].bodyArguments.size() == 1);
+  CHECK(stmt.args[1].bodyArguments[0].isBinding);
 }
 
 TEST_SUITE_END();
