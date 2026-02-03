@@ -21,6 +21,36 @@ main() {
   CHECK(error.find("expected '}' after return statement") != std::string::npos);
 }
 
+TEST_CASE("return without argument fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return()
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("return requires exactly one argument") != std::string::npos);
+}
+
+TEST_CASE("return with too many arguments fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32, 2i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("return requires exactly one argument") != std::string::npos);
+}
+
 TEST_CASE("missing return turns into execution") {
   const std::string source = R"(
 [return<int>]

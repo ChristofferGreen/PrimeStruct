@@ -328,11 +328,17 @@ bool Parser::parseDefinitionBody(Definition &def) {
       if (!expect(TokenKind::LParen, "expected '(' after return")) {
         return false;
       }
+      if (match(TokenKind::RParen)) {
+        return fail("return requires exactly one argument");
+      }
       Expr arg;
       if (!parseExpr(arg, def.namespacePrefix)) {
         return false;
       }
       returnCall.args.push_back(std::move(arg));
+      if (match(TokenKind::Comma)) {
+        return fail("return requires exactly one argument");
+      }
       if (!expect(TokenKind::RParen, "expected ')' after return argument")) {
         return false;
       }
