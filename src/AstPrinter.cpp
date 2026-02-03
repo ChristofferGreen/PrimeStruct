@@ -104,6 +104,7 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
 
 void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
   indent(out, depth);
+  printTransforms(out, exec.transforms);
   out << exec.fullPath;
   printTemplateArgs(out, exec.templateArgs);
   out << "(";

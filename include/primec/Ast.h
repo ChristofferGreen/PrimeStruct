@@ -35,6 +35,7 @@ struct Execution {
   std::string name;
   std::string fullPath;
   std::string namespacePrefix;
+  std::vector<Transform> transforms;
   std::vector<std::string> templateArgs;
   std::vector<Expr> arguments;
   std::vector<Expr> bodyArguments;

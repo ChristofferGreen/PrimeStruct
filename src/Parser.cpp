@@ -127,6 +127,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     exec.name = name.text;
     exec.namespacePrefix = currentNamespacePrefix();
     exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
+    exec.transforms = std::move(transforms);
     exec.templateArgs = std::move(templateArgs);
     exec.arguments = std::move(arguments);
     execs.push_back(std::move(exec));
@@ -137,6 +138,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.name = name.text;
   exec.namespacePrefix = currentNamespacePrefix();
   exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
+  exec.transforms = std::move(transforms);
   exec.templateArgs = std::move(templateArgs);
   exec.arguments = std::move(arguments);
   if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {

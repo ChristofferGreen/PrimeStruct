@@ -47,4 +47,20 @@ execute_repeat(3i32) { main(), main() }
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
+TEST_CASE("parses execution transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects]
+execute_task(2i32)
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].transforms.size() == 1);
+  CHECK(program.executions[0].transforms[0].name == "effects");
+}
+
 TEST_SUITE_END();
