@@ -31,8 +31,18 @@ struct Definition {
   std::optional<Expr> returnExpr;
 };
 
+struct Execution {
+  std::string name;
+  std::string fullPath;
+  std::string namespacePrefix;
+  std::vector<std::string> templateArgs;
+  std::vector<Expr> arguments;
+  std::vector<Expr> bodyArguments;
+};
+
 struct Program {
   std::vector<Definition> definitions;
+  std::vector<Execution> executions;
 };
 
 } // namespace primec

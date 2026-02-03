@@ -18,11 +18,11 @@ bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
   while (!match(TokenKind::End)) {
     if (match(TokenKind::KeywordNamespace)) {
-      if (!parseNamespace(program.definitions)) {
+      if (!parseNamespace(program.definitions, program.executions)) {
         return false;
       }
     } else {
-      if (!parseDefinition(program.definitions)) {
+      if (!parseDefinitionOrExecution(program.definitions, program.executions)) {
         return false;
       }
     }
@@ -30,7 +30,7 @@ bool Parser::parse(Program &program, std::string &error) {
   return true;
 }
 
-bool Parser::parseNamespace(std::vector<Definition> &defs) {
+bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs) {
   if (!expect(TokenKind::KeywordNamespace, "expected 'namespace'")) {
     return false;
   }
@@ -50,10 +50,10 @@ bool Parser::parseNamespace(std::vector<Definition> &defs) {
       return fail("unexpected end of file inside namespace block");
     }
     if (match(TokenKind::KeywordNamespace)) {
-      if (!parseNamespace(defs)) {
+      if (!parseNamespace(defs, execs)) {
         return false;
       }
-    } else if (!parseDefinition(defs)) {
+    } else if (!parseDefinitionOrExecution(defs, execs)) {
       return false;
     }
   }
@@ -62,7 +62,7 @@ bool Parser::parseNamespace(std::vector<Definition> &defs) {
   return true;
 }
 
-bool Parser::parseDefinition(std::vector<Definition> &defs) {
+bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs) {
   std::vector<Transform> transforms;
   if (match(TokenKind::LBracket)) {
     if (!parseTransformList(transforms)) {
@@ -78,44 +78,71 @@ bool Parser::parseDefinition(std::vector<Definition> &defs) {
     return fail("reserved keyword cannot be used as identifier: " + name.text);
   }
 
+  std::vector<std::string> templateArgs;
   if (match(TokenKind::LAngle)) {
-    return fail("templates are not supported in v0.1");
+    if (!parseTemplateList(templateArgs)) {
+      return false;
+    }
   }
 
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }
-  if (!match(TokenKind::Identifier) && !match(TokenKind::RParen)) {
-    return fail("executions are not supported in v0.1");
+  bool isDefinition = isDefinitionSignature();
+  if (isDefinition) {
+    std::vector<std::string> parameters;
+    if (!parseIdentifierList(parameters)) {
+      return false;
+    }
+    if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
+      return false;
+    }
+    if (!match(TokenKind::LBrace)) {
+      return fail("definitions must have a body");
+    }
+    Definition def;
+    def.name = name.text;
+    def.namespacePrefix = currentNamespacePrefix();
+    def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+    def.transforms = std::move(transforms);
+    def.templateArgs = std::move(templateArgs);
+    def.parameters = std::move(parameters);
+    if (!parseDefinitionBody(def)) {
+      return false;
+    }
+    defs.push_back(std::move(def));
+    return true;
   }
-  std::vector<std::string> parameters;
-  if (!parseIdentifierList(parameters)) {
+
+  std::vector<Expr> arguments;
+  if (!parseExprList(arguments, currentNamespacePrefix())) {
     return false;
   }
-  if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
+  if (!expect(TokenKind::RParen, "expected ')' after arguments")) {
     return false;
   }
+
   if (!match(TokenKind::LBrace)) {
-    return fail("executions are not supported in v0.1");
+    Execution exec;
+    exec.name = name.text;
+    exec.namespacePrefix = currentNamespacePrefix();
+    exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
+    exec.templateArgs = std::move(templateArgs);
+    exec.arguments = std::move(arguments);
+    execs.push_back(std::move(exec));
+    return true;
   }
-  if (transforms.empty()) {
-    return fail("definitions must declare [return<int>]");
-  }
-  if (transforms.size() != 1 || transforms[0].name != "return" ||
-      !transforms[0].templateArg || *transforms[0].templateArg != "int") {
-    return fail("only [return<int>] transform is supported in v0.1");
-  }
-  Definition def;
-  def.name = name.text;
-  def.namespacePrefix = currentNamespacePrefix();
-  def.fullPath = makeFullPath(def.name, def.namespacePrefix);
-  def.transforms = std::move(transforms);
-  def.templateArgs = {};
-  def.parameters = std::move(parameters);
-  if (!parseDefinitionBody(def)) {
+
+  Execution exec;
+  exec.name = name.text;
+  exec.namespacePrefix = currentNamespacePrefix();
+  exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
+  exec.templateArgs = std::move(templateArgs);
+  exec.arguments = std::move(arguments);
+  if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
     return false;
   }
-  defs.push_back(std::move(def));
+  execs.push_back(std::move(exec));
   return true;
 }
 
@@ -245,6 +272,58 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   return true;
 }
 
+bool Parser::isDefinitionSignature() const {
+  size_t index = pos_;
+  int depth = 1;
+  bool paramsAreIdentifiers = true;
+  while (index < tokens_.size()) {
+    TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::LParen) {
+      ++depth;
+    } else if (kind == TokenKind::RParen) {
+      --depth;
+      if (depth == 0) {
+        break;
+      }
+    } else if (depth == 1) {
+      if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+        paramsAreIdentifiers = false;
+      }
+    }
+    ++index;
+  }
+  if (depth != 0) {
+    return false;
+  }
+  if (!paramsAreIdentifiers) {
+    return false;
+  }
+  if (index + 1 >= tokens_.size()) {
+    return false;
+  }
+  if (tokens_[index + 1].kind != TokenKind::LBrace) {
+    return false;
+  }
+
+  size_t braceIndex = index + 1;
+  int braceDepth = 0;
+  while (braceIndex < tokens_.size()) {
+    TokenKind kind = tokens_[braceIndex].kind;
+    if (kind == TokenKind::LBrace) {
+      ++braceDepth;
+    } else if (kind == TokenKind::RBrace) {
+      --braceDepth;
+      if (braceDepth == 0) {
+        break;
+      }
+    } else if (kind == TokenKind::Identifier && tokens_[braceIndex].text == "return") {
+      return true;
+    }
+    ++braceIndex;
+  }
+  return false;
+}
+
 bool Parser::parseDefinitionBody(Definition &def) {
   if (!expect(TokenKind::LBrace, "expected '{' to start body")) {
     return false;
@@ -356,8 +435,11 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (isReservedKeyword(name.text)) {
       return fail("reserved keyword cannot be used as identifier: " + name.text);
     }
+    std::vector<std::string> templateArgs;
     if (match(TokenKind::LAngle)) {
-      return fail("templates are not supported in v0.1");
+      if (!parseTemplateList(templateArgs)) {
+        return false;
+      }
     }
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '(' after identifier");
@@ -365,6 +447,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.kind = Expr::Kind::Call;
       call.name = name.text;
       call.namespacePrefix = namespacePrefix;
+      call.templateArgs = std::move(templateArgs);
       if (!match(TokenKind::RParen)) {
         while (true) {
           Expr arg;
@@ -386,6 +469,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return true;
     }
 
+    if (!templateArgs.empty()) {
+      return fail("template arguments require a call");
+    }
     expr.kind = Expr::Kind::Name;
     expr.name = name.text;
     expr.namespacePrefix = namespacePrefix;

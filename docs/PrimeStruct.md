@@ -25,7 +25,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 ### Acceptance criteria
 - A single-file PrimeStruct program with one entry definition compiles to a native executable on macOS (initial target).
 - The compiler can:
-  - Parse a subset of the uniform envelope (definitions + executions, no templates).
+  - Parse a subset of the uniform envelope (definitions + executions).
   - Build a canonical AST for that subset.
   - Lower to a minimal IR (calls, literals, return).
   - Emit C++ and invoke a host compiler to produce an executable.
@@ -34,11 +34,8 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
 - Integer literal support (signed 32-bit).
-- Templates are not supported in v0.1.
-- `[return<int>]` transform required on every definition.
+- `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
-- Executions are not supported in v0.1.
-- Entry selection is fixed to `/main` in v0.1.
 
 ### Example source and expected IR (sketch)
 PrimeStruct:
@@ -71,7 +68,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 ### Acceptance criteria
 - A single-file PrimeStruct program with one entry definition compiles to a native executable on macOS (initial target).
 - The compiler can:
-  - Parse a subset of the uniform envelope (definitions + executions, no templates).
+  - Parse a subset of the uniform envelope (definitions + executions).
   - Build a canonical AST for that subset.
   - Lower to a minimal IR (calls, literals, return).
   - Emit C++ and invoke a host compiler to produce an executable.

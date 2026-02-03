@@ -15,13 +15,14 @@ public:
   bool parse(Program &program, std::string &error);
 
 private:
-  bool parseNamespace(std::vector<Definition> &defs);
-  bool parseDefinition(std::vector<Definition> &defs);
+  bool parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs);
+  bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
   bool parseIdentifierList(std::vector<std::string> &out);
   bool parseExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool isDefinitionSignature() const;
   bool parseDefinitionBody(Definition &def);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
 

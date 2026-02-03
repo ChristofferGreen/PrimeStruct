@@ -102,6 +102,30 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
   out << "}\n";
 }
 
+void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
+  indent(out, depth);
+  out << exec.fullPath;
+  printTemplateArgs(out, exec.templateArgs);
+  out << "(";
+  for (size_t i = 0; i < exec.arguments.size(); ++i) {
+    if (i > 0) {
+      out << ", ";
+    }
+    printExpr(out, exec.arguments[i]);
+  }
+  out << ")";
+  if (!exec.bodyArguments.empty()) {
+    out << " { ";
+    for (size_t i = 0; i < exec.bodyArguments.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      printExpr(out, exec.bodyArguments[i]);
+    }
+    out << " }";
+  }
+  out << "\n";
+}
 } // namespace
 
 std::string AstPrinter::print(const Program &program) const {
@@ -109,6 +133,9 @@ std::string AstPrinter::print(const Program &program) const {
   out << "ast {\n";
   for (const auto &def : program.definitions) {
     printDefinition(out, def, 1);
+  }
+  for (const auto &exec : program.executions) {
+    printExecution(out, exec, 1);
   }
   out << "}\n";
   return out.str();

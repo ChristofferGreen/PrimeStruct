@@ -51,65 +51,6 @@ main(mut) {
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
-TEST_CASE("missing return transform fails") {
-  const std::string source = R"(
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("definitions must declare [return<int>]") != std::string::npos);
-}
-
-TEST_CASE("non return transform fails") {
-  const std::string source = R"(
-[effects]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
-}
-
-TEST_CASE("wrong return type fails") {
-  const std::string source = R"(
-[return<float>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
-}
-
-TEST_CASE("multiple transforms fail") {
-  const std::string source = R"(
-[return<int>, effects]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("only [return<int>] transform is supported in v0.1") != std::string::npos);
-}
-
 TEST_CASE("return without argument fails") {
   const std::string source = R"(
 [return<int>]
@@ -140,7 +81,7 @@ main() {
   CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
-TEST_CASE("missing return fails in parser") {
+TEST_CASE("missing return turns into execution") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -151,8 +92,11 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("missing return statement in definition body") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  CHECK(program.definitions.empty());
+  CHECK(program.executions.size() == 1);
+  CHECK(program.executions[0].fullPath == "/main");
 }
 
 TEST_CASE("out of range literal fails") {

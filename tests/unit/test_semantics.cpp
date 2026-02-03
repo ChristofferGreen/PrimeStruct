@@ -36,20 +36,6 @@ main() {
   CHECK(error.find("missing entry definition") != std::string::npos);
 }
 
-TEST_CASE("entry path must be main") {
-  const std::string source = R"(
-namespace demo {
-  [return<int>]
-  main() {
-    return(1i32)
-  }
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/demo/main", error));
-  CHECK(error.find("v0.1 entry must be /main") != std::string::npos);
-}
-
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]
@@ -77,6 +63,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
+TEST_CASE("unsupported return type fails") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported return type") != std::string::npos);
 }
 
 TEST_SUITE_END();

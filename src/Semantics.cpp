@@ -12,24 +12,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       error = "duplicate definition: " + def.fullPath;
       return false;
     }
-    if (!def.templateArgs.empty()) {
-      error = "templates are not supported in definitions: " + def.fullPath;
-      return false;
-    }
-    if (def.transforms.empty()) {
-      error = "definitions must declare [return<int>]: " + def.fullPath;
-      return false;
-    }
-    if (def.transforms.size() > 1) {
-      error = "only one return transform is supported in v0.1: " + def.fullPath;
-      return false;
-    }
     for (const auto &transform : def.transforms) {
-      if (transform.name != "return") {
-        error = "unsupported transform on " + def.fullPath + ": " + transform.name;
-        return false;
-      }
-      if (!transform.templateArg || *transform.templateArg != "int") {
+      if (transform.name == "return" && transform.templateArg && *transform.templateArg != "int") {
         error = "unsupported return type on " + def.fullPath;
         return false;
       }
@@ -77,10 +61,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     if (expr.kind == Expr::Kind::Call) {
-      if (!expr.templateArgs.empty()) {
-        error = "templates are not supported in calls: " + expr.name;
-        return false;
-      }
       std::string resolved = resolveCalleePath(expr);
       auto it = defMap.find(resolved);
       if (it == defMap.end()) {
@@ -119,26 +99,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
 
   if (defMap.count(entryPath) == 0) {
     error = "missing entry definition " + entryPath;
-    return false;
-  }
-  if (entryPath != "/main") {
-    error = "v0.1 entry must be /main";
-    return false;
-  }
-  const Definition *entryDef = defMap.at(entryPath);
-  if (entryDef->parameters.size() != 0) {
-    error = "entry definition must take no parameters: " + entryPath;
-    return false;
-  }
-  bool hasReturnTransform = false;
-  for (const auto &transform : entryDef->transforms) {
-    if (transform.name == "return" && transform.templateArg && *transform.templateArg == "int") {
-      hasReturnTransform = true;
-      break;
-    }
-  }
-  if (!hasReturnTransform) {
-    error = "entry definition must declare [return<int>]: " + entryPath;
     return false;
   }
 
