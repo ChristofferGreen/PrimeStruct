@@ -17,6 +17,17 @@ bool isDigitChar(char c) {
   return std::isdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+bool isUnaryPrefixPosition(const std::string &input, size_t index) {
+  if (index == 0) {
+    return true;
+  }
+  char prev = input[index - 1];
+  if (prev == ')' || prev == ']' || prev == '}') {
+    return false;
+  }
+  return isSeparator(prev);
+}
+
 bool looksLikeTemplateList(const std::string &input, size_t index) {
   if (index >= input.size() || input[index] != '<') {
     return false;
@@ -87,6 +98,45 @@ bool rewriteUnaryNot(const std::string &input,
     right = maybeAppendI32(right);
   }
   output.append("not(");
+  output.append(right);
+  output.append(")");
+  index = rightEnd - 1;
+  return true;
+}
+
+bool rewriteUnaryMinus(const std::string &input,
+                       std::string &output,
+                       size_t &index,
+                       const TextFilterOptions &options) {
+  if (input[index] != '-') {
+    return false;
+  }
+  if (index + 1 >= input.size()) {
+    return false;
+  }
+  if (isDigitChar(input[index + 1])) {
+    return false;
+  }
+  if (!isUnaryPrefixPosition(input, index)) {
+    return false;
+  }
+  if (input[index + 1] == '(') {
+    output.append("negate");
+    return true;
+  }
+  size_t rightStart = index + 1;
+  size_t rightEnd = rightStart;
+  while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+    ++rightEnd;
+  }
+  if (rightEnd == rightStart) {
+    return false;
+  }
+  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  if (options.implicitI32Suffix) {
+    right = maybeAppendI32(right);
+  }
+  output.append("negate(");
   output.append(right);
   output.append(")");
   index = rightEnd - 1;
@@ -292,6 +342,9 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
     if (rewriteUnaryNot(input, output, i, options)) {
+      continue;
+    }
+    if (rewriteUnaryMinus(input, output, i, options)) {
       continue;
     }
     if (input[i] == '<' && !looksLikeTemplateList(input, i) && rewriteBinary(i, '<', "less_than")) {

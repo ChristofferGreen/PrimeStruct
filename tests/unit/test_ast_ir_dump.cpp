@@ -2,6 +2,7 @@
 #include "primec/IrPrinter.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
+#include "primec/TextFilterPipeline.h"
 
 #include "third_party/doctest.h"
 
@@ -11,6 +12,21 @@ primec::Program parseProgram(const std::string &source) {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  return program;
+}
+
+primec::Program parseProgramWithFilters(const std::string &source) {
+  primec::TextFilterPipeline pipeline;
+  std::string filtered;
+  std::string error;
+  CHECK(pipeline.apply(source, filtered, error));
+  CHECK(error.empty());
+  primec::Lexer lexer(filtered);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  error.clear();
   CHECK(parser.parse(program, error));
   CHECK(error.empty());
   return program;
@@ -112,6 +128,27 @@ main() {
       "    let value: i32 = 4\n"
       "    assign value, 9\n"
       "    return value\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints unary minus rewrite") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(3i32)
+  return(-value)
+}
+)";
+  const auto program = parseProgramWithFilters(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    let value: i32 = 3\n"
+      "    return negate(value)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);

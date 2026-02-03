@@ -54,7 +54,7 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "plus" || name == "minus" || name == "multiply" || name == "divide") {
+  if (name == "plus" || name == "minus" || name == "multiply" || name == "divide" || name == "negate") {
     out = name;
     return true;
   }
@@ -258,7 +258,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       if (it == defMap.end()) {
         std::string builtinName;
         if (getBuiltinOperatorName(expr, builtinName)) {
-          if (expr.args.size() != 2) {
+          size_t expectedArgs = builtinName == "negate" ? 1 : 2;
+          if (expr.args.size() != expectedArgs) {
             error = "argument count mismatch for builtin " + builtinName;
             return false;
           }

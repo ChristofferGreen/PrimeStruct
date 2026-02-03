@@ -132,6 +132,20 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
   return false;
 }
 
+bool isBuiltinNegate(const Expr &expr) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == "negate";
+}
+
 bool isBuiltinClamp(const Expr &expr) {
   if (expr.name.empty()) {
     return false;
@@ -237,6 +251,11 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::ostringstream out;
       out << "(" << emitExpr(expr.args[0], nameMap) << " " << op << " "
           << emitExpr(expr.args[1], nameMap) << ")";
+      return out.str();
+    }
+    if (isBuiltinNegate(expr) && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "(-" << emitExpr(expr.args[0], nameMap) << ")";
       return out.str();
     }
     const char *cmp = nullptr;
