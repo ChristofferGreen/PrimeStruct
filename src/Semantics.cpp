@@ -97,6 +97,29 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
   }
 
+  for (const auto &exec : program.executions) {
+    auto it = defMap.find(exec.fullPath);
+    if (it == defMap.end()) {
+      error = "unknown execution target: " + exec.fullPath;
+      return false;
+    }
+    size_t expectedArgs = paramCounts[exec.fullPath];
+    if (exec.arguments.size() != expectedArgs) {
+      error = "argument count mismatch for " + exec.fullPath;
+      return false;
+    }
+    for (const auto &arg : exec.arguments) {
+      if (!validateExpr({}, arg)) {
+        return false;
+      }
+    }
+    for (const auto &arg : exec.bodyArguments) {
+      if (!validateExpr({}, arg)) {
+        return false;
+      }
+    }
+  }
+
   if (defMap.count(entryPath) == 0) {
     error = "missing entry definition " + entryPath;
     return false;

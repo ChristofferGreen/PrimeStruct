@@ -65,6 +65,39 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
+TEST_CASE("execution target must exist") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+run()
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown execution target") != std::string::npos);
+}
+
+TEST_CASE("execution argument count mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+task()
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
 [return<float>]
