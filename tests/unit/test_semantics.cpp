@@ -129,4 +129,30 @@ main() {
   CHECK(error.find("unsupported return type") != std::string::npos);
 }
 
+TEST_CASE("builtin arithmetic calls validate") {
+  const std::string source = R"(
+namespace demo {
+  [return<int>]
+  main() {
+    return(plus(1i32, 2i32))
+  }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/demo/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin arithmetic arity mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin plus") != std::string::npos);
+}
+
 TEST_SUITE_END();

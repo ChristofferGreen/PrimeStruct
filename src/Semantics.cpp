@@ -4,6 +4,25 @@
 #include <unordered_map>
 
 namespace primec {
+namespace {
+bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "plus" || name == "minus" || name == "multiply" || name == "divide") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+} // namespace
 
 bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
   std::unordered_map<std::string, const Definition *> defMap;
@@ -64,6 +83,19 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       std::string resolved = resolveCalleePath(expr);
       auto it = defMap.find(resolved);
       if (it == defMap.end()) {
+        std::string builtinName;
+        if (getBuiltinOperatorName(expr, builtinName)) {
+          if (expr.args.size() != 2) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, arg)) {
+              return false;
+            }
+          }
+          return true;
+        }
         error = "unknown call target: " + expr.name;
         return false;
       }

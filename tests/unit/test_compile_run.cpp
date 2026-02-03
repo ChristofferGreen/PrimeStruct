@@ -83,4 +83,19 @@ TEST_CASE("compiles and runs include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs operator rewrite") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_ops.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ops_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_SUITE_END();

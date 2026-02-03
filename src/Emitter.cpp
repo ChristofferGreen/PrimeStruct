@@ -4,6 +4,37 @@
 #include <unordered_map>
 
 namespace primec {
+namespace {
+bool getBuiltinOperator(const Expr &expr, char &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "plus") {
+    out = '+';
+    return true;
+  }
+  if (name == "minus") {
+    out = '-';
+    return true;
+  }
+  if (name == "multiply") {
+    out = '*';
+    return true;
+  }
+  if (name == "divide") {
+    out = '/';
+    return true;
+  }
+  return false;
+}
+} // namespace
 
 std::string Emitter::toCppName(const std::string &fullPath) const {
   std::string name = "ps";
@@ -35,6 +66,13 @@ std::string Emitter::emitExpr(const Expr &expr,
   }
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
+    char op = '\0';
+    if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "(" << emitExpr(expr.args[0], nameMap) << " " << op << " "
+          << emitExpr(expr.args[1], nameMap) << ")";
+      return out.str();
+    }
     return "0";
   }
   std::ostringstream out;
