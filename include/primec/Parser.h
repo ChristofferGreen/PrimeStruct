@@ -18,6 +18,7 @@ private:
   bool parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseTransformList(std::vector<Transform> &out);
+  bool parseTemplateList(std::vector<std::string> &out);
   bool parseIdentifierList(std::vector<std::string> &out);
   bool parseDefinitionBody(Definition &def);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);

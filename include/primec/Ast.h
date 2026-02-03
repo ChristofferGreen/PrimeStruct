@@ -16,6 +16,7 @@ struct Expr {
   int literalValue = 0;
   std::string name;
   std::vector<Expr> args;
+  std::vector<std::string> templateArgs;
   std::string namespacePrefix;
 };
 
@@ -24,6 +25,7 @@ struct Definition {
   std::string fullPath;
   std::string namespacePrefix;
   std::vector<Transform> transforms;
+  std::vector<std::string> templateArgs;
   std::vector<std::string> parameters;
   std::vector<Expr> statements;
   std::optional<Expr> returnExpr;
@@ -33,6 +35,7 @@ struct Execution {
   std::string name;
   std::string fullPath;
   std::string namespacePrefix;
+  std::vector<std::string> templateArgs;
 };
 
 struct Program {
