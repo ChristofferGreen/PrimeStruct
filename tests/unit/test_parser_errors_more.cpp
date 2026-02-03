@@ -5,7 +5,7 @@
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.more");
 
-TEST_CASE("multiple return statements fail in parser") {
+TEST_CASE("multiple return statements parse") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -17,8 +17,8 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected '}' after return statement") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("reserved keyword cannot name definition") {

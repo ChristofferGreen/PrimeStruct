@@ -210,7 +210,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts.
 - **`if<Bool>(cond, then{…}, else{…})`:** canonical conditional form after control-flow desugaring.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
-- **`return(value)`:** explicit return primitive; implicit `return(void)` fires at end-of-body when omitted.
+- **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. Implicit `return(void)` fires at end-of-body when omitted.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
 
 ## Runtime Stack Model (draft)

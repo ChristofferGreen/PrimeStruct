@@ -319,6 +319,25 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs early return in if") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32) {
+    return(5i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_return_if.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_return_if_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]

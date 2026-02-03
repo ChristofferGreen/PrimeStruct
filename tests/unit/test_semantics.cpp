@@ -414,4 +414,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("return inside if block validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32) {
+    return(2i32)
+  } else {
+    return(3i32)
+  }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("return not allowed in execution body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+execute_repeat(x) {
+  return(x)
+}
+
+execute_repeat(1i32) { return(2i32) }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return not allowed in execution body") != std::string::npos);
+}
+
 TEST_SUITE_END();

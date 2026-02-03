@@ -137,6 +137,10 @@ bool isElseCall(const Expr &expr) {
   return isSimpleCallName(expr, "else");
 }
 
+bool isReturnCall(const Expr &expr) {
+  return isSimpleCallName(expr, "return");
+}
+
 bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
   std::string typeName;
   for (const auto &transform : expr.transforms) {
@@ -240,6 +244,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "block arguments are only supported on if blocks";
         return false;
       }
+      if (isReturnCall(expr)) {
+        error = "return not allowed in expression context";
+        return false;
+      }
       if (isIfCall(expr) || isThenCall(expr) || isElseCall(expr)) {
         error = "control-flow blocks cannot appear in expressions";
         return false;
@@ -321,10 +329,18 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   };
 
-  std::function<bool(const std::vector<std::string> &, std::unordered_map<std::string, BindingInfo> &, const Expr &)>
+  std::function<bool(const std::vector<std::string> &,
+                     std::unordered_map<std::string, BindingInfo> &,
+                     const Expr &,
+                     ReturnKind,
+                     bool,
+                     bool *)>
       validateStatement = [&](const std::vector<std::string> &params,
                               std::unordered_map<std::string, BindingInfo> &locals,
-                              const Expr &stmt) -> bool {
+                              const Expr &stmt,
+                              ReturnKind returnKind,
+                              bool allowReturn,
+                              bool *sawReturn) -> bool {
     if (stmt.isBinding) {
       if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
         error = "duplicate binding name: " + stmt.name;
@@ -347,6 +363,34 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     if (stmt.kind != Expr::Kind::Call) {
       error = "statements must be calls";
       return false;
+    }
+    if (isReturnCall(stmt)) {
+      if (!allowReturn) {
+        error = "return not allowed in execution body";
+        return false;
+      }
+      if (!stmt.bodyArguments.empty()) {
+        error = "return does not accept block arguments";
+        return false;
+      }
+      if (returnKind == ReturnKind::Void) {
+        if (!stmt.args.empty()) {
+          error = "return value not allowed for void definition";
+          return false;
+        }
+      } else {
+        if (stmt.args.size() != 1) {
+          error = "return requires exactly one argument";
+          return false;
+        }
+        if (!validateExpr(params, locals, stmt.args.front())) {
+          return false;
+        }
+      }
+      if (sawReturn) {
+        *sawReturn = true;
+      }
+      return true;
     }
     if (isIfCall(stmt)) {
       if (!stmt.bodyArguments.empty()) {
@@ -379,7 +423,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         std::unordered_map<std::string, BindingInfo> blockLocals = locals;
         for (const auto &bodyExpr : block.bodyArguments) {
-          if (!validateStatement(params, blockLocals, bodyExpr)) {
+          if (!validateStatement(params, blockLocals, bodyExpr, returnKind, allowReturn, sawReturn)) {
             return false;
           }
         }
@@ -407,24 +451,15 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     if (kindIt != returnKinds.end()) {
       kind = kindIt->second;
     }
+    bool sawReturn = false;
     for (const auto &stmt : def.statements) {
-      if (!validateStatement(def.parameters, locals, stmt)) {
+      if (!validateStatement(def.parameters, locals, stmt, kind, true, &sawReturn)) {
         return false;
       }
     }
-    if (kind == ReturnKind::Void) {
-      if (def.returnExpr) {
-        error = "return value not allowed in void definition " + def.fullPath;
-        return false;
-      }
-    } else {
-      if (!def.returnExpr) {
-        error = "missing return statement in " + def.fullPath;
-        return false;
-      }
-      if (!validateExpr(def.parameters, locals, *def.returnExpr)) {
-        return false;
-      }
+    if (kind != ReturnKind::Void && !sawReturn) {
+      error = "missing return statement in " + def.fullPath;
+      return false;
     }
   }
 
@@ -450,7 +485,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments must be calls";
         return false;
       }
-      if (!validateStatement({}, execLocals, arg)) {
+      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, nullptr)) {
         return false;
       }
     }

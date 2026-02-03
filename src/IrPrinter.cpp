@@ -37,6 +37,20 @@ bool isAssignCall(const Expr &expr) {
   return name == "assign";
 }
 
+bool isReturnCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == "return";
+}
+
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || !transform.templateArg) {
@@ -97,9 +111,18 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
   ReturnKind kind = getReturnKind(def);
   indent(out, depth);
   out << "def " << def.fullPath << "(): " << returnTypeName(kind) << " {\n";
+  bool sawReturn = false;
   for (const auto &stmt : def.statements) {
     indent(out, depth + 1);
-    if (stmt.isBinding) {
+    if (isReturnCall(stmt)) {
+      out << "return";
+      if (!stmt.args.empty()) {
+        out << " ";
+        printExpr(out, stmt.args.front());
+      }
+      out << "\n";
+      sawReturn = true;
+    } else if (stmt.isBinding) {
       out << "let " << stmt.name;
       std::string typeName = bindingTypeName(stmt);
       if (!typeName.empty()) {
@@ -122,12 +145,7 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
       out << "\n";
     }
   }
-  if (def.returnExpr) {
-    indent(out, depth + 1);
-    out << "return ";
-    printExpr(out, *def.returnExpr);
-    out << "\n";
-  } else if (kind == ReturnKind::Void) {
+  if (kind == ReturnKind::Void && !sawReturn) {
     indent(out, depth + 1);
     out << "return\n";
   }

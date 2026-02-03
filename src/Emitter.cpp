@@ -183,6 +183,10 @@ bool isThenCall(const Expr &expr) {
 bool isElseCall(const Expr &expr) {
   return isSimpleCallName(expr, "else");
 }
+
+bool isReturnCall(const Expr &expr) {
+  return isSimpleCallName(expr, "return");
+}
 } // namespace
 
 std::string Emitter::toCppName(const std::string &fullPath) const {
@@ -278,6 +282,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     std::function<void(const Expr &, int)> emitStatement;
     emitStatement = [&](const Expr &stmt, int indent) {
       std::string pad(static_cast<size_t>(indent) * 2, ' ');
+      if (isReturnCall(stmt)) {
+        out << pad << "return";
+        if (!stmt.args.empty()) {
+          out << " " << emitExpr(stmt.args.front(), nameMap);
+        }
+        out << ";\n";
+        return;
+      }
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
         std::string type = bindingTypeToCpp(binding.typeName);
@@ -318,12 +330,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       emitStatement(stmt, 1);
     }
     if (returnKind == ReturnKind::Void) {
-      if (def.returnExpr) {
-        out << "  " << emitExpr(*def.returnExpr, nameMap) << ";\n";
-      }
       out << "  return;\n";
-    } else {
-      out << "  return " << emitExpr(*def.returnExpr, nameMap) << ";\n";
     }
     out << "}\n";
   }

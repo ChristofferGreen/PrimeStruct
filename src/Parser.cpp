@@ -95,7 +95,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
       break;
     }
   }
-  bool isDefinition = hasReturnTransform ? true : isDefinitionSignature();
+  bool paramsAreIdentifiers = false;
+  bool isDefinition = hasReturnTransform ? true : isDefinitionSignature(&paramsAreIdentifiers);
   if (isDefinition) {
     std::vector<std::string> parameters;
     if (!parseIdentifierList(parameters)) {
@@ -121,7 +122,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return true;
   }
 
-  if (definitionHasReturnBeforeClose()) {
+  if (paramsAreIdentifiers && definitionHasReturnBeforeClose()) {
     return fail("definition missing return statement");
   }
 
@@ -269,8 +270,14 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   }
   while (true) {
     Expr arg;
-    if (!parseExpr(arg, namespacePrefix)) {
-      return false;
+    if (match(TokenKind::Identifier) && tokens_[pos_].text == "return") {
+      if (!parseReturnStatement(arg, namespacePrefix)) {
+        return false;
+      }
+    } else {
+      if (!parseExpr(arg, namespacePrefix)) {
+        return false;
+      }
     }
     out.push_back(std::move(arg));
     if (match(TokenKind::Comma)) {
@@ -283,6 +290,53 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   }
   if (!expect(TokenKind::RBrace, "expected '}'")) {
     return false;
+  }
+  return true;
+}
+
+bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix) {
+  Token name = consume(TokenKind::Identifier, "expected return statement");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  if (name.text != "return") {
+    return fail("expected return statement");
+  }
+  Expr returnCall = {};
+  returnCall.kind = Expr::Kind::Call;
+  returnCall.name = name.text;
+  returnCall.namespacePrefix = namespacePrefix;
+  if (!expect(TokenKind::LParen, "expected '(' after return")) {
+    return false;
+  }
+  if (match(TokenKind::RParen)) {
+    if (!returnsVoidContext_) {
+      return fail("return requires exactly one argument");
+    }
+    expect(TokenKind::RParen, "expected ')' after return");
+    out = std::move(returnCall);
+    if (returnTracker_) {
+      *returnTracker_ = true;
+    }
+    return true;
+  }
+  if (returnsVoidContext_) {
+    return fail("return value not allowed for void definition");
+  }
+  Expr arg;
+  if (!parseExpr(arg, namespacePrefix)) {
+    return false;
+  }
+  returnCall.args.push_back(std::move(arg));
+  if (match(TokenKind::Comma)) {
+    return fail("return requires exactly one argument");
+  }
+  if (!expect(TokenKind::RParen, "expected ')' after return argument")) {
+    return false;
+  }
+  out = std::move(returnCall);
+  if (returnTracker_) {
+    *returnTracker_ = true;
   }
   return true;
 }
@@ -331,10 +385,10 @@ bool Parser::definitionHasReturnBeforeClose() const {
   return false;
 }
 
-bool Parser::isDefinitionSignature() const {
+bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   size_t index = pos_;
   int depth = 1;
-  bool paramsAreIdentifiers = true;
+  bool identifiersOnly = true;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
     if (kind == TokenKind::LParen) {
@@ -346,15 +400,18 @@ bool Parser::isDefinitionSignature() const {
       }
     } else if (depth == 1) {
       if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
-        paramsAreIdentifiers = false;
+        identifiersOnly = false;
       }
     }
     ++index;
   }
+  if (paramsAreIdentifiers) {
+    *paramsAreIdentifiers = identifiersOnly;
+  }
   if (depth != 0) {
     return false;
   }
-  if (!paramsAreIdentifiers) {
+  if (!identifiersOnly) {
     return false;
   }
   if (index + 1 >= tokens_.size()) {
@@ -391,6 +448,21 @@ bool Parser::parseDefinitionBody(Definition &def) {
       break;
     }
   }
+  bool foundReturn = false;
+  struct ReturnContextGuard {
+    Parser *parser;
+    bool *prevTracker;
+    bool prevReturnsVoid;
+    ReturnContextGuard(Parser *parserIn, bool *tracker, bool returnsVoid)
+        : parser(parserIn), prevTracker(parserIn->returnTracker_), prevReturnsVoid(parserIn->returnsVoidContext_) {
+      parser->returnTracker_ = tracker;
+      parser->returnsVoidContext_ = returnsVoid;
+    }
+    ~ReturnContextGuard() {
+      parser->returnTracker_ = prevTracker;
+      parser->returnsVoidContext_ = prevReturnsVoid;
+    }
+  } guard(this, &foundReturn, returnsVoid);
   if (!expect(TokenKind::LBrace, "expected '{' to start body")) {
     return false;
   }
@@ -404,54 +476,24 @@ bool Parser::parseDefinitionBody(Definition &def) {
         return false;
       }
     }
-    Token name = consume(TokenKind::Identifier, "expected statement");
-    if (name.kind == TokenKind::End) {
-      return false;
-    }
-    if (name.text == "return") {
+    if (match(TokenKind::Identifier) && tokens_[pos_].text == "return") {
       if (!statementTransforms.empty()) {
         return fail("return statement cannot have transforms");
       }
+      Expr returnCall;
+      if (!parseReturnStatement(returnCall, def.namespacePrefix)) {
+        return false;
+      }
       def.hasReturnStatement = true;
-      if (def.returnExpr) {
-        return fail("multiple return statements are not supported");
+      if (!returnCall.args.empty()) {
+        def.returnExpr = returnCall.args.front();
       }
-      Expr returnCall = {};
-      returnCall.kind = Expr::Kind::Call;
-      returnCall.name = name.text;
-      returnCall.namespacePrefix = def.namespacePrefix;
-      if (!expect(TokenKind::LParen, "expected '(' after return")) {
-        return false;
-      }
-      if (match(TokenKind::RParen)) {
-        if (!returnsVoid) {
-          return fail("return requires exactly one argument");
-        }
-        expect(TokenKind::RParen, "expected ')' after return");
-        if (!expect(TokenKind::RBrace, "expected '}' after return statement")) {
-          return false;
-        }
-        return true;
-      }
-      if (returnsVoid) {
-        return fail("return value not allowed for void definition");
-      }
-      Expr arg;
-      if (!parseExpr(arg, def.namespacePrefix)) {
-        return false;
-      }
-      returnCall.args.push_back(std::move(arg));
-      if (match(TokenKind::Comma)) {
-        return fail("return requires exactly one argument");
-      }
-      if (!expect(TokenKind::RParen, "expected ')' after return argument")) {
-        return false;
-      }
-      def.returnExpr = returnCall.args.front();
-      if (!expect(TokenKind::RBrace, "expected '}' after return statement")) {
-        return false;
-      }
-      return true;
+      def.statements.push_back(std::move(returnCall));
+      continue;
+    }
+    Token name = consume(TokenKind::Identifier, "expected statement");
+    if (name.kind == TokenKind::End) {
+      return false;
     }
     if (isReservedKeyword(name.text)) {
       return fail("reserved keyword cannot be used as identifier: " + name.text);
@@ -533,12 +575,10 @@ bool Parser::parseDefinitionBody(Definition &def) {
     def.statements.push_back(std::move(callExpr));
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
-  if (!def.returnExpr) {
-    if (returnsVoid) {
-      return true;
-    }
+  if (!foundReturn && !returnsVoid) {
     return fail("missing return statement in definition body");
   }
+  def.hasReturnStatement = foundReturn;
   return true;
 }
 

@@ -56,7 +56,7 @@ main() {
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 1);
-  REQUIRE(program.definitions[0].statements.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
   const auto &stmt = program.definitions[0].statements[0];
   CHECK(stmt.isBinding);
   CHECK(stmt.name == "value");
@@ -78,7 +78,7 @@ main() {
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 1);
-  REQUIRE(program.definitions[0].statements.size() == 2);
+  REQUIRE(program.definitions[0].statements.size() == 3);
   const auto &stmt = program.definitions[0].statements[1];
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   CHECK(stmt.name == "if");
@@ -119,7 +119,7 @@ main() {
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 1);
-  REQUIRE(program.definitions[0].statements.size() == 2);
+  REQUIRE(program.definitions[0].statements.size() == 3);
   const auto &stmt = program.definitions[0].statements[1];
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   CHECK(stmt.name == "if");

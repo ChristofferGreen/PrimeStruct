@@ -13,6 +13,20 @@ void indent(std::ostringstream &out, int depth) {
 
 void printTransforms(std::ostringstream &out, const std::vector<Transform> &transforms);
 
+bool isReturnCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == "return";
+}
+
 void printExpr(std::ostringstream &out, const Expr &expr) {
   switch (expr.kind) {
   case Expr::Kind::Literal:
@@ -104,15 +118,14 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
   out << ") {\n";
   for (const auto &stmt : def.statements) {
     indent(out, depth + 1);
-    printExpr(out, stmt);
-    out << "\n";
-  }
-  if (def.hasReturnStatement) {
-    indent(out, depth + 1);
-    out << "return";
-    if (def.returnExpr) {
-      out << " ";
-      printExpr(out, *def.returnExpr);
+    if (isReturnCall(stmt)) {
+      out << "return";
+      if (!stmt.args.empty()) {
+        out << " ";
+        printExpr(out, stmt.args.front());
+      }
+    } else {
+      printExpr(out, stmt);
     }
     out << "\n";
   }
