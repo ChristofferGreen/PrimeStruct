@@ -133,6 +133,29 @@ main() {
   CHECK(program.definitions[0].returnExpr->floatWidth == 32);
 }
 
+TEST_CASE("parses transform arguments") {
+  const std::string source = R"(
+[effects(global_write, io_stdout), align_bytes(16), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 3);
+  CHECK(transforms[0].name == "effects");
+  REQUIRE(transforms[0].arguments.size() == 2);
+  CHECK(transforms[0].arguments[0] == "global_write");
+  CHECK(transforms[0].arguments[1] == "io_stdout");
+  CHECK(transforms[1].name == "align_bytes");
+  REQUIRE(transforms[1].arguments.size() == 1);
+  CHECK(transforms[1].arguments[0] == "16");
+  CHECK(transforms[2].name == "return");
+  REQUIRE(transforms[2].templateArg.has_value());
+  CHECK(*transforms[2].templateArg == "int");
+}
+
 TEST_CASE("parses float literals without suffix") {
   const std::string source = R"(
 [return<float>]

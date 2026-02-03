@@ -91,6 +91,16 @@ void printTransforms(std::ostringstream &out, const std::vector<Transform> &tran
     if (transforms[i].templateArg) {
       out << "<" << *transforms[i].templateArg << ">";
     }
+    if (!transforms[i].arguments.empty()) {
+      out << "(";
+      for (size_t argIndex = 0; argIndex < transforms[i].arguments.size(); ++argIndex) {
+        if (argIndex > 0) {
+          out << ", ";
+        }
+        out << transforms[i].arguments[argIndex];
+      }
+      out << ")";
+    }
   }
   out << "] ";
 }

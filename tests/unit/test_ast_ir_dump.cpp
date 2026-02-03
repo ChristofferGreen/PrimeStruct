@@ -208,6 +208,25 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints transform arguments") {
+  const std::string source = R"(
+[effects(global_write, io_stdout), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [effects(global_write, io_stdout), return<int>] /main() {\n"
+      "    return 1\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]

@@ -233,6 +233,43 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return false;
       }
     }
+    if (match(TokenKind::LParen)) {
+      expect(TokenKind::LParen, "expected '('");
+      if (match(TokenKind::RParen)) {
+        return fail("transform argument list cannot be empty");
+      }
+      while (true) {
+        if (match(TokenKind::Identifier)) {
+          Token arg = consume(TokenKind::Identifier, "expected transform argument");
+          if (arg.kind == TokenKind::End) {
+            return false;
+          }
+          transform.arguments.push_back(arg.text);
+        } else if (match(TokenKind::Number)) {
+          Token arg = consume(TokenKind::Number, "expected transform argument");
+          if (arg.kind == TokenKind::End) {
+            return false;
+          }
+          transform.arguments.push_back(arg.text);
+        } else if (match(TokenKind::String)) {
+          Token arg = consume(TokenKind::String, "expected transform argument");
+          if (arg.kind == TokenKind::End) {
+            return false;
+          }
+          transform.arguments.push_back(arg.text);
+        } else {
+          return fail("expected transform argument");
+        }
+        if (match(TokenKind::Comma)) {
+          expect(TokenKind::Comma, "expected ','");
+          continue;
+        }
+        break;
+      }
+      if (!expect(TokenKind::RParen, "expected ')'")) {
+        return false;
+      }
+    }
     out.push_back(std::move(transform));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
