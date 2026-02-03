@@ -20,6 +20,8 @@ private:
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
   bool parseIdentifierList(std::vector<std::string> &out);
+  bool parseExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool isDefinitionAfterParamList() const;
   bool parseDefinitionBody(Definition &def);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
 

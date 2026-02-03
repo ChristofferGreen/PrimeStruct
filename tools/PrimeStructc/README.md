@@ -24,6 +24,7 @@ clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 - Definitions with zero or more parameters (all `int` for now).
 - Calls to other definitions with matching argument counts.
 - Template lists (`<...>`) are parsed and preserved but ignored by codegen.
+- Executions parse argument expressions (no execution bodies yet).
 - `namespace` blocks for path prefixes.
 - `--entry /path` selects the entry definition (defaults to `/main`).
 

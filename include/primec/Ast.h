@@ -36,6 +36,7 @@ struct Execution {
   std::string fullPath;
   std::string namespacePrefix;
   std::vector<std::string> templateArgs;
+  std::vector<Expr> arguments;
 };
 
 struct Program {

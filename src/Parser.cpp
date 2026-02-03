@@ -74,11 +74,37 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }
-  std::vector<std::string> parameters;
-  if (!parseIdentifierList(parameters)) {
+  bool isDefinition = isDefinitionAfterParamList();
+  if (isDefinition) {
+    std::vector<std::string> parameters;
+    if (!parseIdentifierList(parameters)) {
+      return false;
+    }
+    if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
+      return false;
+    }
+    if (!match(TokenKind::LBrace)) {
+      return fail("definitions must have a body");
+    }
+    Definition def;
+    def.name = name.text;
+    def.namespacePrefix = currentNamespacePrefix();
+    def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+    def.transforms = std::move(transforms);
+    def.templateArgs = std::move(templateArgs);
+    def.parameters = std::move(parameters);
+    if (!parseDefinitionBody(def)) {
+      return false;
+    }
+    defs.push_back(std::move(def));
+    return true;
+  }
+
+  std::vector<Expr> arguments;
+  if (!parseExprList(arguments, currentNamespacePrefix())) {
     return false;
   }
-  if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
+  if (!expect(TokenKind::RParen, "expected ')' after arguments")) {
     return false;
   }
 
@@ -88,22 +114,12 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     exec.namespacePrefix = currentNamespacePrefix();
     exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
     exec.templateArgs = std::move(templateArgs);
+    exec.arguments = std::move(arguments);
     execs.push_back(std::move(exec));
     return true;
   }
 
-  Definition def;
-  def.name = name.text;
-  def.namespacePrefix = currentNamespacePrefix();
-  def.fullPath = makeFullPath(def.name, def.namespacePrefix);
-  def.transforms = std::move(transforms);
-  def.templateArgs = std::move(templateArgs);
-  def.parameters = std::move(parameters);
-  if (!parseDefinitionBody(def)) {
-    return false;
-  }
-  defs.push_back(std::move(def));
-  return true;
+  return fail("executions cannot have a body");
 }
 
 bool Parser::parseTransformList(std::vector<Transform> &out) {
@@ -179,6 +195,46 @@ bool Parser::parseIdentifierList(std::vector<std::string> &out) {
     }
   }
   return true;
+}
+
+bool Parser::parseExprList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+  if (match(TokenKind::RParen)) {
+    return true;
+  }
+  while (true) {
+    Expr arg;
+    if (!parseExpr(arg, namespacePrefix)) {
+      return false;
+    }
+    out.push_back(std::move(arg));
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+    } else {
+      break;
+    }
+  }
+  return true;
+}
+
+bool Parser::isDefinitionAfterParamList() const {
+  size_t index = pos_;
+  int depth = 1;
+  while (index < tokens_.size()) {
+    TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::LParen) {
+      ++depth;
+    } else if (kind == TokenKind::RParen) {
+      --depth;
+      if (depth == 0) {
+        if (index + 1 < tokens_.size()) {
+          return tokens_[index + 1].kind == TokenKind::LBrace;
+        }
+        return false;
+      }
+    }
+    ++index;
+  }
+  return false;
 }
 
 bool Parser::parseDefinitionBody(Definition &def) {
