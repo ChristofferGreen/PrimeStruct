@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace primec {
 namespace {
@@ -195,6 +196,34 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
   info.typeName = typeName;
   return true;
 }
+
+bool validateNamedArguments(const std::vector<Expr> &args,
+                            const std::vector<std::optional<std::string>> &argNames,
+                            const std::string &context,
+                            std::string &error) {
+  if (!argNames.empty() && argNames.size() != args.size()) {
+    error = "argument name count mismatch for " + context;
+    return false;
+  }
+  bool sawNamed = false;
+  std::unordered_set<std::string> used;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i < argNames.size() && argNames[i].has_value()) {
+      sawNamed = true;
+      const std::string &name = *argNames[i];
+      if (!used.insert(name).second) {
+        error = "duplicate named argument: " + name;
+        return false;
+      }
+      continue;
+    }
+    if (sawNamed) {
+      error = "positional argument cannot follow named arguments";
+      return false;
+    }
+  }
+  return true;
+}
 } // namespace
 
 bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
@@ -285,6 +314,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         return false;
       }
       std::string resolved = resolveCalleePath(expr);
+      if (!validateNamedArguments(expr.args, expr.argNames, resolved, error)) {
+        return false;
+      }
       auto it = defMap.find(resolved);
       if (it == defMap.end()) {
         std::string builtinName;
@@ -506,6 +538,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     size_t expectedArgs = paramCounts[exec.fullPath];
     if (exec.arguments.size() != expectedArgs) {
       error = "argument count mismatch for " + exec.fullPath;
+      return false;
+    }
+    if (!validateNamedArguments(exec.arguments, exec.argumentNames, exec.fullPath, error)) {
       return false;
     }
     for (const auto &arg : exec.arguments) {
