@@ -19,6 +19,92 @@ Each filter stage halts on error (reporting diagnostics immediately) and exposes
 - **Risk log:** record open questions (borrow checker, capability taxonomy, GPU backend constraints) and mitigation/rollback strategies.
 - **Exit:** only after this phase is reviewed/approved do parser/IR/backend implementations begin; the conformance suite derives from the frozen charter instead of chasing a moving target.
 
+## Phase 1 — Minimal Compiler That Emits an Executable
+Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source file into a runnable native executable. This is the smallest vertical slice that proves parsing, IR, a backend, and a host toolchain handoff.
+
+### Acceptance criteria
+- A single-file PrimeStruct program with one entry definition compiles to a native executable on macOS (initial target).
+- The compiler can:
+  - Parse a subset of the uniform envelope (definitions + executions, no templates).
+  - Build a canonical AST for that subset.
+  - Lower to a minimal IR (calls, literals, return).
+  - Emit C++ and invoke a host compiler to produce an executable.
+- The produced executable runs and returns a deterministic exit code.
+
+### Minimal surface for v0.1
+- `return(...)` primitive only.
+- Integer literal support (signed 32-bit).
+- `[return<int>]` transform on the entry definition.
+- A single `main()`-like entry definition (`main()`).
+
+### Example source and expected IR (sketch)
+PrimeStruct:
+```
+[return<int>]
+main() {
+  return(42i32)
+}
+```
+
+Expected IR (shape only):
+```
+module {
+  def main(): i32 {
+    return 42
+  }
+}
+```
+
+### Compiler driver behavior (plan)
+- `PrimeStructc --emit=cpp input.prime -o build/hello.cpp`
+- `PrimeStructc --emit=exe input.prime -o build/hello`
+  - Uses the C++ emitter plus the host toolchain (initially `clang++`).
+  - Bundles a minimal runtime shim that maps `main` to `int main()`.
+- All generated outputs land under `build/` (configurable by `--out-dir`).
+
+## Phase 1 — Minimal Compiler That Emits an Executable
+Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source file into a runnable native executable. This is the smallest vertical slice that proves parsing, IR, a backend, and a host toolchain handoff.
+
+### Acceptance criteria
+- A single-file PrimeStruct program with one entry definition compiles to a native executable on macOS (initial target).
+- The compiler can:
+  - Parse a subset of the uniform envelope (definitions + executions, no templates).
+  - Build a canonical AST for that subset.
+  - Lower to a minimal IR (calls, literals, return).
+  - Emit C++ and invoke a host compiler to produce an executable.
+- The produced executable runs and returns a deterministic exit code.
+
+### Minimal surface for v0.1
+- `return(...)` primitive only.
+- Integer literal support (signed 32-bit).
+- `[return<int>]` transform on the entry definition.
+- A single `main()`-like entry definition (`main()`).
+
+### Example source and expected IR (sketch)
+PrimeStruct:
+```
+[return<int>]
+main() {
+  return(42i32)
+}
+```
+
+Expected IR (shape only):
+```
+module {
+  def main(): i32 {
+    return 42
+  }
+}
+```
+
+### Compiler driver behavior (plan)
+- `PrimeStructc --emit=cpp input.prime -o build/hello.cpp`
+- `PrimeStructc --emit=exe input.prime -o build/hello`
+  - Uses the C++ emitter plus the host toolchain (initially `clang++`).
+  - Bundles a minimal runtime shim that maps `main` to `int main()`.
+- All generated outputs land under `build/` (configurable by `--out-dir`).
+
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
 - Emit high-performance C++ for engine integration, GLSL/SPIR-V for GPU shading, and bytecode for an embedded VM without diverging semantics.
