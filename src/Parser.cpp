@@ -456,6 +456,53 @@ bool Parser::parseDefinitionBody(Definition &def) {
     if (isReservedKeyword(name.text)) {
       return fail("reserved keyword cannot be used as identifier: " + name.text);
     }
+    if (name.text == "if" && statementTransforms.empty() && match(TokenKind::LParen)) {
+      size_t savedPos = pos_;
+      expect(TokenKind::LParen, "expected '(' after if");
+      Expr condition;
+      if (!parseExpr(condition, def.namespacePrefix)) {
+        return false;
+      }
+      if (!match(TokenKind::Comma) && match(TokenKind::RParen)) {
+        expect(TokenKind::RParen, "expected ')' after if condition");
+        if (match(TokenKind::LBrace)) {
+          std::vector<Expr> thenBody;
+          if (!parseBraceExprList(thenBody, def.namespacePrefix)) {
+            return false;
+          }
+          if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
+            return fail("if statement requires else block");
+          }
+          consume(TokenKind::Identifier, "expected 'else'");
+          std::vector<Expr> elseBody;
+          if (!parseBraceExprList(elseBody, def.namespacePrefix)) {
+            return false;
+          }
+          Expr thenCall;
+          thenCall.kind = Expr::Kind::Call;
+          thenCall.name = "then";
+          thenCall.namespacePrefix = def.namespacePrefix;
+          thenCall.bodyArguments = std::move(thenBody);
+          Expr elseCall;
+          elseCall.kind = Expr::Kind::Call;
+          elseCall.name = "else";
+          elseCall.namespacePrefix = def.namespacePrefix;
+          elseCall.bodyArguments = std::move(elseBody);
+          Expr ifCall;
+          ifCall.kind = Expr::Kind::Call;
+          ifCall.name = "if";
+          ifCall.namespacePrefix = def.namespacePrefix;
+          ifCall.args.push_back(std::move(condition));
+          ifCall.args.push_back(std::move(thenCall));
+          ifCall.args.push_back(std::move(elseCall));
+          def.statements.push_back(std::move(ifCall));
+          continue;
+        }
+      }
+      pos_ = savedPos;
+    } else if (name.text == "if" && !statementTransforms.empty()) {
+      return fail("if statement cannot have transforms");
+    }
 
     Expr callExpr;
     callExpr.kind = Expr::Kind::Call;

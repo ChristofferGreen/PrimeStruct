@@ -163,6 +163,27 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs if statement sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  if(0i32) {
+    assign(value, 4i32)
+  } else {
+    assign(value, 9i32)
+  }
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_if_sugar.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_sugar_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]

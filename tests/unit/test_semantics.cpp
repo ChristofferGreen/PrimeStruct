@@ -288,4 +288,22 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("if statement sugar validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  if(1i32) {
+    assign(value, 2i32)
+  } else {
+    assign(value, 3i32)
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
