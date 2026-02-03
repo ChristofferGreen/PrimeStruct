@@ -36,6 +36,37 @@ bool isUnaryPrefixPosition(const std::string &input, size_t index) {
   return isSeparator(prev);
 }
 
+bool isExponentSign(const std::string &text, size_t index) {
+  if (index == 0) {
+    return false;
+  }
+  char prev = text[index - 1];
+  if (prev != 'e' && prev != 'E') {
+    return false;
+  }
+  return text[index] == '-' || text[index] == '+';
+}
+
+size_t findLeftTokenStart(const std::string &text, size_t end) {
+  size_t start = end;
+  while (start > 0) {
+    char c = text[start - 1];
+    if (isOperatorTokenChar(c)) {
+      --start;
+      continue;
+    }
+    if (isExponentSign(text, start - 1)) {
+      --start;
+      continue;
+    }
+    break;
+  }
+  if (start > 0 && text[start - 1] == '-' && isUnaryPrefixPosition(text, start - 1)) {
+    --start;
+  }
+  return start;
+}
+
 bool looksLikeTemplateList(const std::string &input, size_t index) {
   if (index >= input.size() || input[index] != '<') {
     return false;
@@ -181,13 +212,7 @@ bool TextFilterPipeline::apply(const std::string &input,
       return false;
     }
     size_t end = output.size();
-    size_t start = end;
-    while (start > 0 && isOperatorTokenChar(output[start - 1])) {
-      --start;
-    }
-    if (start > 0 && output[start - 1] == '-' && isUnaryPrefixPosition(output, start - 1)) {
-      --start;
-    }
+    size_t start = findLeftTokenStart(output, end);
     if (start == end) {
       return false;
     }
@@ -197,8 +222,13 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     size_t rightStart = index + 2;
     size_t rightEnd = rightStart;
-    while (rightEnd < input.size() && isOperatorTokenChar(input[rightEnd])) {
-      ++rightEnd;
+    while (rightEnd < input.size()) {
+      char c = input[rightEnd];
+      if (isOperatorTokenChar(c) || isExponentSign(input, rightEnd)) {
+        ++rightEnd;
+        continue;
+      }
+      break;
     }
     if (rightEnd == rightStart) {
       return false;
@@ -226,13 +256,7 @@ bool TextFilterPipeline::apply(const std::string &input,
       return false;
     }
     size_t end = output.size();
-    size_t start = end;
-    while (start > 0 && isOperatorTokenChar(output[start - 1])) {
-      --start;
-    }
-    if (start > 0 && output[start - 1] == '-' && isUnaryPrefixPosition(output, start - 1)) {
-      --start;
-    }
+    size_t start = findLeftTokenStart(output, end);
     if (start == end) {
       return false;
     }
@@ -242,8 +266,13 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     size_t rightStart = index + 1;
     size_t rightEnd = rightStart;
-    while (rightEnd < input.size() && isOperatorTokenChar(input[rightEnd])) {
-      ++rightEnd;
+    while (rightEnd < input.size()) {
+      char c = input[rightEnd];
+      if (isOperatorTokenChar(c) || isExponentSign(input, rightEnd)) {
+        ++rightEnd;
+        continue;
+      }
+      break;
     }
     if (rightEnd == rightStart) {
       return false;
@@ -351,10 +380,25 @@ bool TextFilterPipeline::apply(const std::string &input,
           }
         }
         size_t digitsEnd = i;
+        bool hasExponent = false;
         if (!isHex && i + 1 < input.size() && input[i] == '.' && isDigitChar(input[i + 1])) {
           ++i;
           while (i < input.size() && isDigitChar(input[i])) {
             ++i;
+          }
+        }
+        if (!isHex && i < input.size() && (input[i] == 'e' || input[i] == 'E')) {
+          size_t expPos = i + 1;
+          if (expPos < input.size() && (input[expPos] == '+' || input[expPos] == '-')) {
+            ++expPos;
+          }
+          size_t expDigits = expPos;
+          while (expPos < input.size() && isDigitChar(input[expPos])) {
+            ++expPos;
+          }
+          if (expPos > expDigits) {
+            i = expPos;
+            hasExponent = true;
           }
         }
         size_t literalEnd = i;
@@ -380,7 +424,7 @@ bool TextFilterPipeline::apply(const std::string &input,
           i = literalEnd + floatSuffixLen - 1;
           continue;
         }
-        if (literalEnd > digitsEnd) {
+        if (literalEnd > digitsEnd || hasExponent) {
           output.append(input.substr(start, literalEnd - start));
           i = literalEnd - 1;
           continue;

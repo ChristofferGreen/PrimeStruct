@@ -354,6 +354,26 @@ TEST_CASE("does not add suffix to float literal without suffix") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not add suffix to float literal with exponent") {
+  const std::string source = "main(){ return(1e3) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("rewrites plus operator with exponent float") {
+  const std::string source = "main(){ return(1e-3+2) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(1e-3, 2i32)") != std::string::npos);
+}
+
 TEST_CASE("does not add suffix when disabled") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;

@@ -103,6 +103,20 @@ Token Lexer::readNumber() {
         advance();
       }
     }
+    if (pos_ < source_.size() && (source_[pos_] == 'e' || source_[pos_] == 'E')) {
+      size_t expPos = pos_;
+      size_t scan = expPos + 1;
+      if (scan < source_.size() && (source_[scan] == '+' || source_[scan] == '-')) {
+        ++scan;
+      }
+      size_t digitsStart = scan;
+      while (scan < source_.size() && std::isdigit(static_cast<unsigned char>(source_[scan]))) {
+        ++scan;
+      }
+      if (scan > digitsStart) {
+        pos_ = scan;
+      }
+    }
   }
   if (!isHex) {
     if (source_.compare(pos_, 3, "f64") == 0) {

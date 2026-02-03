@@ -148,6 +148,36 @@ main() {
   CHECK(program.definitions[0].returnExpr->floatWidth == 32);
 }
 
+TEST_CASE("parses float literals with exponent") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1e3)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1e3");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses float literals with exponent and sign") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1e-3f)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1e-3");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
 TEST_CASE("parses double literals") {
   const std::string source = R"(
 [return<f64>]

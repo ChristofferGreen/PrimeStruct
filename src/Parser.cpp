@@ -20,28 +20,46 @@ bool isValidFloatLiteral(const std::string &text) {
   if (text.empty()) {
     return false;
   }
-  size_t start = 0;
-  if (text[0] == '-') {
-    start = 1;
+  size_t i = 0;
+  if (text[i] == '-') {
+    ++i;
   }
-  if (start >= text.size()) {
+  if (i >= text.size()) {
     return false;
   }
   bool sawDigit = false;
   bool sawDot = false;
-  for (size_t i = start; i < text.size(); ++i) {
+  while (i < text.size()) {
     char c = text[i];
     if (std::isdigit(static_cast<unsigned char>(c))) {
       sawDigit = true;
+      ++i;
       continue;
     }
     if (c == '.' && !sawDot) {
       sawDot = true;
+      ++i;
       continue;
     }
+    break;
+  }
+  if (!sawDigit) {
     return false;
   }
-  return sawDigit;
+  if (i < text.size() && (text[i] == 'e' || text[i] == 'E')) {
+    ++i;
+    if (i < text.size() && (text[i] == '+' || text[i] == '-')) {
+      ++i;
+    }
+    size_t expStart = i;
+    while (i < text.size() && std::isdigit(static_cast<unsigned char>(text[i]))) {
+      ++i;
+    }
+    if (i == expStart) {
+      return false;
+    }
+  }
+  return i == text.size();
 }
 } // namespace
 
@@ -687,7 +705,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         floatWidth = 32;
         isFloat = true;
         text.pop_back();
-      } else if (text.find('.') != std::string::npos) {
+      } else if (text.find('.') != std::string::npos || text.find('e') != std::string::npos ||
+                 text.find('E') != std::string::npos) {
         floatWidth = 32;
         isFloat = true;
       }
