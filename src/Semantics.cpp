@@ -127,6 +127,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     error = "missing entry definition " + entryPath;
     return false;
   }
+  if (entryPath != "/main") {
+    error = "v0.1 entry must be /main";
+    return false;
+  }
   const Definition *entryDef = defMap.at(entryPath);
   if (entryDef->parameters.size() != 0) {
     error = "entry definition must take no parameters: " + entryPath;
