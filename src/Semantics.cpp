@@ -145,6 +145,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   }
 
   for (const auto &exec : program.executions) {
+    if (!exec.bodyArguments.empty()) {
+      error = "execution bodies are not supported in v0.1: " + exec.fullPath;
+      return false;
+    }
     auto it = defMap.find(exec.fullPath);
     if (it == defMap.end()) {
       error = "unknown execution target: " + exec.fullPath;
@@ -156,11 +160,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     for (const auto &arg : exec.arguments) {
-      if (!validateExpr({}, arg)) {
-        return false;
-      }
-    }
-    for (const auto &arg : exec.bodyArguments) {
       if (!validateExpr({}, arg)) {
         return false;
       }

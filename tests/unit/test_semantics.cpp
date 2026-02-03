@@ -143,4 +143,18 @@ main() {
   CHECK(error.find("templates are not supported in calls") != std::string::npos);
 }
 
+TEST_CASE("execution bodies are rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+run() { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("execution bodies are not supported") != std::string::npos);
+}
+
 TEST_SUITE_END();
