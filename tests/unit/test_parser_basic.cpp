@@ -156,6 +156,26 @@ main() {
   CHECK(*transforms[2].templateArg == "int");
 }
 
+TEST_CASE("parses named call arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(make_color(hue = 1i32, value = 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &call = *program.definitions[0].returnExpr;
+  REQUIRE(call.kind == primec::Expr::Kind::Call);
+  REQUIRE(call.args.size() == 2);
+  REQUIRE(call.argNames.size() == 2);
+  CHECK(call.argNames[0].has_value());
+  CHECK(call.argNames[1].has_value());
+  CHECK(*call.argNames[0] == "hue");
+  CHECK(*call.argNames[1] == "value");
+}
+
 TEST_CASE("parses float literals without suffix") {
   const std::string source = R"(
 [return<float>]

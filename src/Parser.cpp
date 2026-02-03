@@ -178,7 +178,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
 
   std::vector<Expr> arguments;
-  if (!parseExprList(arguments, currentNamespacePrefix())) {
+  std::vector<std::optional<std::string>> argumentNames;
+  if (!parseCallArgumentList(arguments, argumentNames, currentNamespacePrefix())) {
     return false;
   }
   if (!expect(TokenKind::RParen, "expected ')' after arguments")) {
@@ -193,6 +194,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     exec.transforms = std::move(transforms);
     exec.templateArgs = std::move(templateArgs);
     exec.arguments = std::move(arguments);
+    exec.argumentNames = std::move(argumentNames);
     execs.push_back(std::move(exec));
     return true;
   }
@@ -204,6 +206,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.transforms = std::move(transforms);
   exec.templateArgs = std::move(templateArgs);
   exec.arguments = std::move(arguments);
+  exec.argumentNames = std::move(argumentNames);
   if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
     return false;
   }
@@ -329,16 +332,33 @@ bool Parser::parseIdentifierList(std::vector<std::string> &out) {
   return true;
 }
 
-bool Parser::parseExprList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+bool Parser::parseCallArgumentList(std::vector<Expr> &out,
+                                   std::vector<std::optional<std::string>> &argNames,
+                                   const std::string &namespacePrefix) {
   if (match(TokenKind::RParen)) {
     return true;
   }
   while (true) {
+    std::optional<std::string> argName;
+    if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Equal) {
+      Token name = consume(TokenKind::Identifier, "expected argument name");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      if (isReservedKeyword(name.text)) {
+        return fail("reserved keyword cannot be used as identifier: " + name.text);
+      }
+      if (!expect(TokenKind::Equal, "expected '=' after argument name")) {
+        return false;
+      }
+      argName = name.text;
+    }
     Expr arg;
     if (!parseExpr(arg, namespacePrefix)) {
       return false;
     }
     out.push_back(std::move(arg));
+    argNames.push_back(std::move(argName));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
     } else {
@@ -416,6 +436,7 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
     return false;
   }
   returnCall.args.push_back(std::move(arg));
+  returnCall.argNames.push_back(std::nullopt);
   if (match(TokenKind::Comma)) {
     return fail("return requires exactly one argument");
   }
@@ -623,8 +644,11 @@ bool Parser::parseDefinitionBody(Definition &def) {
           ifCall.name = "if";
           ifCall.namespacePrefix = def.namespacePrefix;
           ifCall.args.push_back(std::move(condition));
+          ifCall.argNames.push_back(std::nullopt);
           ifCall.args.push_back(std::move(thenCall));
+          ifCall.argNames.push_back(std::nullopt);
           ifCall.args.push_back(std::move(elseCall));
+          ifCall.argNames.push_back(std::nullopt);
           def.statements.push_back(std::move(ifCall));
           continue;
         }
@@ -643,19 +667,8 @@ bool Parser::parseDefinitionBody(Definition &def) {
     if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
       return false;
     }
-    if (!match(TokenKind::RParen)) {
-      while (true) {
-        Expr arg;
-        if (!parseExpr(arg, def.namespacePrefix)) {
-          return false;
-        }
-        callExpr.args.push_back(std::move(arg));
-        if (match(TokenKind::Comma)) {
-          expect(TokenKind::Comma, "expected ','");
-        } else {
-          break;
-        }
-      }
+    if (!parseCallArgumentList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
+      return false;
     }
     if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
       return false;
@@ -700,19 +713,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     call.templateArgs = std::move(templateArgs);
     call.transforms = std::move(transforms);
     call.isBinding = true;
-    if (!match(TokenKind::RParen)) {
-      while (true) {
-        Expr arg;
-        if (!parseExpr(arg, namespacePrefix)) {
-          return false;
-        }
-        call.args.push_back(std::move(arg));
-        if (match(TokenKind::Comma)) {
-          expect(TokenKind::Comma, "expected ','");
-        } else {
-          break;
-        }
-      }
+    if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+      return false;
     }
     if (!expect(TokenKind::RParen, "expected ')' to close call")) {
       return false;
@@ -845,19 +847,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '(' after identifier");
       hasCallSyntax = true;
-      if (!match(TokenKind::RParen)) {
-        while (true) {
-          Expr arg;
-          if (!parseExpr(arg, namespacePrefix)) {
-            return false;
-          }
-          call.args.push_back(std::move(arg));
-          if (match(TokenKind::Comma)) {
-            expect(TokenKind::Comma, "expected ','");
-          } else {
-            break;
-          }
-        }
+      if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+        return false;
       }
       if (!expect(TokenKind::RParen, "expected ')' to close call")) {
         return false;

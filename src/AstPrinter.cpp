@@ -61,6 +61,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
       if (i > 0) {
         out << ", ";
       }
+      if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+        out << *expr.argNames[i] << " = ";
+      }
       printExpr(out, expr.args[i]);
     }
     out << ")";
@@ -158,6 +161,9 @@ void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
   for (size_t i = 0; i < exec.arguments.size(); ++i) {
     if (i > 0) {
       out << ", ";
+    }
+    if (i < exec.argumentNames.size() && exec.argumentNames[i].has_value()) {
+      out << *exec.argumentNames[i] << " = ";
     }
     printExpr(out, exec.arguments[i]);
   }

@@ -20,7 +20,9 @@ private:
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
   bool parseIdentifierList(std::vector<std::string> &out);
-  bool parseExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool parseCallArgumentList(std::vector<Expr> &out,
+                             std::vector<std::optional<std::string>> &argNames,
+                             const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool definitionHasReturnBeforeClose() const;

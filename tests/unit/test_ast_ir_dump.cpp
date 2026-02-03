@@ -227,6 +227,25 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(make_color(hue = 1i32, value = 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<int>] /main() {\n"
+      "    return make_color(hue = 1, value = 2)\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]
