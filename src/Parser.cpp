@@ -531,13 +531,15 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return false;
       }
     }
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = name.text;
+    call.namespacePrefix = namespacePrefix;
+    call.templateArgs = std::move(templateArgs);
+    bool hasCallSyntax = false;
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '(' after identifier");
-      Expr call;
-      call.kind = Expr::Kind::Call;
-      call.name = name.text;
-      call.namespacePrefix = namespacePrefix;
-      call.templateArgs = std::move(templateArgs);
+      hasCallSyntax = true;
       if (!match(TokenKind::RParen)) {
         while (true) {
           Expr arg;
@@ -555,11 +557,18 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!expect(TokenKind::RParen, "expected ')' to close call")) {
         return false;
       }
+    }
+    if (match(TokenKind::LBrace)) {
+      hasCallSyntax = true;
+      if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+        return false;
+      }
+    }
+    if (hasCallSyntax) {
       expr = std::move(call);
       return true;
     }
-
-    if (!templateArgs.empty()) {
+    if (!call.templateArgs.empty()) {
       return fail("template arguments require a call");
     }
     expr.kind = Expr::Kind::Name;

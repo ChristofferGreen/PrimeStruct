@@ -1,5 +1,6 @@
 #include "primec/Emitter.h"
 
+#include <functional>
 #include <sstream>
 #include <unordered_map>
 
@@ -108,6 +109,36 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
   }
   return name == "assign";
 }
+
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == nameToMatch;
+}
+
+bool isBuiltinExecuteIf(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
+  std::string full = resolveExprPath(expr);
+  if (nameMap.count(full) > 0) {
+    return false;
+  }
+  return isSimpleCallName(expr, "execute_if");
+}
+
+bool isThenBlockCall(const Expr &expr) {
+  return isSimpleCallName(expr, "then_block");
+}
+
+bool isElseBlockCall(const Expr &expr) {
+  return isSimpleCallName(expr, "else_block");
+}
 } // namespace
 
 std::string Emitter::toCppName(const std::string &fullPath) const {
@@ -178,21 +209,47 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       out << "int " << def.parameters[i];
     }
     out << ") {\n";
-    for (const auto &stmt : def.statements) {
+    std::function<void(const Expr &, int)> emitStatement;
+    emitStatement = [&](const Expr &stmt, int indent) {
+      std::string pad(static_cast<size_t>(indent) * 2, ' ');
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
         std::string type = bindingTypeToCpp(binding.typeName);
-        out << "  " << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
+        out << pad << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           out << " = " << emitExpr(stmt.args.front(), nameMap);
         }
         out << ";\n";
-      } else if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
-                 stmt.args.front().kind == Expr::Kind::Name) {
-        out << "  " << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap) << ";\n";
-      } else {
-        out << "  " << emitExpr(stmt, nameMap) << ";\n";
+        return;
       }
+      if (isBuiltinExecuteIf(stmt, nameMap) && stmt.args.size() == 3) {
+        const Expr &cond = stmt.args[0];
+        const Expr &thenBlock = stmt.args[1];
+        const Expr &elseBlock = stmt.args[2];
+        out << pad << "if (" << emitExpr(cond, nameMap) << ") {\n";
+        if (isThenBlockCall(thenBlock)) {
+          for (const auto &bodyStmt : thenBlock.bodyArguments) {
+            emitStatement(bodyStmt, indent + 1);
+          }
+        }
+        out << pad << "} else {\n";
+        if (isElseBlockCall(elseBlock)) {
+          for (const auto &bodyStmt : elseBlock.bodyArguments) {
+            emitStatement(bodyStmt, indent + 1);
+          }
+        }
+        out << pad << "}\n";
+        return;
+      }
+      if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
+          stmt.args.front().kind == Expr::Kind::Name) {
+        out << pad << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap) << ";\n";
+        return;
+      }
+      out << pad << emitExpr(stmt, nameMap) << ";\n";
+    };
+    for (const auto &stmt : def.statements) {
+      emitStatement(stmt, 1);
     }
     if (returnKind == ReturnKind::Void) {
       if (def.returnExpr) {

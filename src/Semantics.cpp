@@ -75,6 +75,32 @@ bool isAssignCall(const Expr &expr) {
   return name == "assign";
 }
 
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == nameToMatch;
+}
+
+bool isExecuteIfCall(const Expr &expr) {
+  return isSimpleCallName(expr, "execute_if");
+}
+
+bool isThenBlockCall(const Expr &expr) {
+  return isSimpleCallName(expr, "then_block");
+}
+
+bool isElseBlockCall(const Expr &expr) {
+  return isSimpleCallName(expr, "else_block");
+}
+
 bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
   std::string typeName;
   for (const auto &transform : expr.transforms) {
@@ -170,6 +196,14 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     if (expr.kind == Expr::Kind::Call) {
+      if (!expr.bodyArguments.empty()) {
+        error = "block arguments are only supported on execute_if blocks";
+        return false;
+      }
+      if (isExecuteIfCall(expr) || isThenBlockCall(expr) || isElseBlockCall(expr)) {
+        error = "control-flow blocks cannot appear in expressions";
+        return false;
+      }
       std::string resolved = resolveCalleePath(expr);
       auto it = defMap.find(resolved);
       if (it == defMap.end()) {
@@ -223,6 +257,66 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   };
 
+  std::function<bool(const std::vector<std::string> &, const std::unordered_map<std::string, BindingInfo> &,
+                     const Expr &)>
+      validateStatement = [&](const std::vector<std::string> &params,
+                              const std::unordered_map<std::string, BindingInfo> &locals,
+                              const Expr &stmt) -> bool {
+    if (stmt.kind != Expr::Kind::Call) {
+      error = "statements must be calls";
+      return false;
+    }
+    if (isExecuteIfCall(stmt)) {
+      if (!stmt.bodyArguments.empty()) {
+        error = "execute_if does not accept trailing block arguments";
+        return false;
+      }
+      if (stmt.args.size() != 3) {
+        error = "execute_if requires condition, then_block, else_block";
+        return false;
+      }
+      const Expr &cond = stmt.args[0];
+      const Expr &thenBlock = stmt.args[1];
+      const Expr &elseBlock = stmt.args[2];
+      if (!validateExpr(params, locals, cond)) {
+        return false;
+      }
+      auto validateBlock = [&](const Expr &block, const char *label) -> bool {
+        if (block.kind != Expr::Kind::Call) {
+          error = std::string(label) + " must be a call";
+          return false;
+        }
+        if ((std::string(label) == "then_block" && !isThenBlockCall(block)) ||
+            (std::string(label) == "else_block" && !isElseBlockCall(block))) {
+          error = std::string(label) + " must use the " + label + " wrapper";
+          return false;
+        }
+        if (!block.args.empty()) {
+          error = std::string(label) + " does not accept arguments";
+          return false;
+        }
+        for (const auto &bodyExpr : block.bodyArguments) {
+          if (!validateStatement(params, locals, bodyExpr)) {
+            return false;
+          }
+        }
+        return true;
+      };
+      if (!validateBlock(thenBlock, "then_block")) {
+        return false;
+      }
+      if (!validateBlock(elseBlock, "else_block")) {
+        return false;
+      }
+      return true;
+    }
+    if (!stmt.bodyArguments.empty()) {
+      error = "block arguments are only supported on execute_if";
+      return false;
+    }
+    return validateExpr(params, locals, stmt);
+  };
+
   for (const auto &def : program.definitions) {
     std::unordered_map<std::string, BindingInfo> locals;
     ReturnKind kind = ReturnKind::Unknown;
@@ -249,7 +343,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         locals.emplace(stmt.name, info);
       } else {
-        if (!validateExpr(def.parameters, locals, stmt)) {
+        if (!validateStatement(def.parameters, locals, stmt)) {
           return false;
         }
       }
@@ -291,7 +385,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments must be calls";
         return false;
       }
-      if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, arg)) {
+      if (!validateStatement({}, std::unordered_map<std::string, BindingInfo>{}, arg)) {
         return false;
       }
     }

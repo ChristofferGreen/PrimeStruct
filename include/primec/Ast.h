@@ -16,6 +16,7 @@ struct Expr {
   int literalValue = 0;
   std::string name;
   std::vector<Expr> args;
+  std::vector<Expr> bodyArguments;
   std::vector<std::string> templateArgs;
   std::string namespacePrefix;
   std::vector<Transform> transforms;

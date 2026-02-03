@@ -44,6 +44,16 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
       printExpr(out, expr.args[i]);
     }
     out << ")";
+    if (!expr.bodyArguments.empty()) {
+      out << " { ";
+      for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
+        if (i > 0) {
+          out << ", ";
+        }
+        printExpr(out, expr.bodyArguments[i]);
+      }
+      out << " }";
+    }
     break;
   }
 }

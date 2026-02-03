@@ -64,4 +64,26 @@ main() {
   CHECK(stmt.transforms[0].name == "i32");
 }
 
+TEST_CASE("parses execute_if with block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  execute_if(1i32, then_block{ assign(value, 2i32) }, else_block{ assign(value, 3i32) })
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &stmt = program.definitions[0].statements[1];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  CHECK(stmt.name == "execute_if");
+  REQUIRE(stmt.args.size() == 3);
+  CHECK(stmt.args[1].name == "then_block");
+  CHECK(stmt.args[2].name == "else_block");
+  CHECK(stmt.args[1].bodyArguments.size() == 1);
+  CHECK(stmt.args[2].bodyArguments.size() == 1);
+}
+
 TEST_SUITE_END();
