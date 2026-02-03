@@ -34,6 +34,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
 - Integer literal support (signed 32-bit).
+- Templates are not supported in v0.1.
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 - Executions are call-style only (no execution bodies in v0.1).

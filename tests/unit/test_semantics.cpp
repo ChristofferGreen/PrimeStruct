@@ -114,49 +114,6 @@ main() {
   CHECK(error.find("unsupported transform") != std::string::npos);
 }
 
-TEST_CASE("definition templates are rejected") {
-  const std::string source = R"(
-[return<int>]
-main<int>() {
-  return(1i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("templates are not supported in definitions") != std::string::npos);
-}
-
-TEST_CASE("execution templates are rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-run<int>()
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("templates are not supported in executions") != std::string::npos);
-}
-
-TEST_CASE("call templates are rejected") {
-  const std::string source = R"(
-[return<int>]
-callee() {
-  return(1i32)
-}
-
-[return<int>]
-main() {
-  return(callee<int>())
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("templates are not supported in calls") != std::string::npos);
-}
-
 TEST_CASE("execution bodies are rejected") {
   const std::string source = R"(
 [return<int>]

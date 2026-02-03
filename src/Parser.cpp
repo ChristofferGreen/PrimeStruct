@@ -65,11 +65,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return false;
   }
 
-  std::vector<std::string> templateArgs;
   if (match(TokenKind::LAngle)) {
-    if (!parseTemplateList(templateArgs)) {
-      return false;
-    }
+    return fail("templates are not supported in v0.1");
   }
 
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
@@ -92,7 +89,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.namespacePrefix = currentNamespacePrefix();
     def.fullPath = makeFullPath(def.name, def.namespacePrefix);
     def.transforms = std::move(transforms);
-    def.templateArgs = std::move(templateArgs);
+    def.templateArgs = {};
     def.parameters = std::move(parameters);
     if (!parseDefinitionBody(def)) {
       return false;
@@ -114,7 +111,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     exec.name = name.text;
     exec.namespacePrefix = currentNamespacePrefix();
     exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
-    exec.templateArgs = std::move(templateArgs);
+    exec.templateArgs = {};
     exec.arguments = std::move(arguments);
     execs.push_back(std::move(exec));
     return true;
@@ -124,7 +121,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.name = name.text;
   exec.namespacePrefix = currentNamespacePrefix();
   exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
-  exec.templateArgs = std::move(templateArgs);
+  exec.templateArgs = {};
   exec.arguments = std::move(arguments);
   if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
     return false;
@@ -410,11 +407,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (name.kind == TokenKind::End) {
       return false;
     }
-    std::vector<std::string> templateArgs;
     if (match(TokenKind::LAngle)) {
-      if (!parseTemplateList(templateArgs)) {
-        return false;
-      }
+      return fail("templates are not supported in v0.1");
     }
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '(' after identifier");
@@ -422,7 +416,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.kind = Expr::Kind::Call;
       call.name = name.text;
       call.namespacePrefix = namespacePrefix;
-      call.templateArgs = std::move(templateArgs);
       if (!match(TokenKind::RParen)) {
         while (true) {
           Expr arg;
@@ -444,9 +437,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return true;
     }
 
-    if (!templateArgs.empty()) {
-      return fail("template arguments require a call");
-    }
     expr.kind = Expr::Kind::Name;
     expr.name = name.text;
     expr.namespacePrefix = namespacePrefix;
