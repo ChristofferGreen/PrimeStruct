@@ -45,11 +45,14 @@ bool IncludeResolver::expandIncludes(const std::string &inputPath, std::string &
   }
   source = std::move(content);
   std::string baseDir = input.parent_path().string();
-  return expandIncludesInternal(baseDir, source, error);
+  std::unordered_set<std::string> expanded;
+  return expandIncludesInternal(baseDir, source, expanded, error);
 }
 
-bool IncludeResolver::expandIncludesInternal(const std::string &baseDir, std::string &source, std::string &error) {
-  std::unordered_set<std::string> expanded;
+bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
+                                             std::string &source,
+                                             std::unordered_set<std::string> &expanded,
+                                             std::string &error) {
   bool changed = true;
 
   while (changed) {
@@ -128,10 +131,10 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir, std::st
             error = "failed to read include: " + resolvedText;
             return false;
           }
-          if (!expandIncludesInternal(resolved.parent_path().string(), included, error)) {
+          expanded.insert(resolvedText);
+          if (!expandIncludesInternal(resolved.parent_path().string(), included, expanded, error)) {
             return false;
           }
-          expanded.insert(resolvedText);
           result.append(included);
           if (!included.empty() && included.back() != '\n') {
             result.push_back('\n');

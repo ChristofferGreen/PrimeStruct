@@ -37,4 +37,29 @@ TEST_CASE("expands multiple include paths") {
   CHECK(source.find("LIB_B") != std::string::npos);
 }
 
+TEST_CASE("ignores nested duplicate includes") {
+  const std::string marker = "LIB_D_MARKER";
+  const std::string libD = writeTemp("lib_nested_d.prime",
+                                     "// " + marker + "\n"
+                                     "[return<int>]\nhelper_d(){ return(4i32) }\n");
+  const std::string libB =
+      writeTemp("lib_nested_b.prime", "include<\"" + libD + "\">\n// LIB_B\n");
+  const std::string libC =
+      writeTemp("lib_nested_c.prime", "include<\"" + libD + "\">\n// LIB_C\n");
+  const std::string srcPath = writeTemp("main_nested.prime",
+                                        "include<\"" + libB + "\">\n"
+                                        "include<\"" + libC + "\">\n"
+                                        "[return<int>]\nmain(){ return(helper_d()) }\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  const auto first = source.find(marker);
+  const auto second = source.find(marker, first == std::string::npos ? 0 : first + 1);
+  CHECK(first != std::string::npos);
+  CHECK(second == std::string::npos);
+}
+
 TEST_SUITE_END();
