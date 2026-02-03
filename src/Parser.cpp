@@ -382,6 +382,13 @@ bool Parser::isDefinitionSignature() const {
 }
 
 bool Parser::parseDefinitionBody(Definition &def) {
+  bool returnsVoid = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {
+      returnsVoid = true;
+      break;
+    }
+  }
   if (!expect(TokenKind::LBrace, "expected '{' to start body")) {
     return false;
   }
@@ -394,6 +401,7 @@ bool Parser::parseDefinitionBody(Definition &def) {
       return false;
     }
     if (name.text == "return") {
+      def.hasReturnStatement = true;
       if (def.returnExpr) {
         return fail("multiple return statements are not supported");
       }
@@ -405,7 +413,17 @@ bool Parser::parseDefinitionBody(Definition &def) {
         return false;
       }
       if (match(TokenKind::RParen)) {
-        return fail("return requires exactly one argument");
+        if (!returnsVoid) {
+          return fail("return requires exactly one argument");
+        }
+        expect(TokenKind::RParen, "expected ')' after return");
+        if (!expect(TokenKind::RBrace, "expected '}' after return statement")) {
+          return false;
+        }
+        return true;
+      }
+      if (returnsVoid) {
+        return fail("return value not allowed for void definition");
       }
       Expr arg;
       if (!parseExpr(arg, def.namespacePrefix)) {
@@ -456,6 +474,9 @@ bool Parser::parseDefinitionBody(Definition &def) {
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
   if (!def.returnExpr) {
+    if (returnsVoid) {
+      return true;
+    }
     return fail("missing return statement in definition body");
   }
   return true;

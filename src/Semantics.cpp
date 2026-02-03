@@ -5,6 +5,39 @@
 
 namespace primec {
 namespace {
+enum class ReturnKind { Unknown, Int, Void };
+
+ReturnKind getReturnKind(const Definition &def, std::string &error) {
+  ReturnKind kind = ReturnKind::Unknown;
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return") {
+      continue;
+    }
+    if (!transform.templateArg) {
+      error = "return transform requires a type on " + def.fullPath;
+      return ReturnKind::Unknown;
+    }
+    const std::string &arg = *transform.templateArg;
+    if (arg == "int") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Int) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Int;
+    } else if (arg == "void") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Void) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Void;
+    } else {
+      error = "unsupported return type on " + def.fullPath;
+      return ReturnKind::Unknown;
+    }
+  }
+  return kind;
+}
+
 bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -26,17 +59,17 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
 
 bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
   std::unordered_map<std::string, const Definition *> defMap;
+  std::unordered_map<std::string, ReturnKind> returnKinds;
   for (const auto &def : program.definitions) {
     if (defMap.count(def.fullPath) > 0) {
       error = "duplicate definition: " + def.fullPath;
       return false;
     }
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "return" && transform.templateArg && *transform.templateArg != "int") {
-        error = "unsupported return type on " + def.fullPath;
-        return false;
-      }
+    ReturnKind kind = getReturnKind(def, error);
+    if (!error.empty()) {
+      return false;
     }
+    returnKinds[def.fullPath] = kind;
     defMap[def.fullPath] = &def;
   }
 
@@ -115,17 +148,29 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   };
 
   for (const auto &def : program.definitions) {
+    ReturnKind kind = ReturnKind::Unknown;
+    auto kindIt = returnKinds.find(def.fullPath);
+    if (kindIt != returnKinds.end()) {
+      kind = kindIt->second;
+    }
     for (const auto &stmt : def.statements) {
       if (!validateExpr(def.parameters, stmt)) {
         return false;
       }
     }
-    if (!def.returnExpr) {
-      error = "missing return statement in " + def.fullPath;
-      return false;
-    }
-    if (!validateExpr(def.parameters, *def.returnExpr)) {
-      return false;
+    if (kind == ReturnKind::Void) {
+      if (def.returnExpr) {
+        error = "return value not allowed in void definition " + def.fullPath;
+        return false;
+      }
+    } else {
+      if (!def.returnExpr) {
+        error = "missing return statement in " + def.fullPath;
+        return false;
+      }
+      if (!validateExpr(def.parameters, *def.returnExpr)) {
+        return false;
+      }
     }
   }
 

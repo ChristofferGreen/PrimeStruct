@@ -81,6 +81,21 @@ main() {
   CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
+TEST_CASE("return value not allowed for void definitions") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("return value not allowed for void definition") != std::string::npos);
+}
+
 TEST_CASE("missing return fails in parser") {
   const std::string source = R"(
 [return<int>]

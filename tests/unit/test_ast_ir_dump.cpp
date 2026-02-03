@@ -57,6 +57,43 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints void return") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  return()
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<void>] /main() {\n"
+      "    return\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints void return") {
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): void {\n"
+      "    return\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints execution transforms") {
   const std::string source = R"(
 [return<int>]

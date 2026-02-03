@@ -98,4 +98,18 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs void main") {
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_void.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_void_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_SUITE_END();

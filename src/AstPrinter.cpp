@@ -92,10 +92,13 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
     printExpr(out, stmt);
     out << "\n";
   }
-  if (def.returnExpr) {
+  if (def.hasReturnStatement) {
     indent(out, depth + 1);
-    out << "return ";
-    printExpr(out, *def.returnExpr);
+    out << "return";
+    if (def.returnExpr) {
+      out << " ";
+      printExpr(out, *def.returnExpr);
+    }
     out << "\n";
   }
   indent(out, depth);

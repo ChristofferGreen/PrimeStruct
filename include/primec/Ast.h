@@ -29,6 +29,7 @@ struct Definition {
   std::vector<std::string> parameters;
   std::vector<Expr> statements;
   std::optional<Expr> returnExpr;
+  bool hasReturnStatement = false;
 };
 
 struct Execution {

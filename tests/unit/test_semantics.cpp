@@ -155,4 +155,15 @@ main() {
   CHECK(error.find("argument count mismatch for builtin plus") != std::string::npos);
 }
 
+TEST_CASE("void return can omit return statement") {
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

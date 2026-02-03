@@ -5,6 +5,27 @@
 namespace primec {
 
 namespace {
+enum class ReturnKind { Int, Void };
+
+ReturnKind getReturnKind(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || !transform.templateArg) {
+      continue;
+    }
+    if (*transform.templateArg == "void") {
+      return ReturnKind::Void;
+    }
+    if (*transform.templateArg == "int") {
+      return ReturnKind::Int;
+    }
+  }
+  return ReturnKind::Int;
+}
+
+const char *returnTypeName(ReturnKind kind) {
+  return kind == ReturnKind::Void ? "void" : "i32";
+}
+
 void indent(std::ostringstream &out, int depth) {
   for (int i = 0; i < depth; ++i) {
     out << "  ";
@@ -33,8 +54,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
 }
 
 void printDefinition(std::ostringstream &out, const Definition &def, int depth) {
+  ReturnKind kind = getReturnKind(def);
   indent(out, depth);
-  out << "def " << def.fullPath << "(): i32 {\n";
+  out << "def " << def.fullPath << "(): " << returnTypeName(kind) << " {\n";
   for (const auto &stmt : def.statements) {
     indent(out, depth + 1);
     out << "call ";
@@ -46,6 +68,9 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
     out << "return ";
     printExpr(out, *def.returnExpr);
     out << "\n";
+  } else if (kind == ReturnKind::Void) {
+    indent(out, depth + 1);
+    out << "return\n";
   }
   indent(out, depth);
   out << "}\n";
