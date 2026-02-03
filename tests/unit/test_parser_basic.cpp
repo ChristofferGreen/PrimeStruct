@@ -104,6 +104,39 @@ main() {
   CHECK(program.definitions[0].returnExpr->literalValue == 1);
 }
 
+TEST_CASE("parses string literal arguments") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  log("hello")
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  REQUIRE(stmt.args.size() == 1);
+  CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
+  CHECK(stmt.args[0].stringValue == "\"hello\"");
+}
+
+TEST_CASE("parses raw string literal arguments") {
+  const std::string source =
+      "[return<void>]\n"
+      "main() {\n"
+      "  log(R\"(hello world)\")\n"
+      "}\n";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  REQUIRE(stmt.args.size() == 1);
+  CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
+  CHECK(stmt.args[0].stringValue == "R\"(hello world)\"");
+}
+
 TEST_CASE("parses if statement sugar") {
   const std::string source = R"(
 [return<int>]

@@ -264,6 +264,16 @@ TEST_CASE("does not rewrite numbers inside strings") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not rewrite numbers inside raw strings") {
+  const std::string source = "main(){ log(R\"(42+7)\") }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("does not add suffix when disabled") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;

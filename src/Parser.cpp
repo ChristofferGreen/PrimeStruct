@@ -655,6 +655,16 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     }
     return true;
   }
+  if (match(TokenKind::String)) {
+    Token text = consume(TokenKind::String, "expected string literal");
+    if (text.kind == TokenKind::End) {
+      return false;
+    }
+    expr.kind = Expr::Kind::StringLiteral;
+    expr.namespacePrefix = namespacePrefix;
+    expr.stringValue = text.text;
+    return true;
+  }
   if (match(TokenKind::Identifier)) {
     Token name = consume(TokenKind::Identifier, "expected identifier");
     if (name.kind == TokenKind::End) {

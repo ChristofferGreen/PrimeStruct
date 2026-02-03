@@ -110,6 +110,45 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints string literals") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  log("hello")
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<void>] /main() {\n"
+      "    log(\"hello\")\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints string literals") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  log("hello")
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): void {\n"
+      "    call log(\"hello\")\n"
+      "    return\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]

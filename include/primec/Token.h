@@ -7,6 +7,7 @@ namespace primec {
 enum class TokenKind {
   Identifier,
   Number,
+  String,
   LBracket,
   RBracket,
   LParen,

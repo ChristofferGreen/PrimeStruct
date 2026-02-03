@@ -229,6 +229,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     if (expr.kind == Expr::Kind::Literal) {
       return true;
     }
+    if (expr.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
     if (expr.kind == Expr::Kind::Name) {
       if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
         return true;

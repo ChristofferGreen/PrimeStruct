@@ -15,7 +15,11 @@ std::vector<Token> Lexer::tokenize() {
       break;
     }
     char c = source_[pos_];
-    if (isIdentifierStart(c)) {
+    if (c == 'R' && pos_ + 2 < source_.size() && source_[pos_ + 1] == '"' && source_[pos_ + 2] == '(') {
+      tokens.push_back(readRawString());
+    } else if (c == '"' || c == '\'') {
+      tokens.push_back(readString(c));
+    } else if (isIdentifierStart(c)) {
       tokens.push_back(readIdentifier());
     } else if (std::isdigit(static_cast<unsigned char>(c)) ||
                (c == '-' && pos_ + 1 < source_.size() &&
@@ -85,6 +89,53 @@ Token Lexer::readNumber() {
     advance();
   }
   return {TokenKind::Number, source_.substr(start, pos_ - start), startLine, startColumn};
+}
+
+Token Lexer::readString(char quote) {
+  int startLine = line_;
+  int startColumn = column_;
+  size_t start = pos_;
+  advance();
+  while (pos_ < source_.size()) {
+    char c = source_[pos_];
+    if (c == '\\') {
+      advance();
+      if (pos_ < source_.size()) {
+        advance();
+      }
+      continue;
+    }
+    if (c == quote) {
+      advance();
+      return {TokenKind::String, source_.substr(start, pos_ - start), startLine, startColumn};
+    }
+    advance();
+  }
+  return {TokenKind::End, "", startLine, startColumn};
+}
+
+Token Lexer::readRawString() {
+  int startLine = line_;
+  int startColumn = column_;
+  size_t start = pos_;
+  advance();
+  if (pos_ >= source_.size() || source_[pos_] != '"') {
+    return {TokenKind::End, "", startLine, startColumn};
+  }
+  advance();
+  if (pos_ >= source_.size() || source_[pos_] != '(') {
+    return {TokenKind::End, "", startLine, startColumn};
+  }
+  advance();
+  while (pos_ + 1 < source_.size()) {
+    if (source_[pos_] == ')' && source_[pos_ + 1] == '"') {
+      advance();
+      advance();
+      return {TokenKind::String, source_.substr(start, pos_ - start), startLine, startColumn};
+    }
+    advance();
+  }
+  return {TokenKind::End, "", startLine, startColumn};
 }
 
 Token Lexer::readPunct() {

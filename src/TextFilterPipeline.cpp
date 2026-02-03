@@ -247,6 +247,25 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
 
+    if (input[i] == 'R' && i + 2 < input.size() && input[i + 1] == '"' && input[i + 2] == '(') {
+      size_t end = i + 3;
+      bool foundTerminator = false;
+      while (end + 1 < input.size()) {
+        if (input[end] == ')' && input[end + 1] == '"') {
+          end += 2;
+          foundTerminator = true;
+          break;
+        }
+        ++end;
+      }
+      if (!foundTerminator) {
+        end = input.size();
+      }
+      output.append(input.substr(i, end - i));
+      i = end > 0 ? end - 1 : i;
+      continue;
+    }
+
     if (input[i] == '"' || input[i] == '\'') {
       char quote = input[i];
       size_t end = i + 1;

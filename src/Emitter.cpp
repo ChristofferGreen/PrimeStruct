@@ -240,6 +240,9 @@ std::string Emitter::emitExpr(const Expr &expr,
   if (expr.kind == Expr::Kind::Literal) {
     return std::to_string(expr.literalValue);
   }
+  if (expr.kind == Expr::Kind::StringLiteral) {
+    return expr.stringValue;
+  }
   if (expr.kind == Expr::Kind::Name) {
     return expr.name;
   }

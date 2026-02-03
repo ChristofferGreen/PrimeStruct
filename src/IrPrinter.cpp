@@ -81,6 +81,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
   case Expr::Kind::Literal:
     out << expr.literalValue;
     break;
+  case Expr::Kind::StringLiteral:
+    out << expr.stringValue;
+    break;
   case Expr::Kind::Name:
     out << expr.name;
     break;
