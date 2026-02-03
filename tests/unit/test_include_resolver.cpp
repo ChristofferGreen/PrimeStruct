@@ -17,6 +17,15 @@ std::string writeTemp(const std::string &name, const std::string &contents) {
   CHECK(file.good());
   return path.string();
 }
+
+std::string writeFile(const std::filesystem::path &path, const std::string &contents) {
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream file(path);
+  CHECK(file.good());
+  file << contents;
+  CHECK(file.good());
+  return path.string();
+}
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.includes");
@@ -61,6 +70,45 @@ TEST_CASE("missing include fails") {
   primec::IncludeResolver resolver;
   CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
   CHECK(error.find("failed to read include") != std::string::npos);
+}
+
+TEST_CASE("resolves exact include version") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_exact";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  writeFile(baseDir / "1.2.0" / "lib.prime", "// V120\n");
+  writeFile(baseDir / "1.2.1" / "lib.prime", "// V121\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2.0\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find("V120") != std::string::npos);
+  CHECK(source.find("V121") == std::string::npos);
+}
+
+TEST_CASE("selects newest matching include version") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_latest";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  writeFile(baseDir / "1.2.0" / "lib.prime", "// V120\n");
+  writeFile(baseDir / "1.2.5" / "lib.prime", "// V125\n");
+  writeFile(baseDir / "1.3.0" / "lib.prime", "// V130\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find("V125") != std::string::npos);
+  CHECK(source.find("V130") == std::string::npos);
 }
 
 TEST_SUITE_END();

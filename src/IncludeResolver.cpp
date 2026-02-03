@@ -1,8 +1,10 @@
 #include "primec/IncludeResolver.h"
 
+#include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -32,6 +34,116 @@ std::string trim(const std::string &value) {
     --end;
   }
   return value.substr(start, end - start);
+}
+
+bool parseVersionParts(const std::string &text, std::vector<int> &parts, std::string &error) {
+  parts.clear();
+  if (text.empty()) {
+    error = "include version cannot be empty";
+    return false;
+  }
+  int current = 0;
+  bool hasDigit = false;
+  for (size_t i = 0; i <= text.size(); ++i) {
+    if (i == text.size() || text[i] == '.') {
+      if (!hasDigit) {
+        error = "invalid include version: " + text;
+        return false;
+      }
+      parts.push_back(current);
+      current = 0;
+      hasDigit = false;
+      continue;
+    }
+    if (!std::isdigit(static_cast<unsigned char>(text[i]))) {
+      error = "invalid include version: " + text;
+      return false;
+    }
+    hasDigit = true;
+    current = current * 10 + (text[i] - '0');
+  }
+  if (parts.size() < 1 || parts.size() > 3) {
+    error = "include version must have 1 to 3 numeric parts: " + text;
+    return false;
+  }
+  return true;
+}
+
+bool hasPrefix(const std::vector<int> &candidate, const std::vector<int> &prefix) {
+  if (candidate.size() < prefix.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < prefix.size(); ++i) {
+    if (candidate[i] != prefix[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool isNewerVersion(const std::vector<int> &lhs, const std::vector<int> &rhs) {
+  size_t maxSize = std::max(lhs.size(), rhs.size());
+  for (size_t i = 0; i < maxSize; ++i) {
+    int left = i < lhs.size() ? lhs[i] : 0;
+    int right = i < rhs.size() ? rhs[i] : 0;
+    if (left != right) {
+      return left > right;
+    }
+  }
+  return false;
+}
+
+bool selectVersionDirectory(const std::filesystem::path &baseDir,
+                            const std::vector<int> &requested,
+                            std::string &selected,
+                            std::string &error) {
+  if (requested.size() == 3) {
+    std::ostringstream exact;
+    exact << requested[0] << "." << requested[1] << "." << requested[2];
+    std::filesystem::path candidate = baseDir / exact.str();
+    if (std::filesystem::exists(candidate) && std::filesystem::is_directory(candidate)) {
+      selected = exact.str();
+      return true;
+    }
+    error = "include version not found: " + exact.str();
+    return false;
+  }
+
+  bool found = false;
+  std::vector<int> bestParts;
+  std::string bestName;
+  for (const auto &entry : std::filesystem::directory_iterator(baseDir)) {
+    if (!entry.is_directory()) {
+      continue;
+    }
+    std::string name = entry.path().filename().string();
+    std::vector<int> parts;
+    std::string parseError;
+    if (!parseVersionParts(name, parts, parseError)) {
+      continue;
+    }
+    if (!hasPrefix(parts, requested)) {
+      continue;
+    }
+    if (!found || isNewerVersion(parts, bestParts)) {
+      bestParts = parts;
+      bestName = name;
+      found = true;
+    }
+  }
+  if (!found) {
+    std::ostringstream requestedText;
+    for (size_t i = 0; i < requested.size(); ++i) {
+      if (i > 0) {
+        requestedText << ".";
+      }
+      requestedText << requested[i];
+    }
+    error = "include version not found: " + requestedText.str();
+    return false;
+  }
+  selected = bestName;
+  return true;
 }
 
 } // namespace
@@ -68,6 +180,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
         }
         std::string payload = source.substr(start, end - start);
         std::vector<std::string> paths;
+        std::optional<std::string> versionTag;
         size_t pos = 0;
         while (pos < payload.size()) {
           while (pos < payload.size() && std::isspace(static_cast<unsigned char>(payload[pos]))) {
@@ -85,6 +198,12 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
                 error = "unterminated version string in include<...>";
                 return false;
               }
+              if (versionTag) {
+                error = "duplicate version attribute in include<...>";
+                return false;
+              }
+              std::string versionValue = payload.substr(pos, quoteEnd - pos);
+              versionTag = trim(versionValue);
               pos = quoteEnd + 1;
               continue;
             }
@@ -116,9 +235,27 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           return false;
         }
 
+        std::optional<std::filesystem::path> versionRoot;
+        if (versionTag) {
+          std::vector<int> requested;
+          if (!parseVersionParts(*versionTag, requested, error)) {
+            return false;
+          }
+          std::string selected;
+          if (!selectVersionDirectory(baseDir, requested, selected, error)) {
+            return false;
+          }
+          versionRoot = std::filesystem::path(baseDir) / selected;
+        }
+
         for (const auto &path : paths) {
           std::filesystem::path resolved(path);
-          if (resolved.is_relative()) {
+          if (versionRoot) {
+            if (resolved.is_absolute()) {
+              resolved = resolved.relative_path();
+            }
+            resolved = *versionRoot / resolved;
+          } else if (resolved.is_relative()) {
             resolved = std::filesystem::path(baseDir) / resolved;
           }
           resolved = std::filesystem::absolute(resolved);
