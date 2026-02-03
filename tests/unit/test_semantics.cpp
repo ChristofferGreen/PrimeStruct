@@ -205,4 +205,32 @@ main() {
   CHECK(error.find("unsupported binding type") != std::string::npos);
 }
 
+TEST_CASE("assign to mutable binding succeeds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  assign(value, 4i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("assign to immutable binding fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  assign(value, 2i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
 TEST_SUITE_END();

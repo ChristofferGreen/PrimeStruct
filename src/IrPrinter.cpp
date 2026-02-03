@@ -23,6 +23,20 @@ std::string bindingTypeName(const Expr &expr) {
   return "";
 }
 
+bool isAssignCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == "assign";
+}
+
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || !transform.templateArg) {
@@ -85,6 +99,12 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
         out << " = ";
         printExpr(out, stmt.args.front());
       }
+      out << "\n";
+    } else if (isAssignCall(stmt) && stmt.args.size() == 2) {
+      out << "assign ";
+      printExpr(out, stmt.args[0]);
+      out << ", ";
+      printExpr(out, stmt.args[1]);
       out << "\n";
     } else {
       out << "call ";

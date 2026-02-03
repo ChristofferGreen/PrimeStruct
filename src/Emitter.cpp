@@ -80,6 +80,34 @@ bool getBuiltinOperator(const Expr &expr, char &out) {
   }
   return false;
 }
+
+std::string resolveExprPath(const Expr &expr) {
+  if (!expr.name.empty() && expr.name[0] == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    return expr.namespacePrefix + "/" + expr.name;
+  }
+  return "/" + expr.name;
+}
+
+bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string full = resolveExprPath(expr);
+  if (nameMap.count(full) > 0) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == "assign";
+}
 } // namespace
 
 std::string Emitter::toCppName(const std::string &fullPath) const {
@@ -102,14 +130,7 @@ std::string Emitter::emitExpr(const Expr &expr,
   if (expr.kind == Expr::Kind::Name) {
     return expr.name;
   }
-  std::string full;
-  if (!expr.name.empty() && expr.name[0] == '/') {
-    full = expr.name;
-  } else if (!expr.namespacePrefix.empty()) {
-    full = expr.namespacePrefix + "/" + expr.name;
-  } else {
-    full = "/" + expr.name;
-  }
+  std::string full = resolveExprPath(expr);
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
     char op = '\0';
@@ -117,6 +138,11 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::ostringstream out;
       out << "(" << emitExpr(expr.args[0], nameMap) << " " << op << " "
           << emitExpr(expr.args[1], nameMap) << ")";
+      return out.str();
+    }
+    if (isBuiltinAssign(expr, nameMap) && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "(" << emitExpr(expr.args[0], nameMap) << " = " << emitExpr(expr.args[1], nameMap) << ")";
       return out.str();
     }
     return "0";
@@ -161,6 +187,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           out << " = " << emitExpr(stmt.args.front(), nameMap);
         }
         out << ";\n";
+      } else if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
+                 stmt.args.front().kind == Expr::Kind::Name) {
+        out << "  " << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap) << ";\n";
       } else {
         out << "  " << emitExpr(stmt, nameMap) << ";\n";
       }

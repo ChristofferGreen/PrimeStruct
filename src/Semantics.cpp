@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <unordered_map>
-#include <unordered_set>
 
 namespace primec {
 namespace {
@@ -60,6 +59,20 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
     return true;
   }
   return false;
+}
+
+bool isAssignCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == "assign";
 }
 
 bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
@@ -135,19 +148,22 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   };
 
-  auto isLocal = [](const std::unordered_set<std::string> &locals, const std::string &name) -> bool {
-    return locals.count(name) > 0;
+  auto isMutableLocal = [](const std::unordered_map<std::string, BindingInfo> &locals,
+                           const std::string &name) -> bool {
+    auto it = locals.find(name);
+    return it != locals.end() && it->second.isMutable;
   };
 
-  std::function<bool(const std::vector<std::string> &, const std::unordered_set<std::string> &, const Expr &)>
+  std::function<bool(const std::vector<std::string> &, const std::unordered_map<std::string, BindingInfo> &,
+                     const Expr &)>
       validateExpr = [&](const std::vector<std::string> &params,
-                         const std::unordered_set<std::string> &locals,
+                         const std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &expr) -> bool {
     if (expr.kind == Expr::Kind::Literal) {
       return true;
     }
     if (expr.kind == Expr::Kind::Name) {
-      if (isParam(params, expr.name) || isLocal(locals, expr.name)) {
+      if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
         return true;
       }
       error = "unknown identifier: " + expr.name;
@@ -170,6 +186,25 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           return true;
         }
+        if (isAssignCall(expr)) {
+          if (expr.args.size() != 2) {
+            error = "assign requires exactly two arguments";
+            return false;
+          }
+          if (expr.args.front().kind != Expr::Kind::Name) {
+            error = "assign target must be a mutable binding";
+            return false;
+          }
+          const std::string &targetName = expr.args.front().name;
+          if (!isMutableLocal(locals, targetName)) {
+            error = "assign target must be a mutable binding: " + targetName;
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          return true;
+        }
         error = "unknown call target: " + expr.name;
         return false;
       }
@@ -189,7 +224,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   };
 
   for (const auto &def : program.definitions) {
-    std::unordered_set<std::string> locals;
+    std::unordered_map<std::string, BindingInfo> locals;
     ReturnKind kind = ReturnKind::Unknown;
     auto kindIt = returnKinds.find(def.fullPath);
     if (kindIt != returnKinds.end()) {
@@ -197,7 +232,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
     for (const auto &stmt : def.statements) {
       if (stmt.isBinding) {
-        if (isParam(def.parameters, stmt.name) || isLocal(locals, stmt.name)) {
+        if (isParam(def.parameters, stmt.name) || locals.count(stmt.name) > 0) {
           error = "duplicate binding name: " + stmt.name;
           return false;
         }
@@ -212,7 +247,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         if (!validateExpr(def.parameters, locals, stmt.args.front())) {
           return false;
         }
-        locals.insert(stmt.name);
+        locals.emplace(stmt.name, info);
       } else {
         if (!validateExpr(def.parameters, locals, stmt)) {
           return false;
@@ -247,7 +282,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     for (const auto &arg : exec.arguments) {
-      if (!validateExpr({}, {}, arg)) {
+      if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, arg)) {
         return false;
       }
     }
@@ -256,7 +291,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments must be calls";
         return false;
       }
-      if (!validateExpr({}, {}, arg)) {
+      if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, arg)) {
         return false;
       }
     }

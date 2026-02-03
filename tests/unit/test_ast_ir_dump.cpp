@@ -99,6 +99,7 @@ TEST_CASE("ir dump prints local bindings") {
 [return<int>]
 main() {
   [i32] value(4i32)
+  assign(value, 9i32)
   return(value)
 }
 )";
@@ -109,6 +110,7 @@ main() {
       "module {\n"
       "  def /main(): i32 {\n"
       "    let value: i32 = 4\n"
+      "    assign value, 9\n"
       "    return value\n"
       "  }\n"
       "}\n";
