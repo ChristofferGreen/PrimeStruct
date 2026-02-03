@@ -57,4 +57,20 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump prints execution transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(3i32)
+}
+
+[effects]
+run(1i32)
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  CHECK(dump.find("exec [effects] /run(1)") != std::string::npos);
+}
+
 TEST_SUITE_END();

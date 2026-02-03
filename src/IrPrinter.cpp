@@ -53,7 +53,21 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
 
 void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
   indent(out, depth);
-  out << "exec " << exec.fullPath << "(";
+  out << "exec ";
+  if (!exec.transforms.empty()) {
+    out << "[";
+    for (size_t i = 0; i < exec.transforms.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      out << exec.transforms[i].name;
+      if (exec.transforms[i].templateArg) {
+        out << "<" << *exec.transforms[i].templateArg << ">";
+      }
+    }
+    out << "] ";
+  }
+  out << exec.fullPath << "(";
   for (size_t i = 0; i < exec.arguments.size(); ++i) {
     if (i > 0) {
       out << ", ";
