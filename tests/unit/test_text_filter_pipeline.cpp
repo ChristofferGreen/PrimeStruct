@@ -24,8 +24,48 @@ TEST_CASE("rewrites divide operator without spaces") {
   CHECK(output.find("divide(a, b)") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus operator without spaces") {
+  const std::string source = "main(){ return(a+b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(a, b)") != std::string::npos);
+}
+
+TEST_CASE("rewrites minus operator without spaces") {
+  const std::string source = "main(){ return(a-b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("minus(a, b)") != std::string::npos);
+}
+
+TEST_CASE("rewrites multiply operator without spaces") {
+  const std::string source = "main(){ return(a*b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("multiply(a, b)") != std::string::npos);
+}
+
 TEST_CASE("does not rewrite spaced slash") {
   const std::string source = "main(){ return(a / b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not rewrite unary minus") {
+  const std::string source = "main(){ return(-1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;

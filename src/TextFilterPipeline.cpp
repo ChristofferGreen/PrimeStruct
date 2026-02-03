@@ -19,6 +19,42 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
   output.reserve(input.size());
   error.clear();
 
+  auto rewriteBinary = [&](size_t &index, char op, const char *name) -> bool {
+    if (input[index] != op || index == 0 || index + 1 >= input.size()) {
+      return false;
+    }
+    if (!isTokenChar(input[index - 1]) || !isTokenChar(input[index + 1])) {
+      return false;
+    }
+    size_t end = output.size();
+    size_t start = end;
+    while (start > 0 && isTokenChar(output[start - 1])) {
+      --start;
+    }
+    if (start == end) {
+      return false;
+    }
+    std::string left = output.substr(start, end - start);
+    size_t rightStart = index + 1;
+    size_t rightEnd = rightStart;
+    while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+      ++rightEnd;
+    }
+    if (rightEnd == rightStart) {
+      return false;
+    }
+    std::string right = input.substr(rightStart, rightEnd - rightStart);
+    output.erase(start);
+    output.append(name);
+    output.append("(");
+    output.append(left);
+    output.append(", ");
+    output.append(right);
+    output.append(")");
+    index = rightEnd - 1;
+    return true;
+  };
+
   for (size_t i = 0; i < input.size(); ++i) {
     if (input[i] == '/' && i + 1 < input.size() && input[i + 1] == '/') {
       size_t end = i + 2;
@@ -41,37 +77,17 @@ bool TextFilterPipeline::apply(const std::string &input, std::string &output, st
       continue;
     }
 
-    if (input[i] == '/' && i > 0 && i + 1 < input.size()) {
-      if (isTokenChar(input[i - 1]) && isTokenChar(input[i + 1])) {
-        size_t end = output.size();
-        size_t start = end;
-        while (start > 0 && isTokenChar(output[start - 1])) {
-          --start;
-        }
-        if (start == end) {
-          output.push_back(input[i]);
-          continue;
-        }
-        std::string left = output.substr(start, end - start);
-        size_t rightStart = i + 1;
-        size_t rightEnd = rightStart;
-        while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
-          ++rightEnd;
-        }
-        if (rightEnd == rightStart) {
-          output.push_back(input[i]);
-          continue;
-        }
-        std::string right = input.substr(rightStart, rightEnd - rightStart);
-        output.erase(start);
-        output.append("divide(");
-        output.append(left);
-        output.append(", ");
-        output.append(right);
-        output.append(")");
-        i = rightEnd - 1;
-        continue;
-      }
+    if (input[i] == '/' && rewriteBinary(i, '/', "divide")) {
+      continue;
+    }
+    if (rewriteBinary(i, '+', "plus")) {
+      continue;
+    }
+    if (rewriteBinary(i, '-', "minus")) {
+      continue;
+    }
+    if (rewriteBinary(i, '*', "multiply")) {
+      continue;
     }
 
     output.push_back(input[i]);
