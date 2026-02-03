@@ -37,7 +37,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 - Templates are not supported in v0.1.
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
-- Executions are call-style only (no execution bodies in v0.1).
+- Executions are not supported in v0.1.
 - Entry selection is fixed to `/main` in v0.1.
 
 ### Example source and expected IR (sketch)

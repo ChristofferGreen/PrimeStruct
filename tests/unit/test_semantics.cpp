@@ -114,18 +114,18 @@ main() {
   CHECK(error.find("unsupported transform") != std::string::npos);
 }
 
-TEST_CASE("execution bodies are rejected") {
+TEST_CASE("executions are rejected in v0.1") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-run() { main() }
+run()
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("execution bodies are not supported") != std::string::npos);
+  CHECK(error.find("executions are not supported in v0.1") != std::string::npos);
 }
 
 TEST_SUITE_END();

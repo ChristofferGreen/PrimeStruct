@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <unordered_map>
-#include <unordered_set>
 
 namespace primec {
 
@@ -30,17 +29,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     defMap[def.fullPath] = &def;
   }
 
-  std::unordered_set<std::string> execPaths;
-  for (const auto &exec : program.executions) {
-    if (execPaths.count(exec.fullPath) > 0) {
-      error = "duplicate execution: " + exec.fullPath;
-      return false;
-    }
-    if (!exec.templateArgs.empty()) {
-      error = "templates are not supported in executions: " + exec.fullPath;
-      return false;
-    }
-    execPaths.insert(exec.fullPath);
+  if (!program.executions.empty()) {
+    error = "executions are not supported in v0.1";
+    return false;
   }
 
   auto resolveCalleePath = [&](const Expr &expr) -> std::string {
@@ -148,27 +139,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   }
 
-  for (const auto &exec : program.executions) {
-    if (!exec.bodyArguments.empty()) {
-      error = "execution bodies are not supported in v0.1: " + exec.fullPath;
-      return false;
-    }
-    auto it = defMap.find(exec.fullPath);
-    if (it == defMap.end()) {
-      error = "unknown execution target: " + exec.fullPath;
-      return false;
-    }
-    size_t expectedArgs = paramCounts[exec.fullPath];
-    if (exec.arguments.size() != expectedArgs) {
-      error = "argument count mismatch for " + exec.fullPath;
-      return false;
-    }
-    for (const auto &arg : exec.arguments) {
-      if (!validateExpr({}, arg)) {
-        return false;
-      }
-    }
-  }
   return true;
 }
 
