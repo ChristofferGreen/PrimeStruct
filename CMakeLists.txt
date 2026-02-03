@@ -29,6 +29,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_tests
     tests/unit/test_main.cpp
     tests/unit/test_parser_basic.cpp
+    tests/unit/test_include_resolver.cpp
+    tests/unit/test_semantics.cpp
   )
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
