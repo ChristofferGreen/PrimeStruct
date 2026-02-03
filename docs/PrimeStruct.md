@@ -33,7 +33,7 @@ Each filter stage halts on error (reporting diagnostics immediately) and exposes
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, `false`, and `null` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.

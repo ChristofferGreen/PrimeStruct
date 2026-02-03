@@ -1,0 +1,9 @@
+[return<int>]
+identity(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(identity(88i32))
+}

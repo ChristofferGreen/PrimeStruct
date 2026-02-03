@@ -1,0 +1,11 @@
+namespace demo {
+  [return<int>]
+  get_value() {
+    return(19i32)
+  }
+
+  [return<int>]
+  main() {
+    return(get_value())
+  }
+}
