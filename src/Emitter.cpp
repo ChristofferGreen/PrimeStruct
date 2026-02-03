@@ -7,6 +7,11 @@ namespace primec {
 namespace {
 enum class ReturnKind { Int, Void };
 
+struct BindingInfo {
+  std::string typeName;
+  bool isMutable = false;
+};
+
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || !transform.templateArg) {
@@ -20,6 +25,30 @@ ReturnKind getReturnKind(const Definition &def) {
     }
   }
   return ReturnKind::Int;
+}
+
+BindingInfo getBindingInfo(const Expr &expr) {
+  BindingInfo info;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "mut" && !transform.templateArg) {
+      info.isMutable = true;
+      continue;
+    }
+    if (!transform.templateArg) {
+      info.typeName = transform.name;
+    }
+  }
+  if (info.typeName.empty()) {
+    info.typeName = "int";
+  }
+  return info;
+}
+
+std::string bindingTypeToCpp(const std::string &typeName) {
+  if (typeName == "i32" || typeName == "int") {
+    return "int";
+  }
+  return "int";
 }
 
 bool getBuiltinOperator(const Expr &expr, char &out) {
@@ -124,7 +153,17 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     out << ") {\n";
     for (const auto &stmt : def.statements) {
-      out << "  " << emitExpr(stmt, nameMap) << ";\n";
+      if (stmt.isBinding) {
+        BindingInfo binding = getBindingInfo(stmt);
+        std::string type = bindingTypeToCpp(binding.typeName);
+        out << "  " << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
+        if (!stmt.args.empty()) {
+          out << " = " << emitExpr(stmt.args.front(), nameMap);
+        }
+        out << ";\n";
+      } else {
+        out << "  " << emitExpr(stmt, nameMap) << ";\n";
+      }
     }
     if (returnKind == ReturnKind::Void) {
       if (def.returnExpr) {

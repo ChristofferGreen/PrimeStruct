@@ -112,4 +112,20 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs local binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_binding.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_binding_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_SUITE_END();

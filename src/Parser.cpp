@@ -396,11 +396,20 @@ bool Parser::parseDefinitionBody(Definition &def) {
     if (match(TokenKind::End)) {
       return fail("unexpected end of file inside definition body");
     }
+    std::vector<Transform> statementTransforms;
+    if (match(TokenKind::LBracket)) {
+      if (!parseTransformList(statementTransforms)) {
+        return false;
+      }
+    }
     Token name = consume(TokenKind::Identifier, "expected statement");
     if (name.kind == TokenKind::End) {
       return false;
     }
     if (name.text == "return") {
+      if (!statementTransforms.empty()) {
+        return fail("return statement cannot have transforms");
+      }
       def.hasReturnStatement = true;
       if (def.returnExpr) {
         return fail("multiple return statements are not supported");
@@ -450,6 +459,8 @@ bool Parser::parseDefinitionBody(Definition &def) {
     callExpr.kind = Expr::Kind::Call;
     callExpr.name = name.text;
     callExpr.namespacePrefix = def.namespacePrefix;
+    callExpr.transforms = std::move(statementTransforms);
+    callExpr.isBinding = !callExpr.transforms.empty();
     if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
       return false;
     }

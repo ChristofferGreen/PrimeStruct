@@ -46,4 +46,22 @@ execute_repeat(3i32) { main() }
   CHECK(program.executions[0].bodyArguments.size() == 1);
 }
 
+TEST_CASE("parses local binding statements") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(7i32)
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.isBinding);
+  CHECK(stmt.name == "value");
+  REQUIRE(stmt.transforms.size() == 1);
+  CHECK(stmt.transforms[0].name == "i32");
+}
+
 TEST_SUITE_END();

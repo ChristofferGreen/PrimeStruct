@@ -94,6 +94,27 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump prints local bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(4i32)
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    let value: i32 = 4\n"
+      "    return value\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints execution transforms") {
   const std::string source = R"(
 [return<int>]

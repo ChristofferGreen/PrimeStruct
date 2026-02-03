@@ -18,6 +18,8 @@ struct Expr {
   std::vector<Expr> args;
   std::vector<std::string> templateArgs;
   std::string namespacePrefix;
+  std::vector<Transform> transforms;
+  bool isBinding = false;
 };
 
 struct Definition {

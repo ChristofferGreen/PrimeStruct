@@ -7,6 +7,22 @@ namespace primec {
 namespace {
 enum class ReturnKind { Int, Void };
 
+std::string bindingTypeName(const Expr &expr) {
+  std::string typeName;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "mut") {
+      continue;
+    }
+    if (!transform.templateArg) {
+      typeName = transform.name;
+    }
+  }
+  if (typeName == "int" || typeName == "i32") {
+    return "i32";
+  }
+  return "";
+}
+
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || !transform.templateArg) {
@@ -59,9 +75,22 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
   out << "def " << def.fullPath << "(): " << returnTypeName(kind) << " {\n";
   for (const auto &stmt : def.statements) {
     indent(out, depth + 1);
-    out << "call ";
-    printExpr(out, stmt);
-    out << "\n";
+    if (stmt.isBinding) {
+      out << "let " << stmt.name;
+      std::string typeName = bindingTypeName(stmt);
+      if (!typeName.empty()) {
+        out << ": " << typeName;
+      }
+      if (!stmt.args.empty()) {
+        out << " = ";
+        printExpr(out, stmt.args.front());
+      }
+      out << "\n";
+    } else {
+      out << "call ";
+      printExpr(out, stmt);
+      out << "\n";
+    }
   }
   if (def.returnExpr) {
     indent(out, depth + 1);

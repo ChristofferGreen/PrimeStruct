@@ -11,6 +11,8 @@ void indent(std::ostringstream &out, int depth) {
   }
 }
 
+void printTransforms(std::ostringstream &out, const std::vector<Transform> &transforms);
+
 void printExpr(std::ostringstream &out, const Expr &expr) {
   switch (expr.kind) {
   case Expr::Kind::Literal:
@@ -20,6 +22,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     out << expr.name;
     break;
   case Expr::Kind::Call:
+    if (!expr.transforms.empty()) {
+      printTransforms(out, expr.transforms);
+    }
     out << expr.name;
     if (!expr.templateArgs.empty()) {
       out << "<";

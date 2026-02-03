@@ -2,10 +2,16 @@
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace primec {
 namespace {
 enum class ReturnKind { Unknown, Int, Void };
+
+struct BindingInfo {
+  std::string typeName;
+  bool isMutable = false;
+};
 
 ReturnKind getReturnKind(const Definition &def, std::string &error) {
   ReturnKind kind = ReturnKind::Unknown;
@@ -55,6 +61,35 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   }
   return false;
 }
+
+bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
+  std::string typeName;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "mut" && !transform.templateArg) {
+      info.isMutable = true;
+      continue;
+    }
+    if (transform.templateArg) {
+      error = "binding transforms do not take template arguments";
+      return false;
+    }
+    if (!typeName.empty()) {
+      error = "binding requires exactly one type";
+      return false;
+    }
+    typeName = transform.name;
+  }
+  if (typeName.empty()) {
+    error = "binding requires a type";
+    return false;
+  }
+  if (typeName != "int" && typeName != "i32") {
+    error = "unsupported binding type: " + typeName;
+    return false;
+  }
+  info.typeName = typeName;
+  return true;
+}
 } // namespace
 
 bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
@@ -100,13 +135,19 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   };
 
-  std::function<bool(const std::vector<std::string> &, const Expr &)> validateExpr =
-      [&](const std::vector<std::string> &params, const Expr &expr) -> bool {
+  auto isLocal = [](const std::unordered_set<std::string> &locals, const std::string &name) -> bool {
+    return locals.count(name) > 0;
+  };
+
+  std::function<bool(const std::vector<std::string> &, const std::unordered_set<std::string> &, const Expr &)>
+      validateExpr = [&](const std::vector<std::string> &params,
+                         const std::unordered_set<std::string> &locals,
+                         const Expr &expr) -> bool {
     if (expr.kind == Expr::Kind::Literal) {
       return true;
     }
     if (expr.kind == Expr::Kind::Name) {
-      if (isParam(params, expr.name)) {
+      if (isParam(params, expr.name) || isLocal(locals, expr.name)) {
         return true;
       }
       error = "unknown identifier: " + expr.name;
@@ -123,7 +164,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             return false;
           }
           for (const auto &arg : expr.args) {
-            if (!validateExpr(params, arg)) {
+            if (!validateExpr(params, locals, arg)) {
               return false;
             }
           }
@@ -138,7 +179,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         return false;
       }
       for (const auto &arg : expr.args) {
-        if (!validateExpr(params, arg)) {
+        if (!validateExpr(params, locals, arg)) {
           return false;
         }
       }
@@ -148,14 +189,34 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   };
 
   for (const auto &def : program.definitions) {
+    std::unordered_set<std::string> locals;
     ReturnKind kind = ReturnKind::Unknown;
     auto kindIt = returnKinds.find(def.fullPath);
     if (kindIt != returnKinds.end()) {
       kind = kindIt->second;
     }
     for (const auto &stmt : def.statements) {
-      if (!validateExpr(def.parameters, stmt)) {
-        return false;
+      if (stmt.isBinding) {
+        if (isParam(def.parameters, stmt.name) || isLocal(locals, stmt.name)) {
+          error = "duplicate binding name: " + stmt.name;
+          return false;
+        }
+        BindingInfo info;
+        if (!parseBindingInfo(stmt, info, error)) {
+          return false;
+        }
+        if (stmt.args.size() != 1) {
+          error = "binding requires exactly one argument";
+          return false;
+        }
+        if (!validateExpr(def.parameters, locals, stmt.args.front())) {
+          return false;
+        }
+        locals.insert(stmt.name);
+      } else {
+        if (!validateExpr(def.parameters, locals, stmt)) {
+          return false;
+        }
       }
     }
     if (kind == ReturnKind::Void) {
@@ -168,7 +229,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "missing return statement in " + def.fullPath;
         return false;
       }
-      if (!validateExpr(def.parameters, *def.returnExpr)) {
+      if (!validateExpr(def.parameters, locals, *def.returnExpr)) {
         return false;
       }
     }
@@ -186,7 +247,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     for (const auto &arg : exec.arguments) {
-      if (!validateExpr({}, arg)) {
+      if (!validateExpr({}, {}, arg)) {
         return false;
       }
     }
@@ -195,7 +256,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments must be calls";
         return false;
       }
-      if (!validateExpr({}, arg)) {
+      if (!validateExpr({}, {}, arg)) {
         return false;
       }
     }
