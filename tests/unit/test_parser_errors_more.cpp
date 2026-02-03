@@ -141,11 +141,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("minimum hex i32 literal succeeds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(-0x80000000i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("below minimum i32 literal fails") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(-2147483649i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("integer literal out of range") != std::string::npos);
+}
+
+TEST_CASE("hex literal out of range fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0x80000000i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("integer literal out of range") != std::string::npos);
+}
+
+TEST_CASE("below minimum hex literal fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(-0x80000001i32)
 }
 )";
   primec::Lexer lexer(source);

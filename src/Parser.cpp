@@ -1,5 +1,6 @@
 #include "primec/Parser.h"
 
+#include <cctype>
 #include <limits>
 #include <sstream>
 
@@ -9,6 +10,10 @@ namespace {
 bool isReservedKeyword(const std::string &text) {
   return text == "mut" || text == "return" || text == "include" || text == "namespace" || text == "true" ||
          text == "false";
+}
+
+bool isHexDigitChar(char c) {
+  return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 } // namespace
 
@@ -644,8 +649,43 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return fail("integer literal requires i32 suffix");
     }
     text = text.substr(0, text.size() - 3);
+    if (text.empty()) {
+      return fail("invalid integer literal");
+    }
+    bool negative = false;
+    size_t start = 0;
+    if (text[0] == '-') {
+      negative = true;
+      start = 1;
+      if (start >= text.size()) {
+        return fail("invalid integer literal");
+      }
+    }
+    int base = 10;
+    std::string digits = text.substr(start);
+    if (digits.size() >= 2 && digits[0] == '0' && (digits[1] == 'x' || digits[1] == 'X')) {
+      base = 16;
+      digits = digits.substr(2);
+      if (digits.empty()) {
+        return fail("invalid integer literal");
+      }
+      for (char c : digits) {
+        if (!isHexDigitChar(c)) {
+          return fail("invalid integer literal");
+        }
+      }
+    } else {
+      for (char c : digits) {
+        if (!std::isdigit(static_cast<unsigned char>(c))) {
+          return fail("invalid integer literal");
+        }
+      }
+    }
     try {
-      long long value = std::stoll(text);
+      long long value = std::stoll(digits, nullptr, base);
+      if (negative) {
+        value = -value;
+      }
       if (value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) {
         return fail("integer literal out of range");
       }

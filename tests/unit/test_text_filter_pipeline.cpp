@@ -244,6 +244,36 @@ TEST_CASE("adds i32 suffix to negative integer literal") {
   CHECK(output.find("-7i32") != std::string::npos);
 }
 
+TEST_CASE("adds i32 suffix to hex integer literal") {
+  const std::string source = "main(){ return(0x2A) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("0x2Ai32") != std::string::npos);
+}
+
+TEST_CASE("adds i32 suffix to negative hex integer literal") {
+  const std::string source = "main(){ return(-0x2A) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("-0x2Ai32") != std::string::npos);
+}
+
+TEST_CASE("rewrites plus with hex literals") {
+  const std::string source = "main(){ return(0x1+0x2) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(0x1i32, 0x2i32)") != std::string::npos);
+}
+
 TEST_CASE("does not change suffixed integer literals") {
   const std::string source = "main(){ return(42i32) }\n";
   primec::TextFilterPipeline pipeline;

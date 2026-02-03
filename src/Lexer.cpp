@@ -32,6 +32,10 @@ std::vector<Token> Lexer::tokenize() {
   return tokens;
 }
 
+static bool isHexDigitChar(char c) {
+  return std::isxdigit(static_cast<unsigned char>(c)) != 0;
+}
+
 bool Lexer::isIdentifierStart(char c) const {
   return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '/';
 }
@@ -80,8 +84,16 @@ Token Lexer::readNumber() {
   if (source_[pos_] == '-') {
     advance();
   }
-  while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
+  if (pos_ + 1 < source_.size() && source_[pos_] == '0' && (source_[pos_ + 1] == 'x' || source_[pos_ + 1] == 'X')) {
     advance();
+    advance();
+    while (pos_ < source_.size() && isHexDigitChar(source_[pos_])) {
+      advance();
+    }
+  } else {
+    while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
+      advance();
+    }
   }
   if (source_.compare(pos_, 3, "i32") == 0) {
     advance();

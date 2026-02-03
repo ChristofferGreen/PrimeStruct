@@ -279,6 +279,21 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
+TEST_CASE("compiles and runs implicit hex literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0x2A)
+}
+)";
+  const std::string srcPath = writeTemp("compile_hex.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_hex_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 42);
+}
+
 TEST_CASE("implicit suffix can be disabled") {
   const std::string source = R"(
 [return<int>]

@@ -104,6 +104,20 @@ main() {
   CHECK(program.definitions[0].returnExpr->literalValue == 1);
 }
 
+TEST_CASE("parses hex integer literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0x2Ai32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(program.definitions[0].returnExpr->literalValue == 42);
+}
+
 TEST_CASE("parses string literal arguments") {
   const std::string source = R"(
 [return<void>]

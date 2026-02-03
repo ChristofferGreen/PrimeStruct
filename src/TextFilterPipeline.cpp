@@ -17,6 +17,10 @@ bool isDigitChar(char c) {
   return std::isdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+bool isHexDigitChar(char c) {
+  return std::isxdigit(static_cast<unsigned char>(c)) != 0;
+}
+
 bool isUnaryPrefixPosition(const std::string &input, size_t index) {
   if (index == 0) {
     return true;
@@ -57,12 +61,25 @@ std::string maybeAppendI32(const std::string &token) {
   if (token.empty()) {
     return token;
   }
+  bool isDecimal = true;
   for (char c : token) {
     if (!isDigitChar(c)) {
-      return token;
+      isDecimal = false;
+      break;
     }
   }
-  return token + "i32";
+  if (isDecimal) {
+    return token + "i32";
+  }
+  if (token.size() > 2 && token[0] == '0' && (token[1] == 'x' || token[1] == 'X')) {
+    for (size_t i = 2; i < token.size(); ++i) {
+      if (!isHexDigitChar(token[i])) {
+        return token;
+      }
+    }
+    return token + "i32";
+  }
+  return token;
 }
 
 bool rewriteUnaryNot(const std::string &input,
@@ -310,8 +327,16 @@ bool TextFilterPipeline::apply(const std::string &input,
           ++i;
         }
         size_t digitsStart = i;
-        while (i < input.size() && isDigitChar(input[i])) {
-          ++i;
+        if (i + 1 < input.size() && input[i] == '0' && (input[i + 1] == 'x' || input[i + 1] == 'X')) {
+          i += 2;
+          digitsStart = i;
+          while (i < input.size() && isHexDigitChar(input[i])) {
+            ++i;
+          }
+        } else {
+          while (i < input.size() && isDigitChar(input[i])) {
+            ++i;
+          }
         }
         size_t digitsEnd = i;
         if (digitsStart == digitsEnd) {
