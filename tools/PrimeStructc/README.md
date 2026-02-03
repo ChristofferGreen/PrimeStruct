@@ -1,18 +1,18 @@
-# PrimeStructc (minimal)
+# primec (minimal)
 
 This is a tiny proof-of-life compiler that accepts a small PrimeStruct subset and emits a native executable via C++.
 
 ## Build
 
 ```
-clang++ -std=c++23 -O2 tools/PrimeStructc/main.cpp -o tools/PrimeStructc/PrimeStructc
+clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 ```
 
 ## Usage
 
 ```
-./tools/PrimeStructc/PrimeStructc --emit=cpp input.prime -o build/hello.cpp
-./tools/PrimeStructc/PrimeStructc --emit=exe input.prime -o build/hello --entry /main
+./primec --emit=cpp input.prime -o build/hello.cpp
+./primec --emit=exe input.prime -o build/hello --entry /main
 ```
 
 ## Supported subset
