@@ -119,7 +119,7 @@ execute_repeat(3i32) { 1i32 }
 
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
-[return<bool>]
+[return<u32>]
 main() {
   return(1i32)
 }
@@ -127,6 +127,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported return type") != std::string::npos);
+}
+
+TEST_CASE("bool return type validates") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(true)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("float return type validates") {
@@ -436,7 +448,7 @@ TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [bool] value(1i32)
+  [u32] value(1i32)
   return(1i32)
 }
 )";
@@ -450,6 +462,19 @@ TEST_CASE("float binding validates") {
 [return<int>]
 main() {
   [float] value(1.5f)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("bool binding validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [bool] value(true)
   return(1i32)
 }
 )";

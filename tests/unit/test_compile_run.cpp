@@ -503,6 +503,21 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs bool return") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(true)
+}
+)";
+  const std::string srcPath = writeTemp("compile_bool_return.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_bool_return_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]

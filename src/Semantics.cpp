@@ -5,7 +5,7 @@
 
 namespace primec {
 namespace {
-enum class ReturnKind { Unknown, Int, Float32, Float64, Void };
+enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
 
 struct BindingInfo {
   std::string typeName;
@@ -29,6 +29,12 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
         return ReturnKind::Unknown;
       }
       kind = ReturnKind::Int;
+    } else if (arg == "bool") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Bool) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Bool;
     } else if (arg == "i32") {
       if (kind != ReturnKind::Unknown && kind != ReturnKind::Int) {
         error = "conflicting return types on " + def.fullPath;
@@ -182,7 +188,7 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
     return false;
   }
   if (typeName != "int" && typeName != "i32" && typeName != "float" && typeName != "f32" &&
-      typeName != "f64") {
+      typeName != "f64" && typeName != "bool") {
     error = "unsupported binding type: " + typeName;
     return false;
   }

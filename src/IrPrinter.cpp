@@ -5,7 +5,7 @@
 namespace primec {
 
 namespace {
-enum class ReturnKind { Int, Float32, Float64, Void };
+enum class ReturnKind { Int, Float32, Float64, Bool, Void };
 
 std::string bindingTypeName(const Expr &expr) {
   std::string typeName;
@@ -19,6 +19,9 @@ std::string bindingTypeName(const Expr &expr) {
   }
   if (typeName == "int" || typeName == "i32") {
     return "i32";
+  }
+  if (typeName == "bool") {
+    return "bool";
   }
   if (typeName == "float" || typeName == "f32") {
     return "f32";
@@ -68,6 +71,9 @@ ReturnKind getReturnKind(const Definition &def) {
     if (*transform.templateArg == "int") {
       return ReturnKind::Int;
     }
+    if (*transform.templateArg == "bool") {
+      return ReturnKind::Bool;
+    }
     if (*transform.templateArg == "i32") {
       return ReturnKind::Int;
     }
@@ -90,6 +96,9 @@ const char *returnTypeName(ReturnKind kind) {
   }
   if (kind == ReturnKind::Float64) {
     return "f64";
+  }
+  if (kind == ReturnKind::Bool) {
+    return "bool";
   }
   return "i32";
 }

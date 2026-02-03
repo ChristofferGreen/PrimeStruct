@@ -187,6 +187,27 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump prints bool return type") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [bool] flag(true)
+  return(flag)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): bool {\n"
+      "    let flag: bool = 1\n"
+      "    return flag\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]

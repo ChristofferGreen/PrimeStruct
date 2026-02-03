@@ -6,7 +6,7 @@
 
 namespace primec {
 namespace {
-enum class ReturnKind { Int, Float32, Float64, Void };
+enum class ReturnKind { Int, Float32, Float64, Bool, Void };
 
 struct BindingInfo {
   std::string typeName;
@@ -23,6 +23,9 @@ ReturnKind getReturnKind(const Definition &def) {
     }
     if (*transform.templateArg == "int") {
       return ReturnKind::Int;
+    }
+    if (*transform.templateArg == "bool") {
+      return ReturnKind::Bool;
     }
     if (*transform.templateArg == "i32") {
       return ReturnKind::Int;
@@ -57,6 +60,9 @@ BindingInfo getBindingInfo(const Expr &expr) {
 std::string bindingTypeToCpp(const std::string &typeName) {
   if (typeName == "i32" || typeName == "int") {
     return "int";
+  }
+  if (typeName == "bool") {
+    return "bool";
   }
   if (typeName == "float" || typeName == "f32") {
     return "float";
@@ -346,6 +352,8 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       returnType = "float";
     } else if (returnKind == ReturnKind::Float64) {
       returnType = "double";
+    } else if (returnKind == ReturnKind::Bool) {
+      returnType = "bool";
     }
     out << "static " << returnType << " " << nameMap[def.fullPath] << "(";
     for (size_t i = 0; i < def.parameters.size(); ++i) {
