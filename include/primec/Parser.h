@@ -22,6 +22,7 @@ private:
   bool parseIdentifierList(std::vector<std::string> &out);
   bool parseExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool definitionHasReturnBeforeClose() const;
   bool isDefinitionSignature() const;
   bool parseDefinitionBody(Definition &def);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);

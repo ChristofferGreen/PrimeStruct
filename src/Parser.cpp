@@ -88,7 +88,14 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }
-  bool isDefinition = isDefinitionSignature();
+  bool hasReturnTransform = false;
+  for (const auto &transform : transforms) {
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+      break;
+    }
+  }
+  bool isDefinition = hasReturnTransform ? true : isDefinitionSignature();
   if (isDefinition) {
     std::vector<std::string> parameters;
     if (!parseIdentifierList(parameters)) {
@@ -112,6 +119,10 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     }
     defs.push_back(std::move(def));
     return true;
+  }
+
+  if (definitionHasReturnBeforeClose()) {
+    return fail("definition missing return statement");
   }
 
   std::vector<Expr> arguments;
@@ -272,6 +283,50 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     return false;
   }
   return true;
+}
+
+bool Parser::definitionHasReturnBeforeClose() const {
+  size_t index = pos_;
+  int depth = 1;
+  while (index < tokens_.size()) {
+    TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::LParen) {
+      ++depth;
+    } else if (kind == TokenKind::RParen) {
+      --depth;
+      if (depth == 0) {
+        break;
+      }
+    }
+    ++index;
+  }
+  if (depth != 0) {
+    return false;
+  }
+  if (index + 1 >= tokens_.size()) {
+    return false;
+  }
+  if (tokens_[index + 1].kind != TokenKind::LBrace) {
+    return false;
+  }
+
+  size_t braceIndex = index + 1;
+  int braceDepth = 0;
+  while (braceIndex < tokens_.size()) {
+    TokenKind kind = tokens_[braceIndex].kind;
+    if (kind == TokenKind::LBrace) {
+      ++braceDepth;
+    } else if (kind == TokenKind::RBrace) {
+      --braceDepth;
+      if (braceDepth == 0) {
+        break;
+      }
+    } else if (kind == TokenKind::Identifier && tokens_[braceIndex].text == "return") {
+      return true;
+    }
+    ++braceIndex;
+  }
+  return false;
 }
 
 bool Parser::isDefinitionSignature() const {
