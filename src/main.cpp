@@ -6,6 +6,7 @@
 #include "primec/Options.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
+#include "primec/TextFilterPipeline.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -81,7 +82,7 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] [--dump-stage ast|ir]\n";
+    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] [--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
 
@@ -93,7 +94,19 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  primec::Lexer lexer(source);
+  primec::TextFilterPipeline textPipeline;
+  std::string filteredSource;
+  if (!textPipeline.apply(source, filteredSource, error)) {
+    std::cerr << "Transform error: " << error << "\n";
+    return 2;
+  }
+
+  if (!options.dumpStage.empty() && options.dumpStage == "pre_ast") {
+    std::cout << filteredSource;
+    return 0;
+  }
+
+  primec::Lexer lexer(filteredSource);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   if (!parser.parse(program, error)) {

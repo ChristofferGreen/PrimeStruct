@@ -15,6 +15,7 @@ add_library(primec_lib
   src/Lexer.cpp
   src/Parser.cpp
   src/Semantics.cpp
+  src/TextFilterPipeline.cpp
 )
 
 target_include_directories(primec_lib PUBLIC include)
@@ -41,6 +42,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_execution_whitespace.cpp
     tests/unit/test_template_parsing.cpp
     tests/unit/test_compile_run.cpp
+    tests/unit/test_text_filter_pipeline.cpp
   )
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
