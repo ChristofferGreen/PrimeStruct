@@ -144,6 +144,16 @@ TEST_CASE("rewrites not operator without spaces") {
   CHECK(output.find("not(a)") != std::string::npos);
 }
 
+TEST_CASE("rewrites not operator before parentheses") {
+  const std::string source = "main(){ return(!(a)) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("not(a)") != std::string::npos);
+}
+
 TEST_CASE("does not rewrite template list syntax") {
   const std::string source = "if<bool>(cond, then{ }, else{ })\n";
   primec::TextFilterPipeline pipeline;

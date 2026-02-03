@@ -70,6 +70,10 @@ bool rewriteUnaryNot(const std::string &input,
   if (index > 0 && isTokenChar(input[index - 1])) {
     return false;
   }
+  if (input[index + 1] == '(') {
+    output.append("not");
+    return true;
+  }
   size_t rightStart = index + 1;
   size_t rightEnd = rightStart;
   while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
