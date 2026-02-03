@@ -1,6 +1,7 @@
 #include "primec/AstPrinter.h"
 #include "primec/Emitter.h"
 #include "primec/IncludeResolver.h"
+#include "primec/IrPrinter.h"
 #include "primec/Lexer.h"
 #include "primec/Options.h"
 #include "primec/Parser.h"
@@ -80,7 +81,7 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] [--dump-stage ast]\n";
+    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] [--dump-stage ast|ir]\n";
     return 2;
   }
 
@@ -101,13 +102,20 @@ int main(int argc, char **argv) {
   }
 
   if (!options.dumpStage.empty()) {
-    if (options.dumpStage != "ast") {
+    if (options.dumpStage == "ast") {
+      primec::AstPrinter printer;
+      std::cout << printer.print(program);
+      return 0;
+    }
+    if (options.dumpStage == "ir") {
+      primec::IrPrinter printer;
+      std::cout << printer.print(program);
+      return 0;
+    }
+    {
       std::cerr << "Unsupported dump stage: " << options.dumpStage << "\n";
       return 2;
     }
-    primec::AstPrinter printer;
-    std::cout << printer.print(program);
-    return 0;
   }
 
   primec::Semantics semantics;

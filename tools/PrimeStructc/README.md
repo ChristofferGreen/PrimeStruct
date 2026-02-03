@@ -14,6 +14,7 @@ clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 ./primec --emit=cpp input.prime -o build/hello.cpp
 ./primec --emit=exe input.prime -o build/hello --entry /main
 ./primec --dump-stage ast input.prime -o /tmp/ignored
+./primec --dump-stage ir input.prime -o /tmp/ignored
 ```
 
 ## Supported subset
@@ -27,5 +28,5 @@ clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 - Template lists (`<...>`) are parsed and preserved but ignored by codegen.
 - Executions parse argument expressions and `{...}` body argument lists (ignored by codegen).
 - `--dump-stage ast` prints a simple AST dump and exits.
+- `--dump-stage ir` prints a minimal IR-style dump and exits.
 - `include<"path">` expands files inline (multiple paths allowed; duplicates ignored). `version="..."` is parsed and ignored.
-

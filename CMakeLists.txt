@@ -11,6 +11,7 @@ add_library(primec_lib
   src/AstPrinter.cpp
   src/Emitter.cpp
   src/IncludeResolver.cpp
+  src/IrPrinter.cpp
   src/Lexer.cpp
   src/Parser.cpp
   src/Semantics.cpp
