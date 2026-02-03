@@ -155,6 +155,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin clamp calls validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(2i32, 1i32, 5i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("builtin arithmetic arity mismatch fails") {
   const std::string source = R"(
 [return<int>]
@@ -177,6 +189,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for builtin greater_than") != std::string::npos);
+}
+
+TEST_CASE("builtin clamp arity mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin clamp") != std::string::npos);
 }
 
 TEST_CASE("void return can omit return statement") {
