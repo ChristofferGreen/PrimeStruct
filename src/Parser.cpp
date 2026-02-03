@@ -1,5 +1,6 @@
 #include "primec/Parser.h"
 
+#include <limits>
 #include <sstream>
 
 namespace primec {
@@ -388,7 +389,11 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       text = text.substr(0, text.size() - 3);
     }
     try {
-      expr.literalValue = std::stoi(text);
+      long long value = std::stoll(text);
+      if (value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) {
+        return fail("integer literal out of range");
+      }
+      expr.literalValue = static_cast<int>(value);
     } catch (const std::exception &) {
       return fail("invalid integer literal");
     }

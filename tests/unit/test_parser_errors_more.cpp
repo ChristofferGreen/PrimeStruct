@@ -39,4 +39,19 @@ main() {
   CHECK(program.executions[0].fullPath == "/main");
 }
 
+TEST_CASE("out of range literal fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(2147483648i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program.definitions, program.executions, error));
+  CHECK(error.find("integer literal out of range") != std::string::npos);
+}
+
 TEST_SUITE_END();
