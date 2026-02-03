@@ -98,6 +98,41 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs operator rewrite with calls") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(5i32)
+}
+
+[return<int>]
+main() {
+  return(helper()+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_ops_call.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ops_call_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs operator rewrite with parentheses") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return((1i32+2i32)*3i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_ops_paren.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ops_paren_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs assignment operator rewrite") {
   const std::string source = R"(
 [return<int>]

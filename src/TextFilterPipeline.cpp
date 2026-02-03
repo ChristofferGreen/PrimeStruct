@@ -14,7 +14,11 @@ bool isTokenChar(char c) {
 }
 
 bool isOperatorTokenChar(char c) {
-  return isTokenChar(c) || c == '.';
+  return isTokenChar(c) || c == '.' || c == '/';
+}
+
+bool isLeftOperandEndChar(char c) {
+  return isOperatorTokenChar(c) || c == ')' || c == ']' || c == '}' || c == '"' || c == '\'';
 }
 
 bool isDigitChar(char c) {
@@ -36,6 +40,20 @@ bool isUnaryPrefixPosition(const std::string &input, size_t index) {
   return isSeparator(prev);
 }
 
+bool isRightOperandStartChar(const std::string &input, size_t index) {
+  char c = input[index];
+  if (isOperatorTokenChar(c) || c == '(' || c == '"' || c == '\'' || c == '[' || c == '{') {
+    return true;
+  }
+  if (c == 'R' && index + 2 < input.size() && input[index + 1] == '"' && input[index + 2] == '(') {
+    return true;
+  }
+  if (c == '-' && isUnaryPrefixPosition(input, index)) {
+    return true;
+  }
+  return false;
+}
+
 bool isExponentSign(const std::string &text, size_t index) {
   if (index == 0) {
     return false;
@@ -47,15 +65,172 @@ bool isExponentSign(const std::string &text, size_t index) {
   return text[index] == '-' || text[index] == '+';
 }
 
-size_t findLeftTokenStart(const std::string &text, size_t end) {
-  size_t start = end;
-  while (start > 0) {
-    char c = text[start - 1];
-    if (isOperatorTokenChar(c)) {
-      --start;
+bool isEscaped(const std::string &text, size_t index) {
+  size_t count = 0;
+  while (index > 0 && text[index - 1] == '\\') {
+    --index;
+    ++count;
+  }
+  return (count % 2) == 1;
+}
+
+size_t findQuotedStart(const std::string &text, size_t endQuote) {
+  char quote = text[endQuote];
+  if (endQuote == 0) {
+    return std::string::npos;
+  }
+  size_t pos = endQuote;
+  while (pos > 0) {
+    --pos;
+    if (text[pos] == quote && !isEscaped(text, pos)) {
+      return pos;
+    }
+  }
+  return std::string::npos;
+}
+
+size_t findRawStringStart(const std::string &text, size_t endQuote) {
+  if (endQuote < 2 || text[endQuote - 1] != ')') {
+    return std::string::npos;
+  }
+  return text.rfind("R\"(", endQuote);
+}
+
+size_t skipQuotedForward(const std::string &text, size_t start) {
+  char quote = text[start];
+  size_t pos = start + 1;
+  while (pos < text.size()) {
+    if (text[pos] == '\\' && pos + 1 < text.size()) {
+      pos += 2;
       continue;
     }
-    if (isExponentSign(text, start - 1)) {
+    if (text[pos] == quote) {
+      return pos + 1;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
+size_t skipRawStringForward(const std::string &text, size_t start) {
+  size_t pos = start + 3;
+  while (pos + 1 < text.size()) {
+    if (text[pos] == ')' && text[pos + 1] == '"') {
+      return pos + 2;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
+size_t findMatchingClose(const std::string &text, size_t openIndex, char openChar, char closeChar) {
+  int depth = 1;
+  size_t pos = openIndex + 1;
+  while (pos < text.size()) {
+    char c = text[pos];
+    if (c == openChar) {
+      ++depth;
+      ++pos;
+      continue;
+    }
+    if (c == closeChar) {
+      --depth;
+      if (depth == 0) {
+        return pos;
+      }
+      ++pos;
+      continue;
+    }
+    if (c == 'R' && pos + 2 < text.size() && text[pos + 1] == '"' && text[pos + 2] == '(') {
+      size_t end = skipRawStringForward(text, pos);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end;
+      continue;
+    }
+    if (c == '"' || c == '\'') {
+      size_t end = skipQuotedForward(text, pos);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end;
+      continue;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
+size_t findMatchingOpen(const std::string &text, size_t closeIndex, char openChar, char closeChar) {
+  int depth = 1;
+  size_t pos = closeIndex;
+  while (pos > 0) {
+    --pos;
+    char c = text[pos];
+    if (c == closeChar) {
+      ++depth;
+      continue;
+    }
+    if (c == openChar) {
+      --depth;
+      if (depth == 0) {
+        return pos;
+      }
+      continue;
+    }
+    if (c == '"' || c == '\'') {
+      size_t rawStart = (c == '"') ? findRawStringStart(text, pos) : std::string::npos;
+      if (rawStart != std::string::npos) {
+        pos = rawStart;
+        continue;
+      }
+      size_t start = findQuotedStart(text, pos);
+      if (start == std::string::npos || start == 0) {
+        return std::string::npos;
+      }
+      pos = start;
+      continue;
+    }
+  }
+  return std::string::npos;
+}
+
+size_t findLeftTokenStart(const std::string &text, size_t end) {
+  size_t start = end;
+  if (end == 0) {
+    return start;
+  }
+  char tail = text[end - 1];
+  if (tail == ')' || tail == ']' || tail == '}') {
+    char openChar = tail == ')' ? '(' : (tail == ']' ? '[' : '{');
+    size_t openPos = findMatchingOpen(text, end - 1, openChar, tail);
+    if (openPos == std::string::npos) {
+      return end;
+    }
+    start = openPos;
+    while (start > 0 && isOperatorTokenChar(text[start - 1])) {
+      --start;
+    }
+    if (start > 0 && text[start - 1] == '-' && isUnaryPrefixPosition(text, start - 1)) {
+      --start;
+    }
+    return start;
+  }
+  if (tail == '"' || tail == '\'') {
+    size_t rawStart = (tail == '"') ? findRawStringStart(text, end - 1) : std::string::npos;
+    if (rawStart != std::string::npos) {
+      return rawStart;
+    }
+    size_t quoteStart = findQuotedStart(text, end - 1);
+    if (quoteStart != std::string::npos) {
+      return quoteStart;
+    }
+    return end;
+  }
+  while (start > 0) {
+    char c = text[start - 1];
+    if (isOperatorTokenChar(c) || isExponentSign(text, start - 1)) {
       --start;
       continue;
     }
@@ -65,6 +240,55 @@ size_t findLeftTokenStart(const std::string &text, size_t end) {
     --start;
   }
   return start;
+}
+
+size_t findRightTokenEnd(const std::string &text, size_t start) {
+  if (start >= text.size()) {
+    return start;
+  }
+  if (text[start] == '-' && isUnaryPrefixPosition(text, start)) {
+    return findRightTokenEnd(text, start + 1);
+  }
+  char lead = text[start];
+  if (lead == '(' || lead == '[' || lead == '{') {
+    char closeChar = lead == '(' ? ')' : (lead == '[' ? ']' : '}');
+    size_t closePos = findMatchingClose(text, start, lead, closeChar);
+    return closePos == std::string::npos ? start : closePos + 1;
+  }
+  if (lead == 'R' && start + 2 < text.size() && text[start + 1] == '"' && text[start + 2] == '(') {
+    size_t end = skipRawStringForward(text, start);
+    return end == std::string::npos ? start : end;
+  }
+  if (lead == '"' || lead == '\'') {
+    size_t end = skipQuotedForward(text, start);
+    return end == std::string::npos ? start : end;
+  }
+  size_t pos = start;
+  while (pos < text.size()) {
+    if (isOperatorTokenChar(text[pos]) || isExponentSign(text, pos)) {
+      ++pos;
+      continue;
+    }
+    break;
+  }
+  if (pos < text.size() && text[pos] == '(') {
+    size_t closePos = findMatchingClose(text, pos, '(', ')');
+    if (closePos != std::string::npos) {
+      pos = closePos + 1;
+    }
+  }
+  return pos;
+}
+
+std::string stripOuterParens(const std::string &text) {
+  if (text.size() < 2 || text.front() != '(' || text.back() != ')') {
+    return text;
+  }
+  size_t closePos = findMatchingClose(text, 0, '(', ')');
+  if (closePos != text.size() - 1) {
+    return text;
+  }
+  return text.substr(1, text.size() - 2);
 }
 
 bool looksLikeTemplateList(const std::string &input, size_t index) {
@@ -78,13 +302,37 @@ bool looksLikeTemplateList(const std::string &input, size_t index) {
     if (c == '>') {
       return sawToken;
     }
-    if (isTokenChar(c)) {
+    if (isOperatorTokenChar(c)) {
       sawToken = true;
       ++pos;
       continue;
     }
     if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
       ++pos;
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
+bool looksLikeTemplateListClose(const std::string &input, size_t index) {
+  if (index >= input.size() || input[index] != '>') {
+    return false;
+  }
+  size_t pos = index;
+  bool sawToken = false;
+  while (pos > 0) {
+    --pos;
+    char c = input[pos];
+    if (c == '<') {
+      return sawToken;
+    }
+    if (isOperatorTokenChar(c)) {
+      sawToken = true;
+      continue;
+    }
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
       continue;
     }
     return false;
@@ -208,7 +456,8 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (input[index] != first || index == 0 || index + 1 >= input.size() || input[index + 1] != second) {
       return false;
     }
-    if (!isOperatorTokenChar(input[index - 1]) || index + 2 >= input.size() || !isOperatorTokenChar(input[index + 2])) {
+    if (!isLeftOperandEndChar(input[index - 1]) || index + 2 >= input.size() ||
+        !isRightOperandStartChar(input, index + 2)) {
       return false;
     }
     size_t end = output.size();
@@ -217,23 +466,17 @@ bool TextFilterPipeline::apply(const std::string &input,
       return false;
     }
     std::string left = output.substr(start, end - start);
+    left = stripOuterParens(left);
     if (options.implicitI32Suffix) {
       left = maybeAppendI32(left);
     }
     size_t rightStart = index + 2;
-    size_t rightEnd = rightStart;
-    while (rightEnd < input.size()) {
-      char c = input[rightEnd];
-      if (isOperatorTokenChar(c) || isExponentSign(input, rightEnd)) {
-        ++rightEnd;
-        continue;
-      }
-      break;
-    }
+    size_t rightEnd = findRightTokenEnd(input, rightStart);
     if (rightEnd == rightStart) {
       return false;
     }
     std::string right = input.substr(rightStart, rightEnd - rightStart);
+    right = stripOuterParens(right);
     if (options.implicitI32Suffix) {
       right = maybeAppendI32(right);
     }
@@ -252,7 +495,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (input[index] != op || index == 0 || index + 1 >= input.size()) {
       return false;
     }
-    if (!isOperatorTokenChar(input[index - 1]) || !isOperatorTokenChar(input[index + 1])) {
+    if (!isLeftOperandEndChar(input[index - 1]) || !isRightOperandStartChar(input, index + 1)) {
       return false;
     }
     size_t end = output.size();
@@ -261,23 +504,17 @@ bool TextFilterPipeline::apply(const std::string &input,
       return false;
     }
     std::string left = output.substr(start, end - start);
+    left = stripOuterParens(left);
     if (options.implicitI32Suffix) {
       left = maybeAppendI32(left);
     }
     size_t rightStart = index + 1;
-    size_t rightEnd = rightStart;
-    while (rightEnd < input.size()) {
-      char c = input[rightEnd];
-      if (isOperatorTokenChar(c) || isExponentSign(input, rightEnd)) {
-        ++rightEnd;
-        continue;
-      }
-      break;
-    }
+    size_t rightEnd = findRightTokenEnd(input, rightStart);
     if (rightEnd == rightStart) {
       return false;
     }
     std::string right = input.substr(rightStart, rightEnd - rightStart);
+    right = stripOuterParens(right);
     if (options.implicitI32Suffix) {
       right = maybeAppendI32(right);
     }
@@ -491,7 +728,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (rewriteBinary(i, '*', "multiply")) {
       continue;
     }
-    if (rewriteBinary(i, '>', "greater_than")) {
+    if (!looksLikeTemplateListClose(input, i) && rewriteBinary(i, '>', "greater_than")) {
       continue;
     }
 

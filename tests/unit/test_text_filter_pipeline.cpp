@@ -44,6 +44,26 @@ TEST_CASE("rewrites plus operator with float literals") {
   CHECK(output.find("plus(1.5f, 2.5f)") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus operator with call operands") {
+  const std::string source = "main(){ return(foo()+bar()) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(foo(), bar())") != std::string::npos);
+}
+
+TEST_CASE("rewrites multiply with parenthesized operand") {
+  const std::string source = "main(){ return((1i32+2i32)*3i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("multiply(plus(1i32, 2i32), 3i32)") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with negative literal") {
   const std::string source = "main(){ return(-1+2) }\n";
   primec::TextFilterPipeline pipeline;
