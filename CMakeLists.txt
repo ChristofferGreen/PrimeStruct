@@ -40,6 +40,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_execution_parsing.cpp
     tests/unit/test_execution_whitespace.cpp
     tests/unit/test_template_parsing.cpp
+    tests/unit/test_compile_run.cpp
   )
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
