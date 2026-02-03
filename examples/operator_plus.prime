@@ -1,0 +1,4 @@
+[return<int>]
+main() {
+  return(1i32+2i32)
+}

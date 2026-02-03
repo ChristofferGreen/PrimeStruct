@@ -1,0 +1,6 @@
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  assign(value, 6i32)
+  return(value)
+}
