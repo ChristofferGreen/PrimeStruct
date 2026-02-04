@@ -52,6 +52,10 @@ BindingInfo getBindingInfo(const Expr &expr) {
       info.isMutable = true;
       continue;
     }
+    if (transform.name == "copy" || transform.name == "restrict" || transform.name == "align_bytes" ||
+        transform.name == "align_kbytes") {
+      continue;
+    }
     if (transform.arguments.empty()) {
       if (transform.name == "public" || transform.name == "private" || transform.name == "package" ||
           transform.name == "static") {

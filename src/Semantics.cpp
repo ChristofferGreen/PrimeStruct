@@ -15,6 +15,8 @@ struct BindingInfo {
   bool isMutable = false;
 };
 
+bool validateAlignTransform(const Transform &transform, const std::string &context, std::string &error);
+
 bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "package" || name == "static";
 }
@@ -280,6 +282,28 @@ bool parseBindingInfo(const Expr &expr,
       info.isMutable = true;
       continue;
     }
+    if (transform.name == "copy") {
+      if (transform.templateArg) {
+        error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      continue;
+    }
+    if (transform.name == "restrict") {
+      if (!transform.templateArg) {
+        error = "restrict requires a template argument";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      continue;
+    }
     if (isBindingQualifierName(transform.name)) {
       if (transform.templateArg) {
         error = "binding transforms do not take template arguments";
@@ -287,6 +311,12 @@ bool parseBindingInfo(const Expr &expr,
       }
       if (!transform.arguments.empty()) {
         error = "binding transforms do not take arguments";
+        return false;
+      }
+      continue;
+    }
+    if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
+      if (!validateAlignTransform(transform, "binding " + expr.name, error)) {
         return false;
       }
       continue;

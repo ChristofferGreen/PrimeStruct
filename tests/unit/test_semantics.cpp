@@ -963,6 +963,71 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("copy binding validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [copy i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("restrict binding validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [restrict<i32> i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("restrict requires template argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [restrict i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("restrict requires a template argument") != std::string::npos);
+}
+
+TEST_CASE("binding align_bytes validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_bytes(16) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding align_bytes rejects invalid") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_bytes(0) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_bytes requires a positive integer argument") != std::string::npos);
+}
+
 TEST_CASE("binding qualifiers are allowed") {
   const std::string source = R"(
 [return<int>]
