@@ -242,6 +242,54 @@ bool validateNamedArguments(const std::vector<Expr> &args,
   }
   return true;
 }
+
+bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {
+  for (const auto &name : argNames) {
+    if (name.has_value()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool validateNamedArgumentsAgainstParams(const std::vector<std::string> &params,
+                                         const std::vector<std::optional<std::string>> &argNames,
+                                         std::string &error) {
+  if (argNames.empty()) {
+    return true;
+  }
+  size_t positionalCount = 0;
+  while (positionalCount < argNames.size() && !argNames[positionalCount].has_value()) {
+    ++positionalCount;
+  }
+  std::unordered_set<std::string> bound;
+  for (size_t i = 0; i < positionalCount && i < params.size(); ++i) {
+    bound.insert(params[i]);
+  }
+  for (size_t i = positionalCount; i < argNames.size(); ++i) {
+    if (!argNames[i].has_value()) {
+      continue;
+    }
+    const std::string &name = *argNames[i];
+    bool found = false;
+    for (const auto &param : params) {
+      if (param == name) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      error = "unknown named argument: " + name;
+      return false;
+    }
+    if (bound.count(name) > 0) {
+      error = "named argument duplicates parameter: " + name;
+      return false;
+    }
+    bound.insert(name);
+  }
+  return true;
+}
 } // namespace
 
 bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
@@ -337,6 +385,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       auto it = defMap.find(resolved);
       if (it == defMap.end()) {
+        if (hasNamedArguments(expr.argNames)) {
+          error = "named arguments not supported for builtin calls";
+          return false;
+        }
         std::string builtinName;
         if (getBuiltinOperatorName(expr, builtinName)) {
           size_t expectedArgs = builtinName == "negate" ? 1 : 2;
@@ -424,6 +476,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       size_t expectedArgs = paramCounts[resolved];
       if (expr.args.size() != expectedArgs) {
         error = "argument count mismatch for " + resolved;
+        return false;
+      }
+      if (!validateNamedArgumentsAgainstParams(it->second->parameters, expr.argNames, error)) {
         return false;
       }
       for (const auto &arg : expr.args) {
@@ -582,6 +637,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return false;
     }
     if (!validateNamedArguments(exec.arguments, exec.argumentNames, exec.fullPath, error)) {
+      return false;
+    }
+    if (!validateNamedArgumentsAgainstParams(it->second->parameters, exec.argumentNames, error)) {
       return false;
     }
     for (const auto &arg : exec.arguments) {

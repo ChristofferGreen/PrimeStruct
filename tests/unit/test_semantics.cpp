@@ -605,6 +605,76 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("named arguments match parameters") {
+  const std::string source = R"(
+[return<int>]
+foo(a, b) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(a = 1i32, b = 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unknown named argument fails") {
+  const std::string source = R"(
+[return<int>]
+foo(a, b) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(c = 1i32, b = 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument") != std::string::npos);
+}
+
+TEST_CASE("named argument duplicates positional parameter fails") {
+  const std::string source = R"(
+[return<int>]
+foo(a, b) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(1i32, a = 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named argument duplicates parameter") != std::string::npos);
+}
+
+TEST_CASE("execution named arguments match parameters") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job(a, b) {
+  return(a)
+}
+
+job(a = 1i32, b = 2i32)
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]
