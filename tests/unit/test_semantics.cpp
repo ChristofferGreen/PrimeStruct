@@ -1040,7 +1040,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("builtin comparison rejects float operands") {
+TEST_CASE("builtin comparison accepts float operands") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1048,8 +1048,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("builtin comparison rejects string operands") {
@@ -1061,7 +1061,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
+  CHECK(error.find("comparisons require numeric or bool operands") != std::string::npos);
 }
 
 TEST_CASE("builtin comparison rejects pointer operands") {
@@ -1074,7 +1074,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
+  CHECK(error.find("comparisons require numeric or bool operands") != std::string::npos);
 }
 
 TEST_CASE("builtin comparison rejects mixed signed/unsigned operands") {

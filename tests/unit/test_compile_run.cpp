@@ -1341,6 +1341,21 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs float comparison") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(greater_than(1.5f, 0.5f))
+}
+)";
+  const std::string srcPath = writeTemp("compile_float_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_float_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("implicit suffix disabled by default") {
   const std::string source = R"(
 [return<int>]

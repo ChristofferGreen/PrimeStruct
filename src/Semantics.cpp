@@ -1099,6 +1099,41 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       return false;
     };
+    auto isComparisonOperand = [&](const Expr &arg) -> bool {
+      ReturnKind kind = inferExprReturnKind(arg, params, locals);
+      if (kind == ReturnKind::Bool || kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+          kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+        return true;
+      }
+      if (kind == ReturnKind::Void) {
+        return false;
+      }
+      if (kind == ReturnKind::Unknown) {
+        if (arg.kind == Expr::Kind::StringLiteral) {
+          return false;
+        }
+        if (isPointerExpr(arg, locals)) {
+          return false;
+        }
+        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+          auto it = locals.find(arg.name);
+          if (it != locals.end()) {
+            const std::string &typeName = it->second.typeName;
+            if (typeName == "string" || typeName == "Pointer") {
+              return false;
+            }
+            if (typeName == "Reference") {
+              const std::string &refType = it->second.typeTemplateArg;
+              if (refType == "string" || refType == "Pointer" || refType.rfind("Pointer<", 0) == 0) {
+                return false;
+              }
+            }
+          }
+        }
+        return true;
+      }
+      return false;
+    };
     auto isUnsignedExpr = [&](const Expr &arg) -> bool {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
       return kind == ReturnKind::UInt64;
@@ -1237,17 +1272,21 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             error = "argument count mismatch for builtin " + builtinName;
             return false;
           }
+          const bool isBooleanOp = builtinName == "and" || builtinName == "or" || builtinName == "not";
           for (const auto &arg : expr.args) {
-            if (!isIntegerOrBoolExpr(arg, params, locals)) {
-              if (builtinName == "and" || builtinName == "or" || builtinName == "not") {
+            if (isBooleanOp) {
+              if (!isIntegerOrBoolExpr(arg, params, locals)) {
                 error = "boolean operators require integer or bool operands";
-              } else {
-                error = "comparisons require integer or bool operands";
+                return false;
               }
-              return false;
+            } else {
+              if (!isComparisonOperand(arg)) {
+                error = "comparisons require numeric or bool operands";
+                return false;
+              }
             }
           }
-          if (builtinName != "and" && builtinName != "or" && builtinName != "not") {
+          if (!isBooleanOp) {
             if (hasMixedSignedness(expr.args, true)) {
               error = "comparisons do not support mixed signed/unsigned operands";
               return false;
