@@ -204,6 +204,14 @@ class Arm64Emitter {
     emit(encodeRet());
   }
 
+  void emitReturnVoid() {
+    emitMovImm64(0, 0);
+    if (frameSize_ > 0) {
+      emit(encodeAddSpImm(static_cast<uint16_t>(frameSize_)));
+    }
+    emit(encodeRet());
+  }
+
   std::vector<uint8_t> finalize() const {
     std::vector<uint8_t> bytes;
     bytes.reserve(code_.size() * 4);
@@ -460,6 +468,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "JumpIfZero";
       case IrOpcode::Jump:
         return "Jump";
+      case IrOpcode::ReturnVoid:
+        return "ReturnVoid";
       case IrOpcode::ReturnI32:
         return "ReturnI32";
       case IrOpcode::ReturnI64:
@@ -517,6 +527,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return -1;
       case IrOpcode::Jump:
         return 0;
+      case IrOpcode::ReturnVoid:
+        return 0;
       case IrOpcode::ReturnI32:
       case IrOpcode::ReturnI64:
         return -1;
@@ -563,7 +575,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       return true;
     };
 
-    if (inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64) {
+    if (inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64) {
       continue;
     }
     if (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) {
@@ -1244,6 +1256,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         fixups.push_back(fixup);
         break;
       }
+      case IrOpcode::ReturnVoid:
+        emitter.emitReturnVoid();
+        break;
       case IrOpcode::ReturnI32:
         emitter.emitReturn();
         break;

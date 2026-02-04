@@ -45,6 +45,7 @@ enum class IrOpcode : uint8_t {
   CmpGeU64,
   JumpIfZero,
   Jump,
+  ReturnVoid,
   ReturnI32,
   ReturnI64,
 };

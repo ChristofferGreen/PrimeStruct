@@ -310,6 +310,10 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) c
         ip = static_cast<size_t>(inst.imm);
         break;
       }
+      case IrOpcode::ReturnVoid: {
+        result = 0;
+        return true;
+      }
       case IrOpcode::ReturnI32: {
         if (stack.empty()) {
           error = "IR stack underflow on return";

@@ -139,6 +139,13 @@ bool IrLowerer::lower(const Program &program,
     error = "native backend requires entry definition " + entryPath;
     return false;
   }
+  bool returnsVoid = false;
+  for (const auto &transform : entryDef->transforms) {
+    if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {
+      returnsVoid = true;
+      break;
+    }
+  }
 
   IrFunction function;
   function.name = entryPath;
@@ -984,8 +991,21 @@ bool IrLowerer::lower(const Program &program,
       return true;
     }
     if (isReturnCall(stmt)) {
+      if (stmt.args.empty()) {
+        if (!returnsVoid) {
+          error = "return requires exactly one argument";
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::ReturnVoid, 0});
+        sawReturn = true;
+        return true;
+      }
       if (stmt.args.size() != 1) {
         error = "return requires exactly one argument";
+        return false;
+      }
+      if (returnsVoid) {
+        error = "return value not allowed for void definition";
         return false;
       }
       if (!emitExpr(stmt.args.front(), localsIn)) {
@@ -1060,8 +1080,12 @@ bool IrLowerer::lower(const Program &program,
   }
 
   if (!sawReturn) {
-    error = "native backend requires an explicit return statement";
-    return false;
+    if (returnsVoid) {
+      function.instructions.push_back({IrOpcode::ReturnVoid, 0});
+    } else {
+      error = "native backend requires an explicit return statement";
+      return false;
+    }
   }
 
   out.functions.push_back(std::move(function));
