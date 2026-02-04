@@ -1251,6 +1251,19 @@ main() {
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
+TEST_CASE("assign not allowed in expression context") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  return(assign(value, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign not allowed in expression context") != std::string::npos);
+}
+
 TEST_CASE("if validates block arguments") {
   const std::string source = R"(
 [return<int>]

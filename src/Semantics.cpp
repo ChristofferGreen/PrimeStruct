@@ -940,6 +940,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "control-flow blocks cannot appear in expressions";
         return false;
       }
+      if (isAssignCall(expr)) {
+        error = "assign not allowed in expression context";
+        return false;
+      }
       std::string resolved = resolveCalleePath(expr);
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, error)) {
         return false;
@@ -1063,25 +1067,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         return true;
       }
-      if (isAssignCall(expr)) {
-        if (expr.args.size() != 2) {
-          error = "assign requires exactly two arguments";
-          return false;
-        }
-          if (expr.args.front().kind != Expr::Kind::Name) {
-            error = "assign target must be a mutable binding";
-            return false;
-          }
-          const std::string &targetName = expr.args.front().name;
-          if (!isMutableLocal(locals, targetName)) {
-            error = "assign target must be a mutable binding: " + targetName;
-            return false;
-          }
-          if (!validateExpr(params, locals, expr.args[1])) {
-            return false;
-          }
-          return true;
-        }
         error = "unknown call target: " + expr.name;
         return false;
       }
@@ -1169,6 +1154,29 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       if (sawReturn) {
         *sawReturn = true;
+      }
+      return true;
+    }
+    if (isAssignCall(stmt)) {
+      if (!stmt.bodyArguments.empty()) {
+        error = "assign does not accept block arguments";
+        return false;
+      }
+      if (stmt.args.size() != 2) {
+        error = "assign requires exactly two arguments";
+        return false;
+      }
+      if (stmt.args.front().kind != Expr::Kind::Name) {
+        error = "assign target must be a mutable binding";
+        return false;
+      }
+      const std::string &targetName = stmt.args.front().name;
+      if (!isMutableLocal(locals, targetName)) {
+        error = "assign target must be a mutable binding: " + targetName;
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args[1])) {
+        return false;
       }
       return true;
     }
