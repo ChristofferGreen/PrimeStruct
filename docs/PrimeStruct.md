@@ -60,6 +60,9 @@ module {
 - `PrimeStructc --emit=exe input.prime -o build/hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
+- `PrimeStructc --emit=native input.prime -o build/hello`
+  - Emits a self-contained macOS/arm64 executable directly (no external linker).
+  - Lowers through the portable IR that also feeds the VM/network path.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Phase 1 — Minimal Compiler That Emits an Executable
@@ -103,6 +106,9 @@ module {
 - `PrimeStructc --emit=exe input.prime -o build/hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
+- `PrimeStructc --emit=native input.prime -o build/hello`
+  - Emits a self-contained macOS/arm64 executable directly (no external linker).
+  - Lowers through the portable IR that also feeds the VM/network path.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Goals

@@ -11,11 +11,15 @@ add_library(primec_lib
   src/AstPrinter.cpp
   src/Emitter.cpp
   src/IncludeResolver.cpp
+  src/IrLowerer.cpp
   src/IrPrinter.cpp
+  src/IrSerializer.cpp
   src/Lexer.cpp
+  src/NativeEmitter.cpp
   src/Parser.cpp
   src/Semantics.cpp
   src/TextFilterPipeline.cpp
+  src/Vm.cpp
 )
 
 target_include_directories(primec_lib PUBLIC include)
@@ -40,6 +44,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_parser_errors_more.cpp
     tests/unit/test_execution_parsing.cpp
     tests/unit/test_execution_whitespace.cpp
+    tests/unit/test_ir_pipeline.cpp
     tests/unit/test_template_parsing.cpp
     tests/unit/test_compile_run.cpp
     tests/unit/test_text_filter_pipeline.cpp

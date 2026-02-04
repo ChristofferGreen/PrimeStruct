@@ -54,6 +54,23 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+TEST_CASE("compiles and runs native executable") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+#endif
+
 TEST_CASE("compiles and runs namespace entry") {
   const std::string source = R"(
 namespace demo {

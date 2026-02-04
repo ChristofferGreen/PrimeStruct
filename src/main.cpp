@@ -1,8 +1,10 @@
 #include "primec/AstPrinter.h"
 #include "primec/Emitter.h"
 #include "primec/IncludeResolver.h"
+#include "primec/IrLowerer.h"
 #include "primec/IrPrinter.h"
 #include "primec/Lexer.h"
+#include "primec/NativeEmitter.h"
 #include "primec/Options.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
@@ -71,7 +73,7 @@ std::vector<std::string> parseTextFilters(const std::string &text) {
 bool parseArgs(int argc, char **argv, primec::Options &out) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
-    if (arg == "--emit=cpp" || arg == "--emit=exe") {
+    if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native") {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "-o" && i + 1 < argc) {
       out.outputPath = argv[++i];
@@ -146,7 +148,7 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] "
+    std::cerr << "Usage: primec --emit=cpp|exe|native <input.prime> -o <output> [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] "
                  "[--dump-stage pre_ast|ast|ir]\n";
     return 2;
@@ -203,6 +205,21 @@ int main(int argc, char **argv) {
   if (!semantics.validate(program, options.entryPath, error)) {
     std::cerr << "Semantic error: " << error << "\n";
     return 2;
+  }
+
+  if (options.emitKind == "native") {
+    primec::IrLowerer lowerer;
+    primec::IrModule ir;
+    if (!lowerer.lower(program, options.entryPath, ir, error)) {
+      std::cerr << "Native lowering error: " << error << "\n";
+      return 2;
+    }
+    primec::NativeEmitter nativeEmitter;
+    if (!nativeEmitter.emitExecutable(ir, options.outputPath, error)) {
+      std::cerr << "Native emit error: " << error << "\n";
+      return 2;
+    }
+    return 0;
   }
 
   primec::Emitter emitter;
