@@ -26,6 +26,25 @@ bool isPrimitiveBindingTypeName(const std::string &name) {
          name == "string";
 }
 
+ReturnKind returnKindForTypeName(const std::string &name) {
+  if (name == "int" || name == "i32") {
+    return ReturnKind::Int;
+  }
+  if (name == "bool") {
+    return ReturnKind::Bool;
+  }
+  if (name == "float" || name == "f32") {
+    return ReturnKind::Float32;
+  }
+  if (name == "f64") {
+    return ReturnKind::Float64;
+  }
+  if (name == "void") {
+    return ReturnKind::Void;
+  }
+  return ReturnKind::Unknown;
+}
+
 ReturnKind getReturnKind(const Definition &def, std::string &error) {
   ReturnKind kind = ReturnKind::Unknown;
   for (const auto &transform : def.transforms) {
@@ -666,6 +685,156 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
     return false;
   };
+
+  std::unordered_set<std::string> inferenceStack;
+  std::function<bool(const Definition &)> inferDefinitionReturnKind;
+  std::function<ReturnKind(const Expr &,
+                           const std::vector<std::string> &,
+                           const std::unordered_map<std::string, BindingInfo> &)>
+      inferExprReturnKind;
+
+  inferExprReturnKind = [&](const Expr &expr,
+                            const std::vector<std::string> &params,
+                            const std::unordered_map<std::string, BindingInfo> &locals) -> ReturnKind {
+    if (expr.kind == Expr::Kind::Literal) {
+      return ReturnKind::Int;
+    }
+    if (expr.kind == Expr::Kind::FloatLiteral) {
+      return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
+    }
+    if (expr.kind == Expr::Kind::StringLiteral) {
+      return ReturnKind::Unknown;
+    }
+    if (expr.kind == Expr::Kind::Name) {
+      if (isParam(params, expr.name)) {
+        return ReturnKind::Unknown;
+      }
+      auto it = locals.find(expr.name);
+      if (it == locals.end()) {
+        return ReturnKind::Unknown;
+      }
+      return returnKindForTypeName(it->second.typeName);
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      std::string resolved = resolveCalleePath(expr);
+      auto defIt = defMap.find(resolved);
+      if (defIt != defMap.end()) {
+        if (!inferDefinitionReturnKind(*defIt->second)) {
+          return ReturnKind::Unknown;
+        }
+        auto kindIt = returnKinds.find(resolved);
+        if (kindIt != returnKinds.end()) {
+          return kindIt->second;
+        }
+        return ReturnKind::Unknown;
+      }
+      std::string builtinName;
+      if (getBuiltinComparisonName(expr, builtinName)) {
+        return ReturnKind::Bool;
+      }
+      if (getBuiltinConvertName(expr, builtinName)) {
+        if (expr.templateArgs.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        return returnKindForTypeName(expr.templateArgs.front());
+      }
+      return ReturnKind::Unknown;
+    }
+    return ReturnKind::Unknown;
+  };
+
+  inferDefinitionReturnKind = [&](const Definition &def) -> bool {
+    auto kindIt = returnKinds.find(def.fullPath);
+    if (kindIt == returnKinds.end()) {
+      return false;
+    }
+    if (kindIt->second != ReturnKind::Unknown) {
+      return true;
+    }
+    if (!inferenceStack.insert(def.fullPath).second) {
+      error = "return type inference requires explicit annotation on " + def.fullPath;
+      return false;
+    }
+    ReturnKind inferred = ReturnKind::Unknown;
+    bool sawReturn = false;
+    std::unordered_map<std::string, BindingInfo> locals;
+    std::function<bool(const Expr &, std::unordered_map<std::string, BindingInfo> &)> inferStatement;
+    inferStatement = [&](const Expr &stmt, std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
+      if (stmt.isBinding) {
+        BindingInfo info;
+        if (!parseBindingInfo(stmt, def.namespacePrefix, structNames, info, error)) {
+          return false;
+        }
+        activeLocals.emplace(stmt.name, std::move(info));
+        return true;
+      }
+      if (isReturnCall(stmt)) {
+        sawReturn = true;
+        ReturnKind exprKind = ReturnKind::Void;
+        if (!stmt.args.empty()) {
+          exprKind = inferExprReturnKind(stmt.args.front(), def.parameters, activeLocals);
+        }
+        if (exprKind == ReturnKind::Unknown) {
+          error = "unable to infer return type on " + def.fullPath;
+          return false;
+        }
+        if (inferred == ReturnKind::Unknown) {
+          inferred = exprKind;
+          return true;
+        }
+        if (inferred != exprKind) {
+          error = "conflicting return types on " + def.fullPath;
+          return false;
+        }
+        return true;
+      }
+      if (isIfCall(stmt) && stmt.args.size() == 3) {
+        const Expr &thenBlock = stmt.args[1];
+        const Expr &elseBlock = stmt.args[2];
+        auto walkBlock = [&](const Expr &block) -> bool {
+          std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
+          for (const auto &bodyExpr : block.bodyArguments) {
+            if (!inferStatement(bodyExpr, blockLocals)) {
+              return false;
+            }
+          }
+          return true;
+        };
+        if (!walkBlock(thenBlock)) {
+          return false;
+        }
+        if (!walkBlock(elseBlock)) {
+          return false;
+        }
+        return true;
+      }
+      return true;
+    };
+
+    for (const auto &stmt : def.statements) {
+      if (!inferStatement(stmt, locals)) {
+        return false;
+      }
+    }
+    if (!sawReturn) {
+      kindIt->second = ReturnKind::Void;
+    } else if (inferred == ReturnKind::Unknown) {
+      error = "unable to infer return type on " + def.fullPath;
+      return false;
+    } else {
+      kindIt->second = inferred;
+    }
+    inferenceStack.erase(def.fullPath);
+    return true;
+  };
+
+  for (const auto &def : program.definitions) {
+    if (returnKinds[def.fullPath] == ReturnKind::Unknown) {
+      if (!inferDefinitionReturnKind(def)) {
+        return false;
+      }
+    }
+  }
 
   auto isMutableLocal = [](const std::unordered_map<std::string, BindingInfo> &locals,
                            const std::string &name) -> bool {

@@ -248,7 +248,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
   }
   if (isDefinition && !hasReturnTransform && !hasStructTransform) {
-    return fail("definition requires return transform");
+    // Definitions without return transforms are allowed as long as they are unambiguous.
   }
   if (isDefinition) {
     std::vector<std::string> parameters;

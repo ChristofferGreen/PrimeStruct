@@ -30,6 +30,18 @@ main() {
   CHECK(program.definitions[0].fullPath == "/main");
 }
 
+TEST_CASE("parses definition without return transform") {
+  const std::string source = R"(
+main() {
+  return(7i32)
+}
+)";
+
+  const auto program = parseProgram(source);
+  CHECK(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/main");
+}
+
 TEST_CASE("parses slash path definition") {
   const std::string source = R"(
 [return<int>]

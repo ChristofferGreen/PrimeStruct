@@ -48,6 +48,28 @@ main(x) {
   CHECK(error.find("unknown identifier") != std::string::npos);
 }
 
+TEST_CASE("infers return type without transform") {
+  const std::string source = R"(
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("infers float return type without transform") {
+  const std::string source = R"(
+main() {
+  return(1.5f)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("argument count mismatch fails") {
   const std::string source = R"(
 [return<int>]

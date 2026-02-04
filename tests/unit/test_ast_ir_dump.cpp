@@ -324,6 +324,24 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump infers return type without transform") {
+  const std::string source = R"(
+main() {
+  return(1.5f)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): f32 {\n"
+      "    return 1.5f32\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints collection literal calls") {
   const std::string source = R"(
 [return<int>]

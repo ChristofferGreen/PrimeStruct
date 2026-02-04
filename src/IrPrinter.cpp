@@ -1,11 +1,14 @@
 #include "primec/IrPrinter.h"
 
+#include <functional>
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace primec {
 
 namespace {
-enum class ReturnKind { Int, Float32, Float64, Bool, Void };
+enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
 
 std::string bindingTypeName(const Expr &expr) {
   std::string typeName;
@@ -68,6 +71,61 @@ bool isReturnCall(const Expr &expr) {
   return name == "return";
 }
 
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == nameToMatch;
+}
+
+bool isIfCall(const Expr &expr) {
+  return isSimpleCallName(expr, "if");
+}
+
+bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal" ||
+      name == "greater_equal" || name == "less_equal" || name == "and" || name == "or" || name == "not") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
+bool getBuiltinConvertName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "convert") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name == "struct" || transform.name == "pod" || transform.name == "stack" ||
@@ -96,7 +154,7 @@ ReturnKind getReturnKind(const Definition &def) {
       return ReturnKind::Float64;
     }
   }
-  return ReturnKind::Int;
+  return ReturnKind::Unknown;
 }
 
 const char *returnTypeName(ReturnKind kind) {
@@ -113,6 +171,25 @@ const char *returnTypeName(ReturnKind kind) {
     return "bool";
   }
   return "i32";
+}
+
+ReturnKind returnKindForTypeName(const std::string &name) {
+  if (name == "int" || name == "i32") {
+    return ReturnKind::Int;
+  }
+  if (name == "bool") {
+    return ReturnKind::Bool;
+  }
+  if (name == "float" || name == "f32") {
+    return ReturnKind::Float32;
+  }
+  if (name == "f64") {
+    return ReturnKind::Float64;
+  }
+  if (name == "void") {
+    return ReturnKind::Void;
+  }
+  return ReturnKind::Unknown;
 }
 
 void indent(std::ostringstream &out, int depth) {
@@ -161,8 +238,17 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
   }
 }
 
-void printDefinition(std::ostringstream &out, const Definition &def, int depth) {
-  ReturnKind kind = getReturnKind(def);
+void printDefinition(std::ostringstream &out,
+                     const Definition &def,
+                     int depth,
+                     const std::unordered_map<std::string, ReturnKind> &returnKinds) {
+  ReturnKind kind = ReturnKind::Int;
+  auto kindIt = returnKinds.find(def.fullPath);
+  if (kindIt != returnKinds.end()) {
+    kind = kindIt->second;
+  } else {
+    kind = getReturnKind(def);
+  }
   indent(out, depth);
   out << "def " << def.fullPath << "(): " << returnTypeName(kind) << " {\n";
   bool sawReturn = false;
@@ -259,10 +345,155 @@ void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
 } // namespace
 
 std::string IrPrinter::print(const Program &program) const {
+  std::unordered_map<std::string, const Definition *> defMap;
+  std::unordered_map<std::string, ReturnKind> returnKinds;
+  for (const auto &def : program.definitions) {
+    defMap[def.fullPath] = &def;
+    returnKinds[def.fullPath] = getReturnKind(def);
+  }
+
+  auto isParam = [](const std::vector<std::string> &params, const std::string &name) -> bool {
+    for (const auto &param : params) {
+      if (param == name) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  std::unordered_set<std::string> inferenceStack;
+  std::function<ReturnKind(const Definition &)> inferDefinitionReturnKind;
+  std::function<ReturnKind(const Expr &,
+                           const std::vector<std::string> &,
+                           const std::unordered_map<std::string, ReturnKind> &)>
+      inferExprReturnKind;
+
+  inferExprReturnKind = [&](const Expr &expr,
+                            const std::vector<std::string> &params,
+                            const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
+    if (expr.kind == Expr::Kind::Literal) {
+      return ReturnKind::Int;
+    }
+    if (expr.kind == Expr::Kind::FloatLiteral) {
+      return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
+    }
+    if (expr.kind == Expr::Kind::StringLiteral) {
+      return ReturnKind::Unknown;
+    }
+    if (expr.kind == Expr::Kind::Name) {
+      if (isParam(params, expr.name)) {
+        return ReturnKind::Unknown;
+      }
+      auto it = locals.find(expr.name);
+      if (it == locals.end()) {
+        return ReturnKind::Unknown;
+      }
+      return it->second;
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      std::string resolved = expr.name;
+      if (!resolved.empty() && resolved[0] != '/') {
+        if (!expr.namespacePrefix.empty()) {
+          resolved = expr.namespacePrefix + "/" + resolved;
+        } else {
+          resolved = "/" + resolved;
+        }
+      }
+      auto defIt = defMap.find(resolved);
+      if (defIt != defMap.end()) {
+        ReturnKind calleeKind = inferDefinitionReturnKind(*defIt->second);
+        if (calleeKind == ReturnKind::Void || calleeKind == ReturnKind::Unknown) {
+          return ReturnKind::Unknown;
+        }
+        return calleeKind;
+      }
+      std::string builtinName;
+      if (getBuiltinComparisonName(expr, builtinName)) {
+        return ReturnKind::Bool;
+      }
+      if (getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
+        return returnKindForTypeName(expr.templateArgs.front());
+      }
+      return ReturnKind::Unknown;
+    }
+    return ReturnKind::Unknown;
+  };
+
+  inferDefinitionReturnKind = [&](const Definition &def) -> ReturnKind {
+    ReturnKind &kind = returnKinds[def.fullPath];
+    if (kind != ReturnKind::Unknown) {
+      return kind;
+    }
+    if (!inferenceStack.insert(def.fullPath).second) {
+      return ReturnKind::Unknown;
+    }
+    ReturnKind inferred = ReturnKind::Unknown;
+    bool sawReturn = false;
+    std::unordered_map<std::string, ReturnKind> locals;
+    std::function<void(const Expr &, std::unordered_map<std::string, ReturnKind> &)> visitStmt;
+    visitStmt = [&](const Expr &stmt, std::unordered_map<std::string, ReturnKind> &activeLocals) {
+      if (stmt.isBinding) {
+        ReturnKind bindingKind = returnKindForTypeName(bindingTypeName(stmt));
+        activeLocals.emplace(stmt.name, bindingKind);
+        return;
+      }
+      if (isReturnCall(stmt)) {
+        sawReturn = true;
+        ReturnKind exprKind = ReturnKind::Void;
+        if (!stmt.args.empty()) {
+          exprKind = inferExprReturnKind(stmt.args.front(), def.parameters, activeLocals);
+        }
+        if (exprKind == ReturnKind::Unknown) {
+          inferred = ReturnKind::Unknown;
+          return;
+        }
+        if (inferred == ReturnKind::Unknown) {
+          inferred = exprKind;
+          return;
+        }
+        if (inferred != exprKind) {
+          inferred = ReturnKind::Unknown;
+          return;
+        }
+        return;
+      }
+      if (isIfCall(stmt) && stmt.args.size() == 3) {
+        const Expr &thenBlock = stmt.args[1];
+        const Expr &elseBlock = stmt.args[2];
+        auto walkBlock = [&](const Expr &block) {
+          std::unordered_map<std::string, ReturnKind> blockLocals = activeLocals;
+          for (const auto &bodyStmt : block.bodyArguments) {
+            visitStmt(bodyStmt, blockLocals);
+          }
+        };
+        walkBlock(thenBlock);
+        walkBlock(elseBlock);
+      }
+    };
+    for (const auto &stmt : def.statements) {
+      visitStmt(stmt, locals);
+    }
+    if (!sawReturn) {
+      kind = ReturnKind::Void;
+    } else if (inferred == ReturnKind::Unknown) {
+      kind = ReturnKind::Int;
+    } else {
+      kind = inferred;
+    }
+    inferenceStack.erase(def.fullPath);
+    return kind;
+  };
+
+  for (const auto &def : program.definitions) {
+    if (returnKinds[def.fullPath] == ReturnKind::Unknown) {
+      inferDefinitionReturnKind(def);
+    }
+  }
+
   std::ostringstream out;
   out << "module {\n";
   for (const auto &def : program.definitions) {
-    printDefinition(out, def, 1);
+    printDefinition(out, def, 1, returnKinds);
   }
   for (const auto &exec : program.executions) {
     printExecution(out, exec, 1);
