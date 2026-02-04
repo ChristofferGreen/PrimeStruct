@@ -2653,6 +2653,45 @@ main() {
   CHECK(error.find("only supported as a statement") != std::string::npos);
 }
 
+TEST_CASE("print rejects pointer argument") {
+  const std::string source = R"(
+[effects(io_out) return<int>]
+main() {
+  [i32] value(1i32)
+  print(location(value))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
+}
+
+TEST_CASE("print rejects collection argument") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print(array<i32>(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
+}
+
+TEST_CASE("print accepts string binding") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  [string] greeting("hi")
+  print_line(greeting)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("default effects allow print") {
   const std::string source = R"(
 [return<void>]

@@ -1195,6 +1195,51 @@ bool Semantics::validate(const Program &program,
     }
     return false;
   };
+  auto isPrintableExpr = [&](const Expr &arg,
+                             const std::vector<std::string> &params,
+                             const std::unordered_map<std::string, BindingInfo> &locals) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+      return true;
+    }
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (kind == ReturnKind::Void) {
+      return false;
+    }
+    if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+      auto it = locals.find(arg.name);
+      if (it != locals.end()) {
+        if (it->second.typeName == "string") {
+          return true;
+        }
+        ReturnKind localKind = returnKindForBinding(it->second);
+        return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+               localKind == ReturnKind::Bool || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
+      }
+    }
+    if (isPointerLikeExpr(arg, locals)) {
+      return false;
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      std::string builtinName;
+      if (getBuiltinCollectionName(arg, builtinName)) {
+        return false;
+      }
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::StringLiteral) {
+        return true;
+      }
+      if (isPointerExpr(arg, locals)) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  };
 
   std::unordered_set<std::string> activeEffects;
 
@@ -1826,6 +1871,10 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       if (!validateExpr(params, locals, stmt.args.front())) {
+        return false;
+      }
+      if (!isPrintableExpr(stmt.args.front(), params, locals)) {
+        error = printBuiltin.name + " requires a numeric/bool or string literal/binding argument";
         return false;
       }
       return true;
