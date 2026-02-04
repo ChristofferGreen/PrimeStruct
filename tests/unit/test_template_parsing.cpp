@@ -51,4 +51,39 @@ main() {
   CHECK(mainDef.returnExpr->templateArgs[0] == "int");
 }
 
+TEST_CASE("parses nested template arguments on call") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(use(map<i32, array<i32>>(1i32, array<i32>(2i32))))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.returnExpr);
+  CHECK(mainDef.returnExpr->kind == primec::Expr::Kind::Call);
+  REQUIRE(mainDef.returnExpr->args.size() == 1);
+  const auto &mapCall = mainDef.returnExpr->args[0];
+  CHECK(mapCall.kind == primec::Expr::Kind::Call);
+  CHECK(mapCall.templateArgs.size() == 2);
+  CHECK(mapCall.templateArgs[0] == "i32");
+  CHECK(mapCall.templateArgs[1] == "array<i32>");
+}
+
+TEST_CASE("parses nested template argument on return transform") {
+  const std::string source = R"(
+[return<array<i32>>]
+main() {
+  return(array<i32>(1i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions[0];
+  REQUIRE(def.transforms.size() == 1);
+  REQUIRE(def.transforms[0].templateArg);
+  CHECK(*def.transforms[0].templateArg == "array<i32>");
+}
+
 TEST_SUITE_END();
