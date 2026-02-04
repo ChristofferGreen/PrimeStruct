@@ -695,6 +695,21 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs convert<bool> from negative i64") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<bool>(-1i64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert_bool_i64_neg.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_bool_i64_neg_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs pointer helpers") {
   const std::string source = R"(
 [return<int>]
