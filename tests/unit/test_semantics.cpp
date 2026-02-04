@@ -1838,6 +1838,20 @@ main() {
   CHECK(error.find("if condition requires integer or bool") != std::string::npos);
 }
 
+TEST_CASE("reference participates in signedness checks") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [u64 mut] value(1u64)
+  [Reference<u64>] ref(location(value))
+  return(plus(ref, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
 TEST_CASE("statement call with block arguments validates") {
   const std::string source = R"(
 [return<void>]

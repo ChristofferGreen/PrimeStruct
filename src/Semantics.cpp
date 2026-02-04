@@ -855,6 +855,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       if (it == locals.end()) {
         return ReturnKind::Unknown;
       }
+      if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
+        ReturnKind refKind = returnKindForTypeName(it->second.typeTemplateArg);
+        if (refKind != ReturnKind::Unknown) {
+          return refKind;
+        }
+      }
       return returnKindForTypeName(it->second.typeName);
     }
     if (expr.kind == Expr::Kind::Call) {
@@ -1041,6 +1047,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           if (typeName == "float" || typeName == "f32" || typeName == "f64" || typeName == "string") {
             return false;
           }
+          if (typeName == "Reference") {
+            const std::string &refType = it->second.typeTemplateArg;
+            if (refType == "string" || refType == "Pointer" || refType.rfind("Pointer<", 0) == 0) {
+              return false;
+            }
+          }
         }
       }
       return true;
@@ -1074,6 +1086,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           if (it != locals.end()) {
             if (it->second.typeName == "string" || it->second.typeName == "Pointer") {
               return false;
+            }
+            if (it->second.typeName == "Reference") {
+              const std::string &refType = it->second.typeTemplateArg;
+              if (refType == "string" || refType == "Pointer" || refType.rfind("Pointer<", 0) == 0) {
+                return false;
+              }
             }
           }
         }
