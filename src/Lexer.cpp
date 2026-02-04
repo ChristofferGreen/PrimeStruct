@@ -36,6 +36,18 @@ static bool isHexDigitChar(char c) {
   return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+static bool isAsciiAlpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+static bool isAsciiDigit(char c) {
+  return c >= '0' && c <= '9';
+}
+
+static bool isNonAscii(char c) {
+  return static_cast<unsigned char>(c) >= 0x80;
+}
+
 static bool isStringSuffixStart(char c) {
   return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
 }
@@ -45,11 +57,11 @@ static bool isStringSuffixBody(char c) {
 }
 
 bool Lexer::isIdentifierStart(char c) const {
-  return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '/';
+  return isAsciiAlpha(c) || c == '_' || c == '/' || isNonAscii(c);
 }
 
 bool Lexer::isIdentifierBody(char c) const {
-  return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '/';
+  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_' || c == '/' || isNonAscii(c);
 }
 
 void Lexer::skipWhitespace() {

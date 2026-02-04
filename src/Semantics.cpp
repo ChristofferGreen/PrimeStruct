@@ -585,17 +585,23 @@ bool parseBindingInfo(const Expr &expr,
   return true;
 }
 
+bool isAsciiAlpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+bool isAsciiDigit(char c) {
+  return c >= '0' && c <= '9';
+}
+
 bool isEffectName(const std::string &text) {
   if (text.empty()) {
     return false;
   }
-  unsigned char first = static_cast<unsigned char>(text[0]);
-  if (!std::isalpha(first) && text[0] != '_') {
+  if (!isAsciiAlpha(text[0]) && text[0] != '_') {
     return false;
   }
   for (size_t i = 1; i < text.size(); ++i) {
-    unsigned char c = static_cast<unsigned char>(text[i]);
-    if (!std::isalnum(c) && text[i] != '_') {
+    if (!isAsciiAlpha(text[i]) && !isAsciiDigit(text[i]) && text[i] != '_') {
       return false;
     }
   }

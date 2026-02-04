@@ -51,6 +51,17 @@ main(mut) {
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
+TEST_CASE("non-ascii identifier rejected") {
+  const std::string source =
+      std::string("[return<int>]\nma") + "\xC3\xA9" + "n() {\n  return(1i32)\n}\n";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid identifier") != std::string::npos);
+}
+
 TEST_CASE("return without argument fails") {
   const std::string source = R"(
 [return<int>]

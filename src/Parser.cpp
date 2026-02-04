@@ -13,12 +13,20 @@ bool isReservedKeyword(const std::string &text) {
          text == "false";
 }
 
+bool isAsciiAlpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+bool isAsciiDigit(char c) {
+  return c >= '0' && c <= '9';
+}
+
 bool isIdentifierSegmentStart(char c) {
-  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+  return isAsciiAlpha(c) || c == '_';
 }
 
 bool isIdentifierSegmentChar(char c) {
-  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_';
 }
 
 bool validateSlashPath(const std::string &text, std::string &error) {
