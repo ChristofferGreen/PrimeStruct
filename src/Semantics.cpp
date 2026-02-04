@@ -1546,19 +1546,8 @@ bool Semantics::validate(const Program &program,
         }
         PrintBuiltin printBuiltin;
         if (getPrintBuiltin(expr, printBuiltin)) {
-          if (expr.args.size() != 1) {
-            error = printBuiltin.name + " requires exactly one argument";
-            return false;
-          }
-          const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
-          if (activeEffects.count(effectName) == 0) {
-            error = printBuiltin.name + " requires " + effectName + " effect";
-            return false;
-          }
-          if (!validateExpr(params, locals, expr.args.front())) {
-            return false;
-          }
-          return true;
+          error = printBuiltin.name + " is only supported as a statement";
+          return false;
         }
       if (getBuiltinPointerName(expr, builtinName)) {
         if (!expr.templateArgs.empty()) {
@@ -1809,6 +1798,30 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       if (!validateBlock(elseBlock, "else")) {
+        return false;
+      }
+      return true;
+    }
+    PrintBuiltin printBuiltin;
+    if (getPrintBuiltin(stmt, printBuiltin)) {
+      if (hasNamedArguments(stmt.argNames)) {
+        error = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!stmt.bodyArguments.empty()) {
+        error = printBuiltin.name + " does not accept block arguments";
+        return false;
+      }
+      if (stmt.args.size() != 1) {
+        error = printBuiltin.name + " requires exactly one argument";
+        return false;
+      }
+      const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
+      if (activeEffects.count(effectName) == 0) {
+        error = printBuiltin.name + " requires " + effectName + " effect";
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front())) {
         return false;
       }
       return true;

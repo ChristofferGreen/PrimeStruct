@@ -2632,4 +2632,16 @@ main() {
   CHECK(error.find("unknown string literal suffix") != std::string::npos);
 }
 
+TEST_CASE("print not allowed in expression context") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  return(print_line("hello"))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
 TEST_SUITE_END();
