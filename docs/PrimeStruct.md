@@ -9,7 +9,7 @@ PrimeStruct is built around a simple philosophy: program meaning emerges from tw
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully typed.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
-Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure.
+Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline can optionally append implicit `i32` suffixes when enabled via `--implicit-i32`.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
@@ -33,7 +33,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
-- Integer literal support (signed 32-bit, requires `i32` suffix).
+- Integer literal support (signed 32-bit, requires `i32` suffix by default; `--implicit-i32` opt-in for filters).
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 
