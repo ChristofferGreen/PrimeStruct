@@ -184,8 +184,9 @@ TEST_CASE("block arguments allowed on statement calls") {
 TEST_CASE("literal statements are allowed") {
   primec::Program program;
   primec::Expr literal = makeLiteral(1);
+  primec::Expr returnCall = makeCall("/return", {makeLiteral(1)});
   program.definitions.push_back(
-      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {literal}));
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {literal, returnCall}));
   std::string error;
   CHECK(validateProgram(program, "/main", error));
   CHECK(error.empty());
