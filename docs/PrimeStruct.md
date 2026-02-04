@@ -232,7 +232,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`if<Bool>(cond, then{…}, else{…})`:** canonical conditional form after control-flow desugaring.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted.
-- **IR note:** the current native/VM IR lowering does not yet support `array(...)` or `map(...)` calls; collections are parsed and validated but rejected during lowering until dedicated collection IR is added.
+- **IR note:** the current native/VM IR lowering does not yet support `array(...)`/`map(...)` calls or literal forms (`array<T>{...}`, `map<K, V>{...}`); collections are parsed and validated but rejected during lowering until dedicated collection IR is added.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
 
 ## Runtime Stack Model (draft)

@@ -120,6 +120,24 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "array" || name == "map") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool IrLowerer::lower(const Program &program,
@@ -931,6 +949,10 @@ bool IrLowerer::lower(const Program &program,
           }
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
+        }
+        if (getBuiltinCollectionName(expr, builtin)) {
+          error = "native backend does not support " + builtin + " literals";
+          return false;
         }
         if (isSimpleCallName(expr, "assign")) {
           if (expr.args.size() != 2) {

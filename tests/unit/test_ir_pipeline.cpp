@@ -1631,8 +1631,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/convert/pointer/assign calls in "
-                   "expressions") != std::string::npos);
+  CHECK(error.find("native backend does not support array literals") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects map literal call") {
@@ -1651,8 +1650,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/convert/pointer/assign calls in "
-                   "expressions") != std::string::npos);
+  CHECK(error.find("native backend does not support map literals") != std::string::npos);
 }
 
 TEST_SUITE_END();
