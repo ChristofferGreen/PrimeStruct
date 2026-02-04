@@ -1028,6 +1028,20 @@ namespace demo {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding allows pointer types") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Pointer<int>] ptr(1i32)
+  [Reference<i32>] ref(2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pointer_add validates") {
   const std::string source = R"(
 [return<int>]
