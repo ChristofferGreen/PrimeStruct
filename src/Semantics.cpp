@@ -19,7 +19,7 @@ bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "package" || name == "static";
 }
 
-bool isBindingTypeName(const std::string &name) {
+bool isPrimitiveBindingTypeName(const std::string &name) {
   return name == "int" || name == "i32" || name == "float" || name == "f32" || name == "f64" || name == "bool";
 }
 
@@ -233,6 +233,7 @@ bool isReturnCall(const Expr &expr) {
 
 bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
   std::string typeName;
+  bool typeHasTemplate = false;
   for (const auto &transform : expr.transforms) {
     if (transform.name == "mut") {
       if (transform.templateArg) {
@@ -257,7 +258,7 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
       }
       continue;
     }
-    if (isBindingTypeName(transform.name)) {
+    if (isPrimitiveBindingTypeName(transform.name)) {
       if (transform.templateArg) {
         error = "binding transforms do not take template arguments";
         return false;
@@ -266,7 +267,21 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
         error = "binding transforms do not take arguments";
         return false;
       }
-    } else if (transform.templateArg || !transform.arguments.empty()) {
+    }
+    if (transform.templateArg) {
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      if (!typeName.empty()) {
+        error = "binding requires exactly one type";
+        return false;
+      }
+      typeName = transform.name;
+      typeHasTemplate = true;
+      continue;
+    }
+    if (!transform.arguments.empty()) {
       continue;
     }
     if (!typeName.empty()) {
@@ -279,8 +294,7 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
     error = "binding requires a type";
     return false;
   }
-  if (typeName != "int" && typeName != "i32" && typeName != "float" && typeName != "f32" &&
-      typeName != "f64" && typeName != "bool") {
+  if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
     error = "unsupported binding type: " + typeName;
     return false;
   }

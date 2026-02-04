@@ -52,12 +52,16 @@ BindingInfo getBindingInfo(const Expr &expr) {
       info.isMutable = true;
       continue;
     }
-    if (!transform.templateArg && transform.arguments.empty()) {
+    if (transform.arguments.empty()) {
       if (transform.name == "public" || transform.name == "private" || transform.name == "package" ||
           transform.name == "static") {
         continue;
       }
-      info.typeName = transform.name;
+      if (!transform.templateArg) {
+        info.typeName = transform.name;
+      } else if (info.typeName.empty()) {
+        info.typeName = transform.name;
+      }
     }
   }
   if (info.typeName.empty()) {

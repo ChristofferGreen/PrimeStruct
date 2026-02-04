@@ -977,6 +977,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding allows templated type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [handle<Texture>] value(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to mutable binding succeeds") {
   const std::string source = R"(
 [return<int>]
