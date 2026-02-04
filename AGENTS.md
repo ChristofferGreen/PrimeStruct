@@ -54,6 +54,7 @@ build and layout solidify.
 
 ## Git commit guidelines
 - Use a clear, imperative subject line in present tense.
+- Avoid literal `\n` sequences in commit messages; use real newlines (multiple `-m` or an editor).
 - Keep the subject line <= 50 characters, start with a capital letter, no trailing period.
 - Separate subject/body with a blank line; wrap body lines at ~72 chars.
 - Prefer one logical change per commit.
