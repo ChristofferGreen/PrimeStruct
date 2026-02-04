@@ -316,4 +316,104 @@ TEST_CASE("execution unknown named argument fails") {
   CHECK(error.find("unknown named argument") != std::string::npos);
 }
 
+TEST_CASE("call argument name count mismatch fails") {
+  primec::Program program;
+  primec::Expr call = makeCall("callee", {makeLiteral(1)});
+  call.argNames = {std::string("a"), std::string("b")};
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {call})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("argument name count mismatch") != std::string::npos);
+}
+
+TEST_CASE("positional argument after named fails") {
+  primec::Program program;
+  primec::Expr call = makeCall("callee", {makeLiteral(1), makeLiteral(2)});
+  call.argNames = {std::string("a"), std::nullopt};
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {call})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+}
+
+TEST_CASE("assign requires exactly two arguments") {
+  primec::Program program;
+  primec::Expr assignCall = makeCall("assign", {makeLiteral(1)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))},
+      {assignCall, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("assign requires exactly two arguments") != std::string::npos);
+}
+
+TEST_CASE("convert requires exactly one argument") {
+  primec::Program program;
+  primec::Expr convertCall = makeCall("convert");
+  convertCall.templateArgs = {"int"};
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {convertCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin convert") != std::string::npos);
+}
+
+TEST_CASE("array literal requires exactly one template argument") {
+  primec::Program program;
+  primec::Expr arrayCall = makeCall("array", {makeLiteral(1)});
+  arrayCall.templateArgs = {"i32", "i32"};
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {arrayCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("then block must be a call") {
+  primec::Program program;
+  primec::Expr thenBlock = makeLiteral(1);
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
+  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("then must be a call") != std::string::npos);
+}
+
+TEST_CASE("else block cannot take arguments") {
+  primec::Program program;
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
+  primec::Expr elseBlock =
+      makeCall("else", {makeLiteral(1)}, {}, {makeCall("/return", {makeLiteral(2)})});
+  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("else does not accept arguments") != std::string::npos);
+}
+
+TEST_CASE("execution positional argument after named fails") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {"a", "b"}));
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {makeLiteral(1), makeLiteral(2)};
+  exec.argumentNames = {std::string("a"), std::nullopt};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+}
+
 TEST_SUITE_END();
