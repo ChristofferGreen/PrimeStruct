@@ -2641,6 +2641,18 @@ main() {
   CHECK(error.find("unknown string literal suffix") != std::string::npos);
 }
 
+TEST_CASE("ascii string literal rejects non-ASCII characters") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print("héllo"ascii)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
+}
+
 TEST_CASE("print not allowed in expression context") {
   const std::string source = R"(
 [return<int> effects(io_out)]
