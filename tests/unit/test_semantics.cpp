@@ -900,6 +900,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("handle transform marks struct definitions") {
+  const std::string source = R"(
+[handle]
+main() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+use() {
+  [main] item(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/use", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("gpu_lane transform marks struct definitions") {
+  const std::string source = R"(
+[gpu_lane]
+main() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+use() {
+  [main] item(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/use", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
