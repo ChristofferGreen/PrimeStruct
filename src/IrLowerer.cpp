@@ -174,6 +174,10 @@ bool IrLowerer::lower(const Program &program,
            name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes";
   };
 
+  auto isFloatTypeName = [](const std::string &name) -> bool {
+    return name == "float" || name == "f32" || name == "f64";
+  };
+
   auto valueKindFromTypeName = [](const std::string &name) -> LocalInfo::ValueKind {
     if (name == "int" || name == "i32") {
       return LocalInfo::ValueKind::Int32;
@@ -200,6 +204,22 @@ bool IrLowerer::lower(const Program &program,
       }
     }
     return LocalInfo::Kind::Value;
+  };
+
+  auto isFloatBinding = [&](const Expr &expr) -> bool {
+    for (const auto &transform : expr.transforms) {
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (isFloatTypeName(transform.name)) {
+        return true;
+      }
+      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArg &&
+          isFloatTypeName(*transform.templateArg)) {
+        return true;
+      }
+    }
+    return false;
   };
 
   auto bindingValueKind = [&](const Expr &expr, LocalInfo::Kind kind) -> LocalInfo::ValueKind {
@@ -462,6 +482,9 @@ bool IrLowerer::lower(const Program &program,
         function.instructions.push_back(inst);
         return true;
       }
+      case Expr::Kind::FloatLiteral:
+        error = "native backend does not support float literals";
+        return false;
       case Expr::Kind::BoolLiteral: {
         IrInstruction inst;
         inst.op = IrOpcode::PushI32;
@@ -969,6 +992,10 @@ bool IrLowerer::lower(const Program &program,
       }
       if (localsIn.count(stmt.name) > 0) {
         error = "binding redefines existing name: " + stmt.name;
+        return false;
+      }
+      if (isFloatBinding(stmt)) {
+        error = "native backend does not support float types";
         return false;
       }
       if (!emitExpr(stmt.args.front(), localsIn)) {
