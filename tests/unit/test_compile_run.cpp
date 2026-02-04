@@ -666,6 +666,36 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
+
+TEST_CASE("rejects native array literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32>{1i32, 2i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_array_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_array_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects native map literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>{1i32=2i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
 #endif
 
 TEST_CASE("compiles and runs namespace entry") {
