@@ -1457,6 +1457,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer assignment requires mutable binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(5i32)
+  [Pointer<i32>] ptr(location(value))
+  assign(dereference(ptr), 4i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
 TEST_CASE("reference binding assigns to target") {
   const std::string source = R"(
 [return<int>]
@@ -1470,6 +1485,21 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("reference assignment requires mutable binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(5i32)
+  [Reference<i32>] ref(location(value))
+  assign(ref, 4i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
 TEST_CASE("reference binding requires location") {
