@@ -8,6 +8,10 @@ namespace primec {
 
 enum class IrOpcode : uint8_t {
   PushI32 = 1,
+  LoadLocal,
+  StoreLocal,
+  Dup,
+  Pop,
   AddI32,
   SubI32,
   MulI32,

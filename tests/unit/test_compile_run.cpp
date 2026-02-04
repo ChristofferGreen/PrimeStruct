@@ -69,6 +69,23 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
 }
+
+TEST_CASE("compiles and runs native locals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(2i32)
+  assign(value, plus(value, 3i32))
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_locals.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_locals_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
 #endif
 
 TEST_CASE("compiles and runs namespace entry") {

@@ -36,9 +36,43 @@ uint64_t alignTo(uint64_t value, uint64_t alignment) {
 
 class Arm64Emitter {
  public:
+  bool beginFunction(uint64_t frameSize, std::string &error) {
+    frameSize_ = frameSize;
+    if (frameSize_ > 4095) {
+      error = "native backend frame size too large";
+      return false;
+    }
+    if (frameSize_ > 0) {
+      emit(encodeSubSpImm(static_cast<uint16_t>(frameSize_)));
+    }
+    emit(encodeAddRegImm(27, 31, 0));
+    emit(encodeAddRegImm(28, 31, static_cast<uint16_t>(frameSize_)));
+    return true;
+  }
+
   void emitPushI32(int32_t value) {
     emitMovImm64(0, static_cast<uint64_t>(static_cast<int64_t>(value)));
     emitPushReg(0);
+  }
+
+  void emitLoadLocal(uint32_t index) {
+    emit(encodeLdrRegBase(0, 27, localOffset(index)));
+    emitPushReg(0);
+  }
+
+  void emitStoreLocal(uint32_t index) {
+    emitPopReg(0);
+    emit(encodeStrRegBase(0, 27, localOffset(index)));
+  }
+
+  void emitDup() {
+    emitPopReg(0);
+    emitPushReg(0);
+    emitPushReg(0);
+  }
+
+  void emitPop() {
+    emitPopReg(0);
   }
 
   void emitAdd() {
@@ -65,6 +99,9 @@ class Arm64Emitter {
 
   void emitReturn() {
     emitPopReg(0);
+    if (frameSize_ > 0) {
+      emit(encodeAddSpImm(static_cast<uint16_t>(frameSize_)));
+    }
     emit(encodeRet());
   }
 
@@ -93,13 +130,13 @@ class Arm64Emitter {
   }
 
   void emitPushReg(uint8_t reg) {
-    emit(encodeSubSpImm(16));
-    emit(encodeStrRegSp(reg, 8));
+    emit(encodeSubRegImm(28, 28, 16));
+    emit(encodeStrRegBase(reg, 28, 8));
   }
 
   void emitPopReg(uint8_t reg) {
-    emit(encodeLdrRegSp(reg, 8));
-    emit(encodeAddSpImm(16));
+    emit(encodeLdrRegBase(reg, 28, 8));
+    emit(encodeAddRegImm(28, 28, 16));
   }
 
   void emitMovImm64(uint8_t rd, uint64_t value) {
@@ -117,14 +154,24 @@ class Arm64Emitter {
     return 0xD10003FF | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10);
   }
 
-  static uint32_t encodeStrRegSp(uint8_t rt, uint16_t offsetBytes) {
-    uint32_t imm = static_cast<uint32_t>((offsetBytes / 8) & 0xFFFu);
-    return 0xF90003E0 | (imm << 10) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  static uint32_t encodeAddRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    return 0x91000000 | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
   }
 
-  static uint32_t encodeLdrRegSp(uint8_t rt, uint16_t offsetBytes) {
+  static uint32_t encodeSubRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    return 0xD1000000 | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeStrRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
     uint32_t imm = static_cast<uint32_t>((offsetBytes / 8) & 0xFFFu);
-    return 0xF94003E0 | (imm << 10) | (static_cast<uint32_t>(rt) & 0x1Fu);
+    return 0xF9000000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeLdrRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>((offsetBytes / 8) & 0xFFFu);
+    return 0xF9400000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
   }
 
   static uint32_t encodeAddReg(uint8_t rd, uint8_t rn, uint8_t rm) {
@@ -167,7 +214,12 @@ class Arm64Emitter {
     return 0xD65F03C0;
   }
 
+  static uint16_t localOffset(uint32_t index) {
+    return static_cast<uint16_t>(index * 16 + 8);
+  }
+
   std::vector<uint32_t> code_;
+  uint64_t frameSize_ = 0;
 };
 
 bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error) {
@@ -668,10 +720,74 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
 
   const IrFunction &fn = module.functions[static_cast<size_t>(module.entryIndex)];
   Arm64Emitter emitter;
+  size_t localCount = 0;
+  int64_t stackDepth = 0;
+  int64_t maxStack = 0;
+  for (const auto &inst : fn.instructions) {
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal) {
+      if (inst.imm >= 0) {
+        localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+      }
+    }
+    switch (inst.op) {
+      case IrOpcode::PushI32:
+      case IrOpcode::LoadLocal:
+        stackDepth += 1;
+        break;
+      case IrOpcode::StoreLocal:
+      case IrOpcode::Pop:
+        stackDepth -= 1;
+        break;
+      case IrOpcode::Dup:
+        stackDepth += 1;
+        break;
+      case IrOpcode::AddI32:
+      case IrOpcode::SubI32:
+      case IrOpcode::MulI32:
+      case IrOpcode::DivI32:
+        stackDepth -= 1;
+        break;
+      case IrOpcode::NegI32:
+        break;
+      case IrOpcode::ReturnI32:
+        stackDepth -= 1;
+        break;
+      default:
+        break;
+    }
+    if (stackDepth < 0) {
+      error = "native backend detected invalid stack usage";
+      return false;
+    }
+    maxStack = std::max(maxStack, stackDepth);
+  }
+  uint64_t localsSize = static_cast<uint64_t>(localCount) * 16;
+  uint64_t stackSize = static_cast<uint64_t>(maxStack) * 16;
+  uint64_t frameSize = alignTo(localsSize + stackSize, 16);
+  if (localCount > 2047) {
+    error = "native backend supports up to 2048 locals";
+    return false;
+  }
+  if (!emitter.beginFunction(frameSize, error)) {
+    return false;
+  }
+
   for (const auto &inst : fn.instructions) {
     switch (inst.op) {
       case IrOpcode::PushI32:
         emitter.emitPushI32(inst.imm);
+        break;
+      case IrOpcode::LoadLocal:
+        emitter.emitLoadLocal(static_cast<uint32_t>(inst.imm));
+        break;
+      case IrOpcode::StoreLocal:
+        emitter.emitStoreLocal(static_cast<uint32_t>(inst.imm));
+        break;
+      case IrOpcode::Dup:
+        emitter.emitDup();
+        break;
+      case IrOpcode::Pop:
+        emitter.emitPop();
         break;
       case IrOpcode::AddI32:
         emitter.emitAdd();

@@ -11,12 +11,58 @@ bool Vm::execute(const IrModule &module, int32_t &result, std::string &error) co
   }
   const IrFunction &fn = module.functions[static_cast<size_t>(module.entryIndex)];
   std::vector<int64_t> stack;
+  size_t localCount = 0;
+  for (const auto &inst : fn.instructions) {
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal) {
+      if (inst.imm >= 0) {
+        localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+      }
+    }
+  }
+  std::vector<int64_t> locals(localCount, 0);
 
   for (const auto &inst : fn.instructions) {
     switch (inst.op) {
       case IrOpcode::PushI32:
         stack.push_back(static_cast<int64_t>(inst.imm));
         break;
+      case IrOpcode::LoadLocal: {
+        if (inst.imm < 0 || static_cast<size_t>(inst.imm) >= locals.size()) {
+          error = "invalid local index in IR";
+          return false;
+        }
+        stack.push_back(locals[static_cast<size_t>(inst.imm)]);
+        break;
+      }
+      case IrOpcode::StoreLocal: {
+        if (inst.imm < 0 || static_cast<size_t>(inst.imm) >= locals.size()) {
+          error = "invalid local index in IR";
+          return false;
+        }
+        if (stack.empty()) {
+          error = "IR stack underflow on store";
+          return false;
+        }
+        locals[static_cast<size_t>(inst.imm)] = stack.back();
+        stack.pop_back();
+        break;
+      }
+      case IrOpcode::Dup: {
+        if (stack.empty()) {
+          error = "IR stack underflow on dup";
+          return false;
+        }
+        stack.push_back(stack.back());
+        break;
+      }
+      case IrOpcode::Pop: {
+        if (stack.empty()) {
+          error = "IR stack underflow on pop";
+          return false;
+        }
+        stack.pop_back();
+        break;
+      }
       case IrOpcode::AddI32: {
         if (stack.size() < 2) {
           error = "IR stack underflow on add";

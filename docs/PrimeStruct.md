@@ -63,6 +63,7 @@ module {
 - `PrimeStructc --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
+  - Current subset: integer literals, locals + assign, and basic arithmetic in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Phase 1 — Minimal Compiler That Emits an Executable
@@ -109,6 +110,7 @@ module {
 - `PrimeStructc --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
+  - Current subset: integer literals, locals + assign, and basic arithmetic in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Goals
