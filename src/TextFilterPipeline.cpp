@@ -543,7 +543,14 @@ bool TextFilterPipeline::apply(const std::string &input,
             scan = end;
             continue;
           }
-          if (c == '=' && (scan == 0 || inner[scan - 1] != '=')) {
+          if (c == '=') {
+            char prev = scan > 0 ? inner[scan - 1] : '\0';
+            char next = scan + 1 < inner.size() ? inner[scan + 1] : '\0';
+            if (prev == '=' || prev == '!' || prev == '<' || prev == '>' || next == '=') {
+              rewritten.push_back(c);
+              ++scan;
+              continue;
+            }
             rewritten.append(", ");
             ++scan;
             continue;
