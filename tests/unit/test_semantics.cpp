@@ -20,6 +20,15 @@ bool validateProgram(const std::string &source, const std::string &entry, std::s
   primec::Semantics semantics;
   return semantics.validate(program, entry, error, {});
 }
+
+bool validateProgramWithDefaults(const std::string &source,
+                                 const std::string &entry,
+                                 const std::vector<std::string> &defaultEffects,
+                                 std::string &error) {
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  return semantics.validate(program, entry, error, defaultEffects);
+}
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics");
@@ -2642,6 +2651,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("default effects allow print") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("hello")
+}
+)";
+  std::string error;
+  CHECK(validateProgramWithDefaults(source, "/main", {"io_out"}, error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();
