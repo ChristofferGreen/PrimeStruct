@@ -1,5 +1,6 @@
 #include "primec/Semantics.h"
 
+#include <cctype>
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
@@ -233,6 +234,42 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
   return true;
 }
 
+bool isEffectName(const std::string &text) {
+  if (text.empty()) {
+    return false;
+  }
+  unsigned char first = static_cast<unsigned char>(text[0]);
+  if (!std::isalpha(first) && text[0] != '_') {
+    return false;
+  }
+  for (size_t i = 1; i < text.size(); ++i) {
+    unsigned char c = static_cast<unsigned char>(text[i]);
+    if (!std::isalnum(c) && text[i] != '_') {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error) {
+  if (transform.templateArg) {
+    error = "effects transform does not accept template arguments on " + context;
+    return false;
+  }
+  std::unordered_set<std::string> seen;
+  for (const auto &arg : transform.arguments) {
+    if (!isEffectName(arg)) {
+      error = "invalid effects capability: " + arg;
+      return false;
+    }
+    if (!seen.insert(arg).second) {
+      error = "duplicate effects capability: " + arg;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool validateNamedArguments(const std::vector<Expr> &args,
                             const std::vector<std::optional<std::string>> &argNames,
                             const std::string &context,
@@ -317,6 +354,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     if (defMap.count(def.fullPath) > 0) {
       error = "duplicate definition: " + def.fullPath;
       return false;
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "effects") {
+        if (!validateEffectsTransform(transform, def.fullPath, error)) {
+          return false;
+        }
+      }
     }
     ReturnKind kind = getReturnKind(def, error);
     if (!error.empty()) {
@@ -664,6 +708,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   }
 
   for (const auto &exec : program.executions) {
+    for (const auto &transform : exec.transforms) {
+      if (transform.name == "effects") {
+        if (!validateEffectsTransform(transform, exec.fullPath, error)) {
+          return false;
+        }
+      }
+    }
     auto it = defMap.find(exec.fullPath);
     if (it == defMap.end()) {
       error = "unknown execution target: " + exec.fullPath;

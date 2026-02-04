@@ -153,6 +153,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("effects transform validates identifiers") {
+  const std::string source = R"(
+[effects(global_write, io_stdout), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("effects transform rejects template arguments") {
+  const std::string source = R"(
+[effects<io>, return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("effects transform does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("effects transform rejects invalid capability") {
+  const std::string source = R"(
+[effects("io"), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid effects capability") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {
