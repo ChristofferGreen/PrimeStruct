@@ -230,7 +230,7 @@ between statements and expressions—any expression can stand alone as a stateme
 - **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected. The C++ emitter also handles floats.
 - **`if<Bool>(cond, then{…}, else{…})`:** canonical conditional form after control-flow desugaring.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
-- **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. Implicit `return(void)` fires at end-of-body when omitted.
+- **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted.
 - **IR note:** the current native/VM IR lowering does not yet support `array(...)` or `map(...)` calls; collections are parsed and validated but rejected during lowering until dedicated collection IR is added.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
 
