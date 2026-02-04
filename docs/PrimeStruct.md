@@ -265,7 +265,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
-- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation.
+- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
 - **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions. The brace forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals also accept `key = value` pairs inside braces.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
@@ -316,6 +316,11 @@ convert_demo() {
   return(convert<int>(1.5f))
 }
 
+[return<int>]
+named_args_demo() {
+  return(sum3(1i32, c = 3i32, b = 2i32))
+}
+
 [return<float> default_operators control_flow desugar_assignment]
 float blend(float a, float b) {
   float result = (a + b) * 0.5f;
@@ -340,6 +345,9 @@ float blend(float a, float b) {
 module {
   def /convert_demo(): i32 {
     return convert(1.5f32)
+  }
+  def /named_args_demo(): i32 {
+    return sum3(1, c = 3, b = 2)
   }
 }
 ```
