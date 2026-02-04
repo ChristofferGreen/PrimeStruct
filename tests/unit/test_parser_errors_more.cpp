@@ -96,6 +96,21 @@ main() {
   CHECK(error.find("return value not allowed for void definition") != std::string::npos);
 }
 
+TEST_CASE("named arguments rejected for print builtin") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+main() {
+  print_line(message = "hello")
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("missing return fails in parser") {
   const std::string source = R"(
 [return<int>]
