@@ -950,6 +950,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("string binding validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] message("hello")
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("binding qualifiers are allowed") {
   const std::string source = R"(
 [return<int>]

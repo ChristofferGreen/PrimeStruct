@@ -29,6 +29,9 @@ std::string bindingTypeName(const Expr &expr) {
   if (typeName == "f64") {
     return "f64";
   }
+  if (typeName == "string") {
+    return "string";
+  }
   return "";
 }
 

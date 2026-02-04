@@ -83,6 +83,9 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   if (typeName == "f64") {
     return "double";
   }
+  if (typeName == "string") {
+    return "const char *";
+  }
   return "int";
 }
 

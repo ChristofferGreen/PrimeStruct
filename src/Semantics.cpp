@@ -20,7 +20,8 @@ bool isBindingQualifierName(const std::string &name) {
 }
 
 bool isPrimitiveBindingTypeName(const std::string &name) {
-  return name == "int" || name == "i32" || name == "float" || name == "f32" || name == "f64" || name == "bool";
+  return name == "int" || name == "i32" || name == "float" || name == "f32" || name == "f64" || name == "bool" ||
+         name == "string";
 }
 
 ReturnKind getReturnKind(const Definition &def, std::string &error) {
