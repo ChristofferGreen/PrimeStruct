@@ -95,7 +95,8 @@ bool isBuiltinName(const std::string &name) {
          name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
          name == "less_equal" || name == "equal" || name == "not_equal" || name == "and" || name == "or" ||
          name == "not" || name == "clamp" || name == "if" || name == "then" || name == "else" ||
-         name == "return" || name == "array" || name == "map" || name == "convert";
+         name == "return" || name == "array" || name == "map" || name == "convert" || name == "location" ||
+         name == "dereference";
 }
 
 bool isHexDigitChar(char c) {

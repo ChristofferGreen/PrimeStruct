@@ -276,6 +276,22 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named args for pointer helpers fail in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  return(dereference(ptr = location(value)))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("execution positional argument after named fails in parser") {
   const std::string source = R"(
 [return<int>]
