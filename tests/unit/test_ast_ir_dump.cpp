@@ -265,6 +265,29 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump prints collection literal calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32>{1i32, 2i32}
+  map<i32, i32>{1i32, 2i32}
+  return(1i32)
+}
+)";
+  const auto program = parseProgramWithFilters(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    call array(1, 2)\n"
+      "    call map(1, 2)\n"
+      "    return 1\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]
