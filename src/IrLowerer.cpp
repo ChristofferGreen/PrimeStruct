@@ -161,12 +161,19 @@ bool IrLowerer::lower(const Program &program,
     error = "native backend does not support entry parameters";
     return false;
   }
+  bool hasReturnTransform = false;
   bool returnsVoid = false;
   for (const auto &transform : entryDef->transforms) {
-    if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {
-      returnsVoid = true;
-      break;
+    if (transform.name != "return") {
+      continue;
     }
+    hasReturnTransform = true;
+    if (transform.templateArg && *transform.templateArg == "void") {
+      returnsVoid = true;
+    }
+  }
+  if (!hasReturnTransform && !entryDef->returnExpr.has_value()) {
+    returnsVoid = true;
   }
 
   IrFunction function;

@@ -291,6 +291,34 @@ main() {
   CHECK(result == 0);
 }
 
+TEST_CASE("ir lowers implicit void return without transform") {
+  const std::string source = R"(
+main() {
+  [i32] value(4i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  const auto &inst = module.functions[0].instructions;
+  REQUIRE(inst.size() == 3);
+  CHECK(inst[0].op == primec::IrOpcode::PushI32);
+  CHECK(inst[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(inst[2].op == primec::IrOpcode::ReturnVoid);
+
+  primec::Vm vm;
+  uint64_t result = 1;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 0);
+}
+
 TEST_CASE("ir lowers explicit void return") {
   const std::string source = R"(
 [return<void>]
