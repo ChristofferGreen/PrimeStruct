@@ -1358,7 +1358,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("location requires a local name") != std::string::npos);
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects array literal call") {

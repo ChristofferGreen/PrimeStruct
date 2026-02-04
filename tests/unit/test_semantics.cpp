@@ -1219,7 +1219,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("location requires local name") {
+TEST_CASE("location requires local binding name") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1228,19 +1228,20 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("location requires a local name") != std::string::npos);
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("location requires known local") {
+TEST_CASE("location rejects parameters") {
   const std::string source = R"(
 [return<int>]
-main() {
-  return(dereference(location(missing)))
+main(x) {
+  [Pointer<i32>] ptr(location(x))
+  return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("location requires a known local: missing") != std::string::npos);
+  CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
 TEST_CASE("binding allows templated type") {

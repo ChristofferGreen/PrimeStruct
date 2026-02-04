@@ -851,12 +851,12 @@ bool IrLowerer::lower(const Program &program,
           if (builtin == "location") {
             const Expr &target = expr.args.front();
             if (target.kind != Expr::Kind::Name) {
-              error = "location requires a local name";
+              error = "location requires a local binding";
               return false;
             }
             auto it = localsIn.find(target.name);
             if (it == localsIn.end()) {
-              error = "location requires a known local: " + target.name;
+              error = "location requires a local binding";
               return false;
             }
             if (it->second.kind == LocalInfo::Kind::Reference) {

@@ -1159,12 +1159,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         if (builtinName == "location") {
           const Expr &target = expr.args.front();
-          if (target.kind != Expr::Kind::Name) {
-            error = "location requires a local name";
-            return false;
-          }
-          if (!isParam(params, target.name) && locals.count(target.name) == 0) {
-            error = "location requires a known local: " + target.name;
+          if (target.kind != Expr::Kind::Name || locals.count(target.name) == 0) {
+            error = "location requires a local binding";
             return false;
           }
         }
