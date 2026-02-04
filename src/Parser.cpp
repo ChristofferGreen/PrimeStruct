@@ -12,6 +12,14 @@ bool isReservedKeyword(const std::string &text) {
          text == "false";
 }
 
+bool isBuiltinName(const std::string &name) {
+  return name == "assign" || name == "plus" || name == "minus" || name == "multiply" || name == "divide" ||
+         name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
+         name == "less_equal" || name == "equal" || name == "not_equal" || name == "and" || name == "or" ||
+         name == "not" || name == "clamp" || name == "if" || name == "then" || name == "else" ||
+         name == "return" || name == "array" || name == "map" || name == "convert";
+}
+
 bool isHexDigitChar(char c) {
   return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
@@ -368,6 +376,19 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   return true;
 }
 
+bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
+                                             const std::vector<std::optional<std::string>> &argNames) {
+  if (!isBuiltinName(name)) {
+    return true;
+  }
+  for (const auto &argName : argNames) {
+    if (argName.has_value()) {
+      return fail("named arguments not supported for builtin calls");
+    }
+  }
+  return true;
+}
+
 bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix) {
   if (!expect(TokenKind::LBrace, "expected '{'")) {
     return false;
@@ -675,6 +696,9 @@ bool Parser::parseDefinitionBody(Definition &def) {
     if (!parseCallArgumentList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
       return false;
     }
+    if (!validateNoBuiltinNamedArguments(callExpr.name, callExpr.argNames)) {
+      return false;
+    }
     if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
       return false;
     }
@@ -719,6 +743,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     call.transforms = std::move(transforms);
     call.isBinding = true;
     if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+      return false;
+    }
+    if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
       return false;
     }
     if (!expect(TokenKind::RParen, "expected ')' to close call")) {
@@ -853,6 +880,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       expect(TokenKind::LParen, "expected '(' after identifier");
       hasCallSyntax = true;
       if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+        return false;
+      }
+      if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
         return false;
       }
       if (!expect(TokenKind::RParen, "expected ')' to close call")) {

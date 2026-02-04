@@ -24,6 +24,8 @@ private:
                              std::vector<std::optional<std::string>> &argNames,
                              const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool validateNoBuiltinNamedArguments(const std::string &name,
+                                       const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool definitionHasReturnBeforeClose() const;
   bool isDefinitionSignature(bool *paramsAreIdentifiers) const;
