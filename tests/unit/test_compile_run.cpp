@@ -734,6 +734,26 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles with struct definition") {
+  const std::string source = R"(
+[struct]
+data() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_struct.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs assign to mutable binding") {
   const std::string source = R"(
 [return<int>]

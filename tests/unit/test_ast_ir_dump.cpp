@@ -266,6 +266,26 @@ data() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump prints pod definition") {
+  const std::string source = R"(
+[pod]
+data() {
+  [i32] value(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /data(): void {\n"
+      "    let value: i32 = 1\n"
+      "    return\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ast dump prints named arguments") {
   const std::string source = R"(
 [return<int>]

@@ -505,6 +505,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pod transform validates without args") {
+  const std::string source = R"(
+[pod]
+main() {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct transform rejects template arguments") {
   const std::string source = R"(
 [struct<i32>]
@@ -544,6 +556,18 @@ main() {
 TEST_CASE("struct transform rejects return statements") {
   const std::string source = R"(
 [struct]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct definitions cannot contain return statements") != std::string::npos);
+}
+
+TEST_CASE("stack transform rejects return statements") {
+  const std::string source = R"(
+[stack]
 main() {
   return(1i32)
 }

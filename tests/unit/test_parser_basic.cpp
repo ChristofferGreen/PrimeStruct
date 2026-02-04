@@ -92,6 +92,21 @@ data() {
   CHECK(program.definitions[0].statements[0].isBinding);
 }
 
+TEST_CASE("parses pod definition without return") {
+  const std::string source = R"(
+[pod]
+data() {
+  [i32] value(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/data");
+  CHECK(program.definitions[0].hasReturnStatement == false);
+  CHECK(program.definitions[0].statements.size() == 1);
+  CHECK(program.definitions[0].statements[0].isBinding);
+}
+
 TEST_CASE("parses if with block arguments") {
   const std::string source = R"(
 [return<int>]

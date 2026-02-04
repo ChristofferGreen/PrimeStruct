@@ -459,7 +459,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       if (transform.name == "return") {
         hasReturnTransform = true;
       }
-      if (transform.name == "struct") {
+      if (isStructTransformName(transform.name)) {
         isStruct = true;
       }
     }

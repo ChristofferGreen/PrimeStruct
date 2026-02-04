@@ -62,7 +62,8 @@ bool isReturnCall(const Expr &expr) {
 
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
-    if (transform.name == "struct") {
+    if (transform.name == "struct" || transform.name == "pod" || transform.name == "stack" ||
+        transform.name == "heap" || transform.name == "buffer") {
       return ReturnKind::Void;
     }
     if (transform.name != "return" || !transform.templateArg) {
