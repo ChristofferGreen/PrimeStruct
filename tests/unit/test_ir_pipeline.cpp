@@ -1239,12 +1239,7 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK_FALSE(parseAndValidate(source, program, error));
   CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
 }
 

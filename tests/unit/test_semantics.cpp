@@ -1458,6 +1458,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("dereference requires pointer or reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(dereference(value))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
+}
+
 TEST_CASE("pointer assignment requires mutable binding") {
   const std::string source = R"(
 [return<int>]

@@ -261,6 +261,25 @@ bool isPointerExpr(const Expr &expr, const std::unordered_map<std::string, Bindi
   return false;
 }
 
+bool isPointerLikeExpr(const Expr &expr, const std::unordered_map<std::string, BindingInfo> &locals) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = locals.find(expr.name);
+    return it != locals.end() && (it->second.typeName == "Pointer" || it->second.typeName == "Reference");
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  std::string builtinName;
+  if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
+    return true;
+  }
+  if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
+      expr.args.size() == 2) {
+    return isPointerLikeExpr(expr.args[0], locals) && !isPointerLikeExpr(expr.args[1], locals);
+  }
+  return false;
+}
+
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -1129,20 +1148,26 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           return true;
         }
-        if (getBuiltinPointerName(expr, builtinName)) {
-          if (!expr.templateArgs.empty()) {
-            error = "pointer helpers do not accept template arguments";
-            return false;
-          }
-          if (expr.args.size() != 1) {
-            error = "argument count mismatch for builtin " + builtinName;
-            return false;
-          }
-          if (!validateExpr(params, locals, expr.args.front())) {
-            return false;
-          }
-          return true;
+      if (getBuiltinPointerName(expr, builtinName)) {
+        if (!expr.templateArgs.empty()) {
+          error = "pointer helpers do not accept template arguments";
+          return false;
         }
+        if (expr.args.size() != 1) {
+          error = "argument count mismatch for builtin " + builtinName;
+          return false;
+        }
+        if (builtinName == "dereference") {
+          if (!isPointerLikeExpr(expr.args.front(), locals)) {
+            error = "dereference requires a pointer or reference";
+            return false;
+          }
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        return true;
+      }
       if (getBuiltinCollectionName(expr, builtinName)) {
         if (builtinName == "array") {
           if (expr.templateArgs.size() != 1) {
