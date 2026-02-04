@@ -398,6 +398,7 @@ bool validateNamedArgumentsAgainstParams(const std::vector<std::string> &params,
 bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
+  std::unordered_set<std::string> structNames;
   for (const auto &def : program.definitions) {
     if (defMap.count(def.fullPath) > 0) {
       error = "duplicate definition: " + def.fullPath;
@@ -423,9 +424,53 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
       }
     }
-    ReturnKind kind = getReturnKind(def, error);
-    if (!error.empty()) {
+    if (def.name == "Create" || def.name == "Destroy" || def.name == "CreateStack" ||
+        def.name == "DestroyStack" || def.name == "CreateHeap" || def.name == "DestroyHeap" ||
+        def.name == "CreateBuffer" || def.name == "DestroyBuffer") {
+      error = "lifecycle helper must be nested inside a struct: " + def.fullPath;
       return false;
+    }
+    bool isStruct = false;
+    bool hasReturnTransform = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return") {
+        hasReturnTransform = true;
+      }
+      if (transform.name == "struct") {
+        isStruct = true;
+      }
+    }
+    if (isStruct) {
+      structNames.insert(def.fullPath);
+      if (hasReturnTransform) {
+        error = "struct definitions cannot declare return types: " + def.fullPath;
+        return false;
+      }
+      if (def.hasReturnStatement) {
+        error = "struct definitions cannot contain return statements: " + def.fullPath;
+        return false;
+      }
+      if (def.returnExpr.has_value()) {
+        error = "struct definitions cannot return a value: " + def.fullPath;
+        return false;
+      }
+      if (!def.parameters.empty()) {
+        error = "struct definitions cannot declare parameters: " + def.fullPath;
+        return false;
+      }
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          error = "struct definitions may only contain field bindings: " + def.fullPath;
+          return false;
+        }
+      }
+    }
+    ReturnKind kind = ReturnKind::Void;
+    if (!isStruct) {
+      kind = getReturnKind(def, error);
+      if (!error.empty()) {
+        return false;
+      }
     }
     returnKinds[def.fullPath] = kind;
     defMap[def.fullPath] = &def;

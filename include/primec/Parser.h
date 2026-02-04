@@ -30,7 +30,8 @@ private:
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool definitionHasReturnBeforeClose() const;
   bool isDefinitionSignature(bool *paramsAreIdentifiers) const;
-  bool parseDefinitionBody(Definition &def);
+  bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;
+  bool parseDefinitionBody(Definition &def, bool allowNoReturn);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
 
   std::string currentNamespacePrefix() const;

@@ -84,6 +84,10 @@ bool validateIdentifierText(const std::string &text, std::string &error) {
   return true;
 }
 
+bool isStructTransformName(const std::string &text) {
+  return text == "struct" || text == "pod" || text == "stack" || text == "heap" || text == "buffer";
+}
+
 bool isBuiltinName(const std::string &name) {
   return name == "assign" || name == "plus" || name == "minus" || name == "multiply" || name == "divide" ||
          name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
@@ -225,15 +229,25 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return false;
   }
   bool hasReturnTransform = false;
+  bool hasStructTransform = false;
   for (const auto &transform : transforms) {
     if (transform.name == "return") {
       hasReturnTransform = true;
-      break;
+    }
+    if (isStructTransformName(transform.name)) {
+      hasStructTransform = true;
     }
   }
   bool paramsAreIdentifiers = false;
-  bool isDefinition = hasReturnTransform ? true : isDefinitionSignature(&paramsAreIdentifiers);
-  if (isDefinition && !hasReturnTransform) {
+  bool isDefinition = false;
+  if (hasReturnTransform) {
+    isDefinition = true;
+  } else if (hasStructTransform) {
+    isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
+  } else {
+    isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+  }
+  if (isDefinition && !hasReturnTransform && !hasStructTransform) {
     return fail("definition requires return transform");
   }
   if (isDefinition) {
@@ -254,7 +268,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
     def.parameters = std::move(parameters);
-    if (!parseDefinitionBody(def)) {
+    if (!parseDefinitionBody(def, hasStructTransform)) {
       return false;
     }
     defs.push_back(std::move(def));
@@ -670,7 +684,39 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   return false;
 }
 
-bool Parser::parseDefinitionBody(Definition &def) {
+bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const {
+  size_t index = pos_;
+  int depth = 1;
+  bool identifiersOnly = true;
+  while (index < tokens_.size()) {
+    TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::LParen) {
+      ++depth;
+    } else if (kind == TokenKind::RParen) {
+      --depth;
+      if (depth == 0) {
+        break;
+      }
+    } else if (depth == 1) {
+      if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+        identifiersOnly = false;
+      }
+    }
+    ++index;
+  }
+  if (paramsAreIdentifiers) {
+    *paramsAreIdentifiers = identifiersOnly;
+  }
+  if (depth != 0 || !identifiersOnly) {
+    return false;
+  }
+  if (index + 1 >= tokens_.size()) {
+    return false;
+  }
+  return tokens_[index + 1].kind == TokenKind::LBrace;
+}
+
+bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
   bool returnsVoid = false;
   for (const auto &transform : def.transforms) {
     if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {
@@ -809,7 +855,7 @@ bool Parser::parseDefinitionBody(Definition &def) {
     def.statements.push_back(std::move(callExpr));
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
-  if (!foundReturn && !returnsVoid) {
+  if (!foundReturn && !returnsVoid && !allowNoReturn) {
     return fail("missing return statement in definition body");
   }
   def.hasReturnStatement = foundReturn;

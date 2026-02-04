@@ -319,9 +319,9 @@ main() {
 
 TEST_CASE("struct transform validates without args") {
   const std::string source = R"(
-[struct, return<int>]
+[struct]
 main() {
-  return(1i32)
+  [i32] value(1i32)
 }
 )";
   std::string error;
@@ -331,9 +331,9 @@ main() {
 
 TEST_CASE("struct transform rejects template arguments") {
   const std::string source = R"(
-[struct<i32>, return<int>]
+[struct<i32>]
 main() {
-  return(1i32)
+  [i32] value(1i32)
 }
 )";
   std::string error;
@@ -343,14 +343,61 @@ main() {
 
 TEST_CASE("struct transform rejects arguments") {
   const std::string source = R"(
-[struct(foo), return<int>]
+[struct(foo)]
+main() {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct transform does not accept arguments") != std::string::npos);
+}
+
+TEST_CASE("struct transform rejects return transform") {
+  const std::string source = R"(
+[struct, return<int>]
+main() {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct definitions cannot declare return types") != std::string::npos);
+}
+
+TEST_CASE("struct transform rejects return statements") {
+  const std::string source = R"(
+[struct]
 main() {
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("struct transform does not accept arguments") != std::string::npos);
+  CHECK(error.find("struct definitions cannot contain return statements") != std::string::npos);
+}
+
+TEST_CASE("struct transform rejects parameters") {
+  const std::string source = R"(
+[struct]
+main(x) {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct definitions cannot declare parameters") != std::string::npos);
+}
+
+TEST_CASE("lifecycle helpers require struct context") {
+  const std::string source = R"(
+[return<void>]
+Create() {
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/Create", error));
+  CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
 }
 
 TEST_CASE("struct transforms are rejected on executions") {
