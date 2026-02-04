@@ -18,6 +18,7 @@ enum class TokenKind {
   RAngle,
   Comma,
   Equal,
+  Semicolon,
   KeywordNamespace,
   End
 };

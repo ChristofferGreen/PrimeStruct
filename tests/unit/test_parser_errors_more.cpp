@@ -96,6 +96,21 @@ main() {
   CHECK(error.find("return value not allowed for void definition") != std::string::npos);
 }
 
+TEST_CASE("semicolon is rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32);
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("named arguments rejected for print builtin") {
   const std::string source = R"(
 [return<void> effects(io_out)]

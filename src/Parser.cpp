@@ -550,6 +550,9 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     return true;
   }
   while (true) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     Expr arg;
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsedIf = false;
@@ -859,6 +862,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
   while (!match(TokenKind::RBrace)) {
     if (match(TokenKind::End)) {
       return fail("unexpected end of file inside definition body");
+    }
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
     }
     std::vector<Transform> statementTransforms;
     bool hasStatementTransforms = false;
