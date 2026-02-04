@@ -133,6 +133,24 @@ bool getBuiltinClampName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinPointerName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "deref" || name == "address_of") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -663,6 +681,20 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           if (typeName != "int" && typeName != "i32" && typeName != "bool" && typeName != "float" &&
               typeName != "f32" && typeName != "f64") {
             error = "unsupported convert target type: " + typeName;
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
+        }
+        if (getBuiltinPointerName(expr, builtinName)) {
+          if (!expr.templateArgs.empty()) {
+            error = "pointer helpers do not accept template arguments";
             return false;
           }
           if (expr.args.size() != 1) {

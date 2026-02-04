@@ -429,6 +429,69 @@ bool rewriteUnaryNot(const std::string &input,
   return true;
 }
 
+bool rewriteUnaryAddressOf(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options) {
+  (void)options;
+  if (input[index] != '&' || index + 1 >= input.size() || input[index + 1] == '&') {
+    return false;
+  }
+  if (!isUnaryPrefixPosition(input, index)) {
+    return false;
+  }
+  if (input[index + 1] == '(') {
+    output.append("address_of");
+    return true;
+  }
+  size_t rightStart = index + 1;
+  size_t rightEnd = rightStart;
+  while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+    ++rightEnd;
+  }
+  if (rightEnd == rightStart) {
+    return false;
+  }
+  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  right = stripOuterParens(right);
+  right = normalizeUnaryOperand(right);
+  output.append("address_of(");
+  output.append(right);
+  output.append(")");
+  index = rightEnd - 1;
+  return true;
+}
+
+bool rewriteUnaryDeref(const std::string &input, std::string &output, size_t &index, const TextFilterOptions &options) {
+  (void)options;
+  if (input[index] != '*' || index + 1 >= input.size()) {
+    return false;
+  }
+  if (!isUnaryPrefixPosition(input, index)) {
+    return false;
+  }
+  if (input[index + 1] == '(') {
+    output.append("deref");
+    return true;
+  }
+  size_t rightStart = index + 1;
+  size_t rightEnd = rightStart;
+  while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
+    ++rightEnd;
+  }
+  if (rightEnd == rightStart) {
+    return false;
+  }
+  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  right = stripOuterParens(right);
+  right = normalizeUnaryOperand(right);
+  output.append("deref(");
+  output.append(right);
+  output.append(")");
+  index = rightEnd - 1;
+  return true;
+}
+
 bool rewriteUnaryMinus(const std::string &input,
                        std::string &output,
                        size_t &index,
@@ -909,6 +972,12 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
     if (rewriteBinary(i, '=', "assign")) {
+      continue;
+    }
+    if (rewriteUnaryAddressOf(input, output, i, options)) {
+      continue;
+    }
+    if (rewriteUnaryDeref(input, output, i, options)) {
       continue;
     }
     if (rewriteUnaryNot(input, output, i, options)) {

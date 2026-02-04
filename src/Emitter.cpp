@@ -190,6 +190,28 @@ bool isBuiltinClamp(const Expr &expr) {
   return name == "clamp";
 }
 
+bool getBuiltinPointerOperator(const Expr &expr, char &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "deref") {
+    out = '*';
+    return true;
+  }
+  if (name == "address_of") {
+    out = '&';
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -405,6 +427,12 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
       std::ostringstream out;
       out << "static_cast<" << targetType << ">(" << emitExpr(expr.args[0], nameMap, paramMap) << ")";
+      return out.str();
+    }
+    char pointerOp = '\0';
+    if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "(" << pointerOp << emitExpr(expr.args[0], nameMap, paramMap) << ")";
       return out.str();
     }
     std::string collection;

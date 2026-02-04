@@ -964,6 +964,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer helpers validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  return(deref(address_of(value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to mutable binding succeeds") {
   const std::string source = R"(
 [return<int>]
