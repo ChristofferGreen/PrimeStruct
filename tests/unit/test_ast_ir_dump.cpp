@@ -342,6 +342,42 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump infers return type from builtin plus") {
+  const std::string source = R"(
+main() {
+  return(plus(1i32, 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return plus(1, 2)\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump infers return type from builtin clamp") {
+  const std::string source = R"(
+main() {
+  return(clamp(2i32, 1i32, 5i32))
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return clamp(2, 1, 5)\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump infers void return without transform") {
   const std::string source = R"(
 main() {

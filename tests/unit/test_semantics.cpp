@@ -70,6 +70,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("infers return type from builtin plus") {
+  const std::string source = R"(
+main() {
+  return(plus(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("infers return type from builtin negate") {
+  const std::string source = R"(
+main() {
+  return(negate(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("infers return type from builtin clamp") {
+  const std::string source = R"(
+main() {
+  return(clamp(2i32, 1i32, 5i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers void return type without transform") {
   const std::string source = R"(
 main() {

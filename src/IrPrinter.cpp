@@ -108,6 +108,42 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "plus" || name == "minus" || name == "multiply" || name == "divide" || name == "negate") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
+bool getBuiltinClampName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "clamp") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -374,6 +410,25 @@ std::string IrPrinter::print(const Program &program) const {
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<std::string> &params,
                             const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
+    auto combineNumeric = [&](ReturnKind left, ReturnKind right) -> ReturnKind {
+      if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
+        return ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+        return ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
+        return ReturnKind::Float64;
+      }
+      if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
+        return ReturnKind::Float32;
+      }
+      if (left == ReturnKind::Int && right == ReturnKind::Int) {
+        return ReturnKind::Int;
+      }
+      return ReturnKind::Unknown;
+    };
+
     if (expr.kind == Expr::Kind::Literal) {
       return ReturnKind::Int;
     }
@@ -416,6 +471,33 @@ std::string IrPrinter::print(const Program &program) const {
       std::string builtinName;
       if (getBuiltinComparisonName(expr, builtinName)) {
         return ReturnKind::Bool;
+      }
+      if (getBuiltinOperatorName(expr, builtinName)) {
+        if (builtinName == "negate") {
+          if (expr.args.size() != 1) {
+            return ReturnKind::Unknown;
+          }
+          ReturnKind argKind = inferExprReturnKind(expr.args.front(), params, locals);
+          if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+            return ReturnKind::Unknown;
+          }
+          return argKind;
+        }
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind left = inferExprReturnKind(expr.args[0], params, locals);
+        ReturnKind right = inferExprReturnKind(expr.args[1], params, locals);
+        return combineNumeric(left, right);
+      }
+      if (getBuiltinClampName(expr, builtinName)) {
+        if (expr.args.size() != 3) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
+        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
+        result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
+        return result;
       }
       if (getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
         return returnKindForTypeName(expr.templateArgs.front());

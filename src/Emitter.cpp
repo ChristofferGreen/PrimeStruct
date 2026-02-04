@@ -585,6 +585,25 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<std::string> &params,
                             const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
+    auto combineNumeric = [&](ReturnKind left, ReturnKind right) -> ReturnKind {
+      if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
+        return ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+        return ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
+        return ReturnKind::Float64;
+      }
+      if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
+        return ReturnKind::Float32;
+      }
+      if (left == ReturnKind::Int && right == ReturnKind::Int) {
+        return ReturnKind::Int;
+      }
+      return ReturnKind::Unknown;
+    };
+
     if (expr.kind == Expr::Kind::Literal) {
       return ReturnKind::Int;
     }
@@ -620,6 +639,34 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       const char *cmp = nullptr;
       if (getBuiltinComparison(expr, cmp)) {
         return ReturnKind::Bool;
+      }
+      char op = '\0';
+      if (getBuiltinOperator(expr, op)) {
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind left = inferExprReturnKind(expr.args[0], params, locals);
+        ReturnKind right = inferExprReturnKind(expr.args[1], params, locals);
+        return combineNumeric(left, right);
+      }
+      if (isBuiltinNegate(expr)) {
+        if (expr.args.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind argKind = inferExprReturnKind(expr.args.front(), params, locals);
+        if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+          return ReturnKind::Unknown;
+        }
+        return argKind;
+      }
+      if (isBuiltinClamp(expr)) {
+        if (expr.args.size() != 3) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
+        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
+        result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
+        return result;
       }
       std::string convertName;
       if (getBuiltinConvertName(expr, convertName) && expr.templateArgs.size() == 1) {
