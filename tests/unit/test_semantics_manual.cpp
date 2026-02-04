@@ -108,6 +108,17 @@ TEST_CASE("conflicting return types fail") {
   CHECK(error.find("conflicting return types") != std::string::npos);
 }
 
+TEST_CASE("duplicate return transforms fail") {
+  primec::Program program;
+  program.definitions.push_back(makeDefinition(
+      "/main",
+      {makeTransform("return", std::string("int")), makeTransform("return", std::string("i32"))},
+      {makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("duplicate return transform") != std::string::npos);
+}
+
 TEST_CASE("binding transform template arguments fail") {
   primec::Program program;
   primec::Expr binding =

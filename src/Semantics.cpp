@@ -131,6 +131,7 @@ ReturnKind returnKindForTypeName(const std::string &name) {
 
 ReturnKind getReturnKind(const Definition &def, std::string &error) {
   ReturnKind kind = ReturnKind::Unknown;
+  bool sawReturn = false;
   for (const auto &transform : def.transforms) {
     if (transform.name != "return") {
       continue;
@@ -139,59 +140,21 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
       error = "return transform requires a type on " + def.fullPath;
       return ReturnKind::Unknown;
     }
-    const std::string &arg = *transform.templateArg;
-    if (arg == "int") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Int) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Int;
-    } else if (arg == "i64") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Int64) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Int64;
-    } else if (arg == "u64") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::UInt64) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::UInt64;
-    } else if (arg == "bool") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Bool) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Bool;
-    } else if (arg == "i32") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Int) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Int;
-    } else if (arg == "void") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Void) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Void;
-    } else if (arg == "float" || arg == "f32") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Float32) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Float32;
-    } else if (arg == "f64") {
-      if (kind != ReturnKind::Unknown && kind != ReturnKind::Float64) {
-        error = "conflicting return types on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      kind = ReturnKind::Float64;
-    } else {
+    ReturnKind nextKind = returnKindForTypeName(*transform.templateArg);
+    if (nextKind == ReturnKind::Unknown) {
       error = "unsupported return type on " + def.fullPath;
       return ReturnKind::Unknown;
     }
+    if (sawReturn) {
+      if (nextKind == kind) {
+        error = "duplicate return transform on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      error = "conflicting return types on " + def.fullPath;
+      return ReturnKind::Unknown;
+    }
+    sawReturn = true;
+    kind = nextKind;
   }
   return kind;
 }

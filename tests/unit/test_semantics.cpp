@@ -428,6 +428,18 @@ main() {
   CHECK(error.find("unsupported return type") != std::string::npos);
 }
 
+TEST_CASE("duplicate return transform fails") {
+  const std::string source = R"(
+[return<int>, return<i32>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate return transform") != std::string::npos);
+}
+
 TEST_CASE("bool return type validates") {
   const std::string source = R"(
 [return<bool>]
