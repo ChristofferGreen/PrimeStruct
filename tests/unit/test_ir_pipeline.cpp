@@ -727,6 +727,80 @@ main() {
   CHECK(result == 4);
 }
 
+TEST_CASE("ir lowers pointer minus u64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(minus(location(second), 16u64)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawSub = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::SubI64) {
+      sawSub = true;
+      break;
+    }
+  }
+  CHECK(sawSub);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  bool ok = vm.execute(module, result, error);
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(result == 4);
+}
+
+TEST_CASE("ir lowers pointer minus negative i64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(minus(location(first), -16i64)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawSub = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::SubI64) {
+      sawSub = true;
+      break;
+    }
+  }
+  CHECK(sawSub);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  bool ok = vm.execute(module, result, error);
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(result == 9);
+}
+
 TEST_CASE("pointer plus uses byte offsets in VM") {
   const std::string source = R"(
 [return<int>]

@@ -1360,6 +1360,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer minus accepts u64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(3i32)
+  [i32] second(4i32)
+  return(dereference(minus(location(second), 16u64)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pointer plus rejects pointer + pointer") {
   const std::string source = R"(
 [return<int>]

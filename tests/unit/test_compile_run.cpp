@@ -267,6 +267,40 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native pointer minus u64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(minus(location(second), 16u64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_minus_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_minus_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("compiles and runs native pointer minus negative i64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(minus(location(first), -16i64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_minus_neg_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_minus_neg_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs native pointer plus u64 offsets") {
   const std::string source = R"(
 [return<int>]
@@ -792,6 +826,22 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs pointer minus u64 offset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(dereference(minus(location(value), 0u64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_pointer_minus_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_minus_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs collection literals in C++ emitter") {
