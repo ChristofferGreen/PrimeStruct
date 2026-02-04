@@ -1035,6 +1035,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
           return false;
         }
+        if (isPointerExpr(arg, locals)) {
+          return false;
+        }
         if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
           auto it = locals.find(arg.name);
           if (it != locals.end()) {
@@ -1075,6 +1078,21 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         return true;
       }
       return false;
+    };
+    auto hasMixedSignedness = [&](const std::vector<Expr> &args, bool boolCountsAsSigned) -> bool {
+      bool sawUnsigned = false;
+      bool sawSigned = false;
+      for (const auto &arg : args) {
+        ReturnKind kind = inferExprReturnKind(arg, params, locals);
+        if (kind == ReturnKind::UInt64) {
+          sawUnsigned = true;
+          continue;
+        }
+        if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (boolCountsAsSigned && kind == ReturnKind::Bool)) {
+          sawSigned = true;
+        }
+      }
+      return sawUnsigned && sawSigned;
     };
     if (expr.kind == Expr::Kind::Literal) {
       return true;
@@ -1167,6 +1185,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                 error = "arithmetic operators require numeric operands";
                 return false;
               }
+              if (hasMixedSignedness(expr.args, false)) {
+                error = "arithmetic operators do not support mixed signed/unsigned operands";
+                return false;
+              }
             } else if (leftPointer) {
               if (!isNumericExpr(expr.args[1])) {
                 error = "arithmetic operators require numeric operands";
@@ -1197,6 +1219,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
               return false;
             }
           }
+          if (builtinName != "and" && builtinName != "or" && builtinName != "not") {
+            if (hasMixedSignedness(expr.args, true)) {
+              error = "comparisons do not support mixed signed/unsigned operands";
+              return false;
+            }
+          }
           for (const auto &arg : expr.args) {
             if (!validateExpr(params, locals, arg)) {
               return false;
@@ -1207,6 +1235,16 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         if (getBuiltinClampName(expr, builtinName)) {
           if (expr.args.size() != 3) {
             error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!isNumericExpr(arg)) {
+              error = "clamp requires numeric operands";
+              return false;
+            }
+          }
+          if (hasMixedSignedness(expr.args, false)) {
+            error = "clamp does not support mixed signed/unsigned operands";
             return false;
           }
           for (const auto &arg : expr.args) {

@@ -1207,14 +1207,8 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  bool ok = lowerer.lower(program, "/main", module, error);
-  CHECK_FALSE(ok);
-  CHECK(error.find("clamp requires numeric arguments of the same type") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
 TEST_CASE("ir lowers convert to int") {
@@ -1483,13 +1477,8 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("unsupported operand types for plus") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects mixed signed/unsigned comparison") {
@@ -1501,13 +1490,8 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("unsupported operand types for greater_than") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects dereference of value") {

@@ -128,6 +128,18 @@ main() {
   CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
 }
 
+TEST_CASE("arithmetic rejects mixed signed/unsigned operands") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(plus(1i64, 2u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 main() {
@@ -990,6 +1002,31 @@ main() {
   CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
 }
 
+TEST_CASE("builtin comparison rejects pointer operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  return(greater_than(location(value), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
+}
+
+TEST_CASE("builtin comparison rejects mixed signed/unsigned operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(1i64, 2u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
 TEST_CASE("builtin clamp calls validate") {
   const std::string source = R"(
 [return<int>]
@@ -1000,6 +1037,18 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("builtin clamp rejects mixed signed/unsigned operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(2i64, 1u64, 5u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
 TEST_CASE("builtin arithmetic arity mismatch fails") {
