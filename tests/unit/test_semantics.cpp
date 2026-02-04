@@ -317,6 +317,62 @@ main() {
   CHECK(error.find("align_kbytes does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("struct transform validates without args") {
+  const std::string source = R"(
+[struct, return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct transform rejects template arguments") {
+  const std::string source = R"(
+[struct<i32>, return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct transform does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("struct transform rejects arguments") {
+  const std::string source = R"(
+[struct(foo), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct transform does not accept arguments") != std::string::npos);
+}
+
+TEST_CASE("struct transforms are rejected on executions") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[struct]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct transforms are not allowed on executions") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {

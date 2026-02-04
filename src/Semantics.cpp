@@ -314,6 +314,10 @@ bool validateAlignTransform(const Transform &transform, const std::string &conte
   return true;
 }
 
+bool isStructTransformName(const std::string &name) {
+  return name == "struct" || name == "pod" || name == "stack" || name == "heap" || name == "buffer";
+}
+
 bool validateNamedArguments(const std::vector<Expr> &args,
                             const std::vector<std::optional<std::string>> &argNames,
                             const std::string &context,
@@ -406,6 +410,15 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
         if (!validateAlignTransform(transform, def.fullPath, error)) {
+          return false;
+        }
+      } else if (isStructTransformName(transform.name)) {
+        if (transform.templateArg) {
+          error = "struct transform does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error = "struct transform does not accept arguments on " + def.fullPath;
           return false;
         }
       }
@@ -765,6 +778,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         if (!validateAlignTransform(transform, exec.fullPath, error)) {
           return false;
         }
+      } else if (isStructTransformName(transform.name)) {
+        error = "struct transforms are not allowed on executions: " + exec.fullPath;
+        return false;
       }
     }
     auto it = defMap.find(exec.fullPath);
