@@ -48,6 +48,10 @@ build and layout solidify.
 - **Determinism:** no unordered iteration that affects outputs; sort keys before emitting
   diagnostics/IR when order might vary.
 
+## Bug-fix workflow
+- Before fixing a bug, find a concrete way to reproduce it.
+- Do not claim a bug is fixed unless you can no longer reproduce it after the change.
+
 ## Git commit guidelines
 - Use a clear, imperative subject line in present tense.
 - Keep the subject line <= 50 characters, start with a capital letter, no trailing period.

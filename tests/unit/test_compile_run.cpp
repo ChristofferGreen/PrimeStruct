@@ -566,6 +566,26 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs named-arg call") {
+  const std::string source = R"(
+[return<int>]
+add(a, b) {
+  return(plus(a, b))
+}
+
+[return<int>]
+main() {
+  return(add(b = 2i32, a = 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_named_args.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_named_args_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]
