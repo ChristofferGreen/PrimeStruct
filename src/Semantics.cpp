@@ -1375,6 +1375,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             error = "assign target must be a mutable binding";
             return false;
           }
+          if (!isPointerLikeExpr(pointerExpr, locals)) {
+            error = "assign target must be a mutable pointer binding";
+            return false;
+          }
           if (!validateExpr(params, locals, pointerExpr)) {
             return false;
           }
