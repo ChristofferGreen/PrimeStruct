@@ -116,6 +116,17 @@ TEST_CASE("map literal rewrites nested map literals") {
   CHECK(output.find("map<i32,i32>(1i32, map<i32,i32>(2i32, 3i32))") != std::string::npos);
 }
 
+TEST_CASE("map literal rewrites whitespace-heavy pairs") {
+  const std::string source =
+      "main(){ return(map<i32,i32>{\n  1i32 = 2i32,\n  3i32 = 4i32\n}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32,i32>(\n  1i32 ,  2i32,\n  3i32 ,  4i32\n)") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with call operands") {
   const std::string source = "main(){ return(foo()+bar()) }\n";
   primec::TextFilterPipeline pipeline;

@@ -526,6 +526,11 @@ bool TextFilterPipeline::apply(const std::string &input,
         int bracketDepth = 0;
         while (scan < inner.size()) {
           char c = inner[scan];
+          if (std::isspace(static_cast<unsigned char>(c))) {
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
           if (c == 'R' && scan + 2 < inner.size() && inner[scan + 1] == '"' && inner[scan + 2] == '(') {
             size_t end = skipRawStringForward(inner, scan);
             if (end == std::string::npos) {
@@ -591,6 +596,20 @@ bool TextFilterPipeline::apply(const std::string &input,
           if (c == '=') {
             char prev = scan > 0 ? inner[scan - 1] : '\0';
             char next = scan + 1 < inner.size() ? inner[scan + 1] : '\0';
+            size_t prevIndex = scan;
+            while (prevIndex > 0 && std::isspace(static_cast<unsigned char>(inner[prevIndex - 1]))) {
+              --prevIndex;
+            }
+            if (prevIndex > 0) {
+              prev = inner[prevIndex - 1];
+            }
+            size_t nextIndex = scan + 1;
+            while (nextIndex < inner.size() && std::isspace(static_cast<unsigned char>(inner[nextIndex]))) {
+              ++nextIndex;
+            }
+            if (nextIndex < inner.size()) {
+              next = inner[nextIndex];
+            }
             if (prev == '=' || prev == '!' || prev == '<' || prev == '>' || next == '=') {
               rewritten.push_back(c);
               ++scan;
