@@ -1,0 +1,5 @@
+[return<int>]
+main() {
+  log_line("Hello, world!")
+  return(0i32)
+}

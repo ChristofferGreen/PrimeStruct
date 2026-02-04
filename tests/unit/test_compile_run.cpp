@@ -275,6 +275,19 @@ main() {
   CHECK(readFile(outPath) == "42\nhello\n");
 }
 
+TEST_CASE("compiles and runs native hello world example") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::string srcPath = (repoRoot / "examples" / "hello_world.prime").string();
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_hello_world_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_hello_world_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "Hello, world!\n");
+}
+
 TEST_CASE("compiles and runs native pointer plus offsets") {
   const std::string source = R"(
 [return<int>]

@@ -365,6 +365,13 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## Examples (sketch)
 ```
+// Hello world (native/VM-friendly)
+[return<int>]
+main() {
+  log_line("Hello, world!")
+  return(0i32)
+}
+
 // Pull std::io at version 1.2.0
 include<"/std/io", version="1.2.0">
 
