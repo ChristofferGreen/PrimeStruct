@@ -16,7 +16,8 @@ private:
   std::string toCppName(const std::string &fullPath) const;
   std::string emitExpr(const Expr &expr,
                        const std::unordered_map<std::string, std::string> &nameMap,
-                       const std::unordered_map<std::string, std::vector<std::string>> &paramMap) const;
+                       const std::unordered_map<std::string, std::vector<std::string>> &paramMap,
+                       const std::unordered_map<std::string, std::string> &localTypes) const;
 };
 
 } // namespace primec

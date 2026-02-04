@@ -243,7 +243,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("integer literal requires i32 suffix") != std::string::npos);
+  CHECK(error.find("integer literal requires i32/i64/u64 suffix") != std::string::npos);
 }
 
 TEST_CASE("named args for builtin fail in parser") {
@@ -259,6 +259,72 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("named args for collection builtin fail in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(array<i32>(first = 1i32, second = 2i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("execution positional argument after named fails in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(a = 1i32, 2i32) { }
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+}
+
+TEST_CASE("execution named arguments cannot target builtins") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(items = array<i32>(first = 1i32)) { }
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("execution positional after named with collections fails in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
 }
 
 TEST_CASE("positional argument after named fails in parser") {
@@ -324,7 +390,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected template argument") != std::string::npos);
+  CHECK(error.find("expected template identifier") != std::string::npos);
 }
 
 TEST_CASE("binding requires argument list in expression") {

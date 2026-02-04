@@ -54,4 +54,23 @@ execute_task(
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
+TEST_CASE("parses named execution args across lines") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(
+  items = array<i32>(1i32, 2i32),
+  pairs = map<i32, i32>(1i32, 2i32)
+) { }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 2);
+  CHECK(program.executions[0].argumentNames.size() == 2);
+  CHECK(program.executions[0].bodyArguments.empty());
+}
+
 TEST_SUITE_END();

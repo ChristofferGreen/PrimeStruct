@@ -949,7 +949,9 @@ bool TextFilterPipeline::apply(const std::string &input,
           i = literalEnd - 1;
           continue;
         }
-        if (literalEnd + 2 < input.size() && input.compare(literalEnd, 3, "i32") == 0) {
+        if (literalEnd + 2 < input.size() &&
+            (input.compare(literalEnd, 3, "i32") == 0 || input.compare(literalEnd, 3, "i64") == 0 ||
+             input.compare(literalEnd, 3, "u64") == 0)) {
           output.append(input.substr(start, literalEnd - start + 3));
           i = literalEnd + 2;
           continue;

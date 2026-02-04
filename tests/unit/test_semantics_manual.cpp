@@ -419,4 +419,49 @@ TEST_CASE("execution positional argument after named fails") {
   CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
 }
 
+TEST_CASE("execution named arguments reorder") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {"a", "b"}));
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {makeLiteral(2), makeLiteral(1)};
+  exec.argumentNames = {std::string("b"), std::string("a")};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("execution arguments accept collection literals") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {"items", "pairs"}));
+
+  primec::Expr arrayCall = makeCall("array", {makeLiteral(1), makeLiteral(2)});
+  arrayCall.templateArgs = {"i32"};
+  primec::Expr mapCall = makeCall("map", {makeLiteral(1), makeLiteral(10), makeLiteral(2), makeLiteral(20)});
+  mapCall.templateArgs = {"i32", "i32"};
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {arrayCall, mapCall};
+  exec.argumentNames = {std::string("items"), std::string("pairs")};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

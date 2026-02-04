@@ -1,5 +1,6 @@
 #include "primec/IrPrinter.h"
 
+#include <cstdint>
 #include <functional>
 #include <sstream>
 #include <unordered_map>
@@ -8,7 +9,7 @@
 namespace primec {
 
 namespace {
-enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
+enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
 
 std::string bindingTypeName(const Expr &expr) {
   std::string typeName;
@@ -29,6 +30,12 @@ std::string bindingTypeName(const Expr &expr) {
   }
   if (typeName == "int" || typeName == "i32") {
     return "i32";
+  }
+  if (typeName == "i64") {
+    return "i64";
+  }
+  if (typeName == "u64") {
+    return "u64";
   }
   if (typeName == "bool") {
     return "bool";
@@ -179,6 +186,12 @@ ReturnKind getReturnKind(const Definition &def) {
     if (*transform.templateArg == "int") {
       return ReturnKind::Int;
     }
+    if (*transform.templateArg == "i64") {
+      return ReturnKind::Int64;
+    }
+    if (*transform.templateArg == "u64") {
+      return ReturnKind::UInt64;
+    }
     if (*transform.templateArg == "bool") {
       return ReturnKind::Bool;
     }
@@ -199,6 +212,12 @@ const char *returnTypeName(ReturnKind kind) {
   if (kind == ReturnKind::Void) {
     return "void";
   }
+  if (kind == ReturnKind::Int64) {
+    return "i64";
+  }
+  if (kind == ReturnKind::UInt64) {
+    return "u64";
+  }
   if (kind == ReturnKind::Float32) {
     return "f32";
   }
@@ -214,6 +233,12 @@ const char *returnTypeName(ReturnKind kind) {
 ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "int" || name == "i32") {
     return ReturnKind::Int;
+  }
+  if (name == "i64") {
+    return ReturnKind::Int64;
+  }
+  if (name == "u64") {
+    return ReturnKind::UInt64;
   }
   if (name == "bool") {
     return ReturnKind::Bool;
@@ -239,7 +264,17 @@ void indent(std::ostringstream &out, int depth) {
 void printExpr(std::ostringstream &out, const Expr &expr) {
   switch (expr.kind) {
   case Expr::Kind::Literal:
-    out << expr.literalValue;
+    if (!expr.isUnsigned && expr.intWidth == 32) {
+      out << static_cast<int64_t>(expr.literalValue);
+    } else {
+      if (expr.isUnsigned) {
+        out << expr.literalValue;
+        out << (expr.intWidth == 64 ? "u64" : "u32");
+      } else {
+        out << static_cast<int64_t>(expr.literalValue);
+        out << (expr.intWidth == 64 ? "i64" : "i32");
+      }
+    }
     break;
   case Expr::Kind::BoolLiteral:
     out << (expr.boolValue ? "true" : "false");
@@ -425,6 +460,16 @@ std::string IrPrinter::print(const Program &program) const {
       if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
         return ReturnKind::Float32;
       }
+      if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
+        return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
+        if ((left == ReturnKind::Int64 || left == ReturnKind::Int) &&
+            (right == ReturnKind::Int64 || right == ReturnKind::Int)) {
+          return ReturnKind::Int64;
+        }
+        return ReturnKind::Unknown;
+      }
       if (left == ReturnKind::Int && right == ReturnKind::Int) {
         return ReturnKind::Int;
       }
@@ -432,6 +477,12 @@ std::string IrPrinter::print(const Program &program) const {
     };
 
     if (expr.kind == Expr::Kind::Literal) {
+      if (expr.isUnsigned) {
+        return ReturnKind::UInt64;
+      }
+      if (expr.intWidth == 64) {
+        return ReturnKind::Int64;
+      }
       return ReturnKind::Int;
     }
     if (expr.kind == Expr::Kind::BoolLiteral) {

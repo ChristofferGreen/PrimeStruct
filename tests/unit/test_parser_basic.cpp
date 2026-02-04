@@ -208,6 +208,36 @@ main() {
   CHECK(program.definitions[0].returnExpr->literalValue == 42);
 }
 
+TEST_CASE("parses i64 and u64 integer literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(9i64)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(program.definitions[0].returnExpr->intWidth == 64);
+  CHECK_FALSE(program.definitions[0].returnExpr->isUnsigned);
+  CHECK(program.definitions[0].returnExpr->literalValue == 9);
+
+  const std::string sourceUnsigned = R"(
+[return<int>]
+main() {
+  return(10u64)
+}
+)";
+  const auto programUnsigned = parseProgram(sourceUnsigned);
+  REQUIRE(programUnsigned.definitions.size() == 1);
+  REQUIRE(programUnsigned.definitions[0].returnExpr.has_value());
+  CHECK(programUnsigned.definitions[0].returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(programUnsigned.definitions[0].returnExpr->intWidth == 64);
+  CHECK(programUnsigned.definitions[0].returnExpr->isUnsigned);
+  CHECK(programUnsigned.definitions[0].returnExpr->literalValue == 10);
+}
+
 TEST_CASE("parses float literals") {
   const std::string source = R"(
 [return<float>]

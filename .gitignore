@@ -4,3 +4,4 @@ build-release/
 workspaces/
 out
 out.cpp
+default.profraw

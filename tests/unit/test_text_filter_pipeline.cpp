@@ -525,6 +525,18 @@ TEST_CASE("does not change suffixed integer literals") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not add suffix to i64 or u64 literals with implicit filter") {
+  const std::string source = "main(){ return(9i64); return(10u64) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("does not rewrite numbers inside strings") {
   const std::string source = "main(){ log(\"42\") }\n";
   primec::TextFilterPipeline pipeline;
@@ -603,6 +615,66 @@ TEST_CASE("does not rewrite collection literal name prefixes") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output == source);
+}
+
+TEST_CASE("rewrites array literal braces") {
+  const std::string source = "main(){ array<i32>{1i32, 2i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("array<i32>(1i32, 2i32)") != std::string::npos);
+}
+
+TEST_CASE("rewrites map literal equals pairs") {
+  const std::string source = "main(){ map<i32, i32>{1i32=2i32, 3i32=4i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32, i32>(1i32, 2i32, 3i32, 4i32)") != std::string::npos);
+}
+
+TEST_CASE("map literal preserves equality operators") {
+  const std::string source = "main(){ map<i32, i32>{1i32=2i32, 3i32==4i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("equal(3i32, 4i32)") != std::string::npos);
+}
+
+TEST_CASE("rewrites nested expressions inside array literal") {
+  const std::string source = "main(){ array<i32>{1i32+2i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("array<i32>(plus(1i32, 2i32))") != std::string::npos);
+}
+
+TEST_CASE("rewrites map literal with string keys") {
+  const std::string source = "main(){ map<string, i32>{\"a\"=1i32, \"b\"=2i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<string, i32>(\"a\", 1i32, \"b\", 2i32)") != std::string::npos);
+}
+
+TEST_CASE("map literal handles nested braces") {
+  const std::string source = "main(){ map<i32, i32>{1i32=plus(2i32, 3i32), 4i32=5i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32, i32>(1i32, plus(2i32, 3i32), 4i32, 5i32)") != std::string::npos);
 }
 
 TEST_CASE("fails on unterminated collection literal") {

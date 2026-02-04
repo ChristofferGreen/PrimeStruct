@@ -8,7 +8,7 @@
 
 namespace primec {
 namespace {
-enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
+enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
 
 struct BindingInfo {
   std::string typeName;
@@ -23,13 +23,19 @@ bool isBindingQualifierName(const std::string &name) {
 }
 
 bool isPrimitiveBindingTypeName(const std::string &name) {
-  return name == "int" || name == "i32" || name == "float" || name == "f32" || name == "f64" || name == "bool" ||
-         name == "string";
+  return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
+         name == "f64" || name == "bool" || name == "string";
 }
 
 ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "int" || name == "i32") {
     return ReturnKind::Int;
+  }
+  if (name == "i64") {
+    return ReturnKind::Int64;
+  }
+  if (name == "u64") {
+    return ReturnKind::UInt64;
   }
   if (name == "bool") {
     return ReturnKind::Bool;
@@ -63,6 +69,18 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
         return ReturnKind::Unknown;
       }
       kind = ReturnKind::Int;
+    } else if (arg == "i64") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::Int64) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::Int64;
+    } else if (arg == "u64") {
+      if (kind != ReturnKind::Unknown && kind != ReturnKind::UInt64) {
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      kind = ReturnKind::UInt64;
     } else if (arg == "bool") {
       if (kind != ReturnKind::Unknown && kind != ReturnKind::Bool) {
         error = "conflicting return types on " + def.fullPath;
@@ -174,24 +192,6 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   return false;
 }
 
-bool getBuiltinPointerBinaryName(const Expr &expr, std::string &out) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "pointer_add") {
-    out = name;
-    return true;
-  }
-  return false;
-}
-
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -240,6 +240,25 @@ bool isAssignCall(const Expr &expr) {
     return false;
   }
   return name == "assign";
+}
+
+bool isPointerExpr(const Expr &expr, const std::unordered_map<std::string, BindingInfo> &locals) {
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = locals.find(expr.name);
+    return it != locals.end() && it->second.typeName == "Pointer";
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  std::string builtinName;
+  if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
+    return true;
+  }
+  if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
+      expr.args.size() == 2) {
+    return isPointerExpr(expr.args[0], locals) && !isPointerExpr(expr.args[1], locals);
+  }
+  return false;
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
@@ -775,6 +794,16 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
         return ReturnKind::Float32;
       }
+      if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
+        return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
+        if ((left == ReturnKind::Int64 || left == ReturnKind::Int) &&
+            (right == ReturnKind::Int64 || right == ReturnKind::Int)) {
+          return ReturnKind::Int64;
+        }
+        return ReturnKind::Unknown;
+      }
       if (left == ReturnKind::Int && right == ReturnKind::Int) {
         return ReturnKind::Int;
       }
@@ -782,6 +811,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     };
 
     if (expr.kind == Expr::Kind::Literal) {
+      if (expr.isUnsigned) {
+        return ReturnKind::UInt64;
+      }
+      if (expr.intWidth == 64) {
+        return ReturnKind::Int64;
+      }
       return ReturnKind::Int;
     }
     if (expr.kind == Expr::Kind::BoolLiteral) {
@@ -1021,6 +1056,27 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             error = "argument count mismatch for builtin " + builtinName;
             return false;
           }
+          if ((builtinName == "plus" || builtinName == "minus") && expr.args.size() == 2) {
+            bool leftPointer = isPointerExpr(expr.args[0], locals);
+            bool rightPointer = isPointerExpr(expr.args[1], locals);
+            if (leftPointer && rightPointer) {
+              error = "pointer arithmetic does not support pointer + pointer";
+              return false;
+            }
+            if (rightPointer) {
+              error = "pointer arithmetic requires pointer on the left";
+              return false;
+            }
+            if (leftPointer || rightPointer) {
+              const Expr &offsetExpr = leftPointer ? expr.args[1] : expr.args[0];
+              ReturnKind offsetKind = inferExprReturnKind(offsetExpr, params, locals);
+              if (offsetKind != ReturnKind::Unknown && offsetKind != ReturnKind::Int &&
+                  offsetKind != ReturnKind::Int64 && offsetKind != ReturnKind::UInt64) {
+                error = "pointer arithmetic requires integer offset";
+                return false;
+              }
+            }
+          }
           for (const auto &arg : expr.args) {
             if (!validateExpr(params, locals, arg)) {
               return false;
@@ -1059,8 +1115,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             return false;
           }
           const std::string &typeName = expr.templateArgs[0];
-          if (typeName != "int" && typeName != "i32" && typeName != "bool" && typeName != "float" &&
-              typeName != "f32" && typeName != "f64") {
+          if (typeName != "int" && typeName != "i32" && typeName != "i64" && typeName != "u64" &&
+              typeName != "bool" && typeName != "float" && typeName != "f32" && typeName != "f64") {
             error = "unsupported convert target type: " + typeName;
             return false;
           }
@@ -1083,23 +1139,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             return false;
           }
           if (!validateExpr(params, locals, expr.args.front())) {
-            return false;
-          }
-          return true;
-        }
-        if (getBuiltinPointerBinaryName(expr, builtinName)) {
-          if (!expr.templateArgs.empty()) {
-            error = "pointer helpers do not accept template arguments";
-            return false;
-          }
-          if (expr.args.size() != 2) {
-            error = "argument count mismatch for builtin " + builtinName;
-            return false;
-          }
-          if (!validateExpr(params, locals, expr.args[0])) {
-            return false;
-          }
-          if (!validateExpr(params, locals, expr.args[1])) {
             return false;
           }
           return true;

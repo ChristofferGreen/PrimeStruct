@@ -1,6 +1,7 @@
 #include "primec/Parser.h"
 
 #include <cctype>
+#include <cstdint>
 #include <limits>
 #include <sstream>
 
@@ -332,11 +333,11 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     transform.name = name.text;
     if (match(TokenKind::LAngle)) {
       expect(TokenKind::LAngle, "expected '<'");
-      Token arg = consume(TokenKind::Identifier, "expected template argument");
-      if (arg.kind == TokenKind::End) {
+      std::string typeName;
+      if (!parseTypeName(typeName)) {
         return false;
       }
-      transform.templateArg = arg.text;
+      transform.templateArg = typeName;
       if (!expect(TokenKind::RAngle, "expected '>'")) {
         return false;
       }
@@ -392,11 +393,11 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
     return false;
   }
   while (!match(TokenKind::RAngle)) {
-    Token name = consume(TokenKind::Identifier, "expected template identifier");
-    if (name.kind == TokenKind::End) {
+    std::string typeName;
+    if (!parseTypeName(typeName)) {
       return false;
     }
-    out.push_back(name.text);
+    out.push_back(typeName);
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
     } else {
@@ -405,6 +406,40 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
   }
   if (!expect(TokenKind::RAngle, "expected '>'")) {
     return false;
+  }
+  return true;
+}
+
+bool Parser::parseTypeName(std::string &out) {
+  Token name = consume(TokenKind::Identifier, "expected template identifier");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  out = name.text;
+  if (match(TokenKind::LAngle)) {
+    expect(TokenKind::LAngle, "expected '<'");
+    out += "<";
+    bool first = true;
+    while (!match(TokenKind::RAngle)) {
+      std::string nested;
+      if (!parseTypeName(nested)) {
+        return false;
+      }
+      if (!first) {
+        out += ", ";
+      }
+      out += nested;
+      first = false;
+      if (match(TokenKind::Comma)) {
+        expect(TokenKind::Comma, "expected ','");
+        continue;
+      }
+      break;
+    }
+    if (!expect(TokenKind::RAngle, "expected '>'")) {
+      return false;
+    }
+    out += ">";
   }
   return true;
 }
@@ -927,7 +962,23 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     }
     expr.namespacePrefix = namespacePrefix;
     std::string text = number.text;
-    if (text.size() < 3 || text.compare(text.size() - 3, 3, "i32") != 0) {
+    int intWidth = 0;
+    bool isUnsigned = false;
+    size_t suffixLen = 0;
+    if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i32") == 0) {
+      intWidth = 32;
+      isUnsigned = false;
+      suffixLen = 3;
+    } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i64") == 0) {
+      intWidth = 64;
+      isUnsigned = false;
+      suffixLen = 3;
+    } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "u64") == 0) {
+      intWidth = 64;
+      isUnsigned = true;
+      suffixLen = 3;
+    }
+    if (suffixLen == 0) {
       int floatWidth = 32;
       bool isFloat = false;
       if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f64") == 0) {
@@ -948,7 +999,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         isFloat = true;
       }
       if (!isFloat) {
-        return fail("integer literal requires i32 suffix");
+        return fail("integer literal requires i32/i64/u64 suffix");
       }
       if (!isValidFloatLiteral(text)) {
         return fail("invalid float literal");
@@ -959,13 +1010,16 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return true;
     }
     expr.kind = Expr::Kind::Literal;
-    text = text.substr(0, text.size() - 3);
+    text = text.substr(0, text.size() - suffixLen);
     if (text.empty()) {
       return fail("invalid integer literal");
     }
     bool negative = false;
     size_t start = 0;
     if (text[0] == '-') {
+      if (isUnsigned) {
+        return fail("invalid integer literal");
+      }
       negative = true;
       start = 1;
       if (start >= text.size()) {
@@ -992,15 +1046,24 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
       }
     }
+    expr.intWidth = intWidth;
+    expr.isUnsigned = isUnsigned;
     try {
-      long long value = std::stoll(digits, nullptr, base);
-      if (negative) {
-        value = -value;
+      if (isUnsigned) {
+        unsigned long long value = std::stoull(digits, nullptr, base);
+        expr.literalValue = static_cast<uint64_t>(value);
+      } else {
+        long long value = std::stoll(digits, nullptr, base);
+        if (negative) {
+          value = -value;
+        }
+        if (intWidth == 32) {
+          if (value < std::numeric_limits<int32_t>::min() || value > std::numeric_limits<int32_t>::max()) {
+            return fail("integer literal out of range");
+          }
+        }
+        expr.literalValue = static_cast<uint64_t>(value);
       }
-      if (value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) {
-        return fail("integer literal out of range");
-      }
-      expr.literalValue = static_cast<int>(value);
     } catch (const std::exception &) {
       return fail("invalid integer literal");
     }

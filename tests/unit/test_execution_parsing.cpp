@@ -80,4 +80,38 @@ execute_task(count = 2i32) { }
   CHECK(*program.executions[0].argumentNames[0] == "count");
 }
 
+TEST_CASE("parses execution with collection call arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 2);
+  CHECK(program.executions[0].bodyArguments.empty());
+}
+
+TEST_CASE("parses execution with named args and collections") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32)) { }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 2);
+  CHECK(program.executions[0].argumentNames.size() == 2);
+  CHECK(program.executions[0].argumentNames[0].has_value());
+  CHECK(program.executions[0].argumentNames[1].has_value());
+  CHECK(*program.executions[0].argumentNames[0] == "items");
+  CHECK(*program.executions[0].argumentNames[1] == "pairs");
+}
+
 TEST_SUITE_END();

@@ -103,6 +103,61 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("clamp argument count fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(2i32, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count") != std::string::npos);
+}
+
+TEST_CASE("assign through non-mut pointer fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [Pointer<i32>] ptr(location(value))
+  assign(dereference(ptr), 3i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
+TEST_CASE("not argument count fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(not(true, false))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  const bool hasCountMismatch = error.find("argument count mismatch") != std::string::npos;
+  const bool hasExactArg = error.find("requires exactly one argument") != std::string::npos;
+  if (!hasCountMismatch) {
+    CHECK(hasExactArg);
+  }
+}
+
+TEST_CASE("convert requires template argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template") != std::string::npos);
+}
+
 TEST_CASE("infers void return type without transform") {
   const std::string source = R"(
 main() {
@@ -1211,17 +1266,120 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("pointer_add validates") {
+TEST_CASE("i64 and u64 bindings validate") {
+  const std::string sourceSigned = R"(
+[return<i64>]
+main() {
+  [i64] value(9i64)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(sourceSigned, "/main", error));
+  CHECK(error.empty());
+
+  const std::string sourceUnsigned = R"(
+[return<u64>]
+main() {
+  [u64] value(10u64)
+  return(value)
+}
+)";
+  CHECK(validateProgram(sourceUnsigned, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pointer plus validates") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32] value(3i32)
-  return(pointer_add(location(value), 1i32))
+  return(plus(location(value), 1i32))
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("pointer plus rejects non-integer offset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(3i32)
+  return(plus(location(value), true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pointer arithmetic requires integer offset") != std::string::npos);
+}
+
+TEST_CASE("pointer plus rejects pointer on right") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(3i32)
+  [Pointer<i32>] ptr(location(value))
+  return(plus(1i32, ptr))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pointer arithmetic requires pointer on the left") != std::string::npos);
+}
+
+TEST_CASE("pointer plus rejects non-integer offset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(3i32)
+  return(plus(location(value), true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pointer arithmetic requires integer offset") != std::string::npos);
+}
+
+TEST_CASE("collections validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32>(1i32, 2i32, 3i32)
+  map<i32, i32>(1i32, 10i32, 2i32, 20i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array requires one template argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array(1i32, 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("map requires even number of arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>(1i32, 10i32, 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map literal requires an even number of arguments") != std::string::npos);
 }
 
 TEST_CASE("assign to mutable binding succeeds") {
@@ -1424,6 +1582,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("named arguments with reordered params match") {
+  const std::string source = R"(
+[return<int>]
+foo(a, b) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(b = 2i32, a = 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
@@ -1526,6 +1701,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported convert target type") != std::string::npos);
+}
+
+TEST_CASE("convert<bool> accepts u64 literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<bool>(1u64))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map literal validates") {

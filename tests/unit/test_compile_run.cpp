@@ -54,6 +54,38 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs array literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32>{1i32, 2i32, 3i32}
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_array_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs map literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>{1i32=2i32, 3i32=4i32}
+  return(9i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_CASE("compiles and runs native executable") {
   const std::string source = R"(
@@ -85,6 +117,330 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs native if/else") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(4i32)
+  if(greater_equal(value, 4i32)) {
+    return(9i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_if.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_if_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs native pointer helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [Pointer<i32> mut] ptr(location(value))
+  assign(dereference(ptr), 6i32)
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs native pointer plus") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(dereference(plus(location(value), 0i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_plus.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_plus_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs native pointer plus offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(plus(location(first), 16i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_plus_offset.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_plus_offset_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs native pointer plus u64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(plus(location(first), 16u64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_plus_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_plus_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs native pointer plus negative i64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  return(dereference(plus(location(second), -16i64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_plus_neg_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_plus_neg_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("compiles and runs native references") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(4i32)
+  [Reference<i32> mut] ref(location(value))
+  assign(ref, 7i32)
+  return(ref)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ref.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ref_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native clamp") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(9i32, 2i32, 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_clamp.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_clamp_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs native clamp i64") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(clamp(9i64, 2i64, 6i64), 6i64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_clamp_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_clamp_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native i64 arithmetic") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(plus(4000000000i64, 2i64), 4000000002i64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native u64 division") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(divide(10u64, 2u64), 5u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native u64 comparison") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(greater_than(0xFFFFFFFFFFFFFFFFu64, 1u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_u64_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_u64_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native bool return") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(true)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bool.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_bool_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native boolean ops") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(or(and(true, false), not(false)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bool_ops.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_bool_ops_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native short-circuit and") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [i32 mut] witness(0i32)
+  assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
+  return(witness)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_and_short.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_and_short_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs native short-circuit or") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [i32 mut] witness(0i32)
+  assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
+  return(witness)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_or_short.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_or_short_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs native convert") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_convert.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_convert_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native convert bool") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<bool>(0i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_convert_bool.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_convert_bool_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs native convert i64") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(convert<i64>(9i64), 9i64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_convert_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_convert_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native convert u64") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(convert<u64>(10u64), 10u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_convert_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_convert_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 #endif
 
@@ -183,6 +539,102 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs short-circuit and") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [i32 mut] witness(0i32)
+  assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
+  return(witness)
+}
+)";
+  const std::string srcPath = writeTemp("compile_and_short.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_and_short_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs short-circuit or") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [i32 mut] witness(0i32)
+  assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
+  return(witness)
+}
+)";
+  const std::string srcPath = writeTemp("compile_or_short.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_or_short_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs convert<bool>") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<bool>(0i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert_bool.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_bool_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs convert<i64>") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(convert<i64>(9i64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs convert<u64>") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(convert<u64>(10u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
+TEST_CASE("compiles and runs convert<bool> from u64") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<bool>(1u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert_bool_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_bool_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs pointer helpers") {
   const std::string source = R"(
 [return<int>]
@@ -199,20 +651,145 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs pointer_add helper") {
+TEST_CASE("compiles and runs pointer plus helper") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32] value(5i32)
-  return(dereference(pointer_add(location(value), 0i32)))
+  return(dereference(plus(location(value), 0i32)))
 }
 )";
-  const std::string srcPath = writeTemp("compile_pointer_add.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_add_exe").string();
+  const std::string srcPath = writeTemp("compile_pointer_plus.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_plus_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs collection literals in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32>{1i32, 2i32, 3i32}
+  map<i32, i32>{1i32=10i32, 2i32=20i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_collections_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_collections_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<string, i32>{"a"=1i32, "b"=2i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_collections_string_map.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_collections_string_map_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles with executions using collection arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(items, pairs) {
+  return(1i32)
+}
+
+execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32)) { }
+)";
+  const std::string srcPath = writeTemp("compile_exec_collections.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_collections_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles with execution body arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(count) {
+  return(1i32)
+}
+
+execute_repeat(2i32) {
+  main(),
+  main()
+}
+)";
+  const std::string srcPath = writeTemp("compile_exec_body.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_body_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs pointer plus u64 offset") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(dereference(plus(location(value), 0u64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_pointer_plus_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_plus_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs i64 literals") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(9i64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_i64_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_i64_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs u64 literals") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(10u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_u64_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_u64_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("compiles and runs assignment operator rewrite") {
@@ -554,6 +1131,81 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("compiles and runs clamp i64") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(clamp(9i64, 2i64, 6i64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_clamp_i64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_clamp_i64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs clamp mixed i32/i64") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(clamp(9i32, 2i64, 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_clamp_i64_mixed.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_clamp_i64_mixed_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs clamp u64") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(clamp(9u64, 2u64, 6u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_clamp_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_clamp_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs clamp f32") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(clamp(1.5f, 0.5f, 1.2f)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_clamp_f32.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_clamp_f32_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs clamp f64") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(clamp(2.5f64, 1.0f64, 2.0f64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_clamp_f64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_clamp_f64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs boolean literal") {

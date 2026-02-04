@@ -19,6 +19,7 @@ private:
   bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseTransformList(std::vector<Transform> &out);
   bool parseTemplateList(std::vector<std::string> &out);
+  bool parseTypeName(std::string &out);
   bool parseIdentifierList(std::vector<std::string> &out);
   bool parseCallArgumentList(std::vector<Expr> &out,
                              std::vector<std::optional<std::string>> &argNames,

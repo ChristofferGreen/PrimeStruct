@@ -6,6 +6,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <vector>
 
 #if defined(__APPLE__)
@@ -55,14 +56,43 @@ class Arm64Emitter {
     emitPushReg(0);
   }
 
+  void emitPushI64(uint64_t value) {
+    emitMovImm64(0, value);
+    emitPushReg(0);
+  }
+
   void emitLoadLocal(uint32_t index) {
     emit(encodeLdrRegBase(0, 27, localOffset(index)));
+    emitPushReg(0);
+  }
+
+  void emitAddressOfLocal(uint32_t index) {
+    uint32_t offset = localOffset(index);
+    if (offset <= 4095) {
+      emit(encodeAddRegImm(0, 27, static_cast<uint16_t>(offset)));
+    } else {
+      emitMovImm64(1, offset);
+      emit(encodeAddReg(0, 27, 1));
+    }
     emitPushReg(0);
   }
 
   void emitStoreLocal(uint32_t index) {
     emitPopReg(0);
     emit(encodeStrRegBase(0, 27, localOffset(index)));
+  }
+
+  void emitLoadIndirect() {
+    emitPopReg(0);
+    emit(encodeLdrRegBase(1, 0, 0));
+    emitPushReg(1);
+  }
+
+  void emitStoreIndirect() {
+    emitPopReg(0);
+    emitPopReg(1);
+    emit(encodeStrRegBase(0, 1, 0));
+    emitPushReg(0);
   }
 
   void emitDup() {
@@ -91,10 +121,79 @@ class Arm64Emitter {
     emitBinaryOp(encodeSdivReg(0, 1, 0));
   }
 
+  void emitDivU() {
+    emitBinaryOp(encodeUdivReg(0, 1, 0));
+  }
+
   void emitNeg() {
     emitPopReg(0);
     emit(encodeSubReg(0, 31, 0));
     emitPushReg(0);
+  }
+
+  void emitCmpEq() {
+    emitCompareAndPush(CondCode::Eq);
+  }
+
+  void emitCmpNe() {
+    emitCompareAndPush(CondCode::Ne);
+  }
+
+  void emitCmpLt() {
+    emitCompareAndPush(CondCode::Lt);
+  }
+
+  void emitCmpLe() {
+    emitCompareAndPush(CondCode::Le);
+  }
+
+  void emitCmpGt() {
+    emitCompareAndPush(CondCode::Gt);
+  }
+
+  void emitCmpGe() {
+    emitCompareAndPush(CondCode::Ge);
+  }
+
+  void emitCmpLtU() {
+    emitCompareAndPush(CondCode::Lo);
+  }
+
+  void emitCmpLeU() {
+    emitCompareAndPush(CondCode::Ls);
+  }
+
+  void emitCmpGtU() {
+    emitCompareAndPush(CondCode::Hi);
+  }
+
+  void emitCmpGeU() {
+    emitCompareAndPush(CondCode::Hs);
+  }
+
+  size_t emitJumpPlaceholder() {
+    size_t index = currentWordIndex();
+    emit(encodeB(0));
+    return index;
+  }
+
+  size_t emitJumpIfZeroPlaceholder() {
+    emitPopReg(0);
+    size_t index = currentWordIndex();
+    emit(encodeCbz(0, 0));
+    return index;
+  }
+
+  void patchJump(size_t index, int32_t offsetWords) {
+    patchWord(index, encodeB(offsetWords));
+  }
+
+  void patchJumpIfZero(size_t index, int32_t offsetWords) {
+    patchWord(index, encodeCbz(0, offsetWords));
+  }
+
+  size_t currentWordIndex() const {
+    return code_.size();
   }
 
   void emitReturn() {
@@ -118,14 +217,45 @@ class Arm64Emitter {
   }
 
  private:
+  enum class CondCode : uint8_t {
+    Eq = 0x0,
+    Ne = 0x1,
+    Hs = 0x2,
+    Lo = 0x3,
+    Hi = 0x8,
+    Ls = 0x9,
+    Ge = 0xA,
+    Lt = 0xB,
+    Gt = 0xC,
+    Le = 0xD,
+  };
+
   void emit(uint32_t word) {
     code_.push_back(word);
+  }
+
+  void patchWord(size_t index, uint32_t word) {
+    if (index < code_.size()) {
+      code_[index] = word;
+    }
   }
 
   void emitBinaryOp(uint32_t opWord) {
     emitPopReg(0);
     emitPopReg(1);
     emit(opWord);
+    emitPushReg(0);
+  }
+
+  void emitCompareAndPush(CondCode cond) {
+    emitPopReg(0);
+    emitPopReg(1);
+    emit(encodeSubsReg(31, 1, 0));
+    // Offsets assume emitMovImm64 emits 4 instructions and emitPushReg emits 2.
+    emit(encodeBCond(6, static_cast<uint8_t>(cond)));
+    emitMovImm64(0, 0);
+    emit(encodeB(5));
+    emitMovImm64(0, 1);
     emitPushReg(0);
   }
 
@@ -184,6 +314,11 @@ class Arm64Emitter {
            (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
   }
 
+  static uint32_t encodeSubsReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0xEB000000 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
   static uint32_t encodeMulReg(uint8_t rd, uint8_t rn, uint8_t rm) {
     return 0x9B007C00 | (static_cast<uint32_t>(rm) << 16) |
            (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
@@ -191,6 +326,11 @@ class Arm64Emitter {
 
   static uint32_t encodeSdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
     return 0x9AC00C00 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeUdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0x9AC00800 | (static_cast<uint32_t>(rm) << 16) |
            (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
   }
 
@@ -204,6 +344,21 @@ class Arm64Emitter {
     uint32_t shiftField = static_cast<uint32_t>((shift / 16) & 0x3u);
     return 0xF2800000 | (shiftField << 21) | (static_cast<uint32_t>(imm) << 5) |
            static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeB(int32_t imm26) {
+    uint32_t imm = static_cast<uint32_t>(imm26) & 0x03FFFFFFu;
+    return 0x14000000 | imm;
+  }
+
+  static uint32_t encodeBCond(int32_t imm19, uint8_t cond) {
+    uint32_t imm = static_cast<uint32_t>(imm19) & 0x7FFFFu;
+    return 0x54000000 | (imm << 5) | (static_cast<uint32_t>(cond) & 0xFu);
+  }
+
+  static uint32_t encodeCbz(uint8_t rt, int32_t imm19) {
+    uint32_t imm = static_cast<uint32_t>(imm19) & 0x7FFFFu;
+    return 0xB4000000 | (imm << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
   }
 
   static uint32_t encodeSvc() {
@@ -221,6 +376,217 @@ class Arm64Emitter {
   std::vector<uint32_t> code_;
   uint64_t frameSize_ = 0;
 };
+
+bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error) {
+  if (fn.instructions.empty()) {
+    error = "native backend requires at least one instruction";
+    return false;
+  }
+  auto opcodeName = [](IrOpcode op) -> const char * {
+    switch (op) {
+      case IrOpcode::PushI32:
+        return "PushI32";
+      case IrOpcode::PushI64:
+        return "PushI64";
+      case IrOpcode::LoadLocal:
+        return "LoadLocal";
+      case IrOpcode::StoreLocal:
+        return "StoreLocal";
+      case IrOpcode::AddressOfLocal:
+        return "AddressOfLocal";
+      case IrOpcode::LoadIndirect:
+        return "LoadIndirect";
+      case IrOpcode::StoreIndirect:
+        return "StoreIndirect";
+      case IrOpcode::Dup:
+        return "Dup";
+      case IrOpcode::Pop:
+        return "Pop";
+      case IrOpcode::AddI32:
+        return "AddI32";
+      case IrOpcode::SubI32:
+        return "SubI32";
+      case IrOpcode::MulI32:
+        return "MulI32";
+      case IrOpcode::DivI32:
+        return "DivI32";
+      case IrOpcode::NegI32:
+        return "NegI32";
+      case IrOpcode::AddI64:
+        return "AddI64";
+      case IrOpcode::SubI64:
+        return "SubI64";
+      case IrOpcode::MulI64:
+        return "MulI64";
+      case IrOpcode::DivI64:
+        return "DivI64";
+      case IrOpcode::DivU64:
+        return "DivU64";
+      case IrOpcode::NegI64:
+        return "NegI64";
+      case IrOpcode::CmpEqI32:
+        return "CmpEqI32";
+      case IrOpcode::CmpNeI32:
+        return "CmpNeI32";
+      case IrOpcode::CmpLtI32:
+        return "CmpLtI32";
+      case IrOpcode::CmpLeI32:
+        return "CmpLeI32";
+      case IrOpcode::CmpGtI32:
+        return "CmpGtI32";
+      case IrOpcode::CmpGeI32:
+        return "CmpGeI32";
+      case IrOpcode::CmpEqI64:
+        return "CmpEqI64";
+      case IrOpcode::CmpNeI64:
+        return "CmpNeI64";
+      case IrOpcode::CmpLtI64:
+        return "CmpLtI64";
+      case IrOpcode::CmpLeI64:
+        return "CmpLeI64";
+      case IrOpcode::CmpGtI64:
+        return "CmpGtI64";
+      case IrOpcode::CmpGeI64:
+        return "CmpGeI64";
+      case IrOpcode::CmpLtU64:
+        return "CmpLtU64";
+      case IrOpcode::CmpLeU64:
+        return "CmpLeU64";
+      case IrOpcode::CmpGtU64:
+        return "CmpGtU64";
+      case IrOpcode::CmpGeU64:
+        return "CmpGeU64";
+      case IrOpcode::JumpIfZero:
+        return "JumpIfZero";
+      case IrOpcode::Jump:
+        return "Jump";
+      case IrOpcode::ReturnI32:
+        return "ReturnI32";
+      case IrOpcode::ReturnI64:
+        return "ReturnI64";
+      default:
+        return "Unknown";
+    }
+  };
+  auto stackDelta = [](IrOpcode op) -> int32_t {
+    switch (op) {
+      case IrOpcode::PushI32:
+      case IrOpcode::PushI64:
+      case IrOpcode::LoadLocal:
+      case IrOpcode::AddressOfLocal:
+        return 1;
+      case IrOpcode::StoreLocal:
+      case IrOpcode::Pop:
+        return -1;
+      case IrOpcode::LoadIndirect:
+        return 0;
+      case IrOpcode::StoreIndirect:
+        return -1;
+      case IrOpcode::Dup:
+        return 1;
+      case IrOpcode::AddI32:
+      case IrOpcode::SubI32:
+      case IrOpcode::MulI32:
+      case IrOpcode::DivI32:
+      case IrOpcode::AddI64:
+      case IrOpcode::SubI64:
+      case IrOpcode::MulI64:
+      case IrOpcode::DivI64:
+      case IrOpcode::DivU64:
+      case IrOpcode::CmpEqI32:
+      case IrOpcode::CmpNeI32:
+      case IrOpcode::CmpLtI32:
+      case IrOpcode::CmpLeI32:
+      case IrOpcode::CmpGtI32:
+      case IrOpcode::CmpGeI32:
+      case IrOpcode::CmpEqI64:
+      case IrOpcode::CmpNeI64:
+      case IrOpcode::CmpLtI64:
+      case IrOpcode::CmpLeI64:
+      case IrOpcode::CmpGtI64:
+      case IrOpcode::CmpGeI64:
+      case IrOpcode::CmpLtU64:
+      case IrOpcode::CmpLeU64:
+      case IrOpcode::CmpGtU64:
+      case IrOpcode::CmpGeU64:
+        return -1;
+      case IrOpcode::NegI32:
+      case IrOpcode::NegI64:
+        return 0;
+      case IrOpcode::JumpIfZero:
+        return -1;
+      case IrOpcode::Jump:
+        return 0;
+      case IrOpcode::ReturnI32:
+      case IrOpcode::ReturnI64:
+        return -1;
+      default:
+        return 0;
+    }
+  };
+
+  const int64_t kUnset = std::numeric_limits<int64_t>::min();
+  std::vector<int64_t> depth(fn.instructions.size(), kUnset);
+  std::vector<size_t> worklist;
+  depth[0] = 0;
+  worklist.push_back(0);
+  maxDepth = 0;
+
+  while (!worklist.empty()) {
+    size_t index = worklist.back();
+    worklist.pop_back();
+    int64_t currentDepth = depth[index];
+    maxDepth = std::max(maxDepth, currentDepth);
+    const auto &inst = fn.instructions[index];
+    int64_t nextDepth = currentDepth + stackDelta(inst.op);
+    if (nextDepth < 0) {
+      error = "native backend detected invalid stack usage at instruction " + std::to_string(index) + " (" +
+              opcodeName(inst.op) + ")";
+      return false;
+    }
+    maxDepth = std::max(maxDepth, nextDepth);
+
+    auto pushSuccessor = [&](size_t nextIndex) -> bool {
+      if (nextIndex >= fn.instructions.size()) {
+        return true;
+      }
+      if (depth[nextIndex] == kUnset) {
+        depth[nextIndex] = nextDepth;
+        worklist.push_back(nextIndex);
+        return true;
+      }
+      if (depth[nextIndex] != nextDepth) {
+        error = "native backend detected inconsistent stack depth at instruction " + std::to_string(nextIndex) + " (" +
+                opcodeName(fn.instructions[nextIndex].op) + ")";
+        return false;
+      }
+      return true;
+    };
+
+    if (inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64) {
+      continue;
+    }
+    if (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) {
+      if (static_cast<size_t>(inst.imm) > fn.instructions.size()) {
+        error = "native backend detected invalid jump target";
+        return false;
+      }
+      if (!pushSuccessor(static_cast<size_t>(inst.imm))) {
+        return false;
+      }
+      if (inst.op == IrOpcode::JumpIfZero) {
+        if (!pushSuccessor(index + 1)) {
+          return false;
+        }
+      }
+      continue;
+    }
+    if (!pushSuccessor(index + 1)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error) {
   std::ofstream file(path, std::ios::binary);
@@ -721,45 +1087,15 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   const IrFunction &fn = module.functions[static_cast<size_t>(module.entryIndex)];
   Arm64Emitter emitter;
   size_t localCount = 0;
-  int64_t stackDepth = 0;
   int64_t maxStack = 0;
   for (const auto &inst : fn.instructions) {
-    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal) {
-      if (inst.imm >= 0) {
-        localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
-      }
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+        inst.op == IrOpcode::AddressOfLocal) {
+      localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
     }
-    switch (inst.op) {
-      case IrOpcode::PushI32:
-      case IrOpcode::LoadLocal:
-        stackDepth += 1;
-        break;
-      case IrOpcode::StoreLocal:
-      case IrOpcode::Pop:
-        stackDepth -= 1;
-        break;
-      case IrOpcode::Dup:
-        stackDepth += 1;
-        break;
-      case IrOpcode::AddI32:
-      case IrOpcode::SubI32:
-      case IrOpcode::MulI32:
-      case IrOpcode::DivI32:
-        stackDepth -= 1;
-        break;
-      case IrOpcode::NegI32:
-        break;
-      case IrOpcode::ReturnI32:
-        stackDepth -= 1;
-        break;
-      default:
-        break;
-    }
-    if (stackDepth < 0) {
-      error = "native backend detected invalid stack usage";
-      return false;
-    }
-    maxStack = std::max(maxStack, stackDepth);
+  }
+  if (!computeMaxStackDepth(fn, maxStack, error)) {
+    return false;
   }
   uint64_t localsSize = static_cast<uint64_t>(localCount) * 16;
   uint64_t stackSize = static_cast<uint64_t>(maxStack) * 16;
@@ -772,16 +1108,38 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     return false;
   }
 
-  for (const auto &inst : fn.instructions) {
+  struct BranchFixup {
+    size_t codeIndex = 0;
+    size_t targetInst = 0;
+    bool isConditional = false;
+  };
+  std::vector<BranchFixup> fixups;
+  std::vector<size_t> instOffsets(fn.instructions.size() + 1, 0);
+
+  for (size_t index = 0; index < fn.instructions.size(); ++index) {
+    const auto &inst = fn.instructions[index];
+    instOffsets[index] = emitter.currentWordIndex();
     switch (inst.op) {
       case IrOpcode::PushI32:
-        emitter.emitPushI32(inst.imm);
+        emitter.emitPushI32(static_cast<int32_t>(inst.imm));
+        break;
+      case IrOpcode::PushI64:
+        emitter.emitPushI64(inst.imm);
         break;
       case IrOpcode::LoadLocal:
         emitter.emitLoadLocal(static_cast<uint32_t>(inst.imm));
         break;
       case IrOpcode::StoreLocal:
         emitter.emitStoreLocal(static_cast<uint32_t>(inst.imm));
+        break;
+      case IrOpcode::AddressOfLocal:
+        emitter.emitAddressOfLocal(static_cast<uint32_t>(inst.imm));
+        break;
+      case IrOpcode::LoadIndirect:
+        emitter.emitLoadIndirect();
+        break;
+      case IrOpcode::StoreIndirect:
+        emitter.emitStoreIndirect();
         break;
       case IrOpcode::Dup:
         emitter.emitDup();
@@ -804,12 +1162,126 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::NegI32:
         emitter.emitNeg();
         break;
+      case IrOpcode::AddI64:
+        emitter.emitAdd();
+        break;
+      case IrOpcode::SubI64:
+        emitter.emitSub();
+        break;
+      case IrOpcode::MulI64:
+        emitter.emitMul();
+        break;
+      case IrOpcode::DivI64:
+        emitter.emitDiv();
+        break;
+      case IrOpcode::DivU64:
+        emitter.emitDivU();
+        break;
+      case IrOpcode::NegI64:
+        emitter.emitNeg();
+        break;
+      case IrOpcode::CmpEqI32:
+        emitter.emitCmpEq();
+        break;
+      case IrOpcode::CmpNeI32:
+        emitter.emitCmpNe();
+        break;
+      case IrOpcode::CmpLtI32:
+        emitter.emitCmpLt();
+        break;
+      case IrOpcode::CmpLeI32:
+        emitter.emitCmpLe();
+        break;
+      case IrOpcode::CmpGtI32:
+        emitter.emitCmpGt();
+        break;
+      case IrOpcode::CmpGeI32:
+        emitter.emitCmpGe();
+        break;
+      case IrOpcode::CmpEqI64:
+        emitter.emitCmpEq();
+        break;
+      case IrOpcode::CmpNeI64:
+        emitter.emitCmpNe();
+        break;
+      case IrOpcode::CmpLtI64:
+        emitter.emitCmpLt();
+        break;
+      case IrOpcode::CmpLeI64:
+        emitter.emitCmpLe();
+        break;
+      case IrOpcode::CmpGtI64:
+        emitter.emitCmpGt();
+        break;
+      case IrOpcode::CmpGeI64:
+        emitter.emitCmpGe();
+        break;
+      case IrOpcode::CmpLtU64:
+        emitter.emitCmpLtU();
+        break;
+      case IrOpcode::CmpLeU64:
+        emitter.emitCmpLeU();
+        break;
+      case IrOpcode::CmpGtU64:
+        emitter.emitCmpGtU();
+        break;
+      case IrOpcode::CmpGeU64:
+        emitter.emitCmpGeU();
+        break;
+      case IrOpcode::JumpIfZero: {
+        BranchFixup fixup;
+        fixup.codeIndex = emitter.emitJumpIfZeroPlaceholder();
+        fixup.targetInst = static_cast<size_t>(inst.imm);
+        fixup.isConditional = true;
+        fixups.push_back(fixup);
+        break;
+      }
+      case IrOpcode::Jump: {
+        BranchFixup fixup;
+        fixup.codeIndex = emitter.emitJumpPlaceholder();
+        fixup.targetInst = static_cast<size_t>(inst.imm);
+        fixup.isConditional = false;
+        fixups.push_back(fixup);
+        break;
+      }
       case IrOpcode::ReturnI32:
+        emitter.emitReturn();
+        break;
+      case IrOpcode::ReturnI64:
         emitter.emitReturn();
         break;
       default:
         error = "unsupported IR opcode for native backend";
         return false;
+    }
+  }
+
+  instOffsets[fn.instructions.size()] = emitter.currentWordIndex();
+
+  constexpr int64_t kImm19Min = -(1LL << 18);
+  constexpr int64_t kImm19Max = (1LL << 18) - 1;
+  constexpr int64_t kImm26Min = -(1LL << 25);
+  constexpr int64_t kImm26Max = (1LL << 25) - 1;
+  for (const auto &fixup : fixups) {
+    if (fixup.targetInst > fn.instructions.size()) {
+      error = "native backend detected invalid jump target";
+      return false;
+    }
+    int64_t targetOffset = static_cast<int64_t>(instOffsets[fixup.targetInst]);
+    int64_t branchOffset = static_cast<int64_t>(fixup.codeIndex);
+    int64_t delta = targetOffset - branchOffset;
+    if (fixup.isConditional) {
+      if (delta < kImm19Min || delta > kImm19Max) {
+        error = "native backend jump offset out of range";
+        return false;
+      }
+      emitter.patchJumpIfZero(fixup.codeIndex, static_cast<int32_t>(delta));
+    } else {
+      if (delta < kImm26Min || delta > kImm26Max) {
+        error = "native backend jump offset out of range";
+        return false;
+      }
+      emitter.patchJump(fixup.codeIndex, static_cast<int32_t>(delta));
     }
   }
 

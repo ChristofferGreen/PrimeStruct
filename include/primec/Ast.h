@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -14,7 +15,9 @@ struct Transform {
 
 struct Expr {
   enum class Kind { Literal, BoolLiteral, FloatLiteral, StringLiteral, Call, Name } kind = Kind::Literal;
-  int literalValue = 0;
+  uint64_t literalValue = 0;
+  int intWidth = 32;
+  bool isUnsigned = false;
   bool boolValue = false;
   std::string floatValue;
   int floatWidth = 32;

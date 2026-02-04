@@ -1,5 +1,6 @@
 #include "primec/AstPrinter.h"
 
+#include <cstdint>
 #include <sstream>
 
 namespace primec {
@@ -30,7 +31,17 @@ bool isReturnCall(const Expr &expr) {
 void printExpr(std::ostringstream &out, const Expr &expr) {
   switch (expr.kind) {
   case Expr::Kind::Literal:
-    out << expr.literalValue;
+    if (!expr.isUnsigned && expr.intWidth == 32) {
+      out << static_cast<int64_t>(expr.literalValue);
+    } else {
+      if (expr.isUnsigned) {
+        out << expr.literalValue;
+        out << (expr.intWidth == 64 ? "u64" : "u32");
+      } else {
+        out << static_cast<int64_t>(expr.literalValue);
+        out << (expr.intWidth == 64 ? "i64" : "i32");
+      }
+    }
     break;
   case Expr::Kind::BoolLiteral:
     out << (expr.boolValue ? "true" : "false");

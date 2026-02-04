@@ -43,16 +43,18 @@ TEST_CASE("lexes string literals with escapes") {
 }
 
 TEST_CASE("lexes numeric literals with suffixes and exponents") {
-  const auto tokens = lex("123i32 0x2Ai32 -5i32 1.25f 2.5f32 3.0f64 1e-3 1e+3f");
-  REQUIRE(tokens.size() >= 8);
+  const auto tokens = lex("123i32 0x2Ai32 -5i32 9i64 10u64 1.25f 2.5f32 3.0f64 1e-3 1e+3f");
+  REQUIRE(tokens.size() >= 10);
   CHECK(tokens[0].text == "123i32");
   CHECK(tokens[1].text == "0x2Ai32");
   CHECK(tokens[2].text == "-5i32");
-  CHECK(tokens[3].text == "1.25f");
-  CHECK(tokens[4].text == "2.5f32");
-  CHECK(tokens[5].text == "3.0f64");
-  CHECK(tokens[6].text == "1e-3");
-  CHECK(tokens[7].text == "1e+3f");
+  CHECK(tokens[3].text == "9i64");
+  CHECK(tokens[4].text == "10u64");
+  CHECK(tokens[5].text == "1.25f");
+  CHECK(tokens[6].text == "2.5f32");
+  CHECK(tokens[7].text == "3.0f64");
+  CHECK(tokens[8].text == "1e-3");
+  CHECK(tokens[9].text == "1e+3f");
 }
 
 TEST_CASE("lexes unknown punctuation as end token") {

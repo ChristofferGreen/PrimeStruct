@@ -494,6 +494,116 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints execution body arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(2i32) { main(), main() }
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<int>] /main() {\n"
+      "    return 1\n"
+      "  }\n"
+      "  /execute_repeat(2) { main(), main() }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints execution body arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(2i32) { main(), main() }
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return 1\n"
+      "  }\n"
+      "  exec /execute_repeat(2) { main(), main() }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ast dump prints execution named arguments with collections") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) { }
+)";
+  const auto program = parseProgramWithFilters(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<int>] /main() {\n"
+      "    return 1\n"
+      "  }\n"
+      "  /execute_task(items = array<i32>(1, 2), pairs = map<i32, i32>(1, 2))\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints execution named arguments with collections") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) { }
+)";
+  const auto program = parseProgramWithFilters(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return 1\n"
+      "  }\n"
+      "  exec /execute_task(items = array(1, 2), pairs = map(1, 2))\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints execution named arguments with body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(count = 2i32) { main(), main() }
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return 1\n"
+      "  }\n"
+      "  exec /execute_repeat(count = 2) { main(), main() }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]

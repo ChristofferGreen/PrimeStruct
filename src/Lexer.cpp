@@ -131,7 +131,8 @@ Token Lexer::readNumber() {
       advance();
     }
   }
-  if (source_.compare(pos_, 3, "i32") == 0) {
+  if (source_.compare(pos_, 3, "i64") == 0 || source_.compare(pos_, 3, "u64") == 0 ||
+      source_.compare(pos_, 3, "i32") == 0) {
     advance();
     advance();
     advance();

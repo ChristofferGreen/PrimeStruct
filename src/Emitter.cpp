@@ -1,6 +1,7 @@
 #include "primec/Emitter.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <sstream>
 #include <unordered_map>
@@ -8,7 +9,7 @@
 
 namespace primec {
 namespace {
-enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
+enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
 
 struct BindingInfo {
   std::string typeName;
@@ -28,20 +29,26 @@ ReturnKind getReturnKind(const Definition &def) {
     if (*transform.templateArg == "void") {
       return ReturnKind::Void;
     }
-    if (*transform.templateArg == "int") {
-      return ReturnKind::Int;
-    }
-    if (*transform.templateArg == "bool") {
-      return ReturnKind::Bool;
-    }
-    if (*transform.templateArg == "i32") {
-      return ReturnKind::Int;
-    }
-    if (*transform.templateArg == "float" || *transform.templateArg == "f32") {
-      return ReturnKind::Float32;
-    }
-    if (*transform.templateArg == "f64") {
-      return ReturnKind::Float64;
+  if (*transform.templateArg == "int") {
+    return ReturnKind::Int;
+  }
+  if (*transform.templateArg == "bool") {
+    return ReturnKind::Bool;
+  }
+  if (*transform.templateArg == "i32") {
+    return ReturnKind::Int;
+  }
+  if (*transform.templateArg == "i64") {
+    return ReturnKind::Int64;
+  }
+  if (*transform.templateArg == "u64") {
+    return ReturnKind::UInt64;
+  }
+  if (*transform.templateArg == "float" || *transform.templateArg == "f32") {
+    return ReturnKind::Float32;
+  }
+  if (*transform.templateArg == "f64") {
+    return ReturnKind::Float64;
     }
   }
   return ReturnKind::Unknown;
@@ -83,6 +90,12 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   if (typeName == "i32" || typeName == "int") {
     return "int";
   }
+  if (typeName == "i64") {
+    return "int64_t";
+  }
+  if (typeName == "u64") {
+    return "uint64_t";
+  }
   if (typeName == "bool") {
     return "bool";
   }
@@ -119,6 +132,12 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
 ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "int" || name == "i32") {
     return ReturnKind::Int;
+  }
+  if (name == "i64") {
+    return ReturnKind::Int64;
+  }
+  if (name == "u64") {
+    return ReturnKind::UInt64;
   }
   if (name == "bool") {
     return ReturnKind::Bool;
@@ -260,24 +279,6 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   }
   if (name == "location") {
     out = '&';
-    return true;
-  }
-  return false;
-}
-
-bool getBuiltinPointerBinaryOperator(const Expr &expr, char &out) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "pointer_add") {
-    out = '+';
     return true;
   }
   return false;
@@ -443,9 +444,39 @@ std::string Emitter::toCppName(const std::string &fullPath) const {
 
 std::string Emitter::emitExpr(const Expr &expr,
                               const std::unordered_map<std::string, std::string> &nameMap,
-                              const std::unordered_map<std::string, std::vector<std::string>> &paramMap) const {
+                              const std::unordered_map<std::string, std::vector<std::string>> &paramMap,
+                              const std::unordered_map<std::string, std::string> &localTypes) const {
+  std::function<bool(const Expr &)> isPointerExpr;
+  isPointerExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto it = localTypes.find(candidate.name);
+      return it != localTypes.end() && it->second == "Pointer";
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isSimpleCallName(candidate, "location")) {
+      return true;
+    }
+    char op = '\0';
+    if (getBuiltinOperator(candidate, op) && candidate.args.size() == 2 && (op == '+' || op == '-')) {
+      return isPointerExpr(candidate.args[0]) && !isPointerExpr(candidate.args[1]);
+    }
+    return false;
+  };
+
   if (expr.kind == Expr::Kind::Literal) {
-    return std::to_string(expr.literalValue);
+    if (!expr.isUnsigned && expr.intWidth == 32) {
+      return std::to_string(static_cast<int64_t>(expr.literalValue));
+    }
+    if (expr.isUnsigned) {
+      std::ostringstream out;
+      out << "static_cast<uint64_t>(" << static_cast<uint64_t>(expr.literalValue) << ")";
+      return out.str();
+    }
+    std::ostringstream out;
+    out << "static_cast<int64_t>(" << static_cast<int64_t>(expr.literalValue) << ")";
+    return out.str();
   }
   if (expr.kind == Expr::Kind::BoolLiteral) {
     return expr.boolValue ? "true" : "false";
@@ -468,52 +499,56 @@ std::string Emitter::emitExpr(const Expr &expr,
     char op = '\0';
     if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " " << op << " "
-          << emitExpr(expr.args[1], nameMap, paramMap) << ")";
+      if ((op == '+' || op == '-') && isPointerExpr(expr.args[0])) {
+        out << "ps_pointer_add(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ", ";
+        if (op == '-') {
+          out << "-(" << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ")";
+        } else {
+          out << emitExpr(expr.args[1], nameMap, paramMap, localTypes);
+        }
+        out << ")";
+        return out.str();
+      }
+      out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << " " << op << " "
+          << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ")";
       return out.str();
     }
     if (isBuiltinNegate(expr) && expr.args.size() == 1) {
       std::ostringstream out;
-      out << "(-" << emitExpr(expr.args[0], nameMap, paramMap) << ")";
+      out << "(-" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ")";
       return out.str();
     }
     const char *cmp = nullptr;
     if (getBuiltinComparison(expr, cmp)) {
       std::ostringstream out;
       if (expr.args.size() == 1) {
-        out << "(" << cmp << emitExpr(expr.args[0], nameMap, paramMap) << ")";
+        out << "(" << cmp << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ")";
         return out.str();
       }
       if (expr.args.size() == 2) {
-        out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " " << cmp << " "
-            << emitExpr(expr.args[1], nameMap, paramMap) << ")";
+        out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << " " << cmp << " "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ")";
         return out.str();
       }
     }
     if (isBuiltinClamp(expr) && expr.args.size() == 3) {
       std::ostringstream out;
-      out << "ps_builtin_clamp(" << emitExpr(expr.args[0], nameMap, paramMap) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap) << ", " << emitExpr(expr.args[2], nameMap, paramMap) << ")";
+      out << "ps_builtin_clamp(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ", "
+          << emitExpr(expr.args[2], nameMap, paramMap, localTypes) << ")";
       return out.str();
     }
     std::string convertName;
     if (getBuiltinConvertName(expr, convertName) && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
       std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
       std::ostringstream out;
-      out << "static_cast<" << targetType << ">(" << emitExpr(expr.args[0], nameMap, paramMap) << ")";
+      out << "static_cast<" << targetType << ">(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ")";
       return out.str();
     }
     char pointerOp = '\0';
     if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
       std::ostringstream out;
-      out << "(" << pointerOp << emitExpr(expr.args[0], nameMap, paramMap) << ")";
-      return out.str();
-    }
-    char pointerBinaryOp = '\0';
-    if (getBuiltinPointerBinaryOperator(expr, pointerBinaryOp) && expr.args.size() == 2) {
-      std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " " << pointerBinaryOp << " "
-          << emitExpr(expr.args[1], nameMap, paramMap) << ")";
+      out << "(" << pointerOp << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ")";
       return out.str();
     }
     std::string collection;
@@ -526,7 +561,7 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(expr.args[i], nameMap, paramMap);
+          out << emitExpr(expr.args[i], nameMap, paramMap, localTypes);
         }
         out << "}";
         return out.str();
@@ -540,8 +575,8 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (i > 0) {
             out << ", ";
           }
-          out << "{" << emitExpr(expr.args[i], nameMap, paramMap) << ", "
-              << emitExpr(expr.args[i + 1], nameMap, paramMap) << "}";
+          out << "{" << emitExpr(expr.args[i], nameMap, paramMap, localTypes) << ", "
+              << emitExpr(expr.args[i + 1], nameMap, paramMap, localTypes) << "}";
         }
         out << "}";
         return out.str();
@@ -549,8 +584,8 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     if (isBuiltinAssign(expr, nameMap) && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " = "
-          << emitExpr(expr.args[1], nameMap, paramMap) << ")";
+      out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << " = "
+          << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ")";
       return out.str();
     }
     return "0";
@@ -570,7 +605,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (i > 0) {
       out << ", ";
     }
-    out << emitExpr(*orderedArgs[i], nameMap, paramMap);
+    out << emitExpr(*orderedArgs[i], nameMap, paramMap, localTypes);
   }
   out << ")";
   return out.str();
@@ -620,6 +655,17 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
         return ReturnKind::Float32;
       }
+      if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
+        return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
+      }
+      if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
+        if (left == ReturnKind::Int64 || left == ReturnKind::Int) {
+          if (right == ReturnKind::Int64 || right == ReturnKind::Int) {
+            return ReturnKind::Int64;
+          }
+        }
+        return ReturnKind::Unknown;
+      }
       if (left == ReturnKind::Int && right == ReturnKind::Int) {
         return ReturnKind::Int;
       }
@@ -627,6 +673,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     };
 
     if (expr.kind == Expr::Kind::Literal) {
+      if (expr.isUnsigned) {
+        return ReturnKind::UInt64;
+      }
+      if (expr.intWidth == 64) {
+        return ReturnKind::Int64;
+      }
       return ReturnKind::Int;
     }
     if (expr.kind == Expr::Kind::BoolLiteral) {
@@ -774,22 +826,46 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
 
   std::ostringstream out;
   out << "// Generated by primec (minimal)\n";
+  out << "#include <cstdint>\n";
+  out << "#include <type_traits>\n";
   out << "#include <unordered_map>\n";
   out << "#include <vector>\n";
-  out << "static int ps_builtin_clamp(int value, int minValue, int maxValue) {\n";
-  out << "  if (value < minValue) {\n";
-  out << "    return minValue;\n";
+  out << "template <typename T, typename Offset>\n";
+  out << "static inline T *ps_pointer_add(T *ptr, Offset offset) {\n";
+  out << "  if constexpr (std::is_signed_v<Offset>) {\n";
+  out << "    return reinterpret_cast<T *>(reinterpret_cast<std::intptr_t>(ptr) + "
+         "static_cast<std::intptr_t>(offset));\n";
   out << "  }\n";
-  out << "  if (value > maxValue) {\n";
-  out << "    return maxValue;\n";
+  out << "  return reinterpret_cast<T *>(reinterpret_cast<std::uintptr_t>(ptr) + "
+         "static_cast<std::uintptr_t>(offset));\n";
+  out << "}\n";
+  out << "template <typename T, typename Offset>\n";
+  out << "static inline T *ps_pointer_add(T &ref, Offset offset) {\n";
+  out << "  return ps_pointer_add(&ref, offset);\n";
+  out << "}\n";
+  out << "template <typename T, typename U, typename V>\n";
+  out << "static inline std::common_type_t<T, U, V> ps_builtin_clamp(T value, U minValue, V maxValue) {\n";
+  out << "  using R = std::common_type_t<T, U, V>;\n";
+  out << "  R v = static_cast<R>(value);\n";
+  out << "  R minV = static_cast<R>(minValue);\n";
+  out << "  R maxV = static_cast<R>(maxValue);\n";
+  out << "  if (v < minV) {\n";
+  out << "    return minV;\n";
   out << "  }\n";
-  out << "  return value;\n";
+  out << "  if (v > maxV) {\n";
+  out << "    return maxV;\n";
+  out << "  }\n";
+  out << "  return v;\n";
   out << "}\n";
   for (const auto &def : program.definitions) {
     ReturnKind returnKind = returnKinds[def.fullPath];
     std::string returnType = "int";
     if (returnKind == ReturnKind::Void) {
       returnType = "void";
+    } else if (returnKind == ReturnKind::Int64) {
+      returnType = "int64_t";
+    } else if (returnKind == ReturnKind::UInt64) {
+      returnType = "uint64_t";
     } else if (returnKind == ReturnKind::Float32) {
       returnType = "float";
     } else if (returnKind == ReturnKind::Float64) {
@@ -805,13 +881,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       out << "int " << def.parameters[i];
     }
     out << ") {\n";
-    std::function<void(const Expr &, int)> emitStatement;
-    emitStatement = [&](const Expr &stmt, int indent) {
+    std::function<void(const Expr &, int, std::unordered_map<std::string, std::string> &)> emitStatement;
+    emitStatement = [&](const Expr &stmt, int indent, std::unordered_map<std::string, std::string> &localTypes) {
       std::string pad(static_cast<size_t>(indent) * 2, ' ');
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
-          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap);
+          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes);
         }
         out << ";\n";
         return;
@@ -820,12 +896,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         BindingInfo binding = getBindingInfo(stmt);
         std::string type = bindingTypeToCpp(binding);
         bool isReference = binding.typeName == "Reference";
+        localTypes[stmt.name] = binding.typeName;
         out << pad << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           if (isReference) {
-            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap) << ")";
+            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes) << ")";
           } else {
-            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap);
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes);
           }
         }
         out << ";\n";
@@ -835,16 +912,18 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         const Expr &cond = stmt.args[0];
         const Expr &thenBlock = stmt.args[1];
         const Expr &elseBlock = stmt.args[2];
-        out << pad << "if (" << emitExpr(cond, nameMap, paramMap) << ") {\n";
+        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, localTypes) << ") {\n";
         if (isThenCall(thenBlock)) {
+          auto blockTypes = localTypes;
           for (const auto &bodyStmt : thenBlock.bodyArguments) {
-            emitStatement(bodyStmt, indent + 1);
+            emitStatement(bodyStmt, indent + 1, blockTypes);
           }
         }
         out << pad << "} else {\n";
         if (isElseCall(elseBlock)) {
+          auto blockTypes = localTypes;
           for (const auto &bodyStmt : elseBlock.bodyArguments) {
-            emitStatement(bodyStmt, indent + 1);
+            emitStatement(bodyStmt, indent + 1, blockTypes);
           }
         }
         out << pad << "}\n";
@@ -854,7 +933,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string full = resolveExprPath(stmt);
         auto it = nameMap.find(full);
         if (it == nameMap.end()) {
-          out << pad << emitExpr(stmt, nameMap, paramMap) << ";\n";
+          out << pad << emitExpr(stmt, nameMap, paramMap, localTypes) << ";\n";
           return;
         }
         out << pad << it->second << "(";
@@ -871,14 +950,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(*orderedArgs[i], nameMap, paramMap);
+          out << emitExpr(*orderedArgs[i], nameMap, paramMap, localTypes);
         }
         if (!orderedArgs.empty()) {
           out << ", ";
         }
         out << "[&]() {\n";
         for (const auto &bodyStmt : stmt.bodyArguments) {
-          emitStatement(bodyStmt, indent + 1);
+          emitStatement(bodyStmt, indent + 1, localTypes);
         }
         out << pad << "}";
         out << ");\n";
@@ -886,13 +965,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
-        out << pad << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap, paramMap) << ";\n";
+        out << pad << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap, paramMap, localTypes) << ";\n";
         return;
       }
-      out << pad << emitExpr(stmt, nameMap, paramMap) << ";\n";
+      out << pad << emitExpr(stmt, nameMap, paramMap, localTypes) << ";\n";
     };
+    std::unordered_map<std::string, std::string> localTypes;
     for (const auto &stmt : def.statements) {
-      emitStatement(stmt, 1);
+      emitStatement(stmt, 1, localTypes);
     }
     if (returnKind == ReturnKind::Void) {
       out << "  return;\n";
@@ -910,6 +990,8 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     out << "int main() { " << nameMap.at(entryPath) << "(); return 0; }\n";
   } else if (entryReturn == ReturnKind::Int) {
     out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";
+  } else if (entryReturn == ReturnKind::Int64 || entryReturn == ReturnKind::UInt64) {
+    out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
   } else {
     out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
   }

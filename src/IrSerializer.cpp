@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 1;
+constexpr uint32_t IrVersion = 3;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -15,8 +15,15 @@ void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
 }
 
-void appendI32(std::vector<uint8_t> &out, int32_t value) {
-  appendU32(out, static_cast<uint32_t>(value));
+void appendU64(std::vector<uint8_t> &out, uint64_t value) {
+  out.push_back(static_cast<uint8_t>(value & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 32) & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 40) & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 48) & 0xFF));
+  out.push_back(static_cast<uint8_t>((value >> 56) & 0xFF));
 }
 
 bool readU32(const std::vector<uint8_t> &data, size_t &offset, uint32_t &outValue) {
@@ -31,12 +38,20 @@ bool readU32(const std::vector<uint8_t> &data, size_t &offset, uint32_t &outValu
   return true;
 }
 
-bool readI32(const std::vector<uint8_t> &data, size_t &offset, int32_t &outValue) {
-  uint32_t value = 0;
-  if (!readU32(data, offset, value)) {
+
+bool readU64(const std::vector<uint8_t> &data, size_t &offset, uint64_t &outValue) {
+  if (offset + 8 > data.size()) {
     return false;
   }
-  outValue = static_cast<int32_t>(value);
+  outValue = static_cast<uint64_t>(data[offset]) |
+             (static_cast<uint64_t>(data[offset + 1]) << 8) |
+             (static_cast<uint64_t>(data[offset + 2]) << 16) |
+             (static_cast<uint64_t>(data[offset + 3]) << 24) |
+             (static_cast<uint64_t>(data[offset + 4]) << 32) |
+             (static_cast<uint64_t>(data[offset + 5]) << 40) |
+             (static_cast<uint64_t>(data[offset + 6]) << 48) |
+             (static_cast<uint64_t>(data[offset + 7]) << 56);
+  offset += 8;
   return true;
 }
 } // namespace
@@ -65,7 +80,7 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     appendU32(out, static_cast<uint32_t>(fn.instructions.size()));
     for (const auto &inst : fn.instructions) {
       out.push_back(static_cast<uint8_t>(inst.op));
-      appendI32(out, inst.imm);
+      appendU64(out, inst.imm);
     }
   }
   return true;
@@ -119,7 +134,7 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       IrInstruction inst;
       inst.op = static_cast<IrOpcode>(data[offset]);
       offset += 1;
-      if (!readI32(data, offset, inst.imm)) {
+      if (!readU64(data, offset, inst.imm)) {
         error = "truncated IR instruction data";
         return false;
       }

@@ -33,7 +33,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
-- Integer literal support (signed 32-bit, requires `i32` suffix by default; opt into the `implicit-i32` filter via `--text-filters`).
+- Integer literal support (`i32`, `i64`, `u64`), requires explicit width suffixes by default; opt into the `implicit-i32` filter via `--text-filters` to auto-append `i32`.
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 
@@ -63,7 +63,7 @@ module {
 - `PrimeStructc --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer literals, locals + assign, and basic arithmetic in a single entry definition.
+  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Phase 1 — Minimal Compiler That Emits an Executable
@@ -80,7 +80,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
-- Integer literal support (signed 32-bit, requires `i32` suffix).
+- Integer literal support (`i32`, `i64`, `u64`), requires explicit width suffixes.
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 
@@ -110,7 +110,7 @@ module {
 - `PrimeStructc --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer literals, locals + assign, and basic arithmetic in a single entry definition.
+  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Goals
@@ -123,11 +123,16 @@ module {
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Intermediate representation:** strongly-typed SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering.
+  - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
 - **Backends:**
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
 - **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **AST/IR dumps:** the debug printers include executions with their argument lists and body expressions so tooling can capture scheduling intent in snapshots.
+  - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
+  - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
 
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
@@ -137,6 +142,11 @@ module {
   - `(...)` lists runtime parameters and captures.
   - `{...}` holds either a definition body or, in the execution case, an argument list for higher-order constructs.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`) with no body. The compiler decides whether to emit callable artifacts or schedule work based on that presence.
+  - Executions accept the same argument syntax as calls, including named arguments (with the same ordering rules).
+  - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>(first = 1i32)` is rejected).
+  - Example: `execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32))`.
+  - Note: the current C++ emitter only generates code for definitions; executions are parsed/validated but not emitted.
+  - Execution bodies are parsed as brace-delimited argument lists (e.g., `execute_repeat(2i32) { main(), main() }`).
 - **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical.
 - **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_stdout)]`. Standard library routines permit stdout/stderr logging; backends reject unsupported effects (e.g., GPU code requesting filesystem access).
 - **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private.
@@ -161,7 +171,8 @@ namespace demo {
   }
 }
 ```
-Statements are separated by newlines; semicolons never appear in PrimeStruct source.
+Statements are separated by newlines; semicolons never appear in PrimeStruct source. PrimeStruct does not distinguish
+between statements and expressions—any expression can stand alone as a statement, and unused values are discarded.
 
 ### Slash paths & textual operator filters
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the uniform envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
@@ -214,16 +225,17 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 ### Core library surface (draft)
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The expression evaluates to `value`, so it can be nested or returned.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring.
-- **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring.
-- **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts.
+- **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering).
+- **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected. The C++ emitter also handles floats.
 - **`if<Bool>(cond, then{…}, else{…})`:** canonical conditional form after control-flow desugaring.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. Implicit `return(void)` fires at end-of-body when omitted.
+- **IR note:** the current native/VM IR lowering does not yet support `array(...)` or `map(...)` calls; collections are parsed and validated but rejected during lowering until dedicated collection IR is added.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
 
 ## Runtime Stack Model (draft)
 - **Frames:** each execution pushes a frame recording the instruction pointer, constants, locals, captures, and effect mask. Frames are immutable from the caller’s perspective; `assign` creates new bindings.
-- **Deterministic evaluation:** arguments evaluate left-to-right; `return(value)` unwinds automatically. Implicit `return(void)` fires if the body reaches the end.
+- **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds automatically. Implicit `return(void)` fires if the body reaches the end.
 - **Transform boundaries:** rewrites annotate frame entry/exit so the VM, C++, and GLSL backends share a consistent calling convention.
 - **Resource handles:** PathSpace references/handles live inside frames as opaque values; lifetimes follow lexical scope.
 - **Tail execution (planned):** future optimisation collapses tail executions to reuse frames (VM optional, GPU required).
@@ -268,21 +280,85 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **PathSpace interop:** captured handles respect frame lifetimes; transforms force reference-count or move semantics as required.
 
 ## Literals & Composite Construction (draft)
-- **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42u32`, `1.0f64`).
-- v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `implicit-i32` is included in `--text-filters`.
+- **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
+- v0 requires explicit width suffixes for integers (`42i32`, `42i64`, `42u64`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `implicit-i32` is included in `--text-filters`.
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
+- **Named arguments:** named arguments may be reordered (including on executions), but cannot repeat a parameter name or follow a positional argument. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept named arguments.
+  - Example: `array<i32>(first = 1i32)` is rejected because collections are builtin calls.
+  - Example: `execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32))` is invalid because the positional map argument follows a named argument.
 - **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions. The brace forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals also accept `key = value` pairs inside braces.
-- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0.
+  - Requires the `collections` text filter (enabled by default in `--text-filters`).
+  - `key = value` pairs only trigger on single `=` tokens; `==`, `<=`, `>=`, and `!=` remain comparison operators.
+  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"=1i32}`), and nested expressions inside braces are rewritten as usual.
+  - Collections can appear anywhere expressions are allowed, including execution arguments.
+  - Collection literals currently compile through the C++ emitter only; IR/VM/native lowering is pending.
+  - String-keyed map literals compile through the C++ emitter using `const char *` keys.
+  - Collection literals currently lower through the C++ emitter only; the native backend does not yet lower them through IR.
+- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0 and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero). Float conversions are currently supported only by the C++ emitter.
+  - `convert<bool>` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
 
 ## Pointers & References (draft)
 - **Explicit types:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
-- **Operator transforms:** dereference (`*ptr`), address-of (`&value`), pointer arithmetic desugar to canonical calls (`dereference(ptr)`, `location(value)`, `pointer_add(ptr, offset)`).
+- **Operator transforms:** dereference (`*ptr`), address-of (`&value`), pointer arithmetic desugar to canonical calls (`dereference(ptr)`, `location(value)`, `plus(ptr, offset)`).
 - **Reference binding:** `Reference<T>` bindings are initialized from `location(...)` and behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
+- **Core pointer calls:** `location(value)` yields a pointer to a local binding; `dereference(ptr)` reads through a pointer; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`.
+- **Pointer arithmetic:** `plus(ptr, offset)` treats `offset` as a byte offset. VM/native frames currently space locals in 16-byte slots, so adding `16` advances one local slot. Offsets accept `i32`, `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.
+  - Offsets are interpreted as unsigned byte counts at runtime; negative offsets require signed operands (e.g., `-16i64`).
+  - Example: `plus(location(second), -16i64)` steps back one 16-byte slot.
+  - The C++ emitter performs raw pointer arithmetic on actual addresses; offsets are only well-defined within the same allocated object.
+  - Minimal runnable example:
+    ```
+    [return<int>]
+    main() {
+      [i32 mut] value(2i32)
+      [Pointer<i32> mut] ptr(location(value))
+      assign(dereference(ptr), 4i32)
+      return(value)
+    }
+    ```
+  - Expected IR (shape only):
+    ```
+    PushI32 2
+    StoreLocal value
+    AddressOfLocal value
+    StoreLocal ptr
+    LoadLocal ptr
+    PushI32 4
+    StoreIndirect
+    Pop
+    LoadLocal value
+    ReturnI32
+    ```
+- **Reference example:** `Reference<T>` behaves like a dereferenced pointer in expressions while still storing the address.
+  - Minimal runnable example:
+    ```
+    [return<int>]
+    main() {
+      [i32 mut] value(2i32)
+      [Reference<i32> mut] ref(location(value))
+      assign(ref, 4i32)
+      return(ref)
+    }
+    ```
+  - Expected IR (shape only):
+    ```
+    PushI32 2
+    StoreLocal value
+    AddressOfLocal value
+    StoreLocal ref
+    LoadLocal ref
+    PushI32 4
+    StoreIndirect
+    Pop
+    LoadLocal ref
+    LoadIndirect
+    ReturnI32
+    ```
 - **Ownership:** references are non-owning, frame-bound views. Pointers can be tagged `raw`, `unique`, `shared` via transform-generated wrappers around PathSpace-aware allocators.
 - **Raw memory:** `memory::load/store` primitives expose byte-level access; opt-in to highlight unsafe operations.
 - **Layout control:** attributes like `[packed]` guarantee interop-friendly layouts for C++/GLSL.
@@ -290,6 +366,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ## VM Design (draft)
 - **Instruction set:** ~50 stack-based ops covering control flow, stack manipulation, memory/pointer access, optional coroutine primitives. No implicit conversions; opcodes mirror the canonical language surface.
+- **PSIR versioning:** current portable IR is PSIR v2 (adds `AddressOfLocal`, `LoadIndirect`, `StoreIndirect` for pointer helpers).
 - **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.

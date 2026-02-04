@@ -7,8 +7,8 @@
 namespace primec {
 
 class Vm {
- public:
-  bool execute(const IrModule &module, int32_t &result, std::string &error) const;
+public:
+  bool execute(const IrModule &module, uint64_t &result, std::string &error) const;
 };
 
 } // namespace primec
