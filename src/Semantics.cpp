@@ -15,6 +15,14 @@ struct BindingInfo {
   bool isMutable = false;
 };
 
+bool isBindingQualifierName(const std::string &name) {
+  return name == "public" || name == "private" || name == "package" || name == "static";
+}
+
+bool isBindingTypeName(const std::string &name) {
+  return name == "int" || name == "i32" || name == "float" || name == "f32" || name == "f64" || name == "bool";
+}
+
 ReturnKind getReturnKind(const Definition &def, std::string &error) {
   ReturnKind kind = ReturnKind::Unknown;
   for (const auto &transform : def.transforms) {
@@ -208,13 +216,40 @@ bool isReturnCall(const Expr &expr) {
 bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
   std::string typeName;
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "mut" && !transform.templateArg) {
+    if (transform.name == "mut") {
+      if (transform.templateArg) {
+        error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
       info.isMutable = true;
       continue;
     }
-    if (transform.templateArg) {
-      error = "binding transforms do not take template arguments";
-      return false;
+    if (isBindingQualifierName(transform.name)) {
+      if (transform.templateArg) {
+        error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      continue;
+    }
+    if (isBindingTypeName(transform.name)) {
+      if (transform.templateArg) {
+        error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+    } else if (transform.templateArg || !transform.arguments.empty()) {
+      continue;
     }
     if (!typeName.empty()) {
       error = "binding requires exactly one type";

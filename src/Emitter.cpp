@@ -48,11 +48,15 @@ ReturnKind getReturnKind(const Definition &def) {
 BindingInfo getBindingInfo(const Expr &expr) {
   BindingInfo info;
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "mut" && !transform.templateArg) {
+    if (transform.name == "mut" && !transform.templateArg && transform.arguments.empty()) {
       info.isMutable = true;
       continue;
     }
-    if (!transform.templateArg) {
+    if (!transform.templateArg && transform.arguments.empty()) {
+      if (transform.name == "public" || transform.name == "private" || transform.name == "package" ||
+          transform.name == "static") {
+        continue;
+      }
       info.typeName = transform.name;
     }
   }

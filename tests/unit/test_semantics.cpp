@@ -950,6 +950,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding qualifiers are allowed") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [public float] exposure(1.5f)
+  [private align_bytes(16) i32 mut] count(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to mutable binding succeeds") {
   const std::string source = R"(
 [return<int>]
