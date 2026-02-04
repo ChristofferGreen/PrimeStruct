@@ -36,6 +36,18 @@ main() {
   CHECK(error.find("missing entry definition") != std::string::npos);
 }
 
+TEST_CASE("entry definition rejects parameters") {
+  const std::string source = R"(
+[return<int>]
+main(value) {
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("entry definition does not support parameters") != std::string::npos);
+}
+
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]

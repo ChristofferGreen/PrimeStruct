@@ -1758,8 +1758,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
   }
 
-  if (defMap.count(entryPath) == 0) {
+  auto entryIt = defMap.find(entryPath);
+  if (entryIt == defMap.end()) {
     error = "missing entry definition " + entryPath;
+    return false;
+  }
+  if (!entryIt->second->parameters.empty()) {
+    error = "entry definition does not support parameters: " + entryPath;
     return false;
   }
 
