@@ -249,7 +249,21 @@ bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }
 
-bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
+std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix) {
+  if (!name.empty() && name[0] == '/') {
+    return name;
+  }
+  if (!namespacePrefix.empty()) {
+    return namespacePrefix + "/" + name;
+  }
+  return "/" + name;
+}
+
+bool parseBindingInfo(const Expr &expr,
+                      const std::string &namespacePrefix,
+                      const std::unordered_set<std::string> &structTypes,
+                      BindingInfo &info,
+                      std::string &error) {
   std::string typeName;
   bool typeHasTemplate = false;
   for (const auto &transform : expr.transforms) {
@@ -313,8 +327,19 @@ bool parseBindingInfo(const Expr &expr, BindingInfo &info, std::string &error) {
     return false;
   }
   if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
-    error = "unsupported binding type: " + typeName;
-    return false;
+    std::string resolved = resolveTypePath(typeName, namespacePrefix);
+    if (structTypes.count(resolved) == 0) {
+      error = "unsupported binding type: " + typeName;
+      return false;
+    }
+  }
+  if (isPrimitiveBindingTypeName(typeName)) {
+    info.typeName = typeName;
+    return true;
+  }
+  if (typeHasTemplate) {
+    info.typeName = typeName;
+    return true;
   }
   info.typeName = typeName;
   return true;
@@ -823,20 +848,22 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                      const Expr &,
                      ReturnKind,
                      bool,
-                     bool *)>
+                     bool *,
+                     const std::string &)>
       validateStatement = [&](const std::vector<std::string> &params,
                               std::unordered_map<std::string, BindingInfo> &locals,
                               const Expr &stmt,
                               ReturnKind returnKind,
                               bool allowReturn,
-                              bool *sawReturn) -> bool {
+                              bool *sawReturn,
+                              const std::string &namespacePrefix) -> bool {
     if (stmt.isBinding) {
       if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
         error = "duplicate binding name: " + stmt.name;
         return false;
       }
       BindingInfo info;
-      if (!parseBindingInfo(stmt, info, error)) {
+      if (!parseBindingInfo(stmt, namespacePrefix, structNames, info, error)) {
         return false;
       }
       if (stmt.args.size() != 1) {
@@ -912,7 +939,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         std::unordered_map<std::string, BindingInfo> blockLocals = locals;
         for (const auto &bodyExpr : block.bodyArguments) {
-          if (!validateStatement(params, blockLocals, bodyExpr, returnKind, allowReturn, sawReturn)) {
+          if (!validateStatement(params,
+                                 blockLocals,
+                                 bodyExpr,
+                                 returnKind,
+                                 allowReturn,
+                                 sawReturn,
+                                 namespacePrefix)) {
             return false;
           }
         }
@@ -942,7 +975,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
     bool sawReturn = false;
     for (const auto &stmt : def.statements) {
-      if (!validateStatement(def.parameters, locals, stmt, kind, true, &sawReturn)) {
+      if (!validateStatement(def.parameters, locals, stmt, kind, true, &sawReturn, def.namespacePrefix)) {
         return false;
       }
     }
@@ -998,7 +1031,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments must be calls";
         return false;
       }
-      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, nullptr)) {
+      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, nullptr, exec.namespacePrefix)) {
         return false;
       }
     }

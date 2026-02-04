@@ -990,6 +990,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding allows struct types") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  [thing] item(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pointer_add validates") {
   const std::string source = R"(
 [return<int>]
