@@ -1137,7 +1137,7 @@ TEST_CASE("pointer helpers validate") {
 [return<int>]
 main() {
   [i32] value(1i32)
-  return(deref(address_of(value)))
+  return(dereference(location(value)))
 }
 )";
   std::string error;
@@ -1200,8 +1200,9 @@ TEST_CASE("binding allows pointer types") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [Pointer<int>] ptr(1i32)
-  [Reference<i32>] ref(2i32)
+  [i32 mut] value(1i32)
+  [Pointer<i32>] ptr(location(value))
+  [Reference<i32>] ref(location(value))
   return(1i32)
 }
 )";
@@ -1215,7 +1216,7 @@ TEST_CASE("pointer_add validates") {
 [return<int>]
 main() {
   [i32] value(3i32)
-  return(pointer_add(address_of(value), 1i32))
+  return(pointer_add(location(value), 1i32))
 }
 )";
   std::string error;
@@ -1269,7 +1270,7 @@ TEST_CASE("pointer binding and dereference assignment validate") {
 [return<int>]
 main() {
   [i32 mut] value(5i32)
-  [Pointer<i32>] ptr(location(value))
+  [Pointer<i32> mut] ptr(location(value))
   assign(dereference(ptr), 4i32)
   return(value)
 }
@@ -1277,6 +1278,34 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("reference binding assigns to target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(5i32)
+  [Reference<i32> mut] ref(location(value))
+  assign(ref, 4i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reference binding requires location") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Reference<i32>] ref(5i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Reference bindings require location") != std::string::npos);
 }
 
 TEST_CASE("if validates block arguments") {

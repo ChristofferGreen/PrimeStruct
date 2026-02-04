@@ -106,6 +106,13 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
     }
     return base + " *";
   }
+  if (info.typeName == "Reference") {
+    std::string base = bindingTypeToCpp(info.typeTemplateArg);
+    if (base.empty()) {
+      base = "void";
+    }
+    return base + " &";
+  }
   return bindingTypeToCpp(info.typeName);
 }
 
@@ -247,11 +254,11 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "deref" || name == "dereference") {
+  if (name == "dereference") {
     out = '*';
     return true;
   }
-  if (name == "address_of" || name == "location") {
+  if (name == "location") {
     out = '&';
     return true;
   }
@@ -812,9 +819,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
         std::string type = bindingTypeToCpp(binding);
+        bool isReference = binding.typeName == "Reference";
         out << pad << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
-          out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap);
+          if (isReference) {
+            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap) << ")";
+          } else {
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap);
+          }
         }
         out << ";\n";
         return;

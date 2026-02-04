@@ -154,7 +154,7 @@ TEST_CASE("compiles and runs pointer helpers") {
 [return<int>]
 main() {
   [i32] value(4i32)
-  return(deref(address_of(value)))
+  return(dereference(location(value)))
 }
 )";
   const std::string srcPath = writeTemp("compile_pointer_helpers.prime", source);
@@ -170,7 +170,7 @@ TEST_CASE("compiles and runs pointer_add helper") {
 [return<int>]
 main() {
   [i32] value(5i32)
-  return(deref(pointer_add(address_of(value), 0i32)))
+  return(dereference(pointer_add(location(value), 0i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_pointer_add.prime", source);
@@ -817,6 +817,24 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs assign to reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [Reference<i32> mut] ref(location(value))
+  assign(ref, 9i32)
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_assign_ref.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_assign_ref_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
 }
 
 TEST_SUITE_END();

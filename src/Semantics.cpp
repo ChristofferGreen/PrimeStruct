@@ -167,7 +167,7 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "deref" || name == "dereference" || name == "address_of" || name == "location") {
+  if (name == "dereference" || name == "location") {
     out = name;
     return true;
   }
@@ -369,6 +369,24 @@ bool parseBindingInfo(const Expr &expr,
       info.typeTemplateArg = *transform.templateArg;
       continue;
     }
+    if (transform.name == "Reference") {
+      if (!transform.templateArg) {
+        error = "Reference requires a template argument";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      if (!typeName.empty()) {
+        error = "binding requires exactly one type";
+        return false;
+      }
+      typeName = transform.name;
+      typeHasTemplate = true;
+      info.typeTemplateArg = *transform.templateArg;
+      continue;
+    }
     if (transform.templateArg) {
       if (!transform.arguments.empty()) {
         error = "binding transforms do not take arguments";
@@ -410,6 +428,16 @@ bool parseBindingInfo(const Expr &expr,
     }
     if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
       error = "unsupported pointer target type: " + info.typeTemplateArg;
+      return false;
+    }
+  }
+  if (typeHasTemplate && typeName == "Reference") {
+    if (info.typeTemplateArg.empty()) {
+      error = "Reference requires a template argument";
+      return false;
+    }
+    if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
+      error = "unsupported reference target type: " + info.typeTemplateArg;
       return false;
     }
   }
@@ -825,6 +853,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         return returnKindForTypeName(expr.templateArgs.front());
       }
+      if (isAssignCall(expr)) {
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        return inferExprReturnKind(expr.args[1], params, locals);
+      }
       return ReturnKind::Unknown;
     }
     return ReturnKind::Unknown;
@@ -1106,13 +1140,17 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
         } else if (target.kind == Expr::Kind::Call) {
           std::string pointerName;
-          if (!getBuiltinPointerName(target, pointerName) ||
-              (pointerName != "deref" && pointerName != "dereference") ||
+          if (!getBuiltinPointerName(target, pointerName) || pointerName != "dereference" ||
               target.args.size() != 1) {
             error = "assign target must be a mutable binding";
             return false;
           }
-          if (!validateExpr(params, locals, target.args.front())) {
+          const Expr &pointerExpr = target.args.front();
+          if (pointerExpr.kind != Expr::Kind::Name || !isMutableLocal(locals, pointerExpr.name)) {
+            error = "assign target must be a mutable binding";
+            return false;
+          }
+          if (!validateExpr(params, locals, pointerExpr)) {
             return false;
           }
         } else {
@@ -1178,6 +1216,15 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       if (!validateExpr(params, locals, stmt.args.front())) {
         return false;
+      }
+      if (info.typeName == "Reference") {
+        const Expr &init = stmt.args.front();
+        std::string pointerName;
+        if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
+            pointerName != "location" || init.args.size() != 1) {
+          error = "Reference bindings require location(...)";
+          return false;
+        }
       }
       locals.emplace(stmt.name, info);
       return true;

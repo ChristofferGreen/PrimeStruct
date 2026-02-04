@@ -387,24 +387,24 @@ TEST_CASE("rewrites unary minus before parentheses") {
   CHECK(output.find("negate(value)") != std::string::npos);
 }
 
-TEST_CASE("rewrites address_of before name") {
+TEST_CASE("rewrites location before name") {
   const std::string source = "main(){ return(&value) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("address_of(value)") != std::string::npos);
+  CHECK(output.find("location(value)") != std::string::npos);
 }
 
-TEST_CASE("rewrites deref before name") {
+TEST_CASE("rewrites dereference before name") {
   const std::string source = "main(){ return(*value) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("deref(value)") != std::string::npos);
+  CHECK(output.find("dereference(value)") != std::string::npos);
 }
 
 TEST_CASE("does not rewrite template list syntax") {

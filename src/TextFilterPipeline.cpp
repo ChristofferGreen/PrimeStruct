@@ -452,7 +452,7 @@ bool rewriteUnaryAddressOf(const std::string &input,
     return false;
   }
   if (input[index + 1] == '(') {
-    output.append("address_of");
+    output.append("location");
     return true;
   }
   size_t rightStart = index + 1;
@@ -466,7 +466,7 @@ bool rewriteUnaryAddressOf(const std::string &input,
   std::string right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
-  output.append("address_of(");
+  output.append("location(");
   output.append(right);
   output.append(")");
   index = rightEnd - 1;
@@ -482,7 +482,7 @@ bool rewriteUnaryDeref(const std::string &input, std::string &output, size_t &in
     return false;
   }
   if (input[index + 1] == '(') {
-    output.append("deref");
+    output.append("dereference");
     return true;
   }
   size_t rightStart = index + 1;
@@ -496,7 +496,7 @@ bool rewriteUnaryDeref(const std::string &input, std::string &output, size_t &in
   std::string right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
-  output.append("deref(");
+  output.append("dereference(");
   output.append(right);
   output.append(")");
   index = rightEnd - 1;
