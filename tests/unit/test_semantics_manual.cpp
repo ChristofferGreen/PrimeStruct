@@ -181,14 +181,14 @@ TEST_CASE("block arguments allowed on statement calls") {
   CHECK(error.empty());
 }
 
-TEST_CASE("statements must be calls") {
+TEST_CASE("literal statements are allowed") {
   primec::Program program;
   primec::Expr literal = makeLiteral(1);
   program.definitions.push_back(
       makeDefinition("/main", {makeTransform("return", std::string("int"))}, {literal}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("statements must be calls") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("assign target must be a mutable binding") {

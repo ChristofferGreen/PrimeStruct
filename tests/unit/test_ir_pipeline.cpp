@@ -101,6 +101,32 @@ main() {
   CHECK(result == 0);
 }
 
+TEST_CASE("ir lowers literal statement with pop") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  1i32
+  return(2i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  const auto &inst = module.functions[0].instructions;
+  REQUIRE(inst.size() == 4);
+  CHECK(inst[0].op == primec::IrOpcode::PushI32);
+  CHECK(inst[1].op == primec::IrOpcode::Pop);
+  CHECK(inst[2].op == primec::IrOpcode::PushI32);
+  CHECK(inst[3].op == primec::IrOpcode::ReturnI32);
+}
+
 TEST_CASE("ir lowers i64 arithmetic") {
   const std::string source = R"(
 [return<i64>]
@@ -1157,6 +1183,48 @@ main() {
   CHECK(result == 1);
 }
 
+TEST_CASE("ir lowers location of reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(5i32)
+  [Reference<i32> mut] ref(location(value))
+  return(dereference(location(ref)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawAddressOf = false;
+  bool sawLoadLocal = false;
+  bool sawLoadIndirect = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::AddressOfLocal) {
+      sawAddressOf = true;
+    } else if (inst.op == primec::IrOpcode::LoadLocal) {
+      sawLoadLocal = true;
+    } else if (inst.op == primec::IrOpcode::LoadIndirect) {
+      sawLoadIndirect = true;
+    }
+  }
+  CHECK(sawAddressOf);
+  CHECK(sawLoadLocal);
+  CHECK(sawLoadIndirect);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
 TEST_CASE("ir lowerer rejects unsupported convert") {
   const std::string source = R"(
 [return<int>]
@@ -1280,7 +1348,7 @@ main() {
   CHECK(error.find("pointer arithmetic requires pointer on the left") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects location of non-local") {
+TEST_CASE("semantics reject location of non-local") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1289,12 +1357,7 @@ main() {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK_FALSE(parseAndValidate(source, program, error));
   CHECK(error.find("location requires a local name") != std::string::npos);
 }
 

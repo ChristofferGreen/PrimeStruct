@@ -1219,6 +1219,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("location requires local name") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(dereference(location(plus(1i32, 2i32))))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("location requires a local name") != std::string::npos);
+}
+
+TEST_CASE("location requires known local") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(dereference(location(missing)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("location requires a known local: missing") != std::string::npos);
+}
+
 TEST_CASE("binding allows templated type") {
   const std::string source = R"(
 [return<int>]
@@ -1469,6 +1493,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("dereference requires a pointer or reference") != std::string::npos);
+}
+
+TEST_CASE("literal statement validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  1i32
+  return(2i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("pointer assignment requires mutable binding") {

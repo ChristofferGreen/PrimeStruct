@@ -1157,6 +1157,17 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           error = "argument count mismatch for builtin " + builtinName;
           return false;
         }
+        if (builtinName == "location") {
+          const Expr &target = expr.args.front();
+          if (target.kind != Expr::Kind::Name) {
+            error = "location requires a local name";
+            return false;
+          }
+          if (!isParam(params, target.name) && locals.count(target.name) == 0) {
+            error = "location requires a known local: " + target.name;
+            return false;
+          }
+        }
         if (builtinName == "dereference") {
           if (!isPointerLikeExpr(expr.args.front(), locals)) {
             error = "dereference requires a pointer or reference";
@@ -1294,8 +1305,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return true;
     }
     if (stmt.kind != Expr::Kind::Call) {
-      error = "statements must be calls";
-      return false;
+      return validateExpr(params, locals, stmt);
     }
     if (isReturnCall(stmt)) {
       if (!allowReturn) {

@@ -173,7 +173,8 @@ namespace demo {
 }
 ```
 Statements are separated by newlines; semicolons never appear in PrimeStruct source. PrimeStruct does not distinguish
-between statements and expressions—any expression can stand alone as a statement, and unused values are discarded.
+between statements and expressions—any expression can stand alone as a statement, and unused values are discarded (for
+example, `helper()` or `1i32` can appear as standalone statements).
 
 ### Slash paths & textual operator filters
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the uniform envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
@@ -308,9 +309,9 @@ between statements and expressions—any expression can stand alone as a stateme
 
 ## Pointers & References (draft)
 - **Explicit types:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
-- **Operator transforms:** dereference (`*ptr`), address-of (`&value`), pointer arithmetic desugar to canonical calls (`dereference(ptr)`, `location(value)`, `plus(ptr, offset)`).
+- **Surface syntax:** pointer helpers are explicit calls (`location`, `dereference`, `plus`/`minus`); there is no `&`/`*` operator sugar yet.
 - **Reference binding:** `Reference<T>` bindings are initialized from `location(...)` and behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
-- **Core pointer calls:** `location(value)` yields a pointer to a local binding; `dereference(ptr)` reads through a pointer/reference expression; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
+- **Core pointer calls:** `location(value)` yields a pointer to a local binding (location only accepts a local binding name); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads through a pointer/reference expression; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
 - **Pointer arithmetic:** `plus(ptr, offset)` treats `offset` as a byte offset. VM/native frames currently space locals in 16-byte slots, so adding `16` advances one local slot. Offsets accept `i32`, `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.
   - Pointer + pointer is rejected; only pointer ± integer offsets are allowed.
   - Offsets are interpreted as unsigned byte counts at runtime; negative offsets require signed operands (e.g., `-16i64`).

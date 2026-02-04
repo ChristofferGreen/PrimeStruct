@@ -792,13 +792,15 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       return fail("unexpected end of file inside definition body");
     }
     std::vector<Transform> statementTransforms;
+    bool hasStatementTransforms = false;
     if (match(TokenKind::LBracket)) {
       if (!parseTransformList(statementTransforms)) {
         return false;
       }
+      hasStatementTransforms = true;
     }
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "return") {
-      if (!statementTransforms.empty()) {
+      if (hasStatementTransforms) {
         return fail("return statement cannot have transforms");
       }
       Expr returnCall;
@@ -812,97 +814,120 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       def.statements.push_back(std::move(returnCall));
       continue;
     }
-    Token name = consume(TokenKind::Identifier, "expected statement");
-    if (name.kind == TokenKind::End) {
-      return false;
-    }
-    std::string nameError;
-    if (!validateIdentifierText(name.text, nameError)) {
-      return fail(nameError);
-    }
-    if (name.text == "if" && statementTransforms.empty() && match(TokenKind::LParen)) {
+    if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
+      if (hasStatementTransforms) {
+        return fail("if statement cannot have transforms");
+      }
       size_t savedPos = pos_;
-      expect(TokenKind::LParen, "expected '(' after if");
-      Expr condition;
-      if (!parseExpr(condition, def.namespacePrefix)) {
+      Token name = consume(TokenKind::Identifier, "expected statement");
+      if (name.kind == TokenKind::End) {
         return false;
       }
-      if (!match(TokenKind::Comma) && match(TokenKind::RParen)) {
-        expect(TokenKind::RParen, "expected ')' after if condition");
-        if (match(TokenKind::LBrace)) {
-          std::vector<Expr> thenBody;
-          if (!parseBraceExprList(thenBody, def.namespacePrefix)) {
-            return false;
+      if (match(TokenKind::LParen)) {
+        expect(TokenKind::LParen, "expected '(' after if");
+        Expr condition;
+        if (!parseExpr(condition, def.namespacePrefix)) {
+          return false;
+        }
+        if (!match(TokenKind::Comma) && match(TokenKind::RParen)) {
+          expect(TokenKind::RParen, "expected ')' after if condition");
+          if (match(TokenKind::LBrace)) {
+            std::vector<Expr> thenBody;
+            if (!parseBraceExprList(thenBody, def.namespacePrefix)) {
+              return false;
+            }
+            if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
+              return fail("if statement requires else block");
+            }
+            consume(TokenKind::Identifier, "expected 'else'");
+            std::vector<Expr> elseBody;
+            if (!parseBraceExprList(elseBody, def.namespacePrefix)) {
+              return false;
+            }
+            Expr thenCall;
+            thenCall.kind = Expr::Kind::Call;
+            thenCall.name = "then";
+            thenCall.namespacePrefix = def.namespacePrefix;
+            thenCall.bodyArguments = std::move(thenBody);
+            Expr elseCall;
+            elseCall.kind = Expr::Kind::Call;
+            elseCall.name = "else";
+            elseCall.namespacePrefix = def.namespacePrefix;
+            elseCall.bodyArguments = std::move(elseBody);
+            Expr ifCall;
+            ifCall.kind = Expr::Kind::Call;
+            ifCall.name = "if";
+            ifCall.namespacePrefix = def.namespacePrefix;
+            ifCall.args.push_back(std::move(condition));
+            ifCall.argNames.push_back(std::nullopt);
+            ifCall.args.push_back(std::move(thenCall));
+            ifCall.argNames.push_back(std::nullopt);
+            ifCall.args.push_back(std::move(elseCall));
+            ifCall.argNames.push_back(std::nullopt);
+            def.statements.push_back(std::move(ifCall));
+            continue;
           }
-          if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
-            return fail("if statement requires else block");
-          }
-          consume(TokenKind::Identifier, "expected 'else'");
-          std::vector<Expr> elseBody;
-          if (!parseBraceExprList(elseBody, def.namespacePrefix)) {
-            return false;
-          }
-          Expr thenCall;
-          thenCall.kind = Expr::Kind::Call;
-          thenCall.name = "then";
-          thenCall.namespacePrefix = def.namespacePrefix;
-          thenCall.bodyArguments = std::move(thenBody);
-          Expr elseCall;
-          elseCall.kind = Expr::Kind::Call;
-          elseCall.name = "else";
-          elseCall.namespacePrefix = def.namespacePrefix;
-          elseCall.bodyArguments = std::move(elseBody);
-          Expr ifCall;
-          ifCall.kind = Expr::Kind::Call;
-          ifCall.name = "if";
-          ifCall.namespacePrefix = def.namespacePrefix;
-          ifCall.args.push_back(std::move(condition));
-          ifCall.argNames.push_back(std::nullopt);
-          ifCall.args.push_back(std::move(thenCall));
-          ifCall.argNames.push_back(std::nullopt);
-          ifCall.args.push_back(std::move(elseCall));
-          ifCall.argNames.push_back(std::nullopt);
-          def.statements.push_back(std::move(ifCall));
-          continue;
         }
       }
       pos_ = savedPos;
-    } else if (name.text == "if" && !statementTransforms.empty()) {
-      return fail("if statement cannot have transforms");
     }
 
-    Expr callExpr;
-    callExpr.kind = Expr::Kind::Call;
-    callExpr.name = name.text;
-    callExpr.namespacePrefix = def.namespacePrefix;
-    callExpr.transforms = std::move(statementTransforms);
-    callExpr.isBinding = !callExpr.transforms.empty();
-    if (match(TokenKind::LAngle)) {
-      if (!parseTemplateList(callExpr.templateArgs)) {
+    if (!statementTransforms.empty()) {
+      Token name = consume(TokenKind::Identifier, "expected statement");
+      if (name.kind == TokenKind::End) {
         return false;
       }
-    }
-    if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
-      return false;
-    }
-    if (!parseCallArgumentList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
-      return false;
-    }
-    if (!validateNoBuiltinNamedArguments(callExpr.name, callExpr.argNames)) {
-      return false;
-    }
-    if (!validateNamedArgumentOrdering(callExpr.argNames)) {
-      return false;
-    }
-    if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
-      return false;
-    }
-    if (match(TokenKind::LBrace)) {
-      if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
+      }
+      if (name.text == "if") {
+        return fail("if statement cannot have transforms");
+      }
+      if (name.text == "return") {
+        return fail("return statement cannot have transforms");
+      }
+
+      Expr callExpr;
+      callExpr.kind = Expr::Kind::Call;
+      callExpr.name = name.text;
+      callExpr.namespacePrefix = def.namespacePrefix;
+      callExpr.transforms = std::move(statementTransforms);
+      callExpr.isBinding = !callExpr.transforms.empty();
+      if (match(TokenKind::LAngle)) {
+        if (!parseTemplateList(callExpr.templateArgs)) {
+          return false;
+        }
+      }
+      if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
         return false;
       }
+      if (!parseCallArgumentList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
+        return false;
+      }
+      if (!validateNoBuiltinNamedArguments(callExpr.name, callExpr.argNames)) {
+        return false;
+      }
+      if (!validateNamedArgumentOrdering(callExpr.argNames)) {
+        return false;
+      }
+      if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
+        return false;
+      }
+      if (match(TokenKind::LBrace)) {
+        if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+          return false;
+        }
+      }
+      def.statements.push_back(std::move(callExpr));
+      continue;
     }
-    def.statements.push_back(std::move(callExpr));
+
+    Expr statementExpr;
+    if (!parseExpr(statementExpr, def.namespacePrefix)) {
+      return false;
+    }
+    def.statements.push_back(std::move(statementExpr));
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
   if (!foundReturn && !returnsVoid && !allowNoReturn) {
