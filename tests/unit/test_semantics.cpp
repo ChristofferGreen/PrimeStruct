@@ -1483,6 +1483,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("reference participates in arithmetic") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(5i32)
+  [Reference<i32> mut] ref(location(value))
+  assign(ref, plus(ref, 2i32))
+  return(plus(1i32, ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("dereference requires pointer or reference") {
   const std::string source = R"(
 [return<int>]

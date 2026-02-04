@@ -365,6 +365,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
     LoadIndirect
     ReturnI32
     ```
+  - References can be used directly in arithmetic (e.g., `plus(ref, 2i32)`), and `location(ref)` yields the underlying pointer.
 - **Ownership:** references are non-owning, frame-bound views. Pointers can be tagged `raw`, `unique`, `shared` via transform-generated wrappers around PathSpace-aware allocators.
 - **Raw memory:** `memory::load/store` primitives expose byte-level access; opt-in to highlight unsafe operations.
 - **Layout control:** attributes like `[packed]` guarantee interop-friendly layouts for C++/GLSL.

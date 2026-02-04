@@ -614,6 +614,46 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("ir lowers location of reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(2i32)
+  [Reference<i32> mut] ref(location(value))
+  [Pointer<i32>] ptr(location(ref))
+  return(dereference(ptr))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  int addressCount = 0;
+  bool sawRefLoad = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::AddressOfLocal) {
+      addressCount += 1;
+    }
+    if (inst.op == primec::IrOpcode::LoadLocal && inst.imm == 1) {
+      sawRefLoad = true;
+    }
+  }
+  CHECK(addressCount == 1);
+  CHECK(sawRefLoad);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
+}
+
 TEST_CASE("ir lowers pointer plus") {
   const std::string source = R"(
 [return<int>]
