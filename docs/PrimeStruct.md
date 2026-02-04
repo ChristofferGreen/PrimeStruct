@@ -261,7 +261,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ## Literals & Composite Construction (draft)
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42u32`, `1.0f64`).
-  - v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; the default compiler pipeline enables implicit `i32` suffixing unless `--no-implicit-i32` is passed.
+- v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `--implicit-i32` is passed.
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
