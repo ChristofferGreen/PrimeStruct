@@ -167,6 +167,36 @@ TEST_CASE("rewrites plus operator with unary minus operand") {
   CHECK(output.find("plus(a, negate(b))") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus operator with leading unary minus name") {
+  const std::string source = "main(){ return(-value+2) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(negate(value), 2i32)") != std::string::npos);
+}
+
+TEST_CASE("rewrites plus operator with string literals") {
+  const std::string source = "main(){ return(\"a\"+\"b\") }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(\"a\", \"b\")") != std::string::npos);
+}
+
+TEST_CASE("rewrites plus operator with raw string literals") {
+  const std::string source = "main(){ return(R\"(a)\"+R\"(b)\") }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(R\"(a)\", R\"(b)\")") != std::string::npos);
+}
+
 TEST_CASE("rewrites multiply operator with unary minus operand") {
   const std::string source = "main(){ return(a*-b) }\n";
   primec::TextFilterPipeline pipeline;
@@ -315,6 +345,16 @@ TEST_CASE("rewrites not operator without spaces") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output.find("not(a)") != std::string::npos);
+}
+
+TEST_CASE("rewrites not operator with numeric literal") {
+  const std::string source = "main(){ return(!1) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("not(1i32)") != std::string::npos);
 }
 
 TEST_CASE("rewrites not operator before parentheses") {
@@ -505,6 +545,54 @@ TEST_CASE("does not add suffix to float literal with exponent") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output == source);
+}
+
+TEST_CASE("does not add suffix before identifier characters") {
+  const std::string source = "main(){ return(1foo) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not add suffix before dot access") {
+  const std::string source = "main(){ return(1.value) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not rewrite collection literal name prefixes") {
+  const std::string source = "main(){ return(arrayish{1i32}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("fails on unterminated collection literal") {
+  const std::string source = "array<i32>{1i32";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  (void)pipeline.apply(source, output, error);
+  CHECK(error.find("unterminated collection literal") != std::string::npos);
+}
+
+TEST_CASE("fails on unterminated template list in collection literal") {
+  const std::string source = "array<i32{1i32}";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  (void)pipeline.apply(source, output, error);
+  CHECK(error.find("unterminated template list in collection literal") != std::string::npos);
 }
 
 TEST_CASE("rewrites plus operator with exponent float") {
