@@ -894,6 +894,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin and rejects float operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(and(1.5f, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
+}
+
 TEST_CASE("builtin or calls validate") {
   const std::string source = R"(
 [return<int>]
@@ -916,6 +928,30 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("builtin comparison rejects float operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(less_than(1.5f, 2.5f))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
+}
+
+TEST_CASE("builtin comparison rejects string operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(equal("a", "b"))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require integer or bool operands") != std::string::npos);
 }
 
 TEST_CASE("builtin clamp calls validate") {
