@@ -425,6 +425,9 @@ std::string Emitter::emitExpr(const Expr &expr,
   if (expr.kind == Expr::Kind::Literal) {
     return std::to_string(expr.literalValue);
   }
+  if (expr.kind == Expr::Kind::BoolLiteral) {
+    return expr.boolValue ? "true" : "false";
+  }
   if (expr.kind == Expr::Kind::FloatLiteral) {
     if (expr.floatWidth == 64) {
       return expr.floatValue;
@@ -584,6 +587,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
                             const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
     if (expr.kind == Expr::Kind::Literal) {
       return ReturnKind::Int;
+    }
+    if (expr.kind == Expr::Kind::BoolLiteral) {
+      return ReturnKind::Bool;
     }
     if (expr.kind == Expr::Kind::FloatLiteral) {
       return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;

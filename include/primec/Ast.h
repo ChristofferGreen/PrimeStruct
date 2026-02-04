@@ -13,8 +13,9 @@ struct Transform {
 };
 
 struct Expr {
-  enum class Kind { Literal, FloatLiteral, StringLiteral, Call, Name } kind = Kind::Literal;
+  enum class Kind { Literal, BoolLiteral, FloatLiteral, StringLiteral, Call, Name } kind = Kind::Literal;
   int literalValue = 0;
+  bool boolValue = false;
   std::string floatValue;
   int floatWidth = 32;
   std::string stringValue;

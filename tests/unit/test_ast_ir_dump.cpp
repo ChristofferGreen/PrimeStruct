@@ -201,7 +201,7 @@ main() {
   const std::string expected =
       "module {\n"
       "  def /main(): bool {\n"
-      "    let flag: bool = 1\n"
+      "    let flag: bool = true\n"
       "    return flag\n"
       "  }\n"
       "}\n";

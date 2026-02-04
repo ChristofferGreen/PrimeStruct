@@ -203,6 +203,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
   case Expr::Kind::Literal:
     out << expr.literalValue;
     break;
+  case Expr::Kind::BoolLiteral:
+    out << (expr.boolValue ? "true" : "false");
+    break;
   case Expr::Kind::FloatLiteral:
     out << expr.floatValue << (expr.floatWidth == 64 ? "f64" : "f32");
     break;
@@ -373,6 +376,9 @@ std::string IrPrinter::print(const Program &program) const {
                             const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
     if (expr.kind == Expr::Kind::Literal) {
       return ReturnKind::Int;
+    }
+    if (expr.kind == Expr::Kind::BoolLiteral) {
+      return ReturnKind::Bool;
     }
     if (expr.kind == Expr::Kind::FloatLiteral) {
       return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;

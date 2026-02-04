@@ -1012,9 +1012,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return false;
     }
     if (name.text == "true" || name.text == "false") {
-      expr.kind = Expr::Kind::Literal;
+      expr.kind = Expr::Kind::BoolLiteral;
       expr.namespacePrefix = namespacePrefix;
-      expr.literalValue = name.text == "true" ? 1 : 0;
+      expr.boolValue = name.text == "true";
       return true;
     }
     std::string nameError;

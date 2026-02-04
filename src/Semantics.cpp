@@ -699,6 +699,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     if (expr.kind == Expr::Kind::Literal) {
       return ReturnKind::Int;
     }
+    if (expr.kind == Expr::Kind::BoolLiteral) {
+      return ReturnKind::Bool;
+    }
     if (expr.kind == Expr::Kind::FloatLiteral) {
       return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
     }
@@ -848,6 +851,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                          const std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &expr) -> bool {
     if (expr.kind == Expr::Kind::Literal) {
+      return true;
+    }
+    if (expr.kind == Expr::Kind::BoolLiteral) {
       return true;
     }
     if (expr.kind == Expr::Kind::FloatLiteral) {
