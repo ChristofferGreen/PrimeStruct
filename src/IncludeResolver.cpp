@@ -7,6 +7,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <unordered_set>
 #include <vector>
 
@@ -108,6 +109,57 @@ bool isPrivatePath(const std::filesystem::path &path) {
     }
   }
   return false;
+}
+
+bool collectPrimeFiles(const std::filesystem::path &root,
+                       std::vector<std::filesystem::path> &out,
+                       std::string &error) {
+  out.clear();
+  if (isPrivatePath(root)) {
+    error = "include path refers to private folder: " + std::filesystem::absolute(root).string();
+    return false;
+  }
+  if (std::filesystem::is_regular_file(root)) {
+    out.push_back(root);
+    return true;
+  }
+  if (!std::filesystem::is_directory(root)) {
+    error = "failed to read include: " + std::filesystem::absolute(root).string();
+    return false;
+  }
+  std::error_code ec;
+  std::filesystem::recursive_directory_iterator it(root, std::filesystem::directory_options::skip_permission_denied,
+                                                   ec);
+  std::filesystem::recursive_directory_iterator end;
+  for (; it != end; it.increment(ec)) {
+    if (ec) {
+      error = "failed to read include: " + std::filesystem::absolute(root).string();
+      return false;
+    }
+    const std::filesystem::path current = it->path();
+    if (it->is_directory()) {
+      if (isPrivatePath(current)) {
+        it.disable_recursion_pending();
+      }
+      continue;
+    }
+    if (!it->is_regular_file()) {
+      continue;
+    }
+    if (current.extension() != ".prime") {
+      continue;
+    }
+    if (isPrivatePath(current)) {
+      continue;
+    }
+    out.push_back(current);
+  }
+  if (out.empty()) {
+    error = "include directory contains no .prime files: " + std::filesystem::absolute(root).string();
+    return false;
+  }
+  std::sort(out.begin(), out.end());
+  return true;
 }
 
 bool selectVersionDirectory(const std::filesystem::path &baseDir,
@@ -314,14 +366,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               }
               foundVersion = true;
               std::filesystem::path candidate = root / selected / logicalPath;
-          if (std::filesystem::exists(candidate)) {
-            if (isPrivatePath(candidate)) {
-              error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
-              return false;
-            }
-            resolved = std::filesystem::absolute(candidate);
-            return true;
-          }
+              if (std::filesystem::exists(candidate)) {
+                if (isPrivatePath(candidate)) {
+                  error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                  return false;
+                }
+                resolved = std::filesystem::absolute(candidate);
+                return true;
+              }
               lastCandidate = candidate;
             }
             if (!foundVersion) {
@@ -338,14 +390,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
 
           if (!isAbsolute) {
             std::filesystem::path candidate = std::filesystem::path(baseDir) / requested;
-          if (std::filesystem::exists(candidate)) {
-            if (isPrivatePath(candidate)) {
-              error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
-              return false;
+            if (std::filesystem::exists(candidate)) {
+              if (isPrivatePath(candidate)) {
+                error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                return false;
+              }
+              resolved = std::filesystem::absolute(candidate);
+              return true;
             }
-            resolved = std::filesystem::absolute(candidate);
-            return true;
-          }
             for (const auto &root : includeRoots) {
               candidate = root / requested;
               if (std::filesystem::exists(candidate)) {
@@ -385,22 +437,28 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           if (!resolveIncludePath(path, resolved)) {
             return false;
           }
-          std::string resolvedText = resolved.string();
-          if (expanded.count(resolvedText) > 0) {
-            continue;
-          }
-          std::string included;
-          if (!readFile(resolvedText, included)) {
-            error = "failed to read include: " + resolvedText;
+          std::vector<std::filesystem::path> includeFiles;
+          if (!collectPrimeFiles(resolved, includeFiles, error)) {
             return false;
           }
-          expanded.insert(resolvedText);
-          if (!expandIncludesInternal(resolved.parent_path().string(), included, expanded, error, includeRoots)) {
-            return false;
-          }
-          result.append(included);
-          if (!included.empty() && included.back() != '\n') {
-            result.push_back('\n');
+          for (const auto &includeFile : includeFiles) {
+            std::string resolvedText = includeFile.string();
+            if (expanded.count(resolvedText) > 0) {
+              continue;
+            }
+            std::string included;
+            if (!readFile(resolvedText, included)) {
+              error = "failed to read include: " + resolvedText;
+              return false;
+            }
+            expanded.insert(resolvedText);
+            if (!expandIncludesInternal(includeFile.parent_path().string(), included, expanded, error, includeRoots)) {
+              return false;
+            }
+            result.append(included);
+            if (!included.empty() && included.back() != '\n') {
+              result.push_back('\n');
+            }
           }
         }
         i = end + 1;

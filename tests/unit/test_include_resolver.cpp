@@ -193,4 +193,45 @@ TEST_CASE("selects newest matching include version") {
   CHECK(source.find("V130") == std::string::npos);
 }
 
+TEST_CASE("expands directory include contents") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_dir";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  writeFile(baseDir / "b.prime", "// DIR_B\n");
+  writeFile(baseDir / "a.prime", "// DIR_A\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"" + baseDir.string() + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  const auto first = source.find("DIR_A");
+  const auto second = source.find("DIR_B");
+  CHECK(first != std::string::npos);
+  CHECK(second != std::string::npos);
+  CHECK(first < second);
+}
+
+TEST_CASE("skips private subdirectories in directory include") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_dir_private";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  writeFile(baseDir / "_private" / "secret.prime", "// SECRET\n");
+  writeFile(baseDir / "public.prime", "// PUBLIC\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"" + baseDir.string() + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find("PUBLIC") != std::string::npos);
+  CHECK(source.find("SECRET") == std::string::npos);
+}
+
 TEST_SUITE_END();
