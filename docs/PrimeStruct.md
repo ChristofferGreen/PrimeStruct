@@ -58,6 +58,7 @@ module {
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
   - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+- Optional: `primec --default-effects io_out,io_err` supplies default effects for definitions/executions that omit `[effects]`.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ### Example source and expected IR (sketch)
