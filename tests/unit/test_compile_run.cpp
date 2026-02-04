@@ -353,6 +353,24 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs native location on reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(8i32)
+  [Reference<i32> mut] ref(location(value))
+  [Pointer<i32>] ptr(location(ref))
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ref_location.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ref_location_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
+}
+
 TEST_CASE("compiles and runs native reference arithmetic") {
   const std::string source = R"(
 [return<int>]
@@ -1728,6 +1746,24 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs location on reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(8i32)
+  [Reference<i32> mut] ref(location(value))
+  [Pointer<i32>] ptr(location(ref))
+  return(dereference(ptr))
+}
+)";
+  const std::string srcPath = writeTemp("compile_ref_location.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ref_location_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
 }
 
 TEST_CASE("compiles and runs reference arithmetic") {

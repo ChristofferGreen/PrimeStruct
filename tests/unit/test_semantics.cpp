@@ -1562,6 +1562,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("location accepts reference binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(8i32)
+  [Reference<i32> mut] ref(location(value))
+  [Pointer<i32>] ptr(location(ref))
+  return(dereference(ptr))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("dereference requires pointer or reference") {
   const std::string source = R"(
 [return<int>]

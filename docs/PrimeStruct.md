@@ -352,6 +352,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
       return(ref)
     }
     ```
+  - You can recover a raw pointer from a reference via `location(ref)` when needed for pointer arithmetic or passing into APIs.
   - Expected IR (shape only):
     ```
     PushI32 2
