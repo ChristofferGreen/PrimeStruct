@@ -1,4 +1,5 @@
 #include "primec/Semantics.h"
+#include "primec/StringLiteral.h"
 
 #include <cctype>
 #include <functional>
@@ -350,8 +351,40 @@ bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }
 
-bool isLogLineCall(const Expr &expr) {
-  return isSimpleCallName(expr, "log_line");
+enum class PrintTarget { Out, Err };
+
+struct PrintBuiltin {
+  PrintTarget target = PrintTarget::Out;
+  bool newline = false;
+  std::string name;
+};
+
+bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
+  if (isSimpleCallName(expr, "print")) {
+    out.target = PrintTarget::Out;
+    out.newline = false;
+    out.name = "print";
+    return true;
+  }
+  if (isSimpleCallName(expr, "print_line")) {
+    out.target = PrintTarget::Out;
+    out.newline = true;
+    out.name = "print_line";
+    return true;
+  }
+  if (isSimpleCallName(expr, "print_error")) {
+    out.target = PrintTarget::Err;
+    out.newline = false;
+    out.name = "print_error";
+    return true;
+  }
+  if (isSimpleCallName(expr, "print_line_error")) {
+    out.target = PrintTarget::Err;
+    out.newline = true;
+    out.name = "print_line_error";
+    return true;
+  }
+  return false;
 }
 
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix) {
@@ -728,7 +761,18 @@ bool validateNamedArgumentsAgainstParams(const std::vector<std::string> &params,
 }
 } // namespace
 
-bool Semantics::validate(const Program &program, const std::string &entryPath, std::string &error) const {
+bool Semantics::validate(const Program &program,
+                         const std::string &entryPath,
+                         std::string &error,
+                         const std::vector<std::string> &defaultEffects) const {
+  std::unordered_set<std::string> defaultEffectSet;
+  for (const auto &effect : defaultEffects) {
+    if (!isEffectName(effect)) {
+      error = "invalid default effect: " + effect;
+      return false;
+    }
+    defaultEffectSet.insert(effect);
+  }
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
   std::unordered_set<std::string> structNames;
@@ -1148,6 +1192,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return false;
   };
 
+  std::unordered_set<std::string> activeEffects;
+
   std::function<bool(const std::vector<std::string> &, const std::unordered_map<std::string, BindingInfo> &,
                      const Expr &)>
       validateExpr = [&](const std::vector<std::string> &params,
@@ -1300,6 +1346,14 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return true;
     }
     if (expr.kind == Expr::Kind::StringLiteral) {
+      ParsedStringLiteral parsed;
+      if (!parseStringLiteralToken(expr.stringValue, parsed, error)) {
+        return false;
+      }
+      if (parsed.encoding == StringEncoding::Ascii && !isAsciiText(parsed.decoded)) {
+        error = "ascii string literal contains non-ASCII characters";
+        return false;
+      }
       return true;
     }
     if (expr.kind == Expr::Kind::Name) {
@@ -1490,9 +1544,15 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           return true;
         }
-        if (isLogLineCall(expr)) {
+        PrintBuiltin printBuiltin;
+        if (getPrintBuiltin(expr, printBuiltin)) {
           if (expr.args.size() != 1) {
-            error = "log_line requires exactly one argument";
+            error = printBuiltin.name + " requires exactly one argument";
+            return false;
+          }
+          const std::string effectName = (printBuiltin.target == PrintTarget::Err) ? "io_err" : "io_out";
+          if (activeEffects.count(effectName) == 0) {
+            error = printBuiltin.name + " requires " + effectName + " effect";
             return false;
           }
           if (!validateExpr(params, locals, expr.args.front())) {
@@ -1779,7 +1839,27 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return validateExpr(params, locals, stmt);
   };
 
+  auto resolveEffects = [&](const std::vector<Transform> &transforms) {
+    bool sawEffects = false;
+    std::unordered_set<std::string> effects;
+    for (const auto &transform : transforms) {
+      if (transform.name != "effects") {
+        continue;
+      }
+      sawEffects = true;
+      effects.clear();
+      for (const auto &arg : transform.arguments) {
+        effects.insert(arg);
+      }
+    }
+    if (!sawEffects) {
+      effects = defaultEffectSet;
+    }
+    return effects;
+  };
+
   for (const auto &def : program.definitions) {
+    activeEffects = resolveEffects(def.transforms);
     std::unordered_map<std::string, BindingInfo> locals;
     ReturnKind kind = ReturnKind::Unknown;
     auto kindIt = returnKinds.find(def.fullPath);
@@ -1799,6 +1879,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   }
 
   for (const auto &exec : program.executions) {
+    activeEffects = resolveEffects(exec.transforms);
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {

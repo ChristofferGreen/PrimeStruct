@@ -54,6 +54,27 @@ enum class IrOpcode : uint8_t {
   PrintString,
 };
 
+constexpr uint64_t PrintFlagNewline = 1ull << 0;
+constexpr uint64_t PrintFlagStderr = 1ull << 1;
+constexpr uint64_t PrintFlagMask = PrintFlagNewline | PrintFlagStderr;
+constexpr uint64_t PrintStringIndexShift = 2;
+
+inline uint64_t encodePrintFlags(bool newline, bool stderrOut) {
+  return (newline ? PrintFlagNewline : 0) | (stderrOut ? PrintFlagStderr : 0);
+}
+
+inline uint64_t encodePrintStringImm(uint64_t stringIndex, uint64_t flags) {
+  return (stringIndex << PrintStringIndexShift) | (flags & PrintFlagMask);
+}
+
+inline uint64_t decodePrintFlags(uint64_t imm) {
+  return imm & PrintFlagMask;
+}
+
+inline uint64_t decodePrintStringIndex(uint64_t imm) {
+  return imm >> PrintStringIndexShift;
+}
+
 struct IrInstruction {
   IrOpcode op = IrOpcode::PushI32;
   uint64_t imm = 0;

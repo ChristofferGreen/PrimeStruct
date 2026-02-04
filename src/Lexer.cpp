@@ -36,6 +36,14 @@ static bool isHexDigitChar(char c) {
   return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+static bool isStringSuffixStart(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+}
+
+static bool isStringSuffixBody(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+}
+
 bool Lexer::isIdentifierStart(char c) const {
   return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '/';
 }
@@ -156,6 +164,11 @@ Token Lexer::readString(char quote) {
     }
     if (c == quote) {
       advance();
+      if (pos_ < source_.size() && isStringSuffixStart(source_[pos_])) {
+        while (pos_ < source_.size() && isStringSuffixBody(source_[pos_])) {
+          advance();
+        }
+      }
       return {TokenKind::String, source_.substr(start, pos_ - start), startLine, startColumn};
     }
     advance();
@@ -180,6 +193,11 @@ Token Lexer::readRawString() {
     if (source_[pos_] == ')' && source_[pos_ + 1] == '"') {
       advance();
       advance();
+      if (pos_ < source_.size() && isStringSuffixStart(source_[pos_])) {
+        while (pos_ < source_.size() && isStringSuffixBody(source_[pos_])) {
+          advance();
+        }
+      }
       return {TokenKind::String, source_.substr(start, pos_ - start), startLine, startColumn};
     }
     advance();

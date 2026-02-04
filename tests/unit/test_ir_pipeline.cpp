@@ -10,14 +10,17 @@
 #include "primec/Vm.h"
 
 namespace {
-bool parseAndValidate(const std::string &source, primec::Program &program, std::string &error) {
+bool parseAndValidate(const std::string &source,
+                      primec::Program &program,
+                      std::string &error,
+                      std::vector<std::string> defaultEffects = {}) {
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   if (!parser.parse(program, error)) {
     return false;
   }
   primec::Semantics semantics;
-  return semantics.validate(program, "/main", error);
+  return semantics.validate(program, "/main", error, defaultEffects);
 }
 } // namespace
 
@@ -1553,11 +1556,11 @@ main() {
   CHECK(error.find("requires string bindings to use string literals") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer supports log_line with string literals") {
+TEST_CASE("ir lowerer supports print_line with string literals") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(io_out)]
 main() {
-  log_line("hello")
+  print_line("hello")
   return(1i32)
 }
 )";
@@ -1575,6 +1578,8 @@ main() {
   for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::PrintString) {
       sawPrintString = true;
+      CHECK((primec::decodePrintFlags(inst.imm) & primec::PrintFlagNewline) != 0);
+      CHECK((primec::decodePrintFlags(inst.imm) & primec::PrintFlagStderr) == 0);
       break;
     }
   }
@@ -1589,12 +1594,12 @@ main() {
   CHECK(decoded.stringTable == module.stringTable);
 }
 
-TEST_CASE("ir lowerer supports log_line with string bindings") {
+TEST_CASE("ir lowerer supports print_line with string bindings") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(io_out)]
 main() {
   [string] message("hello")
-  log_line(message)
+  print_line(message)
   return(1i32)
 }
 )";
@@ -1612,6 +1617,8 @@ main() {
   for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::PrintString) {
       sawPrintString = true;
+      CHECK((primec::decodePrintFlags(inst.imm) & primec::PrintFlagNewline) != 0);
+      CHECK((primec::decodePrintFlags(inst.imm) & primec::PrintFlagStderr) == 0);
       break;
     }
   }

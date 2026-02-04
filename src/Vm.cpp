@@ -339,9 +339,14 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) c
         }
         int32_t value = static_cast<int32_t>(stack.back());
         stack.pop_back();
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
         std::string text = std::to_string(value);
-        std::fwrite(text.data(), 1, text.size(), stdout);
-        std::fputc('\n', stdout);
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
         ip += 1;
         break;
       }
@@ -352,9 +357,14 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) c
         }
         int64_t value = static_cast<int64_t>(stack.back());
         stack.pop_back();
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
         std::string text = std::to_string(value);
-        std::fwrite(text.data(), 1, text.size(), stdout);
-        std::fputc('\n', stdout);
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
         ip += 1;
         break;
       }
@@ -365,20 +375,31 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) c
         }
         uint64_t value = stack.back();
         stack.pop_back();
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
         std::string text = std::to_string(value);
-        std::fwrite(text.data(), 1, text.size(), stdout);
-        std::fputc('\n', stdout);
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
         ip += 1;
         break;
       }
       case IrOpcode::PrintString: {
-        if (inst.imm >= module.stringTable.size()) {
+        uint64_t stringIndex = decodePrintStringIndex(inst.imm);
+        if (stringIndex >= module.stringTable.size()) {
           error = "invalid string index in IR";
           return false;
         }
-        const std::string &text = module.stringTable[static_cast<size_t>(inst.imm)];
-        std::fwrite(text.data(), 1, text.size(), stdout);
-        std::fputc('\n', stdout);
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
+        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
         ip += 1;
         break;
       }

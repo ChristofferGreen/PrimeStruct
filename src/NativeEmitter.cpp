@@ -221,7 +221,7 @@ class Arm64Emitter {
     emit(encodeRet());
   }
 
-  void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes) {
+  void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd) {
     emitPopReg(0);
     emitCompareRegZero(0);
     size_t nonNegative = emitCondBranchPlaceholder(CondCode::Ge);
@@ -233,19 +233,21 @@ class Arm64Emitter {
     emitMovImm64(5, 0);
     size_t afterSignIndex = currentWordIndex();
     patchJump(afterSign, static_cast<int32_t>(afterSignIndex - afterSign));
-    emitPrintUnsignedInternal(scratchOffset, scratchBytes, true, 5);
+    emitPrintUnsignedInternal(scratchOffset, scratchBytes, true, 5, newline, fd);
   }
 
-  void emitPrintUnsigned(uint32_t scratchOffset, uint32_t scratchBytes) {
+  void emitPrintUnsigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd) {
     emitPopReg(0);
-    emitPrintUnsignedInternal(scratchOffset, scratchBytes, false, 0);
+    emitPrintUnsignedInternal(scratchOffset, scratchBytes, false, 0, newline, fd);
   }
 
-  size_t emitPrintStringPlaceholder(uint64_t lengthBytes, uint32_t scratchOffset) {
+  size_t emitPrintStringPlaceholder(uint64_t lengthBytes, uint32_t scratchOffset, bool newline, uint64_t fd) {
     size_t fixupIndex = emitAdrPlaceholder(1);
     emitMovImm64(2, lengthBytes);
-    emitWriteSyscall(1, 2);
-    emitWriteNewline(scratchOffset);
+    emitWriteSyscall(fd, 1, 2);
+    if (newline) {
+      emitWriteNewline(fd, scratchOffset);
+    }
     return fixupIndex;
   }
 
@@ -387,20 +389,20 @@ class Arm64Emitter {
     emit(encodeStrbRegBase(rt, rn, offsetBytes));
   }
 
-  void emitWriteSyscall(uint8_t bufferReg, uint8_t lengthReg) {
-    emitMovImm64(0, 1);
+  void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg) {
+    emitMovImm64(0, fd);
     emitMovReg(1, bufferReg);
     emitMovReg(2, lengthReg);
     emitMovImm64(16, SysWrite);
     emit(encodeSvc());
   }
 
-  void emitWriteNewline(uint32_t scratchOffset) {
+  void emitWriteNewline(uint64_t fd, uint32_t scratchOffset) {
     emitLoadFrameOffset(1, scratchOffset);
     emitMovImm64(4, '\n');
     emitStrbRegBase(4, 1, 0);
     emitMovImm64(2, 1);
-    emitWriteSyscall(1, 2);
+    emitWriteSyscall(fd, 1, 2);
   }
 
   void emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes) {
@@ -424,13 +426,17 @@ class Arm64Emitter {
   void emitPrintUnsignedInternal(uint32_t scratchOffset,
                                  uint32_t scratchBytes,
                                  bool includeSign,
-                                 uint8_t signReg) {
+                                 uint8_t signReg,
+                                 bool newline,
+                                 uint64_t fd) {
     emitLoadFrameOffset(1, scratchOffset);
     emitAddOffset(1, 1, scratchBytes);
     emitMovReg(2, 1);
-    emitSubRegImm(2, 2, 1);
-    emitMovImm64(4, '\n');
-    emitStrbRegBase(4, 2, 0);
+    if (newline) {
+      emitSubRegImm(2, 2, 1);
+      emitMovImm64(4, '\n');
+      emitStrbRegBase(4, 2, 0);
+    }
     emitMovImm64(10, 10);
 
     size_t loopStart = currentWordIndex();
@@ -460,7 +466,7 @@ class Arm64Emitter {
     }
 
     emitSubReg(3, 1, 2);
-    emitWriteSyscall(2, 3);
+    emitWriteSyscall(fd, 2, 3);
   }
 
   static uint32_t encodeAddSpImm(uint16_t imm) {
@@ -1492,24 +1498,39 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::ReturnI64:
         emitter.emitReturn();
         break;
-      case IrOpcode::PrintI32:
-        emitter.emitPrintSigned(scratchOffset, scratchBytes);
+      case IrOpcode::PrintI32: {
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        emitter.emitPrintSigned(scratchOffset, scratchBytes, newline, fd);
         break;
-      case IrOpcode::PrintI64:
-        emitter.emitPrintSigned(scratchOffset, scratchBytes);
+      }
+      case IrOpcode::PrintI64: {
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        emitter.emitPrintSigned(scratchOffset, scratchBytes, newline, fd);
         break;
-      case IrOpcode::PrintU64:
-        emitter.emitPrintUnsigned(scratchOffset, scratchBytes);
+      }
+      case IrOpcode::PrintU64: {
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        emitter.emitPrintUnsigned(scratchOffset, scratchBytes, newline, fd);
         break;
+      }
       case IrOpcode::PrintString: {
-        if (inst.imm >= module.stringTable.size()) {
+        uint64_t stringIndex = decodePrintStringIndex(inst.imm);
+        if (stringIndex >= module.stringTable.size()) {
           error = "native backend encountered invalid string index";
           return false;
         }
-        size_t fixupIndex =
-            emitter.emitPrintStringPlaceholder(module.stringTable[static_cast<size_t>(inst.imm)].size(),
-                                               scratchOffset);
-        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        size_t fixupIndex = emitter.emitPrintStringPlaceholder(
+            module.stringTable[static_cast<size_t>(stringIndex)].size(), scratchOffset, newline, fd);
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(stringIndex)});
         break;
       }
       default:

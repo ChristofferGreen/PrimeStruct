@@ -255,24 +255,29 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs native log_line output") {
+TEST_CASE("compiles and runs native print output") {
   const std::string source = R"(
 [return<int>]
 main() {
-  log_line(42i32)
-  log_line("hello")
+  print(42i32)
+  print_line("hello")
+  print_error("oops")
+  print_line_error(7i32)
   return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_log.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_log_exe").string();
-  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_log_out.txt").string();
+  const std::string srcPath = writeTemp("compile_native_print.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_print_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_print_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_print_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --default-effects=io_out,io_err";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath;
+  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "42\nhello\n");
+  CHECK(readFile(outPath) == "42hello\n");
+  CHECK(readFile(errPath) == "oops7\n");
 }
 
 TEST_CASE("compiles and runs native hello world example") {

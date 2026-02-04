@@ -1,4 +1,5 @@
 #include "primec/IrLowerer.h"
+#include "primec/StringLiteral.h"
 
 #include <functional>
 #include <limits>
@@ -37,8 +38,40 @@ bool isElseCall(const Expr &expr) {
   return isSimpleCallName(expr, "else");
 }
 
-bool isLogLineCall(const Expr &expr) {
-  return isSimpleCallName(expr, "log_line");
+enum class PrintTarget { Out, Err };
+
+struct PrintBuiltin {
+  PrintTarget target = PrintTarget::Out;
+  bool newline = false;
+  std::string name;
+};
+
+bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
+  if (isSimpleCallName(expr, "print")) {
+    out.target = PrintTarget::Out;
+    out.newline = false;
+    out.name = "print";
+    return true;
+  }
+  if (isSimpleCallName(expr, "print_line")) {
+    out.target = PrintTarget::Out;
+    out.newline = true;
+    out.name = "print_line";
+    return true;
+  }
+  if (isSimpleCallName(expr, "print_error")) {
+    out.target = PrintTarget::Err;
+    out.newline = false;
+    out.name = "print_error";
+    return true;
+  }
+  if (isSimpleCallName(expr, "print_line_error")) {
+    out.target = PrintTarget::Err;
+    out.newline = true;
+    out.name = "print_line_error";
+    return true;
+  }
+  return false;
 }
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
@@ -205,51 +238,17 @@ bool IrLowerer::lower(const Program &program,
     return static_cast<int32_t>(stringTable.size() - 1);
   };
 
-  auto decodeStringLiteral = [](const std::string &text) -> std::string {
-    if (text.size() >= 5 && text.rfind("R\"(", 0) == 0 && text.substr(text.size() - 2) == ")\"") {
-      return text.substr(3, text.size() - 5);
+  auto parseStringLiteral = [&](const std::string &text, std::string &decoded) -> bool {
+    ParsedStringLiteral parsed;
+    if (!parseStringLiteralToken(text, parsed, error)) {
+      return false;
     }
-    if (text.size() >= 2 &&
-        ((text.front() == '"' && text.back() == '"') || (text.front() == '\'' && text.back() == '\''))) {
-      std::string out;
-      out.reserve(text.size() - 2);
-      for (size_t i = 1; i + 1 < text.size(); ++i) {
-        char c = text[i];
-        if (c == '\\' && i + 2 < text.size()) {
-          char next = text[++i];
-          switch (next) {
-            case 'n':
-              out.push_back('\n');
-              break;
-            case 'r':
-              out.push_back('\r');
-              break;
-            case 't':
-              out.push_back('\t');
-              break;
-            case '\\':
-              out.push_back('\\');
-              break;
-            case '"':
-              out.push_back('"');
-              break;
-            case '\'':
-              out.push_back('\'');
-              break;
-            case '0':
-              out.push_back('\0');
-              break;
-            default:
-              out.push_back(next);
-              break;
-          }
-        } else {
-          out.push_back(c);
-        }
-      }
-      return out;
+    if (parsed.encoding == StringEncoding::Ascii && !isAsciiText(parsed.decoded)) {
+      error = "ascii string literal contains non-ASCII characters";
+      return false;
     }
-    return text;
+    decoded = std::move(parsed.decoded);
+    return true;
   };
 
   auto isBindingMutable = [](const Expr &expr) -> bool {
@@ -629,8 +628,9 @@ bool IrLowerer::lower(const Program &program,
         return true;
       }
       case Expr::Kind::Call: {
-        if (isLogLineCall(expr)) {
-          error = "log_line is only supported as a statement in the native backend";
+        PrintBuiltin printBuiltin;
+        if (getPrintBuiltin(expr, printBuiltin)) {
+          error = printBuiltin.name + " is only supported as a statement in the native backend";
           return false;
         }
         std::string builtin;
@@ -1116,10 +1116,16 @@ bool IrLowerer::lower(const Program &program,
     }
   };
 
-  auto emitLogLineArg = [&](const Expr &arg, const LocalMap &localsIn) -> bool {
+  auto emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn, const PrintBuiltin &builtin) -> bool {
+    uint64_t flags = encodePrintFlags(builtin.newline, builtin.target == PrintTarget::Err);
     if (arg.kind == Expr::Kind::StringLiteral) {
-      int32_t index = internString(decodeStringLiteral(arg.stringValue));
-      function.instructions.push_back({IrOpcode::PrintString, static_cast<uint64_t>(index)});
+      std::string decoded;
+      if (!parseStringLiteral(arg.stringValue, decoded)) {
+        return false;
+      }
+      int32_t index = internString(decoded);
+      function.instructions.push_back(
+          {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(index), flags)});
       return true;
     }
     if (arg.kind == Expr::Kind::Name) {
@@ -1134,7 +1140,7 @@ bool IrLowerer::lower(const Program &program,
           return false;
         }
         function.instructions.push_back(
-            {IrOpcode::PrintString, static_cast<uint64_t>(it->second.stringIndex)});
+            {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(it->second.stringIndex), flags)});
         return true;
       }
     }
@@ -1143,18 +1149,18 @@ bool IrLowerer::lower(const Program &program,
     }
     LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
     if (kind == LocalInfo::ValueKind::Int64) {
-      function.instructions.push_back({IrOpcode::PrintI64, 0});
+      function.instructions.push_back({IrOpcode::PrintI64, flags});
       return true;
     }
     if (kind == LocalInfo::ValueKind::UInt64) {
-      function.instructions.push_back({IrOpcode::PrintU64, 0});
+      function.instructions.push_back({IrOpcode::PrintU64, flags});
       return true;
     }
     if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
-      function.instructions.push_back({IrOpcode::PrintI32, 0});
+      function.instructions.push_back({IrOpcode::PrintI32, flags});
       return true;
     }
-    error = "log_line requires a numeric/bool or string literal argument";
+    error = builtin.name + " requires a numeric/bool or string literal/binding argument";
     return false;
   };
 
@@ -1182,7 +1188,11 @@ bool IrLowerer::lower(const Program &program,
           error = "native backend requires string bindings to use string literals";
           return false;
         }
-        int32_t index = internString(decodeStringLiteral(init.stringValue));
+        std::string decoded;
+        if (!parseStringLiteral(init.stringValue, decoded)) {
+          return false;
+        }
+        int32_t index = internString(decoded);
         function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
         LocalInfo info;
         info.index = nextLocal++;
@@ -1213,16 +1223,17 @@ bool IrLowerer::lower(const Program &program,
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call && isLogLineCall(stmt)) {
+    PrintBuiltin printBuiltin;
+    if (stmt.kind == Expr::Kind::Call && getPrintBuiltin(stmt, printBuiltin)) {
       if (!stmt.bodyArguments.empty()) {
-        error = "log_line does not support body arguments";
+        error = printBuiltin.name + " does not support body arguments";
         return false;
       }
       if (stmt.args.size() != 1) {
-        error = "log_line requires exactly one argument";
+        error = printBuiltin.name + " requires exactly one argument";
         return false;
       }
-      return emitLogLineArg(stmt.args.front(), localsIn);
+      return emitPrintArg(stmt.args.front(), localsIn, printBuiltin);
     }
     if (isReturnCall(stmt)) {
       if (stmt.args.empty()) {

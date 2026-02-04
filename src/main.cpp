@@ -23,6 +23,10 @@ std::vector<std::string> defaultTextFilters() {
   return {"operators", "collections"};
 }
 
+std::vector<std::string> defaultEffectsList() {
+  return {};
+}
+
 std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -70,6 +74,42 @@ std::vector<std::string> parseTextFilters(const std::string &text) {
   }
   return filters;
 }
+
+std::vector<std::string> parseDefaultEffects(const std::string &text) {
+  std::vector<std::string> effects;
+  size_t start = 0;
+  auto addUnique = [&](const std::string &name) {
+    for (const auto &existing : effects) {
+      if (existing == name) {
+        return;
+      }
+    }
+    effects.push_back(name);
+  };
+  while (start <= text.size()) {
+    size_t end = text.find(',', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    std::string token = trimWhitespace(text.substr(start, end - start));
+    if (!token.empty()) {
+      if (token == "default") {
+        for (const auto &name : defaultEffectsList()) {
+          addUnique(name);
+        }
+      } else if (token == "none") {
+        effects.clear();
+      } else {
+        addUnique(token);
+      }
+    }
+    if (end == text.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return effects;
+}
 bool parseArgs(int argc, char **argv, primec::Options &out) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -97,6 +137,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.textFilters = parseTextFilters(argv[++i]);
     } else if (arg.rfind("--text-filters=", 0) == 0) {
       out.textFilters = parseTextFilters(arg.substr(std::string("--text-filters=").size()));
+    } else if (arg == "--default-effects" && i + 1 < argc) {
+      out.defaultEffects = parseDefaultEffects(argv[++i]);
+    } else if (arg.rfind("--default-effects=", 0) == 0) {
+      out.defaultEffects = parseDefaultEffects(arg.substr(std::string("--default-effects=").size()));
     } else if (!arg.empty() && arg[0] == '-') {
       return false;
     } else {
@@ -149,7 +193,7 @@ int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primec --emit=cpp|exe|native <input.prime> -o <output> [--entry /path] "
-                 "[--include-path <dir>] [--text-filters <list>] "
+                 "[--include-path <dir>] [--text-filters <list>] [--default-effects <list>] "
                  "[--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
@@ -202,7 +246,7 @@ int main(int argc, char **argv) {
   }
 
   primec::Semantics semantics;
-  if (!semantics.validate(program, options.entryPath, error)) {
+  if (!semantics.validate(program, options.entryPath, error, options.defaultEffects)) {
     std::cerr << "Semantic error: " << error << "\n";
     return 2;
   }

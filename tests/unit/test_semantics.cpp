@@ -18,7 +18,7 @@ primec::Program parseProgram(const std::string &source) {
 bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
   auto program = parseProgram(source);
   primec::Semantics semantics;
-  return semantics.validate(program, entry, error);
+  return semantics.validate(program, entry, error, {});
 }
 } // namespace
 
@@ -2607,6 +2607,29 @@ execute_repeat(1i32) { return(2i32) }
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return not allowed in execution body") != std::string::npos);
+}
+
+TEST_CASE("print requires io_out effect") {
+  const std::string source = R"(
+main() {
+  print("hello")
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("io_out") != std::string::npos);
+}
+
+TEST_CASE("string literal rejects unknown suffix") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print("hello"utf16)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown string literal suffix") != std::string::npos);
 }
 
 TEST_SUITE_END();

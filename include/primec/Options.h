@@ -11,6 +11,7 @@ struct Options {
   std::string entryPath = "/main";
   std::string dumpStage;
   std::vector<std::string> textFilters = {"operators", "collections"};
+  std::vector<std::string> defaultEffects;
   std::vector<std::string> includePaths;
 };
 } // namespace primec

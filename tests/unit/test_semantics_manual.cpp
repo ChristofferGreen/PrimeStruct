@@ -59,7 +59,7 @@ primec::Definition makeDefinition(const std::string &fullPath,
 
 bool validateProgram(const primec::Program &program, const std::string &entry, std::string &error) {
   primec::Semantics semantics;
-  return semantics.validate(program, entry, error);
+  return semantics.validate(program, entry, error, {});
 }
 } // namespace
 

@@ -57,7 +57,7 @@ module {
 - `primec --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `log_line` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ### Example source and expected IR (sketch)
@@ -86,7 +86,7 @@ module {
 - `primec --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `log_line` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Goals
@@ -99,7 +99,7 @@ module {
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Intermediate representation:** strongly-typed SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds string table + print opcodes to support `log_line` in VM/native builds.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
@@ -113,6 +113,7 @@ module {
 
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
+- **String literals:** UTF-8 by default; suffix `utf8` is explicit UTF-8, `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example: `"hello"utf8`, `"moo"ascii`.
 - **Uniform envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
@@ -125,7 +126,7 @@ module {
   - Note: the current C++ emitter only generates code for definitions; executions are parsed/validated but not emitted.
   - Execution bodies are parsed as brace-delimited argument lists (e.g., `execute_repeat(2i32) { main(), main() }`).
 - **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical.
-- **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_stdout)]`. Standard library routines permit stdout/stderr logging; backends reject unsupported effects (e.g., GPU code requesting filesystem access).
+- **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_out)]`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies a default effect set for definitions/executions that omit `[effects]` (comma-separated list; `default` and `none` are supported tokens).
 - **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private.
 - **Transform-driven control flow:** control structures desugar into prefix calls (`if(cond, then{…}, else{…})`). A surface form like `if(cond) { … } else { … }` is accepted and rewritten into the canonical call form. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure(42)`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
@@ -133,14 +134,14 @@ module {
 ### Example function syntax
 ```
 namespace demo {
-  [return<void>]
+  [return<void> effects(io_out)]
   hello_values() {
     [string] message("Hello PrimeStruct")
     [i32] iterations(3i32)
     [float mut] exposure(1.25f)
     [float3] tone_curve(0.8f, 0.9f, 1.1f)
 
-    log_line(message)
+    print_line(message)
     assign(exposure, clamp(exposure, 0.0f, 2.0f))
     execute_repeat(iterations) {
       apply_curve(tone_curve, exposure)
@@ -177,8 +178,9 @@ example, `helper()` or `1i32` can appear as standalone statements).
         assign(this.exposure, clamp(this.exposure, 0.0f, 2.0f))
       }
 
+      [effects(io_out)]
       Destroy() {
-        log_line("color grade destroyed")
+        print_line("color grade destroyed")
       }
     }
   }
@@ -202,7 +204,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ### Core library surface (draft)
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The expression evaluates to `value`, so it can be nested or returned.
-- **`log_line(value)`:** stdout logging primitive used by tooling/examples. VM/native backends support numeric/bool values plus string literals/bindings; other string operations still require the C++ emitter.
+- **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output primitives. `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require `io_err`. VM/native backends support numeric/bool values plus string literals/bindings; other string operations still require the C++ emitter.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see Pointer arithmetic below).
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean combinators accept `bool` or integer inputs and treat zero as `false` and any non-zero value as `true`. The current IR/native subset accepts only integer/bool operands for comparisons and boolean ops (float/string comparisons are not yet supported outside the C++ emitter).
 - **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected. The C++ emitter also handles floats.
@@ -222,7 +224,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ### Execution Metadata (draft)
 - **Scheduling scope:** queue/thread selection stays host-driven; v0.1 exposes no stack- or runner-specific annotations, so executions inherit the embedding runtime’s default placement.
-- **Capabilities:** effect masks double as capability descriptors (IO, global write, GPU access, etc.). Additional attributes can narrow capabilities (`[capabilities(io_stdout, pathspace_insert)]`).
+- **Capabilities:** effect masks double as capability descriptors (IO, global write, GPU access, etc.). Additional attributes can narrow capabilities (`[capabilities(io_out, pathspace_insert)]`).
 - **Instrumentation:** executions carry metadata (source file/line plus effect/capability masks) for diagnostics and tracing.
 - **Open design items:** finalise the capability taxonomy and determine which instrumentation fields flow into inspector tooling vs. runtime-only logs.
 
@@ -281,7 +283,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - Collection literals currently lower through the C++ emitter only; the native backend does not yet lower them through IR.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0 and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
 - **Float note:** VM/native lowering currently rejects float literals, float bindings, and float arithmetic; use the C++ emitter for float-heavy scripts until float opcodes land in PSIR.
-- **String note:** VM/native lowering now accepts string literals and string bindings only when used by `log_line`; other string operations still require the C++ emitter for now.
+- **String note:** VM/native lowering now accepts string literals and string bindings only when used by `print`/`print_line`/`print_error`/`print_line_error`; other string operations still require the C++ emitter for now.
   - `convert<bool>` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
@@ -355,7 +357,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## VM Design (draft)
 - **Instruction set:** ~50 stack-based ops covering control flow, stack manipulation, memory/pointer access, optional coroutine primitives. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR versioning:** current portable IR is PSIR v5 (adds `AddressOfLocal`, `LoadIndirect`, `StoreIndirect` for pointer helpers, `ReturnVoid`, plus string table + print opcodes for `log_line`).
+- **PSIR versioning:** current portable IR is PSIR v6 (adds `AddressOfLocal`, `LoadIndirect`, `StoreIndirect` for pointer helpers, `ReturnVoid`, plus string table + print opcodes with stdout/stderr + newline flags for the print functions).
 - **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.
@@ -366,9 +368,9 @@ example, `helper()` or `1i32` can appear as standalone statements).
 ## Examples (sketch)
 ```
 // Hello world (native/VM-friendly)
-[return<int>]
+[return<int> effects(io_out)]
 main() {
-  log_line("Hello, world!")
+  print_line("Hello, world!")
   return(0i32)
 }
 
