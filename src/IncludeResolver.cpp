@@ -359,7 +359,11 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             }
             std::string versionError;
             bool foundVersion = false;
+            bool foundCandidate = false;
             std::filesystem::path lastCandidate;
+            std::filesystem::path bestCandidate;
+            std::vector<int> bestParts;
+            std::string bestVersion;
             for (const auto &root : roots) {
               std::string selected;
               std::string rootError;
@@ -374,9 +378,19 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
                   error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
                   return false;
                 }
-                resolved = std::filesystem::absolute(candidate);
-                resolvedVersion = selected;
-                return true;
+                std::vector<int> candidateParts;
+                std::string parseError;
+                if (!parseVersionParts(selected, candidateParts, parseError)) {
+                  error = "invalid include version: " + selected;
+                  return false;
+                }
+                if (!foundCandidate || isNewerVersion(candidateParts, bestParts)) {
+                  bestParts = std::move(candidateParts);
+                  bestCandidate = candidate;
+                  bestVersion = selected;
+                }
+                foundCandidate = true;
+                continue;
               }
               lastCandidate = candidate;
             }
@@ -384,12 +398,17 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               error = versionError.empty() ? "include version not found" : versionError;
               return false;
             }
-            if (!lastCandidate.empty()) {
-              error = "failed to read include: " + std::filesystem::absolute(lastCandidate).string();
-            } else {
-              error = "failed to read include: " + logicalPath.string();
+            if (!foundCandidate) {
+              if (!lastCandidate.empty()) {
+                error = "failed to read include: " + std::filesystem::absolute(lastCandidate).string();
+              } else {
+                error = "failed to read include: " + logicalPath.string();
+              }
+              return false;
             }
-            return false;
+            resolved = std::filesystem::absolute(bestCandidate);
+            resolvedVersion = bestVersion;
+            return true;
           }
 
           if (!isAbsolute) {

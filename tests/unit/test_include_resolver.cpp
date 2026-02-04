@@ -132,6 +132,31 @@ TEST_CASE("resolves versioned absolute include from include path") {
   CHECK(source.find("INCLUDE_VERSION_ABS_120") == std::string::npos);
 }
 
+TEST_CASE("selects newest include version across roots") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_base";
+  auto includeRootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_a";
+  auto includeRootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_b";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRootA);
+  std::filesystem::remove_all(includeRootB);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRootA);
+  std::filesystem::create_directories(includeRootB);
+
+  writeFile(includeRootA / "1.2.0" / "lib.prime", "// INCLUDE_VERSION_MULTI_120\n");
+  writeFile(includeRootB / "1.2.9" / "lib.prime", "// INCLUDE_VERSION_MULTI_129\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRootA.string(), includeRootB.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_VERSION_MULTI_129") != std::string::npos);
+  CHECK(source.find("INCLUDE_VERSION_MULTI_120") == std::string::npos);
+}
+
 TEST_CASE("resolves versioned relative include from include path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_root";
