@@ -696,27 +696,7 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   if (index + 1 >= tokens_.size()) {
     return false;
   }
-  if (tokens_[index + 1].kind != TokenKind::LBrace) {
-    return false;
-  }
-
-  size_t braceIndex = index + 1;
-  int braceDepth = 0;
-  while (braceIndex < tokens_.size()) {
-    TokenKind kind = tokens_[braceIndex].kind;
-    if (kind == TokenKind::LBrace) {
-      ++braceDepth;
-    } else if (kind == TokenKind::RBrace) {
-      --braceDepth;
-      if (braceDepth == 0) {
-        break;
-      }
-    } else if (kind == TokenKind::Identifier && tokens_[braceIndex].text == "return") {
-      return true;
-    }
-    ++braceIndex;
-  }
-  return false;
+  return tokens_[index + 1].kind == TokenKind::LBrace;
 }
 
 bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const {
@@ -931,7 +911,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
   if (!foundReturn && !returnsVoid && !allowNoReturn) {
-    return fail("missing return statement in definition body");
+    if (!allowImplicitVoidReturn) {
+      return fail("missing return statement in definition body");
+    }
   }
   def.hasReturnStatement = foundReturn;
   return true;

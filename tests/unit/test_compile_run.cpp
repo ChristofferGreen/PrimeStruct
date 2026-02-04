@@ -84,6 +84,20 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs implicit void main") {
+  const std::string source = R"(
+main() {
+  [i32] value(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_void_implicit.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_void_implicit_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs array literal") {
   const std::string source = R"(
 [return<int>]

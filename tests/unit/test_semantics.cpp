@@ -59,6 +59,17 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("implicit void definition without return validates") {
+  const std::string source = R"(
+main() {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers float return type without transform") {
   const std::string source = R"(
 main() {
