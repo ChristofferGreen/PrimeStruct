@@ -201,6 +201,86 @@ main() {
   CHECK(error.find("duplicate effects capability") != std::string::npos);
 }
 
+TEST_CASE("execution effects transform validates") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects(io_stdout)]
+task(1i32)
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("execution effects rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects<io>]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("effects transform does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("execution effects rejects invalid capability") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects("io")]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid effects capability") != std::string::npos);
+}
+
+TEST_CASE("execution effects rejects duplicate capability") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects(io, io)]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects capability") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {
