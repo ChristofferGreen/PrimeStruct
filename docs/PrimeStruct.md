@@ -289,6 +289,7 @@ between statements and expressions—any expression can stand alone as a stateme
 - **Named arguments:** named arguments may be reordered (including on executions), but cannot repeat a parameter name or follow a positional argument. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept named arguments.
   - Example: `array<i32>(first = 1i32)` is rejected because collections are builtin calls.
   - Example: `execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32))` is invalid because the positional map argument follows a named argument.
+  - Duplicate named arguments are rejected for definitions and executions (`execute_task(a = 1i32, a = 2i32)`).
 - **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions. The brace forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals also accept `key = value` pairs inside braces.
   - Requires the `collections` text filter (enabled by default in `--text-filters`).
   - `key = value` pairs only trigger on single `=` tokens; `==`, `<=`, `>=`, and `!=` remain comparison operators.

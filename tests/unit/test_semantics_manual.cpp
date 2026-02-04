@@ -439,6 +439,26 @@ TEST_CASE("execution named arguments reorder") {
   CHECK(error.empty());
 }
 
+TEST_CASE("execution duplicate named arguments fail") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {"a", "b"}));
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {makeLiteral(1), makeLiteral(2)};
+  exec.argumentNames = {std::string("a"), std::string("a")};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("duplicate named argument") != std::string::npos);
+}
+
 TEST_CASE("execution arguments accept collection literals") {
   primec::Program program;
   program.definitions.push_back(
