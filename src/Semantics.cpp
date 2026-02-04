@@ -17,6 +17,7 @@ struct BindingInfo {
 };
 
 bool validateAlignTransform(const Transform &transform, const std::string &context, std::string &error);
+std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
 
 bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "package" || name == "static";
@@ -25,6 +26,82 @@ bool isBindingQualifierName(const std::string &name) {
 bool isPrimitiveBindingTypeName(const std::string &name) {
   return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
          name == "f64" || name == "bool" || name == "string";
+}
+
+std::string normalizeBindingTypeName(const std::string &name) {
+  if (name == "int") {
+    return "i32";
+  }
+  if (name == "float") {
+    return "f32";
+  }
+  return name;
+}
+
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+  size_t lt = text.find('<');
+  if (lt == std::string::npos) {
+    base = text;
+    arg.clear();
+    return false;
+  }
+  size_t gt = text.rfind('>');
+  if (gt == std::string::npos || gt <= lt || gt != text.size() - 1) {
+    base = text;
+    arg.clear();
+    return false;
+  }
+  base = text.substr(0, lt);
+  arg = text.substr(lt + 1, gt - lt - 1);
+  return true;
+}
+
+bool isBuiltinTemplateTypeName(const std::string &name) {
+  return name == "Pointer" || name == "Reference";
+}
+
+bool restrictMatchesBinding(const std::string &restrictType,
+                            const std::string &typeName,
+                            const std::string &typeTemplateArg,
+                            bool typeHasTemplate,
+                            const std::string &namespacePrefix) {
+  std::string restrictBase;
+  std::string restrictArg;
+  bool restrictHasTemplate = splitTemplateTypeName(restrictType, restrictBase, restrictArg);
+  if (restrictHasTemplate != typeHasTemplate) {
+    return false;
+  }
+  if (typeHasTemplate) {
+    std::string bindingBase = typeName;
+    std::string bindingArg = typeTemplateArg;
+    std::string resolvedBindingBase = bindingBase;
+    std::string resolvedRestrictBase = restrictBase;
+    if (isPrimitiveBindingTypeName(bindingBase) || isPrimitiveBindingTypeName(restrictBase)) {
+      resolvedBindingBase = normalizeBindingTypeName(bindingBase);
+      resolvedRestrictBase = normalizeBindingTypeName(restrictBase);
+    } else {
+      if (!bindingBase.empty() && bindingBase[0] != '/' && !isBuiltinTemplateTypeName(bindingBase)) {
+        resolvedBindingBase = resolveTypePath(bindingBase, namespacePrefix);
+      }
+      if (!restrictBase.empty() && restrictBase[0] != '/' && !isBuiltinTemplateTypeName(restrictBase)) {
+        resolvedRestrictBase = resolveTypePath(restrictBase, namespacePrefix);
+      }
+    }
+    if (resolvedBindingBase != resolvedRestrictBase) {
+      return false;
+    }
+    if (isBuiltinTemplateTypeName(bindingBase)) {
+      return normalizeBindingTypeName(bindingArg) == normalizeBindingTypeName(restrictArg);
+    }
+    if (isPrimitiveBindingTypeName(bindingArg) || isPrimitiveBindingTypeName(restrictArg)) {
+      return normalizeBindingTypeName(bindingArg) == normalizeBindingTypeName(restrictArg);
+    }
+    return bindingArg == restrictArg;
+  }
+  if (isPrimitiveBindingTypeName(typeName) || isPrimitiveBindingTypeName(restrictType)) {
+    return normalizeBindingTypeName(typeName) == normalizeBindingTypeName(restrictType);
+  }
+  return resolveTypePath(typeName, namespacePrefix) == resolveTypePath(restrictType, namespacePrefix);
 }
 
 ReturnKind returnKindForTypeName(const std::string &name) {
@@ -327,6 +404,7 @@ bool parseBindingInfo(const Expr &expr,
                       std::string &error) {
   std::string typeName;
   bool typeHasTemplate = false;
+  std::optional<std::string> restrictType;
   for (const auto &transform : expr.transforms) {
     if (transform.name == "mut") {
       if (transform.templateArg) {
@@ -360,6 +438,11 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding transforms do not take arguments";
         return false;
       }
+      if (restrictType.has_value()) {
+        error = "duplicate restrict transform";
+        return false;
+      }
+      restrictType = *transform.templateArg;
       continue;
     }
     if (isBindingQualifierName(transform.name)) {
@@ -476,6 +559,12 @@ bool parseBindingInfo(const Expr &expr,
     }
     if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
       error = "unsupported reference target type: " + info.typeTemplateArg;
+      return false;
+    }
+  }
+  if (restrictType.has_value()) {
+    if (!restrictMatchesBinding(*restrictType, typeName, info.typeTemplateArg, typeHasTemplate, namespacePrefix)) {
+      error = "restrict type does not match binding type";
       return false;
     }
   }

@@ -1504,6 +1504,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("restrict binding accepts int alias") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [restrict<int> i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("restrict requires template argument") {
   const std::string source = R"(
 [return<int>]
@@ -1515,6 +1528,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("restrict requires a template argument") != std::string::npos);
+}
+
+TEST_CASE("restrict rejects mismatched type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [restrict<i32> i64] value(1i64)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("restrict type does not match binding type") != std::string::npos);
 }
 
 TEST_CASE("binding align_bytes validates") {

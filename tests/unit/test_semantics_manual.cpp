@@ -177,8 +177,8 @@ TEST_CASE("block arguments allowed on statement calls") {
       makeDefinition("/main", {makeTransform("return", std::string("int"))},
                      {callWithBlock, makeCall("/return", {makeLiteral(1)})}));
   std::string error;
-  CHECK(validateProgram(program, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
 }
 
 TEST_CASE("literal statements are allowed") {

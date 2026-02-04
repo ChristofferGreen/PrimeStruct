@@ -1671,13 +1671,8 @@ main(value) {
 )";
   primec::Program program;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support entry parameters") != std::string::npos);
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error.find("entry definition does not support parameters") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects map literal call") {
