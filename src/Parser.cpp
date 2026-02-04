@@ -12,6 +12,78 @@ bool isReservedKeyword(const std::string &text) {
          text == "false";
 }
 
+bool isIdentifierSegmentStart(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+}
+
+bool isIdentifierSegmentChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+}
+
+bool validateSlashPath(const std::string &text, std::string &error) {
+  if (text.size() < 2 || text[0] != '/') {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  size_t start = 1;
+  while (start < text.size()) {
+    size_t end = text.find('/', start);
+    std::string segment = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (segment.empty() || !isIdentifierSegmentStart(segment[0])) {
+      error = "invalid slash path identifier: " + text;
+      return false;
+    }
+    for (size_t i = 1; i < segment.size(); ++i) {
+      if (!isIdentifierSegmentChar(segment[i])) {
+        error = "invalid slash path identifier: " + text;
+        return false;
+      }
+    }
+    if (isReservedKeyword(segment)) {
+      error = "reserved keyword cannot be used as identifier: " + segment;
+      return false;
+    }
+    if (end == std::string::npos) {
+      break;
+    }
+    start = end + 1;
+  }
+  if (text.back() == '/') {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  return true;
+}
+
+bool validateIdentifierText(const std::string &text, std::string &error) {
+  if (text.empty()) {
+    error = "invalid identifier";
+    return false;
+  }
+  if (text[0] == '/') {
+    return validateSlashPath(text, error);
+  }
+  if (text.find('/') != std::string::npos) {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  if (!isIdentifierSegmentStart(text[0])) {
+    error = "invalid identifier: " + text;
+    return false;
+  }
+  for (size_t i = 1; i < text.size(); ++i) {
+    if (!isIdentifierSegmentChar(text[i])) {
+      error = "invalid identifier: " + text;
+      return false;
+    }
+  }
+  if (isReservedKeyword(text)) {
+    error = "reserved keyword cannot be used as identifier: " + text;
+    return false;
+  }
+  return true;
+}
+
 bool isBuiltinName(const std::string &name) {
   return name == "assign" || name == "plus" || name == "minus" || name == "multiply" || name == "divide" ||
          name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
@@ -97,8 +169,12 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   if (name.kind == TokenKind::End) {
     return false;
   }
-  if (isReservedKeyword(name.text)) {
-    return fail("reserved keyword cannot be used as identifier: " + name.text);
+  if (name.text.find('/') != std::string::npos) {
+    return fail("namespace name must be a simple identifier");
+  }
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    return fail(nameError);
   }
   if (!expect(TokenKind::LBrace, "expected '{' after namespace")) {
     return false;
@@ -133,8 +209,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (name.kind == TokenKind::End) {
     return false;
   }
-  if (isReservedKeyword(name.text)) {
-    return fail("reserved keyword cannot be used as identifier: " + name.text);
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    return fail(nameError);
   }
 
   std::vector<std::string> templateArgs;
@@ -326,8 +403,9 @@ bool Parser::parseIdentifierList(std::vector<std::string> &out) {
   if (first.kind == TokenKind::End) {
     return false;
   }
-  if (isReservedKeyword(first.text)) {
-    return fail("reserved keyword cannot be used as identifier: " + first.text);
+  std::string firstError;
+  if (!validateIdentifierText(first.text, firstError)) {
+    return fail(firstError);
   }
   out.push_back(first.text);
   if (!match(TokenKind::RParen)) {
@@ -337,8 +415,9 @@ bool Parser::parseIdentifierList(std::vector<std::string> &out) {
       if (next.kind == TokenKind::End) {
         return false;
       }
-      if (isReservedKeyword(next.text)) {
-        return fail("reserved keyword cannot be used as identifier: " + next.text);
+      std::string nextError;
+      if (!validateIdentifierText(next.text, nextError)) {
+        return fail(nextError);
       }
       out.push_back(next.text);
     }
@@ -359,8 +438,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       if (name.kind == TokenKind::End) {
         return false;
       }
-      if (isReservedKeyword(name.text)) {
-        return fail("reserved keyword cannot be used as identifier: " + name.text);
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
       }
       if (!expect(TokenKind::Equal, "expected '=' after argument name")) {
         return false;
@@ -645,8 +725,9 @@ bool Parser::parseDefinitionBody(Definition &def) {
     if (name.kind == TokenKind::End) {
       return false;
     }
-    if (isReservedKeyword(name.text)) {
-      return fail("reserved keyword cannot be used as identifier: " + name.text);
+    std::string nameError;
+    if (!validateIdentifierText(name.text, nameError)) {
+      return fail(nameError);
     }
     if (name.text == "if" && statementTransforms.empty() && match(TokenKind::LParen)) {
       size_t savedPos = pos_;
@@ -745,8 +826,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (name.kind == TokenKind::End) {
       return false;
     }
-    if (isReservedKeyword(name.text)) {
-      return fail("reserved keyword cannot be used as identifier: " + name.text);
+    std::string nameError;
+    if (!validateIdentifierText(name.text, nameError)) {
+      return fail(nameError);
     }
     std::vector<std::string> templateArgs;
     if (match(TokenKind::LAngle)) {
@@ -884,8 +966,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       expr.literalValue = name.text == "true" ? 1 : 0;
       return true;
     }
-    if (isReservedKeyword(name.text)) {
-      return fail("reserved keyword cannot be used as identifier: " + name.text);
+    std::string nameError;
+    if (!validateIdentifierText(name.text, nameError)) {
+      return fail(nameError);
     }
     std::vector<std::string> templateArgs;
     if (match(TokenKind::LAngle)) {

@@ -125,6 +125,36 @@ main() {
   CHECK(error.find("definition requires return transform") != std::string::npos);
 }
 
+TEST_CASE("invalid slash path identifier fails") {
+  const std::string source = R"(
+[return<int>]
+/demo//widget() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
+}
+
+TEST_CASE("slash path requires leading slash") {
+  const std::string source = R"(
+[return<int>]
+demo/widget() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
+}
+
 TEST_CASE("out of range literal fails") {
   const std::string source = R"(
 [return<int>]
