@@ -2685,6 +2685,18 @@ main() {
   CHECK(error.find("io_out") != std::string::npos);
 }
 
+TEST_CASE("print_error requires io_err effect") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print_error("oops")
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("io_err") != std::string::npos);
+}
+
 TEST_CASE("string literal rejects unknown suffix") {
   const std::string source = R"(
 [effects(io_out)]
@@ -2788,6 +2800,18 @@ execute_repeat(1i32) {
 )";
   std::string error;
   CHECK(validateProgramWithDefaults(source, "/main", {"io_out"}, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("default effects allow print_error") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line_error("oops")
+}
+)";
+  std::string error;
+  CHECK(validateProgramWithDefaults(source, "/main", {"io_err"}, error));
   CHECK(error.empty());
 }
 

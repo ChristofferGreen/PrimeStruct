@@ -1625,6 +1625,43 @@ main() {
   CHECK(sawPrintString);
 }
 
+TEST_CASE("ir lowerer supports print_error with string literals") {
+  const std::string source = R"(
+[return<int> effects(io_err)]
+main() {
+  print_error("oops")
+  print_line_error("warn")
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  CHECK(module.stringTable.size() == 2);
+  bool sawNoNewlineErr = false;
+  bool sawNewlineErr = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintString) {
+      const uint64_t flags = primec::decodePrintFlags(inst.imm);
+      if ((flags & primec::PrintFlagStderr) != 0) {
+        if ((flags & primec::PrintFlagNewline) != 0) {
+          sawNewlineErr = true;
+        } else {
+          sawNoNewlineErr = true;
+        }
+      }
+    }
+  }
+  CHECK(sawNoNewlineErr);
+  CHECK(sawNewlineErr);
+}
+
 TEST_CASE("ir lowerer accepts string literal suffixes") {
   const std::string source = R"PS(
 [return<int> effects(io_out)]
