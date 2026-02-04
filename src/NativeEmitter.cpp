@@ -26,6 +26,15 @@ constexpr uint64_t PageSize =
 #endif
 constexpr uint64_t PageZeroSize = 0x100000000ull;
 constexpr uint64_t TextVmAddr = 0x100000000ull;
+#if defined(__APPLE__)
+constexpr uint32_t PrintScratchBytes = 32;
+constexpr uint32_t PrintScratchSlots = (PrintScratchBytes + 15) / 16;
+#endif
+#if defined(__APPLE__)
+constexpr uint64_t SysWrite = SYS_write;
+#else
+constexpr uint64_t SysWrite = 0;
+#endif
 
 uint64_t alignTo(uint64_t value, uint64_t alignment) {
   if (alignment == 0) {
@@ -212,6 +221,38 @@ class Arm64Emitter {
     emit(encodeRet());
   }
 
+  void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes) {
+    emitPopReg(0);
+    emitCompareRegZero(0);
+    size_t nonNegative = emitCondBranchPlaceholder(CondCode::Ge);
+    emitSubReg(0, 31, 0);
+    emitMovImm64(5, 1);
+    size_t afterSign = emitJumpPlaceholder();
+    size_t nonNegativeIndex = currentWordIndex();
+    patchCondBranch(nonNegative, static_cast<int32_t>(nonNegativeIndex - nonNegative), CondCode::Ge);
+    emitMovImm64(5, 0);
+    size_t afterSignIndex = currentWordIndex();
+    patchJump(afterSign, static_cast<int32_t>(afterSignIndex - afterSign));
+    emitPrintUnsignedInternal(scratchOffset, scratchBytes, true, 5);
+  }
+
+  void emitPrintUnsigned(uint32_t scratchOffset, uint32_t scratchBytes) {
+    emitPopReg(0);
+    emitPrintUnsignedInternal(scratchOffset, scratchBytes, false, 0);
+  }
+
+  size_t emitPrintStringPlaceholder(uint64_t lengthBytes, uint32_t scratchOffset) {
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitMovImm64(2, lengthBytes);
+    emitWriteSyscall(1, 2);
+    emitWriteNewline(scratchOffset);
+    return fixupIndex;
+  }
+
+  void patchAdr(size_t index, uint8_t rd, int32_t imm21) {
+    patchWord(index, encodeAdr(rd, imm21));
+  }
+
   std::vector<uint8_t> finalize() const {
     std::vector<uint8_t> bytes;
     bytes.reserve(code_.size() * 4);
@@ -255,6 +296,30 @@ class Arm64Emitter {
     emitPushReg(0);
   }
 
+  void emitCompareRegZero(uint8_t reg) {
+    emit(encodeSubsReg(31, reg, 31));
+  }
+
+  size_t emitCondBranchPlaceholder(CondCode cond) {
+    size_t index = currentWordIndex();
+    emit(encodeBCond(0, static_cast<uint8_t>(cond)));
+    return index;
+  }
+
+  void patchCondBranch(size_t index, int32_t offsetWords, CondCode cond) {
+    patchWord(index, encodeBCond(offsetWords, static_cast<uint8_t>(cond)));
+  }
+
+  size_t emitCbzPlaceholder(uint8_t reg) {
+    size_t index = currentWordIndex();
+    emit(encodeCbz(reg, 0));
+    return index;
+  }
+
+  void patchCbz(size_t index, uint8_t reg, int32_t offsetWords) {
+    patchWord(index, encodeCbz(reg, offsetWords));
+  }
+
   void emitCompareAndPush(CondCode cond) {
     emitPopReg(0);
     emitPopReg(1);
@@ -282,6 +347,120 @@ class Arm64Emitter {
     emit(encodeMovk(rd, static_cast<uint16_t>((value >> 16) & 0xFFFF), 16));
     emit(encodeMovk(rd, static_cast<uint16_t>((value >> 32) & 0xFFFF), 32));
     emit(encodeMovk(rd, static_cast<uint16_t>((value >> 48) & 0xFFFF), 48));
+  }
+
+  size_t emitAdrPlaceholder(uint8_t rd) {
+    size_t index = currentWordIndex();
+    emit(encodeAdr(rd, 0));
+    return index;
+  }
+
+  void emitMovReg(uint8_t rd, uint8_t rn) {
+    emit(encodeAddRegImm(rd, rn, 0));
+  }
+
+  void emitAddRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    emit(encodeAddRegImm(rd, rn, imm));
+  }
+
+  void emitSubRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    emit(encodeSubRegImm(rd, rn, imm));
+  }
+
+  void emitAddReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeAddReg(rd, rn, rm));
+  }
+
+  void emitSubReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeSubReg(rd, rn, rm));
+  }
+
+  void emitMulReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeMulReg(rd, rn, rm));
+  }
+
+  void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeUdivReg(rd, rn, rm));
+  }
+
+  void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    emit(encodeStrbRegBase(rt, rn, offsetBytes));
+  }
+
+  void emitWriteSyscall(uint8_t bufferReg, uint8_t lengthReg) {
+    emitMovImm64(0, 1);
+    emitMovReg(1, bufferReg);
+    emitMovReg(2, lengthReg);
+    emitMovImm64(16, SysWrite);
+    emit(encodeSvc());
+  }
+
+  void emitWriteNewline(uint32_t scratchOffset) {
+    emitLoadFrameOffset(1, scratchOffset);
+    emitMovImm64(4, '\n');
+    emitStrbRegBase(4, 1, 0);
+    emitMovImm64(2, 1);
+    emitWriteSyscall(1, 2);
+  }
+
+  void emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes) {
+    if (offsetBytes <= 4095) {
+      emitAddRegImm(rd, 27, static_cast<uint16_t>(offsetBytes));
+      return;
+    }
+    emitMovImm64(9, offsetBytes);
+    emitAddReg(rd, 27, 9);
+  }
+
+  void emitAddOffset(uint8_t rd, uint8_t rn, uint32_t offsetBytes) {
+    if (offsetBytes <= 4095) {
+      emitAddRegImm(rd, rn, static_cast<uint16_t>(offsetBytes));
+      return;
+    }
+    emitMovImm64(9, offsetBytes);
+    emitAddReg(rd, rn, 9);
+  }
+
+  void emitPrintUnsignedInternal(uint32_t scratchOffset,
+                                 uint32_t scratchBytes,
+                                 bool includeSign,
+                                 uint8_t signReg) {
+    emitLoadFrameOffset(1, scratchOffset);
+    emitAddOffset(1, 1, scratchBytes);
+    emitMovReg(2, 1);
+    emitSubRegImm(2, 2, 1);
+    emitMovImm64(4, '\n');
+    emitStrbRegBase(4, 2, 0);
+    emitMovImm64(10, 10);
+
+    size_t loopStart = currentWordIndex();
+    emitUdivReg(3, 0, 10);
+    emitMulReg(4, 3, 10);
+    emitSubReg(4, 0, 4);
+    emitAddRegImm(4, 4, static_cast<uint16_t>('0'));
+    emitSubRegImm(2, 2, 1);
+    emitStrbRegBase(4, 2, 0);
+    emitMovReg(0, 3);
+    size_t doneBranch = emitCbzPlaceholder(0);
+    size_t jumpBack = emitJumpPlaceholder();
+    int32_t loopDelta = static_cast<int32_t>(static_cast<int64_t>(loopStart) - static_cast<int64_t>(jumpBack));
+    patchJump(jumpBack, loopDelta);
+    size_t doneIndex = currentWordIndex();
+    int32_t doneDelta = static_cast<int32_t>(static_cast<int64_t>(doneIndex) - static_cast<int64_t>(doneBranch));
+    patchCbz(doneBranch, 0, doneDelta);
+
+    if (includeSign) {
+      size_t skipSign = emitCbzPlaceholder(signReg);
+      emitSubRegImm(2, 2, 1);
+      emitMovImm64(4, '-');
+      emitStrbRegBase(4, 2, 0);
+      size_t afterSign = currentWordIndex();
+      int32_t signDelta = static_cast<int32_t>(static_cast<int64_t>(afterSign) - static_cast<int64_t>(skipSign));
+      patchCbz(skipSign, signReg, signDelta);
+    }
+
+    emitSubReg(3, 1, 2);
+    emitWriteSyscall(2, 3);
   }
 
   static uint32_t encodeAddSpImm(uint16_t imm) {
@@ -354,6 +533,13 @@ class Arm64Emitter {
            static_cast<uint32_t>(rd);
   }
 
+  static uint32_t encodeAdr(uint8_t rd, int32_t imm21) {
+    uint32_t imm = static_cast<uint32_t>(imm21) & 0x1FFFFFu;
+    uint32_t immlo = imm & 0x3u;
+    uint32_t immhi = (imm >> 2) & 0x7FFFFu;
+    return 0x10000000 | (immlo << 29) | (immhi << 5) | static_cast<uint32_t>(rd);
+  }
+
   static uint32_t encodeB(int32_t imm26) {
     uint32_t imm = static_cast<uint32_t>(imm26) & 0x03FFFFFFu;
     return 0x14000000 | imm;
@@ -367,6 +553,11 @@ class Arm64Emitter {
   static uint32_t encodeCbz(uint8_t rt, int32_t imm19) {
     uint32_t imm = static_cast<uint32_t>(imm19) & 0x7FFFFu;
     return 0xB4000000 | (imm << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>(offsetBytes & 0xFFFu);
+    return 0x39000000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
   }
 
   static uint32_t encodeSvc() {
@@ -474,6 +665,14 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "ReturnI32";
       case IrOpcode::ReturnI64:
         return "ReturnI64";
+      case IrOpcode::PrintI32:
+        return "PrintI32";
+      case IrOpcode::PrintI64:
+        return "PrintI64";
+      case IrOpcode::PrintU64:
+        return "PrintU64";
+      case IrOpcode::PrintString:
+        return "PrintString";
       default:
         return "Unknown";
     }
@@ -532,6 +731,12 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::ReturnI32:
       case IrOpcode::ReturnI64:
         return -1;
+      case IrOpcode::PrintI32:
+      case IrOpcode::PrintI64:
+      case IrOpcode::PrintU64:
+        return -1;
+      case IrOpcode::PrintString:
+        return 0;
       default:
         return 0;
     }
@@ -1100,16 +1305,24 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   Arm64Emitter emitter;
   size_t localCount = 0;
   int64_t maxStack = 0;
+  bool needsPrintScratch = false;
   for (const auto &inst : fn.instructions) {
     if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
         inst.op == IrOpcode::AddressOfLocal) {
       localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
     }
+    if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
+        inst.op == IrOpcode::PrintString) {
+      needsPrintScratch = true;
+    }
   }
   if (!computeMaxStackDepth(fn, maxStack, error)) {
     return false;
   }
-  uint64_t localsSize = static_cast<uint64_t>(localCount) * 16;
+  uint32_t scratchSlots = needsPrintScratch ? PrintScratchSlots : 0;
+  uint32_t scratchBytes = scratchSlots * 16;
+  uint32_t scratchOffset = static_cast<uint32_t>(localCount) * 16;
+  uint64_t localsSize = static_cast<uint64_t>(localCount + scratchSlots) * 16;
   uint64_t stackSize = static_cast<uint64_t>(maxStack) * 16;
   uint64_t frameSize = alignTo(localsSize + stackSize, 16);
   if (localCount > 2047) {
@@ -1126,6 +1339,20 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     bool isConditional = false;
   };
   std::vector<BranchFixup> fixups;
+  struct StringFixup {
+    size_t codeIndex = 0;
+    uint32_t stringIndex = 0;
+  };
+  std::vector<StringFixup> stringFixups;
+  std::vector<uint64_t> stringOffsets;
+  std::vector<uint8_t> stringData;
+  if (!module.stringTable.empty()) {
+    stringOffsets.reserve(module.stringTable.size());
+    for (const auto &text : module.stringTable) {
+      stringOffsets.push_back(static_cast<uint64_t>(stringData.size()));
+      stringData.insert(stringData.end(), text.begin(), text.end());
+    }
+  }
   std::vector<size_t> instOffsets(fn.instructions.size() + 1, 0);
 
   for (size_t index = 0; index < fn.instructions.size(); ++index) {
@@ -1265,6 +1492,26 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::ReturnI64:
         emitter.emitReturn();
         break;
+      case IrOpcode::PrintI32:
+        emitter.emitPrintSigned(scratchOffset, scratchBytes);
+        break;
+      case IrOpcode::PrintI64:
+        emitter.emitPrintSigned(scratchOffset, scratchBytes);
+        break;
+      case IrOpcode::PrintU64:
+        emitter.emitPrintUnsigned(scratchOffset, scratchBytes);
+        break;
+      case IrOpcode::PrintString: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "native backend encountered invalid string index";
+          return false;
+        }
+        size_t fixupIndex =
+            emitter.emitPrintStringPlaceholder(module.stringTable[static_cast<size_t>(inst.imm)].size(),
+                                               scratchOffset);
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        break;
+      }
       default:
         error = "unsupported IR opcode for native backend";
         return false;
@@ -1300,7 +1547,31 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     }
   }
 
+  if (!stringFixups.empty()) {
+    uint64_t codeSizeBytes = static_cast<uint64_t>(emitter.currentWordIndex()) * 4;
+    uint64_t stringBaseOffset = codeSizeBytes;
+    constexpr int64_t kAdrMin = -(1LL << 20);
+    constexpr int64_t kAdrMax = (1LL << 20) - 1;
+    for (const auto &fixup : stringFixups) {
+      if (fixup.stringIndex >= module.stringTable.size()) {
+        error = "native backend encountered invalid string fixup";
+        return false;
+      }
+      int64_t targetOffset = static_cast<int64_t>(stringBaseOffset + stringOffsets[fixup.stringIndex]);
+      int64_t instrOffset = static_cast<int64_t>(fixup.codeIndex) * 4;
+      int64_t delta = targetOffset - instrOffset;
+      if (delta < kAdrMin || delta > kAdrMax) {
+        error = "native backend string literal out of range";
+        return false;
+      }
+      emitter.patchAdr(fixup.codeIndex, 1, static_cast<int32_t>(delta));
+    }
+  }
+
   std::vector<uint8_t> code = emitter.finalize();
+  if (!stringData.empty()) {
+    code.insert(code.end(), stringData.begin(), stringData.end());
+  }
   std::vector<uint8_t> image;
   if (!buildMachO(code, image, error)) {
     return false;

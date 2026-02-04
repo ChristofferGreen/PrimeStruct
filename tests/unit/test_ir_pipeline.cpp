@@ -1534,11 +1534,11 @@ main() {
   CHECK(error.find("native backend does not support string literals") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects string bindings") {
+TEST_CASE("ir lowerer rejects non-literal string bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message("hello")
+  [string] message(1i32)
   return(1i32)
 }
 )";
@@ -1550,7 +1550,72 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support string types") != std::string::npos);
+  CHECK(error.find("requires string bindings to use string literals") != std::string::npos);
+}
+
+TEST_CASE("ir lowerer supports log_line with string literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  log_line("hello")
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  CHECK(module.stringTable.size() == 1);
+  bool sawPrintString = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintString) {
+      sawPrintString = true;
+      break;
+    }
+  }
+  CHECK(sawPrintString);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  CHECK(decoded.stringTable == module.stringTable);
+}
+
+TEST_CASE("ir lowerer supports log_line with string bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] message("hello")
+  log_line(message)
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  CHECK(module.stringTable.size() == 1);
+  bool sawPrintString = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintString) {
+      sawPrintString = true;
+      break;
+    }
+  }
+  CHECK(sawPrintString);
 }
 
 TEST_CASE("ir lowerer rejects mixed signed/unsigned arithmetic") {

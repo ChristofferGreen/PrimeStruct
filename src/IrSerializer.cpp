@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 4;
+constexpr uint32_t IrVersion = 5;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -66,6 +66,19 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
   appendU32(out, IrVersion);
   appendU32(out, static_cast<uint32_t>(module.functions.size()));
   appendU32(out, static_cast<uint32_t>(module.entryIndex));
+  if (module.stringTable.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    error = "too many strings for IR serialization";
+    return false;
+  }
+  appendU32(out, static_cast<uint32_t>(module.stringTable.size()));
+  for (const auto &text : module.stringTable) {
+    if (text.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+      error = "string literal too long for IR serialization";
+      return false;
+    }
+    appendU32(out, static_cast<uint32_t>(text.size()));
+    out.insert(out.end(), text.begin(), text.end());
+  }
   for (const auto &fn : module.functions) {
     if (fn.name.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
       error = "function name too long for IR serialization";
@@ -104,6 +117,25 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
   if (!readU32(data, offset, funcCount) || !readU32(data, offset, entryIndex)) {
     error = "truncated IR header";
     return false;
+  }
+  uint32_t stringCount = 0;
+  if (!readU32(data, offset, stringCount)) {
+    error = "truncated IR string table";
+    return false;
+  }
+  out.stringTable.reserve(stringCount);
+  for (uint32_t i = 0; i < stringCount; ++i) {
+    uint32_t len = 0;
+    if (!readU32(data, offset, len)) {
+      error = "truncated IR string length";
+      return false;
+    }
+    if (offset + len > data.size()) {
+      error = "truncated IR string";
+      return false;
+    }
+    out.stringTable.emplace_back(reinterpret_cast<const char *>(data.data() + offset), len);
+    offset += len;
   }
   out.functions.reserve(funcCount);
   for (uint32_t i = 0; i < funcCount; ++i) {

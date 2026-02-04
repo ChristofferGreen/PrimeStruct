@@ -350,6 +350,10 @@ bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }
 
+bool isLogLineCall(const Expr &expr) {
+  return isSimpleCallName(expr, "log_line");
+}
+
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix) {
   if (!name.empty() && name[0] == '/') {
     return name;
@@ -1107,6 +1111,13 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return it != locals.end() && it->second.isMutable;
   };
 
+  auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
+    if (binding.typeName == "Reference") {
+      return returnKindForTypeName(binding.typeTemplateArg);
+    }
+    return returnKindForTypeName(binding.typeName);
+  };
+
   auto isIntegerOrBoolExpr = [&](const Expr &arg,
                                  const std::vector<std::string> &params,
                                  const std::unordered_map<std::string, BindingInfo> &locals) -> bool {
@@ -1127,16 +1138,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
-          const std::string &typeName = it->second.typeName;
-          if (typeName == "float" || typeName == "f32" || typeName == "f64" || typeName == "string") {
-            return false;
-          }
-          if (typeName == "Reference") {
-            const std::string &refType = it->second.typeTemplateArg;
-            if (refType == "string" || refType == "Pointer" || refType.rfind("Pointer<", 0) == 0) {
-              return false;
-            }
-          }
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+                 localKind == ReturnKind::Bool;
         }
       }
       return true;
@@ -1168,15 +1172,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
           auto it = locals.find(arg.name);
           if (it != locals.end()) {
-            if (it->second.typeName == "string" || it->second.typeName == "Pointer") {
-              return false;
-            }
-            if (it->second.typeName == "Reference") {
-              const std::string &refType = it->second.typeTemplateArg;
-              if (refType == "string" || refType == "Pointer" || refType.rfind("Pointer<", 0) == 0) {
-                return false;
-              }
-            }
+            ReturnKind localKind = returnKindForBinding(it->second);
+            return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+                   localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
           }
         }
         return true;
@@ -1264,16 +1262,9 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
           auto it = locals.find(arg.name);
           if (it != locals.end()) {
-            const std::string &typeName = it->second.typeName;
-            if (typeName == "string" || typeName == "Pointer") {
-              return false;
-            }
-            if (typeName == "Reference") {
-              const std::string &refType = it->second.typeTemplateArg;
-              if (refType == "string" || refType == "Pointer" || refType.rfind("Pointer<", 0) == 0) {
-                return false;
-              }
-            }
+            ReturnKind localKind = returnKindForBinding(it->second);
+            return localKind == ReturnKind::Bool || localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                   localKind == ReturnKind::UInt64 || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
           }
         }
         return true;
@@ -1492,6 +1483,16 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           if (expr.args.size() != 1) {
             error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
+        }
+        if (isLogLineCall(expr)) {
+          if (expr.args.size() != 1) {
+            error = "log_line requires exactly one argument";
             return false;
           }
           if (!validateExpr(params, locals, expr.args.front())) {

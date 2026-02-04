@@ -1,5 +1,7 @@
 #include "primec/Vm.h"
 
+#include <cstdio>
+#include <string>
 #include <vector>
 
 namespace primec {
@@ -329,6 +331,56 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) c
         }
         result = stack.back();
         return true;
+      }
+      case IrOpcode::PrintI32: {
+        if (stack.empty()) {
+          error = "IR stack underflow on print";
+          return false;
+        }
+        int32_t value = static_cast<int32_t>(stack.back());
+        stack.pop_back();
+        std::string text = std::to_string(value);
+        std::fwrite(text.data(), 1, text.size(), stdout);
+        std::fputc('\n', stdout);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::PrintI64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on print";
+          return false;
+        }
+        int64_t value = static_cast<int64_t>(stack.back());
+        stack.pop_back();
+        std::string text = std::to_string(value);
+        std::fwrite(text.data(), 1, text.size(), stdout);
+        std::fputc('\n', stdout);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::PrintU64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on print";
+          return false;
+        }
+        uint64_t value = stack.back();
+        stack.pop_back();
+        std::string text = std::to_string(value);
+        std::fwrite(text.data(), 1, text.size(), stdout);
+        std::fputc('\n', stdout);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::PrintString: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "invalid string index in IR";
+          return false;
+        }
+        const std::string &text = module.stringTable[static_cast<size_t>(inst.imm)];
+        std::fwrite(text.data(), 1, text.size(), stdout);
+        std::fputc('\n', stdout);
+        ip += 1;
+        break;
       }
       default:
         error = "unknown IR opcode";

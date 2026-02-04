@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -34,6 +35,13 @@ int runCommand(const std::string &command) {
 #else
   return code;
 #endif
+}
+
+std::string readFile(const std::string &path) {
+  std::ifstream file(path);
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  return buffer.str();
 }
 } // namespace
 
@@ -245,6 +253,26 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs native log_line output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  log_line(42i32)
+  log_line("hello")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_log.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_log_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_log_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "42\nhello\n");
 }
 
 TEST_CASE("compiles and runs native pointer plus offsets") {
@@ -680,11 +708,11 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native string bindings") {
+TEST_CASE("rejects native non-literal string bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message("hello")
+  [string] message(1i32)
   return(1i32)
 }
 )";

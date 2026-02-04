@@ -48,6 +48,10 @@ enum class IrOpcode : uint8_t {
   ReturnVoid,
   ReturnI32,
   ReturnI64,
+  PrintI32,
+  PrintI64,
+  PrintU64,
+  PrintString,
 };
 
 struct IrInstruction {
@@ -63,6 +67,7 @@ struct IrFunction {
 struct IrModule {
   std::vector<IrFunction> functions;
   int32_t entryIndex = -1;
+  std::vector<std::string> stringTable;
 };
 
 } // namespace primec

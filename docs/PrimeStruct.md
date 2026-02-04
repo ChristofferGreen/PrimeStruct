@@ -13,7 +13,7 @@ Each filter stage halts on error (reporting diagnostics immediately) and exposes
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
-- **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs) so reviewers can tell when v0 is complete.
+- **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs) 
 - **Ownership map:** assign leads for parser, IR/type system, first backend, and test infrastructure, plus security/runtime reviewers.
 - **Integration plan:** describe how the compiler/test suite slots into the build (targets, CI loops, feature flags, artifact publishing).
 - **Risk log:** record open questions (borrow checker, capability taxonomy, GPU backend constraints) and mitigation/rollback strategies.
@@ -31,12 +31,6 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
   - Emit C++ and invoke a host compiler to produce an executable.
 - The produced executable runs and returns a deterministic exit code.
 
-### Minimal surface for v0.1
-- `return(...)` primitive only.
-- Integer literal support (`i32`, `i64`, `u64`), requires explicit width suffixes by default; opt into the `implicit-i32` filter via `--text-filters` to auto-append `i32`.
-- `[return<int>]` transform on the entry definition.
-- A single `main()`-like entry definition (`main()`). The VM/native subset currently requires entry definitions with no parameters.
-
 ### Example source and expected IR (sketch)
 PrimeStruct:
 ```
@@ -56,34 +50,16 @@ module {
 ```
 
 ### Compiler driver behavior (plan)
-- `PrimeStructc --emit=cpp input.prime -o build/hello.cpp`
-- `PrimeStructc --emit=exe input.prime -o build/hello`
+- `primec --emit=cpp input.prime -o build/hello.cpp`
+- `primec --emit=exe input.prime -o build/hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
-- `PrimeStructc --emit=native input.prime -o build/hello`
+- `primec --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `log_line` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
-## Phase 1 — Minimal Compiler That Emits an Executable
-Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source file into a runnable native executable. This is the smallest vertical slice that proves parsing, IR, a backend, and a host toolchain handoff.
-
-### Acceptance criteria
-- A single-file PrimeStruct program with one entry definition compiles to a native executable on macOS (initial target).
-- The compiler can:
-  - Parse a subset of the uniform envelope (definitions + executions).
-  - Build a canonical AST for that subset.
-  - Lower to a minimal IR (calls, literals, return).
-  - Emit C++ and invoke a host compiler to produce an executable.
-- The produced executable runs and returns a deterministic exit code.
-
-### Minimal surface for v0.1
-- `return(...)` primitive only.
-- Integer literal support (`i32`, `i64`, `u64`), requires explicit width suffixes.
-- `[return<int>]` transform on the entry definition.
-- A single `main()`-like entry definition (`main()`). The VM/native subset currently requires entry definitions with no parameters.
-
 ### Example source and expected IR (sketch)
 PrimeStruct:
 ```
@@ -103,14 +79,14 @@ module {
 ```
 
 ### Compiler driver behavior (plan)
-- `PrimeStructc --emit=cpp input.prime -o build/hello.cpp`
-- `PrimeStructc --emit=exe input.prime -o build/hello`
+- `primec --emit=cpp input.prime -o build/hello.cpp`
+- `primec --emit=exe input.prime -o build/hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
-- `PrimeStructc --emit=native input.prime -o build/hello`
+- `primec --emit=native input.prime -o build/hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `log_line` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - All generated outputs land under `build/` (configurable by `--out-dir`).
 
 ## Goals
@@ -123,14 +99,14 @@ module {
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Intermediate representation:** strongly-typed SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds string table + print opcodes to support `log_line` in VM/native builds.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`), and the current VM/native subset expects that definition to take no parameters. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`), and the current VM/native subset expects that definition to take no parameters. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body expressions so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
@@ -226,6 +202,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ### Core library surface (draft)
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The expression evaluates to `value`, so it can be nested or returned.
+- **`log_line(value)`:** stdout logging primitive used by tooling/examples. VM/native backends support numeric/bool values plus string literals/bindings; other string operations still require the C++ emitter.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see Pointer arithmetic below).
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean combinators accept `bool` or integer inputs and treat zero as `false` and any non-zero value as `true`. The current IR/native subset accepts only integer/bool operands for comparisons and boolean ops (float/string comparisons are not yet supported outside the C++ emitter).
 - **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected. The C++ emitter also handles floats.
@@ -304,7 +281,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - Collection literals currently lower through the C++ emitter only; the native backend does not yet lower them through IR.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0 and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
 - **Float note:** VM/native lowering currently rejects float literals, float bindings, and float arithmetic; use the C++ emitter for float-heavy scripts until float opcodes land in PSIR.
-- **String note:** VM/native lowering currently rejects string literals and string bindings; the C++ emitter is the supported path for string-heavy scripts for now.
+- **String note:** VM/native lowering now accepts string literals and string bindings only when used by `log_line`; other string operations still require the C++ emitter for now.
   - `convert<bool>` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
@@ -378,7 +355,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## VM Design (draft)
 - **Instruction set:** ~50 stack-based ops covering control flow, stack manipulation, memory/pointer access, optional coroutine primitives. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR versioning:** current portable IR is PSIR v2 (adds `AddressOfLocal`, `LoadIndirect`, `StoreIndirect` for pointer helpers).
+- **PSIR versioning:** current portable IR is PSIR v5 (adds `AddressOfLocal`, `LoadIndirect`, `StoreIndirect` for pointer helpers, `ReturnVoid`, plus string table + print opcodes for `log_line`).
 - **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.
@@ -451,7 +428,7 @@ module {
 ```
 
 ## Integration Points
-- **Build system:** extend CMake/tooling to run `PrimeStructc`, track dependency graphs, and support incremental builds.
+- **Build system:** extend CMake/tooling to run `primec`, track dependency graphs, and support incremental builds.
 - **PathSpace Scene Graph:** helper APIs map PrimeStruct modules to scenes/renderers and manage path-based resource bindings.
 - **Testing:** unit/looped regression suites verify backend parity (C++, VM, GLSL).
 - **Diagnostics:** metrics/logs land under `diagnostics/PrimeStruct/*`. Effect annotations drive error messaging.
@@ -489,7 +466,3 @@ module {
 8. Decide machine-code strategy (C++ emission, direct LLVM IR, third-party JIT) and prototype.
 9. Define diagnostics/tooling plan (source maps, error reporting pipeline, incremental tooling, future PathSpace-native editor).
 10. Document staffing/time requirements before promoting PrimeStruct onto the active PathSpace roadmap.
-
----
-
-*Logged as a research idea on 2025-10-15. Not scheduled for current milestones but tracked for future convergence of scripting and shading.*

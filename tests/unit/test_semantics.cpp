@@ -139,6 +139,23 @@ main() {
   CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
 }
 
+TEST_CASE("arithmetic rejects struct operands") {
+  const std::string source = R"(
+thing() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  [thing] item(1i32)
+  return(plus(item, item))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
+}
+
 TEST_CASE("arithmetic negate rejects bool operands") {
   const std::string source = R"(
 [return<int>]
@@ -1225,6 +1242,23 @@ main() {
   CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
 }
 
+TEST_CASE("builtin and rejects struct operands") {
+  const std::string source = R"(
+thing() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  [thing] item(1i32)
+  return(and(item, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
+}
+
 TEST_CASE("builtin or calls validate") {
   const std::string source = R"(
 [return<int>]
@@ -1279,6 +1313,23 @@ TEST_CASE("builtin comparison rejects pointer operands") {
 main() {
   [i32] value(1i32)
   return(greater_than(location(value), 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require numeric or bool operands") != std::string::npos);
+}
+
+TEST_CASE("builtin comparison rejects struct operands") {
+  const std::string source = R"(
+thing() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  [thing] item(1i32)
+  return(equal(item, item))
 }
 )";
   std::string error;
