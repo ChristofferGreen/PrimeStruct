@@ -852,6 +852,11 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
     if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
       return false;
     }
+    if (match(TokenKind::LBrace)) {
+      if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+        return false;
+      }
+    }
     def.statements.push_back(std::move(callExpr));
   }
   expect(TokenKind::RBrace, "expected '}' to close body");

@@ -605,6 +605,40 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << "}\n";
         return;
       }
+      if (stmt.kind == Expr::Kind::Call && !stmt.bodyArguments.empty()) {
+        std::string full = resolveExprPath(stmt);
+        auto it = nameMap.find(full);
+        if (it == nameMap.end()) {
+          out << pad << emitExpr(stmt, nameMap, paramMap) << ";\n";
+          return;
+        }
+        out << pad << it->second << "(";
+        std::vector<const Expr *> orderedArgs;
+        auto paramIt = paramMap.find(full);
+        if (paramIt != paramMap.end()) {
+          orderedArgs = orderCallArguments(stmt, paramIt->second);
+        } else {
+          for (const auto &arg : stmt.args) {
+            orderedArgs.push_back(&arg);
+          }
+        }
+        for (size_t i = 0; i < orderedArgs.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          out << emitExpr(*orderedArgs[i], nameMap, paramMap);
+        }
+        if (!orderedArgs.empty()) {
+          out << ", ";
+        }
+        out << "[&]() {\n";
+        for (const auto &bodyStmt : stmt.bodyArguments) {
+          emitStatement(bodyStmt, indent + 1);
+        }
+        out << pad << "}";
+        out << ");\n";
+        return;
+      }
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
         out << pad << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap, paramMap) << ";\n";

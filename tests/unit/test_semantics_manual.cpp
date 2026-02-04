@@ -167,15 +167,18 @@ TEST_CASE("then wrapper mismatch fails") {
   CHECK(error.find("then must use the then wrapper") != std::string::npos);
 }
 
-TEST_CASE("block arguments only supported on if") {
+TEST_CASE("block arguments allowed on statement calls") {
   primec::Program program;
-  primec::Expr callWithBlock = makeCall("foo", {}, {}, {makeLiteral(1)});
+  primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr callWithBlock = makeCall("foo", {}, {}, {binding});
+  program.definitions.push_back(
+      makeDefinition("/foo", {makeTransform("return", std::string("void"))}, {}));
   program.definitions.push_back(
       makeDefinition("/main", {makeTransform("return", std::string("int"))},
                      {callWithBlock, makeCall("/return", {makeLiteral(1)})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("block arguments are only supported on if") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("statements must be calls") {
@@ -282,7 +285,7 @@ TEST_CASE("block arguments not allowed in expression context") {
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("block arguments are only supported on if blocks") != std::string::npos);
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
 }
 
 TEST_CASE("named arguments not allowed on builtin calls") {

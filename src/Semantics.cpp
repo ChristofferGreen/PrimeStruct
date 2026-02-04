@@ -669,7 +669,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         return false;
       }
       if (!expr.bodyArguments.empty()) {
-        error = "block arguments are only supported on if blocks";
+        error = "block arguments are only supported on statement calls";
         return false;
       }
       if (isReturnCall(expr)) {
@@ -858,6 +858,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                               bool *sawReturn,
                               const std::string &namespacePrefix) -> bool {
     if (stmt.isBinding) {
+      if (!stmt.bodyArguments.empty()) {
+        error = "binding does not accept block arguments";
+        return false;
+      }
       if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
         error = "duplicate binding name: " + stmt.name;
         return false;
@@ -960,8 +964,27 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return true;
     }
     if (!stmt.bodyArguments.empty()) {
-      error = "block arguments are only supported on if";
-      return false;
+      if (isThenCall(stmt) || isElseCall(stmt)) {
+        error = "then/else blocks must be nested inside if";
+        return false;
+      }
+      std::string resolved = resolveCalleePath(stmt);
+      if (defMap.count(resolved) == 0) {
+        error = "block arguments require a definition target: " + resolved;
+        return false;
+      }
+      Expr call = stmt;
+      call.bodyArguments.clear();
+      if (!validateExpr(params, locals, call)) {
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      for (const auto &bodyExpr : stmt.bodyArguments) {
+        if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, nullptr, namespacePrefix)) {
+          return false;
+        }
+      }
+      return true;
     }
     return validateExpr(params, locals, stmt);
   };

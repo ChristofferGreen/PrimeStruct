@@ -133,6 +133,27 @@ main() {
   CHECK(stmt.args[1].bodyArguments[0].isBinding);
 }
 
+TEST_CASE("parses statement call with block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  execute_repeat(3i32) {
+    [i32] temp(1i32)
+    assign(temp, 2i32)
+  }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  CHECK(stmt.name == "execute_repeat");
+  CHECK(stmt.bodyArguments.size() == 2);
+  CHECK(stmt.bodyArguments[0].isBinding);
+}
+
 TEST_CASE("parses boolean literals") {
   const std::string source = R"(
 [return<int>]
