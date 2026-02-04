@@ -406,6 +406,10 @@ bool parseBindingInfo(const Expr &expr,
   bool typeHasTemplate = false;
   std::optional<std::string> restrictType;
   for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      error = "binding does not accept " + transform.name + " transform";
+      return false;
+    }
     if (transform.name == "mut") {
       if (transform.templateArg) {
         error = "binding transforms do not take template arguments";

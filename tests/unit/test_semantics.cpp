@@ -1634,26 +1634,26 @@ TEST_CASE("binding rejects effects transform arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [effects(io_stdout) i32] value(1i32)
+  [effects(io_out) i32] value(1i32)
   return(value)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding transforms do not take arguments") != std::string::npos);
+  CHECK(error.find("binding does not accept effects transform") != std::string::npos);
 }
 
 TEST_CASE("binding rejects capabilities transform arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [capabilities(io_stdout) i32] value(1i32)
+  [capabilities(io_out) i32] value(1i32)
   return(value)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding transforms do not take arguments") != std::string::npos);
+  CHECK(error.find("binding does not accept capabilities transform") != std::string::npos);
 }
 
 TEST_CASE("restrict binding validates") {

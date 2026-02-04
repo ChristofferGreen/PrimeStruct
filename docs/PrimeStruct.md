@@ -198,6 +198,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`restrict<T>`:** constrain the accepted type to `T` (or satisfy concept-like predicates once defined). Applied alongside `copy`/`mut` when needed.
 - **`return<T>`:** optional contract that pins the inferred return type. Recommended for public APIs or when disambiguation is required.
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
+- **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
 - **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
 - **Capability helpers:** `capabilities(...)` reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
 - **`struct`, `pod`, `stack`, `heap`, `buffer`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[stack]` forbids heap placement, `[pod]` forbids handles/async fields).
