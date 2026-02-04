@@ -1530,6 +1530,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                      const Expr &,
                      ReturnKind,
                      bool,
+                     bool,
                      bool *,
                      const std::string &)>
       validateStatement = [&](const std::vector<std::string> &params,
@@ -1537,9 +1538,14 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                               const Expr &stmt,
                               ReturnKind returnKind,
                               bool allowReturn,
+                              bool allowBindings,
                               bool *sawReturn,
                               const std::string &namespacePrefix) -> bool {
     if (stmt.isBinding) {
+      if (!allowBindings) {
+        error = "binding not allowed in execution body";
+        return false;
+      }
       if (!stmt.bodyArguments.empty()) {
         error = "binding does not accept block arguments";
         return false;
@@ -1642,6 +1648,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                                  bodyExpr,
                                  returnKind,
                                  allowReturn,
+                                 allowBindings,
                                  sawReturn,
                                  namespacePrefix)) {
             return false;
@@ -1674,7 +1681,8 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       std::unordered_map<std::string, BindingInfo> blockLocals = locals;
       for (const auto &bodyExpr : stmt.bodyArguments) {
-        if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, nullptr, namespacePrefix)) {
+        if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, allowBindings, nullptr,
+                               namespacePrefix)) {
           return false;
         }
       }
@@ -1692,7 +1700,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
     bool sawReturn = false;
     for (const auto &stmt : def.statements) {
-      if (!validateStatement(def.parameters, locals, stmt, kind, true, &sawReturn, def.namespacePrefix)) {
+      if (!validateStatement(def.parameters, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
         return false;
       }
     }
@@ -1752,7 +1760,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments cannot be bindings";
         return false;
       }
-      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, nullptr, exec.namespacePrefix)) {
+      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, false, nullptr, exec.namespacePrefix)) {
         return false;
       }
     }

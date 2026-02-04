@@ -378,6 +378,25 @@ execute_repeat(3i32) { [i32] value(1i32) }
   CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
 }
 
+TEST_CASE("execution body rejects nested bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat(x) {
+  return()
+}
+
+execute_repeat(3i32) { if(1i32, then{ [i32] value(2i32) }, else{ }) }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
+}
+
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
 [return<u32>]
