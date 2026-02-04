@@ -76,4 +76,20 @@ TEST_CASE("missing include version directory fails") {
   CHECK(error.find("include version not found") != std::string::npos);
 }
 
+TEST_CASE("private include path fails") {
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_dir";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  const std::filesystem::path privateFile = dir / "_private" / "lib.prime";
+  writeFile(privateFile, "// PRIVATE\n");
+  const std::string srcPath =
+      writeFile(dir / "main_private.prime", "include<\"" + privateFile.string() + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("private folder") != std::string::npos);
+}
+
 TEST_SUITE_END();

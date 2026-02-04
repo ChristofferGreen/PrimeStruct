@@ -93,6 +93,23 @@ bool isNewerVersion(const std::vector<int> &lhs, const std::vector<int> &rhs) {
   return false;
 }
 
+bool isPrivatePath(const std::filesystem::path &path) {
+  std::filesystem::path parent = path.parent_path();
+  for (const auto &part : parent) {
+    std::string segment = part.string();
+    if (segment.empty()) {
+      continue;
+    }
+    if (segment == "." || segment == "..") {
+      continue;
+    }
+    if (!segment.empty() && segment[0] == '_') {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool selectVersionDirectory(const std::filesystem::path &baseDir,
                             const std::vector<int> &requested,
                             std::string &selected,
@@ -297,10 +314,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               }
               foundVersion = true;
               std::filesystem::path candidate = root / selected / logicalPath;
-              if (std::filesystem::exists(candidate)) {
-                resolved = std::filesystem::absolute(candidate);
-                return true;
-              }
+          if (std::filesystem::exists(candidate)) {
+            if (isPrivatePath(candidate)) {
+              error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+              return false;
+            }
+            resolved = std::filesystem::absolute(candidate);
+            return true;
+          }
               lastCandidate = candidate;
             }
             if (!foundVersion) {
@@ -317,10 +338,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
 
           if (!isAbsolute) {
             std::filesystem::path candidate = std::filesystem::path(baseDir) / requested;
-            if (std::filesystem::exists(candidate)) {
-              resolved = std::filesystem::absolute(candidate);
-              return true;
+          if (std::filesystem::exists(candidate)) {
+            if (isPrivatePath(candidate)) {
+              error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+              return false;
             }
+            resolved = std::filesystem::absolute(candidate);
+            return true;
+          }
             for (const auto &root : includeRoots) {
               candidate = root / requested;
               if (std::filesystem::exists(candidate)) {
@@ -333,12 +358,20 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           }
 
           if (std::filesystem::exists(requested)) {
+            if (isPrivatePath(requested)) {
+              error = "include path refers to private folder: " + std::filesystem::absolute(requested).string();
+              return false;
+            }
             resolved = std::filesystem::absolute(requested);
             return true;
           }
           for (const auto &root : includeRoots) {
             std::filesystem::path candidate = root / logicalPath;
             if (std::filesystem::exists(candidate)) {
+              if (isPrivatePath(candidate)) {
+                error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                return false;
+              }
               resolved = std::filesystem::absolute(candidate);
               return true;
             }
