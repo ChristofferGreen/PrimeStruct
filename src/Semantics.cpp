@@ -1017,40 +1017,42 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     return it != locals.end() && it->second.isMutable;
   };
 
+  auto isIntegerOrBoolExpr = [&](const Expr &arg,
+                                 const std::vector<std::string> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
+      return true;
+    }
+    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          const std::string &typeName = it->second.typeName;
+          if (typeName == "float" || typeName == "f32" || typeName == "f64" || typeName == "string") {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+    return false;
+  };
+
   std::function<bool(const std::vector<std::string> &, const std::unordered_map<std::string, BindingInfo> &,
                      const Expr &)>
       validateExpr = [&](const std::vector<std::string> &params,
                          const std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &expr) -> bool {
-    auto isIntegerOrBoolExpr = [&](const Expr &arg) -> bool {
-      ReturnKind kind = inferExprReturnKind(arg, params, locals);
-      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
-          kind == ReturnKind::Bool) {
-        return true;
-      }
-      if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void) {
-        return false;
-      }
-      if (kind == ReturnKind::Unknown) {
-        if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
-          return false;
-        }
-        if (isPointerExpr(arg, locals)) {
-          return false;
-        }
-        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
-          auto it = locals.find(arg.name);
-          if (it != locals.end()) {
-            const std::string &typeName = it->second.typeName;
-            if (typeName == "float" || typeName == "f32" || typeName == "f64" || typeName == "string") {
-              return false;
-            }
-          }
-        }
-        return true;
-      }
-      return false;
-    };
     auto isNumericExpr = [&](const Expr &arg) -> bool {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
       if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
@@ -1218,7 +1220,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             return false;
           }
           for (const auto &arg : expr.args) {
-            if (!isIntegerOrBoolExpr(arg)) {
+            if (!isIntegerOrBoolExpr(arg, params, locals)) {
               if (builtinName == "and" || builtinName == "or" || builtinName == "not") {
                 error = "boolean operators require integer or bool operands";
               } else {
@@ -1478,6 +1480,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       const Expr &thenBlock = stmt.args[1];
       const Expr &elseBlock = stmt.args[2];
       if (!validateExpr(params, locals, cond)) {
+        return false;
+      }
+      if (!isIntegerOrBoolExpr(cond, params, locals)) {
+        error = "if condition requires integer or bool";
         return false;
       }
       auto validateBlock = [&](const Expr &block, const char *label) -> bool {

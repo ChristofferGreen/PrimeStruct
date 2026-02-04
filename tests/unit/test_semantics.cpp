@@ -1826,6 +1826,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("if rejects float condition") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1.5f, then{ return(1i32) }, else{ return(2i32) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if condition requires integer or bool") != std::string::npos);
+}
+
 TEST_CASE("statement call with block arguments validates") {
   const std::string source = R"(
 [return<void>]
