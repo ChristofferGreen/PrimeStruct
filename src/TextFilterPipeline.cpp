@@ -74,11 +74,22 @@ bool isExponentSign(const std::string &text, size_t index) {
   if (index == 0) {
     return false;
   }
+  char sign = text[index];
+  if (sign != '-' && sign != '+') {
+    return false;
+  }
   char prev = text[index - 1];
   if (prev != 'e' && prev != 'E') {
     return false;
   }
-  return text[index] == '-' || text[index] == '+';
+  if (index < 2) {
+    return false;
+  }
+  char beforeExp = text[index - 2];
+  if (!isDigitChar(beforeExp)) {
+    return false;
+  }
+  return true;
 }
 
 bool isEscaped(const std::string &text, size_t index) {
@@ -419,7 +430,7 @@ bool rewriteUnaryNot(const std::string &input,
     return false;
   }
   std::string right = input.substr(rightStart, rightEnd - rightStart);
-  if (options.implicitI32Suffix) {
+  if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
   }
   output.append("not(");
@@ -521,7 +532,7 @@ bool rewriteUnaryMinus(const std::string &input,
     return false;
   }
   std::string right = input.substr(rightStart, rightEnd - rightStart);
-  if (options.implicitI32Suffix) {
+  if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
   }
   output.append("negate(");
@@ -539,8 +550,13 @@ bool TextFilterPipeline::apply(const std::string &input,
   output.clear();
   output.reserve(input.size());
   error.clear();
+  const bool enableCollections = options.hasFilter("collections");
+  const bool enableOperators = options.hasFilter("operators");
 
   auto rewriteCollectionLiteral = [&](size_t &index) -> bool {
+    if (!enableCollections) {
+      return false;
+    }
     const std::string names[] = {"array", "map"};
     for (const auto &name : names) {
       const size_t nameLen = name.size();
@@ -724,7 +740,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     std::string left = output.substr(start, end - start);
     left = stripOuterParens(left);
     left = normalizeUnaryOperand(left);
-    if (options.implicitI32Suffix) {
+    if (options.hasFilter("implicit-i32")) {
       left = maybeAppendI32(left);
     }
     size_t rightStart = index + 2;
@@ -735,7 +751,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     std::string right = input.substr(rightStart, rightEnd - rightStart);
     right = stripOuterParens(right);
     right = normalizeUnaryOperand(right);
-    if (options.implicitI32Suffix) {
+    if (options.hasFilter("implicit-i32")) {
       right = maybeAppendI32(right);
     }
     output.erase(start);
@@ -753,6 +769,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (input[index] != op || index == 0 || index + 1 >= input.size()) {
       return false;
     }
+    if (isExponentSign(input, index)) {
+      return false;
+    }
     if (!isLeftOperandEndChar(input[index - 1]) || !isRightOperandStartChar(input, index + 1)) {
       return false;
     }
@@ -764,7 +783,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     std::string left = output.substr(start, end - start);
     left = stripOuterParens(left);
     left = normalizeUnaryOperand(left);
-    if (options.implicitI32Suffix) {
+    if (options.hasFilter("implicit-i32")) {
       left = maybeAppendI32(left);
     }
     size_t rightStart = index + 1;
@@ -775,7 +794,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     std::string right = input.substr(rightStart, rightEnd - rightStart);
     right = stripOuterParens(right);
     right = normalizeUnaryOperand(right);
-    if (options.implicitI32Suffix) {
+    if (options.hasFilter("implicit-i32")) {
       right = maybeAppendI32(right);
     }
     output.erase(start);
@@ -853,7 +872,7 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
 
-    if (options.implicitI32Suffix) {
+    if (options.hasFilter("implicit-i32")) {
       bool startsNumber = false;
       if (isDigitChar(input[i]) && (i == 0 || (!isTokenChar(input[i - 1]) && input[i - 1] != '.'))) {
         startsNumber = true;
@@ -950,56 +969,58 @@ bool TextFilterPipeline::apply(const std::string &input,
       }
     }
 
-    if (input[i] == '/' && rewriteBinary(i, '/', "divide")) {
-      continue;
-    }
-    if (rewriteBinaryPair(i, '=', '=', "equal")) {
-      continue;
-    }
-    if (rewriteBinaryPair(i, '!', '=', "not_equal")) {
-      continue;
-    }
-    if (rewriteBinaryPair(i, '>', '=', "greater_equal")) {
-      continue;
-    }
-    if (rewriteBinaryPair(i, '<', '=', "less_equal")) {
-      continue;
-    }
-    if (rewriteBinaryPair(i, '&', '&', "and")) {
-      continue;
-    }
-    if (rewriteBinaryPair(i, '|', '|', "or")) {
-      continue;
-    }
-    if (rewriteBinary(i, '=', "assign")) {
-      continue;
-    }
-    if (rewriteUnaryAddressOf(input, output, i, options)) {
-      continue;
-    }
-    if (rewriteUnaryDeref(input, output, i, options)) {
-      continue;
-    }
-    if (rewriteUnaryNot(input, output, i, options)) {
-      continue;
-    }
-    if (rewriteUnaryMinus(input, output, i, options)) {
-      continue;
-    }
-    if (input[i] == '<' && !looksLikeTemplateList(input, i) && rewriteBinary(i, '<', "less_than")) {
-      continue;
-    }
-    if (rewriteBinary(i, '+', "plus")) {
-      continue;
-    }
-    if (rewriteBinary(i, '-', "minus")) {
-      continue;
-    }
-    if (rewriteBinary(i, '*', "multiply")) {
-      continue;
-    }
-    if (!looksLikeTemplateListClose(input, i) && rewriteBinary(i, '>', "greater_than")) {
-      continue;
+    if (enableOperators) {
+      if (input[i] == '/' && rewriteBinary(i, '/', "divide")) {
+        continue;
+      }
+      if (rewriteBinaryPair(i, '=', '=', "equal")) {
+        continue;
+      }
+      if (rewriteBinaryPair(i, '!', '=', "not_equal")) {
+        continue;
+      }
+      if (rewriteBinaryPair(i, '>', '=', "greater_equal")) {
+        continue;
+      }
+      if (rewriteBinaryPair(i, '<', '=', "less_equal")) {
+        continue;
+      }
+      if (rewriteBinaryPair(i, '&', '&', "and")) {
+        continue;
+      }
+      if (rewriteBinaryPair(i, '|', '|', "or")) {
+        continue;
+      }
+      if (rewriteBinary(i, '=', "assign")) {
+        continue;
+      }
+      if (rewriteUnaryAddressOf(input, output, i, options)) {
+        continue;
+      }
+      if (rewriteUnaryDeref(input, output, i, options)) {
+        continue;
+      }
+      if (rewriteUnaryNot(input, output, i, options)) {
+        continue;
+      }
+      if (rewriteUnaryMinus(input, output, i, options)) {
+        continue;
+      }
+      if (input[i] == '<' && !looksLikeTemplateList(input, i) && rewriteBinary(i, '<', "less_than")) {
+        continue;
+      }
+      if (rewriteBinary(i, '+', "plus")) {
+        continue;
+      }
+      if (rewriteBinary(i, '-', "minus")) {
+        continue;
+      }
+      if (rewriteBinary(i, '*', "multiply")) {
+        continue;
+      }
+      if (!looksLikeTemplateListClose(input, i) && rewriteBinary(i, '>', "greater_than")) {
+        continue;
+      }
     }
 
     output.push_back(input[i]);

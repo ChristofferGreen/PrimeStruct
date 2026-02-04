@@ -21,7 +21,9 @@ std::string bindingTypeName(const Expr &expr) {
     if (!transform.arguments.empty()) {
       continue;
     }
-    if (!transform.templateArg) {
+    if (transform.templateArg) {
+      typeName = transform.name + "<" + *transform.templateArg + ">";
+    } else {
       typeName = transform.name;
     }
   }

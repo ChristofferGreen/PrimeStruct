@@ -10,7 +10,7 @@ struct Options {
   std::string outputPath;
   std::string entryPath = "/main";
   std::string dumpStage;
-  bool implicitI32Suffix = false;
+  std::vector<std::string> textFilters = {"operators", "collections"};
   std::vector<std::string> includePaths;
 };
 } // namespace primec

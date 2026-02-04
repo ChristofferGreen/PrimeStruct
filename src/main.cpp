@@ -8,6 +8,7 @@
 #include "primec/Semantics.h"
 #include "primec/TextFilterPipeline.h"
 
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -16,6 +17,57 @@
 #include <string>
 
 namespace {
+std::vector<std::string> defaultTextFilters() {
+  return {"operators", "collections"};
+}
+
+std::string trimWhitespace(const std::string &text) {
+  size_t start = 0;
+  while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
+    ++start;
+  }
+  size_t end = text.size();
+  while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
+    --end;
+  }
+  return text.substr(start, end - start);
+}
+
+std::vector<std::string> parseTextFilters(const std::string &text) {
+  std::vector<std::string> filters;
+  size_t start = 0;
+  auto addUnique = [&](const std::string &name) {
+    for (const auto &existing : filters) {
+      if (existing == name) {
+        return;
+      }
+    }
+    filters.push_back(name);
+  };
+  while (start <= text.size()) {
+    size_t end = text.find(',', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    std::string token = trimWhitespace(text.substr(start, end - start));
+    if (!token.empty()) {
+      if (token == "default") {
+        for (const auto &name : defaultTextFilters()) {
+          addUnique(name);
+        }
+      } else if (token == "none") {
+        filters.clear();
+      } else {
+        addUnique(token);
+      }
+    }
+    if (end == text.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return filters;
+}
 bool parseArgs(int argc, char **argv, primec::Options &out) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -39,10 +91,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.includePaths.push_back(argv[++i]);
     } else if (arg.rfind("-I", 0) == 0 && arg.size() > 2) {
       out.includePaths.push_back(arg.substr(2));
-    } else if (arg == "--implicit-i32") {
-      out.implicitI32Suffix = true;
-    } else if (arg == "--no-implicit-i32") {
-      out.implicitI32Suffix = false;
+    } else if (arg == "--text-filters" && i + 1 < argc) {
+      out.textFilters = parseTextFilters(argv[++i]);
+    } else if (arg.rfind("--text-filters=", 0) == 0) {
+      out.textFilters = parseTextFilters(arg.substr(std::string("--text-filters=").size()));
     } else if (!arg.empty() && arg[0] == '-') {
       return false;
     } else {
@@ -95,7 +147,7 @@ int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] "
-                 "[--include-path <dir>] [--implicit-i32|--no-implicit-i32] "
+                 "[--include-path <dir>] [--text-filters <list>] "
                  "[--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
@@ -110,7 +162,7 @@ int main(int argc, char **argv) {
 
   primec::TextFilterPipeline textPipeline;
   primec::TextFilterOptions textOptions;
-  textOptions.implicitI32Suffix = options.implicitI32Suffix;
+  textOptions.enabledFilters = options.textFilters;
   std::string filteredSource;
   if (!textPipeline.apply(source, filteredSource, error, textOptions)) {
     std::cerr << "Transform error: " << error << "\n";

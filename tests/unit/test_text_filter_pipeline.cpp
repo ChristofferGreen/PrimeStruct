@@ -148,7 +148,7 @@ TEST_CASE("rewrites multiply with parenthesized operand") {
 }
 
 TEST_CASE("rewrites plus operator with negative literal") {
-  const std::string source = "main(){ return(-1+2) }\n";
+  const std::string source = "main(){ return(-1i32+2i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -168,7 +168,7 @@ TEST_CASE("rewrites plus operator with unary minus operand") {
 }
 
 TEST_CASE("rewrites plus operator with leading unary minus name") {
-  const std::string source = "main(){ return(-value+2) }\n";
+  const std::string source = "main(){ return(-value+2i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -348,7 +348,7 @@ TEST_CASE("rewrites not operator without spaces") {
 }
 
 TEST_CASE("rewrites not operator with numeric literal") {
-  const std::string source = "main(){ return(!1) }\n";
+  const std::string source = "main(){ return(!1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -460,9 +460,11 @@ TEST_CASE("does not rewrite line comments") {
 TEST_CASE("adds i32 suffix to bare integer literal") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters.push_back("implicit-i32");
   std::string output;
   std::string error;
-  CHECK(pipeline.apply(source, output, error));
+  CHECK(pipeline.apply(source, output, error, options));
   CHECK(error.empty());
   CHECK(output.find("42i32") != std::string::npos);
 }
@@ -470,9 +472,11 @@ TEST_CASE("adds i32 suffix to bare integer literal") {
 TEST_CASE("adds i32 suffix to negative integer literal") {
   const std::string source = "main(){ return(-7) }\n";
   primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters.push_back("implicit-i32");
   std::string output;
   std::string error;
-  CHECK(pipeline.apply(source, output, error));
+  CHECK(pipeline.apply(source, output, error, options));
   CHECK(error.empty());
   CHECK(output.find("-7i32") != std::string::npos);
 }
@@ -480,9 +484,11 @@ TEST_CASE("adds i32 suffix to negative integer literal") {
 TEST_CASE("adds i32 suffix to hex integer literal") {
   const std::string source = "main(){ return(0x2A) }\n";
   primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters.push_back("implicit-i32");
   std::string output;
   std::string error;
-  CHECK(pipeline.apply(source, output, error));
+  CHECK(pipeline.apply(source, output, error, options));
   CHECK(error.empty());
   CHECK(output.find("0x2Ai32") != std::string::npos);
 }
@@ -490,15 +496,17 @@ TEST_CASE("adds i32 suffix to hex integer literal") {
 TEST_CASE("adds i32 suffix to negative hex integer literal") {
   const std::string source = "main(){ return(-0x2A) }\n";
   primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters.push_back("implicit-i32");
   std::string output;
   std::string error;
-  CHECK(pipeline.apply(source, output, error));
+  CHECK(pipeline.apply(source, output, error, options));
   CHECK(error.empty());
   CHECK(output.find("-0x2Ai32") != std::string::npos);
 }
 
 TEST_CASE("rewrites plus with hex literals") {
-  const std::string source = "main(){ return(0x1+0x2) }\n";
+  const std::string source = "main(){ return(0x1i32+0x2i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -616,7 +624,7 @@ TEST_CASE("fails on unterminated template list in collection literal") {
 }
 
 TEST_CASE("rewrites plus operator with exponent float") {
-  const std::string source = "main(){ return(1e-3+2) }\n";
+  const std::string source = "main(){ return(1e-3+2i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -625,11 +633,11 @@ TEST_CASE("rewrites plus operator with exponent float") {
   CHECK(output.find("plus(1e-3, 2i32)") != std::string::npos);
 }
 
-TEST_CASE("does not add suffix when disabled") {
+TEST_CASE("does not add suffix without implicit filter") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.implicitI32Suffix = false;
+  options.enabledFilters = {"operators", "collections"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));

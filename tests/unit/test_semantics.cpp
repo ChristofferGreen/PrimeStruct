@@ -1251,7 +1251,7 @@ main() {
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
-TEST_CASE("assign not allowed in expression context") {
+TEST_CASE("assign allowed in expression context") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1260,8 +1260,23 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("assign not allowed in expression context") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pointer binding and dereference assignment validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(5i32)
+  [Pointer<i32>] ptr(location(value))
+  assign(dereference(ptr), 4i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("if validates block arguments") {

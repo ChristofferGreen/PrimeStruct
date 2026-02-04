@@ -9,7 +9,7 @@ PrimeStruct is built around a simple philosophy: program meaning emerges from tw
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully typed.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
-Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline can optionally append implicit `i32` suffixes when enabled via `--implicit-i32`.
+Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline is configured with `--text-filters=<list>`; the default list enables `operators` and `collections`, and adding `implicit-i32` will auto-append `i32` suffixes.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
@@ -33,7 +33,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 
 ### Minimal surface for v0.1
 - `return(...)` primitive only.
-- Integer literal support (signed 32-bit, requires `i32` suffix by default; `--implicit-i32` opt-in for filters).
+- Integer literal support (signed 32-bit, requires `i32` suffix by default; opt into the `implicit-i32` filter via `--text-filters`).
 - `[return<int>]` transform on the entry definition.
 - A single `main()`-like entry definition (`main()`).
 
@@ -204,7 +204,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
 
 ### Core library surface (draft)
-- **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time.
+- **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The expression evaluates to `value`, so it can be nested or returned.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring.
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring.
 - **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts.
@@ -261,7 +261,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ## Literals & Composite Construction (draft)
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42u32`, `1.0f64`).
-- v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `--implicit-i32` is passed.
+- v0 requires explicit width suffixes for integers (`42i32`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `implicit-i32` is included in `--text-filters`.
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
@@ -273,7 +273,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 
 ## Pointers & References (draft)
 - **Explicit types:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
-- **Operator transforms:** dereference (`*ptr`), address-of (`&value`), pointer arithmetic desugar to canonical calls (`deref(ptr)`, `address_of(value)`, `pointer_add(ptr, offset)`).
+- **Operator transforms:** dereference (`*ptr`), address-of (`&value`), pointer arithmetic desugar to canonical calls (`deref(ptr)`/`dereference(ptr)`, `address_of(value)`/`location(value)`, `pointer_add(ptr, offset)`).
 - **Ownership:** references are non-owning, frame-bound views. Pointers can be tagged `raw`, `unique`, `shared` via transform-generated wrappers around PathSpace-aware allocators.
 - **Raw memory:** `memory::load/store` primitives expose byte-level access; opt-in to highlight unsafe operations.
 - **Layout control:** attributes like `[packed]` guarantee interop-friendly layouts for C++/GLSL.

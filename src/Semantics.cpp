@@ -12,6 +12,7 @@ enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
 
 struct BindingInfo {
   std::string typeName;
+  std::string typeTemplateArg;
   bool isMutable = false;
 };
 
@@ -166,7 +167,7 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "deref" || name == "address_of") {
+  if (name == "deref" || name == "dereference" || name == "address_of" || name == "location") {
     out = name;
     return true;
   }
@@ -350,6 +351,24 @@ bool parseBindingInfo(const Expr &expr,
         return false;
       }
     }
+    if (transform.name == "Pointer") {
+      if (!transform.templateArg) {
+        error = "Pointer requires a template argument";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      if (!typeName.empty()) {
+        error = "binding requires exactly one type";
+        return false;
+      }
+      typeName = transform.name;
+      typeHasTemplate = true;
+      info.typeTemplateArg = *transform.templateArg;
+      continue;
+    }
     if (transform.templateArg) {
       if (!transform.arguments.empty()) {
         error = "binding transforms do not take arguments";
@@ -361,6 +380,7 @@ bool parseBindingInfo(const Expr &expr,
       }
       typeName = transform.name;
       typeHasTemplate = true;
+      info.typeTemplateArg = *transform.templateArg;
       continue;
     }
     if (!transform.arguments.empty()) {
@@ -380,6 +400,16 @@ bool parseBindingInfo(const Expr &expr,
     std::string resolved = resolveTypePath(typeName, namespacePrefix);
     if (structTypes.count(resolved) == 0) {
       error = "unsupported binding type: " + typeName;
+      return false;
+    }
+  }
+  if (typeHasTemplate && typeName == "Pointer") {
+    if (info.typeTemplateArg.empty()) {
+      error = "Pointer requires a template argument";
+      return false;
+    }
+    if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
+      error = "unsupported pointer target type: " + info.typeTemplateArg;
       return false;
     }
   }
@@ -940,10 +970,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "control-flow blocks cannot appear in expressions";
         return false;
       }
-      if (isAssignCall(expr)) {
-        error = "assign not allowed in expression context";
-        return false;
-      }
       std::string resolved = resolveCalleePath(expr);
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, error)) {
         return false;
@@ -1067,6 +1093,37 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
         return true;
       }
+      if (isAssignCall(expr)) {
+        if (expr.args.size() != 2) {
+          error = "assign requires exactly two arguments";
+          return false;
+        }
+        const Expr &target = expr.args.front();
+        if (target.kind == Expr::Kind::Name) {
+          if (!isMutableLocal(locals, target.name)) {
+            error = "assign target must be a mutable binding: " + target.name;
+            return false;
+          }
+        } else if (target.kind == Expr::Kind::Call) {
+          std::string pointerName;
+          if (!getBuiltinPointerName(target, pointerName) ||
+              (pointerName != "deref" && pointerName != "dereference") ||
+              target.args.size() != 1) {
+            error = "assign target must be a mutable binding";
+            return false;
+          }
+          if (!validateExpr(params, locals, target.args.front())) {
+            return false;
+          }
+        } else {
+          error = "assign target must be a mutable binding";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        return true;
+      }
         error = "unknown call target: " + expr.name;
         return false;
       }
@@ -1154,29 +1211,6 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       if (sawReturn) {
         *sawReturn = true;
-      }
-      return true;
-    }
-    if (isAssignCall(stmt)) {
-      if (!stmt.bodyArguments.empty()) {
-        error = "assign does not accept block arguments";
-        return false;
-      }
-      if (stmt.args.size() != 2) {
-        error = "assign requires exactly two arguments";
-        return false;
-      }
-      if (stmt.args.front().kind != Expr::Kind::Name) {
-        error = "assign target must be a mutable binding";
-        return false;
-      }
-      const std::string &targetName = stmt.args.front().name;
-      if (!isMutableLocal(locals, targetName)) {
-        error = "assign target must be a mutable binding: " + targetName;
-        return false;
-      }
-      if (!validateExpr(params, locals, stmt.args[1])) {
-        return false;
       }
       return true;
     }

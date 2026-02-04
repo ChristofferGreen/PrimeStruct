@@ -12,6 +12,7 @@ enum class ReturnKind { Unknown, Int, Float32, Float64, Bool, Void };
 
 struct BindingInfo {
   std::string typeName;
+  std::string typeTemplateArg;
   bool isMutable = false;
 };
 
@@ -66,6 +67,7 @@ BindingInfo getBindingInfo(const Expr &expr) {
         info.typeName = transform.name;
       } else if (info.typeName.empty()) {
         info.typeName = transform.name;
+        info.typeTemplateArg = *transform.templateArg;
       }
     }
   }
@@ -74,6 +76,8 @@ BindingInfo getBindingInfo(const Expr &expr) {
   }
   return info;
 }
+
+std::string bindingTypeToCpp(const BindingInfo &info);
 
 std::string bindingTypeToCpp(const std::string &typeName) {
   if (typeName == "i32" || typeName == "int") {
@@ -92,6 +96,17 @@ std::string bindingTypeToCpp(const std::string &typeName) {
     return "const char *";
   }
   return "int";
+}
+
+std::string bindingTypeToCpp(const BindingInfo &info) {
+  if (info.typeName == "Pointer") {
+    std::string base = bindingTypeToCpp(info.typeTemplateArg);
+    if (base.empty()) {
+      base = "void";
+    }
+    return base + " *";
+  }
+  return bindingTypeToCpp(info.typeName);
 }
 
 ReturnKind returnKindForTypeName(const std::string &name) {
@@ -232,11 +247,11 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "deref") {
+  if (name == "deref" || name == "dereference") {
     out = '*';
     return true;
   }
-  if (name == "address_of") {
+  if (name == "address_of" || name == "location") {
     out = '&';
     return true;
   }
@@ -796,7 +811,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
-        std::string type = bindingTypeToCpp(binding.typeName);
+        std::string type = bindingTypeToCpp(binding);
         out << pad << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap);

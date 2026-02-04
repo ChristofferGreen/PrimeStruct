@@ -1,11 +1,21 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace primec {
 
 struct TextFilterOptions {
-  bool implicitI32Suffix = true;
+  std::vector<std::string> enabledFilters = {"operators", "collections"};
+
+  bool hasFilter(const std::string &name) const {
+    for (const auto &filter : enabledFilters) {
+      if (filter == name) {
+        return true;
+      }
+    }
+    return false;
+  }
 };
 
 class TextFilterPipeline {
