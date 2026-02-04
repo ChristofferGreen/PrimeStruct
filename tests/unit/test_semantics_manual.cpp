@@ -1,0 +1,222 @@
+#include "primec/Ast.h"
+#include "primec/Semantics.h"
+
+#include "third_party/doctest.h"
+
+namespace {
+primec::Expr makeLiteral(int value) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Literal;
+  expr.literalValue = value;
+  return expr;
+}
+
+primec::Transform makeTransform(const std::string &name,
+                                std::optional<std::string> templateArg = std::nullopt) {
+  primec::Transform transform;
+  transform.name = name;
+  transform.templateArg = std::move(templateArg);
+  return transform;
+}
+
+primec::Expr makeCall(const std::string &name,
+                      std::vector<primec::Expr> args = {},
+                      std::vector<std::optional<std::string>> argNames = {},
+                      std::vector<primec::Expr> bodyArguments = {}) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = name;
+  expr.args = std::move(args);
+  expr.argNames = std::move(argNames);
+  expr.bodyArguments = std::move(bodyArguments);
+  return expr;
+}
+
+primec::Expr makeBinding(const std::string &name,
+                         std::vector<primec::Transform> transforms,
+                         std::vector<primec::Expr> args) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isBinding = true;
+  expr.name = name;
+  expr.transforms = std::move(transforms);
+  expr.args = std::move(args);
+  return expr;
+}
+
+primec::Definition makeDefinition(const std::string &fullPath,
+                                  std::vector<primec::Transform> transforms,
+                                  std::vector<primec::Expr> statements,
+                                  std::vector<std::string> parameters = {}) {
+  primec::Definition def;
+  def.fullPath = fullPath;
+  def.name = fullPath;
+  def.transforms = std::move(transforms);
+  def.statements = std::move(statements);
+  def.parameters = std::move(parameters);
+  return def;
+}
+
+bool validateProgram(const primec::Program &program, const std::string &entry, std::string &error) {
+  primec::Semantics semantics;
+  return semantics.validate(program, entry, error);
+}
+} // namespace
+
+TEST_SUITE_BEGIN("primestruct.semantics.manual");
+
+TEST_CASE("duplicate definitions fail") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(2)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("duplicate definition") != std::string::npos);
+}
+
+TEST_CASE("return transform requires template argument") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return")}, {makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return transform requires a type") != std::string::npos);
+}
+
+TEST_CASE("conflicting return types fail") {
+  primec::Program program;
+  program.definitions.push_back(makeDefinition(
+      "/main",
+      {makeTransform("return", std::string("int")), makeTransform("return", std::string("float"))},
+      {makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("conflicting return types") != std::string::npos);
+}
+
+TEST_CASE("binding transform template arguments fail") {
+  primec::Program program;
+  primec::Expr binding =
+      makeBinding("value", {makeTransform("i32", std::string("bad"))}, {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {binding, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("binding transforms do not take template arguments") != std::string::npos);
+}
+
+TEST_CASE("binding requires exactly one type") {
+  primec::Program program;
+  primec::Expr binding = makeBinding(
+      "value", {makeTransform("i32"), makeTransform("f32")}, {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {binding, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("binding requires exactly one type") != std::string::npos);
+}
+
+TEST_CASE("binding requires a type") {
+  primec::Program program;
+  primec::Expr binding = makeBinding("value", {makeTransform("mut")}, {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {binding, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("binding requires a type") != std::string::npos);
+}
+
+TEST_CASE("return blocks are rejected") {
+  primec::Program program;
+  primec::Expr returnCall = makeCall("/return", {makeLiteral(1)}, {}, {makeLiteral(2)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {returnCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return does not accept block arguments") != std::string::npos);
+}
+
+TEST_CASE("if trailing blocks are rejected") {
+  primec::Program program;
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
+  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock}, {}, {makeLiteral(3)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("if does not accept trailing block arguments") != std::string::npos);
+}
+
+TEST_CASE("then wrapper mismatch fails") {
+  primec::Program program;
+  primec::Expr thenBlock = makeCall("wrong", {}, {}, {makeCall("/return", {makeLiteral(1)})});
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
+  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("then must use the then wrapper") != std::string::npos);
+}
+
+TEST_CASE("block arguments only supported on if") {
+  primec::Program program;
+  primec::Expr callWithBlock = makeCall("foo", {}, {}, {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {callWithBlock, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("block arguments are only supported on if") != std::string::npos);
+}
+
+TEST_CASE("statements must be calls") {
+  primec::Program program;
+  primec::Expr literal = makeLiteral(1);
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {literal}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("statements must be calls") != std::string::npos);
+}
+
+TEST_CASE("assign target must be a mutable binding") {
+  primec::Program program;
+  primec::Expr assignCall = makeCall("assign", {makeCall("foo"), makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {assignCall, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
+TEST_CASE("execution argument name count mismatch fails") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {"value"}));
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {makeLiteral(1)};
+  exec.argumentNames = {std::string("value"), std::string("extra")};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("argument name count mismatch") != std::string::npos);
+}
+
+TEST_SUITE_END();
