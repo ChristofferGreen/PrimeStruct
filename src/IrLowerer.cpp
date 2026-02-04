@@ -157,6 +157,10 @@ bool IrLowerer::lower(const Program &program,
     error = "native backend requires entry definition " + entryPath;
     return false;
   }
+  if (!entryDef->parameters.empty()) {
+    error = "native backend does not support entry parameters";
+    return false;
+  }
   bool returnsVoid = false;
   for (const auto &transform : entryDef->transforms) {
     if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {

@@ -1634,6 +1634,24 @@ main() {
   CHECK(error.find("native backend does not support array literals") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer rejects entry parameters") {
+  const std::string source = R"(
+[return<int>]
+main(value) {
+  return(value)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend does not support entry parameters") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer rejects map literal call") {
   const std::string source = R"(
 [return<int>]

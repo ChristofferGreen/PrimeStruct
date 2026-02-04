@@ -35,7 +35,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 - `return(...)` primitive only.
 - Integer literal support (`i32`, `i64`, `u64`), requires explicit width suffixes by default; opt into the `implicit-i32` filter via `--text-filters` to auto-append `i32`.
 - `[return<int>]` transform on the entry definition.
-- A single `main()`-like entry definition (`main()`).
+- A single `main()`-like entry definition (`main()`). The VM/native subset currently requires entry definitions with no parameters.
 
 ### Example source and expected IR (sketch)
 PrimeStruct:
@@ -82,7 +82,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 - `return(...)` primitive only.
 - Integer literal support (`i32`, `i64`, `u64`), requires explicit width suffixes.
 - `[return<int>]` transform on the entry definition.
-- A single `main()`-like entry definition (`main()`).
+- A single `main()`-like entry definition (`main()`). The VM/native subset currently requires entry definitions with no parameters.
 
 ### Example source and expected IR (sketch)
 PrimeStruct:
@@ -130,7 +130,7 @@ module {
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `PrimeStructc` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`), and the current VM/native subset expects that definition to take no parameters. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body expressions so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
