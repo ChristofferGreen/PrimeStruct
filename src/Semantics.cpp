@@ -1948,9 +1948,36 @@ bool Semantics::validate(const Program &program,
     }
     return effects;
   };
+  auto validateCapabilitiesSubset = [&](const std::vector<Transform> &transforms, const std::string &context) -> bool {
+    bool sawCapabilities = false;
+    std::unordered_set<std::string> capabilities;
+    for (const auto &transform : transforms) {
+      if (transform.name != "capabilities") {
+        continue;
+      }
+      sawCapabilities = true;
+      capabilities.clear();
+      for (const auto &arg : transform.arguments) {
+        capabilities.insert(arg);
+      }
+    }
+    if (!sawCapabilities) {
+      return true;
+    }
+    for (const auto &capability : capabilities) {
+      if (activeEffects.count(capability) == 0) {
+        error = "capability requires matching effect on " + context + ": " + capability;
+        return false;
+      }
+    }
+    return true;
+  };
 
   for (const auto &def : program.definitions) {
     activeEffects = resolveEffects(def.transforms);
+    if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
+      return false;
+    }
     std::unordered_map<std::string, BindingInfo> locals;
     ReturnKind kind = ReturnKind::Unknown;
     auto kindIt = returnKinds.find(def.fullPath);
@@ -2011,6 +2038,9 @@ bool Semantics::validate(const Program &program,
         error = "struct transforms are not allowed on executions: " + exec.fullPath;
         return false;
       }
+    }
+    if (!validateCapabilitiesSubset(exec.transforms, exec.fullPath)) {
+      return false;
     }
     auto it = defMap.find(exec.fullPath);
     if (it == defMap.end()) {

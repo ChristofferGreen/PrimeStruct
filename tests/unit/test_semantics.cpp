@@ -571,7 +571,7 @@ main() {
 
 TEST_CASE("capabilities transform validates identifiers") {
   const std::string source = R"(
-[capabilities(render_graph, io_stdout), return<int>]
+[effects(render_graph, io_stdout), capabilities(render_graph, io_stdout), return<int>]
 main() {
   return(1i32)
 }
@@ -579,6 +579,18 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("capabilities require matching effects") {
+  const std::string source = R"(
+[effects(io_out), capabilities(io_err), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capability requires matching effect") != std::string::npos);
 }
 
 TEST_CASE("capabilities transform rejects template arguments") {
@@ -673,7 +685,7 @@ main() {
   return(1i32)
 }
 
-[capabilities(io_stdout)]
+[effects(io_stdout), capabilities(io_stdout)]
 task(1i32)
 )";
   std::string error;
@@ -843,7 +855,7 @@ task(1i32)
 
 TEST_CASE("capabilities transform validates identifiers") {
   const std::string source = R"(
-[capabilities(asset_read, gpu_queue), return<int>]
+[effects(asset_read, gpu_queue), capabilities(asset_read, gpu_queue), return<int>]
 main() {
   return(1i32)
 }
