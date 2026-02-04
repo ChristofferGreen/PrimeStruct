@@ -476,6 +476,21 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs native numeric boolean ops") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(or(and(0i32, 5i32), not(0i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bool_numeric.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_bool_numeric_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs native short-circuit and") {
   const std::string source = R"(
 [return<int>]
@@ -702,6 +717,21 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("compiles and runs numeric boolean ops") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(or(0i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_bool_numeric.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_bool_numeric_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs convert<bool>") {
