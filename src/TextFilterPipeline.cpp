@@ -521,6 +521,9 @@ bool TextFilterPipeline::apply(const std::string &input,
         std::string rewritten;
         rewritten.reserve(inner.size());
         size_t scan = 0;
+        int parenDepth = 0;
+        int braceDepth = 0;
+        int bracketDepth = 0;
         while (scan < inner.size()) {
           char c = inner[scan];
           if (c == 'R' && scan + 2 < inner.size() && inner[scan + 1] == '"' && inner[scan + 2] == '(') {
@@ -543,10 +546,57 @@ bool TextFilterPipeline::apply(const std::string &input,
             scan = end;
             continue;
           }
+          if (c == '(') {
+            ++parenDepth;
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
+          if (c == ')') {
+            if (parenDepth > 0) {
+              --parenDepth;
+            }
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
+          if (c == '{') {
+            ++braceDepth;
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
+          if (c == '}') {
+            if (braceDepth > 0) {
+              --braceDepth;
+            }
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
+          if (c == '[') {
+            ++bracketDepth;
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
+          if (c == ']') {
+            if (bracketDepth > 0) {
+              --bracketDepth;
+            }
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
           if (c == '=') {
             char prev = scan > 0 ? inner[scan - 1] : '\0';
             char next = scan + 1 < inner.size() ? inner[scan + 1] : '\0';
             if (prev == '=' || prev == '!' || prev == '<' || prev == '>' || next == '=') {
+              rewritten.push_back(c);
+              ++scan;
+              continue;
+            }
+            if (parenDepth > 0 || braceDepth > 0 || bracketDepth > 0) {
               rewritten.push_back(c);
               ++scan;
               continue;

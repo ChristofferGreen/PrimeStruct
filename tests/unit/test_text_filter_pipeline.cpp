@@ -95,6 +95,27 @@ TEST_CASE("map literal preserves equality operators") {
         std::string::npos);
 }
 
+TEST_CASE("map literal preserves named args in values") {
+  const std::string source =
+      "main(){ return(map<i32,i32>{1i32=make_color(hue = 1i32, value = 2i32)}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32,i32>(1i32, make_color(hue = 1i32, value = 2i32))") != std::string::npos);
+}
+
+TEST_CASE("map literal rewrites nested map literals") {
+  const std::string source = "main(){ return(map<i32,i32>{1i32=map<i32,i32>{2i32=3i32}}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32,i32>(1i32, map<i32,i32>(2i32, 3i32))") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with call operands") {
   const std::string source = "main(){ return(foo()+bar()) }\n";
   primec::TextFilterPipeline pipeline;
