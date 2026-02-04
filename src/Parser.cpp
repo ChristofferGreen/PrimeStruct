@@ -553,7 +553,7 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
     return false;
   }
   if (match(TokenKind::RParen)) {
-    if (!returnsVoidContext_) {
+    if (!returnsVoidContext_ && !allowImplicitVoidReturn_) {
       return fail("return requires exactly one argument");
     }
     expect(TokenKind::RParen, "expected ')' after return");
@@ -718,27 +718,37 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
 
 bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
   bool returnsVoid = false;
+  bool hasReturnTransform = false;
   for (const auto &transform : def.transforms) {
     if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {
       returnsVoid = true;
-      break;
+    }
+    if (transform.name == "return") {
+      hasReturnTransform = true;
     }
   }
+  const bool allowImplicitVoidReturn = !hasReturnTransform && !allowNoReturn;
   bool foundReturn = false;
   struct ReturnContextGuard {
     Parser *parser;
     bool *prevTracker;
     bool prevReturnsVoid;
-    ReturnContextGuard(Parser *parserIn, bool *tracker, bool returnsVoid)
-        : parser(parserIn), prevTracker(parserIn->returnTracker_), prevReturnsVoid(parserIn->returnsVoidContext_) {
+    bool prevAllowImplicitVoid;
+    ReturnContextGuard(Parser *parserIn, bool *tracker, bool returnsVoid, bool allowImplicitVoid)
+        : parser(parserIn),
+          prevTracker(parserIn->returnTracker_),
+          prevReturnsVoid(parserIn->returnsVoidContext_),
+          prevAllowImplicitVoid(parserIn->allowImplicitVoidReturn_) {
       parser->returnTracker_ = tracker;
       parser->returnsVoidContext_ = returnsVoid;
+      parser->allowImplicitVoidReturn_ = allowImplicitVoid;
     }
     ~ReturnContextGuard() {
       parser->returnTracker_ = prevTracker;
       parser->returnsVoidContext_ = prevReturnsVoid;
+      parser->allowImplicitVoidReturn_ = prevAllowImplicitVoid;
     }
-  } guard(this, &foundReturn, returnsVoid);
+  } guard(this, &foundReturn, returnsVoid, allowImplicitVoidReturn);
   if (!expect(TokenKind::LBrace, "expected '{' to start body")) {
     return false;
   }

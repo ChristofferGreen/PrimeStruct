@@ -48,6 +48,7 @@ private:
   std::string *error_ = nullptr;
   bool *returnTracker_ = nullptr;
   bool returnsVoidContext_ = false;
+  bool allowImplicitVoidReturn_ = false;
 };
 
 } // namespace primec

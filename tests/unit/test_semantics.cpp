@@ -70,6 +70,17 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("infers void return type without transform") {
+  const std::string source = R"(
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("argument count mismatch fails") {
   const std::string source = R"(
 [return<int>]
