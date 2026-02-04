@@ -621,6 +621,27 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs map literal with named-arg value") {
+  const std::string source = R"(
+[return<int>]
+make_color(hue, value) {
+  return(plus(hue, value))
+}
+
+[return<int>]
+main() {
+  map<i32, i32>{1i32=make_color(hue = 2i32, value = 3i32)}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_named_value.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_named_value_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]
