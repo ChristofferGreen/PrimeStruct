@@ -550,6 +550,22 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs map literal pairs") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>{1i32=2i32, 3i32=4i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_pairs.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_pairs_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]
