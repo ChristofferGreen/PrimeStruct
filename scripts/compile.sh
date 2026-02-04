@@ -40,6 +40,14 @@ if [[ $COVERAGE -eq 1 ]]; then
     echo "[compile.sh] ERROR: --coverage requires tests; remove --skip-tests." >&2
     exit 2
   fi
+  if ! command -v clang++ >/dev/null 2>&1; then
+    echo "[compile.sh] ERROR: --coverage requires clang++ in PATH." >&2
+    exit 2
+  fi
+  COVERAGE_CMAKE_ARGS+=("-DCMAKE_CXX_COMPILER=clang++")
+  if command -v clang >/dev/null 2>&1; then
+    COVERAGE_CMAKE_ARGS+=("-DCMAKE_C_COMPILER=clang")
+  fi
   COVERAGE_CXX_FLAGS="${CXXFLAGS:-} -fprofile-instr-generate -fcoverage-mapping"
   COVERAGE_LINK_FLAGS="${LDFLAGS:-} -fprofile-instr-generate"
   COVERAGE_CMAKE_ARGS+=("-DCMAKE_CXX_FLAGS=${COVERAGE_CXX_FLAGS}")
@@ -58,11 +66,21 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     LLVM_PROFDATA="${LLVM_PROFDATA:-llvm-profdata}"
     LLVM_COV="${LLVM_COV:-llvm-cov}"
     if ! command -v "$LLVM_PROFDATA" >/dev/null 2>&1; then
-      echo "[compile.sh] ERROR: llvm-profdata not found in PATH." >&2
-      exit 2
+      if command -v xcrun >/dev/null 2>&1; then
+        LLVM_PROFDATA="$(xcrun --find llvm-profdata 2>/dev/null || true)"
+      fi
     fi
     if ! command -v "$LLVM_COV" >/dev/null 2>&1; then
-      echo "[compile.sh] ERROR: llvm-cov not found in PATH." >&2
+      if command -v xcrun >/dev/null 2>&1; then
+        LLVM_COV="$(xcrun --find llvm-cov 2>/dev/null || true)"
+      fi
+    fi
+    if [[ -z "$LLVM_PROFDATA" || ! -x "$LLVM_PROFDATA" ]]; then
+      echo "[compile.sh] ERROR: llvm-profdata not found; install LLVM tools or set LLVM_PROFDATA." >&2
+      exit 2
+    fi
+    if [[ -z "$LLVM_COV" || ! -x "$LLVM_COV" ]]; then
+      echo "[compile.sh] ERROR: llvm-cov not found; install LLVM tools or set LLVM_COV." >&2
       exit 2
     fi
 
@@ -71,8 +89,7 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     rm -rf "$report_dir"
     mkdir -p "$profile_dir"
 
-    LLVM_PROFILE_FILE="$profile_dir/%p-%m.profraw" \
-      (cd "$BUILD_DIR" && ctest --output-on-failure)
+    (cd "$BUILD_DIR" && LLVM_PROFILE_FILE="$profile_dir/%p-%m.profraw" ctest --output-on-failure)
 
     if ! compgen -G "$profile_dir/*.profraw" >/dev/null; then
       echo "[compile.sh] WARN: no .profraw files produced; coverage report skipped." >&2
