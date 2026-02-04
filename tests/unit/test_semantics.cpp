@@ -2618,6 +2618,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("missing return on some control paths fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32, then{ return(2i32) }, else{ })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("not all control paths return") != std::string::npos);
+}
+
+TEST_CASE("return after partial if validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32, then{ return(2i32) }, else{ })
+  return(3i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("return not allowed in execution body") {
   const std::string source = R"(
 [return<int>]

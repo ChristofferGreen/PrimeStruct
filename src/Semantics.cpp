@@ -1905,6 +1905,31 @@ bool Semantics::validate(const Program &program,
     return validateExpr(params, locals, stmt);
   };
 
+  std::function<bool(const std::vector<Expr> &)> blockAlwaysReturns;
+  std::function<bool(const Expr &)> statementAlwaysReturns;
+  statementAlwaysReturns = [&](const Expr &stmt) -> bool {
+    if (isReturnCall(stmt)) {
+      return true;
+    }
+    if (isIfCall(stmt) && stmt.args.size() == 3) {
+      const Expr &thenBlock = stmt.args[1];
+      const Expr &elseBlock = stmt.args[2];
+      if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+        return false;
+      }
+      return blockAlwaysReturns(thenBlock.bodyArguments) && blockAlwaysReturns(elseBlock.bodyArguments);
+    }
+    return false;
+  };
+  blockAlwaysReturns = [&](const std::vector<Expr> &statements) -> bool {
+    for (const auto &stmt : statements) {
+      if (statementAlwaysReturns(stmt)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   auto resolveEffects = [&](const std::vector<Transform> &transforms) {
     bool sawEffects = false;
     std::unordered_set<std::string> effects;
@@ -1938,9 +1963,16 @@ bool Semantics::validate(const Program &program,
         return false;
       }
     }
-    if (kind != ReturnKind::Void && !sawReturn) {
-      error = "missing return statement in " + def.fullPath;
-      return false;
+    if (kind != ReturnKind::Void) {
+      bool allPathsReturn = blockAlwaysReturns(def.statements);
+      if (!allPathsReturn) {
+        if (sawReturn) {
+          error = "not all control paths return in " + def.fullPath;
+        } else {
+          error = "missing return statement in " + def.fullPath;
+        }
+        return false;
+      }
     }
   }
 
