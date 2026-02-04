@@ -517,6 +517,42 @@ bool TextFilterPipeline::apply(const std::string &input,
         return false;
       }
       std::string inner = input.substr(pos + 1, closeBrace - (pos + 1));
+      if (name == "map") {
+        std::string rewritten;
+        rewritten.reserve(inner.size());
+        size_t scan = 0;
+        while (scan < inner.size()) {
+          char c = inner[scan];
+          if (c == 'R' && scan + 2 < inner.size() && inner[scan + 1] == '"' && inner[scan + 2] == '(') {
+            size_t end = skipRawStringForward(inner, scan);
+            if (end == std::string::npos) {
+              error = "unterminated raw string in map literal";
+              return false;
+            }
+            rewritten.append(inner.substr(scan, end - scan));
+            scan = end;
+            continue;
+          }
+          if (c == '"' || c == '\'') {
+            size_t end = skipQuotedForward(inner, scan);
+            if (end == std::string::npos) {
+              error = "unterminated string in map literal";
+              return false;
+            }
+            rewritten.append(inner.substr(scan, end - scan));
+            scan = end;
+            continue;
+          }
+          if (c == '=' && (scan == 0 || inner[scan - 1] != '=')) {
+            rewritten.append(", ");
+            ++scan;
+            continue;
+          }
+          rewritten.push_back(c);
+          ++scan;
+        }
+        inner.swap(rewritten);
+      }
       std::string filteredInner;
       std::string innerError;
       if (!apply(inner, filteredInner, innerError, options)) {
