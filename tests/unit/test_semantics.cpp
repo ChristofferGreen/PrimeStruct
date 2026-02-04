@@ -870,6 +870,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("builtin comparison accepts bool operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(true, false))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin comparison accepts bool and signed int") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(equal(true, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("builtin comparison rejects bool with u64") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(true, 1u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
 TEST_CASE("builtin less_than calls validate") {
   const std::string source = R"(
 [return<int>]

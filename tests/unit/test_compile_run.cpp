@@ -1498,6 +1498,50 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs bool comparison") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(true, false))
+}
+)";
+  const std::string srcPath = writeTemp("compile_bool_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_bool_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs bool and signed int comparison") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(equal(true, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_bool_int_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_bool_int_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("rejects bool and u64 comparison") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(true, 1u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_bool_u64_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_bool_u64_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs string binding") {
   const std::string source = R"(
 [return<int>]
