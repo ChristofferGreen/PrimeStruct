@@ -1008,6 +1008,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding resolves struct types in namespace") {
+  const std::string source = R"(
+namespace demo {
+  [struct]
+  widget() {
+    [i32] value(1i32)
+  }
+
+  [return<int>]
+  main() {
+    [widget] item(1i32)
+    return(1i32)
+  }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/demo/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pointer_add validates") {
   const std::string source = R"(
 [return<int>]
