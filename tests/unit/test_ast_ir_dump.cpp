@@ -334,6 +334,35 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump prints map literal with named-arg value") {
+  const std::string source = R"(
+[return<int>]
+make_color(hue, value) {
+  return(plus(hue, value))
+}
+
+[return<int>]
+main() {
+  map<i32, i32>{1i32=make_color(hue = 2i32, value = 3i32)}
+  return(1i32)
+}
+)";
+  const auto program = parseProgramWithFilters(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /make_color(): i32 {\n"
+      "    return plus(hue, value)\n"
+      "  }\n"
+      "  def /main(): i32 {\n"
+      "    call map(1, make_color(hue = 2, value = 3))\n"
+      "    return 1\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]
