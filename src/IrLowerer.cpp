@@ -178,6 +178,10 @@ bool IrLowerer::lower(const Program &program,
     return name == "float" || name == "f32" || name == "f64";
   };
 
+  auto isStringTypeName = [](const std::string &name) -> bool {
+    return name == "string";
+  };
+
   auto valueKindFromTypeName = [](const std::string &name) -> LocalInfo::ValueKind {
     if (name == "int" || name == "i32") {
       return LocalInfo::ValueKind::Int32;
@@ -216,6 +220,22 @@ bool IrLowerer::lower(const Program &program,
       }
       if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArg &&
           isFloatTypeName(*transform.templateArg)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  auto isStringBinding = [&](const Expr &expr) -> bool {
+    for (const auto &transform : expr.transforms) {
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (isStringTypeName(transform.name)) {
+        return true;
+      }
+      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArg &&
+          isStringTypeName(*transform.templateArg)) {
         return true;
       }
     }
@@ -484,6 +504,9 @@ bool IrLowerer::lower(const Program &program,
       }
       case Expr::Kind::FloatLiteral:
         error = "native backend does not support float literals";
+        return false;
+      case Expr::Kind::StringLiteral:
+        error = "native backend does not support string literals";
         return false;
       case Expr::Kind::BoolLiteral: {
         IrInstruction inst;
@@ -996,6 +1019,10 @@ bool IrLowerer::lower(const Program &program,
       }
       if (isFloatBinding(stmt)) {
         error = "native backend does not support float types";
+        return false;
+      }
+      if (isStringBinding(stmt)) {
+        error = "native backend does not support string types";
         return false;
       }
       if (!emitExpr(stmt.args.front(), localsIn)) {

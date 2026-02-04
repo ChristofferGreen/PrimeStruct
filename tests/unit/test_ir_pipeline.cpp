@@ -1487,6 +1487,44 @@ main() {
   CHECK(error.find("native backend does not support float types") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer rejects string literal statements") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  "hello"
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend does not support string literals") != std::string::npos);
+}
+
+TEST_CASE("ir lowerer rejects string bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] message("hello")
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend does not support string types") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer rejects mixed signed/unsigned arithmetic") {
   const std::string source = R"(
 [return<i64>]
