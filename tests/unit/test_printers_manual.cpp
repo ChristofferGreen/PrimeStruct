@@ -140,4 +140,32 @@ TEST_CASE("ir printer covers bindings assigns and exec bodies") {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast printer covers executions with templates and bodies") {
+  primec::Program program;
+
+  primec::Execution execWithBody;
+  execWithBody.fullPath = "/run";
+  execWithBody.transforms = {makeTransform("effects", std::string("io"))};
+  execWithBody.templateArgs = {"i32"};
+  execWithBody.arguments = {makeLiteral(1), makeLiteral(2)};
+  execWithBody.argumentNames = {std::string("count"), std::nullopt};
+  execWithBody.bodyArguments = {makeCall("step", {makeLiteral(3)}, {}, {}, {}, {"f32"})};
+
+  primec::Execution execNoBody;
+  execNoBody.fullPath = "/ping";
+  execNoBody.arguments = {makeString("\"ok\"")};
+
+  program.executions.push_back(execWithBody);
+  program.executions.push_back(execNoBody);
+
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [effects<io>] /run<i32>(count = 1, 2) { step<f32>(3) }\n"
+      "  /ping(\"ok\")\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_SUITE_END();
