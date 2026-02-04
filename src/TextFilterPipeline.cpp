@@ -477,6 +477,62 @@ bool TextFilterPipeline::apply(const std::string &input,
   output.reserve(input.size());
   error.clear();
 
+  auto rewriteCollectionLiteral = [&](size_t &index) -> bool {
+    const std::string names[] = {"array", "map"};
+    for (const auto &name : names) {
+      const size_t nameLen = name.size();
+      if (index + nameLen > input.size()) {
+        continue;
+      }
+      if (input.compare(index, nameLen, name) != 0) {
+        continue;
+      }
+      if (index > 0 && (isTokenChar(input[index - 1]) || input[index - 1] == '/')) {
+        continue;
+      }
+      if (index + nameLen < input.size() && isTokenChar(input[index + nameLen])) {
+        continue;
+      }
+      size_t pos = index + nameLen;
+      while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
+        ++pos;
+      }
+      if (pos < input.size() && input[pos] == '<') {
+        size_t close = findMatchingClose(input, pos, '<', '>');
+        if (close == std::string::npos) {
+          error = "unterminated template list in collection literal";
+          return false;
+        }
+        pos = close + 1;
+        while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
+          ++pos;
+        }
+      }
+      if (pos >= input.size() || input[pos] != '{') {
+        continue;
+      }
+      size_t closeBrace = findMatchingClose(input, pos, '{', '}');
+      if (closeBrace == std::string::npos) {
+        error = "unterminated collection literal";
+        return false;
+      }
+      std::string inner = input.substr(pos + 1, closeBrace - (pos + 1));
+      std::string filteredInner;
+      std::string innerError;
+      if (!apply(inner, filteredInner, innerError, options)) {
+        error = innerError;
+        return false;
+      }
+      output.append(input.substr(index, pos - index));
+      output.append("(");
+      output.append(filteredInner);
+      output.append(")");
+      index = closeBrace;
+      return true;
+    }
+    return false;
+  };
+
   auto rewriteBinaryPair = [&](size_t &index, char first, char second, const char *name) -> bool {
     if (input[index] != first || index == 0 || index + 1 >= input.size() || input[index + 1] != second) {
       return false;
@@ -604,6 +660,10 @@ bool TextFilterPipeline::apply(const std::string &input,
       }
       output.append(input.substr(i, end - i));
       i = end > 0 ? end - 1 : i;
+      continue;
+    }
+
+    if (rewriteCollectionLiteral(i)) {
       continue;
     }
 

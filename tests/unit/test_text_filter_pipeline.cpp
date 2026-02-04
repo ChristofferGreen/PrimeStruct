@@ -44,6 +44,26 @@ TEST_CASE("rewrites plus operator with float literals") {
   CHECK(output.find("plus(1.5f, 2.5f)") != std::string::npos);
 }
 
+TEST_CASE("rewrites array literal braces to call") {
+  const std::string source = "main(){ return(array<i32>{1i32,2i32}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("array<i32>(1i32,2i32)") != std::string::npos);
+}
+
+TEST_CASE("rewrites map literal braces to call") {
+  const std::string source = "main(){ return(map<i32,i32>{1i32,2i32}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32,i32>(1i32,2i32)") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with call operands") {
   const std::string source = "main(){ return(foo()+bar()) }\n";
   primec::TextFilterPipeline pipeline;
