@@ -601,6 +601,26 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs mixed named args") {
+  const std::string source = R"(
+[return<int>]
+sum3(a, b, c) {
+  return(plus(plus(a, b), c))
+}
+
+[return<int>]
+main() {
+  return(sum3(1i32, c = 3i32, b = 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_named_mixed.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_named_mixed_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]
