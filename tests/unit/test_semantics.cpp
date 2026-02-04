@@ -548,6 +548,30 @@ main() {
   CHECK(error.find("duplicate capability") != std::string::npos);
 }
 
+TEST_CASE("effects transform rejects duplicates") {
+  const std::string source = R"(
+[effects(io_stdout), effects(asset_read), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects transform") != std::string::npos);
+}
+
+TEST_CASE("capabilities transform rejects duplicates") {
+  const std::string source = R"(
+[capabilities(io_stdout), capabilities(asset_read), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capabilities transform") != std::string::npos);
+}
+
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
@@ -706,6 +730,46 @@ task(1i32)
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("duplicate effects capability") != std::string::npos);
+}
+
+TEST_CASE("execution effects rejects duplicates") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects(io_stdout), effects(asset_read)]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects transform") != std::string::npos);
+}
+
+TEST_CASE("execution capabilities rejects duplicates") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[capabilities(io_stdout), capabilities(asset_read)]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capabilities transform") != std::string::npos);
 }
 
 TEST_CASE("capabilities transform validates identifiers") {
@@ -1489,6 +1553,32 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("binding rejects effects transform arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_stdout) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding transforms do not take arguments") != std::string::npos);
+}
+
+TEST_CASE("binding rejects capabilities transform arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [capabilities(io_stdout) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding transforms do not take arguments") != std::string::npos);
 }
 
 TEST_CASE("restrict binding validates") {

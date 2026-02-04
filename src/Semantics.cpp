@@ -523,7 +523,8 @@ bool parseBindingInfo(const Expr &expr,
       continue;
     }
     if (!transform.arguments.empty()) {
-      continue;
+      error = "binding transforms do not take arguments";
+      return false;
     }
     if (!typeName.empty()) {
       error = "binding requires exactly one type";
@@ -769,12 +770,24 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       error = "duplicate definition: " + def.fullPath;
       return false;
     }
+    bool sawEffects = false;
+    bool sawCapabilities = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "effects") {
+        if (sawEffects) {
+          error = "duplicate effects transform on " + def.fullPath;
+          return false;
+        }
+        sawEffects = true;
         if (!validateEffectsTransform(transform, def.fullPath, error)) {
           return false;
         }
       } else if (transform.name == "capabilities") {
+        if (sawCapabilities) {
+          error = "duplicate capabilities transform on " + def.fullPath;
+          return false;
+        }
+        sawCapabilities = true;
         if (!validateCapabilitiesTransform(transform, def.fullPath, error)) {
           return false;
         }
@@ -1817,12 +1830,24 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
   }
 
   for (const auto &exec : program.executions) {
+    bool sawEffects = false;
+    bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {
       if (transform.name == "effects") {
+        if (sawEffects) {
+          error = "duplicate effects transform on " + exec.fullPath;
+          return false;
+        }
+        sawEffects = true;
         if (!validateEffectsTransform(transform, exec.fullPath, error)) {
           return false;
         }
       } else if (transform.name == "capabilities") {
+        if (sawCapabilities) {
+          error = "duplicate capabilities transform on " + exec.fullPath;
+          return false;
+        }
+        sawCapabilities = true;
         if (!validateCapabilitiesTransform(transform, exec.fullPath, error)) {
           return false;
         }
