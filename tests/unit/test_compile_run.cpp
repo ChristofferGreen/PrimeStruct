@@ -719,6 +719,20 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("rejects negate on u64") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(negate(2u64))
+}
+)";
+  const std::string srcPath = writeTemp("compile_negate_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_negate_u64_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("compiles and runs short-circuit and") {
   const std::string source = R"(
 [return<int>]

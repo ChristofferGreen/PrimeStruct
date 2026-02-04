@@ -128,6 +128,18 @@ main() {
   CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
 }
 
+TEST_CASE("arithmetic negate rejects unsigned operands") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(negate(2u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("negate does not support unsigned operands") != std::string::npos);
+}
+
 TEST_CASE("arithmetic rejects mixed signed/unsigned operands") {
   const std::string source = R"(
 [return<i64>]

@@ -1079,6 +1079,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       return false;
     };
+    auto isUnsignedExpr = [&](const Expr &arg) -> bool {
+      ReturnKind kind = inferExprReturnKind(arg, params, locals);
+      return kind == ReturnKind::UInt64;
+    };
     auto hasMixedSignedness = [&](const std::vector<Expr> &args, bool boolCountsAsSigned) -> bool {
       bool sawUnsigned = false;
       bool sawSigned = false;
@@ -1177,6 +1181,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           if (builtinName == "negate") {
             if (!isNumericExpr(expr.args.front())) {
               error = "arithmetic operators require numeric operands";
+              return false;
+            }
+            if (isUnsignedExpr(expr.args.front())) {
+              error = "negate does not support unsigned operands";
               return false;
             }
           } else {
