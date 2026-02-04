@@ -123,6 +123,24 @@ bool getBuiltinClampName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinConvertName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "convert") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -416,18 +434,38 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           return true;
         }
-      if (getBuiltinClampName(expr, builtinName)) {
-        if (expr.args.size() != 3) {
-          error = "argument count mismatch for builtin " + builtinName;
-          return false;
-        }
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
+        if (getBuiltinClampName(expr, builtinName)) {
+          if (expr.args.size() != 3) {
+            error = "argument count mismatch for builtin " + builtinName;
             return false;
           }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
+            }
+          }
+          return true;
         }
-        return true;
-      }
+        if (getBuiltinConvertName(expr, builtinName)) {
+          if (expr.templateArgs.size() != 1) {
+            error = "convert requires exactly one template argument";
+            return false;
+          }
+          const std::string &typeName = expr.templateArgs[0];
+          if (typeName != "int" && typeName != "i32" && typeName != "bool" && typeName != "float" &&
+              typeName != "f32" && typeName != "f64") {
+            error = "unsupported convert target type: " + typeName;
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
+        }
       if (getBuiltinCollectionName(expr, builtinName)) {
         if (builtinName == "array") {
           if (expr.templateArgs.size() != 1) {

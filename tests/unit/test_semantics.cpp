@@ -687,6 +687,42 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("convert builtin validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(1.5f))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("convert missing template arg fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("convert requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("convert unsupported template arg fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<u32>(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type") != std::string::npos);
+}
+
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]

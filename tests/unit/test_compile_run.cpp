@@ -586,6 +586,21 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs convert builtin") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(1.5f))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]

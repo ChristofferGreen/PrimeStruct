@@ -181,6 +181,24 @@ bool isBuiltinClamp(const Expr &expr) {
   return name == "clamp";
 }
 
+bool getBuiltinConvertName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "convert") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -323,6 +341,13 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::ostringstream out;
       out << "ps_builtin_clamp(" << emitExpr(expr.args[0], nameMap) << ", "
           << emitExpr(expr.args[1], nameMap) << ", " << emitExpr(expr.args[2], nameMap) << ")";
+      return out.str();
+    }
+    std::string convertName;
+    if (getBuiltinConvertName(expr, convertName) && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
+      std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
+      std::ostringstream out;
+      out << "static_cast<" << targetType << ">(" << emitExpr(expr.args[0], nameMap) << ")";
       return out.str();
     }
     std::string collection;
