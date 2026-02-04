@@ -152,6 +152,18 @@ main() {
   CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
+TEST_CASE("arithmetic rejects mixed int/float operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32, 1.5f))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed int/float") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 main() {
@@ -173,6 +185,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count") != std::string::npos);
+}
+
+TEST_CASE("clamp rejects mixed int/float operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(1i32, 0.5f, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed int/float") != std::string::npos);
 }
 
 TEST_CASE("assign through non-mut pointer fails") {
@@ -1087,6 +1111,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
+TEST_CASE("builtin comparison rejects mixed int/float operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(greater_than(1i32, 2.5f))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed int/float") != std::string::npos);
 }
 
 TEST_CASE("builtin clamp calls validate") {

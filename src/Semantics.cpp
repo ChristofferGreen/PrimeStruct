@@ -1099,6 +1099,68 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       return false;
     };
+    enum class NumericCategory { Unknown, Integer, Float };
+    auto numericCategoryForExpr = [&](const Expr &arg) -> NumericCategory {
+      ReturnKind kind = inferExprReturnKind(arg, params, locals);
+      if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+        return NumericCategory::Float;
+      }
+      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
+        return NumericCategory::Integer;
+      }
+      if (kind == ReturnKind::Void) {
+        return NumericCategory::Unknown;
+      }
+      if (kind == ReturnKind::Unknown) {
+        if (arg.kind == Expr::Kind::FloatLiteral) {
+          return NumericCategory::Float;
+        }
+        if (arg.kind == Expr::Kind::StringLiteral) {
+          return NumericCategory::Unknown;
+        }
+        if (isPointerExpr(arg, locals)) {
+          return NumericCategory::Unknown;
+        }
+        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+          auto it = locals.find(arg.name);
+          if (it != locals.end()) {
+            const std::string &typeName = it->second.typeName;
+            if (typeName == "float" || typeName == "f32" || typeName == "f64") {
+              return NumericCategory::Float;
+            }
+            if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" ||
+                typeName == "bool") {
+              return NumericCategory::Integer;
+            }
+            if (typeName == "Reference") {
+              const std::string &refType = it->second.typeTemplateArg;
+              if (refType == "float" || refType == "f32" || refType == "f64") {
+                return NumericCategory::Float;
+              }
+              if (refType == "int" || refType == "i32" || refType == "i64" || refType == "u64" ||
+                  refType == "bool") {
+                return NumericCategory::Integer;
+              }
+            }
+          }
+        }
+        return NumericCategory::Unknown;
+      }
+      return NumericCategory::Unknown;
+    };
+    auto hasMixedNumericCategory = [&](const std::vector<Expr> &args) -> bool {
+      bool sawFloat = false;
+      bool sawInteger = false;
+      for (const auto &arg : args) {
+        NumericCategory category = numericCategoryForExpr(arg);
+        if (category == NumericCategory::Float) {
+          sawFloat = true;
+        } else if (category == NumericCategory::Integer) {
+          sawInteger = true;
+        }
+      }
+      return sawFloat && sawInteger;
+    };
     auto isComparisonOperand = [&](const Expr &arg) -> bool {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
       if (kind == ReturnKind::Bool || kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
@@ -1252,6 +1314,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
                 error = "arithmetic operators do not support mixed signed/unsigned operands";
                 return false;
               }
+              if (hasMixedNumericCategory(expr.args)) {
+                error = "arithmetic operators do not support mixed int/float operands";
+                return false;
+              }
             } else if (leftPointer) {
               if (!isNumericExpr(expr.args[1])) {
                 error = "arithmetic operators require numeric operands";
@@ -1291,6 +1357,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
               error = "comparisons do not support mixed signed/unsigned operands";
               return false;
             }
+            if (hasMixedNumericCategory(expr.args)) {
+              error = "comparisons do not support mixed int/float operands";
+              return false;
+            }
           }
           for (const auto &arg : expr.args) {
             if (!validateExpr(params, locals, arg)) {
@@ -1312,6 +1382,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           if (hasMixedSignedness(expr.args, false)) {
             error = "clamp does not support mixed signed/unsigned operands";
+            return false;
+          }
+          if (hasMixedNumericCategory(expr.args)) {
+            error = "clamp does not support mixed int/float operands";
             return false;
           }
           for (const auto &arg : expr.args) {

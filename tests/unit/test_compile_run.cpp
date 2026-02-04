@@ -1386,6 +1386,20 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("rejects mixed int/float arithmetic") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32, 1.5f))
+}
+)";
+  const std::string srcPath = writeTemp("compile_mixed_int_float.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_mixed_int_float_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("implicit suffix disabled by default") {
   const std::string source = R"(
 [return<int>]
