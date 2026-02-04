@@ -2665,4 +2665,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("default effects allow print in execution body") {
+  const std::string source = R"(
+[return<void>]
+execute_repeat(count) {
+}
+
+[return<void>]
+main() {
+}
+
+execute_repeat(1i32) {
+  print_line("hello")
+}
+)";
+  std::string error;
+  CHECK(validateProgramWithDefaults(source, "/main", {"io_out"}, error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
