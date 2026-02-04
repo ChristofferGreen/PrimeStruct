@@ -442,6 +442,25 @@ execute_repeat(3i32) { if(1i32, then{ 1i32 }, else{ main() }) }
   CHECK(error.find("execution body arguments must be calls") != std::string::npos);
 }
 
+TEST_CASE("execution body accepts if statement sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat(x) {
+  return()
+}
+
+execute_repeat(3i32) { if(1i32) { main() } else { main() } }
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
 [return<u32>]

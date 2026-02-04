@@ -47,6 +47,32 @@ execute_repeat(3i32) { main(), main() }
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
+TEST_CASE("parses execution with if statement sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(1i32) {
+  if(1i32) { main() } else { main() }
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 1);
+  const auto &stmt = program.executions[0].bodyArguments[0];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  CHECK(stmt.name == "if");
+  REQUIRE(stmt.args.size() == 3);
+  CHECK(stmt.args[1].name == "then");
+  CHECK(stmt.args[2].name == "else");
+  REQUIRE(stmt.args[1].bodyArguments.size() == 1);
+  REQUIRE(stmt.args[2].bodyArguments.size() == 1);
+  CHECK(stmt.args[1].bodyArguments[0].name == "main");
+  CHECK(stmt.args[2].bodyArguments[0].name == "main");
+}
+
 TEST_CASE("parses execution transforms") {
   const std::string source = R"(
 [return<int>]

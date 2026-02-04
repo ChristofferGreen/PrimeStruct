@@ -550,6 +550,23 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   }
   while (true) {
     Expr arg;
+    if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
+      bool parsedIf = false;
+      if (!tryParseIfStatementSugar(arg, namespacePrefix, parsedIf)) {
+        return false;
+      }
+      if (parsedIf) {
+        out.push_back(std::move(arg));
+        if (match(TokenKind::Comma)) {
+          expect(TokenKind::Comma, "expected ','");
+          continue;
+        }
+        if (match(TokenKind::RBrace)) {
+          break;
+        }
+        continue;
+      }
+    }
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "return") {
       if (!parseReturnStatement(arg, namespacePrefix)) {
         return false;
@@ -571,6 +588,75 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   if (!expect(TokenKind::RBrace, "expected '}'")) {
     return false;
   }
+  return true;
+}
+
+bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
+  parsed = false;
+  if (!match(TokenKind::Identifier) || tokens_[pos_].text != "if") {
+    return true;
+  }
+  size_t savedPos = pos_;
+  Token name = consume(TokenKind::Identifier, "expected statement");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  if (!match(TokenKind::LParen)) {
+    pos_ = savedPos;
+    return true;
+  }
+  expect(TokenKind::LParen, "expected '(' after if");
+  Expr condition;
+  if (!parseExpr(condition, namespacePrefix)) {
+    return false;
+  }
+  if (match(TokenKind::Comma)) {
+    pos_ = savedPos;
+    return true;
+  }
+  if (!match(TokenKind::RParen)) {
+    pos_ = savedPos;
+    return true;
+  }
+  expect(TokenKind::RParen, "expected ')' after if condition");
+  if (!match(TokenKind::LBrace)) {
+    pos_ = savedPos;
+    return true;
+  }
+  std::vector<Expr> thenBody;
+  if (!parseBraceExprList(thenBody, namespacePrefix)) {
+    return false;
+  }
+  if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
+    return fail("if statement requires else block");
+  }
+  consume(TokenKind::Identifier, "expected 'else'");
+  std::vector<Expr> elseBody;
+  if (!parseBraceExprList(elseBody, namespacePrefix)) {
+    return false;
+  }
+  Expr thenCall;
+  thenCall.kind = Expr::Kind::Call;
+  thenCall.name = "then";
+  thenCall.namespacePrefix = namespacePrefix;
+  thenCall.bodyArguments = std::move(thenBody);
+  Expr elseCall;
+  elseCall.kind = Expr::Kind::Call;
+  elseCall.name = "else";
+  elseCall.namespacePrefix = namespacePrefix;
+  elseCall.bodyArguments = std::move(elseBody);
+  Expr ifCall;
+  ifCall.kind = Expr::Kind::Call;
+  ifCall.name = "if";
+  ifCall.namespacePrefix = namespacePrefix;
+  ifCall.args.push_back(std::move(condition));
+  ifCall.argNames.push_back(std::nullopt);
+  ifCall.args.push_back(std::move(thenCall));
+  ifCall.argNames.push_back(std::nullopt);
+  ifCall.args.push_back(std::move(elseCall));
+  ifCall.argNames.push_back(std::nullopt);
+  out = std::move(ifCall);
+  parsed = true;
   return true;
 }
 
@@ -800,58 +886,15 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       if (hasStatementTransforms) {
         return fail("if statement cannot have transforms");
       }
-      size_t savedPos = pos_;
-      Token name = consume(TokenKind::Identifier, "expected statement");
-      if (name.kind == TokenKind::End) {
+      Expr ifExpr;
+      bool parsedIf = false;
+      if (!tryParseIfStatementSugar(ifExpr, def.namespacePrefix, parsedIf)) {
         return false;
       }
-      if (match(TokenKind::LParen)) {
-        expect(TokenKind::LParen, "expected '(' after if");
-        Expr condition;
-        if (!parseExpr(condition, def.namespacePrefix)) {
-          return false;
-        }
-        if (!match(TokenKind::Comma) && match(TokenKind::RParen)) {
-          expect(TokenKind::RParen, "expected ')' after if condition");
-          if (match(TokenKind::LBrace)) {
-            std::vector<Expr> thenBody;
-            if (!parseBraceExprList(thenBody, def.namespacePrefix)) {
-              return false;
-            }
-            if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
-              return fail("if statement requires else block");
-            }
-            consume(TokenKind::Identifier, "expected 'else'");
-            std::vector<Expr> elseBody;
-            if (!parseBraceExprList(elseBody, def.namespacePrefix)) {
-              return false;
-            }
-            Expr thenCall;
-            thenCall.kind = Expr::Kind::Call;
-            thenCall.name = "then";
-            thenCall.namespacePrefix = def.namespacePrefix;
-            thenCall.bodyArguments = std::move(thenBody);
-            Expr elseCall;
-            elseCall.kind = Expr::Kind::Call;
-            elseCall.name = "else";
-            elseCall.namespacePrefix = def.namespacePrefix;
-            elseCall.bodyArguments = std::move(elseBody);
-            Expr ifCall;
-            ifCall.kind = Expr::Kind::Call;
-            ifCall.name = "if";
-            ifCall.namespacePrefix = def.namespacePrefix;
-            ifCall.args.push_back(std::move(condition));
-            ifCall.argNames.push_back(std::nullopt);
-            ifCall.args.push_back(std::move(thenCall));
-            ifCall.argNames.push_back(std::nullopt);
-            ifCall.args.push_back(std::move(elseCall));
-            ifCall.argNames.push_back(std::nullopt);
-            def.statements.push_back(std::move(ifCall));
-            continue;
-          }
-        }
+      if (parsedIf) {
+        def.statements.push_back(std::move(ifExpr));
+        continue;
       }
-      pos_ = savedPos;
     }
 
     if (!statementTransforms.empty()) {

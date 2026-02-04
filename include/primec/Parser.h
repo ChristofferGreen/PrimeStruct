@@ -29,6 +29,7 @@ private:
                                        const std::vector<std::optional<std::string>> &argNames);
   bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
+  bool tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed);
   bool definitionHasReturnBeforeClose() const;
   bool isDefinitionSignature(bool *paramsAreIdentifiers) const;
   bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;
