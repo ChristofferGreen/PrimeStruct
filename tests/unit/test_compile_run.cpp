@@ -342,7 +342,8 @@ main() {
   const std::string srcPath = writeTemp("compile_suffix.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --implicit-i32";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 8);
 }
@@ -357,7 +358,8 @@ main() {
   const std::string srcPath = writeTemp("compile_hex.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_hex_exe").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --implicit-i32";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 42);
 }
@@ -378,7 +380,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("implicit suffix can be disabled") {
+TEST_CASE("implicit suffix disabled by default") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -389,7 +391,7 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_off_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-implicit-i32";
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
 

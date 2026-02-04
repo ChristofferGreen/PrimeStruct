@@ -39,6 +39,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.includePaths.push_back(argv[++i]);
     } else if (arg.rfind("-I", 0) == 0 && arg.size() > 2) {
       out.includePaths.push_back(arg.substr(2));
+    } else if (arg == "--implicit-i32") {
+      out.implicitI32Suffix = true;
     } else if (arg == "--no-implicit-i32") {
       out.implicitI32Suffix = false;
     } else if (!arg.empty() && arg[0] == '-') {
@@ -93,7 +95,8 @@ int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primec --emit=cpp|exe <input.prime> -o <output> [--entry /path] "
-                 "[--include-path <dir>] [--dump-stage pre_ast|ast|ir]\n";
+                 "[--include-path <dir>] [--implicit-i32|--no-implicit-i32] "
+                 "[--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
 
