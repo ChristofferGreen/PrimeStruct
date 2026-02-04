@@ -723,8 +723,21 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         }
       }
     }
-    if (isStruct) {
+    bool isFieldOnlyStruct = false;
+    if (!isStruct && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
+        !def.returnExpr.has_value()) {
+      isFieldOnlyStruct = true;
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          isFieldOnlyStruct = false;
+          break;
+        }
+      }
+    }
+    if (isStruct || isFieldOnlyStruct) {
       structNames.insert(def.fullPath);
+    }
+    if (isStruct) {
       if (hasReturnTransform) {
         error = "struct definitions cannot declare return types: " + def.fullPath;
         return false;

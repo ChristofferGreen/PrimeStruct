@@ -1349,6 +1349,41 @@ main() {
   CHECK(error.find("unsupported binding type") != std::string::npos);
 }
 
+TEST_CASE("field-only definition can be used as a type") {
+  const std::string source = R"(
+Foo() {
+  [i32] field(1i32)
+}
+
+[return<int>]
+main() {
+  [Foo] value(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("non-field definition is not a valid type") {
+  const std::string source = R"(
+[return<int>]
+Bar() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [Bar] value(1i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported binding type") != std::string::npos);
+}
+
 TEST_CASE("float binding validates") {
   const std::string source = R"(
 [return<int>]
