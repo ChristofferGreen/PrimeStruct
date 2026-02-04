@@ -281,6 +281,42 @@ task(1i32)
   CHECK(error.find("duplicate effects capability") != std::string::npos);
 }
 
+TEST_CASE("align_bytes validates integer argument") {
+  const std::string source = R"(
+[align_bytes(16), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("align_bytes rejects non-integer argument") {
+  const std::string source = R"(
+[align_bytes(foo), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_bytes requires a positive integer argument") != std::string::npos);
+}
+
+TEST_CASE("align_kbytes rejects template arguments") {
+  const std::string source = R"(
+[align_kbytes<i32>(4), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_kbytes does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {

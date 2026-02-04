@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <functional>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -270,6 +271,49 @@ bool validateEffectsTransform(const Transform &transform, const std::string &con
   return true;
 }
 
+bool parsePositiveIntArg(const std::string &text, int &value) {
+  std::string digits = text;
+  if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
+    digits.resize(digits.size() - 3);
+  }
+  if (digits.empty()) {
+    return false;
+  }
+  int parsed = 0;
+  for (char c : digits) {
+    if (!std::isdigit(static_cast<unsigned char>(c))) {
+      return false;
+    }
+    int digit = c - '0';
+    if (parsed > (std::numeric_limits<int>::max() - digit) / 10) {
+      return false;
+    }
+    parsed = parsed * 10 + digit;
+  }
+  if (parsed <= 0) {
+    return false;
+  }
+  value = parsed;
+  return true;
+}
+
+bool validateAlignTransform(const Transform &transform, const std::string &context, std::string &error) {
+  if (transform.templateArg) {
+    error = transform.name + " does not accept template arguments on " + context;
+    return false;
+  }
+  if (transform.arguments.size() != 1) {
+    error = transform.name + " requires exactly one integer argument";
+    return false;
+  }
+  int value = 0;
+  if (!parsePositiveIntArg(transform.arguments[0], value)) {
+    error = transform.name + " requires a positive integer argument";
+    return false;
+  }
+  return true;
+}
+
 bool validateNamedArguments(const std::vector<Expr> &args,
                             const std::vector<std::optional<std::string>> &argNames,
                             const std::string &context,
@@ -358,6 +402,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     for (const auto &transform : def.transforms) {
       if (transform.name == "effects") {
         if (!validateEffectsTransform(transform, def.fullPath, error)) {
+          return false;
+        }
+      } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
+        if (!validateAlignTransform(transform, def.fullPath, error)) {
           return false;
         }
       }
@@ -711,6 +759,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     for (const auto &transform : exec.transforms) {
       if (transform.name == "effects") {
         if (!validateEffectsTransform(transform, exec.fullPath, error)) {
+          return false;
+        }
+      } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
+        if (!validateAlignTransform(transform, exec.fullPath, error)) {
           return false;
         }
       }
