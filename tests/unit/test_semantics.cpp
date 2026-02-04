@@ -588,6 +588,91 @@ main() {
   CHECK(error.find("duplicate named argument") != std::string::npos);
 }
 
+TEST_CASE("array literal validates") {
+  const std::string source = R"(
+[return<int>]
+use(x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(array<i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map literal validates") {
+  const std::string source = R"(
+[return<int>]
+use(x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(map<i32, i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("array literal missing template arg fails") {
+  const std::string source = R"(
+[return<int>]
+use(x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(array(1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("map literal missing template args fails") {
+  const std::string source = R"(
+[return<int>]
+use(x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(map(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map literal requires exactly two template arguments") != std::string::npos);
+}
+
+TEST_CASE("map literal requires even argument count") {
+  const std::string source = R"(
+[return<int>]
+use(x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(map<i32, i32>(1i32, 2i32, 3i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map literal requires an even number of arguments") != std::string::npos);
+}
+
 TEST_CASE("boolean literal validates") {
   const std::string source = R"(
 [return<int>]

@@ -123,6 +123,24 @@ bool getBuiltinClampName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "array" || name == "map") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool isAssignCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -346,23 +364,46 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
           }
           return true;
         }
-        if (getBuiltinClampName(expr, builtinName)) {
-          if (expr.args.size() != 3) {
-            error = "argument count mismatch for builtin " + builtinName;
-            return false;
-          }
-          for (const auto &arg : expr.args) {
-            if (!validateExpr(params, locals, arg)) {
-              return false;
-            }
-          }
-          return true;
+      if (getBuiltinClampName(expr, builtinName)) {
+        if (expr.args.size() != 3) {
+          error = "argument count mismatch for builtin " + builtinName;
+          return false;
         }
-        if (isAssignCall(expr)) {
-          if (expr.args.size() != 2) {
-            error = "assign requires exactly two arguments";
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
             return false;
           }
+        }
+        return true;
+      }
+      if (getBuiltinCollectionName(expr, builtinName)) {
+        if (builtinName == "array") {
+          if (expr.templateArgs.size() != 1) {
+            error = "array literal requires exactly one template argument";
+            return false;
+          }
+        } else {
+          if (expr.templateArgs.size() != 2) {
+            error = "map literal requires exactly two template arguments";
+            return false;
+          }
+          if (expr.args.size() % 2 != 0) {
+            error = "map literal requires an even number of arguments";
+            return false;
+          }
+        }
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        return true;
+      }
+      if (isAssignCall(expr)) {
+        if (expr.args.size() != 2) {
+          error = "assign requires exactly two arguments";
+          return false;
+        }
           if (expr.args.front().kind != Expr::Kind::Name) {
             error = "assign target must be a mutable binding";
             return false;
