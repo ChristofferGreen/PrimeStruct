@@ -1553,7 +1553,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("requires string bindings to use string literals") != std::string::npos);
+  CHECK(error.find("string literals or bindings") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports print_line with string literals") {
@@ -1623,6 +1623,29 @@ main() {
     }
   }
   CHECK(sawPrintString);
+}
+
+TEST_CASE("ir lowerer supports string binding copy") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [string] message("hello")
+  [string] copy(message)
+  print_line(copy)
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  CHECK(module.stringTable.size() == 1);
+  CHECK(module.stringTable[0] == "hello");
 }
 
 TEST_CASE("ir lowerer supports print_error with string literals") {

@@ -1184,15 +1184,28 @@ bool IrLowerer::lower(const Program &program,
           return false;
         }
         const Expr &init = stmt.args.front();
-        if (init.kind != Expr::Kind::StringLiteral) {
-          error = "native backend requires string bindings to use string literals";
+        int32_t index = -1;
+        if (init.kind == Expr::Kind::StringLiteral) {
+          std::string decoded;
+          if (!parseStringLiteral(init.stringValue, decoded)) {
+            return false;
+          }
+          index = internString(decoded);
+        } else if (init.kind == Expr::Kind::Name) {
+          auto it = localsIn.find(init.name);
+          if (it == localsIn.end()) {
+            error = "native backend does not know identifier: " + init.name;
+            return false;
+          }
+          if (it->second.valueKind != LocalInfo::ValueKind::String || it->second.stringIndex < 0) {
+            error = "native backend requires string bindings to use string literals or bindings";
+            return false;
+          }
+          index = it->second.stringIndex;
+        } else {
+          error = "native backend requires string bindings to use string literals or bindings";
           return false;
         }
-        std::string decoded;
-        if (!parseStringLiteral(init.stringValue, decoded)) {
-          return false;
-        }
-        int32_t index = internString(decoded);
         function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
         LocalInfo info;
         info.index = nextLocal++;

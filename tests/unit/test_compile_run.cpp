@@ -319,6 +319,27 @@ main() {
   CHECK(readFile(outPath) == "hi\n");
 }
 
+TEST_CASE("compiles and runs native string binding copy") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [string] greeting("hey")
+  [string] copy(greeting)
+  print_line(copy)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_copy.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_copy_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_string_copy_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "hey\n");
+}
+
 TEST_CASE("compiles and runs native hello world example") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::string srcPath = (repoRoot / "examples" / "hello_world.prime").string();
