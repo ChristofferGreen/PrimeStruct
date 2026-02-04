@@ -219,4 +219,101 @@ TEST_CASE("execution argument name count mismatch fails") {
   CHECK(error.find("argument name count mismatch") != std::string::npos);
 }
 
+TEST_CASE("duplicate binding names fail") {
+  primec::Program program;
+  primec::Expr bindingA = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr bindingB = makeBinding("value", {makeTransform("i32")}, {makeLiteral(2)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))},
+      {bindingA, bindingB, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("duplicate binding name") != std::string::npos);
+}
+
+TEST_CASE("binding cannot shadow parameter") {
+  primec::Program program;
+  primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))},
+      {binding, makeCall("/return", {makeLiteral(1)})}, {"value"}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("duplicate binding name") != std::string::npos);
+}
+
+TEST_CASE("unknown call target fails") {
+  primec::Program program;
+  primec::Expr unknownCall = makeCall("mystery", {makeLiteral(1)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))},
+      {unknownCall, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
+}
+
+TEST_CASE("return not allowed in expression context") {
+  primec::Program program;
+  primec::Expr innerReturn = makeCall("return", {makeLiteral(1)});
+  primec::Expr plusCall = makeCall("plus", {innerReturn, makeLiteral(2)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {plusCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return not allowed in expression context") != std::string::npos);
+}
+
+TEST_CASE("control-flow calls not allowed in expressions") {
+  primec::Program program;
+  primec::Expr ifCall = makeCall("if");
+  primec::Expr plusCall = makeCall("plus", {ifCall, makeLiteral(2)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {plusCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("control-flow blocks cannot appear in expressions") != std::string::npos);
+}
+
+TEST_CASE("block arguments not allowed in expression context") {
+  primec::Program program;
+  primec::Expr blockCall = makeCall("task", {}, {}, {makeLiteral(1)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("block arguments are only supported on if blocks") != std::string::npos);
+}
+
+TEST_CASE("named arguments not allowed on builtin calls") {
+  primec::Program program;
+  primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},
+                                  {std::string("left"), std::string("right")});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {plusCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("execution unknown named argument fails") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {"a", "b"}));
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {makeLiteral(1), makeLiteral(2)};
+  exec.argumentNames = {std::string("c"), std::string("b")};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("unknown named argument") != std::string::npos);
+}
+
 TEST_SUITE_END();
