@@ -231,4 +231,24 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("positional argument after named fails in parser") {
+  const std::string source = R"(
+[return<int>]
+foo(a, b) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(a = 1i32, 2i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+}
+
 TEST_SUITE_END();

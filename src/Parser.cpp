@@ -190,6 +190,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!parseCallArgumentList(arguments, argumentNames, currentNamespacePrefix())) {
     return false;
   }
+  if (!validateNamedArgumentOrdering(argumentNames)) {
+    return false;
+  }
   if (!expect(TokenKind::RParen, "expected ')' after arguments")) {
     return false;
   }
@@ -384,6 +387,20 @@ bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
   for (const auto &argName : argNames) {
     if (argName.has_value()) {
       return fail("named arguments not supported for builtin calls");
+    }
+  }
+  return true;
+}
+
+bool Parser::validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames) {
+  bool sawNamed = false;
+  for (const auto &argName : argNames) {
+    if (argName.has_value()) {
+      sawNamed = true;
+      continue;
+    }
+    if (sawNamed) {
+      return fail("positional argument cannot follow named arguments");
     }
   }
   return true;
@@ -699,6 +716,9 @@ bool Parser::parseDefinitionBody(Definition &def) {
     if (!validateNoBuiltinNamedArguments(callExpr.name, callExpr.argNames)) {
       return false;
     }
+    if (!validateNamedArgumentOrdering(callExpr.argNames)) {
+      return false;
+    }
     if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
       return false;
     }
@@ -883,6 +903,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return false;
       }
       if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
+        return false;
+      }
+      if (!validateNamedArgumentOrdering(call.argNames)) {
         return false;
       }
       if (!expect(TokenKind::RParen, "expected ')' to close call")) {
