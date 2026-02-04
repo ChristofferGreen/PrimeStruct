@@ -267,7 +267,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation.
 - **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions. The brace forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals also accept `key = value` pairs inside braces.
-- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms.
+- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
 
@@ -311,6 +311,11 @@ tweak_color([copy mut restrict<Image>] img) {
   apply_grade(img);
 }
 
+[return<int>]
+convert_demo() {
+  return(convert<int>(1.5f))
+}
+
 [return<float> default_operators control_flow desugar_assignment]
 float blend(float a, float b) {
   float result = (a + b) * 0.5f;
@@ -329,6 +334,13 @@ float blend(float a, float b) {
     else{ }
   );
   return(result);
+}
+
+// IR sketch
+module {
+  def /convert_demo(): i32 {
+    return convert(1.5f32)
+  }
 }
 ```
 
