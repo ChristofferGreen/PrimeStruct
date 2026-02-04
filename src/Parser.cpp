@@ -156,6 +156,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   bool paramsAreIdentifiers = false;
   bool isDefinition = hasReturnTransform ? true : isDefinitionSignature(&paramsAreIdentifiers);
+  if (isDefinition && !hasReturnTransform) {
+    return fail("definition requires return transform");
+  }
   if (isDefinition) {
     std::vector<std::string> parameters;
     if (!parseIdentifierList(parameters)) {

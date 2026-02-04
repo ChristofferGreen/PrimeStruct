@@ -111,6 +111,20 @@ main() {
   CHECK(error.find("missing return statement in definition body") != std::string::npos);
 }
 
+TEST_CASE("definition requires return transform") {
+  const std::string source = R"(
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("definition requires return transform") != std::string::npos);
+}
+
 TEST_CASE("out of range literal fails") {
   const std::string source = R"(
 [return<int>]
