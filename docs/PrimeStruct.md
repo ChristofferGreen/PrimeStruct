@@ -317,6 +317,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - Offsets are interpreted as unsigned byte counts at runtime; negative offsets require signed operands (e.g., `-16i64`).
   - Example: `plus(location(second), -16i64)` steps back one 16-byte slot.
   - Example: `minus(location(second), 16u64)` also steps back one 16-byte slot.
+  - You can use `location(ref)` inside pointer arithmetic when starting from a `Reference<T>` binding.
   - The C++ emitter performs raw pointer arithmetic on actual addresses; offsets are only well-defined within the same allocated object.
   - Minimal runnable example:
     ```

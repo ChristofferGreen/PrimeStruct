@@ -250,6 +250,24 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native pointer plus on reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  [Reference<i32>] ref(location(first))
+  return(dereference(plus(location(ref), 16i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_ptr_plus_ref.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_ptr_plus_ref_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs native pointer minus offsets") {
   const std::string source = R"(
 [return<int>]
@@ -857,6 +875,23 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs pointer plus on reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(8i32)
+  [Reference<i32>] ref(location(value))
+  return(dereference(plus(location(ref), 0i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_pointer_plus_ref.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_plus_ref_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
 }
 
 TEST_CASE("compiles and runs pointer minus helper") {

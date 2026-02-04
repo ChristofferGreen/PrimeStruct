@@ -714,6 +714,44 @@ main() {
   CHECK(result == 5);
 }
 
+TEST_CASE("ir lowers pointer plus on reference location") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first(4i32)
+  [i32] second(9i32)
+  [Reference<i32>] ref(location(first))
+  return(dereference(plus(location(ref), 16i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawAdd = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::AddI64) {
+      sawAdd = true;
+      break;
+    }
+  }
+  CHECK(sawAdd);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  bool ok = vm.execute(module, result, error);
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(result == 9);
+}
+
 TEST_CASE("ir lowers pointer minus") {
   const std::string source = R"(
 [return<int>]
