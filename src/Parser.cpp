@@ -664,6 +664,11 @@ bool Parser::parseDefinitionBody(Definition &def) {
     callExpr.namespacePrefix = def.namespacePrefix;
     callExpr.transforms = std::move(statementTransforms);
     callExpr.isBinding = !callExpr.transforms.empty();
+    if (match(TokenKind::LAngle)) {
+      if (!parseTemplateList(callExpr.templateArgs)) {
+        return false;
+      }
+    }
     if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
       return false;
     }
