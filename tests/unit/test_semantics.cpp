@@ -452,6 +452,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("return transform rejects arguments") {
+  const std::string source = R"(
+[return<int>(foo)]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return transform does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("effects transform validates identifiers") {
   const std::string source = R"(
 [effects(global_write, io_stdout), return<int>]

@@ -87,6 +87,16 @@ TEST_CASE("return transform requires template argument") {
   CHECK(error.find("return transform requires a type") != std::string::npos);
 }
 
+TEST_CASE("return transform rejects arguments") {
+  primec::Program program;
+  primec::Transform transform = makeTransform("return", std::string("int"));
+  transform.arguments = {"bad"};
+  program.definitions.push_back(makeDefinition("/main", {transform}, {makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return transform does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("conflicting return types fail") {
   primec::Program program;
   program.definitions.push_back(makeDefinition(
@@ -221,6 +231,25 @@ TEST_CASE("execution argument name count mismatch fails") {
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("argument name count mismatch") != std::string::npos);
+}
+
+TEST_CASE("execution return transform rejects") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  program.definitions.push_back(makeDefinition(
+      "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})}));
+
+  primec::Execution exec;
+  exec.fullPath = "/task";
+  exec.arguments = {makeLiteral(1)};
+  exec.transforms = {makeTransform("return", std::string("int"))};
+  program.executions.push_back(exec);
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return transform not allowed on executions") != std::string::npos);
 }
 
 TEST_CASE("duplicate binding names fail") {

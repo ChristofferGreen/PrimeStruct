@@ -773,7 +773,12 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : def.transforms) {
-      if (transform.name == "effects") {
+      if (transform.name == "return") {
+        if (!transform.arguments.empty()) {
+          error = "return transform does not accept arguments on " + def.fullPath;
+          return false;
+        }
+      } else if (transform.name == "effects") {
         if (sawEffects) {
           error = "duplicate effects transform on " + def.fullPath;
           return false;
@@ -1833,6 +1838,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {
+      if (transform.name == "return") {
+        error = "return transform not allowed on executions: " + exec.fullPath;
+        return false;
+      }
       if (transform.name == "effects") {
         if (sawEffects) {
           error = "duplicate effects transform on " + exec.fullPath;
