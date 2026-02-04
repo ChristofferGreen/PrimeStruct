@@ -295,6 +295,7 @@ between statements and expressions—any expression can stand alone as a stateme
 - **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions. The brace forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals also accept `key = value` pairs inside braces.
   - Requires the `collections` text filter (enabled by default in `--text-filters`).
   - `key = value` pairs only trigger on single `=` tokens; `==`, `<=`, `>=`, and `!=` remain comparison operators.
+  - `key = value` pairs only trigger at the top level of the map literal; nested `=` tokens inside values (for example `assign(...)`) are preserved.
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"=1i32}`), and nested expressions inside braces are rewritten as usual.
   - Collections can appear anywhere expressions are allowed, including execution arguments.
   - Collection literals currently compile through the C++ emitter only; IR/VM/native lowering is pending.
