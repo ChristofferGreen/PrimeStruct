@@ -337,8 +337,11 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           requestedVersion = std::move(parsed);
         }
 
-        auto resolveIncludePath = [&](const std::string &path, std::filesystem::path &resolved) -> bool {
+        auto resolveIncludePath = [&](const std::string &path,
+                                      std::filesystem::path &resolved,
+                                      std::optional<std::string> &resolvedVersion) -> bool {
           std::filesystem::path requested(path);
+          resolvedVersion.reset();
           bool isAbsolute = requested.is_absolute();
           std::filesystem::path logicalPath = isAbsolute ? requested.relative_path() : requested;
           if (requestedVersion) {
@@ -372,6 +375,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
                   return false;
                 }
                 resolved = std::filesystem::absolute(candidate);
+                resolvedVersion = selected;
                 return true;
               }
               lastCandidate = candidate;
@@ -432,33 +436,49 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           return false;
         };
 
+        std::optional<std::string> selectedVersion;
+        std::vector<std::filesystem::path> allIncludeFiles;
         for (const auto &path : paths) {
           std::filesystem::path resolved;
-          if (!resolveIncludePath(path, resolved)) {
+          std::optional<std::string> resolvedVersion;
+          if (!resolveIncludePath(path, resolved, resolvedVersion)) {
             return false;
+          }
+          if (requestedVersion) {
+            if (!resolvedVersion.has_value()) {
+              error = "include version not resolved";
+              return false;
+            }
+            if (!selectedVersion) {
+              selectedVersion = *resolvedVersion;
+            } else if (*selectedVersion != *resolvedVersion) {
+              error = "include version mismatch: expected " + *selectedVersion + " but got " + *resolvedVersion;
+              return false;
+            }
           }
           std::vector<std::filesystem::path> includeFiles;
           if (!collectPrimeFiles(resolved, includeFiles, error)) {
             return false;
           }
-          for (const auto &includeFile : includeFiles) {
-            std::string resolvedText = includeFile.string();
-            if (expanded.count(resolvedText) > 0) {
-              continue;
-            }
-            std::string included;
-            if (!readFile(resolvedText, included)) {
-              error = "failed to read include: " + resolvedText;
-              return false;
-            }
-            expanded.insert(resolvedText);
-            if (!expandIncludesInternal(includeFile.parent_path().string(), included, expanded, error, includeRoots)) {
-              return false;
-            }
-            result.append(included);
-            if (!included.empty() && included.back() != '\n') {
-              result.push_back('\n');
-            }
+          allIncludeFiles.insert(allIncludeFiles.end(), includeFiles.begin(), includeFiles.end());
+        }
+        for (const auto &includeFile : allIncludeFiles) {
+          std::string resolvedText = includeFile.string();
+          if (expanded.count(resolvedText) > 0) {
+            continue;
+          }
+          std::string included;
+          if (!readFile(resolvedText, included)) {
+            error = "failed to read include: " + resolvedText;
+            return false;
+          }
+          expanded.insert(resolvedText);
+          if (!expandIncludesInternal(includeFile.parent_path().string(), included, expanded, error, includeRoots)) {
+            return false;
+          }
+          result.append(included);
+          if (!included.empty() && included.back() != '\n') {
+            result.push_back('\n');
           }
         }
         i = end + 1;

@@ -76,6 +76,27 @@ TEST_CASE("missing include version directory fails") {
   CHECK(error.find("include version not found") != std::string::npos);
 }
 
+TEST_CASE("include version mismatch fails") {
+  auto rootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_a";
+  auto rootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_b";
+  std::filesystem::remove_all(rootA);
+  std::filesystem::remove_all(rootB);
+  std::filesystem::create_directories(rootA);
+  std::filesystem::create_directories(rootB);
+
+  writeFile(rootA / "1.2.1" / "lib_a.prime", "// LIB_A\n");
+  writeFile(rootB / "1.2.0" / "lib_b.prime", "// LIB_B\n");
+  const std::string srcPath =
+      writeFile(rootA / "main_version_mismatch.prime",
+                "include<\"/lib_a.prime\", \"/lib_b.prime\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error, {rootA.string(), rootB.string()}));
+  CHECK(error.find("include version mismatch") != std::string::npos);
+}
+
 TEST_CASE("private include path fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_dir";
   std::filesystem::remove_all(dir);
