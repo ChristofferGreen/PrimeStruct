@@ -2045,8 +2045,7 @@ execute_repeat(count) {
 main() {
   [i32 mut] value(1i32)
   execute_repeat(2i32) {
-    [i32] temp(3i32)
-    assign(value, temp)
+    assign(value, 3i32)
   }
   return(value)
 }
@@ -2054,6 +2053,26 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("statement call with block arguments rejects bindings") {
+  const std::string source = R"(
+[return<void>]
+execute_repeat(count) {
+  return()
+}
+
+[return<int>]
+main() {
+  execute_repeat(2i32) {
+    [i32] temp(3i32)
+  }
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
 }
 
 TEST_CASE("if missing else fails") {

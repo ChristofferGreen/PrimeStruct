@@ -1699,8 +1699,7 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       std::unordered_map<std::string, BindingInfo> blockLocals = locals;
       for (const auto &bodyExpr : stmt.bodyArguments) {
-        if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, allowBindings, nullptr,
-                               namespacePrefix)) {
+        if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, false, nullptr, namespacePrefix)) {
           return false;
         }
       }
