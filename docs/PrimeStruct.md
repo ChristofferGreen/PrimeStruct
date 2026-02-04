@@ -266,7 +266,7 @@ Statements are separated by newlines; semicolons never appear in PrimeStruct sou
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation.
-- **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions.
+- **Collections:** `array<Type>{ … }`, `map<Key,Value>{ … }` (or bracket sugar) rewrite to standard builder functions. The brace forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
