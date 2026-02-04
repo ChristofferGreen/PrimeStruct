@@ -424,6 +424,10 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             for (const auto &root : includeRoots) {
               candidate = root / requested;
               if (std::filesystem::exists(candidate)) {
+                if (isPrivatePath(candidate)) {
+                  error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                  return false;
+                }
                 resolved = std::filesystem::absolute(candidate);
                 return true;
               }

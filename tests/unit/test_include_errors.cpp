@@ -113,4 +113,23 @@ TEST_CASE("private include path fails") {
   CHECK(error.find("private folder") != std::string::npos);
 }
 
+TEST_CASE("private include path fails from include root") {
+  auto root = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_root";
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_base";
+  std::filesystem::remove_all(root);
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(root);
+  std::filesystem::create_directories(baseDir);
+
+  const std::filesystem::path privateFile = root / "_private" / "lib.prime";
+  writeFile(privateFile, "// PRIVATE\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "include<\"_private/lib.prime\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error, {root.string()}));
+  CHECK(error.find("private folder") != std::string::npos);
+}
+
 TEST_SUITE_END();
