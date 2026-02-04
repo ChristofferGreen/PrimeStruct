@@ -63,6 +63,44 @@ main() {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir serialize roundtrip with implicit void return") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] value(2i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions[0].instructions.size() == 3);
+  CHECK(module.functions[0].instructions[2].op == primec::IrOpcode::ReturnVoid);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.functions.size() == 1);
+  REQUIRE(decoded.functions[0].instructions.size() == 3);
+  CHECK(decoded.functions[0].instructions[2].op == primec::IrOpcode::ReturnVoid);
+
+  primec::Vm vm;
+  uint64_t result = 7;
+  REQUIRE(vm.execute(decoded, result, error));
+  CHECK(error.empty());
+  CHECK(result == 0);
+}
+
 TEST_CASE("ir lowers i64 arithmetic") {
   const std::string source = R"(
 [return<i64>]
