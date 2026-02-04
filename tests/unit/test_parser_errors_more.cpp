@@ -361,6 +361,80 @@ main() {
   CHECK(error.find("if statement cannot have transforms") != std::string::npos);
 }
 
+TEST_CASE("missing '(' after identifier fails") {
+  const std::string source = R"(
+[return<int>]
+main {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '(' after identifier") != std::string::npos);
+}
+
+TEST_CASE("missing ')' after parameters fails") {
+  const std::string source = R"(
+[return<int>]
+main(a {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected ')' after parameters") != std::string::npos);
+}
+
+TEST_CASE("return missing parentheses fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return 1i32
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '(' after return") != std::string::npos);
+}
+
+TEST_CASE("missing '>' in template list fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo<i32(1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '>'") != std::string::npos);
+}
+
+TEST_CASE("unexpected end of file in definition body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("unexpected end of file inside definition body") != std::string::npos);
+}
+
 TEST_CASE("if statement requires else block") {
   const std::string source = R"(
 [return<int>]

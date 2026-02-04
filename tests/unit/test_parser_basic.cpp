@@ -156,6 +156,23 @@ main() {
   CHECK(*transforms[2].templateArg == "int");
 }
 
+TEST_CASE("parses transform string arguments") {
+  const std::string source = R"(
+[doc("hello world"), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 2);
+  CHECK(transforms[0].name == "doc");
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "\"hello world\"");
+  CHECK(transforms[1].name == "return");
+}
+
 TEST_CASE("parses named call arguments") {
   const std::string source = R"(
 [return<int>]
@@ -293,6 +310,24 @@ main() {
   CHECK(stmt.args[2].name == "else");
   CHECK(stmt.args[1].bodyArguments.size() == 1);
   CHECK(stmt.args[2].bodyArguments.size() == 1);
+}
+
+TEST_CASE("parses call with body arguments in expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(task { step() })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "task");
+  CHECK(expr.args.empty());
+  REQUIRE(expr.bodyArguments.size() == 1);
+  CHECK(expr.bodyArguments[0].name == "step");
 }
 
 TEST_SUITE_END();
