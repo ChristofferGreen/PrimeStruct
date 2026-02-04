@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <cstdlib>
 #include <string>
 
 namespace {
@@ -25,6 +26,33 @@ std::string writeFile(const std::filesystem::path &path, const std::string &cont
   file << contents;
   CHECK(file.good());
   return path.string();
+}
+
+std::string quoteShellArg(const std::string &value) {
+  std::string quoted = "'";
+  for (char c : value) {
+    if (c == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += c;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+bool runCommand(const std::string &command) {
+  return std::system(command.c_str()) == 0;
+}
+
+bool hasZipTools() {
+  return runCommand("zip -v > /dev/null 2>&1") && runCommand("unzip -v > /dev/null 2>&1");
+}
+
+bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path &sourceDir) {
+  std::string command = "cd " + quoteShellArg(sourceDir.string()) + " && zip -q -r " +
+                        quoteShellArg(zipPath.string()) + " .";
+  return runCommand(command);
 }
 } // namespace
 
@@ -177,6 +205,33 @@ TEST_CASE("resolves versioned relative include from include path") {
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_VERSION_REL_210") != std::string::npos);
   CHECK(source.find("INCLUDE_VERSION_REL_200") == std::string::npos);
+}
+
+TEST_CASE("resolves versioned include from archive root") {
+  if (!hasZipTools()) {
+    return;
+  }
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_root";
+  auto archiveSource = includeRoot / "archive_src";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(archiveSource);
+
+  writeFile(archiveSource / "1.2.0" / "std" / "io" / "lib.prime", "// ZIP_MARKER\n");
+  const std::filesystem::path archivePath = includeRoot / "std_io.zip";
+  CHECK(createZip(archivePath, archiveSource));
+
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/std/io\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("ZIP_MARKER") != std::string::npos);
 }
 
 TEST_CASE("resolves exact include version") {

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -35,6 +37,76 @@ std::string trim(const std::string &value) {
     --end;
   }
   return value.substr(start, end - start);
+}
+
+std::string quoteShellArg(const std::string &value) {
+  std::string quoted = "'";
+  for (char c : value) {
+    if (c == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += c;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+bool extractArchive(const std::filesystem::path &archive,
+                    std::filesystem::path &outDir,
+                    std::string &error) {
+  std::string absPath = std::filesystem::absolute(archive).string();
+  std::size_t hash = std::hash<std::string>{}(absPath);
+  outDir = std::filesystem::temp_directory_path() / "primec_archives" / std::to_string(hash);
+  std::error_code ec;
+  std::filesystem::create_directories(outDir, ec);
+  if (ec) {
+    error = "failed to create archive cache directory: " + outDir.string();
+    return false;
+  }
+  std::string command =
+      "unzip -q -o " + quoteShellArg(absPath) + " -d " + quoteShellArg(outDir.string());
+  if (std::system(command.c_str()) != 0) {
+    error = "failed to extract archive: " + absPath;
+    return false;
+  }
+  return true;
+}
+
+bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
+                        std::vector<std::filesystem::path> &expanded,
+                        std::string &error) {
+  expanded = roots;
+  for (const auto &root : roots) {
+    if (!std::filesystem::exists(root)) {
+      continue;
+    }
+    if (std::filesystem::is_regular_file(root) && root.extension() == ".zip") {
+      std::filesystem::path extracted;
+      if (!extractArchive(root, extracted, error)) {
+        return false;
+      }
+      expanded.push_back(std::move(extracted));
+      continue;
+    }
+    if (!std::filesystem::is_directory(root)) {
+      continue;
+    }
+    for (const auto &entry : std::filesystem::directory_iterator(root)) {
+      if (!entry.is_regular_file()) {
+        continue;
+      }
+      if (entry.path().extension() != ".zip") {
+        continue;
+      }
+      std::filesystem::path extracted;
+      if (!extractArchive(entry.path(), extracted, error)) {
+        return false;
+      }
+      expanded.push_back(std::move(extracted));
+    }
+  }
+  return true;
 }
 
 bool parseVersionParts(const std::string &text, std::vector<int> &parts, std::string &error) {
@@ -249,8 +321,12 @@ bool IncludeResolver::expandIncludes(const std::string &inputPath,
     }
     includeRoots.push_back(std::filesystem::absolute(path));
   }
+  std::vector<std::filesystem::path> expandedRoots;
+  if (!appendArchiveRoots(includeRoots, expandedRoots, error)) {
+    return false;
+  }
   std::unordered_set<std::string> expanded;
-  return expandIncludesInternal(baseDir, source, expanded, error, includeRoots);
+  return expandIncludesInternal(baseDir, source, expanded, error, expandedRoots);
 }
 
 bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
