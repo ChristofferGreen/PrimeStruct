@@ -201,6 +201,54 @@ main() {
   CHECK(error.find("duplicate effects capability") != std::string::npos);
 }
 
+TEST_CASE("capabilities transform validates identifiers") {
+  const std::string source = R"(
+[capabilities(render_graph, io_stdout), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("capabilities transform rejects template arguments") {
+  const std::string source = R"(
+[capabilities<io>, return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capabilities transform does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("capabilities transform rejects invalid capability") {
+  const std::string source = R"(
+[capabilities("io"), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid capability") != std::string::npos);
+}
+
+TEST_CASE("capabilities transform rejects duplicate capability") {
+  const std::string source = R"(
+[capabilities(io_stdout, io_stdout), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capability") != std::string::npos);
+}
+
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
@@ -219,6 +267,86 @@ task(1i32)
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("execution capabilities transform validates") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[capabilities(io_stdout)]
+task(1i32)
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("execution capabilities rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[capabilities<io>]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capabilities transform does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("execution capabilities rejects invalid capability") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[capabilities("io")]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid capability") != std::string::npos);
+}
+
+TEST_CASE("execution capabilities rejects duplicate capability") {
+  const std::string source = R"(
+[return<int>]
+task(x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[capabilities(io_stdout, io_stdout)]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capability") != std::string::npos);
 }
 
 TEST_CASE("execution effects rejects template arguments") {
@@ -279,6 +407,54 @@ task(1i32)
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("duplicate effects capability") != std::string::npos);
+}
+
+TEST_CASE("capabilities transform validates identifiers") {
+  const std::string source = R"(
+[capabilities(asset_read, gpu_queue), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("capabilities transform rejects template arguments") {
+  const std::string source = R"(
+[capabilities<io>, return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capabilities transform does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("capabilities transform rejects invalid capability") {
+  const std::string source = R"(
+[capabilities("io"), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid capability") != std::string::npos);
+}
+
+TEST_CASE("capabilities transform rejects duplicate capability") {
+  const std::string source = R"(
+[capabilities(gpu, gpu), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capability") != std::string::npos);
 }
 
 TEST_CASE("align_bytes validates integer argument") {

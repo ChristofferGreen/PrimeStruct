@@ -271,6 +271,25 @@ bool validateEffectsTransform(const Transform &transform, const std::string &con
   return true;
 }
 
+bool validateCapabilitiesTransform(const Transform &transform, const std::string &context, std::string &error) {
+  if (transform.templateArg) {
+    error = "capabilities transform does not accept template arguments on " + context;
+    return false;
+  }
+  std::unordered_set<std::string> seen;
+  for (const auto &arg : transform.arguments) {
+    if (!isEffectName(arg)) {
+      error = "invalid capability: " + arg;
+      return false;
+    }
+    if (!seen.insert(arg).second) {
+      error = "duplicate capability: " + arg;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool parsePositiveIntArg(const std::string &text, int &value) {
   std::string digits = text;
   if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
@@ -407,6 +426,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     for (const auto &transform : def.transforms) {
       if (transform.name == "effects") {
         if (!validateEffectsTransform(transform, def.fullPath, error)) {
+          return false;
+        }
+      } else if (transform.name == "capabilities") {
+        if (!validateCapabilitiesTransform(transform, def.fullPath, error)) {
           return false;
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
@@ -817,6 +840,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     for (const auto &transform : exec.transforms) {
       if (transform.name == "effects") {
         if (!validateEffectsTransform(transform, exec.fullPath, error)) {
+          return false;
+        }
+      } else if (transform.name == "capabilities") {
+        if (!validateCapabilitiesTransform(transform, exec.fullPath, error)) {
           return false;
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
