@@ -54,6 +54,21 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs void main") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] value(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_void_main.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_void_main_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs array literal") {
   const std::string source = R"(
 [return<int>]
@@ -100,6 +115,21 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native void executable") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] value(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_void.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_void_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("compiles and runs native locals") {
