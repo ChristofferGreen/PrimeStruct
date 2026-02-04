@@ -208,6 +208,16 @@ void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
       if (exec.transforms[i].templateArg) {
         out << "<" << *exec.transforms[i].templateArg << ">";
       }
+      if (!exec.transforms[i].arguments.empty()) {
+        out << "(";
+        for (size_t argIndex = 0; argIndex < exec.transforms[i].arguments.size(); ++argIndex) {
+          if (argIndex > 0) {
+            out << ", ";
+          }
+          out << exec.transforms[i].arguments[argIndex];
+        }
+        out << ")";
+      }
     }
     out << "] ";
   }
