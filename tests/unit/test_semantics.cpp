@@ -675,6 +675,18 @@ job(a = 1i32, b = 2i32)
   CHECK(error.empty());
 }
 
+TEST_CASE("named arguments not allowed on builtin calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(left = 1i32, right = 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]
