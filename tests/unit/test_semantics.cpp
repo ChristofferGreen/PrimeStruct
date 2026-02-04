@@ -189,6 +189,18 @@ main() {
   CHECK(error.find("invalid effects capability") != std::string::npos);
 }
 
+TEST_CASE("effects transform rejects duplicate capability") {
+  const std::string source = R"(
+[effects(io_stdout, io_stdout), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects capability") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {
