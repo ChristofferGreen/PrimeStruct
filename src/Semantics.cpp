@@ -1442,6 +1442,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
         error = "execution body arguments must be calls";
         return false;
       }
+      if (arg.isBinding) {
+        error = "execution body arguments cannot be bindings";
+        return false;
+      }
       if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, nullptr, exec.namespacePrefix)) {
         return false;
       }

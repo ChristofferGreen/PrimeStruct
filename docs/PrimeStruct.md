@@ -142,7 +142,7 @@ module {
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
   - `(...)` lists runtime parameters and captures.
   - `{...}` holds either a definition body or, in the execution case, an argument list for higher-order constructs.
-- **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`) with no body. The compiler decides whether to emit callable artifacts or schedule work based on that presence.
+- **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`), optionally followed by a brace list of body arguments for higher-order scheduling (`execute_task(...) { work(), work() }`). Execution bodies may only contain calls (no bindings, no `return`), and they are treated as scheduling payloads rather than executable function bodies. The compiler decides whether to emit callable artifacts or schedule work based on that presence.
   - Executions accept the same argument syntax as calls, including named arguments (with the same ordering rules).
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>(first = 1i32)` is rejected).
   - Example: `execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32))`.
