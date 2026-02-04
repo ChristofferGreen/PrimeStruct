@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "primec/Ast.h"
 
@@ -13,7 +14,9 @@ public:
 
 private:
   std::string toCppName(const std::string &fullPath) const;
-  std::string emitExpr(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) const;
+  std::string emitExpr(const Expr &expr,
+                       const std::unordered_map<std::string, std::string> &nameMap,
+                       const std::unordered_map<std::string, std::vector<std::string>> &paramMap) const;
 };
 
 } // namespace primec

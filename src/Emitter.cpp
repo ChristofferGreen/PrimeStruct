@@ -1,5 +1,6 @@
 #include "primec/Emitter.h"
 
+#include <algorithm>
 #include <functional>
 #include <sstream>
 #include <unordered_map>
@@ -245,6 +246,53 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
   return name == "assign";
 }
 
+std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<std::string> &params) {
+  std::vector<const Expr *> ordered;
+  ordered.reserve(expr.args.size());
+  auto fallback = [&]() {
+    ordered.clear();
+    ordered.reserve(expr.args.size());
+    for (const auto &arg : expr.args) {
+      ordered.push_back(&arg);
+    }
+  };
+  if (expr.argNames.empty() || expr.argNames.size() != expr.args.size() || params.size() != expr.args.size()) {
+    fallback();
+    return ordered;
+  }
+  ordered.assign(params.size(), nullptr);
+  size_t positionalIndex = 0;
+  for (size_t i = 0; i < expr.args.size(); ++i) {
+    if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+      const std::string &name = *expr.argNames[i];
+      auto it = std::find(params.begin(), params.end(), name);
+      if (it == params.end()) {
+        fallback();
+        return ordered;
+      }
+      size_t index = static_cast<size_t>(std::distance(params.begin(), it));
+      ordered[index] = &expr.args[i];
+      continue;
+    }
+    while (positionalIndex < ordered.size() && ordered[positionalIndex] != nullptr) {
+      ++positionalIndex;
+    }
+    if (positionalIndex >= ordered.size()) {
+      fallback();
+      return ordered;
+    }
+    ordered[positionalIndex] = &expr.args[i];
+    ++positionalIndex;
+  }
+  for (const auto *arg : ordered) {
+    if (arg == nullptr) {
+      fallback();
+      return ordered;
+    }
+  }
+  return ordered;
+}
+
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -293,7 +341,8 @@ std::string Emitter::toCppName(const std::string &fullPath) const {
 }
 
 std::string Emitter::emitExpr(const Expr &expr,
-                              const std::unordered_map<std::string, std::string> &nameMap) const {
+                              const std::unordered_map<std::string, std::string> &nameMap,
+                              const std::unordered_map<std::string, std::vector<std::string>> &paramMap) const {
   if (expr.kind == Expr::Kind::Literal) {
     return std::to_string(expr.literalValue);
   }
@@ -315,39 +364,39 @@ std::string Emitter::emitExpr(const Expr &expr,
     char op = '\0';
     if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap) << " " << op << " "
-          << emitExpr(expr.args[1], nameMap) << ")";
+      out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " " << op << " "
+          << emitExpr(expr.args[1], nameMap, paramMap) << ")";
       return out.str();
     }
     if (isBuiltinNegate(expr) && expr.args.size() == 1) {
       std::ostringstream out;
-      out << "(-" << emitExpr(expr.args[0], nameMap) << ")";
+      out << "(-" << emitExpr(expr.args[0], nameMap, paramMap) << ")";
       return out.str();
     }
     const char *cmp = nullptr;
     if (getBuiltinComparison(expr, cmp)) {
       std::ostringstream out;
       if (expr.args.size() == 1) {
-        out << "(" << cmp << emitExpr(expr.args[0], nameMap) << ")";
+        out << "(" << cmp << emitExpr(expr.args[0], nameMap, paramMap) << ")";
         return out.str();
       }
       if (expr.args.size() == 2) {
-        out << "(" << emitExpr(expr.args[0], nameMap) << " " << cmp << " "
-            << emitExpr(expr.args[1], nameMap) << ")";
+        out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " " << cmp << " "
+            << emitExpr(expr.args[1], nameMap, paramMap) << ")";
         return out.str();
       }
     }
     if (isBuiltinClamp(expr) && expr.args.size() == 3) {
       std::ostringstream out;
-      out << "ps_builtin_clamp(" << emitExpr(expr.args[0], nameMap) << ", "
-          << emitExpr(expr.args[1], nameMap) << ", " << emitExpr(expr.args[2], nameMap) << ")";
+      out << "ps_builtin_clamp(" << emitExpr(expr.args[0], nameMap, paramMap) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap) << ", " << emitExpr(expr.args[2], nameMap, paramMap) << ")";
       return out.str();
     }
     std::string convertName;
     if (getBuiltinConvertName(expr, convertName) && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
       std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
       std::ostringstream out;
-      out << "static_cast<" << targetType << ">(" << emitExpr(expr.args[0], nameMap) << ")";
+      out << "static_cast<" << targetType << ">(" << emitExpr(expr.args[0], nameMap, paramMap) << ")";
       return out.str();
     }
     std::string collection;
@@ -360,7 +409,7 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(expr.args[i], nameMap);
+          out << emitExpr(expr.args[i], nameMap, paramMap);
         }
         out << "}";
         return out.str();
@@ -374,7 +423,8 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (i > 0) {
             out << ", ";
           }
-          out << "{" << emitExpr(expr.args[i], nameMap) << ", " << emitExpr(expr.args[i + 1], nameMap) << "}";
+          out << "{" << emitExpr(expr.args[i], nameMap, paramMap) << ", "
+              << emitExpr(expr.args[i + 1], nameMap, paramMap) << "}";
         }
         out << "}";
         return out.str();
@@ -382,18 +432,28 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     if (isBuiltinAssign(expr, nameMap) && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap) << " = " << emitExpr(expr.args[1], nameMap) << ")";
+      out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " = "
+          << emitExpr(expr.args[1], nameMap, paramMap) << ")";
       return out.str();
     }
     return "0";
   }
   std::ostringstream out;
   out << it->second << "(";
-  for (size_t i = 0; i < expr.args.size(); ++i) {
+  std::vector<const Expr *> orderedArgs;
+  auto paramIt = paramMap.find(full);
+  if (paramIt != paramMap.end()) {
+    orderedArgs = orderCallArguments(expr, paramIt->second);
+  } else {
+    for (const auto &arg : expr.args) {
+      orderedArgs.push_back(&arg);
+    }
+  }
+  for (size_t i = 0; i < orderedArgs.size(); ++i) {
     if (i > 0) {
       out << ", ";
     }
-    out << emitExpr(expr.args[i], nameMap);
+    out << emitExpr(*orderedArgs[i], nameMap, paramMap);
   }
   out << ")";
   return out.str();
@@ -401,8 +461,10 @@ std::string Emitter::emitExpr(const Expr &expr,
 
 std::string Emitter::emitCpp(const Program &program, const std::string &entryPath) const {
   std::unordered_map<std::string, std::string> nameMap;
+  std::unordered_map<std::string, std::vector<std::string>> paramMap;
   for (const auto &def : program.definitions) {
     nameMap[def.fullPath] = toCppName(def.fullPath);
+    paramMap[def.fullPath] = def.parameters;
   }
 
   std::ostringstream out;
@@ -444,7 +506,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
-          out << " " << emitExpr(stmt.args.front(), nameMap);
+          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap);
         }
         out << ";\n";
         return;
@@ -454,7 +516,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string type = bindingTypeToCpp(binding.typeName);
         out << pad << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
-          out << " = " << emitExpr(stmt.args.front(), nameMap);
+          out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap);
         }
         out << ";\n";
         return;
@@ -463,7 +525,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         const Expr &cond = stmt.args[0];
         const Expr &thenBlock = stmt.args[1];
         const Expr &elseBlock = stmt.args[2];
-        out << pad << "if (" << emitExpr(cond, nameMap) << ") {\n";
+        out << pad << "if (" << emitExpr(cond, nameMap, paramMap) << ") {\n";
         if (isThenCall(thenBlock)) {
           for (const auto &bodyStmt : thenBlock.bodyArguments) {
             emitStatement(bodyStmt, indent + 1);
@@ -480,10 +542,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
-        out << pad << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap) << ";\n";
+        out << pad << stmt.args.front().name << " = " << emitExpr(stmt.args[1], nameMap, paramMap) << ";\n";
         return;
       }
-      out << pad << emitExpr(stmt, nameMap) << ";\n";
+      out << pad << emitExpr(stmt, nameMap, paramMap) << ";\n";
     };
     for (const auto &stmt : def.statements) {
       emitStatement(stmt, 1);

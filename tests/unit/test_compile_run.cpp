@@ -621,6 +621,26 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs reordered named args") {
+  const std::string source = R"(
+[return<int>]
+pack(a, b, c) {
+  return(plus(plus(multiply(a, 100i32), multiply(b, 10i32)), c))
+}
+
+[return<int>]
+main() {
+  return(pack(c = 3i32, a = 1i32, b = 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_named_reorder.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_named_reorder_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 123);
+}
+
 TEST_CASE("compiles and runs map literal with named-arg value") {
   const std::string source = R"(
 [return<int>]
