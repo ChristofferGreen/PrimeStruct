@@ -1591,6 +1591,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       return true;
     }
     if (stmt.kind != Expr::Kind::Call) {
+      if (!allowBindings) {
+        error = "execution body arguments must be calls";
+        return false;
+      }
       return validateExpr(params, locals, stmt);
     }
     if (isReturnCall(stmt)) {
