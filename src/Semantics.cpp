@@ -1048,6 +1048,34 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       }
       return false;
     };
+    auto isNumericExpr = [&](const Expr &arg) -> bool {
+      ReturnKind kind = inferExprReturnKind(arg, params, locals);
+      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+          kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+        return true;
+      }
+      if (kind == ReturnKind::Bool || kind == ReturnKind::Void) {
+        return false;
+      }
+      if (kind == ReturnKind::Unknown) {
+        if (arg.kind == Expr::Kind::StringLiteral) {
+          return false;
+        }
+        if (isPointerExpr(arg, locals)) {
+          return false;
+        }
+        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+          auto it = locals.find(arg.name);
+          if (it != locals.end()) {
+            if (it->second.typeName == "string" || it->second.typeName == "Pointer") {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+      return false;
+    };
     if (expr.kind == Expr::Kind::Literal) {
       return true;
     }
@@ -1101,9 +1129,14 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             error = "argument count mismatch for builtin " + builtinName;
             return false;
           }
-          if ((builtinName == "plus" || builtinName == "minus") && expr.args.size() == 2) {
-            bool leftPointer = isPointerExpr(expr.args[0], locals);
-            bool rightPointer = isPointerExpr(expr.args[1], locals);
+          const bool isPlusMinus = builtinName == "plus" || builtinName == "minus";
+          bool leftPointer = false;
+          bool rightPointer = false;
+          if (expr.args.size() == 2) {
+            leftPointer = isPointerExpr(expr.args[0], locals);
+            rightPointer = isPointerExpr(expr.args[1], locals);
+          }
+          if (isPlusMinus && expr.args.size() == 2 && (leftPointer || rightPointer)) {
             if (leftPointer && rightPointer) {
               error = "pointer arithmetic does not support pointer + pointer";
               return false;
@@ -1112,12 +1145,31 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
               error = "pointer arithmetic requires pointer on the left";
               return false;
             }
-            if (leftPointer || rightPointer) {
-              const Expr &offsetExpr = leftPointer ? expr.args[1] : expr.args[0];
-              ReturnKind offsetKind = inferExprReturnKind(offsetExpr, params, locals);
-              if (offsetKind != ReturnKind::Unknown && offsetKind != ReturnKind::Int &&
-                  offsetKind != ReturnKind::Int64 && offsetKind != ReturnKind::UInt64) {
-                error = "pointer arithmetic requires integer offset";
+            const Expr &offsetExpr = expr.args[1];
+            ReturnKind offsetKind = inferExprReturnKind(offsetExpr, params, locals);
+            if (offsetKind != ReturnKind::Unknown && offsetKind != ReturnKind::Int &&
+                offsetKind != ReturnKind::Int64 && offsetKind != ReturnKind::UInt64) {
+              error = "pointer arithmetic requires integer offset";
+              return false;
+            }
+          } else if (leftPointer || rightPointer) {
+            error = "arithmetic operators require numeric operands";
+            return false;
+          }
+          if (builtinName == "negate") {
+            if (!isNumericExpr(expr.args.front())) {
+              error = "arithmetic operators require numeric operands";
+              return false;
+            }
+          } else {
+            if (!leftPointer && !rightPointer) {
+              if (!isNumericExpr(expr.args[0]) || !isNumericExpr(expr.args[1])) {
+                error = "arithmetic operators require numeric operands";
+                return false;
+              }
+            } else if (leftPointer) {
+              if (!isNumericExpr(expr.args[1])) {
+                error = "arithmetic operators require numeric operands";
                 return false;
               }
             }

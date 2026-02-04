@@ -92,6 +92,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("arithmetic rejects bool operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(true, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
+}
+
+TEST_CASE("arithmetic rejects string operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(multiply("nope", 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
+}
+
+TEST_CASE("arithmetic negate rejects bool operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(negate(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 main() {
