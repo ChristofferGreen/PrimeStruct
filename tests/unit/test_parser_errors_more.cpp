@@ -251,4 +251,192 @@ main() {
   CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
 }
 
+TEST_CASE("transform argument list cannot be empty") {
+  const std::string source = R"(
+[effects(), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
+}
+
+TEST_CASE("transform argument requires value") {
+  const std::string source = R"(
+[effects(,)]
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected transform argument") != std::string::npos);
+}
+
+TEST_CASE("transform template argument required") {
+  const std::string source = R"(
+[return<>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected template argument") != std::string::npos);
+}
+
+TEST_CASE("binding requires argument list in expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([i32] value)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("binding requires argument list") != std::string::npos);
+}
+
+TEST_CASE("template arguments require a call") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(value<i32>)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("template arguments require a call") != std::string::npos);
+}
+
+TEST_CASE("return statement cannot have transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("return statement cannot have transforms") != std::string::npos);
+}
+
+TEST_CASE("if statement cannot have transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [trace] if(1i32) {
+    return(1i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("if statement cannot have transforms") != std::string::npos);
+}
+
+TEST_CASE("if statement requires else block") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(1i32) {
+    return(1i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("if statement requires else block") != std::string::npos);
+}
+
+TEST_CASE("definitions must have body") {
+  const std::string source = R"(
+[return<int>]
+main()
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("definitions must have a body") != std::string::npos);
+}
+
+TEST_CASE("namespace identifier cannot be reserved keyword") {
+  const std::string source = R"(
+namespace return {
+  [return<int>]
+  main() {
+    return(1i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
+}
+
+TEST_CASE("unexpected end of file inside namespace block") {
+  const std::string source = R"(
+namespace demo {
+  [return<int>]
+  main() {
+    return(1i32)
+  }
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("unexpected end of file inside namespace block") != std::string::npos);
+}
+
+TEST_CASE("reserved keyword cannot name argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo(return = 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
+}
+
 TEST_SUITE_END();
