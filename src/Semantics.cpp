@@ -615,12 +615,16 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
     }
     bool isStruct = false;
     bool hasReturnTransform = false;
+    bool isStack = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "return") {
         hasReturnTransform = true;
       }
       if (isStructTransformName(transform.name)) {
         isStruct = true;
+        if (transform.name == "stack") {
+          isStack = true;
+        }
       }
     }
     if (isStruct) {
@@ -644,6 +648,10 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {
           error = "struct definitions may only contain field bindings: " + def.fullPath;
+          return false;
+        }
+        if (isStack && stmt.args.empty()) {
+          error = "stack definitions require field initializers: " + def.fullPath;
           return false;
         }
       }

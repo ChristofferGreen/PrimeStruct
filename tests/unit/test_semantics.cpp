@@ -643,6 +643,30 @@ main() {
   CHECK(error.find("struct definitions cannot contain return statements") != std::string::npos);
 }
 
+TEST_CASE("stack transform requires field initializers") {
+  const std::string source = R"(
+[stack]
+main() {
+  [i32] value()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("stack definitions require field initializers") != std::string::npos);
+}
+
+TEST_CASE("stack transform allows initialized fields") {
+  const std::string source = R"(
+[stack]
+main() {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
