@@ -151,6 +151,24 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinPointerBinaryName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "pointer_add") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -716,6 +734,23 @@ bool Semantics::validate(const Program &program, const std::string &entryPath, s
             return false;
           }
           if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
+        }
+        if (getBuiltinPointerBinaryName(expr, builtinName)) {
+          if (!expr.templateArgs.empty()) {
+            error = "pointer helpers do not accept template arguments";
+            return false;
+          }
+          if (expr.args.size() != 2) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[0])) {
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
             return false;
           }
           return true;

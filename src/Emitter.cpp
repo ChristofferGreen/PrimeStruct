@@ -216,6 +216,24 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   return false;
 }
 
+bool getBuiltinPointerBinaryOperator(const Expr &expr, char &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "pointer_add") {
+    out = '+';
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -437,6 +455,13 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "(" << pointerOp << emitExpr(expr.args[0], nameMap, paramMap) << ")";
+      return out.str();
+    }
+    char pointerBinaryOp = '\0';
+    if (getBuiltinPointerBinaryOperator(expr, pointerBinaryOp) && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "(" << emitExpr(expr.args[0], nameMap, paramMap) << " " << pointerBinaryOp << " "
+          << emitExpr(expr.args[1], nameMap, paramMap) << ")";
       return out.str();
     }
     std::string collection;

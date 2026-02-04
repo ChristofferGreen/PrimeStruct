@@ -990,6 +990,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer_add validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(3i32)
+  return(pointer_add(address_of(value), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to mutable binding succeeds") {
   const std::string source = R"(
 [return<int>]

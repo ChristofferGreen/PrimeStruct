@@ -165,6 +165,22 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs pointer_add helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(deref(pointer_add(address_of(value), 0i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_pointer_add.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_add_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs assignment operator rewrite") {
   const std::string source = R"(
 [return<int>]
