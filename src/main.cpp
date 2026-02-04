@@ -110,6 +110,46 @@ std::vector<std::string> parseDefaultEffects(const std::string &text) {
   }
   return effects;
 }
+
+bool hasPathPrefix(const std::filesystem::path &path, const std::filesystem::path &prefix) {
+  auto pathIter = path.begin();
+  auto prefixIter = prefix.begin();
+  for (; prefixIter != prefix.end(); ++prefixIter, ++pathIter) {
+    if (pathIter == path.end() || *pathIter != *prefixIter) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::filesystem::path resolveOutputPath(const primec::Options &options) {
+  std::filesystem::path output(options.outputPath);
+  if (output.is_absolute()) {
+    return output;
+  }
+  if (options.outDir.empty() || options.outDir == ".") {
+    return output;
+  }
+  std::filesystem::path outDir(options.outDir);
+  if (hasPathPrefix(output.lexically_normal(), outDir.lexically_normal())) {
+    return output;
+  }
+  return outDir / output;
+}
+
+bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string &error) {
+  std::filesystem::path parent = outputPath.parent_path();
+  if (parent.empty()) {
+    return true;
+  }
+  std::error_code ec;
+  std::filesystem::create_directories(parent, ec);
+  if (ec) {
+    error = "failed to create output directory: " + parent.string();
+    return false;
+  }
+  return true;
+}
 bool parseArgs(int argc, char **argv, primec::Options &out) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -137,6 +177,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.textFilters = parseTextFilters(argv[++i]);
     } else if (arg.rfind("--text-filters=", 0) == 0) {
       out.textFilters = parseTextFilters(arg.substr(std::string("--text-filters=").size()));
+    } else if (arg == "--out-dir" && i + 1 < argc) {
+      out.outDir = argv[++i];
+    } else if (arg.rfind("--out-dir=", 0) == 0) {
+      out.outDir = arg.substr(std::string("--out-dir=").size());
     } else if (arg == "--default-effects" && i + 1 < argc) {
       out.defaultEffects = parseDefaultEffects(argv[++i]);
     } else if (arg.rfind("--default-effects=", 0) == 0) {
@@ -193,7 +237,7 @@ int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primec --emit=cpp|exe|native <input.prime> -o <output> [--entry /path] "
-                 "[--include-path <dir>] [--text-filters <list>] [--default-effects <list>] "
+                 "[--include-path <dir>] [--text-filters <list>] [--out-dir <dir>] [--default-effects <list>] "
                  "[--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
@@ -249,6 +293,15 @@ int main(int argc, char **argv) {
   if (!semantics.validate(program, options.entryPath, error, options.defaultEffects)) {
     std::cerr << "Semantic error: " << error << "\n";
     return 2;
+  }
+
+  if (!options.outputPath.empty()) {
+    std::filesystem::path resolved = resolveOutputPath(options);
+    options.outputPath = resolved.string();
+    if (!ensureOutputDirectory(resolved, error)) {
+      std::cerr << "Output error: " << error << "\n";
+      return 2;
+    }
   }
 
   if (options.emitKind == "native") {

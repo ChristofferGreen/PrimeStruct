@@ -62,6 +62,25 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("writes outputs under out dir") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_out_dir.prime", source);
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_out_dir_test";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  const std::string outFile = "primec_out_dir.cpp";
+  const std::string expectedPath = (outDir / outFile).string();
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outFile + " --out-dir " + outDir.string();
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(expectedPath));
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]

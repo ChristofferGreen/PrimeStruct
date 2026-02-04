@@ -8,6 +8,7 @@ struct Options {
   std::string emitKind;
   std::string inputPath;
   std::string outputPath;
+  std::string outDir = "build";
   std::string entryPath = "/main";
   std::string dumpStage;
   std::vector<std::string> textFilters = {"operators", "collections"};
