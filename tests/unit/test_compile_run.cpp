@@ -1762,10 +1762,14 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_string_binding.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_binding_exe").string();
+  const std::string cppPath =
+      std::filesystem::path(exePath).replace_extension(".cpp").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
+  CHECK(std::filesystem::exists(cppPath));
+  CHECK(readFile(cppPath).find("const const char *") == std::string::npos);
 }
 
 TEST_CASE("compiles and runs array literal") {

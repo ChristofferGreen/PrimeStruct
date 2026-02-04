@@ -984,7 +984,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string type = bindingTypeToCpp(binding);
         bool isReference = binding.typeName == "Reference";
         localTypes[stmt.name] = binding.typeName;
-        out << pad << (binding.isMutable ? "" : "const ") << type << " " << stmt.name;
+        bool needsConst = !binding.isMutable;
+        if (needsConst && type.rfind("const ", 0) == 0) {
+          needsConst = false;
+        }
+        out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           if (isReference) {
             out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes) << ")";
