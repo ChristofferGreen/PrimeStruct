@@ -1321,17 +1321,18 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("pointer plus rejects non-integer offset") {
+TEST_CASE("pointer plus rejects pointer + pointer") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32] value(3i32)
-  return(plus(location(value), true))
+  [Pointer<i32>] ptr(location(value))
+  return(plus(location(value), ptr))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pointer arithmetic requires integer offset") != std::string::npos);
+  CHECK(error.find("pointer arithmetic does not support pointer + pointer") != std::string::npos);
 }
 
 TEST_CASE("pointer plus rejects pointer on right") {
