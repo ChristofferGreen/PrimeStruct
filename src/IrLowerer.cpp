@@ -245,7 +245,7 @@ bool IrLowerer::lower(const Program &program,
   struct LocalInfo {
     int32_t index = 0;
     bool isMutable = false;
-    enum class Kind { Value, Pointer, Reference } kind = Kind::Value;
+    enum class Kind { Value, Pointer, Reference, Array } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
     enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
@@ -393,6 +393,9 @@ bool IrLowerer::lower(const Program &program,
       if (transform.name == "Pointer") {
         return LocalInfo::Kind::Pointer;
       }
+      if (transform.name == "array") {
+        return LocalInfo::Kind::Array;
+      }
     }
     return LocalInfo::Kind::Value;
   };
@@ -435,6 +438,12 @@ bool IrLowerer::lower(const Program &program,
         continue;
       }
       if (transform.name == "Pointer" || transform.name == "Reference") {
+        if (transform.templateArg) {
+          return valueKindFromTypeName(*transform.templateArg);
+        }
+        return LocalInfo::ValueKind::Unknown;
+      }
+      if (transform.name == "array") {
         if (transform.templateArg) {
           return valueKindFromTypeName(*transform.templateArg);
         }
@@ -592,6 +601,50 @@ bool IrLowerer::lower(const Program &program,
         if (isEntryArgsCountCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;
         }
+        if (isSimpleCallName(expr, "count") && expr.args.size() == 1) {
+          if (isEntryArgsName(expr.args.front(), localsIn)) {
+            return LocalInfo::ValueKind::Int32;
+          }
+          const Expr &target = expr.args.front();
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+              return LocalInfo::ValueKind::Int32;
+            }
+          }
+          if (target.kind == Expr::Kind::Call) {
+            std::string collection;
+            if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+              return LocalInfo::ValueKind::Int32;
+            }
+          }
+        }
+        std::string accessName;
+        if (getBuiltinArrayAccessName(expr, accessName)) {
+          if (expr.args.size() != 2) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          const Expr &target = expr.args.front();
+          if (isEntryArgsName(target, localsIn)) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+              elemKind = it->second.valueKind;
+            }
+          } else if (target.kind == Expr::Kind::Call) {
+            std::string collection;
+            if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+              elemKind = valueKindFromTypeName(target.templateArgs.front());
+            }
+          }
+          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return elemKind;
+        }
         std::string builtin;
         if (getBuiltinComparisonName(expr, builtin)) {
           return LocalInfo::ValueKind::Bool;
@@ -634,6 +687,9 @@ bool IrLowerer::lower(const Program &program,
           if (target.kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.name);
             if (it != localsIn.end()) {
+              if (it->second.kind != LocalInfo::Kind::Value && it->second.kind != LocalInfo::Kind::Reference) {
+                return LocalInfo::ValueKind::Unknown;
+              }
               return it->second.valueKind;
             }
             return LocalInfo::ValueKind::Unknown;
@@ -1206,11 +1262,14 @@ bool IrLowerer::lower(const Program &program,
             error = "count requires exactly one argument";
             return false;
           }
-          if (!isEntryArgsName(expr.args.front(), localsIn)) {
-            error = "native backend only supports count() on entry arguments";
+          if (isEntryArgsName(expr.args.front(), localsIn)) {
+            function.instructions.push_back({IrOpcode::PushArgc, 0});
+            return true;
+          }
+          if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
-          function.instructions.push_back({IrOpcode::PushArgc, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
         }
         PrintBuiltin printBuiltin;
@@ -1224,12 +1283,93 @@ bool IrLowerer::lower(const Program &program,
             error = accessName + " requires exactly two arguments";
             return false;
           }
-          if (!isEntryArgsName(expr.args.front(), localsIn)) {
-            error = "native backend only supports entry argument indexing";
+          if (isEntryArgsName(expr.args.front(), localsIn)) {
+            error = "native backend only supports entry argument indexing in print calls or string bindings";
             return false;
           }
-          error = "native backend only supports entry argument indexing in print calls or string bindings";
-          return false;
+
+          LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+          const Expr &target = expr.args.front();
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+              elemKind = it->second.valueKind;
+            }
+          } else if (target.kind == Expr::Kind::Call) {
+            std::string collection;
+            if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+              elemKind = valueKindFromTypeName(target.templateArgs.front());
+            }
+          }
+          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+            error = "native backend only supports at() on numeric/bool arrays";
+            return false;
+          }
+
+          LocalInfo::ValueKind indexKind = inferExprKind(expr.args[1], localsIn);
+          if (indexKind == LocalInfo::ValueKind::Bool) {
+            indexKind = LocalInfo::ValueKind::Int32;
+          }
+          if (indexKind != LocalInfo::ValueKind::Int32) {
+            error = "native backend only supports i32 indices for " + accessName;
+            return false;
+          }
+
+          const int32_t ptrLocal = allocTempLocal();
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+
+          const int32_t indexLocal = allocTempLocal();
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+          auto emitBoundsFailure = [&]() {
+            uint64_t flags = encodePrintFlags(true, true);
+            int32_t msgIndex = internString("array index out of bounds");
+            function.instructions.push_back(
+                {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+            function.instructions.push_back({IrOpcode::PushI32, 3});
+            function.instructions.push_back({IrOpcode::ReturnI32, 0});
+          };
+
+          if (accessName == "at") {
+            const int32_t countLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+            size_t jumpNonNegative = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitBoundsFailure();
+            size_t nonNegativeIndex = function.instructions.size();
+            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+            function.instructions.push_back({IrOpcode::CmpGeI32, 0});
+            size_t jumpInRange = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitBoundsFailure();
+            size_t inRangeIndex = function.instructions.size();
+            function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
+          }
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back({IrOpcode::AddI32, 0});
+          function.instructions.push_back({IrOpcode::PushI32, 16});
+          function.instructions.push_back({IrOpcode::MulI32, 0});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
         }
         std::string builtin;
         if (getBuiltinOperatorName(expr, builtin)) {
@@ -1622,7 +1762,7 @@ bool IrLowerer::lower(const Program &program,
               error = "native backend does not know identifier: " + pointerExpr.name;
               return false;
             }
-            if (it->second.kind == LocalInfo::Kind::Value) {
+            if (it->second.kind != LocalInfo::Kind::Pointer && it->second.kind != LocalInfo::Kind::Reference) {
               error = "dereference requires a pointer or reference";
               return false;
             }
@@ -1636,6 +1776,48 @@ bool IrLowerer::lower(const Program &program,
           return true;
         }
         if (getBuiltinCollectionName(expr, builtin)) {
+          if (builtin == "array") {
+            if (expr.templateArgs.size() != 1) {
+              error = "array literal requires exactly one template argument";
+              return false;
+            }
+            LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
+            if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+              error = "native backend only supports numeric/bool array literals";
+              return false;
+            }
+            if (expr.args.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+              error = "array literal too large for native backend";
+              return false;
+            }
+
+            const int32_t baseLocal = nextLocal;
+            nextLocal += static_cast<int32_t>(1 + expr.args.size());
+
+            function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(expr.args.size()))});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+
+            for (size_t i = 0; i < expr.args.size(); ++i) {
+              const Expr &arg = expr.args[i];
+              LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
+              if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
+                error = "native backend requires array literal elements to be numeric/bool values";
+                return false;
+              }
+              if (argKind != elemKind) {
+                error = "array literal element type mismatch";
+                return false;
+              }
+              if (!emitExpr(arg, localsIn)) {
+                return false;
+              }
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(i))});
+            }
+
+            function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+            return true;
+          }
           error = "native backend does not support " + builtin + " literals";
           return false;
         }
@@ -1723,15 +1905,13 @@ bool IrLowerer::lower(const Program &program,
           error = accessName + " requires exactly two arguments";
           return false;
         }
-        if (!isEntryArgsName(arg.args.front(), localsIn)) {
-          error = "native backend only supports entry argument indexing";
-          return false;
+        if (isEntryArgsName(arg.args.front(), localsIn)) {
+          if (!emitExpr(arg.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::PrintArgv, flags});
+          return true;
         }
-        if (!emitExpr(arg.args[1], localsIn)) {
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::PrintArgv, flags});
-        return true;
       }
     }
     if (arg.kind == Expr::Kind::StringLiteral) {

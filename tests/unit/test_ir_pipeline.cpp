@@ -1979,12 +1979,12 @@ main() {
   CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects array literal call") {
+TEST_CASE("ir lowerer supports numeric array literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  array<i32>(1i32, 2i32)
-  return(1i32)
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(plus(values.count(), values[1i32]))
 }
 )";
   primec::Program program;
@@ -1994,8 +1994,32 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support array literals") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawBoundsMessage = false;
+  for (const auto &text : module.stringTable) {
+    if (text == "array index out of bounds") {
+      sawBoundsMessage = true;
+      break;
+    }
+  }
+  CHECK(sawBoundsMessage);
+
+  bool sawBoundsPrint = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintString) {
+      sawBoundsPrint = true;
+      break;
+    }
+  }
+  CHECK(sawBoundsPrint);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 10);
 }
 
 TEST_CASE("ir lowerer supports entry args count") {
