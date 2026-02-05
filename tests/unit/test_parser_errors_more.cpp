@@ -348,6 +348,51 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named args for count fail in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(values = array<i32>(1i32, 2i32)))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("named args for array access fail in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(items = array<i32>(1i32, 2i32), index = 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("named args for unsafe array access fail in parser") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(items = array<i32>(1i32, 2i32), index = 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("execution positional argument after named fails in parser") {
   const std::string source = R"(
 [return<int>]
