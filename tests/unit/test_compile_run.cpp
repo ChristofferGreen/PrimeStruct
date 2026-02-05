@@ -845,6 +845,27 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("compiles and runs native argv unsafe access skips bounds") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(at_unsafe(args, 9i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_unsafe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_unsafe_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_argv_unsafe_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_argv_unsafe_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("compiles and runs native argv binding") {
   const std::string source = R"(
 [return<int> effects(io_out)]
