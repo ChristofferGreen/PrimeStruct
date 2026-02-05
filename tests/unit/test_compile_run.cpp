@@ -2201,6 +2201,37 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects method call on reference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(2i32)
+  [Reference<i32>] ref(location(value))
+  return(ref.inc())
+}
+)";
+  const std::string srcPath = writeTemp("compile_method_reference.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_reference_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects method call on map") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values(map<i32, i32>{1i32=2i32})
+  return(values.inc())
+}
+)";
+  const std::string srcPath = writeTemp("compile_method_map.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_map_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("implicit suffix disabled by default") {
   const std::string source = R"(
 [return<int>]
