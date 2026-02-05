@@ -307,10 +307,27 @@ bool isAssignCall(const Expr &expr) {
   return name == "assign";
 }
 
-bool isPointerExpr(const Expr &expr, const std::unordered_map<std::string, BindingInfo> &locals) {
+const BindingInfo *findBinding(const std::vector<ParameterInfo> &params,
+                               const std::unordered_map<std::string, BindingInfo> &locals,
+                               const std::string &name) {
+  auto it = locals.find(name);
+  if (it != locals.end()) {
+    return &it->second;
+  }
+  for (const auto &param : params) {
+    if (param.name == name) {
+      return &param.binding;
+    }
+  }
+  return nullptr;
+}
+
+bool isPointerExpr(const Expr &expr,
+                   const std::vector<ParameterInfo> &params,
+                   const std::unordered_map<std::string, BindingInfo> &locals) {
   if (expr.kind == Expr::Kind::Name) {
-    auto it = locals.find(expr.name);
-    return it != locals.end() && it->second.typeName == "Pointer";
+    const BindingInfo *binding = findBinding(params, locals, expr.name);
+    return binding != nullptr && binding->typeName == "Pointer";
   }
   if (expr.kind != Expr::Kind::Call) {
     return false;
@@ -321,15 +338,17 @@ bool isPointerExpr(const Expr &expr, const std::unordered_map<std::string, Bindi
   }
   if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {
-    return isPointerExpr(expr.args[0], locals) && !isPointerExpr(expr.args[1], locals);
+    return isPointerExpr(expr.args[0], params, locals) && !isPointerExpr(expr.args[1], params, locals);
   }
   return false;
 }
 
-bool isPointerLikeExpr(const Expr &expr, const std::unordered_map<std::string, BindingInfo> &locals) {
+bool isPointerLikeExpr(const Expr &expr,
+                       const std::vector<ParameterInfo> &params,
+                       const std::unordered_map<std::string, BindingInfo> &locals) {
   if (expr.kind == Expr::Kind::Name) {
-    auto it = locals.find(expr.name);
-    return it != locals.end() && (it->second.typeName == "Pointer" || it->second.typeName == "Reference");
+    const BindingInfo *binding = findBinding(params, locals, expr.name);
+    return binding != nullptr && (binding->typeName == "Pointer" || binding->typeName == "Reference");
   }
   if (expr.kind != Expr::Kind::Call) {
     return false;
@@ -340,7 +359,7 @@ bool isPointerLikeExpr(const Expr &expr, const std::unordered_map<std::string, B
   }
   if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
       expr.args.size() == 2) {
-    return isPointerLikeExpr(expr.args[0], locals) && !isPointerLikeExpr(expr.args[1], locals);
+    return isPointerLikeExpr(expr.args[0], params, locals) && !isPointerLikeExpr(expr.args[1], params, locals);
   }
   return false;
 }
@@ -1247,7 +1266,7 @@ bool Semantics::validate(const Program &program,
         }
         return returnKindForTypeName(expr.templateArgs.front());
       }
-      if (isAssignCall(expr)) {
+        if (isAssignCall(expr)) {
         if (expr.args.size() != 2) {
           return ReturnKind::Unknown;
         }
@@ -1352,8 +1371,12 @@ bool Semantics::validate(const Program &program,
     }
   }
 
-  auto isMutableLocal = [](const std::unordered_map<std::string, BindingInfo> &locals,
-                           const std::string &name) -> bool {
+  auto isMutableBinding = [&](const std::vector<ParameterInfo> &params,
+                              const std::unordered_map<std::string, BindingInfo> &locals,
+                              const std::string &name) -> bool {
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      return paramBinding->isMutable;
+    }
     auto it = locals.find(name);
     return it != locals.end() && it->second.isMutable;
   };
@@ -1379,7 +1402,7 @@ bool Semantics::validate(const Program &program,
       if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
         return false;
       }
-      if (isPointerExpr(arg, locals)) {
+      if (isPointerExpr(arg, params, locals)) {
         return false;
       }
       if (arg.kind == Expr::Kind::Name) {
@@ -1432,7 +1455,7 @@ bool Semantics::validate(const Program &program,
                localKind == ReturnKind::Bool || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
       }
     }
-    if (isPointerLikeExpr(arg, locals)) {
+    if (isPointerLikeExpr(arg, params, locals)) {
       return false;
     }
     if (arg.kind == Expr::Kind::Call) {
@@ -1445,7 +1468,7 @@ bool Semantics::validate(const Program &program,
       if (arg.kind == Expr::Kind::StringLiteral) {
         return true;
       }
-      if (isPointerExpr(arg, locals)) {
+      if (isPointerExpr(arg, params, locals)) {
         return false;
       }
       return true;
@@ -1473,7 +1496,7 @@ bool Semantics::validate(const Program &program,
         if (arg.kind == Expr::Kind::StringLiteral) {
           return false;
         }
-        if (isPointerExpr(arg, locals)) {
+        if (isPointerExpr(arg, params, locals)) {
           return false;
         }
         if (arg.kind == Expr::Kind::Name) {
@@ -1512,7 +1535,7 @@ bool Semantics::validate(const Program &program,
         if (arg.kind == Expr::Kind::StringLiteral) {
           return NumericCategory::Unknown;
         }
-        if (isPointerExpr(arg, locals)) {
+        if (isPointerExpr(arg, params, locals)) {
           return NumericCategory::Unknown;
         }
         if (arg.kind == Expr::Kind::Name) {
@@ -1588,7 +1611,7 @@ bool Semantics::validate(const Program &program,
         if (arg.kind == Expr::Kind::StringLiteral) {
           return false;
         }
-        if (isPointerExpr(arg, locals)) {
+        if (isPointerExpr(arg, params, locals)) {
           return false;
         }
         if (arg.kind == Expr::Kind::Name) {
@@ -1761,8 +1784,8 @@ bool Semantics::validate(const Program &program,
           bool leftPointer = false;
           bool rightPointer = false;
           if (expr.args.size() == 2) {
-            leftPointer = isPointerExpr(expr.args[0], locals);
-            rightPointer = isPointerExpr(expr.args[1], locals);
+            leftPointer = isPointerExpr(expr.args[0], params, locals);
+            rightPointer = isPointerExpr(expr.args[1], params, locals);
           }
           if (isPlusMinus && expr.args.size() == 2 && (leftPointer || rightPointer)) {
             if (leftPointer && rightPointer) {
@@ -1930,95 +1953,95 @@ bool Semantics::validate(const Program &program,
           error = printBuiltin.name + " is only supported as a statement";
           return false;
         }
-      if (getBuiltinPointerName(expr, builtinName)) {
-        if (!expr.templateArgs.empty()) {
-          error = "pointer helpers do not accept template arguments";
-          return false;
+        if (getBuiltinPointerName(expr, builtinName)) {
+          if (!expr.templateArgs.empty()) {
+            error = "pointer helpers do not accept template arguments";
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          if (builtinName == "location") {
+            const Expr &target = expr.args.front();
+            if (target.kind != Expr::Kind::Name || locals.count(target.name) == 0 || isParam(params, target.name)) {
+              error = "location requires a local binding";
+              return false;
+            }
+          }
+          if (builtinName == "dereference") {
+            if (!isPointerLikeExpr(expr.args.front(), params, locals)) {
+              error = "dereference requires a pointer or reference";
+              return false;
+            }
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
         }
-        if (expr.args.size() != 1) {
-          error = "argument count mismatch for builtin " + builtinName;
-          return false;
+        if (getBuiltinCollectionName(expr, builtinName)) {
+          if (builtinName == "array") {
+            if (expr.templateArgs.size() != 1) {
+              error = "array literal requires exactly one template argument";
+              return false;
+            }
+          } else {
+            if (expr.templateArgs.size() != 2) {
+              error = "map literal requires exactly two template arguments";
+              return false;
+            }
+            if (expr.args.size() % 2 != 0) {
+              error = "map literal requires an even number of arguments";
+              return false;
+            }
+          }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
+            }
+          }
+          return true;
         }
-        if (builtinName == "location") {
+        if (isAssignCall(expr)) {
+          if (expr.args.size() != 2) {
+            error = "assign requires exactly two arguments";
+            return false;
+          }
           const Expr &target = expr.args.front();
-          if (target.kind != Expr::Kind::Name || locals.count(target.name) == 0 || isParam(params, target.name)) {
-            error = "location requires a local binding";
-            return false;
-          }
-        }
-        if (builtinName == "dereference") {
-          if (!isPointerLikeExpr(expr.args.front(), locals)) {
-            error = "dereference requires a pointer or reference";
-            return false;
-          }
-        }
-        if (!validateExpr(params, locals, expr.args.front())) {
-          return false;
-        }
-        return true;
-      }
-      if (getBuiltinCollectionName(expr, builtinName)) {
-        if (builtinName == "array") {
-          if (expr.templateArgs.size() != 1) {
-            error = "array literal requires exactly one template argument";
-            return false;
-          }
-        } else {
-          if (expr.templateArgs.size() != 2) {
-            error = "map literal requires exactly two template arguments";
-            return false;
-          }
-          if (expr.args.size() % 2 != 0) {
-            error = "map literal requires an even number of arguments";
-            return false;
-          }
-        }
-        for (const auto &arg : expr.args) {
-          if (!validateExpr(params, locals, arg)) {
-            return false;
-          }
-        }
-        return true;
-      }
-      if (isAssignCall(expr)) {
-        if (expr.args.size() != 2) {
-          error = "assign requires exactly two arguments";
-          return false;
-        }
-        const Expr &target = expr.args.front();
-        if (target.kind == Expr::Kind::Name) {
-          if (!isMutableLocal(locals, target.name)) {
-            error = "assign target must be a mutable binding: " + target.name;
-            return false;
-          }
-        } else if (target.kind == Expr::Kind::Call) {
-          std::string pointerName;
-          if (!getBuiltinPointerName(target, pointerName) || pointerName != "dereference" ||
-              target.args.size() != 1) {
+          if (target.kind == Expr::Kind::Name) {
+            if (!isMutableBinding(params, locals, target.name)) {
+              error = "assign target must be a mutable binding: " + target.name;
+              return false;
+            }
+          } else if (target.kind == Expr::Kind::Call) {
+            std::string pointerName;
+            if (!getBuiltinPointerName(target, pointerName) || pointerName != "dereference" ||
+                target.args.size() != 1) {
+              error = "assign target must be a mutable binding";
+              return false;
+            }
+            const Expr &pointerExpr = target.args.front();
+            if (pointerExpr.kind != Expr::Kind::Name || !isMutableBinding(params, locals, pointerExpr.name)) {
+              error = "assign target must be a mutable binding";
+              return false;
+            }
+            if (!isPointerLikeExpr(pointerExpr, params, locals)) {
+              error = "assign target must be a mutable pointer binding";
+              return false;
+            }
+            if (!validateExpr(params, locals, pointerExpr)) {
+              return false;
+            }
+          } else {
             error = "assign target must be a mutable binding";
             return false;
           }
-          const Expr &pointerExpr = target.args.front();
-          if (pointerExpr.kind != Expr::Kind::Name || !isMutableLocal(locals, pointerExpr.name)) {
-            error = "assign target must be a mutable binding";
+          if (!validateExpr(params, locals, expr.args[1])) {
             return false;
           }
-          if (!isPointerLikeExpr(pointerExpr, locals)) {
-            error = "assign target must be a mutable pointer binding";
-            return false;
-          }
-          if (!validateExpr(params, locals, pointerExpr)) {
-            return false;
-          }
-        } else {
-          error = "assign target must be a mutable binding";
-          return false;
+          return true;
         }
-        if (!validateExpr(params, locals, expr.args[1])) {
-          return false;
-        }
-        return true;
-      }
         error = "unknown call target: " + expr.name;
         return false;
       }

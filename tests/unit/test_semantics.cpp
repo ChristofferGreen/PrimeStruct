@@ -1826,6 +1826,79 @@ main([i32] x) {
   CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
+TEST_CASE("dereference accepts pointer parameters") {
+  const std::string source = R"(
+[return<int>]
+read([Pointer<i32>] ptr) {
+  return(dereference(ptr))
+}
+
+[return<int>]
+main() {
+  [i32] value(7i32)
+  return(read(location(value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pointer arithmetic accepts pointer parameters") {
+  const std::string source = R"(
+[return<int>]
+offset([Pointer<i32>] ptr) {
+  return(dereference(plus(ptr, 0i32)))
+}
+
+[return<int>]
+main() {
+  [i32] value(9i32)
+  return(offset(location(value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("assign allows mutable parameters") {
+  const std::string source = R"(
+[return<int>]
+increment([i32 mut] value) {
+  assign(value, plus(value, 1i32))
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(increment(4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("assign allows mutable pointer parameters") {
+  const std::string source = R"(
+[return<int>]
+write([Pointer<i32> mut] ptr) {
+  assign(dereference(ptr), 9i32)
+  return(dereference(ptr))
+}
+
+[return<int>]
+main() {
+  [i32 mut] value(3i32)
+  return(write(location(value)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("binding allows templated type") {
   const std::string source = R"(
 [return<int>]
