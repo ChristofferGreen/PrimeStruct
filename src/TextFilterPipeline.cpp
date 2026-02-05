@@ -59,6 +59,7 @@ bool isUnaryPrefixPosition(const std::string &input, size_t index) {
   case '>':
   case '&':
   case '|':
+  case '!':
     return true;
   default:
     return false;
@@ -426,9 +427,16 @@ std::string maybeAppendI32(const std::string &token) {
   if (token.empty()) {
     return token;
   }
+  size_t start = 0;
+  if (token[0] == '-') {
+    if (token.size() == 1) {
+      return token;
+    }
+    start = 1;
+  }
   bool isDecimal = true;
-  for (char c : token) {
-    if (!isDigitChar(c)) {
+  for (size_t i = start; i < token.size(); ++i) {
+    if (!isDigitChar(token[i])) {
       isDecimal = false;
       break;
     }
@@ -436,8 +444,8 @@ std::string maybeAppendI32(const std::string &token) {
   if (isDecimal) {
     return token + "i32";
   }
-  if (token.size() > 2 && token[0] == '0' && (token[1] == 'x' || token[1] == 'X')) {
-    for (size_t i = 2; i < token.size(); ++i) {
+  if (token.size() > start + 2 && token[start] == '0' && (token[start + 1] == 'x' || token[start + 1] == 'X')) {
+    for (size_t i = start + 2; i < token.size(); ++i) {
       if (!isHexDigitChar(token[i])) {
         return token;
       }
@@ -483,14 +491,16 @@ bool rewriteUnaryNot(const std::string &input,
     return true;
   }
   size_t rightStart = index + 1;
-  size_t rightEnd = rightStart;
-  while (rightEnd < input.size() && isTokenChar(input[rightEnd])) {
-    ++rightEnd;
+  if (!isRightOperandStartChar(input, rightStart)) {
+    return false;
   }
+  size_t rightEnd = findRightTokenEnd(input, rightStart);
   if (rightEnd == rightStart) {
     return false;
   }
   std::string right = input.substr(rightStart, rightEnd - rightStart);
+  right = stripOuterParens(right);
+  right = normalizeUnaryOperand(right);
   if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
   }
