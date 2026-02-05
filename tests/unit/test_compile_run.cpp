@@ -258,6 +258,32 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("compiles and runs native argv binding") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    [string] first(args[1i32])
+    [string] copy(first)
+    print_line(copy)
+  } else {
+    print_line("missing"utf8)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_binding.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_binding_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_binding_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("compiles and runs native void executable") {
   const std::string source = R"(
 [return<void>]

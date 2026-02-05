@@ -1553,7 +1553,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("string literals or bindings") != std::string::npos);
+  CHECK(error.find("string literals, bindings, or entry args") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports print_line with string literals") {

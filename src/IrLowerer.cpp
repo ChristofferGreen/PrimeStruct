@@ -235,6 +235,7 @@ bool IrLowerer::lower(const Program &program,
     bool isMutable = false;
     enum class Kind { Value, Pointer, Reference } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
+    enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
   };
   using LocalMap = std::unordered_map<std::string, LocalInfo>;
@@ -729,7 +730,7 @@ bool IrLowerer::lower(const Program &program,
             error = "native backend only supports entry argument indexing";
             return false;
           }
-          error = "native backend only supports entry argument indexing in print calls";
+          error = "native backend only supports entry argument indexing in print calls or string bindings";
           return false;
         }
         std::string builtin;
@@ -1252,13 +1253,20 @@ bool IrLowerer::lower(const Program &program,
         return false;
       }
       if (it->second.valueKind == LocalInfo::ValueKind::String) {
-        if (it->second.stringIndex < 0) {
-          error = "native backend missing string data for: " + arg.name;
-          return false;
+        if (it->second.stringSource == LocalInfo::StringSource::TableIndex) {
+          if (it->second.stringIndex < 0) {
+            error = "native backend missing string data for: " + arg.name;
+            return false;
+          }
+          function.instructions.push_back(
+              {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(it->second.stringIndex), flags)});
+          return true;
         }
-        function.instructions.push_back(
-            {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(it->second.stringIndex), flags)});
-        return true;
+        if (it->second.stringSource == LocalInfo::StringSource::ArgvIndex) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          function.instructions.push_back({IrOpcode::PrintArgv, flags});
+          return true;
+        }
       }
     }
     if (!emitExpr(arg, localsIn)) {
@@ -1302,34 +1310,60 @@ bool IrLowerer::lower(const Program &program,
         }
         const Expr &init = stmt.args.front();
         int32_t index = -1;
+        LocalInfo::StringSource source = LocalInfo::StringSource::None;
         if (init.kind == Expr::Kind::StringLiteral) {
           std::string decoded;
           if (!parseStringLiteral(init.stringValue, decoded)) {
             return false;
           }
           index = internString(decoded);
+          source = LocalInfo::StringSource::TableIndex;
         } else if (init.kind == Expr::Kind::Name) {
           auto it = localsIn.find(init.name);
           if (it == localsIn.end()) {
             error = "native backend does not know identifier: " + init.name;
             return false;
           }
-          if (it->second.valueKind != LocalInfo::ValueKind::String || it->second.stringIndex < 0) {
-            error = "native backend requires string bindings to use string literals or bindings";
+          if (it->second.valueKind != LocalInfo::ValueKind::String ||
+              it->second.stringSource == LocalInfo::StringSource::None) {
+            error = "native backend requires string bindings to use string literals, bindings, or entry args";
             return false;
           }
+          source = it->second.stringSource;
           index = it->second.stringIndex;
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        } else if (init.kind == Expr::Kind::Call) {
+          std::string accessName;
+          if (!getBuiltinArrayAccessName(init, accessName)) {
+            error = "native backend requires string bindings to use string literals, bindings, or entry args";
+            return false;
+          }
+          if (init.args.size() != 2) {
+            error = accessName + " requires exactly two arguments";
+            return false;
+          }
+          if (!isEntryArgsName(init.args.front())) {
+            error = "native backend only supports entry argument indexing";
+            return false;
+          }
+          if (!emitExpr(init.args[1], localsIn)) {
+            return false;
+          }
+          source = LocalInfo::StringSource::ArgvIndex;
         } else {
-          error = "native backend requires string bindings to use string literals or bindings";
+          error = "native backend requires string bindings to use string literals, bindings, or entry args";
           return false;
         }
-        function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
         LocalInfo info;
         info.index = nextLocal++;
         info.isMutable = isBindingMutable(stmt);
         info.kind = LocalInfo::Kind::Value;
         info.valueKind = LocalInfo::ValueKind::String;
+        info.stringSource = source;
         info.stringIndex = index;
+        if (init.kind == Expr::Kind::StringLiteral) {
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
+        }
         localsIn.emplace(stmt.name, info);
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         return true;

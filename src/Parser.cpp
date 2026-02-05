@@ -1265,6 +1265,11 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     return false;
   }
 
+  if (current.isBinding) {
+    expr = std::move(current);
+    return true;
+  }
+
   while (true) {
     if (match(TokenKind::Dot)) {
       expect(TokenKind::Dot, "expected '.'");
