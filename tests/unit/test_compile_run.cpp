@@ -293,6 +293,23 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm argv unsafe access skips bounds") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(at_unsafe(args, 9i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_unsafe_bounds.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("vm argv binding checks bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
