@@ -411,6 +411,60 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs literal method call in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+main() {
+  return(1i32.inc())
+}
+)";
+  const std::string srcPath = writeTemp("compile_method_literal.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("compiles and runs chained method calls in C++ emitter") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+
+  [return<int>]
+  dec([i32] value) {
+    return(minus(value, 1i32))
+  }
+}
+
+[return<int>]
+make() {
+  return(4i32)
+}
+
+[return<int>]
+main() {
+  return(make().inc().dec())
+}
+)";
+  const std::string srcPath = writeTemp("compile_method_chain.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_chain_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_CASE("compiles and runs array index sugar") {
   const std::string source = R"(
 [return<int>]
