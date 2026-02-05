@@ -1,0 +1,9 @@
+[return<int> effects(io_out)]
+main() {
+  if(1i32) {
+    print_line("Hello, world! 1"utf8)
+  } else {
+    print_line("Hello, world! 2"utf8)
+  }
+  return(0i32)
+}

@@ -1,0 +1,11 @@
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print("argc="utf8)
+  print_line(args.count())
+  if(greater_than(args.count(), 1i32)) {
+    print_line(args[1i32])
+  } else {
+    print_line("no extra args"utf8)
+  }
+  return(0i32)
+}

@@ -202,6 +202,21 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
   if (!out.dumpStage.empty()) {
     return true;
   }
+  if (out.emitKind.empty()) {
+    out.emitKind = "native";
+  }
+  if (out.outputPath.empty()) {
+    std::filesystem::path inputPath(out.inputPath);
+    std::string stem = inputPath.stem().string();
+    if (stem.empty()) {
+      stem = inputPath.filename().string();
+    }
+    if (out.emitKind == "cpp") {
+      out.outputPath = stem + ".cpp";
+    } else {
+      out.outputPath = stem;
+    }
+  }
   return !out.emitKind.empty() && !out.outputPath.empty();
 }
 
@@ -236,7 +251,7 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec --emit=cpp|exe|native <input.prime> -o <output> [--entry /path] "
+    std::cerr << "Usage: primec [--emit=cpp|exe|native] <input.prime> [-o <output>] [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] [--out-dir <dir>] [--default-effects <list>] "
                  "[--dump-stage pre_ast|ast|ir]\n";
     return 2;

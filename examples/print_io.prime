@@ -1,0 +1,8 @@
+[return<int> effects(io_out, io_err)]
+main() {
+  print("value="utf8)
+  print_line(42i32)
+  print_error("oops"ascii)
+  print_line_error(7i32)
+  return(0i32)
+}

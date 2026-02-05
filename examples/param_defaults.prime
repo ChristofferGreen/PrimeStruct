@@ -1,0 +1,13 @@
+[return<int>]
+clamp_min([i32] value, [i32] min(0i32)) {
+  if(less_than(value, min)) {
+    return(min)
+  } else {
+    return(value)
+  }
+}
+
+[return<int>]
+main() {
+  return(clamp_min(3i32))
+}
