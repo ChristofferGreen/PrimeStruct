@@ -377,6 +377,16 @@ TEST_CASE("rewrites not operator before parentheses") {
   CHECK(output.find("not(a)") != std::string::npos);
 }
 
+TEST_CASE("rewrites not operator before templated call") {
+  const std::string source = "main(){ return(!convert<i32>(1i64)) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("not(convert<i32>(1i64))") != std::string::npos);
+}
+
 TEST_CASE("rewrites chained not operators") {
   const std::string source = "main(){ return(!!flag) }\n";
   primec::TextFilterPipeline pipeline;
@@ -429,6 +439,26 @@ TEST_CASE("rewrites unary minus before name") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output.find("negate(value)") != std::string::npos);
+}
+
+TEST_CASE("rewrites plus with templated call on left") {
+  const std::string source = "main(){ return(convert<i32>(1i64)+2i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(convert<i32>(1i64), 2i32)") != std::string::npos);
+}
+
+TEST_CASE("rewrites plus with templated call on right") {
+  const std::string source = "main(){ return(1i32+convert<i32>(2i64)) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(1i32, convert<i32>(2i64))") != std::string::npos);
 }
 
 TEST_CASE("rewrites unary minus before parentheses") {

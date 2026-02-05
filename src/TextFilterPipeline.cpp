@@ -102,6 +102,8 @@ bool isExponentSign(const std::string &text, size_t index) {
   return true;
 }
 
+bool looksLikeTemplateList(const std::string &input, size_t index);
+
 bool isEscaped(const std::string &text, size_t index) {
   size_t count = 0;
   while (index > 0 && text[index - 1] == '\\') {
@@ -263,6 +265,12 @@ size_t findLeftTokenStart(const std::string &text, size_t end) {
       return end;
     }
     start = openPos;
+    if (tail == ')' && start > 0 && text[start - 1] == '>') {
+      size_t templateStart = findMatchingOpen(text, start - 1, '<', '>');
+      if (templateStart != std::string::npos) {
+        start = templateStart;
+      }
+    }
     while (start > 0 && isOperatorTokenChar(text[start - 1])) {
       --start;
     }
@@ -344,6 +352,12 @@ size_t findRightTokenEnd(const std::string &text, size_t start) {
       continue;
     }
     break;
+  }
+  if (pos < text.size() && text[pos] == '<' && looksLikeTemplateList(text, pos)) {
+    size_t closePos = findMatchingClose(text, pos, '<', '>');
+    if (closePos != std::string::npos) {
+      pos = closePos + 1;
+    }
   }
   if (pos < text.size() && text[pos] == '(') {
     size_t closePos = findMatchingClose(text, pos, '(', ')');
