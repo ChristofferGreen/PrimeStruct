@@ -238,6 +238,54 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs native definition call") {
+  const std::string source = R"(
+[return<int>]
+inc([i32] x) {
+  return(plus(x, 1i32))
+}
+
+[return<int>]
+main() {
+  return(inc(6i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_def_call.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_def_call_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native void call with string param") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+echo([string] msg) {
+  print_line(msg)
+}
+
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    echo(args[1i32])
+  } else {
+    echo("missing"utf8)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_call.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_call_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_string_call_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("compiles and runs native argv count") {
   const std::string source = R"(
 [return<int>]

@@ -4,6 +4,7 @@
 #include <functional>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace primec {
 namespace {
@@ -216,6 +217,13 @@ bool IrLowerer::lower(const Program &program,
     error = "native backend requires entry definition " + entryPath;
     return false;
   }
+
+  std::unordered_map<std::string, const Definition *> defMap;
+  defMap.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    defMap.emplace(def.fullPath, &def);
+  }
+
   bool hasReturnTransform = false;
   bool returnsVoid = false;
   for (const auto &transform : entryDef->transforms) {
@@ -324,17 +332,20 @@ bool IrLowerer::lower(const Program &program,
     hasEntryArgs = true;
     entryArgsName = param.name;
   }
-  auto isEntryArgsName = [&](const Expr &expr) -> bool {
-    return hasEntryArgs && expr.kind == Expr::Kind::Name && expr.name == entryArgsName;
+  auto isEntryArgsName = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
+    if (!hasEntryArgs || expr.kind != Expr::Kind::Name || expr.name != entryArgsName) {
+      return false;
+    }
+    return localsIn.count(entryArgsName) == 0;
   };
-  auto isEntryArgsCountCall = [&](const Expr &expr) -> bool {
+  auto isEntryArgsCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (!isSimpleCallName(expr, "count")) {
       return false;
     }
     if (expr.args.size() != 1) {
       return false;
     }
-    return isEntryArgsName(expr.args.front());
+    return isEntryArgsName(expr.args.front(), localsIn);
   };
 
   auto isFloatTypeName = [](const std::string &name) -> bool {
@@ -343,6 +354,16 @@ bool IrLowerer::lower(const Program &program,
 
   auto isStringTypeName = [](const std::string &name) -> bool {
     return name == "string";
+  };
+
+  auto resolveExprPath = [](const Expr &expr) -> std::string {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return "/" + expr.name;
   };
 
   auto valueKindFromTypeName = [](const std::string &name) -> LocalInfo::ValueKind {
@@ -469,6 +490,15 @@ bool IrLowerer::lower(const Program &program,
     return combineNumericKinds(left, right);
   };
 
+  struct ReturnInfo {
+    bool returnsVoid = false;
+    LocalInfo::ValueKind kind = LocalInfo::ValueKind::Unknown;
+  };
+
+  std::unordered_map<std::string, ReturnInfo> returnInfoCache;
+  std::unordered_set<std::string> returnInferenceStack;
+  std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
+
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
   inferPointerTargetKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (expr.kind == Expr::Kind::Name) {
@@ -548,7 +578,18 @@ bool IrLowerer::lower(const Program &program,
         return LocalInfo::ValueKind::Unknown;
       }
       case Expr::Kind::Call: {
-        if (isEntryArgsCountCall(expr)) {
+        if (!expr.isMethodCall) {
+          const std::string resolved = resolveExprPath(expr);
+          auto defIt = defMap.find(resolved);
+          if (defIt != defMap.end()) {
+            ReturnInfo info;
+            if (getReturnInfo && getReturnInfo(resolved, info) && !info.returnsVoid) {
+              return info.kind;
+            }
+            return LocalInfo::ValueKind::Unknown;
+          }
+        }
+        if (isEntryArgsCountCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;
         }
         std::string builtin;
@@ -618,6 +659,216 @@ bool IrLowerer::lower(const Program &program,
     }
   };
 
+  getReturnInfo = [&](const std::string &path, ReturnInfo &outInfo) -> bool {
+    auto cached = returnInfoCache.find(path);
+    if (cached != returnInfoCache.end()) {
+      outInfo = cached->second;
+      return true;
+    }
+    auto defIt = defMap.find(path);
+    if (defIt == defMap.end() || !defIt->second) {
+      error = "native backend cannot resolve definition: " + path;
+      return false;
+    }
+    if (!returnInferenceStack.insert(path).second) {
+      error = "native backend return type inference requires explicit annotation on " + path;
+      return false;
+    }
+
+    const Definition &def = *defIt->second;
+    ReturnInfo info;
+    bool hasReturnTransformLocal = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "struct" || transform.name == "pod" || transform.name == "stack" || transform.name == "heap" ||
+          transform.name == "buffer") {
+        info.returnsVoid = true;
+        hasReturnTransformLocal = true;
+        break;
+      }
+      if (transform.name != "return") {
+        continue;
+      }
+      hasReturnTransformLocal = true;
+      if (!transform.templateArg) {
+        continue;
+      }
+      if (*transform.templateArg == "void") {
+        info.returnsVoid = true;
+        break;
+      }
+      info.kind = valueKindFromTypeName(*transform.templateArg);
+      info.returnsVoid = false;
+      break;
+    }
+
+    if (hasReturnTransformLocal) {
+      if (!info.returnsVoid) {
+        if (info.kind == LocalInfo::ValueKind::Unknown) {
+          error = "native backend does not support return type on " + def.fullPath;
+          returnInferenceStack.erase(path);
+          return false;
+        }
+        if (info.kind == LocalInfo::ValueKind::String) {
+          error = "native backend does not support string return types on " + def.fullPath;
+          returnInferenceStack.erase(path);
+          return false;
+        }
+      }
+    } else {
+      if (!def.hasReturnStatement) {
+        info.returnsVoid = true;
+      } else {
+        LocalMap localsForInference;
+        for (const auto &param : def.parameters) {
+          if (isFloatBinding(param)) {
+            error = "native backend does not support float types";
+            returnInferenceStack.erase(path);
+            return false;
+          }
+          LocalInfo paramInfo;
+          paramInfo.index = 0;
+          paramInfo.isMutable = isBindingMutable(param);
+          paramInfo.kind = bindingKind(param);
+          paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+          if (isStringBinding(param)) {
+            if (paramInfo.kind != LocalInfo::Kind::Value) {
+              error = "native backend does not support string pointers or references";
+              returnInferenceStack.erase(path);
+              return false;
+            }
+          }
+          if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+            error = "native backend requires typed parameters on " + def.fullPath;
+            returnInferenceStack.erase(path);
+            return false;
+          }
+          localsForInference.emplace(param.name, paramInfo);
+        }
+
+        LocalInfo::ValueKind inferred = LocalInfo::ValueKind::Unknown;
+        bool sawReturnLocal = false;
+        bool inferredVoid = false;
+        std::function<bool(const Expr &, LocalMap &)> inferStatement;
+        inferStatement = [&](const Expr &stmt, LocalMap &activeLocals) -> bool {
+          if (stmt.isBinding) {
+            if (isFloatBinding(stmt)) {
+              error = "native backend does not support float types";
+              return false;
+            }
+            LocalInfo bindingInfo;
+            bindingInfo.index = 0;
+            bindingInfo.isMutable = isBindingMutable(stmt);
+            bindingInfo.kind = bindingKind(stmt);
+            bindingInfo.valueKind = bindingValueKind(stmt, bindingInfo.kind);
+            if (isStringBinding(stmt) && bindingInfo.kind != LocalInfo::Kind::Value) {
+              error = "native backend does not support string pointers or references";
+              return false;
+            }
+            if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+              error = "native backend requires typed bindings on " + def.fullPath;
+              return false;
+            }
+            activeLocals.emplace(stmt.name, bindingInfo);
+            return true;
+          }
+          if (isReturnCall(stmt)) {
+            sawReturnLocal = true;
+            if (stmt.args.empty()) {
+              inferredVoid = true;
+              return true;
+            }
+            LocalInfo::ValueKind kind = inferExprKind(stmt.args.front(), activeLocals);
+            if (kind == LocalInfo::ValueKind::Unknown) {
+              error = "unable to infer return type on " + def.fullPath;
+              return false;
+            }
+            if (kind == LocalInfo::ValueKind::String) {
+              error = "native backend does not support string return types on " + def.fullPath;
+              return false;
+            }
+            if (inferred == LocalInfo::ValueKind::Unknown) {
+              inferred = kind;
+              return true;
+            }
+            if (inferred != kind) {
+              error = "conflicting return types on " + def.fullPath;
+              return false;
+            }
+            return true;
+          }
+          if (isIfCall(stmt) && stmt.args.size() == 3) {
+            const Expr &thenBlock = stmt.args[1];
+            const Expr &elseBlock = stmt.args[2];
+            auto walkBlock = [&](const Expr &block) -> bool {
+              LocalMap blockLocals = activeLocals;
+              for (const auto &bodyStmt : block.bodyArguments) {
+                if (!inferStatement(bodyStmt, blockLocals)) {
+                  return false;
+                }
+              }
+              return true;
+            };
+            if (!walkBlock(thenBlock)) {
+              return false;
+            }
+            if (!walkBlock(elseBlock)) {
+              return false;
+            }
+          }
+          if (isRepeatCall(stmt)) {
+            LocalMap blockLocals = activeLocals;
+            for (const auto &bodyStmt : stmt.bodyArguments) {
+              if (!inferStatement(bodyStmt, blockLocals)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        };
+
+        LocalMap locals = localsForInference;
+        for (const auto &stmt : def.statements) {
+          if (!inferStatement(stmt, locals)) {
+            returnInferenceStack.erase(path);
+            return false;
+          }
+        }
+        if (!sawReturnLocal || inferredVoid) {
+          if (sawReturnLocal && inferred != LocalInfo::ValueKind::Unknown) {
+            error = "conflicting return types on " + def.fullPath;
+            returnInferenceStack.erase(path);
+            return false;
+          }
+          info.returnsVoid = true;
+        } else {
+          info.returnsVoid = false;
+          info.kind = inferred;
+          if (info.kind == LocalInfo::ValueKind::Unknown) {
+            error = "unable to infer return type on " + def.fullPath;
+            returnInferenceStack.erase(path);
+            return false;
+          }
+        }
+      }
+    }
+
+    returnInferenceStack.erase(path);
+    returnInfoCache.emplace(path, info);
+    outInfo = info;
+    return true;
+  };
+
+  struct InlineContext {
+    std::string defPath;
+    bool returnsVoid = false;
+    LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+    int32_t returnLocal = -1;
+    std::vector<size_t> returnJumps;
+  };
+
+  InlineContext *activeInlineContext = nullptr;
+  std::unordered_set<std::string> inlineStack;
+
   std::function<bool(const Expr &, const LocalMap &)> emitExpr;
   std::function<bool(const Expr &, LocalMap &)> emitStatement;
   auto allocTempLocal = [&]() -> int32_t {
@@ -656,6 +907,242 @@ bool IrLowerer::lower(const Program &program,
     return false;
   };
 
+  auto resolveDefinitionCall = [&](const Expr &callExpr) -> const Definition * {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isMethodCall) {
+      return nullptr;
+    }
+    const std::string resolved = resolveExprPath(callExpr);
+    auto it = defMap.find(resolved);
+    if (it == defMap.end()) {
+      return nullptr;
+    }
+    return it->second;
+  };
+
+  auto buildOrderedCallArguments = [&](const Expr &callExpr,
+                                       const Definition &callee,
+                                       std::vector<const Expr *> &ordered) -> bool {
+    ordered.assign(callee.parameters.size(), nullptr);
+    size_t positionalIndex = 0;
+    for (size_t i = 0; i < callExpr.args.size(); ++i) {
+      if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
+        const std::string &name = *callExpr.argNames[i];
+        size_t index = callee.parameters.size();
+        for (size_t p = 0; p < callee.parameters.size(); ++p) {
+          if (callee.parameters[p].name == name) {
+            index = p;
+            break;
+          }
+        }
+        if (index >= callee.parameters.size()) {
+          error = "unknown named argument: " + name;
+          return false;
+        }
+        if (ordered[index] != nullptr) {
+          error = "named argument duplicates parameter: " + name;
+          return false;
+        }
+        ordered[index] = &callExpr.args[i];
+        continue;
+      }
+      while (positionalIndex < ordered.size() && ordered[positionalIndex] != nullptr) {
+        ++positionalIndex;
+      }
+      if (positionalIndex >= ordered.size()) {
+        error = "argument count mismatch";
+        return false;
+      }
+      ordered[positionalIndex] = &callExpr.args[i];
+      ++positionalIndex;
+    }
+    for (size_t i = 0; i < ordered.size(); ++i) {
+      if (ordered[i] != nullptr) {
+        continue;
+      }
+      if (!callee.parameters[i].args.empty()) {
+        ordered[i] = &callee.parameters[i].args.front();
+        continue;
+      }
+      error = "argument count mismatch";
+      return false;
+    }
+    return true;
+  };
+
+  auto emitStringValueForCall = [&](const Expr &arg,
+                                    const LocalMap &callerLocals,
+                                    LocalInfo::StringSource &sourceOut,
+                                    int32_t &stringIndexOut) -> bool {
+    sourceOut = LocalInfo::StringSource::None;
+    stringIndexOut = -1;
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      std::string decoded;
+      if (!parseStringLiteral(arg.stringValue, decoded)) {
+        return false;
+      }
+      int32_t index = internString(decoded);
+      function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
+      sourceOut = LocalInfo::StringSource::TableIndex;
+      stringIndexOut = index;
+      return true;
+    }
+    if (arg.kind == Expr::Kind::Name) {
+      auto it = callerLocals.find(arg.name);
+      if (it == callerLocals.end()) {
+        error = "native backend does not know identifier: " + arg.name;
+        return false;
+      }
+      if (it->second.valueKind != LocalInfo::ValueKind::String || it->second.stringSource == LocalInfo::StringSource::None) {
+        error = "native backend requires string arguments to use string literals, bindings, or entry args";
+        return false;
+      }
+      sourceOut = it->second.stringSource;
+      stringIndexOut = it->second.stringIndex;
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+      return true;
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (!getBuiltinArrayAccessName(arg, accessName)) {
+        error = "native backend requires string arguments to use string literals, bindings, or entry args";
+        return false;
+      }
+      if (arg.args.size() != 2) {
+        error = accessName + " requires exactly two arguments";
+        return false;
+      }
+      if (!isEntryArgsName(arg.args.front(), callerLocals)) {
+        error = "native backend only supports entry argument indexing";
+        return false;
+      }
+      if (!emitExpr(arg.args[1], callerLocals)) {
+        return false;
+      }
+      sourceOut = LocalInfo::StringSource::ArgvIndex;
+      return true;
+    }
+    error = "native backend requires string arguments to use string literals, bindings, or entry args";
+    return false;
+  };
+
+  auto emitInlineDefinitionCall = [&](const Expr &callExpr,
+                                      const Definition &callee,
+                                      const LocalMap &callerLocals,
+                                      bool requireValue) -> bool {
+    ReturnInfo returnInfo;
+    if (!getReturnInfo(callee.fullPath, returnInfo)) {
+      return false;
+    }
+    if (returnInfo.returnsVoid && requireValue) {
+      error = "void call not allowed in expression context: " + callee.fullPath;
+      return false;
+    }
+    if (!inlineStack.insert(callee.fullPath).second) {
+      error = "native backend does not support recursive calls: " + callee.fullPath;
+      return false;
+    }
+
+    std::vector<const Expr *> orderedArgs;
+    if (!buildOrderedCallArguments(callExpr, callee, orderedArgs)) {
+      inlineStack.erase(callee.fullPath);
+      return false;
+    }
+
+    LocalMap calleeLocals;
+    for (size_t i = 0; i < callee.parameters.size(); ++i) {
+      const Expr &param = callee.parameters[i];
+      if (isFloatBinding(param)) {
+        error = "native backend does not support float types";
+        inlineStack.erase(callee.fullPath);
+        return false;
+      }
+      LocalInfo paramInfo;
+      paramInfo.index = nextLocal++;
+      paramInfo.isMutable = isBindingMutable(param);
+      paramInfo.kind = bindingKind(param);
+      paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+
+      if (isStringBinding(param)) {
+        if (paramInfo.kind != LocalInfo::Kind::Value) {
+          error = "native backend does not support string pointers or references";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        if (!orderedArgs[i]) {
+          error = "argument count mismatch";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        LocalInfo::StringSource source = LocalInfo::StringSource::None;
+        int32_t index = -1;
+        if (!emitStringValueForCall(*orderedArgs[i], callerLocals, source, index)) {
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        paramInfo.valueKind = LocalInfo::ValueKind::String;
+        paramInfo.stringSource = source;
+        paramInfo.stringIndex = index;
+        calleeLocals.emplace(param.name, paramInfo);
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
+        continue;
+      }
+
+      if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown || paramInfo.valueKind == LocalInfo::ValueKind::String) {
+        error = "native backend only supports numeric/bool or string parameters";
+        inlineStack.erase(callee.fullPath);
+        return false;
+      }
+
+      if (!orderedArgs[i]) {
+        error = "argument count mismatch";
+        inlineStack.erase(callee.fullPath);
+        return false;
+      }
+      if (!emitExpr(*orderedArgs[i], callerLocals)) {
+        inlineStack.erase(callee.fullPath);
+        return false;
+      }
+      calleeLocals.emplace(param.name, paramInfo);
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
+    }
+
+    InlineContext context;
+    context.defPath = callee.fullPath;
+    context.returnsVoid = returnInfo.returnsVoid;
+    context.returnKind = returnInfo.kind;
+    if (!context.returnsVoid) {
+      context.returnLocal = allocTempLocal();
+      const IrOpcode zeroOp =
+          (context.returnKind == LocalInfo::ValueKind::Int64 || context.returnKind == LocalInfo::ValueKind::UInt64)
+              ? IrOpcode::PushI64
+              : IrOpcode::PushI32;
+      function.instructions.push_back({zeroOp, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+    }
+
+    InlineContext *prevContext = activeInlineContext;
+    activeInlineContext = &context;
+    for (const auto &stmt : callee.statements) {
+      if (!emitStatement(stmt, calleeLocals)) {
+        activeInlineContext = prevContext;
+        inlineStack.erase(callee.fullPath);
+        return false;
+      }
+    }
+    size_t endIndex = function.instructions.size();
+    for (size_t jumpIndex : context.returnJumps) {
+      function.instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);
+    }
+    activeInlineContext = prevContext;
+
+    if (!context.returnsVoid) {
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(context.returnLocal)});
+    }
+
+    inlineStack.erase(callee.fullPath);
+    return true;
+  };
+
   emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     switch (expr.kind) {
       case Expr::Kind::Literal: {
@@ -691,28 +1178,35 @@ bool IrLowerer::lower(const Program &program,
         return true;
       }
       case Expr::Kind::Name: {
+        auto it = localsIn.find(expr.name);
+        if (it != localsIn.end()) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          if (it->second.kind == LocalInfo::Kind::Reference) {
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          }
+          return true;
+        }
         if (hasEntryArgs && expr.name == entryArgsName) {
           error = "native backend only supports count() on entry arguments";
           return false;
         }
-        auto it = localsIn.find(expr.name);
-        if (it == localsIn.end()) {
-          error = "native backend does not know identifier: " + expr.name;
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        if (it->second.kind == LocalInfo::Kind::Reference) {
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-        }
-        return true;
+        error = "native backend does not know identifier: " + expr.name;
+        return false;
       }
       case Expr::Kind::Call: {
+        if (const Definition *callee = resolveDefinitionCall(expr)) {
+          if (!expr.bodyArguments.empty()) {
+            error = "native backend does not support block arguments on calls";
+            return false;
+          }
+          return emitInlineDefinitionCall(expr, *callee, localsIn, true);
+        }
         if (isSimpleCallName(expr, "count")) {
           if (expr.args.size() != 1) {
             error = "count requires exactly one argument";
             return false;
           }
-          if (!isEntryArgsName(expr.args.front())) {
+          if (!isEntryArgsName(expr.args.front(), localsIn)) {
             error = "native backend only supports count() on entry arguments";
             return false;
           }
@@ -730,7 +1224,7 @@ bool IrLowerer::lower(const Program &program,
             error = accessName + " requires exactly two arguments";
             return false;
           }
-          if (!isEntryArgsName(expr.args.front())) {
+          if (!isEntryArgsName(expr.args.front(), localsIn)) {
             error = "native backend only supports entry argument indexing";
             return false;
           }
@@ -1229,7 +1723,7 @@ bool IrLowerer::lower(const Program &program,
           error = accessName + " requires exactly two arguments";
           return false;
         }
-        if (!isEntryArgsName(arg.args.front())) {
+        if (!isEntryArgsName(arg.args.front(), localsIn)) {
           error = "native backend only supports entry argument indexing";
           return false;
         }
@@ -1346,7 +1840,7 @@ bool IrLowerer::lower(const Program &program,
             error = accessName + " requires exactly two arguments";
             return false;
           }
-          if (!isEntryArgsName(init.args.front())) {
+          if (!isEntryArgsName(init.args.front(), localsIn)) {
             error = "native backend only supports entry argument indexing";
             return false;
           }
@@ -1404,6 +1898,46 @@ bool IrLowerer::lower(const Program &program,
       return emitPrintArg(stmt.args.front(), localsIn, printBuiltin);
     }
     if (isReturnCall(stmt)) {
+      if (activeInlineContext) {
+        InlineContext &context = *activeInlineContext;
+        if (stmt.args.empty()) {
+          if (!context.returnsVoid) {
+            error = "return requires exactly one argument";
+            return false;
+          }
+          size_t jumpIndex = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          context.returnJumps.push_back(jumpIndex);
+          return true;
+        }
+        if (stmt.args.size() != 1) {
+          error = "return requires exactly one argument";
+          return false;
+        }
+        if (context.returnsVoid) {
+          error = "return value not allowed for void definition";
+          return false;
+        }
+        if (context.returnLocal < 0) {
+          error = "native backend missing inline return local";
+          return false;
+        }
+        if (!emitExpr(stmt.args.front(), localsIn)) {
+          return false;
+        }
+        LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
+        if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
+            returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+          size_t jumpIndex = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          context.returnJumps.push_back(jumpIndex);
+          return true;
+        }
+        error = "native backend only supports returning numeric or bool values";
+        return false;
+      }
+
       if (stmt.args.empty()) {
         if (!returnsVoid) {
           error = "return requires exactly one argument";
@@ -1530,6 +2064,25 @@ bool IrLowerer::lower(const Program &program,
       const size_t endIndex = function.instructions.size();
       function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
       return true;
+    }
+    if (stmt.kind == Expr::Kind::Call) {
+      if (const Definition *callee = resolveDefinitionCall(stmt)) {
+        if (!stmt.bodyArguments.empty()) {
+          error = "native backend does not support block arguments on calls";
+          return false;
+        }
+        ReturnInfo info;
+        if (!getReturnInfo(callee->fullPath, info)) {
+          return false;
+        }
+        if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+          return false;
+        }
+        if (!info.returnsVoid) {
+          function.instructions.push_back({IrOpcode::Pop, 0});
+        }
+        return true;
+      }
     }
     if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "assign")) {
       if (!emitExpr(stmt, localsIn)) {

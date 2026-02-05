@@ -265,6 +265,119 @@ main() {
   CHECK(result == 4);
 }
 
+TEST_CASE("ir lowers definition call by inlining") {
+  const std::string source = R"(
+[return<int>]
+addOne([i32] x) {
+  return(plus(x, 1i32))
+}
+
+[return<int>]
+main() {
+  return(addOne(2i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
+TEST_CASE("ir lowers definition call with defaults and named args") {
+  const std::string source = R"(
+[return<int>]
+sum3([i32] a, [i32] b(2i32), [i32] c(3i32)) {
+  return(plus(plus(a, b), c))
+}
+
+[return<int>]
+main() {
+  return(sum3(1i32, c = 10i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 13);
+}
+
+TEST_CASE("ir lowers void definition call as statement") {
+  const std::string source = R"(
+touch() {
+  return()
+}
+
+[return<int>]
+main() {
+  touch()
+  return(7i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
+TEST_CASE("native backend rejects recursive definition calls") {
+  const std::string source = R"(
+[return<int>]
+loop([i32] x) {
+  return(loop(x))
+}
+
+[return<int>]
+main() {
+  return(loop(1i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("recursive") != std::string::npos);
+}
+
 TEST_CASE("ir lowers implicit void return") {
   const std::string source = R"(
 [return<void>]
