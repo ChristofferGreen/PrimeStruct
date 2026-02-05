@@ -1,10 +1,13 @@
 #include "third_party/doctest.h"
 
+#include "primec/IrSerializer.h"
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
@@ -60,6 +63,56 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("runs program in vm") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_simple.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 7);
+}
+
+TEST_CASE("runs vm with argv printing") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[0i32])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_print.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_print_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == srcPath + "\n");
+}
+
+TEST_CASE("writes serialized ir output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(3i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_ir_simple.prime", source);
+  const std::string irPath = (std::filesystem::temp_directory_path() / "primec_ir_simple.psir").string();
+  const std::string compileCmd = "./primec --emit=ir " + srcPath + " -o " + irPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  std::ifstream file(irPath, std::ios::binary);
+  REQUIRE(file.good());
+  std::vector<uint8_t> data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  primec::IrModule module;
+  std::string error;
+  REQUIRE(primec::deserializeIr(data, module, error));
+  CHECK(error.empty());
+  CHECK(module.entryIndex == 0);
+  REQUIRE(module.functions.size() == 1);
+  CHECK(module.functions[0].name == "/main");
 }
 
 TEST_CASE("no transforms rejects sugar") {

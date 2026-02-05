@@ -3,12 +3,14 @@
 #include "primec/IncludeResolver.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrPrinter.h"
+#include "primec/IrSerializer.h"
 #include "primec/Lexer.h"
 #include "primec/NativeEmitter.h"
 #include "primec/Options.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/TextFilterPipeline.h"
+#include "primec/Vm.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -153,7 +155,7 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
 bool parseArgs(int argc, char **argv, primec::Options &out) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
-    if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native") {
+    if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" || arg == "--emit=vm") {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "-o" && i + 1 < argc) {
       out.outputPath = argv[++i];
@@ -215,6 +217,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
     }
     if (out.emitKind == "cpp") {
       out.outputPath = stem + ".cpp";
+    } else if (out.emitKind == "ir") {
+      out.outputPath = stem + ".psir";
     } else {
       out.outputPath = stem;
     }
@@ -228,6 +232,15 @@ bool writeFile(const std::string &path, const std::string &contents) {
     return false;
   }
   file << contents;
+  return file.good();
+}
+
+bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &contents) {
+  std::ofstream file(path, std::ios::binary);
+  if (!file) {
+    return false;
+  }
+  file.write(reinterpret_cast<const char *>(contents.data()), static_cast<std::streamsize>(contents.size()));
   return file.good();
 }
 
@@ -253,7 +266,7 @@ std::string quotePath(const std::filesystem::path &path) {
 int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
-    std::cerr << "Usage: primec [--emit=cpp|exe|native] <input.prime> [-o <output>] [--entry /path] "
+    std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm] <input.prime> [-o <output>] [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] [--no-transforms] [--out-dir <dir>] "
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir]\n";
     return 2;
@@ -312,6 +325,24 @@ int main(int argc, char **argv) {
     return 2;
   }
 
+  if (options.emitKind == "vm") {
+    primec::IrLowerer lowerer;
+    primec::IrModule ir;
+    if (!lowerer.lower(program, options.entryPath, ir, error)) {
+      std::cerr << "VM lowering error: " << error << "\n";
+      return 2;
+    }
+    primec::Vm vm;
+    std::vector<std::string_view> args;
+    args.push_back(options.inputPath);
+    uint64_t result = 0;
+    if (!vm.execute(ir, result, error, args)) {
+      std::cerr << "VM error: " << error << "\n";
+      return 3;
+    }
+    return static_cast<int>(static_cast<int32_t>(result));
+  }
+
   if (!options.outputPath.empty()) {
     std::filesystem::path resolved = resolveOutputPath(options);
     options.outputPath = resolved.string();
@@ -331,6 +362,25 @@ int main(int argc, char **argv) {
     primec::NativeEmitter nativeEmitter;
     if (!nativeEmitter.emitExecutable(ir, options.outputPath, error)) {
       std::cerr << "Native emit error: " << error << "\n";
+      return 2;
+    }
+    return 0;
+  }
+
+  if (options.emitKind == "ir") {
+    primec::IrLowerer lowerer;
+    primec::IrModule ir;
+    if (!lowerer.lower(program, options.entryPath, ir, error)) {
+      std::cerr << "IR lowering error: " << error << "\n";
+      return 2;
+    }
+    std::vector<uint8_t> data;
+    if (!primec::serializeIr(ir, data, error)) {
+      std::cerr << "IR serialize error: " << error << "\n";
+      return 2;
+    }
+    if (!writeBinaryFile(options.outputPath, data)) {
+      std::cerr << "Failed to write output: " << options.outputPath << "\n";
       return 2;
     }
     return 0;
