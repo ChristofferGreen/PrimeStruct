@@ -1,4 +1,5 @@
 #include "primec/TextFilterPipeline.h"
+#include "primec/StringLiteral.h"
 
 #include <cctype>
 
@@ -10,6 +11,14 @@ bool isSeparator(char c) {
 }
 
 bool isTokenChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+}
+
+bool isStringSuffixStart(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+}
+
+bool isStringSuffixBody(char c) {
   return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
 }
 
@@ -228,6 +237,23 @@ size_t findLeftTokenStart(const std::string &text, size_t end) {
   if (end == 0) {
     return start;
   }
+  size_t suffixStart = end;
+  while (suffixStart > 0 && isStringSuffixBody(text[suffixStart - 1])) {
+    --suffixStart;
+  }
+  if (suffixStart < end && isStringSuffixStart(text[suffixStart])) {
+    if (suffixStart > 0 && (text[suffixStart - 1] == '"' || text[suffixStart - 1] == '\'')) {
+      size_t quoteEnd = suffixStart - 1;
+      size_t rawStart = (text[quoteEnd] == '"') ? findRawStringStart(text, quoteEnd) : std::string::npos;
+      if (rawStart != std::string::npos) {
+        return rawStart;
+      }
+      size_t quoteStart = findQuotedStart(text, quoteEnd);
+      if (quoteStart != std::string::npos) {
+        return quoteStart;
+      }
+    }
+  }
   char tail = text[end - 1];
   if (tail == ')' || tail == ']' || tail == '}') {
     char openChar = tail == ')' ? '(' : (tail == ']' ? '[' : '{');
@@ -284,11 +310,31 @@ size_t findRightTokenEnd(const std::string &text, size_t start) {
   }
   if (lead == 'R' && start + 2 < text.size() && text[start + 1] == '"' && text[start + 2] == '(') {
     size_t end = skipRawStringForward(text, start);
-    return end == std::string::npos ? start : end;
+    if (end == std::string::npos) {
+      return start;
+    }
+    if (end < text.size() && isStringSuffixStart(text[end])) {
+      size_t suffixEnd = end + 1;
+      while (suffixEnd < text.size() && isStringSuffixBody(text[suffixEnd])) {
+        ++suffixEnd;
+      }
+      end = suffixEnd;
+    }
+    return end;
   }
   if (lead == '"' || lead == '\'') {
     size_t end = skipQuotedForward(text, start);
-    return end == std::string::npos ? start : end;
+    if (end == std::string::npos) {
+      return start;
+    }
+    if (end < text.size() && isStringSuffixStart(text[end])) {
+      size_t suffixEnd = end + 1;
+      while (suffixEnd < text.size() && isStringSuffixBody(text[suffixEnd])) {
+        ++suffixEnd;
+      }
+      end = suffixEnd;
+    }
+    return end;
   }
   size_t pos = start;
   while (pos < text.size()) {
@@ -401,6 +447,21 @@ std::string maybeAppendI32(const std::string &token) {
   return token;
 }
 
+std::string maybeAppendUtf8(const std::string &token) {
+  if (token.empty()) {
+    return token;
+  }
+  std::string literalText;
+  std::string suffix;
+  if (!splitStringLiteralToken(token, literalText, suffix)) {
+    return token;
+  }
+  if (!suffix.empty()) {
+    return token;
+  }
+  return token + "utf8";
+}
+
 bool rewriteUnaryNot(const std::string &input,
                      std::string &output,
                      size_t &index,
@@ -432,6 +493,9 @@ bool rewriteUnaryNot(const std::string &input,
   std::string right = input.substr(rightStart, rightEnd - rightStart);
   if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
+  }
+  if (options.hasFilter("implicit-utf8")) {
+    right = maybeAppendUtf8(right);
   }
   output.append("not(");
   output.append(right);
@@ -535,6 +599,9 @@ bool rewriteUnaryMinus(const std::string &input,
   if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
   }
+  if (options.hasFilter("implicit-utf8")) {
+    right = maybeAppendUtf8(right);
+  }
   output.append("negate(");
   output.append(right);
   output.append(")");
@@ -552,6 +619,7 @@ bool TextFilterPipeline::apply(const std::string &input,
   error.clear();
   const bool enableCollections = options.hasFilter("collections");
   const bool enableOperators = options.hasFilter("operators");
+  const bool enableImplicitUtf8 = options.hasFilter("implicit-utf8");
 
   auto rewriteCollectionLiteral = [&](size_t &index) -> bool {
     if (!enableCollections) {
@@ -743,6 +811,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (options.hasFilter("implicit-i32")) {
       left = maybeAppendI32(left);
     }
+    if (options.hasFilter("implicit-utf8")) {
+      left = maybeAppendUtf8(left);
+    }
     size_t rightStart = index + 2;
     size_t rightEnd = findRightTokenEnd(input, rightStart);
     if (rightEnd == rightStart) {
@@ -753,6 +824,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     right = normalizeUnaryOperand(right);
     if (options.hasFilter("implicit-i32")) {
       right = maybeAppendI32(right);
+    }
+    if (options.hasFilter("implicit-utf8")) {
+      right = maybeAppendUtf8(right);
     }
     output.erase(start);
     output.append(name);
@@ -786,6 +860,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (options.hasFilter("implicit-i32")) {
       left = maybeAppendI32(left);
     }
+    if (options.hasFilter("implicit-utf8")) {
+      left = maybeAppendUtf8(left);
+    }
     size_t rightStart = index + 1;
     size_t rightEnd = findRightTokenEnd(input, rightStart);
     if (rightEnd == rightStart) {
@@ -796,6 +873,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     right = normalizeUnaryOperand(right);
     if (options.hasFilter("implicit-i32")) {
       right = maybeAppendI32(right);
+    }
+    if (options.hasFilter("implicit-utf8")) {
+      right = maybeAppendUtf8(right);
     }
     output.erase(start);
     output.append(name);
@@ -833,7 +913,21 @@ bool TextFilterPipeline::apply(const std::string &input,
       if (!foundTerminator) {
         end = input.size();
       }
+      size_t suffixStart = end;
+      size_t suffixEnd = suffixStart;
+      if (foundTerminator && suffixStart < input.size() && isStringSuffixStart(input[suffixStart])) {
+        ++suffixEnd;
+        while (suffixEnd < input.size() && isStringSuffixBody(input[suffixEnd])) {
+          ++suffixEnd;
+        }
+        output.append(input.substr(i, suffixEnd - i));
+        i = suffixEnd > 0 ? suffixEnd - 1 : i;
+        continue;
+      }
       output.append(input.substr(i, end - i));
+      if (foundTerminator && enableImplicitUtf8) {
+        output.append("utf8");
+      }
       i = end > 0 ? end - 1 : i;
       continue;
     }
@@ -841,6 +935,7 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (input[i] == '"' || input[i] == '\'') {
       char quote = input[i];
       size_t end = i + 1;
+      bool foundTerminator = false;
       while (end < input.size()) {
         if (input[end] == '\\' && end + 1 < input.size()) {
           end += 2;
@@ -848,11 +943,26 @@ bool TextFilterPipeline::apply(const std::string &input,
         }
         if (input[end] == quote) {
           ++end;
+          foundTerminator = true;
           break;
         }
         ++end;
       }
+      size_t suffixStart = end;
+      size_t suffixEnd = suffixStart;
+      if (foundTerminator && suffixStart < input.size() && isStringSuffixStart(input[suffixStart])) {
+        ++suffixEnd;
+        while (suffixEnd < input.size() && isStringSuffixBody(input[suffixEnd])) {
+          ++suffixEnd;
+        }
+        output.append(input.substr(i, suffixEnd - i));
+        i = suffixEnd > 0 ? suffixEnd - 1 : i;
+        continue;
+      }
       output.append(input.substr(i, end - i));
+      if (foundTerminator && enableImplicitUtf8) {
+        output.append("utf8");
+      }
       i = end > 0 ? end - 1 : i;
       continue;
     }

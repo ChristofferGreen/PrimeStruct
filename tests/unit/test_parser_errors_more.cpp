@@ -39,7 +39,7 @@ return() {
 TEST_CASE("reserved keyword cannot name parameter") {
   const std::string source = R"(
 [return<int>]
-main(mut) {
+main([i32] mut) {
   return(1i32)
 }
 )";
@@ -122,11 +122,26 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("string literal requires suffix") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("hello")
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("string literal requires utf8/ascii suffix") != std::string::npos);
+}
+
 TEST_CASE("named arguments rejected for print builtin") {
   const std::string source = R"(
 [return<void> effects(io_out)]
 main() {
-  print_line(message = "hello")
+  print_line(message = "hello"utf8)
 }
 )";
   primec::Lexer lexer(source);
@@ -387,7 +402,7 @@ execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
 TEST_CASE("positional argument after named fails in parser") {
   const std::string source = R"(
 [return<int>]
-foo(a, b) {
+foo([i32] a, [i32] b) {
   return(a)
 }
 
@@ -532,7 +547,7 @@ main {
 TEST_CASE("missing ')' after parameters fails") {
   const std::string source = R"(
 [return<int>]
-main(a {
+main([i32] a {
   return(1i32)
 }
 )";

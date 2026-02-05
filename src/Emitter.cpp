@@ -12,11 +12,7 @@ namespace primec {
 namespace {
 enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
 
-struct BindingInfo {
-  std::string typeName;
-  std::string typeTemplateArg;
-  bool isMutable = false;
-};
+using BindingInfo = Emitter::BindingInfo;
 
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
@@ -107,12 +103,16 @@ std::string bindingTypeToCpp(const std::string &typeName) {
     return "double";
   }
   if (typeName == "string") {
-    return "const char *";
+    return "std::string_view";
   }
   return "int";
 }
 
 std::string bindingTypeToCpp(const BindingInfo &info) {
+  if (info.typeName == "array") {
+    std::string elemType = bindingTypeToCpp(info.typeTemplateArg);
+    return "std::vector<" + elemType + ">";
+  }
   if (info.typeName == "Pointer") {
     std::string base = bindingTypeToCpp(info.typeTemplateArg);
     if (base.empty()) {
@@ -411,7 +411,7 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
   return name == "assign";
 }
 
-std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<std::string> &params) {
+std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<Expr> &params) {
   std::vector<const Expr *> ordered;
   ordered.reserve(expr.args.size());
   auto fallback = [&]() {
@@ -421,21 +421,22 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector
       ordered.push_back(&arg);
     }
   };
-  if (expr.argNames.empty() || expr.argNames.size() != expr.args.size() || params.size() != expr.args.size()) {
-    fallback();
-    return ordered;
-  }
   ordered.assign(params.size(), nullptr);
   size_t positionalIndex = 0;
   for (size_t i = 0; i < expr.args.size(); ++i) {
     if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
       const std::string &name = *expr.argNames[i];
-      auto it = std::find(params.begin(), params.end(), name);
-      if (it == params.end()) {
+      size_t index = params.size();
+      for (size_t p = 0; p < params.size(); ++p) {
+        if (params[p].name == name) {
+          index = p;
+          break;
+        }
+      }
+      if (index >= params.size()) {
         fallback();
         return ordered;
       }
-      size_t index = static_cast<size_t>(std::distance(params.begin(), it));
       ordered[index] = &expr.args[i];
       continue;
     }
@@ -448,6 +449,14 @@ std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector
     }
     ordered[positionalIndex] = &expr.args[i];
     ++positionalIndex;
+  }
+  for (size_t i = 0; i < ordered.size(); ++i) {
+    if (ordered[i] != nullptr) {
+      continue;
+    }
+    if (!params[i].args.empty()) {
+      ordered[i] = &params[i].args.front();
+    }
   }
   for (const auto *arg : ordered) {
     if (arg == nullptr) {
@@ -493,13 +502,13 @@ std::string Emitter::toCppName(const std::string &fullPath) const {
 
 std::string Emitter::emitExpr(const Expr &expr,
                               const std::unordered_map<std::string, std::string> &nameMap,
-                              const std::unordered_map<std::string, std::vector<std::string>> &paramMap,
-                              const std::unordered_map<std::string, std::string> &localTypes) const {
+                              const std::unordered_map<std::string, std::vector<Expr>> &paramMap,
+                              const std::unordered_map<std::string, BindingInfo> &localTypes) const {
   std::function<bool(const Expr &)> isPointerExpr;
   isPointerExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
       auto it = localTypes.find(candidate.name);
-      return it != localTypes.end() && it->second == "Pointer";
+      return it != localTypes.end() && it->second.typeName == "Pointer";
     }
     if (candidate.kind != Expr::Kind::Call) {
       return false;
@@ -543,8 +552,26 @@ std::string Emitter::emitExpr(const Expr &expr,
     return expr.name;
   }
   std::string full = resolveExprPath(expr);
-  auto it = nameMap.find(full);
+  auto it = expr.isMethodCall ? nameMap.end() : nameMap.find(full);
   if (it == nameMap.end()) {
+    if ((expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) ||
+        (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1)) {
+      std::ostringstream out;
+      out << "ps_array_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes) << ")";
+      return out.str();
+    }
+    if (expr.name == "at" && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "ps_array_at(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ")";
+      return out.str();
+    }
+    if (expr.name == "at_unsafe" && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "ps_array_at_unsafe(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, localTypes) << ")";
+      return out.str();
+    }
     char op = '\0';
     if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
       std::ostringstream out;
@@ -662,7 +689,7 @@ std::string Emitter::emitExpr(const Expr &expr,
 
 std::string Emitter::emitCpp(const Program &program, const std::string &entryPath) const {
   std::unordered_map<std::string, std::string> nameMap;
-  std::unordered_map<std::string, std::vector<std::string>> paramMap;
+  std::unordered_map<std::string, std::vector<Expr>> paramMap;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
   for (const auto &def : program.definitions) {
@@ -672,9 +699,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     returnKinds[def.fullPath] = getReturnKind(def);
   }
 
-  auto isParam = [](const std::vector<std::string> &params, const std::string &name) -> bool {
+  auto isParam = [](const std::vector<Expr> &params, const std::string &name) -> bool {
     for (const auto &param : params) {
-      if (param == name) {
+      if (param.name == name) {
         return true;
       }
     }
@@ -684,12 +711,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_set<std::string> inferenceStack;
   std::function<ReturnKind(const Definition &)> inferDefinitionReturnKind;
   std::function<ReturnKind(const Expr &,
-                           const std::vector<std::string> &,
+                           const std::vector<Expr> &,
                            const std::unordered_map<std::string, ReturnKind> &)>
       inferExprReturnKind;
 
   inferExprReturnKind = [&](const Expr &expr,
-                            const std::vector<std::string> &params,
+                            const std::vector<Expr> &params,
                             const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
     auto combineNumeric = [&](ReturnKind left, ReturnKind right) -> ReturnKind {
       if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
@@ -877,8 +904,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "// Generated by primec (minimal)\n";
   out << "#include <cstdint>\n";
   out << "#include <cstdio>\n";
+  out << "#include <cstdlib>\n";
   out << "#include <cstring>\n";
   out << "#include <string>\n";
+  out << "#include <string_view>\n";
   out << "#include <type_traits>\n";
   out << "#include <unordered_map>\n";
   out << "#include <vector>\n";
@@ -909,6 +938,23 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "  }\n";
   out << "  return v;\n";
   out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline int ps_array_count(const std::vector<T> &value) {\n";
+  out << "  return static_cast<int>(value.size());\n";
+  out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline const T &ps_array_at(const std::vector<T> &value, Index index) {\n";
+  out << "  int64_t i = static_cast<int64_t>(index);\n";
+  out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
+  out << "    std::fprintf(stderr, \"array index out of bounds\\n\");\n";
+  out << "    std::abort();\n";
+  out << "  }\n";
+  out << "  return value[static_cast<size_t>(i)];\n";
+  out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline const T &ps_array_at_unsafe(const std::vector<T> &value, Index index) {\n";
+  out << "  return value[static_cast<size_t>(index)];\n";
+  out << "}\n";
   out << "static inline void ps_write(FILE *stream, const char *data, size_t len, bool newline) {\n";
   out << "  if (len > 0) {\n";
   out << "    std::fwrite(data, 1, len, stream);\n";
@@ -925,6 +971,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "    return;\n";
   out << "  }\n";
   out << "  ps_write(stream, text, std::strlen(text), newline);\n";
+  out << "}\n";
+  out << "static inline void ps_print_value(FILE *stream, std::string_view text, bool newline) {\n";
+  out << "  ps_write(stream, text.data(), text.size(), newline);\n";
   out << "}\n";
   out << "template <typename T>\n";
   out << "static inline void ps_print_value(FILE *stream, T value, bool newline) {\n";
@@ -952,11 +1001,17 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (i > 0) {
         out << ", ";
       }
-      out << "int " << def.parameters[i];
+      BindingInfo paramInfo = getBindingInfo(def.parameters[i]);
+      std::string paramType = bindingTypeToCpp(paramInfo);
+      bool needsConst = !paramInfo.isMutable;
+      if (needsConst && paramType.rfind("const ", 0) == 0) {
+        needsConst = false;
+      }
+      out << (needsConst ? "const " : "") << paramType << " " << def.parameters[i].name;
     }
     out << ") {\n";
-    std::function<void(const Expr &, int, std::unordered_map<std::string, std::string> &)> emitStatement;
-    emitStatement = [&](const Expr &stmt, int indent, std::unordered_map<std::string, std::string> &localTypes) {
+    std::function<void(const Expr &, int, std::unordered_map<std::string, BindingInfo> &)> emitStatement;
+    emitStatement = [&](const Expr &stmt, int indent, std::unordered_map<std::string, BindingInfo> &localTypes) {
       std::string pad(static_cast<size_t>(indent) * 2, ' ');
       if (isReturnCall(stmt)) {
         out << pad << "return";
@@ -983,7 +1038,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         BindingInfo binding = getBindingInfo(stmt);
         std::string type = bindingTypeToCpp(binding);
         bool isReference = binding.typeName == "Reference";
-        localTypes[stmt.name] = binding.typeName;
+        localTypes[stmt.name] = binding;
         bool needsConst = !binding.isMutable;
         if (needsConst && type.rfind("const ", 0) == 0) {
           needsConst = false;
@@ -1061,7 +1116,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       out << pad << emitExpr(stmt, nameMap, paramMap, localTypes) << ";\n";
     };
-    std::unordered_map<std::string, std::string> localTypes;
+    std::unordered_map<std::string, BindingInfo> localTypes;
+    for (const auto &param : def.parameters) {
+      localTypes[param.name] = getBindingInfo(param);
+    }
     for (const auto &stmt : def.statements) {
       emitStatement(stmt, 1, localTypes);
     }
@@ -1071,20 +1129,47 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     out << "}\n";
   }
   ReturnKind entryReturn = ReturnKind::Int;
+  const Definition *entryDef = nullptr;
   for (const auto &def : program.definitions) {
     if (def.fullPath == entryPath) {
       entryReturn = returnKinds[def.fullPath];
+      entryDef = &def;
       break;
     }
   }
-  if (entryReturn == ReturnKind::Void) {
-    out << "int main() { " << nameMap.at(entryPath) << "(); return 0; }\n";
-  } else if (entryReturn == ReturnKind::Int) {
-    out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";
-  } else if (entryReturn == ReturnKind::Int64 || entryReturn == ReturnKind::UInt64) {
-    out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
+  bool entryHasArgs = false;
+  if (entryDef && entryDef->parameters.size() == 1) {
+    BindingInfo paramInfo = getBindingInfo(entryDef->parameters.front());
+    if (paramInfo.typeName == "array" && paramInfo.typeTemplateArg == "string") {
+      entryHasArgs = true;
+    }
+  }
+  if (entryHasArgs) {
+    out << "int main(int argc, char **argv) {\n";
+    out << "  std::vector<std::string_view> ps_args;\n";
+    out << "  ps_args.reserve(static_cast<size_t>(argc));\n";
+    out << "  for (int i = 0; i < argc; ++i) {\n";
+    out << "    ps_args.emplace_back(argv[i]);\n";
+    out << "  }\n";
+    if (entryReturn == ReturnKind::Void) {
+      out << "  " << nameMap.at(entryPath) << "(ps_args);\n";
+      out << "  return 0;\n";
+    } else if (entryReturn == ReturnKind::Int) {
+      out << "  return " << nameMap.at(entryPath) << "(ps_args);\n";
+    } else {
+      out << "  return static_cast<int>(" << nameMap.at(entryPath) << "(ps_args));\n";
+    }
+    out << "}\n";
   } else {
-    out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
+    if (entryReturn == ReturnKind::Void) {
+      out << "int main() { " << nameMap.at(entryPath) << "(); return 0; }\n";
+    } else if (entryReturn == ReturnKind::Int) {
+      out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";
+    } else if (entryReturn == ReturnKind::Int64 || entryReturn == ReturnKind::UInt64) {
+      out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
+    } else {
+      out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
+    }
   }
   return out.str();
 }

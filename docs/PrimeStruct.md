@@ -9,7 +9,7 @@ PrimeStruct is built around a simple philosophy: program meaning emerges from tw
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully typed.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
-Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline is configured with `--text-filters=<list>`; the default list enables `operators` and `collections`, and adding `implicit-i32` will auto-append `i32` suffixes.
+Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline is configured with `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals), and adding `implicit-i32` will auto-append `i32` suffixes.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
@@ -107,18 +107,19 @@ module {
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`), and the current VM/native subset expects that definition to take no parameters. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The current VM/native subset still expects the entry definition to take no parameters, while the C++ emitter accepts a single `[array<string>]` entry parameter for command-line arguments. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body expressions so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
 
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
-- **String literals:** UTF-8 by default; suffix `utf8` is explicit UTF-8, `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example: `"hello"utf8`, `"moo"ascii`.
+- **String literals:** canonical form requires an explicit suffix (`utf8` or `ascii`); the `implicit-utf8` text filter (enabled by default) appends `utf8` when omitted in surface syntax. `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example: `"hello"utf8`, `"moo"ascii` (surface `"hello"` becomes `"hello"utf8`).
 - **Uniform envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
   - `(...)` lists runtime parameters and captures.
+  - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit(10i32))`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure expressions (no name references).
   - `{...}` holds either a definition body or, in the execution case, an argument list for higher-order constructs.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`), optionally followed by a brace list of body arguments for higher-order scheduling (`execute_task(...) { work(), work() }`). Execution bodies may only contain calls (no bindings, no `return`), and they are treated as scheduling payloads rather than executable function bodies. The compiler decides whether to emit callable artifacts or schedule work based on that presence.
   - Executions accept the same argument syntax as calls, including named arguments (with the same ordering rules).
@@ -128,7 +129,7 @@ module {
   - Execution bodies are parsed as brace-delimited argument lists (e.g., `execute_repeat(2i32) { main(), main() }`).
 - **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical.
 - **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_out)]`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies a default effect set for definitions/executions that omit `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
-- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private.
+- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. Include paths are parsed before text filters, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private.
 - **Transform-driven control flow:** control structures desugar into prefix calls (`if(cond, then{…}, else{…})`). A surface form like `if(cond) { … } else { … }` is accepted and rewritten into the canonical call form. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure(42)`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
@@ -137,7 +138,7 @@ module {
 namespace demo {
   [return<void> effects(io_out)]
   hello_values() {
-    [string] message("Hello PrimeStruct")
+    [string] message("Hello PrimeStruct"utf8)
     [i32] iterations(3i32)
     [float mut] exposure(1.25f)
     [float3] tone_curve(0.8f, 0.9f, 1.1f)
@@ -164,6 +165,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Placement tags (`[stack]`, `[heap]`, `[buffer]`):** placement transforms consume the manifest and enforce where the shape may live. `[stack]` means “legal to instantiate on the stack”; attempting to allocate it on the heap triggers a compile-time error. Future tags like `[heap allocator=arena::frame]` or `[buffer std=std140]` follow the same pattern.
 - **POD tag as validation:** `[pod]` asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
 - **Member syntax:** every field is just a stack-value execution (`[float mut] exposure(1.0f)`, `[handle<PathNode>] target(get_default())`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
+- **Method calls & indexing:** `value.method(args...)` desugars to `/type/method(value, args...)` in the method namespace (no hidden object model). For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
 - **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
 - **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations again produce diagnostics instead of silent adjustments.
 - **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name(args)` so stack frames remain declarative (e.g., `[float mut] exposure(1.0f)`). Default expressions are mandatory for `[stack]` layouts to keep frames fully initialized.
@@ -181,7 +183,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
       [effects(io_out)]
       Destroy() {
-        print_line("color grade destroyed")
+        print_line("color grade destroyed"utf8)
       }
     }
   }
@@ -206,6 +208,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ### Core library surface (draft)
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The expression evaluates to `value`, so it can be nested or returned.
+- **`count(value)` / `value.count()` / `at(value, index)` / `at_unsafe(value, index)`:** collection helpers. `value.count()` is canonical; `count(value)` forwards to the method when available. `at` performs bounds checking; `at_unsafe` does not.
 - **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require `io_err`. VM/native backends support numeric/bool values plus string literals/bindings; other string operations still require the C++ emitter.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see Pointer arithmetic below).
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean combinators accept `bool` or integer inputs and treat zero as `false` and any non-zero value as `true`. The current IR/native subset accepts only integer/bool operands for comparisons and boolean ops (float/string comparisons are not yet supported outside the C++ emitter).
@@ -267,7 +270,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
 - v0 requires explicit width suffixes for integers (`42i32`, `42i64`, `42u64`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `implicit-i32` is included in `--text-filters`.
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
-- **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`).
+- **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`); canonical literals require `utf8`/`ascii` suffixes, and `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the uniform envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
 - **Named arguments:** named arguments may be reordered (including on executions), but cannot repeat a parameter name or follow a positional argument. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept named arguments.
@@ -278,7 +281,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - Requires the `collections` text filter (enabled by default in `--text-filters`).
   - `key = value` pairs only trigger on single `=` tokens; `==`, `<=`, `>=`, and `!=` remain comparison operators.
   - `key = value` pairs only trigger at the top level of the map literal; nested `=` tokens inside values (for example `assign(...)`) are preserved.
-  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"=1i32}`), and nested expressions inside braces are rewritten as usual.
+  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested expressions inside braces are rewritten as usual.
   - Collections can appear anywhere expressions are allowed, including execution arguments.
   - Collection literals currently compile through the C++ emitter only; IR/VM/native lowering is pending.
   - String-keyed map literals compile through the C++ emitter using `const char *` keys.
@@ -372,7 +375,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 // Hello world (native/VM-friendly)
 [return<int> effects(io_out)]
 main() {
-  print_line("Hello, world!")
+  print_line("Hello, world!"utf8)
   return(0i32)
 }
 
@@ -386,7 +389,7 @@ include<"/std/io", version="1.2.0">
 clamp_exposure(img) {
   if<bool>(
     greater_than(img.exposure, 1.0f),
-    then{ notify("/warn/exposure", img.exposure); },
+    then{ notify("/warn/exposure"utf8, img.exposure); },
     else{ }
   );
 }

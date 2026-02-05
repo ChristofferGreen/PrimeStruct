@@ -1,4 +1,5 @@
 #include "primec/Parser.h"
+#include "primec/StringLiteral.h"
 
 #include <cctype>
 #include <cstdint>
@@ -263,8 +264,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     // Definitions without return transforms are allowed as long as they are unambiguous.
   }
   if (isDefinition) {
-    std::vector<std::string> parameters;
-    if (!parseIdentifierList(parameters)) {
+    std::vector<Expr> parameters;
+    if (!parseParameterList(parameters, currentNamespacePrefix())) {
       return false;
     }
     if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
@@ -455,32 +456,64 @@ bool Parser::parseTypeName(std::string &out) {
   return true;
 }
 
-bool Parser::parseIdentifierList(std::vector<std::string> &out) {
+bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix) {
+  if (!match(TokenKind::LBracket)) {
+    return fail("expected '[' to start parameter");
+  }
+  std::vector<Transform> transforms;
+  if (!parseTransformList(transforms)) {
+    return false;
+  }
+  Token name = consume(TokenKind::Identifier, "expected parameter identifier");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    return fail(nameError);
+  }
+  if (match(TokenKind::LAngle)) {
+    return fail("parameter identifiers do not accept template arguments");
+  }
+  Expr param;
+  param.kind = Expr::Kind::Call;
+  param.name = name.text;
+  param.namespacePrefix = namespacePrefix;
+  param.transforms = std::move(transforms);
+  param.isBinding = true;
+  if (match(TokenKind::LParen)) {
+    expect(TokenKind::LParen, "expected '(' after parameter identifier");
+    if (!parseCallArgumentList(param.args, param.argNames, namespacePrefix)) {
+      return false;
+    }
+    for (const auto &argName : param.argNames) {
+      if (argName.has_value()) {
+        return fail("parameter defaults do not accept named arguments");
+      }
+    }
+    if (!expect(TokenKind::RParen, "expected ')' after parameter default")) {
+      return false;
+    }
+  }
+  out = std::move(param);
+  return true;
+}
+
+bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &namespacePrefix) {
   if (match(TokenKind::RParen)) {
     return true;
   }
-  Token first = consume(TokenKind::Identifier, "expected parameter identifier");
-  if (first.kind == TokenKind::End) {
-    return false;
-  }
-  std::string firstError;
-  if (!validateIdentifierText(first.text, firstError)) {
-    return fail(firstError);
-  }
-  out.push_back(first.text);
-  if (!match(TokenKind::RParen)) {
-    while (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
-      Token next = consume(TokenKind::Identifier, "expected parameter identifier");
-      if (next.kind == TokenKind::End) {
-        return false;
-      }
-      std::string nextError;
-      if (!validateIdentifierText(next.text, nextError)) {
-        return fail(nextError);
-      }
-      out.push_back(next.text);
+  while (true) {
+    Expr param;
+    if (!parseParameterBinding(param, namespacePrefix)) {
+      return false;
     }
+    out.push_back(std::move(param));
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+      continue;
+    }
+    break;
   }
   return true;
 }
@@ -768,6 +801,7 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   size_t index = pos_;
   int depth = 1;
   bool identifiersOnly = true;
+  bool sawBindingSyntax = false;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
     if (kind == TokenKind::LParen) {
@@ -778,7 +812,10 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
         break;
       }
     } else if (depth == 1) {
-      if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+      if (kind == TokenKind::LBracket) {
+        sawBindingSyntax = true;
+        identifiersOnly = false;
+      } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
         identifiersOnly = false;
       }
     }
@@ -790,7 +827,7 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   if (depth != 0) {
     return false;
   }
-  if (!identifiersOnly) {
+  if (!identifiersOnly && !sawBindingSyntax) {
     return false;
   }
   if (index + 1 >= tokens_.size()) {
@@ -803,6 +840,7 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   size_t index = pos_;
   int depth = 1;
   bool identifiersOnly = true;
+  bool sawBindingSyntax = false;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
     if (kind == TokenKind::LParen) {
@@ -813,7 +851,10 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
         break;
       }
     } else if (depth == 1) {
-      if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+      if (kind == TokenKind::LBracket) {
+        sawBindingSyntax = true;
+        identifiersOnly = false;
+      } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
         identifiersOnly = false;
       }
     }
@@ -822,7 +863,7 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   if (paramsAreIdentifiers) {
     *paramsAreIdentifiers = identifiersOnly;
   }
-  if (depth != 0 || !identifiersOnly) {
+  if (depth != 0 || (!identifiersOnly && !sawBindingSyntax)) {
     return false;
   }
   if (index + 1 >= tokens_.size()) {
@@ -980,202 +1021,269 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
 }
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
-  if (match(TokenKind::LBracket)) {
-    std::vector<Transform> transforms;
-    if (!parseTransformList(transforms)) {
-      return false;
-    }
-    Token name = consume(TokenKind::Identifier, "expected identifier");
-    if (name.kind == TokenKind::End) {
-      return false;
-    }
-    std::string nameError;
-    if (!validateIdentifierText(name.text, nameError)) {
-      return fail(nameError);
-    }
-    std::vector<std::string> templateArgs;
-    if (match(TokenKind::LAngle)) {
-      if (!parseTemplateList(templateArgs)) {
+  auto parsePrimary = [&](Expr &out) -> bool {
+    if (match(TokenKind::LBracket)) {
+      std::vector<Transform> transforms;
+      if (!parseTransformList(transforms)) {
         return false;
       }
-    }
-    if (!match(TokenKind::LParen)) {
-      return fail("binding requires argument list");
-    }
-    expect(TokenKind::LParen, "expected '(' after identifier");
-    Expr call;
-    call.kind = Expr::Kind::Call;
-    call.name = name.text;
-    call.namespacePrefix = namespacePrefix;
-    call.templateArgs = std::move(templateArgs);
-    call.transforms = std::move(transforms);
-    call.isBinding = true;
-    if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
-      return false;
-    }
-    if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
-      return false;
-    }
-    if (!expect(TokenKind::RParen, "expected ')' to close call")) {
-      return false;
-    }
-    expr = std::move(call);
-    return true;
-  }
-  if (match(TokenKind::Number)) {
-    Token number = consume(TokenKind::Number, "expected number");
-    if (number.kind == TokenKind::End) {
-      return false;
-    }
-    expr.namespacePrefix = namespacePrefix;
-    std::string text = number.text;
-    int intWidth = 0;
-    bool isUnsigned = false;
-    size_t suffixLen = 0;
-    if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i32") == 0) {
-      intWidth = 32;
-      isUnsigned = false;
-      suffixLen = 3;
-    } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i64") == 0) {
-      intWidth = 64;
-      isUnsigned = false;
-      suffixLen = 3;
-    } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "u64") == 0) {
-      intWidth = 64;
-      isUnsigned = true;
-      suffixLen = 3;
-    }
-    if (suffixLen == 0) {
-      int floatWidth = 32;
-      bool isFloat = false;
-      if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f64") == 0) {
-        floatWidth = 64;
-        isFloat = true;
-        text = text.substr(0, text.size() - 3);
-      } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f32") == 0) {
-        floatWidth = 32;
-        isFloat = true;
-        text = text.substr(0, text.size() - 3);
-      } else if (!text.empty() && text.back() == 'f') {
-        floatWidth = 32;
-        isFloat = true;
-        text.pop_back();
-      } else if (text.find('.') != std::string::npos || text.find('e') != std::string::npos ||
-                 text.find('E') != std::string::npos) {
-        floatWidth = 32;
-        isFloat = true;
+      Token name = consume(TokenKind::Identifier, "expected identifier");
+      if (name.kind == TokenKind::End) {
+        return false;
       }
-      if (!isFloat) {
-        return fail("integer literal requires i32/i64/u64 suffix");
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
       }
-      if (!isValidFloatLiteral(text)) {
-        return fail("invalid float literal");
+      std::vector<std::string> templateArgs;
+      if (match(TokenKind::LAngle)) {
+        if (!parseTemplateList(templateArgs)) {
+          return false;
+        }
       }
-      expr.kind = Expr::Kind::FloatLiteral;
-      expr.floatValue = text;
-      expr.floatWidth = floatWidth;
+      if (!match(TokenKind::LParen)) {
+        return fail("binding requires argument list");
+      }
+      expect(TokenKind::LParen, "expected '(' after identifier");
+      Expr call;
+      call.kind = Expr::Kind::Call;
+      call.name = name.text;
+      call.namespacePrefix = namespacePrefix;
+      call.templateArgs = std::move(templateArgs);
+      call.transforms = std::move(transforms);
+      call.isBinding = true;
+      if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+        return false;
+      }
+      if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
+        return false;
+      }
+      if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+        return false;
+      }
+      out = std::move(call);
       return true;
     }
-    expr.kind = Expr::Kind::Literal;
-    text = text.substr(0, text.size() - suffixLen);
-    if (text.empty()) {
-      return fail("invalid integer literal");
-    }
-    bool negative = false;
-    size_t start = 0;
-    if (text[0] == '-') {
-      if (isUnsigned) {
+    if (match(TokenKind::Number)) {
+      Token number = consume(TokenKind::Number, "expected number");
+      if (number.kind == TokenKind::End) {
+        return false;
+      }
+      out.namespacePrefix = namespacePrefix;
+      std::string text = number.text;
+      int intWidth = 0;
+      bool isUnsigned = false;
+      size_t suffixLen = 0;
+      if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i32") == 0) {
+        intWidth = 32;
+        isUnsigned = false;
+        suffixLen = 3;
+      } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "i64") == 0) {
+        intWidth = 64;
+        isUnsigned = false;
+        suffixLen = 3;
+      } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "u64") == 0) {
+        intWidth = 64;
+        isUnsigned = true;
+        suffixLen = 3;
+      }
+      if (suffixLen == 0) {
+        int floatWidth = 32;
+        bool isFloat = false;
+        if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f64") == 0) {
+          floatWidth = 64;
+          isFloat = true;
+          text = text.substr(0, text.size() - 3);
+        } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f32") == 0) {
+          floatWidth = 32;
+          isFloat = true;
+          text = text.substr(0, text.size() - 3);
+        } else if (!text.empty() && text.back() == 'f') {
+          floatWidth = 32;
+          isFloat = true;
+          text.pop_back();
+        } else if (text.find('.') != std::string::npos || text.find('e') != std::string::npos ||
+                   text.find('E') != std::string::npos) {
+          floatWidth = 32;
+          isFloat = true;
+        }
+        if (!isFloat) {
+          return fail("integer literal requires i32/i64/u64 suffix");
+        }
+        if (!isValidFloatLiteral(text)) {
+          return fail("invalid float literal");
+        }
+        out.kind = Expr::Kind::FloatLiteral;
+        out.floatValue = text;
+        out.floatWidth = floatWidth;
+        return true;
+      }
+      out.kind = Expr::Kind::Literal;
+      text = text.substr(0, text.size() - suffixLen);
+      if (text.empty()) {
         return fail("invalid integer literal");
       }
-      negative = true;
-      start = 1;
-      if (start >= text.size()) {
-        return fail("invalid integer literal");
-      }
-    }
-    int base = 10;
-    std::string digits = text.substr(start);
-    if (digits.size() >= 2 && digits[0] == '0' && (digits[1] == 'x' || digits[1] == 'X')) {
-      base = 16;
-      digits = digits.substr(2);
-      if (digits.empty()) {
-        return fail("invalid integer literal");
-      }
-      for (char c : digits) {
-        if (!isHexDigitChar(c)) {
+      bool negative = false;
+      size_t start = 0;
+      if (text[0] == '-') {
+        if (isUnsigned) {
+          return fail("invalid integer literal");
+        }
+        negative = true;
+        start = 1;
+        if (start >= text.size()) {
           return fail("invalid integer literal");
         }
       }
-    } else {
-      for (char c : digits) {
-        if (!std::isdigit(static_cast<unsigned char>(c))) {
+      int base = 10;
+      std::string digits = text.substr(start);
+      if (digits.size() >= 2 && digits[0] == '0' && (digits[1] == 'x' || digits[1] == 'X')) {
+        base = 16;
+        digits = digits.substr(2);
+        if (digits.empty()) {
           return fail("invalid integer literal");
         }
-      }
-    }
-    expr.intWidth = intWidth;
-    expr.isUnsigned = isUnsigned;
-    try {
-      if (isUnsigned) {
-        unsigned long long value = std::stoull(digits, nullptr, base);
-        expr.literalValue = static_cast<uint64_t>(value);
-      } else {
-        long long value = std::stoll(digits, nullptr, base);
-        if (negative) {
-          value = -value;
-        }
-        if (intWidth == 32) {
-          if (value < std::numeric_limits<int32_t>::min() || value > std::numeric_limits<int32_t>::max()) {
-            return fail("integer literal out of range");
+        for (char c : digits) {
+          if (!isHexDigitChar(c)) {
+            return fail("invalid integer literal");
           }
         }
-        expr.literalValue = static_cast<uint64_t>(value);
+      } else {
+        for (char c : digits) {
+          if (!std::isdigit(static_cast<unsigned char>(c))) {
+            return fail("invalid integer literal");
+          }
+        }
       }
-    } catch (const std::exception &) {
-      return fail("invalid integer literal");
-    }
-    return true;
-  }
-  if (match(TokenKind::String)) {
-    Token text = consume(TokenKind::String, "expected string literal");
-    if (text.kind == TokenKind::End) {
-      return false;
-    }
-    expr.kind = Expr::Kind::StringLiteral;
-    expr.namespacePrefix = namespacePrefix;
-    expr.stringValue = text.text;
-    return true;
-  }
-  if (match(TokenKind::Identifier)) {
-    Token name = consume(TokenKind::Identifier, "expected identifier");
-    if (name.kind == TokenKind::End) {
-      return false;
-    }
-    if (name.text == "true" || name.text == "false") {
-      expr.kind = Expr::Kind::BoolLiteral;
-      expr.namespacePrefix = namespacePrefix;
-      expr.boolValue = name.text == "true";
+      out.intWidth = intWidth;
+      out.isUnsigned = isUnsigned;
+      try {
+        if (isUnsigned) {
+          unsigned long long value = std::stoull(digits, nullptr, base);
+          out.literalValue = static_cast<uint64_t>(value);
+        } else {
+          long long value = std::stoll(digits, nullptr, base);
+          if (negative) {
+            value = -value;
+          }
+          if (intWidth == 32) {
+            if (value < std::numeric_limits<int32_t>::min() || value > std::numeric_limits<int32_t>::max()) {
+              return fail("integer literal out of range");
+            }
+          }
+          out.literalValue = static_cast<uint64_t>(value);
+        }
+      } catch (const std::exception &) {
+        return fail("invalid integer literal");
+      }
       return true;
     }
-    std::string nameError;
-    if (!validateIdentifierText(name.text, nameError)) {
-      return fail(nameError);
-    }
-    std::vector<std::string> templateArgs;
-    if (match(TokenKind::LAngle)) {
-      if (!parseTemplateList(templateArgs)) {
+    if (match(TokenKind::String)) {
+      Token text = consume(TokenKind::String, "expected string literal");
+      if (text.kind == TokenKind::End) {
         return false;
       }
+      std::string literalText;
+      std::string suffix;
+      if (!splitStringLiteralToken(text.text, literalText, suffix)) {
+        return fail("invalid string literal");
+      }
+      if (suffix.empty()) {
+        return fail("string literal requires utf8/ascii suffix");
+      }
+      out.kind = Expr::Kind::StringLiteral;
+      out.namespacePrefix = namespacePrefix;
+      out.stringValue = text.text;
+      return true;
     }
-    Expr call;
-    call.kind = Expr::Kind::Call;
-    call.name = name.text;
-    call.namespacePrefix = namespacePrefix;
-    call.templateArgs = std::move(templateArgs);
-    bool hasCallSyntax = false;
-    if (match(TokenKind::LParen)) {
-      expect(TokenKind::LParen, "expected '(' after identifier");
-      hasCallSyntax = true;
+    if (match(TokenKind::Identifier)) {
+      Token name = consume(TokenKind::Identifier, "expected identifier");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      if (name.text == "true" || name.text == "false") {
+        out.kind = Expr::Kind::BoolLiteral;
+        out.namespacePrefix = namespacePrefix;
+        out.boolValue = name.text == "true";
+        return true;
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
+      }
+      std::vector<std::string> templateArgs;
+      if (match(TokenKind::LAngle)) {
+        if (!parseTemplateList(templateArgs)) {
+          return false;
+        }
+      }
+      Expr call;
+      call.kind = Expr::Kind::Call;
+      call.name = name.text;
+      call.namespacePrefix = namespacePrefix;
+      call.templateArgs = std::move(templateArgs);
+      bool hasCallSyntax = false;
+      if (match(TokenKind::LParen)) {
+        expect(TokenKind::LParen, "expected '(' after identifier");
+        hasCallSyntax = true;
+        if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+          return false;
+        }
+        if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
+          return false;
+        }
+        if (!validateNamedArgumentOrdering(call.argNames)) {
+          return false;
+        }
+        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+          return false;
+        }
+      }
+      if (match(TokenKind::LBrace)) {
+        hasCallSyntax = true;
+        if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+          return false;
+        }
+      }
+      if (hasCallSyntax) {
+        out = std::move(call);
+        return true;
+      }
+      if (!call.templateArgs.empty()) {
+        return fail("template arguments require a call");
+      }
+      out.kind = Expr::Kind::Name;
+      out.name = name.text;
+      out.namespacePrefix = namespacePrefix;
+      return true;
+    }
+    return fail("unexpected token in expression");
+  };
+
+  Expr current;
+  if (!parsePrimary(current)) {
+    return false;
+  }
+
+  while (true) {
+    if (match(TokenKind::Dot)) {
+      expect(TokenKind::Dot, "expected '.'");
+      Token member = consume(TokenKind::Identifier, "expected member identifier");
+      if (member.kind == TokenKind::End) {
+        return false;
+      }
+      std::string nameError;
+      if (!validateIdentifierText(member.text, nameError)) {
+        return fail(nameError);
+      }
+      if (!expect(TokenKind::LParen, "expected '(' after member name")) {
+        return false;
+      }
+      Expr call;
+      call.kind = Expr::Kind::Call;
+      call.name = member.text;
+      call.namespacePrefix = namespacePrefix;
+      call.isMethodCall = true;
       if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
         return false;
       }
@@ -1188,26 +1296,40 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!expect(TokenKind::RParen, "expected ')' to close call")) {
         return false;
       }
+      call.args.insert(call.args.begin(), current);
+      call.argNames.insert(call.argNames.begin(), std::nullopt);
+      if (match(TokenKind::LBrace)) {
+        if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+          return false;
+        }
+      }
+      current = std::move(call);
+      continue;
     }
-    if (match(TokenKind::LBrace)) {
-      hasCallSyntax = true;
-      if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+    if (match(TokenKind::LBracket)) {
+      expect(TokenKind::LBracket, "expected '[' after expression");
+      Expr indexExpr;
+      if (!parseExpr(indexExpr, namespacePrefix)) {
         return false;
       }
+      if (!expect(TokenKind::RBracket, "expected ']' after index expression")) {
+        return false;
+      }
+      Expr call;
+      call.kind = Expr::Kind::Call;
+      call.name = "at";
+      call.namespacePrefix = namespacePrefix;
+      call.args.push_back(current);
+      call.args.push_back(std::move(indexExpr));
+      call.argNames.resize(call.args.size());
+      current = std::move(call);
+      continue;
     }
-    if (hasCallSyntax) {
-      expr = std::move(call);
-      return true;
-    }
-    if (!call.templateArgs.empty()) {
-      return fail("template arguments require a call");
-    }
-    expr.kind = Expr::Kind::Name;
-    expr.name = name.text;
-    expr.namespacePrefix = namespacePrefix;
-    return true;
+    break;
   }
-  return fail("unexpected token in expression");
+
+  expr = std::move(current);
+  return true;
 }
 
 std::string Parser::currentNamespacePrefix() const {

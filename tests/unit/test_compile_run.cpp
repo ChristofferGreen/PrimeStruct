@@ -125,6 +125,22 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs argv count") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_args.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath + " alpha beta") == 3);
+}
+
 TEST_CASE("compiles and runs array literal") {
   const std::string source = R"(
 [return<int>]
@@ -135,6 +151,22 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_array_literal.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs array index sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(values[1i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_array_index.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_index_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -279,8 +311,8 @@ TEST_CASE("compiles and runs native print output") {
 [return<int>]
 main() {
   print(42i32)
-  print_line("hello")
-  print_error("oops")
+  print_line("hello"utf8)
+  print_error("oops"utf8)
   print_line_error(7i32)
   return(0i32)
 }
@@ -323,7 +355,7 @@ TEST_CASE("compiles and runs native string binding copy") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] greeting("hey")
+  [string] greeting("hey"utf8)
   [string] copy(greeting)
   print_line(copy)
   return(0i32)
@@ -1170,7 +1202,7 @@ TEST_CASE("compiles and runs string-keyed map literals in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<string, i32>{"a"=1i32, "b"=2i32}
+  map<string, i32>{"a"utf8=1i32, "b"utf8=2i32}
   return(1i32)
 }
 )";
@@ -1190,7 +1222,7 @@ main() {
   return(1i32)
 }
 
-execute_task(items, pairs) {
+execute_task([i32] items, [i32] pairs) {
   return(1i32)
 }
 
@@ -1211,7 +1243,7 @@ main() {
   return(1i32)
 }
 
-execute_repeat(count) {
+execute_repeat([i32] count) {
   return(1i32)
 }
 
@@ -1797,7 +1829,7 @@ TEST_CASE("compiles and runs string binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message("hello")
+  [string] message("hello"utf8)
   return(1i32)
 }
 )";
@@ -1864,7 +1896,7 @@ main() {
 TEST_CASE("compiles and runs named-arg call") {
   const std::string source = R"(
 [return<int>]
-add(a, b) {
+add([i32] a, [i32] b) {
   return(plus(a, b))
 }
 
@@ -1899,7 +1931,7 @@ main() {
 TEST_CASE("compiles and runs mixed named args") {
   const std::string source = R"(
 [return<int>]
-sum3(a, b, c) {
+sum3([i32] a, [i32] b, [i32] c) {
   return(plus(plus(a, b), c))
 }
 
@@ -1919,7 +1951,7 @@ main() {
 TEST_CASE("compiles and runs reordered named args") {
   const std::string source = R"(
 [return<int>]
-pack(a, b, c) {
+pack([i32] a, [i32] b, [i32] c) {
   return(plus(plus(multiply(a, 100i32), multiply(b, 10i32)), c))
 }
 
@@ -1939,7 +1971,7 @@ main() {
 TEST_CASE("compiles and runs map literal with named-arg value") {
   const std::string source = R"(
 [return<int>]
-make_color(hue, value) {
+make_color([i32] hue, [i32] value) {
   return(plus(hue, value))
 }
 

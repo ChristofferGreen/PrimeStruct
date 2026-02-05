@@ -45,22 +45,22 @@ main() {
   CHECK(error.find("missing entry definition") != std::string::npos);
 }
 
-TEST_CASE("entry definition rejects parameters") {
+TEST_CASE("entry definition rejects non-arg parameter") {
   const std::string source = R"(
 [return<int>]
-main(value) {
+main([i32] value) {
   return(value)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("entry definition does not support parameters") != std::string::npos);
+  CHECK(error.find("entry definition must take a single array<string> parameter") != std::string::npos);
 }
 
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]
-main(x) {
+main([i32] x) {
   return(y)
 }
 )";
@@ -140,7 +140,7 @@ TEST_CASE("arithmetic rejects string operands") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(multiply("nope", 1i32))
+  return(multiply("nope"utf8, 1i32))
 }
 )";
   std::string error;
@@ -319,7 +319,7 @@ main() {
 TEST_CASE("argument count mismatch fails") {
   const std::string source = R"(
 [return<int>]
-callee(x) {
+callee([i32] x) {
   return(x)
 }
 
@@ -350,7 +350,7 @@ run()
 TEST_CASE("execution argument count mismatch fails") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -374,7 +374,7 @@ main() {
 }
 
 [return<int>]
-execute_repeat(x) {
+execute_repeat([i32] x) {
   return(x)
 }
 
@@ -393,7 +393,7 @@ main() {
 }
 
 [return<int>]
-execute_repeat(x) {
+execute_repeat([i32] x) {
   return(x)
 }
 
@@ -412,7 +412,7 @@ main() {
 }
 
 [return<void>]
-execute_repeat(x) {
+execute_repeat([i32] x) {
   return()
 }
 
@@ -431,7 +431,7 @@ main() {
 }
 
 [return<void>]
-execute_repeat(x) {
+execute_repeat([i32] x) {
   return()
 }
 
@@ -450,7 +450,7 @@ main() {
 }
 
 [return<void>]
-execute_repeat(x) {
+execute_repeat([i32] x) {
   return()
 }
 
@@ -523,7 +523,7 @@ main() {
 
 TEST_CASE("effects transform validates identifiers") {
   const std::string source = R"(
-[effects(global_write, io_stdout), return<int>]
+[effects(global_write, io_out), return<int>]
 main() {
   return(1i32)
 }
@@ -559,7 +559,7 @@ main() {
 
 TEST_CASE("effects transform rejects duplicate capability") {
   const std::string source = R"(
-[effects(io_stdout, io_stdout), return<int>]
+[effects(io_out, io_out), return<int>]
 main() {
   return(1i32)
 }
@@ -571,7 +571,7 @@ main() {
 
 TEST_CASE("capabilities transform validates identifiers") {
   const std::string source = R"(
-[effects(render_graph, io_stdout), capabilities(render_graph, io_stdout), return<int>]
+[effects(render_graph, io_out), capabilities(render_graph, io_out), return<int>]
 main() {
   return(1i32)
 }
@@ -619,7 +619,7 @@ main() {
 
 TEST_CASE("capabilities transform rejects duplicate capability") {
   const std::string source = R"(
-[capabilities(io_stdout, io_stdout), return<int>]
+[capabilities(io_out, io_out), return<int>]
 main() {
   return(1i32)
 }
@@ -631,7 +631,7 @@ main() {
 
 TEST_CASE("effects transform rejects duplicates") {
   const std::string source = R"(
-[effects(io_stdout), effects(asset_read), return<int>]
+[effects(io_out), effects(asset_read), return<int>]
 main() {
   return(1i32)
 }
@@ -643,7 +643,7 @@ main() {
 
 TEST_CASE("capabilities transform rejects duplicates") {
   const std::string source = R"(
-[capabilities(io_stdout), capabilities(asset_read), return<int>]
+[capabilities(io_out), capabilities(asset_read), return<int>]
 main() {
   return(1i32)
 }
@@ -656,7 +656,7 @@ main() {
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -665,7 +665,7 @@ main() {
   return(1i32)
 }
 
-[effects(io_stdout)]
+[effects(io_out)]
 task(1i32)
 )";
   std::string error;
@@ -676,7 +676,7 @@ task(1i32)
 TEST_CASE("execution capabilities transform validates") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -685,7 +685,7 @@ main() {
   return(1i32)
 }
 
-[effects(io_stdout), capabilities(io_stdout)]
+[effects(io_out), capabilities(io_out)]
 task(1i32)
 )";
   std::string error;
@@ -696,7 +696,7 @@ task(1i32)
 TEST_CASE("execution capabilities rejects template arguments") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -716,7 +716,7 @@ task(1i32)
 TEST_CASE("execution capabilities rejects invalid capability") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -736,7 +736,7 @@ task(1i32)
 TEST_CASE("execution capabilities rejects duplicate capability") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -745,7 +745,7 @@ main() {
   return(1i32)
 }
 
-[capabilities(io_stdout, io_stdout)]
+[capabilities(io_out, io_out)]
 task(1i32)
 )";
   std::string error;
@@ -756,7 +756,7 @@ task(1i32)
 TEST_CASE("execution effects rejects template arguments") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -776,7 +776,7 @@ task(1i32)
 TEST_CASE("execution effects rejects invalid capability") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -796,7 +796,7 @@ task(1i32)
 TEST_CASE("execution effects rejects duplicate capability") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -816,7 +816,7 @@ task(1i32)
 TEST_CASE("execution effects rejects duplicates") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -825,7 +825,7 @@ main() {
   return(1i32)
 }
 
-[effects(io_stdout), effects(asset_read)]
+[effects(io_out), effects(asset_read)]
 task(1i32)
 )";
   std::string error;
@@ -836,7 +836,7 @@ task(1i32)
 TEST_CASE("execution capabilities rejects duplicates") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -845,7 +845,7 @@ main() {
   return(1i32)
 }
 
-[capabilities(io_stdout), capabilities(asset_read)]
+[capabilities(io_out), capabilities(asset_read)]
 task(1i32)
 )";
   std::string error;
@@ -1084,7 +1084,7 @@ use() {
 TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
-main(x) {
+main([i32] x) {
   [i32] value(1i32)
 }
 )";
@@ -1107,7 +1107,7 @@ Create() {
 TEST_CASE("struct transforms are rejected on executions") {
   const std::string source = R"(
 [return<int>]
-task(x) {
+task([i32] x) {
   return(x)
 }
 
@@ -1339,7 +1339,7 @@ TEST_CASE("builtin comparison rejects string operands") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(equal("a", "b"))
+  return(equal("a"utf8, "b"utf8))
 }
 )";
   std::string error;
@@ -1648,7 +1648,7 @@ TEST_CASE("string binding validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message("hello")
+  [string] message("hello"utf8)
   return(1i32)
 }
 )";
@@ -1816,7 +1816,7 @@ main() {
 TEST_CASE("location rejects parameters") {
   const std::string source = R"(
 [return<int>]
-main(x) {
+main([i32] x) {
   [Pointer<i32>] ptr(location(x))
   return(1i32)
 }
@@ -2268,7 +2268,7 @@ main() {
 TEST_CASE("statement call with block arguments validates") {
   const std::string source = R"(
 [return<void>]
-execute_repeat(count) {
+execute_repeat([i32] count) {
   return()
 }
 
@@ -2289,7 +2289,7 @@ main() {
 TEST_CASE("statement call with block arguments rejects bindings") {
   const std::string source = R"(
 [return<void>]
-execute_repeat(count) {
+execute_repeat([i32] count) {
   return()
 }
 
@@ -2335,7 +2335,7 @@ main() {
 TEST_CASE("duplicate named arguments fail") {
   const std::string source = R"(
 [return<int>]
-foo(a, b) {
+foo([i32] a, [i32] b) {
   return(a)
 }
 
@@ -2352,7 +2352,7 @@ main() {
 TEST_CASE("array literal validates") {
   const std::string source = R"(
 [return<int>]
-use(x) {
+use([array<i32>] x) {
   return(1i32)
 }
 
@@ -2369,7 +2369,7 @@ main() {
 TEST_CASE("named arguments match parameters") {
   const std::string source = R"(
 [return<int>]
-foo(a, b) {
+foo([i32] a, [i32] b) {
   return(a)
 }
 
@@ -2386,7 +2386,7 @@ main() {
 TEST_CASE("named arguments with reordered params match") {
   const std::string source = R"(
 [return<int>]
-foo(a, b) {
+foo([i32] a, [i32] b) {
   return(a)
 }
 
@@ -2403,7 +2403,7 @@ main() {
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
-foo(a, b) {
+foo([i32] a, [i32] b) {
   return(a)
 }
 
@@ -2420,7 +2420,7 @@ main() {
 TEST_CASE("named argument duplicates positional parameter fails") {
   const std::string source = R"(
 [return<int>]
-foo(a, b) {
+foo([i32] a, [i32] b) {
   return(a)
 }
 
@@ -2442,7 +2442,7 @@ main() {
 }
 
 [return<int>]
-job(a, b) {
+job([i32] a, [i32] b) {
   return(a)
 }
 
@@ -2519,7 +2519,7 @@ main() {
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]
-use(x) {
+use([i32] x) {
   return(1i32)
 }
 
@@ -2536,7 +2536,7 @@ main() {
 TEST_CASE("array literal missing template arg fails") {
   const std::string source = R"(
 [return<int>]
-use(x) {
+use([array<i32>] x) {
   return(1i32)
 }
 
@@ -2553,7 +2553,7 @@ main() {
 TEST_CASE("map literal missing template args fails") {
   const std::string source = R"(
 [return<int>]
-use(x) {
+use([i32] x) {
   return(1i32)
 }
 
@@ -2570,7 +2570,7 @@ main() {
 TEST_CASE("map literal requires even argument count") {
   const std::string source = R"(
 [return<int>]
-use(x) {
+use([i32] x) {
   return(1i32)
 }
 
@@ -2663,7 +2663,7 @@ main() {
 }
 
 [return<int>]
-execute_repeat(x) {
+execute_repeat([i32] x) {
   return(x)
 }
 
@@ -2677,7 +2677,7 @@ execute_repeat(1i32) { return(2i32) }
 TEST_CASE("print requires io_out effect") {
   const std::string source = R"(
 main() {
-  print("hello")
+  print("hello"utf8)
 }
 )";
   std::string error;
@@ -2689,7 +2689,7 @@ TEST_CASE("print_error requires io_err effect") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  print_error("oops")
+  print_error("oops"utf8)
 }
 )";
   std::string error;
@@ -2725,7 +2725,7 @@ TEST_CASE("print not allowed in expression context") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  return(print_line("hello"))
+  return(print_line("hello"utf8))
 }
 )";
   std::string error;
@@ -2763,7 +2763,7 @@ TEST_CASE("print accepts string binding") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  [string] greeting("hi")
+  [string] greeting("hi"utf8)
   print_line(greeting)
 }
 )";
@@ -2776,7 +2776,7 @@ TEST_CASE("default effects allow print") {
   const std::string source = R"(
 [return<void>]
 main() {
-  print_line("hello")
+  print_line("hello"utf8)
 }
 )";
   std::string error;
@@ -2787,7 +2787,7 @@ main() {
 TEST_CASE("default effects allow print in execution body") {
   const std::string source = R"(
 [return<void>]
-execute_repeat(count) {
+execute_repeat([i32] count) {
 }
 
 [return<void>]
@@ -2795,7 +2795,7 @@ main() {
 }
 
 execute_repeat(1i32) {
-  print_line("hello")
+  print_line("hello"utf8)
 }
 )";
   std::string error;
@@ -2807,7 +2807,7 @@ TEST_CASE("default effects allow print_error") {
   const std::string source = R"(
 [return<void>]
 main() {
-  print_line_error("oops")
+  print_line_error("oops"utf8)
 }
 )";
   std::string error;

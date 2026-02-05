@@ -56,31 +56,57 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     out << expr.name;
     break;
   case Expr::Kind::Call:
-    if (!expr.transforms.empty()) {
-      printTransforms(out, expr.transforms);
-    }
-    out << expr.name;
-    if (!expr.templateArgs.empty()) {
-      out << "<";
-      for (size_t i = 0; i < expr.templateArgs.size(); ++i) {
+    if (expr.isMethodCall && !expr.args.empty()) {
+      printExpr(out, expr.args.front());
+      out << "." << expr.name;
+      if (!expr.templateArgs.empty()) {
+        out << "<";
+        for (size_t i = 0; i < expr.templateArgs.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          out << expr.templateArgs[i];
+        }
+        out << ">";
+      }
+      out << "(";
+      for (size_t i = 1; i < expr.args.size(); ++i) {
+        if (i > 1) {
+          out << ", ";
+        }
+        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+          out << *expr.argNames[i] << " = ";
+        }
+        printExpr(out, expr.args[i]);
+      }
+      out << ")";
+    } else {
+      if (!expr.transforms.empty()) {
+        printTransforms(out, expr.transforms);
+      }
+      out << expr.name;
+      if (!expr.templateArgs.empty()) {
+        out << "<";
+        for (size_t i = 0; i < expr.templateArgs.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          out << expr.templateArgs[i];
+        }
+        out << ">";
+      }
+      out << "(";
+      for (size_t i = 0; i < expr.args.size(); ++i) {
         if (i > 0) {
           out << ", ";
         }
-        out << expr.templateArgs[i];
+        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+          out << *expr.argNames[i] << " = ";
+        }
+        printExpr(out, expr.args[i]);
       }
-      out << ">";
+      out << ")";
     }
-    out << "(";
-    for (size_t i = 0; i < expr.args.size(); ++i) {
-      if (i > 0) {
-        out << ", ";
-      }
-      if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
-        out << *expr.argNames[i] << " = ";
-      }
-      printExpr(out, expr.args[i]);
-    }
-    out << ")";
     if (!expr.bodyArguments.empty()) {
       out << " { ";
       for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
@@ -136,6 +162,21 @@ void printTemplateArgs(std::ostringstream &out, const std::vector<std::string> &
   out << ">";
 }
 
+void printParameter(std::ostringstream &out, const Expr &param) {
+  printTransforms(out, param.transforms);
+  out << param.name;
+  if (!param.args.empty()) {
+    out << "(";
+    for (size_t i = 0; i < param.args.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      printExpr(out, param.args[i]);
+    }
+    out << ")";
+  }
+}
+
 void printDefinition(std::ostringstream &out, const Definition &def, int depth) {
   indent(out, depth);
   printTransforms(out, def.transforms);
@@ -146,7 +187,7 @@ void printDefinition(std::ostringstream &out, const Definition &def, int depth) 
     if (i > 0) {
       out << ", ";
     }
-    out << def.parameters[i];
+    printParameter(out, def.parameters[i]);
   }
   out << ") {\n";
   for (const auto &stmt : def.statements) {

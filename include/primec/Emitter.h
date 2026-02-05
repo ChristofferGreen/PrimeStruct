@@ -10,14 +10,19 @@ namespace primec {
 
 class Emitter {
 public:
+  struct BindingInfo {
+    std::string typeName;
+    std::string typeTemplateArg;
+    bool isMutable = false;
+  };
   std::string emitCpp(const Program &program, const std::string &entryPath) const;
 
 private:
   std::string toCppName(const std::string &fullPath) const;
   std::string emitExpr(const Expr &expr,
                        const std::unordered_map<std::string, std::string> &nameMap,
-                       const std::unordered_map<std::string, std::vector<std::string>> &paramMap,
-                       const std::unordered_map<std::string, std::string> &localTypes) const;
+                       const std::unordered_map<std::string, std::vector<Expr>> &paramMap,
+                       const std::unordered_map<std::string, BindingInfo> &localTypes) const;
 };
 
 } // namespace primec

@@ -1,5 +1,5 @@
 [return<int>]
-identity(x) {
+identity([i32] x) {
   return(x)
 }
 

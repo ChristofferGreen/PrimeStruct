@@ -17,6 +17,12 @@ struct BindingInfo {
   bool isMutable = false;
 };
 
+struct ParameterInfo {
+  std::string name;
+  BindingInfo binding;
+  const Expr *defaultExpr = nullptr;
+};
+
 bool validateAlignTransform(const Transform &transform, const std::string &context, std::string &error);
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
 
@@ -263,6 +269,24 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name == "array" || name == "map") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
+bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "at" || name == "at_unsafe") {
     out = name;
     return true;
   }
@@ -731,7 +755,80 @@ bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) 
   return false;
 }
 
-bool validateNamedArgumentsAgainstParams(const std::vector<std::string> &params,
+bool isDefaultExprAllowed(const Expr &expr) {
+  if (expr.isBinding) {
+    return false;
+  }
+  if (expr.kind == Expr::Kind::Name) {
+    return false;
+  }
+  if (expr.kind == Expr::Kind::Call) {
+    if (!expr.bodyArguments.empty()) {
+      return false;
+    }
+    for (const auto &arg : expr.args) {
+      if (!isDefaultExprAllowed(arg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return true;
+}
+
+bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
+                           const std::vector<Expr> &args,
+                           const std::vector<std::optional<std::string>> &argNames,
+                           std::vector<const Expr *> &ordered,
+                           std::string &error) {
+  ordered.assign(params.size(), nullptr);
+  size_t positionalIndex = 0;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i < argNames.size() && argNames[i].has_value()) {
+      const std::string &name = *argNames[i];
+      size_t index = params.size();
+      for (size_t p = 0; p < params.size(); ++p) {
+        if (params[p].name == name) {
+          index = p;
+          break;
+        }
+      }
+      if (index >= params.size()) {
+        error = "unknown named argument: " + name;
+        return false;
+      }
+      if (ordered[index] != nullptr) {
+        error = "named argument duplicates parameter: " + name;
+        return false;
+      }
+      ordered[index] = &args[i];
+      continue;
+    }
+    while (positionalIndex < params.size() && ordered[positionalIndex] != nullptr) {
+      ++positionalIndex;
+    }
+    if (positionalIndex >= params.size()) {
+      error = "argument count mismatch";
+      return false;
+    }
+    ordered[positionalIndex] = &args[i];
+    ++positionalIndex;
+  }
+  for (size_t i = 0; i < params.size(); ++i) {
+    if (ordered[i] != nullptr) {
+      continue;
+    }
+    if (params[i].defaultExpr) {
+      ordered[i] = params[i].defaultExpr;
+      continue;
+    }
+    error = "argument count mismatch";
+    return false;
+  }
+  return true;
+}
+
+bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &params,
                                          const std::vector<std::optional<std::string>> &argNames,
                                          std::string &error) {
   if (argNames.empty()) {
@@ -743,7 +840,7 @@ bool validateNamedArgumentsAgainstParams(const std::vector<std::string> &params,
   }
   std::unordered_set<std::string> bound;
   for (size_t i = 0; i < positionalCount && i < params.size(); ++i) {
-    bound.insert(params[i]);
+    bound.insert(params[i].name);
   }
   for (size_t i = positionalCount; i < argNames.size(); ++i) {
     if (!argNames[i].has_value()) {
@@ -752,7 +849,7 @@ bool validateNamedArgumentsAgainstParams(const std::vector<std::string> &params,
     const std::string &name = *argNames[i];
     bool found = false;
     for (const auto &param : params) {
-      if (param == name) {
+      if (param.name == name) {
         found = true;
         break;
       }
@@ -786,6 +883,7 @@ bool Semantics::validate(const Program &program,
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
   std::unordered_set<std::string> structNames;
+  std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef;
   for (const auto &def : program.definitions) {
     if (defMap.count(def.fullPath) > 0) {
       error = "duplicate definition: " + def.fullPath;
@@ -905,6 +1003,46 @@ bool Semantics::validate(const Program &program,
     defMap[def.fullPath] = &def;
   }
 
+  for (const auto &def : program.definitions) {
+    std::unordered_set<std::string> seen;
+    std::vector<ParameterInfo> params;
+    params.reserve(def.parameters.size());
+    for (const auto &param : def.parameters) {
+      if (!param.isBinding) {
+        error = "parameters must use binding syntax: " + def.fullPath;
+        return false;
+      }
+      if (!param.bodyArguments.empty()) {
+        error = "parameter does not accept block arguments: " + param.name;
+        return false;
+      }
+      if (!seen.insert(param.name).second) {
+        error = "duplicate parameter: " + param.name;
+        return false;
+      }
+      BindingInfo binding;
+      if (!parseBindingInfo(param, def.namespacePrefix, structNames, binding, error)) {
+        return false;
+      }
+      if (param.args.size() > 1) {
+        error = "parameter defaults accept at most one argument: " + param.name;
+        return false;
+      }
+      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front())) {
+        error = "parameter default must be a literal or pure expression: " + param.name;
+        return false;
+      }
+      ParameterInfo info;
+      info.name = param.name;
+      info.binding = std::move(binding);
+      if (param.args.size() == 1) {
+        info.defaultExpr = &param.args.front();
+      }
+      params.push_back(std::move(info));
+    }
+    paramsByDef[def.fullPath] = std::move(params);
+  }
+
   auto resolveCalleePath = [&](const Expr &expr) -> std::string {
     if (expr.name.empty()) {
       return "";
@@ -918,29 +1056,33 @@ bool Semantics::validate(const Program &program,
     return "/" + expr.name;
   };
 
-  std::unordered_map<std::string, size_t> paramCounts;
-  for (const auto &def : program.definitions) {
-    paramCounts[def.fullPath] = def.parameters.size();
-  }
-
-  auto isParam = [](const std::vector<std::string> &params, const std::string &name) -> bool {
+  auto isParam = [](const std::vector<ParameterInfo> &params, const std::string &name) -> bool {
     for (const auto &param : params) {
-      if (param == name) {
+      if (param.name == name) {
         return true;
       }
     }
     return false;
   };
 
+  auto findParamBinding = [&](const std::vector<ParameterInfo> &params, const std::string &name) -> const BindingInfo * {
+    for (const auto &param : params) {
+      if (param.name == name) {
+        return &param.binding;
+      }
+    }
+    return nullptr;
+  };
+
   std::unordered_set<std::string> inferenceStack;
   std::function<bool(const Definition &)> inferDefinitionReturnKind;
   std::function<ReturnKind(const Expr &,
-                           const std::vector<std::string> &,
+                           const std::vector<ParameterInfo> &,
                            const std::unordered_map<std::string, BindingInfo> &)>
       inferExprReturnKind;
 
   inferExprReturnKind = [&](const Expr &expr,
-                            const std::vector<std::string> &params,
+                            const std::vector<ParameterInfo> &params,
                             const std::unordered_map<std::string, BindingInfo> &locals) -> ReturnKind {
     auto combineNumeric = [&](ReturnKind left, ReturnKind right) -> ReturnKind {
       if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
@@ -990,8 +1132,14 @@ bool Semantics::validate(const Program &program,
       return ReturnKind::Unknown;
     }
     if (expr.kind == Expr::Kind::Name) {
-      if (isParam(params, expr.name)) {
-        return ReturnKind::Unknown;
+      if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
+        if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
+          ReturnKind refKind = returnKindForTypeName(paramBinding->typeTemplateArg);
+          if (refKind != ReturnKind::Unknown) {
+            return refKind;
+          }
+        }
+        return returnKindForTypeName(paramBinding->typeName);
       }
       auto it = locals.find(expr.name);
       if (it == locals.end()) {
@@ -1007,7 +1155,7 @@ bool Semantics::validate(const Program &program,
     }
     if (expr.kind == Expr::Kind::Call) {
       std::string resolved = resolveCalleePath(expr);
-      auto defIt = defMap.find(resolved);
+      auto defIt = expr.isMethodCall ? defMap.end() : defMap.find(resolved);
       if (defIt != defMap.end()) {
         if (!inferDefinitionReturnKind(*defIt->second)) {
           return ReturnKind::Unknown;
@@ -1018,7 +1166,51 @@ bool Semantics::validate(const Program &program,
         }
         return ReturnKind::Unknown;
       }
+      if (expr.isMethodCall && expr.name == "count") {
+        return ReturnKind::Int;
+      }
+      if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
+        return ReturnKind::Int;
+      }
+      auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            if (paramBinding->typeName != "array" || paramBinding->typeTemplateArg.empty()) {
+              return false;
+            }
+            elemType = paramBinding->typeTemplateArg;
+            return true;
+          }
+          auto it = locals.find(target.name);
+          if (it != locals.end()) {
+            if (it->second.typeName != "array" || it->second.typeTemplateArg.empty()) {
+              return false;
+            }
+            elemType = it->second.typeTemplateArg;
+            return true;
+          }
+          return false;
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string collection;
+          if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+            elemType = target.templateArgs.front();
+            return true;
+          }
+        }
+        return false;
+      };
       std::string builtinName;
+      if (getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2) {
+        std::string elemType;
+        if (resolveArrayTarget(expr.args.front(), elemType)) {
+          ReturnKind kind = returnKindForTypeName(elemType);
+          if (kind != ReturnKind::Unknown) {
+            return kind;
+          }
+        }
+        return ReturnKind::Unknown;
+      }
       if (getBuiltinComparisonName(expr, builtinName)) {
         return ReturnKind::Bool;
       }
@@ -1080,6 +1272,7 @@ bool Semantics::validate(const Program &program,
     }
     ReturnKind inferred = ReturnKind::Unknown;
     bool sawReturn = false;
+    const auto &defParams = paramsByDef[def.fullPath];
     std::unordered_map<std::string, BindingInfo> locals;
     std::function<bool(const Expr &, std::unordered_map<std::string, BindingInfo> &)> inferStatement;
     inferStatement = [&](const Expr &stmt, std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
@@ -1095,7 +1288,7 @@ bool Semantics::validate(const Program &program,
         sawReturn = true;
         ReturnKind exprKind = ReturnKind::Void;
         if (!stmt.args.empty()) {
-          exprKind = inferExprReturnKind(stmt.args.front(), def.parameters, activeLocals);
+          exprKind = inferExprReturnKind(stmt.args.front(), defParams, activeLocals);
         }
         if (exprKind == ReturnKind::Unknown) {
           error = "unable to infer return type on " + def.fullPath;
@@ -1173,7 +1366,7 @@ bool Semantics::validate(const Program &program,
   };
 
   auto isIntegerOrBoolExpr = [&](const Expr &arg,
-                                 const std::vector<std::string> &params,
+                                 const std::vector<ParameterInfo> &params,
                                  const std::unordered_map<std::string, BindingInfo> &locals) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
@@ -1189,7 +1382,12 @@ bool Semantics::validate(const Program &program,
       if (isPointerExpr(arg, locals)) {
         return false;
       }
-      if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+                 paramKind == ReturnKind::Bool;
+        }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
@@ -1202,7 +1400,7 @@ bool Semantics::validate(const Program &program,
     return false;
   };
   auto isPrintableExpr = [&](const Expr &arg,
-                             const std::vector<std::string> &params,
+                             const std::vector<ParameterInfo> &params,
                              const std::unordered_map<std::string, BindingInfo> &locals) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
@@ -1215,7 +1413,15 @@ bool Semantics::validate(const Program &program,
     if (kind == ReturnKind::Void) {
       return false;
     }
-    if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+    if (arg.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+        if (paramBinding->typeName == "string") {
+          return true;
+        }
+        ReturnKind paramKind = returnKindForBinding(*paramBinding);
+        return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+               paramKind == ReturnKind::Bool || paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+      }
       auto it = locals.find(arg.name);
       if (it != locals.end()) {
         if (it->second.typeName == "string") {
@@ -1249,9 +1455,9 @@ bool Semantics::validate(const Program &program,
 
   std::unordered_set<std::string> activeEffects;
 
-  std::function<bool(const std::vector<std::string> &, const std::unordered_map<std::string, BindingInfo> &,
+  std::function<bool(const std::vector<ParameterInfo> &, const std::unordered_map<std::string, BindingInfo> &,
                      const Expr &)>
-      validateExpr = [&](const std::vector<std::string> &params,
+      validateExpr = [&](const std::vector<ParameterInfo> &params,
                          const std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &expr) -> bool {
     auto isNumericExpr = [&](const Expr &arg) -> bool {
@@ -1270,7 +1476,12 @@ bool Semantics::validate(const Program &program,
         if (isPointerExpr(arg, locals)) {
           return false;
         }
-        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+        if (arg.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+            ReturnKind paramKind = returnKindForBinding(*paramBinding);
+            return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+                   paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+          }
           auto it = locals.find(arg.name);
           if (it != locals.end()) {
             ReturnKind localKind = returnKindForBinding(it->second);
@@ -1304,7 +1515,27 @@ bool Semantics::validate(const Program &program,
         if (isPointerExpr(arg, locals)) {
           return NumericCategory::Unknown;
         }
-        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+        if (arg.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+            const std::string &typeName = paramBinding->typeName;
+            if (typeName == "float" || typeName == "f32" || typeName == "f64") {
+              return NumericCategory::Float;
+            }
+            if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" ||
+                typeName == "bool") {
+              return NumericCategory::Integer;
+            }
+            if (typeName == "Reference") {
+              const std::string &refType = paramBinding->typeTemplateArg;
+              if (refType == "float" || refType == "f32" || refType == "f64") {
+                return NumericCategory::Float;
+              }
+              if (refType == "int" || refType == "i32" || refType == "i64" || refType == "u64" ||
+                  refType == "bool") {
+                return NumericCategory::Integer;
+              }
+            }
+          }
           auto it = locals.find(arg.name);
           if (it != locals.end()) {
             const std::string &typeName = it->second.typeName;
@@ -1360,7 +1591,12 @@ bool Semantics::validate(const Program &program,
         if (isPointerExpr(arg, locals)) {
           return false;
         }
-        if (arg.kind == Expr::Kind::Name && !isParam(params, arg.name)) {
+        if (arg.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+            ReturnKind paramKind = returnKindForBinding(*paramBinding);
+            return paramKind == ReturnKind::Bool || paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                   paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+          }
           auto it = locals.find(arg.name);
           if (it != locals.end()) {
             ReturnKind localKind = returnKindForBinding(it->second);
@@ -1435,15 +1671,84 @@ bool Semantics::validate(const Program &program,
         error = "control-flow blocks cannot appear in expressions";
         return false;
       }
+      auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            if (paramBinding->typeName != "array" || paramBinding->typeTemplateArg.empty()) {
+              return false;
+            }
+            elemType = paramBinding->typeTemplateArg;
+            return true;
+          }
+          auto it = locals.find(target.name);
+          if (it != locals.end()) {
+            if (it->second.typeName != "array" || it->second.typeTemplateArg.empty()) {
+              return false;
+            }
+            elemType = it->second.typeTemplateArg;
+            return true;
+          }
+          return false;
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string collection;
+          if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+            elemType = target.templateArgs.front();
+            return true;
+          }
+        }
+        return false;
+      };
+      auto resolveMethodTarget = [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut) -> bool {
+        std::string elemType;
+        if (!resolveArrayTarget(receiver, elemType)) {
+          error = "unknown method target for " + methodName;
+          return false;
+        }
+        if (methodName == "count") {
+          resolvedOut = "/array/count";
+          return true;
+        }
+        error = "unknown method: " + methodName;
+        return false;
+      };
+
       std::string resolved = resolveCalleePath(expr);
+      bool resolvedMethod = false;
+      if (expr.isMethodCall) {
+        if (expr.args.empty()) {
+          error = "method call missing receiver";
+          return false;
+        }
+        if (!resolveMethodTarget(expr.args.front(), expr.name, resolved)) {
+          return false;
+        }
+        resolvedMethod = true;
+      } else if (expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
+        if (!resolveMethodTarget(expr.args.front(), "count", resolved)) {
+          return false;
+        }
+        resolvedMethod = true;
+      }
+
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, error)) {
         return false;
       }
       auto it = defMap.find(resolved);
-      if (it == defMap.end()) {
+      if (it == defMap.end() || resolvedMethod) {
         if (hasNamedArguments(expr.argNames)) {
           error = "named arguments not supported for builtin calls";
           return false;
+        }
+        if (resolvedMethod && resolved == "/array/count") {
+          if (expr.args.size() != 1) {
+            error = "argument count mismatch for builtin count";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
         }
         std::string builtinName;
         if (getBuiltinOperatorName(expr, builtinName)) {
@@ -1579,6 +1884,27 @@ bool Semantics::validate(const Program &program,
           }
           return true;
         }
+        if (getBuiltinArrayAccessName(expr, builtinName)) {
+          if (expr.args.size() != 2) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          std::string elemType;
+          if (!resolveArrayTarget(expr.args.front(), elemType)) {
+            error = builtinName + " requires array target";
+            return false;
+          }
+          if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+            error = builtinName + " requires integer index";
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
+            }
+          }
+          return true;
+        }
         if (getBuiltinConvertName(expr, builtinName)) {
           if (expr.templateArgs.size() != 1) {
             error = "convert requires exactly one template argument";
@@ -1615,7 +1941,7 @@ bool Semantics::validate(const Program &program,
         }
         if (builtinName == "location") {
           const Expr &target = expr.args.front();
-          if (target.kind != Expr::Kind::Name || locals.count(target.name) == 0) {
+          if (target.kind != Expr::Kind::Name || locals.count(target.name) == 0 || isParam(params, target.name)) {
             error = "location requires a local binding";
             return false;
           }
@@ -1696,16 +2022,25 @@ bool Semantics::validate(const Program &program,
         error = "unknown call target: " + expr.name;
         return false;
       }
-      size_t expectedArgs = paramCounts[resolved];
-      if (expr.args.size() != expectedArgs) {
-        error = "argument count mismatch for " + resolved;
+      const auto &calleeParams = paramsByDef[resolved];
+      if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, error)) {
         return false;
       }
-      if (!validateNamedArgumentsAgainstParams(it->second->parameters, expr.argNames, error)) {
+      std::vector<const Expr *> orderedArgs;
+      std::string orderError;
+      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+        if (orderError.find("argument count mismatch") != std::string::npos) {
+          error = "argument count mismatch for " + resolved;
+        } else {
+          error = orderError;
+        }
         return false;
       }
-      for (const auto &arg : expr.args) {
-        if (!validateExpr(params, locals, arg)) {
+      for (const auto *arg : orderedArgs) {
+        if (!arg) {
+          continue;
+        }
+        if (!validateExpr(params, locals, *arg)) {
           return false;
         }
       }
@@ -1714,7 +2049,7 @@ bool Semantics::validate(const Program &program,
     return false;
   };
 
-  std::function<bool(const std::vector<std::string> &,
+  std::function<bool(const std::vector<ParameterInfo> &,
                      std::unordered_map<std::string, BindingInfo> &,
                      const Expr &,
                      ReturnKind,
@@ -1722,7 +2057,7 @@ bool Semantics::validate(const Program &program,
                      bool,
                      bool *,
                      const std::string &)>
-      validateStatement = [&](const std::vector<std::string> &params,
+      validateStatement = [&](const std::vector<ParameterInfo> &params,
                               std::unordered_map<std::string, BindingInfo> &locals,
                               const Expr &stmt,
                               ReturnKind returnKind,
@@ -1985,6 +2320,10 @@ bool Semantics::validate(const Program &program,
       return false;
     }
     std::unordered_map<std::string, BindingInfo> locals;
+    const auto &defParams = paramsByDef[def.fullPath];
+    for (const auto &param : defParams) {
+      locals.emplace(param.name, param.binding);
+    }
     ReturnKind kind = ReturnKind::Unknown;
     auto kindIt = returnKinds.find(def.fullPath);
     if (kindIt != returnKinds.end()) {
@@ -1992,7 +2331,7 @@ bool Semantics::validate(const Program &program,
     }
     bool sawReturn = false;
     for (const auto &stmt : def.statements) {
-      if (!validateStatement(def.parameters, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
+      if (!validateStatement(defParams, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
         return false;
       }
     }
@@ -2053,19 +2392,28 @@ bool Semantics::validate(const Program &program,
       error = "unknown execution target: " + exec.fullPath;
       return false;
     }
-    size_t expectedArgs = paramCounts[exec.fullPath];
-    if (exec.arguments.size() != expectedArgs) {
-      error = "argument count mismatch for " + exec.fullPath;
-      return false;
-    }
     if (!validateNamedArguments(exec.arguments, exec.argumentNames, exec.fullPath, error)) {
       return false;
     }
-    if (!validateNamedArgumentsAgainstParams(it->second->parameters, exec.argumentNames, error)) {
+    const auto &execParams = paramsByDef[exec.fullPath];
+    if (!validateNamedArgumentsAgainstParams(execParams, exec.argumentNames, error)) {
       return false;
     }
-    for (const auto &arg : exec.arguments) {
-      if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, arg)) {
+    std::vector<const Expr *> orderedExecArgs;
+    std::string orderError;
+    if (!buildOrderedArguments(execParams, exec.arguments, exec.argumentNames, orderedExecArgs, orderError)) {
+      if (orderError.find("argument count mismatch") != std::string::npos) {
+        error = "argument count mismatch for " + exec.fullPath;
+      } else {
+        error = orderError;
+      }
+      return false;
+    }
+    for (const auto *arg : orderedExecArgs) {
+      if (!arg) {
+        continue;
+      }
+      if (!validateExpr({}, std::unordered_map<std::string, BindingInfo>{}, *arg)) {
         return false;
       }
     }
@@ -2090,9 +2438,21 @@ bool Semantics::validate(const Program &program,
     error = "missing entry definition " + entryPath;
     return false;
   }
-  if (!entryIt->second->parameters.empty()) {
-    error = "entry definition does not support parameters: " + entryPath;
-    return false;
+  const auto &entryParams = paramsByDef[entryPath];
+  if (!entryParams.empty()) {
+    if (entryParams.size() != 1) {
+      error = "entry definition must take a single array<string> parameter: " + entryPath;
+      return false;
+    }
+    const ParameterInfo &param = entryParams.front();
+    if (param.binding.typeName != "array" || param.binding.typeTemplateArg != "string") {
+      error = "entry definition must take a single array<string> parameter: " + entryPath;
+      return false;
+    }
+    if (param.defaultExpr != nullptr) {
+      error = "entry parameter does not allow a default value: " + entryPath;
+      return false;
+    }
   }
 
   return true;

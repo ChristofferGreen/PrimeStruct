@@ -30,6 +30,7 @@ struct Expr {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   bool isBinding = false;
+  bool isMethodCall = false;
 };
 
 struct Definition {
@@ -38,7 +39,7 @@ struct Definition {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   std::vector<std::string> templateArgs;
-  std::vector<std::string> parameters;
+  std::vector<Expr> parameters;
   std::vector<Expr> statements;
   std::optional<Expr> returnExpr;
   bool hasReturnStatement = false;

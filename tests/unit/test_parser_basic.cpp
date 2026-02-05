@@ -269,7 +269,7 @@ main() {
 
 TEST_CASE("parses transform arguments") {
   const std::string source = R"(
-[effects(global_write, io_stdout), align_bytes(16), return<int>]
+[effects(global_write, io_out), align_bytes(16), return<int>]
 main() {
   return(1i32)
 }
@@ -281,7 +281,7 @@ main() {
   CHECK(transforms[0].name == "effects");
   REQUIRE(transforms[0].arguments.size() == 2);
   CHECK(transforms[0].arguments[0] == "global_write");
-  CHECK(transforms[0].arguments[1] == "io_stdout");
+  CHECK(transforms[0].arguments[1] == "io_out");
   CHECK(transforms[1].name == "align_bytes");
   REQUIRE(transforms[1].arguments.size() == 1);
   CHECK(transforms[1].arguments[0] == "16");
@@ -292,7 +292,7 @@ main() {
 
 TEST_CASE("parses transform string arguments") {
   const std::string source = R"(
-[doc("hello world"), return<int>]
+[doc("hello world"utf8), return<int>]
 main() {
   return(1i32)
 }
@@ -303,7 +303,7 @@ main() {
   REQUIRE(transforms.size() == 2);
   CHECK(transforms[0].name == "doc");
   REQUIRE(transforms[0].arguments.size() == 1);
-  CHECK(transforms[0].arguments[0] == "\"hello world\"");
+  CHECK(transforms[0].arguments[0] == "\"hello world\"utf8");
   CHECK(transforms[1].name == "return");
 }
 
@@ -391,7 +391,7 @@ TEST_CASE("parses string literal arguments") {
   const std::string source = R"(
 [return<void>]
 main() {
-  log("hello")
+  log("hello"utf8)
 }
 )";
   const auto program = parseProgram(source);
@@ -401,14 +401,14 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello\"");
+  CHECK(stmt.args[0].stringValue == "\"hello\"utf8");
 }
 
 TEST_CASE("parses raw string literal arguments") {
   const std::string source =
       "[return<void>]\n"
       "main() {\n"
-      "  log(R\"(hello world)\")\n"
+      "  log(R\"(hello world)\"utf8)\n"
       "}\n";
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 1);
@@ -417,7 +417,45 @@ TEST_CASE("parses raw string literal arguments") {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "R\"(hello world)\"");
+  CHECK(stmt.args[0].stringValue == "R\"(hello world)\"utf8");
+}
+
+TEST_CASE("parses method call sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(items.count())
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.isMethodCall);
+  CHECK(expr.name == "count");
+  REQUIRE(expr.args.size() == 1);
+  CHECK(expr.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(expr.args[0].name == "items");
+}
+
+TEST_CASE("parses index sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(items[1i32])
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "at");
+  REQUIRE(expr.args.size() == 2);
+  CHECK(expr.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(expr.args[0].name == "items");
+  CHECK(expr.args[1].kind == primec::Expr::Kind::Literal);
 }
 
 TEST_CASE("parses if statement sugar") {

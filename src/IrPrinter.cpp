@@ -289,17 +289,32 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     out << expr.name;
     break;
   case Expr::Kind::Call:
-    out << expr.name << "(";
-    for (size_t i = 0; i < expr.args.size(); ++i) {
-      if (i > 0) {
-        out << ", ";
+    if (expr.isMethodCall && !expr.args.empty()) {
+      printExpr(out, expr.args.front());
+      out << "." << expr.name << "(";
+      for (size_t i = 1; i < expr.args.size(); ++i) {
+        if (i > 1) {
+          out << ", ";
+        }
+        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+          out << *expr.argNames[i] << " = ";
+        }
+        printExpr(out, expr.args[i]);
       }
-      if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
-        out << *expr.argNames[i] << " = ";
+      out << ")";
+    } else {
+      out << expr.name << "(";
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i > 0) {
+          out << ", ";
+        }
+        if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+          out << *expr.argNames[i] << " = ";
+        }
+        printExpr(out, expr.args[i]);
       }
-      printExpr(out, expr.args[i]);
+      out << ")";
     }
-    out << ")";
     if (!expr.bodyArguments.empty()) {
       out << " { ";
       for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
@@ -311,6 +326,33 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
       out << " }";
     }
     break;
+  }
+}
+
+void printParameter(std::ostringstream &out, const Expr &param) {
+  if (!param.transforms.empty()) {
+    out << "[";
+    for (size_t i = 0; i < param.transforms.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      out << param.transforms[i].name;
+      if (param.transforms[i].templateArg) {
+        out << "<" << *param.transforms[i].templateArg << ">";
+      }
+    }
+    out << "] ";
+  }
+  out << param.name;
+  if (!param.args.empty()) {
+    out << "(";
+    for (size_t i = 0; i < param.args.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      printExpr(out, param.args[i]);
+    }
+    out << ")";
   }
 }
 
@@ -326,7 +368,14 @@ void printDefinition(std::ostringstream &out,
     kind = getReturnKind(def);
   }
   indent(out, depth);
-  out << "def " << def.fullPath << "(): " << returnTypeName(kind) << " {\n";
+  out << "def " << def.fullPath << "(";
+  for (size_t i = 0; i < def.parameters.size(); ++i) {
+    if (i > 0) {
+      out << ", ";
+    }
+    printParameter(out, def.parameters[i]);
+  }
+  out << "): " << returnTypeName(kind) << " {\n";
   bool sawReturn = false;
   for (const auto &stmt : def.statements) {
     indent(out, depth + 1);
@@ -428,9 +477,9 @@ std::string IrPrinter::print(const Program &program) const {
     returnKinds[def.fullPath] = getReturnKind(def);
   }
 
-  auto isParam = [](const std::vector<std::string> &params, const std::string &name) -> bool {
+  auto isParam = [](const std::vector<Expr> &params, const std::string &name) -> bool {
     for (const auto &param : params) {
-      if (param == name) {
+      if (param.name == name) {
         return true;
       }
     }
@@ -440,12 +489,12 @@ std::string IrPrinter::print(const Program &program) const {
   std::unordered_set<std::string> inferenceStack;
   std::function<ReturnKind(const Definition &)> inferDefinitionReturnKind;
   std::function<ReturnKind(const Expr &,
-                           const std::vector<std::string> &,
+                           const std::vector<Expr> &,
                            const std::unordered_map<std::string, ReturnKind> &)>
       inferExprReturnKind;
 
   inferExprReturnKind = [&](const Expr &expr,
-                            const std::vector<std::string> &params,
+                            const std::vector<Expr> &params,
                             const std::unordered_map<std::string, ReturnKind> &locals) -> ReturnKind {
     auto combineNumeric = [&](ReturnKind left, ReturnKind right) -> ReturnKind {
       if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {

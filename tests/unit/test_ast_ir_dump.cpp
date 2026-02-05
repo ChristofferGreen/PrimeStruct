@@ -114,7 +114,7 @@ TEST_CASE("ast dump prints string literals") {
   const std::string source = R"(
 [return<void>]
 main() {
-  log("hello")
+  log("hello"utf8)
 }
 )";
   const auto program = parseProgram(source);
@@ -123,7 +123,7 @@ main() {
   const std::string expected =
       "ast {\n"
       "  [return<void>] /main() {\n"
-      "    log(\"hello\")\n"
+      "    log(\"hello\"utf8)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -133,7 +133,7 @@ TEST_CASE("ir dump prints string literals") {
   const std::string source = R"(
 [return<void>]
 main() {
-  log("hello")
+  log("hello"utf8)
 }
 )";
   const auto program = parseProgram(source);
@@ -142,7 +142,7 @@ main() {
   const std::string expected =
       "module {\n"
       "  def /main(): void {\n"
-      "    call log(\"hello\")\n"
+      "    call log(\"hello\"utf8)\n"
       "    return\n"
       "  }\n"
       "}\n";
@@ -210,7 +210,7 @@ main() {
 
 TEST_CASE("ast dump prints transform arguments") {
   const std::string source = R"(
-[effects(global_write, io_stdout), return<int>]
+[effects(global_write, io_out), return<int>]
 main() {
   return(1i32)
 }
@@ -220,7 +220,7 @@ main() {
   const std::string dump = printer.print(program);
   const std::string expected =
       "ast {\n"
-      "  [effects(global_write, io_stdout), return<int>] /main() {\n"
+      "  [effects(global_write, io_out), return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
       "}\n";
@@ -441,7 +441,7 @@ main() {
 TEST_CASE("ir dump prints mixed named arguments") {
   const std::string source = R"(
 [return<int>]
-sum3(a, b, c) {
+sum3([i32] a, [i32] b, [i32] c) {
   return(plus(plus(a, b), c))
 }
 
@@ -455,7 +455,7 @@ main() {
   const std::string dump = printer.print(program);
   const std::string expected =
       "module {\n"
-      "  def /sum3(): i32 {\n"
+      "  def /sum3([i32] a, [i32] b, [i32] c): i32 {\n"
       "    return plus(plus(a, b), c)\n"
       "  }\n"
       "  def /main(): i32 {\n"
@@ -468,7 +468,7 @@ main() {
 TEST_CASE("ir dump prints map literal with named-arg value") {
   const std::string source = R"(
 [return<int>]
-make_color(hue, value) {
+make_color([i32] hue, [i32] value) {
   return(plus(hue, value))
 }
 
@@ -483,7 +483,7 @@ main() {
   const std::string dump = printer.print(program);
   const std::string expected =
       "module {\n"
-      "  def /make_color(): i32 {\n"
+      "  def /make_color([i32] hue, [i32] value): i32 {\n"
       "    return plus(hue, value)\n"
       "  }\n"
       "  def /main(): i32 {\n"
@@ -739,13 +739,13 @@ main() {
   return(3i32)
 }
 
-[effects(global_write, io_stdout)]
+[effects(global_write, io_out)]
 run(1i32)
 )";
   const auto program = parseProgram(source);
   primec::IrPrinter printer;
   const std::string dump = printer.print(program);
-  CHECK(dump.find("exec [effects(global_write, io_stdout)] /run(1)") != std::string::npos);
+  CHECK(dump.find("exec [effects(global_write, io_out)] /run(1)") != std::string::npos);
 }
 
 TEST_SUITE_END();

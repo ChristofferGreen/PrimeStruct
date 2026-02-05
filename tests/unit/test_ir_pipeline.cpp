@@ -1522,7 +1522,7 @@ TEST_CASE("ir lowerer rejects string literal statements") {
   const std::string source = R"(
 [return<int>]
 main() {
-  "hello"
+  "hello"utf8
   return(1i32)
 }
 )";
@@ -1560,7 +1560,7 @@ TEST_CASE("ir lowerer supports print_line with string literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  print_line("hello")
+  print_line("hello"utf8)
   return(1i32)
 }
 )";
@@ -1598,7 +1598,7 @@ TEST_CASE("ir lowerer supports print_line with string bindings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] message("hello")
+  [string] message("hello"utf8)
   print_line(message)
   return(1i32)
 }
@@ -1629,7 +1629,7 @@ TEST_CASE("ir lowerer supports string binding copy") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] message("hello")
+  [string] message("hello"utf8)
   [string] copy(message)
   print_line(copy)
   return(1i32)
@@ -1652,8 +1652,8 @@ TEST_CASE("ir lowerer supports print_error with string literals") {
   const std::string source = R"(
 [return<int> effects(io_err)]
 main() {
-  print_error("oops")
-  print_line_error("warn")
+  print_error("oops"utf8)
+  print_line_error("warn"utf8)
   return(1i32)
 }
 )";
@@ -1820,14 +1820,18 @@ main() {
 TEST_CASE("ir lowerer rejects entry parameters") {
   const std::string source = R"(
 [return<int>]
-main(value) {
-  return(value)
+main([array<string>] args) {
+  return(1i32)
 }
 )";
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parseAndValidate(source, program, error));
-  CHECK(error.find("entry definition does not support parameters") != std::string::npos);
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend does not support entry parameters") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects map literal call") {

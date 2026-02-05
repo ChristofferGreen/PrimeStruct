@@ -91,7 +91,7 @@ TEST_CASE("rewrites map literal with string keys") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32,i32>(\"a\", 1i32,\"b\", 2i32)") != std::string::npos);
+  CHECK(output.find("map<i32,i32>(\"a\"utf8, 1i32,\"b\"utf8, 2i32)") != std::string::npos);
 }
 
 TEST_CASE("map literal preserves equality operators") {
@@ -194,7 +194,7 @@ TEST_CASE("rewrites plus operator with string literals") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("plus(\"a\", \"b\")") != std::string::npos);
+  CHECK(output.find("plus(\"a\"utf8, \"b\"utf8)") != std::string::npos);
 }
 
 TEST_CASE("rewrites plus operator with raw string literals") {
@@ -204,7 +204,7 @@ TEST_CASE("rewrites plus operator with raw string literals") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("plus(R\"(a)\", R\"(b)\")") != std::string::npos);
+  CHECK(output.find("plus(R\"(a)\"utf8, R\"(b)\"utf8)") != std::string::npos);
 }
 
 TEST_CASE("rewrites multiply operator with unary minus operand") {
@@ -554,7 +554,7 @@ TEST_CASE("does not rewrite numbers inside strings") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output == "main(){ log(\"42\"utf8) }\n");
 }
 
 TEST_CASE("does not rewrite numbers inside raw strings") {
@@ -564,7 +564,7 @@ TEST_CASE("does not rewrite numbers inside raw strings") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output == "main(){ log(R\"(42+7)\"utf8) }\n");
 }
 
 TEST_CASE("does not add suffix to float literal") {
@@ -674,7 +674,7 @@ TEST_CASE("rewrites map literal with string keys") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<string, i32>(\"a\", 1i32, \"b\", 2i32)") != std::string::npos);
+  CHECK(output.find("map<string, i32>(\"a\"utf8, 1i32, \"b\"utf8, 2i32)") != std::string::npos);
 }
 
 TEST_CASE("map literal handles nested braces") {

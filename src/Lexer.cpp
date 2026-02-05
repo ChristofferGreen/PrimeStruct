@@ -241,6 +241,8 @@ Token Lexer::readPunct() {
     return {TokenKind::RAngle, ">", startLine, startColumn};
   case ',':
     return {TokenKind::Comma, ",", startLine, startColumn};
+  case '.':
+    return {TokenKind::Dot, ".", startLine, startColumn};
   case '=':
     return {TokenKind::Equal, "=", startLine, startColumn};
   case ';':

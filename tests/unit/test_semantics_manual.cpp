@@ -44,10 +44,14 @@ primec::Expr makeBinding(const std::string &name,
   return expr;
 }
 
+primec::Expr makeParameter(const std::string &name, const std::string &type = "i32") {
+  return makeBinding(name, {makeTransform(type)}, {});
+}
+
 primec::Definition makeDefinition(const std::string &fullPath,
                                   std::vector<primec::Transform> transforms,
                                   std::vector<primec::Expr> statements,
-                                  std::vector<std::string> parameters = {}) {
+                                  std::vector<primec::Expr> parameters = {}) {
   primec::Definition def;
   def.fullPath = fullPath;
   def.name = fullPath;
@@ -231,7 +235,7 @@ TEST_CASE("execution argument name count mismatch fails") {
                      {makeCall("/return", {makeLiteral(1)})}));
   program.definitions.push_back(makeDefinition(
       "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
-      {"value"}));
+      {makeParameter("value")}));
 
   primec::Execution exec;
   exec.fullPath = "/task";
@@ -280,7 +284,7 @@ TEST_CASE("binding cannot shadow parameter") {
   primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
   program.definitions.push_back(makeDefinition(
       "/main", {makeTransform("return", std::string("int"))},
-      {binding, makeCall("/return", {makeLiteral(1)})}, {"value"}));
+      {binding, makeCall("/return", {makeLiteral(1)})}, {makeParameter("value")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("duplicate binding name") != std::string::npos);
@@ -347,7 +351,7 @@ TEST_CASE("execution unknown named argument fails") {
                      {makeCall("/return", {makeLiteral(1)})}));
   program.definitions.push_back(makeDefinition(
       "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
-      {"a", "b"}));
+      {makeParameter("a"), makeParameter("b")}));
 
   primec::Execution exec;
   exec.fullPath = "/task";
@@ -447,7 +451,7 @@ TEST_CASE("execution positional argument after named fails") {
                      {makeCall("/return", {makeLiteral(1)})}));
   program.definitions.push_back(makeDefinition(
       "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
-      {"a", "b"}));
+      {makeParameter("a"), makeParameter("b")}));
 
   primec::Execution exec;
   exec.fullPath = "/task";
@@ -467,7 +471,7 @@ TEST_CASE("execution named arguments reorder") {
                      {makeCall("/return", {makeLiteral(1)})}));
   program.definitions.push_back(makeDefinition(
       "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
-      {"a", "b"}));
+      {makeParameter("a"), makeParameter("b")}));
 
   primec::Execution exec;
   exec.fullPath = "/task";
@@ -487,7 +491,7 @@ TEST_CASE("execution duplicate named arguments fail") {
                      {makeCall("/return", {makeLiteral(1)})}));
   program.definitions.push_back(makeDefinition(
       "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
-      {"a", "b"}));
+      {makeParameter("a"), makeParameter("b")}));
 
   primec::Execution exec;
   exec.fullPath = "/task";
@@ -507,7 +511,7 @@ TEST_CASE("execution arguments accept collection literals") {
                      {makeCall("/return", {makeLiteral(1)})}));
   program.definitions.push_back(makeDefinition(
       "/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
-      {"items", "pairs"}));
+      {makeParameter("items"), makeParameter("pairs")}));
 
   primec::Expr arrayCall = makeCall("array", {makeLiteral(1), makeLiteral(2)});
   arrayCall.templateArgs = {"i32"};

@@ -1,5 +1,5 @@
 [return<int> effects(io_out)]
 main() {
-  print_line("Hello, world!")
+  print_line("Hello, world!"utf8)
   return(0i32)
 }

@@ -20,7 +20,7 @@ TEST_SUITE_BEGIN("primestruct.parser.templates");
 TEST_CASE("parses template list on definition") {
   const std::string source = R"(
 [return<int>]
-identity<T>(x) {
+identity<T>([T] x) {
   return(x)
 }
 )";
@@ -33,7 +33,7 @@ identity<T>(x) {
 TEST_CASE("parses template list on call") {
   const std::string source = R"(
 [return<int>]
-identity<T>(x) {
+identity<T>([T] x) {
   return(x)
 }
 

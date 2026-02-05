@@ -91,16 +91,18 @@ inline bool parseStringLiteralToken(const std::string &token, ParsedStringLitera
     error = "invalid string literal";
     return false;
   }
+  if (suffix.empty()) {
+    error = "string literal requires utf8/ascii suffix";
+    return false;
+  }
   StringEncoding encoding = StringEncoding::Utf8;
-  if (!suffix.empty()) {
-    if (suffix == "utf8") {
-      encoding = StringEncoding::Utf8;
-    } else if (suffix == "ascii") {
-      encoding = StringEncoding::Ascii;
-    } else {
-      error = "unknown string literal suffix: " + suffix;
-      return false;
-    }
+  if (suffix == "utf8") {
+    encoding = StringEncoding::Utf8;
+  } else if (suffix == "ascii") {
+    encoding = StringEncoding::Ascii;
+  } else {
+    error = "unknown string literal suffix: " + suffix;
+    return false;
   }
   std::string decoded;
   if (!decodeStringLiteralText(literalText, decoded, error)) {
