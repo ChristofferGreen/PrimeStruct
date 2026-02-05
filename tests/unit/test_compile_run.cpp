@@ -111,13 +111,29 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("runs vm with argv i64 index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[1i64])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_i64.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_i64_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
   [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
   print_line(values.count())
-  print_line(values[1i32])
+  print_line(values[1i64])
+  print_line(values[2u64])
   return(values[0i32])
 }
 )";
@@ -125,7 +141,7 @@ main() {
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_array_literals_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath) == "3\n7\n");
+  CHECK(readFile(outPath) == "3\n7\n9\n");
 }
 
 TEST_CASE("vm array access checks bounds") {
@@ -473,6 +489,30 @@ main([array<string>] args) {
   const std::string srcPath = writeTemp("compile_native_argv_print.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_print_exe").string();
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_argv_print_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
+TEST_CASE("compiles and runs native argv print with u64 index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print_line(args[1u64])
+  } else {
+    print_line("missing"utf8)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_print_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_print_u64_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_print_u64_out.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

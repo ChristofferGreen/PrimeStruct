@@ -274,6 +274,45 @@ bool IrLowerer::lower(const Program &program,
     function.instructions.push_back({IrOpcode::ReturnI32, 0});
   };
 
+  auto normalizeIndexKind = [](LocalInfo::ValueKind kind) {
+    return (kind == LocalInfo::ValueKind::Bool) ? LocalInfo::ValueKind::Int32 : kind;
+  };
+
+  auto isSupportedIndexKind = [](LocalInfo::ValueKind kind) {
+    return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
+           kind == LocalInfo::ValueKind::UInt64;
+  };
+
+  auto pushZeroForIndex = [&](LocalInfo::ValueKind kind) {
+    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
+  };
+
+  auto cmpLtForIndex = [&](LocalInfo::ValueKind kind) {
+    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::CmpLtI32 : IrOpcode::CmpLtI64;
+  };
+
+  auto cmpGeForIndex = [&](LocalInfo::ValueKind kind) {
+    if (kind == LocalInfo::ValueKind::Int32) {
+      return IrOpcode::CmpGeI32;
+    }
+    if (kind == LocalInfo::ValueKind::Int64) {
+      return IrOpcode::CmpGeI64;
+    }
+    return IrOpcode::CmpGeU64;
+  };
+
+  auto pushOneForIndex = [&](LocalInfo::ValueKind kind) {
+    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
+  };
+
+  auto addForIndex = [&](LocalInfo::ValueKind kind) {
+    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::AddI32 : IrOpcode::AddI64;
+  };
+
+  auto mulForIndex = [&](LocalInfo::ValueKind kind) {
+    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::MulI32 : IrOpcode::MulI64;
+  };
+
   auto parseStringLiteral = [&](const std::string &text, std::string &decoded) -> bool {
     ParsedStringLiteral parsed;
     if (!parseStringLiteralToken(text, parsed, error)) {
@@ -1080,12 +1119,9 @@ bool IrLowerer::lower(const Program &program,
         error = "native backend only supports entry argument indexing";
         return false;
       }
-      LocalInfo::ValueKind indexKind = inferExprKind(arg.args[1], callerLocals);
-      if (indexKind == LocalInfo::ValueKind::Bool) {
-        indexKind = LocalInfo::ValueKind::Int32;
-      }
-      if (indexKind != LocalInfo::ValueKind::Int32) {
-        error = "native backend only supports i32 indices for " + accessName;
+      LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(arg.args[1], callerLocals));
+      if (!isSupportedIndexKind(indexKind)) {
+        error = "native backend requires integer indices for " + accessName;
         return false;
       }
 
@@ -1096,18 +1132,20 @@ bool IrLowerer::lower(const Program &program,
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
 
       if (accessName == "at") {
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-        function.instructions.push_back({IrOpcode::PushI32, 0});
-        function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-        size_t jumpNonNegative = function.instructions.size();
-        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-        emitArrayIndexOutOfBounds();
-        size_t nonNegativeIndex = function.instructions.size();
-        function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+        if (indexKind != LocalInfo::ValueKind::UInt64) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
+          function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+          function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+          size_t jumpNonNegative = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          emitArrayIndexOutOfBounds();
+          size_t nonNegativeIndex = function.instructions.size();
+          function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+        }
 
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
         function.instructions.push_back({IrOpcode::PushArgc, 0});
-        function.instructions.push_back({IrOpcode::CmpGeI32, 0});
+        function.instructions.push_back({cmpGeForIndex(indexKind), 0});
         size_t jumpInRange = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         emitArrayIndexOutOfBounds();
@@ -1348,12 +1386,9 @@ bool IrLowerer::lower(const Program &program,
             return false;
           }
 
-          LocalInfo::ValueKind indexKind = inferExprKind(expr.args[1], localsIn);
-          if (indexKind == LocalInfo::ValueKind::Bool) {
-            indexKind = LocalInfo::ValueKind::Int32;
-          }
-          if (indexKind != LocalInfo::ValueKind::Int32) {
-            error = "native backend only supports i32 indices for " + accessName;
+          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
+          if (!isSupportedIndexKind(indexKind)) {
+            error = "native backend requires integer indices for " + accessName;
             return false;
           }
 
@@ -1375,18 +1410,20 @@ bool IrLowerer::lower(const Program &program,
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::PushI32, 0});
-            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-            size_t jumpNonNegative = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            emitArrayIndexOutOfBounds();
-            size_t nonNegativeIndex = function.instructions.size();
-            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            if (indexKind != LocalInfo::ValueKind::UInt64) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+              function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+              size_t jumpNonNegative = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitArrayIndexOutOfBounds();
+              size_t nonNegativeIndex = function.instructions.size();
+              function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            }
 
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-            function.instructions.push_back({IrOpcode::CmpGeI32, 0});
+            function.instructions.push_back({cmpGeForIndex(indexKind), 0});
             size_t jumpInRange = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
             emitArrayIndexOutOfBounds();
@@ -1396,10 +1433,10 @@ bool IrLowerer::lower(const Program &program,
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({IrOpcode::PushI32, 1});
-          function.instructions.push_back({IrOpcode::AddI32, 0});
-          function.instructions.push_back({IrOpcode::PushI32, 16});
-          function.instructions.push_back({IrOpcode::MulI32, 0});
+          function.instructions.push_back({pushOneForIndex(indexKind), 1});
+          function.instructions.push_back({addForIndex(indexKind), 0});
+          function.instructions.push_back({pushOneForIndex(indexKind), 16});
+          function.instructions.push_back({mulForIndex(indexKind), 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
@@ -1991,12 +2028,9 @@ bool IrLowerer::lower(const Program &program,
           return false;
         }
         if (isEntryArgsName(arg.args.front(), localsIn)) {
-          LocalInfo::ValueKind indexKind = inferExprKind(arg.args[1], localsIn);
-          if (indexKind == LocalInfo::ValueKind::Bool) {
-            indexKind = LocalInfo::ValueKind::Int32;
-          }
-          if (indexKind != LocalInfo::ValueKind::Int32) {
-            error = "native backend only supports i32 indices for " + accessName;
+          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(arg.args[1], localsIn));
+          if (!isSupportedIndexKind(indexKind)) {
+            error = "native backend requires integer indices for " + accessName;
             return false;
           }
 
@@ -2007,18 +2041,20 @@ bool IrLowerer::lower(const Program &program,
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
 
           if (accessName == "at") {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::PushI32, 0});
-            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-            size_t jumpNonNegative = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            emitArrayIndexOutOfBounds();
-            size_t nonNegativeIndex = function.instructions.size();
-            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            if (indexKind != LocalInfo::ValueKind::UInt64) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+              function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+              size_t jumpNonNegative = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitArrayIndexOutOfBounds();
+              size_t nonNegativeIndex = function.instructions.size();
+              function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            }
 
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
             function.instructions.push_back({IrOpcode::PushArgc, 0});
-            function.instructions.push_back({IrOpcode::CmpGeI32, 0});
+            function.instructions.push_back({cmpGeForIndex(indexKind), 0});
             size_t jumpInRange = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
             emitArrayIndexOutOfBounds();
@@ -2142,12 +2178,9 @@ bool IrLowerer::lower(const Program &program,
             error = "native backend only supports entry argument indexing";
             return false;
           }
-          LocalInfo::ValueKind indexKind = inferExprKind(init.args[1], localsIn);
-          if (indexKind == LocalInfo::ValueKind::Bool) {
-            indexKind = LocalInfo::ValueKind::Int32;
-          }
-          if (indexKind != LocalInfo::ValueKind::Int32) {
-            error = "native backend only supports i32 indices for " + accessName;
+          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(init.args[1], localsIn));
+          if (!isSupportedIndexKind(indexKind)) {
+            error = "native backend requires integer indices for " + accessName;
             return false;
           }
 
@@ -2158,18 +2191,20 @@ bool IrLowerer::lower(const Program &program,
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
 
           if (accessName == "at") {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-            function.instructions.push_back({IrOpcode::PushI32, 0});
-            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-            size_t jumpNonNegative = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            emitArrayIndexOutOfBounds();
-            size_t nonNegativeIndex = function.instructions.size();
-            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            if (indexKind != LocalInfo::ValueKind::UInt64) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
+              function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+              function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+              size_t jumpNonNegative = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitArrayIndexOutOfBounds();
+              size_t nonNegativeIndex = function.instructions.size();
+              function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            }
 
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
             function.instructions.push_back({IrOpcode::PushArgc, 0});
-            function.instructions.push_back({IrOpcode::CmpGeI32, 0});
+            function.instructions.push_back({cmpGeForIndex(indexKind), 0});
             size_t jumpInRange = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
             emitArrayIndexOutOfBounds();
