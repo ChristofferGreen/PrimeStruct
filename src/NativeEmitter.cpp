@@ -741,6 +741,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintString";
       case IrOpcode::PrintArgv:
         return "PrintArgv";
+      case IrOpcode::PrintArgvUnsafe:
+        return "PrintArgvUnsafe";
       default:
         return "Unknown";
     }
@@ -807,6 +809,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::PrintString:
         return 0;
       case IrOpcode::PrintArgv:
+      case IrOpcode::PrintArgvUnsafe:
         return -1;
       default:
         return 0;
@@ -1385,10 +1388,10 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
     }
     if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
-        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv) {
+        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
       needsPrintScratch = true;
     }
-    if (inst.op == IrOpcode::PrintArgv) {
+    if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
       needsArgc = true;
       needsArgv = true;
     }
@@ -1627,6 +1630,13 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         break;
       }
       case IrOpcode::PrintArgv: {
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        emitter.emitPrintArgv(argcLocalIndex, argvLocalIndex, scratchOffset, newline, fd);
+        break;
+      }
+      case IrOpcode::PrintArgvUnsafe: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;

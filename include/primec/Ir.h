@@ -54,6 +54,7 @@ enum class IrOpcode : uint8_t {
   PrintString,
   PushArgc,
   PrintArgv,
+  PrintArgvUnsafe,
 };
 
 constexpr uint64_t PrintFlagNewline = 1ull << 0;

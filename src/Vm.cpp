@@ -441,6 +441,32 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::PrintArgvUnsafe: {
+        if (stack.empty()) {
+          error = "IR stack underflow on print";
+          return false;
+        }
+        if (!args) {
+          error = "VM missing argv data for PrintArgvUnsafe";
+          return false;
+        }
+        int64_t index = static_cast<int64_t>(stack.back());
+        stack.pop_back();
+        if (index < 0 || static_cast<size_t>(index) >= args->size()) {
+          ip += 1;
+          break;
+        }
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
+        std::string_view text = (*args)[static_cast<size_t>(index)];
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
+        ip += 1;
+        break;
+      }
       default:
         error = "unknown IR opcode";
         return false;

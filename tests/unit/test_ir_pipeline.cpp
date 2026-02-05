@@ -2078,6 +2078,63 @@ main([array<string>] args) {
   CHECK(sawPrintArgv);
 }
 
+TEST_CASE("ir lowerer supports entry args print unsafe index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(at_unsafe(args, 1i32))
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  bool sawPrintArgvUnsafe = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgvUnsafe) {
+      sawPrintArgvUnsafe = true;
+      break;
+    }
+  }
+  CHECK(sawPrintArgvUnsafe);
+}
+
+TEST_CASE("ir lowerer tracks unsafe argv bindings") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  [string] first(at_unsafe(args, 1i32))
+  print_line(first)
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  bool sawPrintArgvUnsafe = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgvUnsafe) {
+      sawPrintArgvUnsafe = true;
+      break;
+    }
+  }
+  CHECK(sawPrintArgvUnsafe);
+}
+
 TEST_CASE("ir lowers map literal call as statement") {
   const std::string source = R"(
 [return<int>]

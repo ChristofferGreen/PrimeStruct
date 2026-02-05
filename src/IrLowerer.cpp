@@ -249,6 +249,7 @@ bool IrLowerer::lower(const Program &program,
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
     enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
+    bool argvChecked = true;
   };
   using LocalMap = std::unordered_map<std::string, LocalInfo>;
   LocalMap locals;
@@ -2139,7 +2140,8 @@ bool IrLowerer::lower(const Program &program,
           }
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({IrOpcode::PrintArgv, flags});
+          IrOpcode printOp = (accessName == "at_unsafe") ? IrOpcode::PrintArgvUnsafe : IrOpcode::PrintArgv;
+          function.instructions.push_back({printOp, flags});
           return true;
         }
       }
@@ -2172,7 +2174,8 @@ bool IrLowerer::lower(const Program &program,
         }
         if (it->second.stringSource == LocalInfo::StringSource::ArgvIndex) {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-          function.instructions.push_back({IrOpcode::PrintArgv, flags});
+          IrOpcode printOp = it->second.argvChecked ? IrOpcode::PrintArgv : IrOpcode::PrintArgvUnsafe;
+          function.instructions.push_back({printOp, flags});
           return true;
         }
       }
@@ -2219,6 +2222,7 @@ bool IrLowerer::lower(const Program &program,
         const Expr &init = stmt.args.front();
         int32_t index = -1;
         LocalInfo::StringSource source = LocalInfo::StringSource::None;
+        bool argvChecked = true;
         if (init.kind == Expr::Kind::StringLiteral) {
           std::string decoded;
           if (!parseStringLiteral(init.stringValue, decoded)) {
@@ -2239,6 +2243,9 @@ bool IrLowerer::lower(const Program &program,
           }
           source = it->second.stringSource;
           index = it->second.stringIndex;
+          if (source == LocalInfo::StringSource::ArgvIndex) {
+            argvChecked = it->second.argvChecked;
+          }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         } else if (init.kind == Expr::Kind::Call) {
           std::string accessName;
@@ -2290,6 +2297,7 @@ bool IrLowerer::lower(const Program &program,
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
           source = LocalInfo::StringSource::ArgvIndex;
+          argvChecked = (accessName == "at");
         } else {
           error = "native backend requires string bindings to use string literals, bindings, or entry args";
           return false;
@@ -2301,6 +2309,7 @@ bool IrLowerer::lower(const Program &program,
         info.valueKind = LocalInfo::ValueKind::String;
         info.stringSource = source;
         info.stringIndex = index;
+        info.argvChecked = argvChecked;
         if (init.kind == Expr::Kind::StringLiteral) {
           function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
         }
