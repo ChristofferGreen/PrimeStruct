@@ -92,6 +92,25 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == srcPath + "\n");
 }
 
+TEST_CASE("runs vm with forwarded argv") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print_line(args[1i32])
+  } else {
+    print_line("missing"utf8)
+  }
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_forward_argv.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_forward_argv_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("writes serialized ir output") {
   const std::string source = R"(
 [return<int>]

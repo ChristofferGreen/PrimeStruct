@@ -155,6 +155,12 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
 bool parseArgs(int argc, char **argv, primec::Options &out) {
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
+    if (arg == "--") {
+      for (int j = i + 1; j < argc; ++j) {
+        out.programArgs.push_back(argv[j]);
+      }
+      break;
+    }
     if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" || arg == "--emit=vm") {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "-o" && i + 1 < argc) {
@@ -192,6 +198,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
     } else if (!arg.empty() && arg[0] == '-') {
       return false;
     } else {
+      if (!out.inputPath.empty()) {
+        return false;
+      }
       out.inputPath = arg;
     }
   }
@@ -268,7 +277,7 @@ int main(int argc, char **argv) {
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm] <input.prime> [-o <output>] [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] [--no-transforms] [--out-dir <dir>] "
-                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ir]\n";
+                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] [-- <program args...>]\n";
     return 2;
   }
 
@@ -334,7 +343,11 @@ int main(int argc, char **argv) {
     }
     primec::Vm vm;
     std::vector<std::string_view> args;
+    args.reserve(1 + options.programArgs.size());
     args.push_back(options.inputPath);
+    for (const auto &arg : options.programArgs) {
+      args.push_back(arg);
+    }
     uint64_t result = 0;
     if (!vm.execute(ir, result, error, args)) {
       std::cerr << "VM error: " << error << "\n";

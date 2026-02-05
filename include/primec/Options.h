@@ -13,6 +13,7 @@ struct Options {
   std::string dumpStage;
   std::vector<std::string> textFilters = {"operators", "collections", "implicit-utf8"};
   std::vector<std::string> defaultEffects;
+  std::vector<std::string> programArgs;
   std::vector<std::string> includePaths;
 };
 } // namespace primec
