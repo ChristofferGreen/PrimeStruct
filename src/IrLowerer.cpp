@@ -386,14 +386,23 @@ bool IrLowerer::lower(const Program &program,
     }
     return localsIn.count(entryArgsName) == 0;
   };
-  auto isEntryArgsCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    if (!isSimpleCallName(expr, "count")) {
+  auto isArrayCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
+    if (!isSimpleCallName(expr, "count") || expr.args.size() != 1) {
       return false;
     }
-    if (expr.args.size() != 1) {
-      return false;
+    const Expr &target = expr.args.front();
+    if (isEntryArgsName(target, localsIn)) {
+      return true;
     }
-    return isEntryArgsName(expr.args.front(), localsIn);
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array;
+    }
+    if (target.kind == Expr::Kind::Call) {
+      std::string collection;
+      return getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1;
+    }
+    return false;
   };
 
   auto isFloatTypeName = [](const std::string &name) -> bool {
@@ -556,6 +565,70 @@ bool IrLowerer::lower(const Program &program,
   std::unordered_set<std::string> returnInferenceStack;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
 
+  auto typeNameForValueKind = [](LocalInfo::ValueKind kind) -> std::string {
+    switch (kind) {
+      case LocalInfo::ValueKind::Int32:
+        return "i32";
+      case LocalInfo::ValueKind::Int64:
+        return "i64";
+      case LocalInfo::ValueKind::UInt64:
+        return "u64";
+      case LocalInfo::ValueKind::Bool:
+        return "bool";
+      case LocalInfo::ValueKind::String:
+        return "string";
+      default:
+        return "";
+    }
+  };
+  std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
+  resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &localsIn) -> const Definition * {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || !callExpr.isMethodCall) {
+      return nullptr;
+    }
+    if (callExpr.args.empty()) {
+      error = "method call missing receiver";
+      return nullptr;
+    }
+    if (isArrayCountCall(callExpr, localsIn)) {
+      return nullptr;
+    }
+    const Expr &receiver = callExpr.args.front();
+    if (isEntryArgsName(receiver, localsIn)) {
+      error = "unknown method target for " + callExpr.name;
+      return nullptr;
+    }
+    if (receiver.kind != Expr::Kind::Name) {
+      error = "unknown method target for " + callExpr.name;
+      return nullptr;
+    }
+    auto it = localsIn.find(receiver.name);
+    if (it == localsIn.end()) {
+      error = "native backend does not know identifier: " + receiver.name;
+      return nullptr;
+    }
+    if (it->second.kind == LocalInfo::Kind::Array) {
+      error = "unknown method: " + callExpr.name;
+      return nullptr;
+    }
+    if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
+      error = "unknown method target for " + callExpr.name;
+      return nullptr;
+    }
+    std::string typeName = typeNameForValueKind(it->second.valueKind);
+    if (typeName.empty()) {
+      error = "unknown method target for " + callExpr.name;
+      return nullptr;
+    }
+    const std::string resolved = "/" + typeName + "/" + callExpr.name;
+    auto defIt = defMap.find(resolved);
+    if (defIt == defMap.end()) {
+      error = "unknown method: " + resolved;
+      return nullptr;
+    }
+    return defIt->second;
+  };
+
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
   inferPointerTargetKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (expr.kind == Expr::Kind::Name) {
@@ -645,27 +718,18 @@ bool IrLowerer::lower(const Program &program,
             }
             return LocalInfo::ValueKind::Unknown;
           }
+        } else {
+          const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
+          if (callee) {
+            ReturnInfo info;
+            if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid) {
+              return info.kind;
+            }
+            return LocalInfo::ValueKind::Unknown;
+          }
         }
-        if (isEntryArgsCountCall(expr, localsIn)) {
+        if (isArrayCountCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;
-        }
-        if (isSimpleCallName(expr, "count") && expr.args.size() == 1) {
-          if (isEntryArgsName(expr.args.front(), localsIn)) {
-            return LocalInfo::ValueKind::Int32;
-          }
-          const Expr &target = expr.args.front();
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
-              return LocalInfo::ValueKind::Int32;
-            }
-          }
-          if (target.kind == Expr::Kind::Call) {
-            std::string collection;
-            if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
-              return LocalInfo::ValueKind::Int32;
-            }
-          }
         }
         std::string accessName;
         if (getBuiltinArrayAccessName(expr, accessName)) {
@@ -1022,7 +1086,6 @@ bool IrLowerer::lower(const Program &program,
     }
     return it->second;
   };
-
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
                                        const Definition &callee,
                                        std::vector<const Expr *> &ordered) -> bool {
@@ -1330,6 +1393,17 @@ bool IrLowerer::lower(const Program &program,
         return false;
       }
       case Expr::Kind::Call: {
+        if (expr.isMethodCall && !isArrayCountCall(expr, localsIn)) {
+          const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
+          if (!callee) {
+            return false;
+          }
+          if (!expr.bodyArguments.empty()) {
+            error = "native backend does not support block arguments on calls";
+            return false;
+          }
+          return emitInlineDefinitionCall(expr, *callee, localsIn, true);
+        }
         if (const Definition *callee = resolveDefinitionCall(expr)) {
           if (!expr.bodyArguments.empty()) {
             error = "native backend does not support block arguments on calls";
@@ -1337,11 +1411,7 @@ bool IrLowerer::lower(const Program &program,
           }
           return emitInlineDefinitionCall(expr, *callee, localsIn, true);
         }
-        if (isSimpleCallName(expr, "count")) {
-          if (expr.args.size() != 1) {
-            error = "count requires exactly one argument";
-            return false;
-          }
+        if (isArrayCountCall(expr, localsIn)) {
           if (isEntryArgsName(expr.args.front(), localsIn)) {
             function.instructions.push_back({IrOpcode::PushArgc, 0});
             return true;
@@ -1351,6 +1421,10 @@ bool IrLowerer::lower(const Program &program,
           }
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
+        }
+        if (isSimpleCallName(expr, "count")) {
+          error = "count requires array target";
+          return false;
         }
         PrintBuiltin printBuiltin;
         if (getPrintBuiltin(expr, printBuiltin)) {
@@ -2432,6 +2506,17 @@ bool IrLowerer::lower(const Program &program,
       return true;
     }
     if (stmt.kind == Expr::Kind::Call) {
+      if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn)) {
+        const Definition *callee = resolveMethodCallDefinition(stmt, localsIn);
+        if (!callee) {
+          return false;
+        }
+        if (!stmt.bodyArguments.empty()) {
+          error = "native backend does not support block arguments on calls";
+          return false;
+        }
+        return emitInlineDefinitionCall(stmt, *callee, localsIn, false);
+      }
       if (const Definition *callee = resolveDefinitionCall(stmt)) {
         if (!stmt.bodyArguments.empty()) {
           error = "native backend does not support block arguments on calls";

@@ -51,6 +51,21 @@ ReturnKind getReturnKind(const Definition &def) {
   return ReturnKind::Unknown;
 }
 
+bool isPrimitiveBindingTypeName(const std::string &name) {
+  return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
+         name == "f64" || name == "bool" || name == "string";
+}
+
+std::string normalizeBindingTypeName(const std::string &name) {
+  if (name == "int") {
+    return "i32";
+  }
+  if (name == "float") {
+    return "f32";
+  }
+  return name;
+}
+
 BindingInfo getBindingInfo(const Expr &expr) {
   BindingInfo info;
   for (const auto &transform : expr.transforms) {
@@ -128,6 +143,16 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
     return base + " &";
   }
   return bindingTypeToCpp(info.typeName);
+}
+
+std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix) {
+  if (!name.empty() && name[0] == '/') {
+    return name;
+  }
+  if (!namespacePrefix.empty()) {
+    return namespacePrefix + "/" + name;
+  }
+  return "/" + name;
 }
 
 ReturnKind returnKindForTypeName(const std::string &name) {
@@ -393,6 +418,51 @@ std::string resolveExprPath(const Expr &expr) {
   return "/" + expr.name;
 }
 
+bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(target.name);
+    return it != localTypes.end() && it->second.typeName == "array";
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    return getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1;
+  }
+  return false;
+}
+
+bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+    return false;
+  }
+  return isArrayValue(call.args.front(), localTypes);
+}
+
+bool resolveMethodCallPath(const Expr &call,
+                           const std::unordered_map<std::string, BindingInfo> &localTypes,
+                           std::string &resolvedOut) {
+  if (!call.isMethodCall || call.args.empty()) {
+    return false;
+  }
+  const Expr &receiver = call.args.front();
+  if (receiver.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localTypes.find(receiver.name);
+  if (it == localTypes.end()) {
+    return false;
+  }
+  std::string typeName = it->second.typeName;
+  if (typeName == "Pointer" || typeName == "Reference" || typeName == "array" || typeName == "map") {
+    return false;
+  }
+  if (isPrimitiveBindingTypeName(typeName)) {
+    resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + call.name;
+    return true;
+  }
+  resolvedOut = resolveTypePath(typeName, call.namespacePrefix) + "/" + call.name;
+  return true;
+}
+
 bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -526,7 +596,6 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     return false;
   };
-
   if (expr.kind == Expr::Kind::Literal) {
     if (!expr.isUnsigned && expr.intWidth == 32) {
       return std::to_string(static_cast<int64_t>(expr.literalValue));
@@ -556,10 +625,15 @@ std::string Emitter::emitExpr(const Expr &expr,
     return expr.name;
   }
   std::string full = resolveExprPath(expr);
-  auto it = expr.isMethodCall ? nameMap.end() : nameMap.find(full);
+  if (expr.isMethodCall && !isArrayCountCall(expr, localTypes)) {
+    std::string methodPath;
+    if (resolveMethodCallPath(expr, localTypes, methodPath)) {
+      full = methodPath;
+    }
+  }
+  auto it = nameMap.find(full);
   if (it == nameMap.end()) {
-    if ((expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) ||
-        (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1)) {
+    if (isArrayCountCall(expr, localTypes)) {
       std::ostringstream out;
       out << "ps_array_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes) << ")";
       return out.str();
@@ -1103,6 +1177,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.kind == Expr::Kind::Call && !stmt.bodyArguments.empty()) {
         std::string full = resolveExprPath(stmt);
+        if (stmt.isMethodCall && !isArrayCountCall(stmt, localTypes)) {
+          std::string methodPath;
+          if (resolveMethodCallPath(stmt, localTypes, methodPath)) {
+            full = methodPath;
+          }
+        }
         auto it = nameMap.find(full);
         if (it == nameMap.end()) {
           out << pad << emitExpr(stmt, nameMap, paramMap, localTypes) << ";\n";

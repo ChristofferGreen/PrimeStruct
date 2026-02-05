@@ -1177,24 +1177,6 @@ bool Semantics::validate(const Program &program,
       return returnKindForTypeName(it->second.typeName);
     }
     if (expr.kind == Expr::Kind::Call) {
-      std::string resolved = resolveCalleePath(expr);
-      auto defIt = expr.isMethodCall ? defMap.end() : defMap.find(resolved);
-      if (defIt != defMap.end()) {
-        if (!inferDefinitionReturnKind(*defIt->second)) {
-          return ReturnKind::Unknown;
-        }
-        auto kindIt = returnKinds.find(resolved);
-        if (kindIt != returnKinds.end()) {
-          return kindIt->second;
-        }
-        return ReturnKind::Unknown;
-      }
-      if (expr.isMethodCall && expr.name == "count") {
-        return ReturnKind::Int;
-      }
-      if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
-        return ReturnKind::Int;
-      }
       auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
         if (target.kind == Expr::Kind::Name) {
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -1223,6 +1205,74 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
+      auto resolveMethodCallPath = [&](std::string &resolvedOut) -> bool {
+        if (expr.args.empty()) {
+          return false;
+        }
+        const Expr &receiver = expr.args.front();
+        std::string typeName;
+        std::string typeTemplateArg;
+        if (receiver.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+            typeName = paramBinding->typeName;
+            typeTemplateArg = paramBinding->typeTemplateArg;
+          } else {
+            auto it = locals.find(receiver.name);
+            if (it != locals.end()) {
+              typeName = it->second.typeName;
+              typeTemplateArg = it->second.typeTemplateArg;
+            }
+          }
+        }
+        if (typeName.empty()) {
+          return false;
+        }
+        if (typeName == "Pointer" || typeName == "Reference") {
+          return false;
+        }
+        if (typeName == "array" || typeName == "map") {
+          return false;
+        }
+        if (isPrimitiveBindingTypeName(typeName)) {
+          resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
+          return true;
+        }
+        resolvedOut = resolveTypePath(typeName, expr.namespacePrefix) + "/" + expr.name;
+        return true;
+      };
+      std::string resolved = resolveCalleePath(expr);
+      bool hasResolvedPath = !expr.isMethodCall;
+      if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
+        std::string elemType;
+        if (resolveArrayTarget(expr.args.front(), elemType)) {
+          return ReturnKind::Int;
+        }
+      }
+      if (expr.isMethodCall) {
+        std::string methodResolved;
+        if (resolveMethodCallPath(methodResolved)) {
+          resolved = methodResolved;
+          hasResolvedPath = true;
+        }
+      }
+      auto defIt = hasResolvedPath ? defMap.find(resolved) : defMap.end();
+      if (defIt != defMap.end()) {
+        if (!inferDefinitionReturnKind(*defIt->second)) {
+          return ReturnKind::Unknown;
+        }
+        auto kindIt = returnKinds.find(resolved);
+        if (kindIt != returnKinds.end()) {
+          return kindIt->second;
+        }
+        return ReturnKind::Unknown;
+      }
+      if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
+        std::string elemType;
+        if (!resolveArrayTarget(expr.args.front(), elemType)) {
+          return ReturnKind::Unknown;
+        }
+        return ReturnKind::Int;
+      }
       std::string builtinName;
       if (getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2) {
         std::string elemType;
@@ -1735,18 +1785,47 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
-      auto resolveMethodTarget = [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut) -> bool {
+      auto resolveMethodTarget =
+          [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
+        isBuiltinOut = false;
         std::string elemType;
-        if (!resolveArrayTarget(receiver, elemType)) {
+        if (methodName == "count" && resolveArrayTarget(receiver, elemType)) {
+          resolvedOut = "/array/count";
+          isBuiltinOut = true;
+          return true;
+        }
+        std::string typeName;
+        std::string typeTemplateArg;
+        if (receiver.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+            typeName = paramBinding->typeName;
+            typeTemplateArg = paramBinding->typeTemplateArg;
+          } else {
+            auto it = locals.find(receiver.name);
+            if (it != locals.end()) {
+              typeName = it->second.typeName;
+              typeTemplateArg = it->second.typeTemplateArg;
+            }
+          }
+        }
+        if (typeName.empty()) {
           error = "unknown method target for " + methodName;
           return false;
         }
-        if (methodName == "count") {
-          resolvedOut = "/array/count";
+        if (typeName == "Pointer" || typeName == "Reference") {
+          error = "unknown method target for " + methodName;
+          return false;
+        }
+        if (typeName == "array" || typeName == "map") {
+          error = "unknown method: " + methodName;
+          return false;
+        }
+        if (isPrimitiveBindingTypeName(typeName)) {
+          resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
           return true;
         }
-        error = "unknown method: " + methodName;
-        return false;
+        resolvedOut = resolveTypePath(typeName, receiver.namespacePrefix) + "/" + methodName;
+        return true;
       };
 
       std::string resolved = resolveCalleePath(expr);
@@ -1756,14 +1835,22 @@ bool Semantics::validate(const Program &program,
           error = "method call missing receiver";
           return false;
         }
-        if (!resolveMethodTarget(expr.args.front(), expr.name, resolved)) {
+        bool isBuiltinMethod = false;
+        if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
           return false;
         }
-        resolvedMethod = true;
+        if (!isBuiltinMethod && defMap.find(resolved) == defMap.end()) {
+          error = "unknown method: " + resolved;
+          return false;
+        }
+        resolvedMethod = isBuiltinMethod;
       } else if (expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
-        if (!resolveMethodTarget(expr.args.front(), "count", resolved)) {
+        std::string elemType;
+        if (!resolveArrayTarget(expr.args.front(), elemType)) {
+          error = "unknown method target for count";
           return false;
         }
+        resolved = "/array/count";
         resolvedMethod = true;
       }
 

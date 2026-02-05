@@ -126,6 +126,26 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("runs vm with method call result") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(plus(value.inc(), 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_method_call.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 8);
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -428,6 +448,52 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native method call") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+
+[return<int>]
+main() {
+  [i32] value(5i32)
+  return(value.inc())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_method_call.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_method_call_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
+TEST_CASE("compiles and runs native method count call") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  count([i32] value) {
+    return(plus(value, 2i32))
+  }
+}
+
+[return<int>]
+main() {
+  [i32] value(3i32)
+  return(value.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_method_count.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_method_count_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs native void call with string param") {
