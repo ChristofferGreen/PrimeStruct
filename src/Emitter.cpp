@@ -483,6 +483,10 @@ bool isElseCall(const Expr &expr) {
   return isSimpleCallName(expr, "else");
 }
 
+bool isRepeatCall(const Expr &expr) {
+  return isSimpleCallName(expr, "repeat");
+}
+
 bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }
@@ -1011,6 +1015,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     out << ") {\n";
     std::function<void(const Expr &, int, std::unordered_map<std::string, BindingInfo> &)> emitStatement;
+    int repeatCounter = 0;
     emitStatement = [&](const Expr &stmt, int indent, std::unordered_map<std::string, BindingInfo> &localTypes) {
       std::string pad(static_cast<size_t>(indent) * 2, ' ');
       if (isReturnCall(stmt)) {
@@ -1072,6 +1077,27 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
             emitStatement(bodyStmt, indent + 1, blockTypes);
           }
         }
+        out << pad << "}\n";
+        return;
+      }
+      if (stmt.kind == Expr::Kind::Call && isRepeatCall(stmt)) {
+        const int repeatIndex = repeatCounter++;
+        const std::string endVar = "ps_repeat_end_" + std::to_string(repeatIndex);
+        const std::string indexVar = "ps_repeat_i_" + std::to_string(repeatIndex);
+        out << pad << "{\n";
+        std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
+        std::string countExpr = "\"\"";
+        if (!stmt.args.empty()) {
+          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, localTypes);
+        }
+        out << innerPad << "auto " << endVar << " = " << countExpr << ";\n";
+        out << innerPad << "for (decltype(" << endVar << ") " << indexVar << " = 0; " << indexVar << " < " << endVar
+            << "; ++" << indexVar << ") {\n";
+        auto blockTypes = localTypes;
+        for (const auto &bodyStmt : stmt.bodyArguments) {
+          emitStatement(bodyStmt, indent + 2, blockTypes);
+        }
+        out << innerPad << "}\n";
         out << pad << "}\n";
         return;
       }

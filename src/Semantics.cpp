@@ -394,6 +394,10 @@ bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }
 
+bool isRepeatCall(const Expr &expr) {
+  return isSimpleCallName(expr, "repeat");
+}
+
 enum class PrintTarget { Out, Err };
 
 struct PrintBuiltin {
@@ -1343,6 +1347,15 @@ bool Semantics::validate(const Program &program,
         }
         return true;
       }
+      if (isRepeatCall(stmt)) {
+        std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
+        for (const auto &bodyExpr : stmt.bodyArguments) {
+          if (!inferStatement(bodyExpr, blockLocals)) {
+            return false;
+          }
+        }
+        return true;
+      }
       return true;
     };
 
@@ -2212,6 +2225,44 @@ bool Semantics::validate(const Program &program,
       }
       if (!validateBlock(elseBlock, "else")) {
         return false;
+      }
+      return true;
+    }
+    if (isRepeatCall(stmt)) {
+      if (hasNamedArguments(stmt.argNames)) {
+        error = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!stmt.templateArgs.empty()) {
+        error = "repeat does not accept template arguments";
+        return false;
+      }
+      if (stmt.args.size() != 1) {
+        error = "repeat requires exactly one argument";
+        return false;
+      }
+      const Expr &count = stmt.args.front();
+      if (!validateExpr(params, locals, count)) {
+        return false;
+      }
+      ReturnKind countKind = inferExprReturnKind(count, params, locals);
+      if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64 &&
+          countKind != ReturnKind::Bool) {
+        error = "repeat count requires integer or bool";
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      for (const auto &bodyExpr : stmt.bodyArguments) {
+        if (!validateStatement(params,
+                               blockLocals,
+                               bodyExpr,
+                               returnKind,
+                               allowReturn,
+                               allowBindings,
+                               sawReturn,
+                               namespacePrefix)) {
+          return false;
+        }
       }
       return true;
     }

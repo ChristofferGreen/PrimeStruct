@@ -2324,6 +2324,80 @@ main() {
   CHECK(error.find("if condition requires integer or bool") != std::string::npos);
 }
 
+TEST_CASE("repeat validates block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(0i32)
+  repeat(3i32) {
+    assign(value, plus(value, 2i32))
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("repeat validates bool count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(0i32)
+  repeat(true) {
+    assign(value, 7i32)
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("repeat rejects float count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  repeat(1.5f) {
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("repeat count requires integer or bool") != std::string::npos);
+}
+
+TEST_CASE("repeat rejects string count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  repeat("nope"utf8) {
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("repeat count requires integer or bool") != std::string::npos);
+}
+
+TEST_CASE("repeat rejects missing count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  repeat() {
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("repeat requires exactly one argument") != std::string::npos);
+}
+
 TEST_CASE("reference participates in signedness checks") {
   const std::string source = R"(
 [return<int>]

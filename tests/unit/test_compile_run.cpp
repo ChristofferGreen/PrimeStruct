@@ -187,6 +187,25 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs repeat loop") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(0i32)
+  repeat(3i32) {
+    assign(value, plus(value, 2i32))
+  }
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_repeat_loop.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_repeat_loop_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs map literal") {
   const std::string source = R"(
 [return<int>]
@@ -349,6 +368,25 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs native repeat loop") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(0i32)
+  repeat(3i32) {
+    assign(value, plus(value, 2i32))
+  }
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_repeat_loop.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_repeat_loop_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
 }
 
 TEST_CASE("compiles and runs native pointer helpers") {
