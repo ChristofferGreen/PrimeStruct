@@ -486,11 +486,17 @@ bool rewriteUnaryNot(const std::string &input,
   if (index > 0 && isTokenChar(input[index - 1])) {
     return false;
   }
-  if (input[index + 1] == '(') {
-    output.append("not");
-    return true;
+  size_t bangEnd = index;
+  while (bangEnd + 1 < input.size() && input[bangEnd + 1] == '!') {
+    if (bangEnd + 2 < input.size() && input[bangEnd + 2] == '=') {
+      break;
+    }
+    if (!isUnaryPrefixPosition(input, bangEnd + 1)) {
+      break;
+    }
+    ++bangEnd;
   }
-  size_t rightStart = index + 1;
+  size_t rightStart = bangEnd + 1;
   if (!isRightOperandStartChar(input, rightStart)) {
     return false;
   }
@@ -507,9 +513,13 @@ bool rewriteUnaryNot(const std::string &input,
   if (options.hasFilter("implicit-utf8")) {
     right = maybeAppendUtf8(right);
   }
-  output.append("not(");
+  for (size_t i = index; i <= bangEnd; ++i) {
+    output.append("not(");
+  }
   output.append(right);
-  output.append(")");
+  for (size_t i = index; i <= bangEnd; ++i) {
+    output.append(")");
+  }
   index = rightEnd - 1;
   return true;
 }

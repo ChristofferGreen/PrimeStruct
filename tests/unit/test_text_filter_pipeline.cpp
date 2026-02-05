@@ -377,6 +377,28 @@ TEST_CASE("rewrites not operator before parentheses") {
   CHECK(output.find("not(a)") != std::string::npos);
 }
 
+TEST_CASE("rewrites chained not operators") {
+  const std::string source = "main(){ return(!!flag) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("not(not(flag))") != std::string::npos);
+}
+
+TEST_CASE("rewrites chained not operators with implicit i32") {
+  const std::string source = "main(){ return(!!!1) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("not(not(not(1i32)))") != std::string::npos);
+}
+
 TEST_CASE("rewrites not operator before negative literal") {
   const std::string source = "main(){ return(!-1i32) }\n";
   primec::TextFilterPipeline pipeline;
