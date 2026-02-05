@@ -6,7 +6,7 @@
 
 namespace primec {
 
-bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) const {
+bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount) const {
   constexpr uint64_t kSlotBytes = 16;
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
@@ -35,6 +35,12 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error) c
         stack.push_back(inst.imm);
         ip += 1;
         break;
+      case IrOpcode::PushArgc: {
+        int32_t count32 = static_cast<int32_t>(argCount);
+        stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(count32)));
+        ip += 1;
+        break;
+      }
       case IrOpcode::LoadLocal: {
         if (static_cast<size_t>(inst.imm) >= locals.size()) {
           error = "invalid local index in IR";

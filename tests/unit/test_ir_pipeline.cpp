@@ -1817,21 +1817,32 @@ main() {
   CHECK(error.find("native backend does not support array literals") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects entry parameters") {
+TEST_CASE("ir lowerer supports entry args count") {
   const std::string source = R"(
 [return<int>]
 main([array<string>] args) {
-  return(1i32)
+  return(args.count())
 }
 )";
   primec::Program program;
   std::string error;
   REQUIRE(parseAndValidate(source, program, error));
   CHECK(error.empty());
+
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support entry parameters") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions[0].instructions.size() == 2);
+  CHECK(module.functions[0].instructions[0].op == primec::IrOpcode::PushArgc);
+  CHECK(module.functions[0].instructions[1].op == primec::IrOpcode::ReturnI32);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error, 3));
+  CHECK(error.empty());
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowerer rejects map literal call") {

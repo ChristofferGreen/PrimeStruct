@@ -91,6 +91,10 @@ class Arm64Emitter {
     emit(encodeStrRegBase(0, 27, localOffset(index)));
   }
 
+  void emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
+    emit(encodeStrRegBase(reg, 27, localOffset(index)));
+  }
+
   void emitLoadIndirect() {
     emitPopReg(0);
     emit(encodeLdrRegBase(1, 0, 0));
@@ -593,6 +597,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PushI32";
       case IrOpcode::PushI64:
         return "PushI64";
+      case IrOpcode::PushArgc:
+        return "PushArgc";
       case IrOpcode::LoadLocal:
         return "LoadLocal";
       case IrOpcode::StoreLocal:
@@ -687,6 +693,7 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
     switch (op) {
       case IrOpcode::PushI32:
       case IrOpcode::PushI64:
+      case IrOpcode::PushArgc:
       case IrOpcode::LoadLocal:
       case IrOpcode::AddressOfLocal:
         return 1;
@@ -1312,6 +1319,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   size_t localCount = 0;
   int64_t maxStack = 0;
   bool needsPrintScratch = false;
+  bool needsArgc = false;
   for (const auto &inst : fn.instructions) {
     if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
         inst.op == IrOpcode::AddressOfLocal) {
@@ -1321,9 +1329,17 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         inst.op == IrOpcode::PrintString) {
       needsPrintScratch = true;
     }
+    if (inst.op == IrOpcode::PushArgc) {
+      needsArgc = true;
+    }
   }
   if (!computeMaxStackDepth(fn, maxStack, error)) {
     return false;
+  }
+  uint32_t argcLocalIndex = 0;
+  if (needsArgc) {
+    argcLocalIndex = static_cast<uint32_t>(localCount);
+    localCount += 1;
   }
   uint32_t scratchSlots = needsPrintScratch ? PrintScratchSlots : 0;
   uint32_t scratchBytes = scratchSlots * 16;
@@ -1337,6 +1353,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   }
   if (!emitter.beginFunction(frameSize, error)) {
     return false;
+  }
+  if (needsArgc) {
+    emitter.emitStoreLocalFromReg(argcLocalIndex, 0);
   }
 
   struct BranchFixup {
@@ -1370,6 +1389,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         break;
       case IrOpcode::PushI64:
         emitter.emitPushI64(inst.imm);
+        break;
+      case IrOpcode::PushArgc:
+        emitter.emitLoadLocal(argcLocalIndex);
         break;
       case IrOpcode::LoadLocal:
         emitter.emitLoadLocal(static_cast<uint32_t>(inst.imm));

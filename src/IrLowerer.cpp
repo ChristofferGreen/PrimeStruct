@@ -194,10 +194,6 @@ bool IrLowerer::lower(const Program &program,
     error = "native backend requires entry definition " + entryPath;
     return false;
   }
-  if (!entryDef->parameters.empty()) {
-    error = "native backend does not support entry parameters";
-    return false;
-  }
   bool hasReturnTransform = false;
   bool returnsVoid = false;
   for (const auto &transform : entryDef->transforms) {
@@ -263,6 +259,59 @@ bool IrLowerer::lower(const Program &program,
   auto isBindingQualifierName = [](const std::string &name) -> bool {
     return name == "public" || name == "private" || name == "package" || name == "static" || name == "mut" ||
            name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes";
+  };
+
+  bool hasEntryArgs = false;
+  std::string entryArgsName;
+  auto isEntryArgsParam = [&](const Expr &param) -> bool {
+    std::string typeName;
+    std::string templateArg;
+    bool hasTemplateArg = false;
+    for (const auto &transform : param.transforms) {
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      typeName = transform.name;
+      if (transform.templateArg) {
+        templateArg = *transform.templateArg;
+        hasTemplateArg = true;
+      } else {
+        hasTemplateArg = false;
+      }
+    }
+    return typeName == "array" && hasTemplateArg && templateArg == "string";
+  };
+  if (!entryDef->parameters.empty()) {
+    if (entryDef->parameters.size() != 1) {
+      error = "native backend only supports a single array<string> entry parameter";
+      return false;
+    }
+    const Expr &param = entryDef->parameters.front();
+    if (!isEntryArgsParam(param)) {
+      error = "native backend entry parameter must be array<string>";
+      return false;
+    }
+    if (!param.args.empty()) {
+      error = "native backend does not allow entry parameter defaults";
+      return false;
+    }
+    hasEntryArgs = true;
+    entryArgsName = param.name;
+  }
+  auto isEntryArgsName = [&](const Expr &expr) -> bool {
+    return hasEntryArgs && expr.kind == Expr::Kind::Name && expr.name == entryArgsName;
+  };
+  auto isEntryArgsCountCall = [&](const Expr &expr) -> bool {
+    if (!isSimpleCallName(expr, "count")) {
+      return false;
+    }
+    if (expr.args.size() != 1) {
+      return false;
+    }
+    return isEntryArgsName(expr.args.front());
   };
 
   auto isFloatTypeName = [](const std::string &name) -> bool {
@@ -476,6 +525,9 @@ bool IrLowerer::lower(const Program &program,
         return LocalInfo::ValueKind::Unknown;
       }
       case Expr::Kind::Call: {
+        if (isEntryArgsCountCall(expr)) {
+          return LocalInfo::ValueKind::Int32;
+        }
         std::string builtin;
         if (getBuiltinComparisonName(expr, builtin)) {
           return LocalInfo::ValueKind::Bool;
@@ -616,6 +668,10 @@ bool IrLowerer::lower(const Program &program,
         return true;
       }
       case Expr::Kind::Name: {
+        if (hasEntryArgs && expr.name == entryArgsName) {
+          error = "native backend only supports count() on entry arguments";
+          return false;
+        }
         auto it = localsIn.find(expr.name);
         if (it == localsIn.end()) {
           error = "native backend does not know identifier: " + expr.name;
@@ -628,6 +684,18 @@ bool IrLowerer::lower(const Program &program,
         return true;
       }
       case Expr::Kind::Call: {
+        if (isSimpleCallName(expr, "count")) {
+          if (expr.args.size() != 1) {
+            error = "count requires exactly one argument";
+            return false;
+          }
+          if (!isEntryArgsName(expr.args.front())) {
+            error = "native backend only supports count() on entry arguments";
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::PushArgc, 0});
+          return true;
+        }
         PrintBuiltin printBuiltin;
         if (getPrintBuiltin(expr, printBuiltin)) {
           error = printBuiltin.name + " is only supported as a statement in the native backend";
