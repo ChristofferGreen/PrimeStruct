@@ -237,6 +237,19 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("rejects vm map literal odd args") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>(1i32)
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_literal_odd.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(
 [return<int>]
@@ -1521,6 +1534,21 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("rejects native map literal odd args") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>(1i32)
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal_odd.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_literal_odd_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
 }
 #endif
 
