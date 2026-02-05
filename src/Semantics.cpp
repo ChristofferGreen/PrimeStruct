@@ -1097,6 +1097,25 @@ bool Semantics::validate(const Program &program,
     return nullptr;
   };
 
+  auto typeNameForReturnKind = [](ReturnKind kind) -> std::string {
+    switch (kind) {
+      case ReturnKind::Int:
+        return "i32";
+      case ReturnKind::Int64:
+        return "i64";
+      case ReturnKind::UInt64:
+        return "u64";
+      case ReturnKind::Bool:
+        return "bool";
+      case ReturnKind::Float32:
+        return "f32";
+      case ReturnKind::Float64:
+        return "f64";
+      default:
+        return "";
+    }
+  };
+
   std::unordered_set<std::string> inferenceStack;
   std::function<bool(const Definition &)> inferDefinitionReturnKind;
   std::function<ReturnKind(const Expr &,
@@ -1222,6 +1241,12 @@ bool Semantics::validate(const Program &program,
               typeName = it->second.typeName;
               typeTemplateArg = it->second.typeTemplateArg;
             }
+          }
+        }
+        if (typeName.empty()) {
+          std::string inferred = typeNameForReturnKind(inferExprReturnKind(receiver, params, locals));
+          if (!inferred.empty()) {
+            typeName = inferred;
           }
         }
         if (typeName.empty()) {
@@ -1806,6 +1831,12 @@ bool Semantics::validate(const Program &program,
               typeName = it->second.typeName;
               typeTemplateArg = it->second.typeTemplateArg;
             }
+          }
+        }
+        if (typeName.empty()) {
+          std::string inferred = typeNameForReturnKind(inferExprReturnKind(receiver, params, locals));
+          if (!inferred.empty()) {
+            typeName = inferred;
           }
         }
         if (typeName.empty()) {

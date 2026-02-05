@@ -565,6 +565,8 @@ bool IrLowerer::lower(const Program &program,
   std::unordered_set<std::string> returnInferenceStack;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
 
+  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
+
   auto typeNameForValueKind = [](LocalInfo::ValueKind kind) -> std::string {
     switch (kind) {
       case LocalInfo::ValueKind::Int32:
@@ -598,24 +600,25 @@ bool IrLowerer::lower(const Program &program,
       error = "unknown method target for " + callExpr.name;
       return nullptr;
     }
-    if (receiver.kind != Expr::Kind::Name) {
-      error = "unknown method target for " + callExpr.name;
-      return nullptr;
+    std::string typeName;
+    if (receiver.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(receiver.name);
+      if (it == localsIn.end()) {
+        error = "native backend does not know identifier: " + receiver.name;
+        return nullptr;
+      }
+      if (it->second.kind == LocalInfo::Kind::Array) {
+        error = "unknown method: " + callExpr.name;
+        return nullptr;
+      }
+      if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
+        error = "unknown method target for " + callExpr.name;
+        return nullptr;
+      }
+      typeName = typeNameForValueKind(it->second.valueKind);
+    } else {
+      typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
     }
-    auto it = localsIn.find(receiver.name);
-    if (it == localsIn.end()) {
-      error = "native backend does not know identifier: " + receiver.name;
-      return nullptr;
-    }
-    if (it->second.kind == LocalInfo::Kind::Array) {
-      error = "unknown method: " + callExpr.name;
-      return nullptr;
-    }
-    if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
-      error = "unknown method target for " + callExpr.name;
-      return nullptr;
-    }
-    std::string typeName = typeNameForValueKind(it->second.valueKind);
     if (typeName.empty()) {
       error = "unknown method target for " + callExpr.name;
       return nullptr;
@@ -681,7 +684,6 @@ bool IrLowerer::lower(const Program &program,
     return LocalInfo::ValueKind::Unknown;
   };
 
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
   inferExprKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     switch (expr.kind) {
       case Expr::Kind::Literal:

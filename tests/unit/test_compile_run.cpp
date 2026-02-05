@@ -146,6 +146,35 @@ main() {
   CHECK(runCommand(runCmd) == 8);
 }
 
+TEST_CASE("runs vm with chained method calls") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+
+  [return<int>]
+  dec([i32] value) {
+    return(minus(value, 1i32))
+  }
+}
+
+[return<int>]
+make() {
+  return(4i32)
+}
+
+[return<int>]
+main() {
+  return(make().inc().dec())
+}
+)";
+  const std::string srcPath = writeTemp("vm_method_chain.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -494,6 +523,38 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs native chained method calls") {
+  const std::string source = R"(
+namespace i32 {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+
+  [return<int>]
+  dec([i32] value) {
+    return(minus(value, 1i32))
+  }
+}
+
+[return<int>]
+make() {
+  return(4i32)
+}
+
+[return<int>]
+main() {
+  return(make().inc().dec())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_method_chain.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_method_chain_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles and runs native void call with string param") {
