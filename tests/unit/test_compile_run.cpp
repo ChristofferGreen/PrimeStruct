@@ -224,6 +224,19 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with map literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>{1i32=2i32, 3i32=4i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_literal.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
 TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(
 [return<int>]
