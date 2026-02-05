@@ -2,11 +2,17 @@
 
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace primec {
 
-bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount) const {
+namespace {
+bool executeImpl(const IrModule &module,
+                 uint64_t &result,
+                 std::string &error,
+                 uint64_t argCount,
+                 const std::vector<std::string_view> *args) {
   constexpr uint64_t kSlotBytes = 16;
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
@@ -409,6 +415,32 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, u
         ip += 1;
         break;
       }
+      case IrOpcode::PrintArgv: {
+        if (stack.empty()) {
+          error = "IR stack underflow on print";
+          return false;
+        }
+        if (!args) {
+          error = "VM missing argv data for PrintArgv";
+          return false;
+        }
+        int64_t index = static_cast<int64_t>(stack.back());
+        stack.pop_back();
+        if (index < 0 || static_cast<size_t>(index) >= args->size()) {
+          error = "invalid argv index in IR";
+          return false;
+        }
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
+        std::string_view text = (*args)[static_cast<size_t>(index)];
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
+        ip += 1;
+        break;
+      }
       default:
         error = "unknown IR opcode";
         return false;
@@ -416,6 +448,18 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, u
   }
   error = "missing return in IR";
   return false;
+}
+} // namespace
+
+bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount) const {
+  return executeImpl(module, result, error, argCount, nullptr);
+}
+
+bool Vm::execute(const IrModule &module,
+                 uint64_t &result,
+                 std::string &error,
+                 const std::vector<std::string_view> &args) const {
+  return executeImpl(module, result, error, static_cast<uint64_t>(args.size()), &args);
 }
 
 } // namespace primec

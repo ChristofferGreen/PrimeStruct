@@ -1845,6 +1845,34 @@ main([array<string>] args) {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir lowerer supports entry args print index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[1i32])
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  bool sawPrintArgv = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgv) {
+      sawPrintArgv = true;
+      break;
+    }
+  }
+  CHECK(sawPrintArgv);
+}
+
 TEST_CASE("ir lowerer rejects map literal call") {
   const std::string source = R"(
 [return<int>]

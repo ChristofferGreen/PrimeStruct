@@ -255,6 +255,51 @@ class Arm64Emitter {
     return fixupIndex;
   }
 
+  void emitPrintArgv(uint32_t argcLocalIndex,
+                     uint32_t argvLocalIndex,
+                     uint32_t scratchOffset,
+                     bool newline,
+                     uint64_t fd) {
+    emitPopReg(0);
+    emitCompareRegZero(0);
+    size_t negativeBranch = emitCondBranchPlaceholder(CondCode::Lt);
+
+    emit(encodeLdrRegBase(1, 27, localOffset(argcLocalIndex)));
+    emitCompareReg(0, 1);
+    size_t oobBranch = emitCondBranchPlaceholder(CondCode::Ge);
+
+    emit(encodeLdrRegBase(2, 27, localOffset(argvLocalIndex)));
+    emitMovImm64(3, 8);
+    emitMulReg(3, 0, 3);
+    emitAddReg(2, 2, 3);
+    emit(encodeLdrRegBase(1, 2, 0));
+    emitCompareRegZero(1);
+    size_t nullBranch = emitCondBranchPlaceholder(CondCode::Eq);
+
+    emitMovReg(3, 1);
+    emitMovImm64(2, 0);
+    size_t loopStart = currentWordIndex();
+    emit(encodeLdrbRegBase(4, 3, 0));
+    emitCompareRegZero(4);
+    size_t doneBranch = emitCondBranchPlaceholder(CondCode::Eq);
+    emitAddRegImm(2, 2, 1);
+    emitAddRegImm(3, 3, 1);
+    size_t loopJump = emitJumpPlaceholder();
+    patchJump(loopJump, static_cast<int32_t>(loopStart - loopJump));
+    size_t doneIndex = currentWordIndex();
+    patchCondBranch(doneBranch, static_cast<int32_t>(doneIndex - doneBranch), CondCode::Eq);
+
+    emitWriteSyscall(fd, 1, 2);
+    if (newline) {
+      emitWriteNewline(fd, scratchOffset);
+    }
+
+    size_t skipIndex = currentWordIndex();
+    patchCondBranch(negativeBranch, static_cast<int32_t>(skipIndex - negativeBranch), CondCode::Lt);
+    patchCondBranch(oobBranch, static_cast<int32_t>(skipIndex - oobBranch), CondCode::Ge);
+    patchCondBranch(nullBranch, static_cast<int32_t>(skipIndex - nullBranch), CondCode::Eq);
+  }
+
   void patchAdr(size_t index, uint8_t rd, int32_t imm21) {
     patchWord(index, encodeAdr(rd, imm21));
   }
@@ -304,6 +349,10 @@ class Arm64Emitter {
 
   void emitCompareRegZero(uint8_t reg) {
     emit(encodeSubsReg(31, reg, 31));
+  }
+
+  void emitCompareReg(uint8_t left, uint8_t right) {
+    emit(encodeSubsReg(31, left, right));
   }
 
   size_t emitCondBranchPlaceholder(CondCode cond) {
@@ -570,6 +619,11 @@ class Arm64Emitter {
     return 0x39000000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
   }
 
+  static uint32_t encodeLdrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>(offsetBytes & 0xFFFu);
+    return 0x39400000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
   static uint32_t encodeSvc() {
     return 0xD4001001;
   }
@@ -685,6 +739,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintU64";
       case IrOpcode::PrintString:
         return "PrintString";
+      case IrOpcode::PrintArgv:
+        return "PrintArgv";
       default:
         return "Unknown";
     }
@@ -750,6 +806,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return -1;
       case IrOpcode::PrintString:
         return 0;
+      case IrOpcode::PrintArgv:
+        return -1;
       default:
         return 0;
     }
@@ -1320,14 +1378,19 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   int64_t maxStack = 0;
   bool needsPrintScratch = false;
   bool needsArgc = false;
+  bool needsArgv = false;
   for (const auto &inst : fn.instructions) {
     if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
         inst.op == IrOpcode::AddressOfLocal) {
       localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
     }
     if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
-        inst.op == IrOpcode::PrintString) {
+        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv) {
       needsPrintScratch = true;
+    }
+    if (inst.op == IrOpcode::PrintArgv) {
+      needsArgc = true;
+      needsArgv = true;
     }
     if (inst.op == IrOpcode::PushArgc) {
       needsArgc = true;
@@ -1337,8 +1400,13 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     return false;
   }
   uint32_t argcLocalIndex = 0;
+  uint32_t argvLocalIndex = 0;
   if (needsArgc) {
     argcLocalIndex = static_cast<uint32_t>(localCount);
+    localCount += 1;
+  }
+  if (needsArgv) {
+    argvLocalIndex = static_cast<uint32_t>(localCount);
     localCount += 1;
   }
   uint32_t scratchSlots = needsPrintScratch ? PrintScratchSlots : 0;
@@ -1356,6 +1424,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   }
   if (needsArgc) {
     emitter.emitStoreLocalFromReg(argcLocalIndex, 0);
+  }
+  if (needsArgv) {
+    emitter.emitStoreLocalFromReg(argvLocalIndex, 1);
   }
 
   struct BranchFixup {
@@ -1553,6 +1624,13 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         size_t fixupIndex = emitter.emitPrintStringPlaceholder(
             module.stringTable[static_cast<size_t>(stringIndex)].size(), scratchOffset, newline, fd);
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(stringIndex)});
+        break;
+      }
+      case IrOpcode::PrintArgv: {
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        emitter.emitPrintArgv(argcLocalIndex, argvLocalIndex, scratchOffset, newline, fd);
         break;
       }
       default:

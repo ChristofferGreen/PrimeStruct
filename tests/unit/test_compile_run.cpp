@@ -62,6 +62,20 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("no transforms rejects sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_no_transforms_exe").string();
+
+  const std::string compileCmd = "./primec --emit=cpp --no-transforms " + srcPath + " -o " + exePath;
+  CHECK(runCommand(compileCmd) != 0);
+}
+
 TEST_CASE("writes outputs under out dir") {
   const std::string source = R"(
 [return<int>]
@@ -219,6 +233,29 @@ main([array<string>] args) {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
   CHECK(runCommand(exePath + " alpha beta") == 3);
+}
+
+TEST_CASE("compiles and runs native argv print") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print_line(args[1i32])
+  } else {
+    print_line("missing"utf8)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_print.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_print_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_argv_print_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
 }
 
 TEST_CASE("compiles and runs native void executable") {

@@ -139,6 +139,24 @@ bool getBuiltinConvertName(const Expr &expr) {
   return name == "convert";
 }
 
+bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "at" || name == "at_unsafe") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -701,6 +719,19 @@ bool IrLowerer::lower(const Program &program,
           error = printBuiltin.name + " is only supported as a statement in the native backend";
           return false;
         }
+        std::string accessName;
+        if (getBuiltinArrayAccessName(expr, accessName)) {
+          if (expr.args.size() != 2) {
+            error = accessName + " requires exactly two arguments";
+            return false;
+          }
+          if (!isEntryArgsName(expr.args.front())) {
+            error = "native backend only supports entry argument indexing";
+            return false;
+          }
+          error = "native backend only supports entry argument indexing in print calls";
+          return false;
+        }
         std::string builtin;
         if (getBuiltinOperatorName(expr, builtin)) {
           if (builtin == "negate") {
@@ -1186,6 +1217,24 @@ bool IrLowerer::lower(const Program &program,
 
   auto emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn, const PrintBuiltin &builtin) -> bool {
     uint64_t flags = encodePrintFlags(builtin.newline, builtin.target == PrintTarget::Err);
+    if (arg.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(arg, accessName)) {
+        if (arg.args.size() != 2) {
+          error = accessName + " requires exactly two arguments";
+          return false;
+        }
+        if (!isEntryArgsName(arg.args.front())) {
+          error = "native backend only supports entry argument indexing";
+          return false;
+        }
+        if (!emitExpr(arg.args[1], localsIn)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::PrintArgv, flags});
+        return true;
+      }
+    }
     if (arg.kind == Expr::Kind::StringLiteral) {
       std::string decoded;
       if (!parseStringLiteral(arg.stringValue, decoded)) {

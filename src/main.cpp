@@ -177,6 +177,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.textFilters = parseTextFilters(argv[++i]);
     } else if (arg.rfind("--text-filters=", 0) == 0) {
       out.textFilters = parseTextFilters(arg.substr(std::string("--text-filters=").size()));
+    } else if (arg == "--no-transforms") {
+      out.textFilters.clear();
     } else if (arg == "--out-dir" && i + 1 < argc) {
       out.outDir = argv[++i];
     } else if (arg.rfind("--out-dir=", 0) == 0) {
@@ -252,8 +254,8 @@ int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primec [--emit=cpp|exe|native] <input.prime> [-o <output>] [--entry /path] "
-                 "[--include-path <dir>] [--text-filters <list>] [--out-dir <dir>] [--default-effects <list>] "
-                 "[--dump-stage pre_ast|ast|ir]\n";
+                 "[--include-path <dir>] [--text-filters <list>] [--no-transforms] [--out-dir <dir>] "
+                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ir]\n";
     return 2;
   }
 

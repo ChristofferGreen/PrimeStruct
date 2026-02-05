@@ -9,7 +9,7 @@ PrimeStruct is built around a simple philosophy: program meaning emerges from tw
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully typed.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
-Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline is configured with `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals), and adding `implicit-i32` will auto-append `i32` suffixes.
+Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline is configured with `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals), and adding `implicit-i32` will auto-append `i32` suffixes. Use `--no-transforms` to disable all text filters and require canonical syntax.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
@@ -50,17 +50,17 @@ module {
 ```
 
 ### Compiler driver behavior (plan)
-- `primec --emit=cpp input.prime -o build/hello.cpp`
-- `primec --emit=exe input.prime -o build/hello`
+- `primec --emit=cpp input.prime -o hello.cpp`
+- `primec --emit=exe input.prime -o hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
-- `primec --emit=native input.prime -o build/hello`
+- `primec --emit=native input.prime -o hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
   - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - Optional: `primec --default-effects io_out,io_err` supplies default effects for definitions/executions that omit `[effects]`.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
-- All generated outputs land under `build/` (configurable by `--out-dir`).
+- All generated outputs land in the current directory (configurable by `--out-dir`).
 
 ### Example source and expected IR (sketch)
 PrimeStruct:
@@ -81,16 +81,16 @@ module {
 ```
 
 ### Compiler driver behavior (plan)
-- `primec --emit=cpp input.prime -o build/hello.cpp`
-- `primec --emit=exe input.prime -o build/hello`
+- `primec --emit=cpp input.prime -o hello.cpp`
+- `primec --emit=exe input.prime -o hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
-- `primec --emit=native input.prime -o build/hello`
+- `primec --emit=native input.prime -o hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
   - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
-- All generated outputs land under `build/` (configurable by `--out-dir`).
+- All generated outputs land in the current directory (configurable by `--out-dir`).
 
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
@@ -102,14 +102,14 @@ module {
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Intermediate representation:** strongly-typed SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments (currently only `args.count()` is supported there), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` is supported, and `print*` calls accept `args[index]` for stdout/stderr output, while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body expressions so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
@@ -364,7 +364,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## VM Design (draft)
 - **Instruction set:** ~50 stack-based ops covering control flow, stack manipulation, memory/pointer access, optional coroutine primitives. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR versioning:** current portable IR is PSIR v7 (adds `PushArgc` for entry argument counts, plus the previous pointer helpers, `ReturnVoid`, and print opcode upgrades).
+- **PSIR versioning:** current portable IR is PSIR v8 (adds `PrintArgv` for entry argument strings, plus `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.
