@@ -1189,7 +1189,7 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("rejects native map literals") {
+TEST_CASE("compiles and runs native map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1201,7 +1201,8 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_literal_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 #endif
 

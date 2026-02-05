@@ -1851,6 +1851,58 @@ bool IrLowerer::lower(const Program &program,
             function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
             return true;
           }
+          if (builtin == "map") {
+            if (expr.templateArgs.size() != 2) {
+              error = "map literal requires exactly two template arguments";
+              return false;
+            }
+            if (expr.args.size() % 2 != 0) {
+              error = "map literal requires an even number of arguments";
+              return false;
+            }
+
+            LocalInfo::ValueKind keyKind = valueKindFromTypeName(expr.templateArgs[0]);
+            LocalInfo::ValueKind valueKind = valueKindFromTypeName(expr.templateArgs[1]);
+            if (keyKind == LocalInfo::ValueKind::Unknown || keyKind == LocalInfo::ValueKind::String ||
+                valueKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::String) {
+              error = "native backend only supports numeric/bool map literals";
+              return false;
+            }
+
+            if (expr.args.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+              error = "map literal too large for native backend";
+              return false;
+            }
+
+            const int32_t baseLocal = nextLocal;
+            nextLocal += static_cast<int32_t>(1 + expr.args.size());
+
+            const int32_t pairCount = static_cast<int32_t>(expr.args.size() / 2);
+            function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(pairCount)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+
+            for (size_t i = 0; i < expr.args.size(); ++i) {
+              const Expr &arg = expr.args[i];
+              LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
+              if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
+                error = "native backend requires map literal arguments to be numeric/bool values";
+                return false;
+              }
+              LocalInfo::ValueKind expectedKind = (i % 2 == 0) ? keyKind : valueKind;
+              if (argKind != expectedKind) {
+                error = (i % 2 == 0) ? "map literal key type mismatch" : "map literal value type mismatch";
+                return false;
+              }
+              if (!emitExpr(arg, localsIn)) {
+                return false;
+              }
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(i))});
+            }
+
+            function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+            return true;
+          }
           error = "native backend does not support " + builtin + " literals";
           return false;
         }

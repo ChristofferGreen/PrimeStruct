@@ -285,8 +285,9 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - `key = value` pairs only trigger at the top level of the map literal; nested `=` tokens inside values (for example `assign(...)`) are preserved.
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested expressions inside braces are rewritten as usual.
   - Collections can appear anywhere expressions are allowed, including execution arguments.
-  - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) now lower through IR/VM/native. Map literals still compile through the C++ emitter only; IR/VM/native map lowering is pending.
-  - String-keyed map literals compile through the C++ emitter using `const char *` keys.
+  - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
+  - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction only; map operations are still pending).
+  - String-keyed map literals compile through the C++ emitter only, using `const char *` keys.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0 and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
 - **Float note:** VM/native lowering currently rejects float literals, float bindings, and float arithmetic; use the C++ emitter for float-heavy scripts until float opcodes land in PSIR.
 - **String note:** VM/native lowering now accepts string literals and string bindings only when used by `print`/`print_line`/`print_error`/`print_line_error`; other string operations still require the C++ emitter for now.
@@ -296,7 +297,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## Pointers & References (draft)
 - **Explicit types:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
-- **Surface syntax:** pointer helpers are explicit calls (`location`, `dereference`, `plus`/`minus`); there is no `&`/`*` operator sugar yet.
+- **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators` text filter rewrites `&name`/`*name` sugar into those calls.
 - **Reference binding:** `Reference<T>` bindings are initialized from `location(...)` and behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
 - **Core pointer calls:** `location(value)` yields a pointer to a local binding (location only accepts a local binding name); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads through a pointer/reference expression; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
 - **Pointer arithmetic:** `plus(ptr, offset)` and `minus(ptr, offset)` treat `offset` as a byte offset. VM/native frames currently space locals in 16-byte slots, so adding or subtracting `16` advances one local slot. Offsets accept `i32`, `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.

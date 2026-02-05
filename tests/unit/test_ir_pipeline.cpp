@@ -2078,12 +2078,13 @@ main([array<string>] args) {
   CHECK(sawPrintArgv);
 }
 
-TEST_CASE("ir lowerer rejects map literal call") {
+TEST_CASE("ir lowers map literal call as statement") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>(1i32, 2i32)
-  return(1i32)
+  [i32 mut] value(0i32)
+  map<i32, i32>(1i32, assign(value, 7i32))
+  return(value)
 }
 )";
   primec::Program program;
@@ -2093,8 +2094,15 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support map literals") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
 }
 
 TEST_SUITE_END();
