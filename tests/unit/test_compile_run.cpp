@@ -2170,6 +2170,37 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects method call on array") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(1i32, 2i32))
+  return(values.inc())
+}
+)";
+  const std::string srcPath = writeTemp("compile_method_array.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_array_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
+TEST_CASE("rejects method call on pointer") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(2i32)
+  [Pointer<i32>] ptr(location(value))
+  return(ptr.inc())
+}
+)";
+  const std::string srcPath = writeTemp("compile_method_pointer.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_method_pointer_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_CASE("implicit suffix disabled by default") {
   const std::string source = R"(
 [return<int>]
