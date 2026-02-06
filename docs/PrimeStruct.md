@@ -12,7 +12,7 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text filters are configured via `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals). Add `implicit-i32` to auto-append `i32` suffixes. Use `--no-transforms` to disable all text filters and require canonical syntax.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
-- **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
+- **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct, and list anything explicitly deferred to later phases.
 - **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs)
 - **Ownership map:** assign leads for parser, IR/type system, first backend, and test infrastructure, plus security/runtime reviewers.
 - **Integration plan:** describe how the compiler/test suite slots into the build (targets, CI loops, feature flags, artifact publishing).
@@ -91,7 +91,7 @@ module {
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
 
 ## Language Design Highlights
-- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but v0 constrains identifiers to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
+- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
 - **String literals:** canonical form requires an explicit suffix (`utf8` or `ascii`); the `implicit-utf8` text filter (enabled by default) appends `utf8` when omitted in surface syntax. `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example: `"hello"utf8`, `"moo"ascii` (surface `"hello"` becomes `"hello"utf8`).
 - **Uniform envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
@@ -206,7 +206,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Standard library defaults to stdout/stderr effects.
 
 ### Execution Metadata (draft)
-- **Scheduling scope:** queue/thread selection stays host-driven; v0.1 exposes no stack- or runner-specific annotations, so executions inherit the embedding runtime’s default placement.
+- **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement.
 - **Capabilities:** effect masks double as capability descriptors (IO, global write, GPU access, etc.). Additional attributes can narrow capabilities (`[capabilities(io_out, pathspace_insert)]`).
 - **Instrumentation:** executions carry metadata (source file/line plus effect/capability masks) for diagnostics and tracing.
 - **Open design items:** finalise the capability taxonomy and determine which instrumentation fields flow into inspector tooling vs. runtime-only logs.
@@ -246,7 +246,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## Literals & Composite Construction (draft)
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
-- v0 requires explicit width suffixes for integers (`42i32`, `42i64`, `42u64`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `implicit-i32` is included in `--text-filters`.
+- Integer literals require explicit width suffixes (`42i32`, `42i64`, `42u64`). Higher-level filters may add suffixes before parsing; primec enables implicit `i32` suffixing only when `implicit-i32` is included in `--text-filters`.
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`R"( … )"`); canonical literals require `utf8`/`ascii` suffixes, and `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
@@ -264,7 +264,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction only; map operations are still pending).
   - String-keyed map literals compile through the C++ emitter only, using `const char *` keys.
-- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper in v0 and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
+- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
 - **Float note:** VM/native lowering currently rejects float literals, float bindings, and float arithmetic; use the C++ emitter for float-heavy scripts until float opcodes land in PSIR.
 - **String note:** VM/native lowering now accepts string literals and string bindings only when used by `print`/`print_line`/`print_error`/`print_line_error`; other string operations still require the C++ emitter for now.
   - `convert<bool>` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
@@ -448,7 +448,7 @@ module {
 - Static analysis/lint integrated into CI to catch undefined constructs before codegen.
 
 ## Next Steps (Exploratory)
-1. Draft detailed syntax/semantics spec and circulate for review. _(Draft v0.1 captured in a separate syntax spec on 2025-11-21; review/feedback tracking TBD.)_
+1. Draft detailed syntax/semantics spec and circulate for review. _(Draft captured in a separate syntax spec on 2025-11-21; review/feedback tracking TBD.)_
 2. Prototype parser + IR builder (Phase 0).
 3. Evaluate reuse of existing shader toolchains (glslang, SPIRV-Cross) vs bespoke emitters.
 4. Design import/package system (module syntax, search paths, visibility rules, transform distribution).
