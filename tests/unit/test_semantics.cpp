@@ -2324,6 +2324,23 @@ main() {
   CHECK(error.find("if condition requires integer or bool") != std::string::npos);
 }
 
+TEST_CASE("if expression rejects void blocks") {
+  const std::string source = R"(
+[return<void>]
+noop() {
+  return()
+}
+
+[return<int>]
+main() {
+  return(if(1i32, then{ noop() }, else{ 1i32 }))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if expression blocks must produce a value") != std::string::npos);
+}
+
 TEST_CASE("repeat validates block arguments") {
   const std::string source = R"(
 [return<int>]

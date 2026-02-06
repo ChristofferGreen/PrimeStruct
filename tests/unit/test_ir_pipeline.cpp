@@ -697,6 +697,44 @@ main() {
   CHECK(result == 7);
 }
 
+TEST_CASE("ir lowers if expression to jumps") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawJump = false;
+  bool sawJumpIfZero = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::Jump) {
+      sawJump = true;
+    } else if (inst.op == primec::IrOpcode::JumpIfZero) {
+      sawJumpIfZero = true;
+    }
+  }
+  CHECK(sawJump);
+  CHECK(sawJumpIfZero);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  bool ok = vm.execute(module, result, error);
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(result == 9);
+}
+
 TEST_CASE("ir lowers repeat to jumps") {
   const std::string source = R"(
 [return<int>]

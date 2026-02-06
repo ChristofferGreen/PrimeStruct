@@ -781,6 +781,23 @@ std::string Emitter::emitExpr(const Expr &expr,
       full = methodPath;
     }
   }
+  if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
+    const Expr &thenBlock = expr.args[1];
+    const Expr &elseBlock = expr.args[2];
+    if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+      return "0";
+    }
+    if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
+      return "0";
+    }
+    const Expr &thenExpr = thenBlock.bodyArguments.front();
+    const Expr &elseExpr = elseBlock.bodyArguments.front();
+    std::ostringstream out;
+    out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " ? "
+        << emitExpr(thenExpr, nameMap, paramMap, localTypes, returnKinds) << " : "
+        << emitExpr(elseExpr, nameMap, paramMap, localTypes, returnKinds) << ")";
+    return out.str();
+  }
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
     if (isArrayCountCall(expr, localTypes)) {
@@ -1031,6 +1048,22 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           return ReturnKind::Unknown;
         }
         return calleeKind;
+      }
+      if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
+        const Expr &thenBlock = expr.args[1];
+        const Expr &elseBlock = expr.args[2];
+        if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+          return ReturnKind::Unknown;
+        }
+        if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind thenKind = inferExprReturnKind(thenBlock.bodyArguments.front(), params, locals);
+        ReturnKind elseKind = inferExprReturnKind(elseBlock.bodyArguments.front(), params, locals);
+        if (thenKind == elseKind) {
+          return thenKind;
+        }
+        return combineNumeric(thenKind, elseKind);
       }
       const char *cmp = nullptr;
       if (getBuiltinComparison(expr, cmp)) {

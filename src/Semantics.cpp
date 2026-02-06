@@ -1196,6 +1196,22 @@ bool Semantics::validate(const Program &program,
       return returnKindForTypeName(it->second.typeName);
     }
     if (expr.kind == Expr::Kind::Call) {
+      if (isIfCall(expr) && expr.args.size() == 3) {
+        const Expr &thenBlock = expr.args[1];
+        const Expr &elseBlock = expr.args[2];
+        if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+          return ReturnKind::Unknown;
+        }
+        if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind thenKind = inferExprReturnKind(thenBlock.bodyArguments.front(), params, locals);
+        ReturnKind elseKind = inferExprReturnKind(elseBlock.bodyArguments.front(), params, locals);
+        if (thenKind == elseKind) {
+          return thenKind;
+        }
+        return combineNumeric(thenKind, elseKind);
+      }
       auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
         if (target.kind == Expr::Kind::Name) {
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -1795,16 +1811,80 @@ bool Semantics::validate(const Program &program,
         error = "binding not allowed in expression context";
         return false;
       }
+      if (isIfCall(expr)) {
+        if (!expr.bodyArguments.empty()) {
+          error = "if does not accept trailing block arguments";
+          return false;
+        }
+        if (expr.args.size() != 3) {
+          error = "if requires condition, then, else";
+          return false;
+        }
+        const Expr &cond = expr.args[0];
+        const Expr &thenBlock = expr.args[1];
+        const Expr &elseBlock = expr.args[2];
+        if (!validateExpr(params, locals, cond)) {
+          return false;
+        }
+        if (!isIntegerOrBoolExpr(cond, params, locals)) {
+          error = "if condition requires integer or bool";
+          return false;
+        }
+        auto validateValueBlock = [&](const Expr &block, const char *label, const Expr *&valueExprOut) -> bool {
+          if (block.kind != Expr::Kind::Call) {
+            error = std::string(label) + " must be a call";
+            return false;
+          }
+          if ((std::string(label) == "then" && !isThenCall(block)) || (std::string(label) == "else" && !isElseCall(block))) {
+            error = std::string(label) + " must use the " + label + " wrapper";
+            return false;
+          }
+          if (!block.args.empty()) {
+            error = std::string(label) + " does not accept arguments";
+            return false;
+          }
+          if (block.bodyArguments.size() != 1) {
+            error = std::string(label) + " must contain exactly one expression";
+            return false;
+          }
+          valueExprOut = &block.bodyArguments.front();
+          if (!validateExpr(params, locals, *valueExprOut)) {
+            return false;
+          }
+          ReturnKind kind = inferExprReturnKind(*valueExprOut, params, locals);
+          if (kind == ReturnKind::Void) {
+            error = "if expression blocks must produce a value";
+            return false;
+          }
+          return true;
+        };
+        const Expr *thenExpr = nullptr;
+        const Expr *elseExpr = nullptr;
+        if (!validateValueBlock(thenBlock, "then", thenExpr)) {
+          return false;
+        }
+        if (!validateValueBlock(elseBlock, "else", elseExpr)) {
+          return false;
+        }
+        ReturnKind thenKind = inferExprReturnKind(*thenExpr, params, locals);
+        ReturnKind elseKind = inferExprReturnKind(*elseExpr, params, locals);
+        ReturnKind combined = inferExprReturnKind(expr, params, locals);
+        if (thenKind != ReturnKind::Unknown && elseKind != ReturnKind::Unknown && combined == ReturnKind::Unknown) {
+          error = "if expression blocks must return compatible types";
+          return false;
+        }
+        return true;
+      }
+      if (isThenCall(expr) || isElseCall(expr)) {
+        error = "then/else blocks must be nested inside if";
+        return false;
+      }
       if (!expr.bodyArguments.empty()) {
         error = "block arguments are only supported on statement calls";
         return false;
       }
       if (isReturnCall(expr)) {
         error = "return not allowed in expression context";
-        return false;
-      }
-      if (isIfCall(expr) || isThenCall(expr) || isElseCall(expr)) {
-        error = "control-flow blocks cannot appear in expressions";
         return false;
       }
       auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {

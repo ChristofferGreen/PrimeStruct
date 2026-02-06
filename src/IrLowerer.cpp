@@ -886,6 +886,22 @@ bool IrLowerer::lower(const Program &program,
           }
           return LocalInfo::ValueKind::Unknown;
         }
+        if (isIfCall(expr) && expr.args.size() == 3) {
+          const Expr &thenBlock = expr.args[1];
+          const Expr &elseBlock = expr.args[2];
+          if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          LocalInfo::ValueKind thenKind = inferExprKind(thenBlock.bodyArguments.front(), localsIn);
+          LocalInfo::ValueKind elseKind = inferExprKind(elseBlock.bodyArguments.front(), localsIn);
+          if (thenKind == elseKind) {
+            return thenKind;
+          }
+          return combineNumericKinds(thenKind, elseKind);
+        }
         if (getBuiltinPointerName(expr, builtin)) {
           if (builtin == "dereference") {
             if (expr.args.size() != 1) {
@@ -2236,8 +2252,73 @@ bool IrLowerer::lower(const Program &program,
           error = "native backend only supports assign to local names or dereference";
           return false;
         }
-        if (isIfCall(expr) || isThenCall(expr) || isElseCall(expr)) {
-          error = "native backend does not support if/then/else in expression context";
+        if (isIfCall(expr)) {
+          if (expr.args.size() != 3) {
+            error = "if requires condition, then, else";
+            return false;
+          }
+          if (!expr.bodyArguments.empty()) {
+            error = "if does not accept trailing block arguments";
+            return false;
+          }
+          const Expr &cond = expr.args[0];
+          const Expr &thenBlock = expr.args[1];
+          const Expr &elseBlock = expr.args[2];
+          if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+            error = "if requires then/else blocks";
+            return false;
+          }
+          if (!thenBlock.args.empty() || !elseBlock.args.empty()) {
+            error = "if blocks do not accept arguments";
+            return false;
+          }
+          if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
+            error = "if blocks must contain exactly one expression";
+            return false;
+          }
+          if (!emitExpr(cond, localsIn)) {
+            return false;
+          }
+          LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
+          if (condKind != LocalInfo::ValueKind::Int32 && condKind != LocalInfo::ValueKind::Int64 &&
+              condKind != LocalInfo::ValueKind::UInt64 && condKind != LocalInfo::ValueKind::Bool) {
+            error = "if condition requires integer or bool";
+            return false;
+          }
+
+          const Expr &thenExpr = thenBlock.bodyArguments.front();
+          const Expr &elseExpr = elseBlock.bodyArguments.front();
+          LocalInfo::ValueKind thenKind = inferExprKind(thenExpr, localsIn);
+          LocalInfo::ValueKind elseKind = inferExprKind(elseExpr, localsIn);
+          LocalInfo::ValueKind resultKind = LocalInfo::ValueKind::Unknown;
+          if (thenKind == elseKind) {
+            resultKind = thenKind;
+          } else {
+            resultKind = combineNumericKinds(thenKind, elseKind);
+          }
+          if (resultKind == LocalInfo::ValueKind::Unknown) {
+            error = "if expression blocks must return compatible types";
+            return false;
+          }
+
+          size_t jumpIfZeroIndex = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          if (!emitExpr(thenExpr, localsIn)) {
+            return false;
+          }
+          size_t jumpEndIndex = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t elseIndex = function.instructions.size();
+          function.instructions[jumpIfZeroIndex].imm = static_cast<int32_t>(elseIndex);
+          if (!emitExpr(elseExpr, localsIn)) {
+            return false;
+          }
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+          return true;
+        }
+        if (isThenCall(expr) || isElseCall(expr)) {
+          error = "then/else blocks must be nested inside if";
           return false;
         }
         error = "native backend only supports arithmetic/comparison/clamp/convert/pointer/assign calls in expressions";

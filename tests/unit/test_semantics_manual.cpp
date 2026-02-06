@@ -312,15 +312,15 @@ TEST_CASE("return not allowed in expression context") {
   CHECK(error.find("return not allowed in expression context") != std::string::npos);
 }
 
-TEST_CASE("control-flow calls not allowed in expressions") {
+TEST_CASE("then/else blocks not allowed in expressions") {
   primec::Program program;
-  primec::Expr ifCall = makeCall("if");
-  primec::Expr plusCall = makeCall("plus", {ifCall, makeLiteral(2)});
+  primec::Expr thenCall = makeCall("then", {}, {}, {makeLiteral(1)});
+  primec::Expr plusCall = makeCall("plus", {thenCall, makeLiteral(2)});
   program.definitions.push_back(makeDefinition(
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {plusCall})}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("control-flow blocks cannot appear in expressions") != std::string::npos);
+  CHECK(error.find("then/else blocks must be nested inside if") != std::string::npos);
 }
 
 TEST_CASE("block arguments not allowed in expression context") {

@@ -1329,6 +1329,21 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs if expression in native backend") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_if_expr.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_if_expr_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs native definition call") {
   const std::string source = R"(
 [return<int>]
@@ -3551,6 +3566,33 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("compiles and runs if expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("compile_if_expr.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_expr_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("runs if expression in vm") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("vm_if_expr.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 9);
 }
 
 TEST_CASE("compiles and runs greater_than") {

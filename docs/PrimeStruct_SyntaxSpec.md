@@ -185,6 +185,8 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Control flow: `if(cond, then{...}, else{...})` with `then{}` and `else{}` blocks as arguments.
   - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted only in
     statement lists and brace argument lists; use canonical `if(...)` inside expression arguments.
+  - When `if(...)` appears in an expression context, `then{}` and `else{}` must each contain exactly one
+    expression; that expression becomes the value of the `if(...)`.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
