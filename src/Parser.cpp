@@ -165,6 +165,9 @@ Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
   while (!match(TokenKind::End)) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(program.definitions, program.executions)) {
         return false;
@@ -200,6 +203,9 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   while (!match(TokenKind::RBrace)) {
     if (match(TokenKind::End)) {
       return fail("unexpected end of file inside namespace block");
+    }
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
     }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(defs, execs)) {

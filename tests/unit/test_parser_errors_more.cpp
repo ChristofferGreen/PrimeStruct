@@ -155,6 +155,40 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("semicolon rejected at top level") {
+  const std::string source = R"(
+;
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
+TEST_CASE("semicolon rejected in namespace") {
+  const std::string source = R"(
+namespace demo {
+  ;
+  [return<int>]
+  main() {
+    return(1i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("trailing comma in transform list is rejected") {
   const std::string source = R"(
 [return<int>,]
