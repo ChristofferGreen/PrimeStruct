@@ -39,6 +39,42 @@ std::string trim(const std::string &value) {
   return value.substr(start, end - start);
 }
 
+size_t skipQuotedLiteral(const std::string &text, size_t start) {
+  if (start >= text.size()) {
+    return start;
+  }
+  char quote = text[start];
+  size_t pos = start + 1;
+  while (pos < text.size()) {
+    char c = text[pos];
+    if (c == '\\' && pos + 1 < text.size()) {
+      pos += 2;
+      continue;
+    }
+    if (c == quote) {
+      return pos + 1;
+    }
+    ++pos;
+  }
+  return text.size();
+}
+
+size_t skipLineComment(const std::string &text, size_t start) {
+  size_t pos = start + 2;
+  while (pos < text.size() && text[pos] != '\n') {
+    ++pos;
+  }
+  return pos;
+}
+
+size_t skipBlockComment(const std::string &text, size_t start) {
+  const size_t end = text.find("*/", start + 2);
+  if (end == std::string::npos) {
+    return text.size();
+  }
+  return end + 2;
+}
+
 std::string quoteShellArg(const std::string &value) {
   std::string quoted = "'";
   for (char c : value) {
@@ -340,6 +376,26 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
     changed = false;
     std::string result;
     for (size_t i = 0; i < source.size();) {
+      if (source[i] == '"' || source[i] == '\'') {
+        size_t end = skipQuotedLiteral(source, i);
+        result.append(source.substr(i, end - i));
+        i = end;
+        continue;
+      }
+      if (source[i] == '/' && i + 1 < source.size()) {
+        if (source[i + 1] == '/') {
+          size_t end = skipLineComment(source, i);
+          result.append(source.substr(i, end - i));
+          i = end;
+          continue;
+        }
+        if (source[i + 1] == '*') {
+          size_t end = skipBlockComment(source, i);
+          result.append(source.substr(i, end - i));
+          i = end;
+          continue;
+        }
+      }
       if (source.compare(i, 8, "include<") == 0) {
         size_t start = i + 8;
         size_t end = source.find('>', start);

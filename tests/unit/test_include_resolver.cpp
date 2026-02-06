@@ -100,6 +100,38 @@ TEST_CASE("missing include fails") {
   CHECK(error.find("failed to read include") != std::string::npos);
 }
 
+TEST_CASE("ignores include directives inside string literals") {
+  const std::string srcPath =
+      writeTemp("include_in_string.prime",
+                "[return<int>]\n"
+                "main() {\n"
+                "  print_line(\"before include<\\\"/tmp/does_not_exist.prime\\\"> after\"utf8)\n"
+                "  return(0i32)\n"
+                "}\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find("include<\\\"/tmp/does_not_exist.prime\\\">") != std::string::npos);
+}
+
+TEST_CASE("ignores include directives inside comments") {
+  const std::string srcPath =
+      writeTemp("include_in_comment.prime",
+                "// include<\"/tmp/does_not_exist.prime\">\n"
+                "[return<int>]\n"
+                "main(){ return(0i32) }\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find("include<\"/tmp/does_not_exist.prime\">") != std::string::npos);
+}
+
 TEST_CASE("resolves include from include path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_search_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_search_root";
