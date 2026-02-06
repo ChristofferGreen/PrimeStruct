@@ -264,6 +264,18 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with array literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(array<i32>(1i32, 2i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_literal_count_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("runs vm with map literal") {
   const std::string source = R"(
 [return<int>]
@@ -702,6 +714,22 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_array_count_helper.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_count_helper_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("compiles and runs array literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(array<i32>(1i32, 2i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_array_literal_count_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_array_literal_count_helper_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -1926,6 +1954,22 @@ main() {
   const std::string srcPath = writeTemp("compile_native_array_count_helper.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_array_count_helper_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("compiles and runs native array literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(array<i32>(1i32, 2i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_array_literal_count_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_array_literal_count_helper_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
