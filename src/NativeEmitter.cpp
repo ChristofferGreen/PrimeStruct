@@ -255,6 +255,15 @@ class Arm64Emitter {
     return fixupIndex;
   }
 
+  size_t emitLoadStringBytePlaceholder() {
+    emitPopReg(0);
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitAddReg(1, 1, 0);
+    emit(encodeLdrbRegBase(2, 1, 0));
+    emitPushReg(2);
+    return fixupIndex;
+  }
+
   void emitPrintArgv(uint32_t argcLocalIndex,
                      uint32_t argvLocalIndex,
                      uint32_t scratchOffset,
@@ -743,6 +752,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintArgv";
       case IrOpcode::PrintArgvUnsafe:
         return "PrintArgvUnsafe";
+      case IrOpcode::LoadStringByte:
+        return "LoadStringByte";
       default:
         return "Unknown";
     }
@@ -811,6 +822,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::PrintArgv:
       case IrOpcode::PrintArgvUnsafe:
         return -1;
+      case IrOpcode::LoadStringByte:
+        return 0;
       default:
         return 0;
     }
@@ -1641,6 +1654,15 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
         emitter.emitPrintArgv(argcLocalIndex, argvLocalIndex, scratchOffset, newline, fd);
+        break;
+      }
+      case IrOpcode::LoadStringByte: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "native backend encountered invalid string index";
+          return false;
+        }
+        size_t fixupIndex = emitter.emitLoadStringBytePlaceholder();
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
         break;
       }
       default:

@@ -334,47 +334,54 @@ std::string stripStringLiteralSuffix(const std::string &token) {
   if (!splitStringLiteralToken(token, literalText, suffix)) {
     return token;
   }
-  if (suffix.empty() || suffix == "utf8" || suffix == "ascii") {
-    return literalText;
-  }
+  bool raw = false;
   if (suffix == "raw_utf8" || suffix == "raw_ascii") {
-    std::string decoded;
-    std::string error;
-    if (decodeStringLiteralText(literalText, decoded, error, true)) {
-      std::string escaped;
-      escaped.reserve(decoded.size() + 2);
-      escaped.push_back('"');
-      for (char c : decoded) {
-        switch (c) {
-          case '\\':
-            escaped += "\\\\";
-            break;
-          case '"':
-            escaped += "\\\"";
-            break;
-          case '\n':
-            escaped += "\\n";
-            break;
-          case '\r':
-            escaped += "\\r";
-            break;
-          case '\t':
-            escaped += "\\t";
-            break;
-          case '\0':
-            escaped += "\\0";
-            break;
-          default:
-            escaped.push_back(c);
-            break;
-        }
-      }
-      escaped.push_back('"');
-      return escaped;
-    }
+    raw = true;
+  } else if (suffix.empty() || suffix == "utf8" || suffix == "ascii") {
+    raw = false;
+  } else {
+    return token;
+  }
+
+  // PrimeStruct string literals can use either 'single' or "double" quotes.
+  // For C++ output we always emit a valid C++ string literal using double quotes,
+  // escaping embedded quotes/backslashes and any decoded escape sequences.
+  std::string decoded;
+  std::string error;
+  if (!decodeStringLiteralText(literalText, decoded, error, raw)) {
     return literalText;
   }
-  return token;
+
+  std::string escaped;
+  escaped.reserve(decoded.size() + 2);
+  escaped.push_back('"');
+  for (char c : decoded) {
+    switch (c) {
+      case '\\':
+        escaped += "\\\\";
+        break;
+      case '"':
+        escaped += "\\\"";
+        break;
+      case '\n':
+        escaped += "\\n";
+        break;
+      case '\r':
+        escaped += "\\r";
+        break;
+      case '\t':
+        escaped += "\\t";
+        break;
+      case '\0':
+        escaped += "\\0";
+        break;
+      default:
+        escaped.push_back(c);
+        break;
+    }
+  }
+  escaped.push_back('"');
+  return escaped;
 }
 
 bool isBuiltinNegate(const Expr &expr) {

@@ -467,6 +467,29 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::LoadStringByte: {
+        if (stack.empty()) {
+          error = "IR stack underflow on string index";
+          return false;
+        }
+        uint64_t indexRaw = stack.back();
+        stack.pop_back();
+        uint64_t stringIndex = inst.imm;
+        if (stringIndex >= module.stringTable.size()) {
+          error = "invalid string index in IR";
+          return false;
+        }
+        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
+        size_t index = static_cast<size_t>(indexRaw);
+        if (index >= text.size()) {
+          error = "string index out of bounds in IR";
+          return false;
+        }
+        uint8_t byte = static_cast<uint8_t>(text[index]);
+        stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(byte))));
+        ip += 1;
+        break;
+      }
       default:
         error = "unknown IR opcode";
         return false;

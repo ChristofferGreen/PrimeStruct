@@ -275,6 +275,15 @@ bool IrLowerer::lower(const Program &program,
     function.instructions.push_back({IrOpcode::ReturnI32, 0});
   };
 
+  auto emitStringIndexOutOfBounds = [&]() {
+    uint64_t flags = encodePrintFlags(true, true);
+    int32_t msgIndex = internString("string index out of bounds");
+    function.instructions.push_back(
+        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+    function.instructions.push_back({IrOpcode::PushI32, 3});
+    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+  };
+
   auto normalizeIndexKind = [](LocalInfo::ValueKind kind) {
     return (kind == LocalInfo::ValueKind::Bool) ? LocalInfo::ValueKind::Int32 : kind;
   };
@@ -402,6 +411,60 @@ bool IrLowerer::lower(const Program &program,
     if (target.kind == Expr::Kind::Call) {
       std::string collection;
       return getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1;
+    }
+    return false;
+  };
+
+  auto resolveStringTableTarget = [&](const Expr &expr,
+                                      const LocalMap &localsIn,
+                                      int32_t &stringIndexOut,
+                                      size_t &lengthOut) -> bool {
+    stringIndexOut = -1;
+    lengthOut = 0;
+    if (expr.kind == Expr::Kind::StringLiteral) {
+      std::string decoded;
+      if (!parseStringLiteral(expr.stringValue, decoded)) {
+        return false;
+      }
+      stringIndexOut = internString(decoded);
+      lengthOut = decoded.size();
+      return true;
+    }
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.name);
+      if (it == localsIn.end()) {
+        return false;
+      }
+      if (it->second.valueKind != LocalInfo::ValueKind::String ||
+          it->second.stringSource != LocalInfo::StringSource::TableIndex) {
+        return false;
+      }
+      if (it->second.stringIndex < 0) {
+        error = "native backend missing string table data for: " + expr.name;
+        return false;
+      }
+      if (static_cast<size_t>(it->second.stringIndex) >= stringTable.size()) {
+        error = "native backend encountered invalid string table index";
+        return false;
+      }
+      stringIndexOut = it->second.stringIndex;
+      lengthOut = stringTable[static_cast<size_t>(stringIndexOut)].size();
+      return true;
+    }
+    return false;
+  };
+
+  auto isStringCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
+    if (!isSimpleCallName(expr, "count") || expr.args.size() != 1) {
+      return false;
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      return it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String;
     }
     return false;
   };
@@ -703,9 +766,6 @@ bool IrLowerer::lower(const Program &program,
           return LocalInfo::ValueKind::Unknown;
         }
         if (it->second.kind == LocalInfo::Kind::Value || it->second.kind == LocalInfo::Kind::Reference) {
-          if (it->second.valueKind == LocalInfo::ValueKind::String) {
-            return LocalInfo::ValueKind::Unknown;
-          }
           return it->second.valueKind;
         }
         return LocalInfo::ValueKind::Unknown;
@@ -734,12 +794,24 @@ bool IrLowerer::lower(const Program &program,
         if (isArrayCountCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;
         }
+        if (isStringCountCall(expr, localsIn)) {
+          return LocalInfo::ValueKind::Int32;
+        }
         std::string accessName;
         if (getBuiltinArrayAccessName(expr, accessName)) {
           if (expr.args.size() != 2) {
             return LocalInfo::ValueKind::Unknown;
           }
           const Expr &target = expr.args.front();
+          if (target.kind == Expr::Kind::StringLiteral) {
+            return LocalInfo::ValueKind::Int32;
+          }
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+              return LocalInfo::ValueKind::Int32;
+            }
+          }
           if (isEntryArgsName(target, localsIn)) {
             return LocalInfo::ValueKind::Unknown;
           }
@@ -1402,7 +1474,7 @@ bool IrLowerer::lower(const Program &program,
         return false;
       }
       case Expr::Kind::Call: {
-        if (expr.isMethodCall && !isArrayCountCall(expr, localsIn)) {
+        if (expr.isMethodCall && !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
           const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
           if (!callee) {
             return false;
@@ -1431,8 +1503,26 @@ bool IrLowerer::lower(const Program &program,
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
         }
+        if (isStringCountCall(expr, localsIn)) {
+          if (expr.args.size() != 1) {
+            error = "count requires exactly one argument";
+            return false;
+          }
+          int32_t stringIndex = -1;
+          size_t length = 0;
+          if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+            error = "native backend only supports count() on string literals or string bindings";
+            return false;
+          }
+          if (length > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+            error = "native backend string too large for count()";
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(length))});
+          return true;
+        }
         if (isSimpleCallName(expr, "count")) {
-          error = "count requires array target";
+          error = "count requires array or string target";
           return false;
         }
         PrintBuiltin printBuiltin;
@@ -1446,13 +1536,71 @@ bool IrLowerer::lower(const Program &program,
             error = accessName + " requires exactly two arguments";
             return false;
           }
-          if (isEntryArgsName(expr.args.front(), localsIn)) {
+          const Expr &target = expr.args.front();
+
+          int32_t stringIndex = -1;
+          size_t stringLength = 0;
+          if (resolveStringTableTarget(target, localsIn, stringIndex, stringLength)) {
+            LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
+            if (!isSupportedIndexKind(indexKind)) {
+              error = "native backend requires integer indices for " + accessName;
+              return false;
+            }
+            if (stringLength > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+              error = "native backend string too large for indexing";
+              return false;
+            }
+
+            const int32_t indexLocal = allocTempLocal();
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+            if (accessName == "at") {
+              if (indexKind != LocalInfo::ValueKind::UInt64) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+                function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+                function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+                size_t jumpNonNegative = function.instructions.size();
+                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+                emitStringIndexOutOfBounds();
+                size_t nonNegativeIndex = function.instructions.size();
+                function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+              }
+
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              IrOpcode lengthOp =
+                  (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
+              function.instructions.push_back({lengthOp, static_cast<uint64_t>(stringLength)});
+              function.instructions.push_back({cmpGeForIndex(indexKind), 0});
+              size_t jumpInRange = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitStringIndexOutOfBounds();
+              size_t inRangeIndex = function.instructions.size();
+              function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
+            }
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::LoadStringByte, static_cast<uint64_t>(stringIndex)});
+            return true;
+          }
+          if (target.kind == Expr::Kind::StringLiteral) {
+            return false;
+          }
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+              error = "native backend only supports indexing into string literals or string bindings";
+              return false;
+            }
+          }
+          if (isEntryArgsName(target, localsIn)) {
             error = "native backend only supports entry argument indexing in print calls or string bindings";
             return false;
           }
 
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-          const Expr &target = expr.args.front();
           if (target.kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.name);
             if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {

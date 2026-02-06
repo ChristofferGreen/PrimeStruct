@@ -84,6 +84,25 @@ main() {
   CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
+TEST_CASE("compiles and runs single-quoted strings in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text('{"k":"v"}'utf8)
+  [i32] k(at(text, 2i32))
+  [i32] v(at_unsafe(text, 6i32))
+  [i32] len(count(text))
+  return(plus(plus(k, v), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_single_quoted_string.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_single_quoted_string_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == (107 + 118 + 9));
+}
+
 TEST_CASE("runs program in vm") {
   const std::string source = R"(
 [return<int>]
@@ -94,6 +113,22 @@ main() {
   const std::string srcPath = writeTemp("vm_simple.prime", source);
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 7);
+}
+
+TEST_CASE("runs vm with string count and indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  [i32] a(text[0i32])
+  [i32] b(at_unsafe(text, 1i32))
+  [i32] len(text.count())
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_index.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == (97 + 98 + 3));
 }
 
 TEST_CASE("runs vm with argv printing") {
@@ -2041,6 +2076,25 @@ main() {
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "hey\n");
+}
+
+TEST_CASE("compiles and runs native string count and indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  [i32] a(text[0i32])
+  [i32] b(at_unsafe(text, 1i32))
+  [i32] len(text.count())
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_index.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_index_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == (97 + 98 + 3));
 }
 
 TEST_CASE("compiles and runs native hello world example") {
