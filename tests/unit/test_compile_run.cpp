@@ -200,6 +200,22 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
+TEST_CASE("runs vm with argv unsafe error output") {
+  const std::string source = R"(
+[return<int> effects(io_err)]
+main([array<string>] args) {
+  print_error(at_unsafe(args, 1i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_error_unsafe.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_argv_error_unsafe_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath) == "alpha");
+}
+
 TEST_CASE("runs vm with method call result") {
   const std::string source = R"(
 namespace i32 {
@@ -797,6 +813,29 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
+TEST_CASE("compiles and runs argv unsafe error output in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_err)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print_error(at_unsafe(args, 1i32))
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_error_unsafe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_error_unsafe_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_args_error_unsafe_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath) == "alpha");
+}
+
 TEST_CASE("compiles and runs argv print in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -1373,6 +1412,27 @@ main([array<string>] args) {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " alpha beta 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath) == "alpha");
+}
+
+TEST_CASE("compiles and runs native argv unsafe error output") {
+  const std::string source = R"(
+[return<int> effects(io_err)]
+main([array<string>] args) {
+  print_error(at_unsafe(args, 1i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_args_error_unsafe.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_args_error_unsafe_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_args_error_unsafe_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha 2> " + errPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha");
 }
