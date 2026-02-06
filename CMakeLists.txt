@@ -55,5 +55,57 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
   target_compile_options(PrimeStruct_tests PRIVATE -Wall -Wextra -Wpedantic)
-  add_test(NAME PrimeStruct_tests COMMAND $<TARGET_FILE:PrimeStruct_tests>)
+
+  set(PrimeStructTestSuites
+    primestruct.dumps
+    primestruct.dumps.namespace
+    primestruct.parser.executions
+    primestruct.parser.execution.whitespace
+    primestruct.includes.errors
+    primestruct.includes.multiple
+    primestruct.includes
+    primestruct.ir.pipeline
+    primestruct.lexer
+    primestruct.parser.basic
+    primestruct.parser.errors
+    primestruct.parser.errors.more
+    primestruct.printers.manual
+    primestruct.semantics
+    primestruct.semantics.manual
+    primestruct.parser.templates
+    primestruct.text_filters
+  )
+
+  foreach(suite IN LISTS PrimeStructTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+  endforeach()
+
+  set(PrimeStructCompileRunSuite "primestruct.compile.run")
+  set(PrimeStructCompileRunRanges
+    "1,35"
+    "36,70"
+    "71,105"
+    "106,140"
+    "141,175"
+    "176,210"
+    "211,9999"
+  )
+  foreach(range IN LISTS PrimeStructCompileRunRanges)
+    string(REPLACE "," ";" rangeParts "${range}")
+    list(GET rangeParts 0 rangeFirst)
+    list(GET rangeParts 1 rangeLast)
+    set(testName "PrimeStruct_compile_run_${rangeFirst}_${rangeLast}")
+    add_test(NAME "${testName}"
+      COMMAND $<TARGET_FILE:PrimeStruct_tests>
+        "--test-suite=${PrimeStructCompileRunSuite}"
+        "--order-by=name"
+        "--first=${rangeFirst}"
+        "--last=${rangeLast}"
+    )
+    set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800)
+  endforeach()
 endif()

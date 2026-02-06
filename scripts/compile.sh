@@ -136,7 +136,7 @@ if [[ $RUN_TESTS -eq 1 ]]; then
     "$LLVM_COV" show "${coverage_args[@]}" "${bins[@]}" -instr-profile "$profdata" \
       -format=html -output-dir "$report_dir/html" -show-instantiations -show-line-counts-or-regions
   else
-    (cd "$BUILD_DIR" && ctest --output-on-failure)
+    (cd "$BUILD_DIR" && ctest --output-on-failure --progress)
   fi
 fi
 
