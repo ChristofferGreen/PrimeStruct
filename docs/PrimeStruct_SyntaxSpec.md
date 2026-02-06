@@ -6,7 +6,7 @@ filters and desugaring.
 
 ## 1. Overview
 
-PrimeStruct uses a **uniform envelope** for definitions, executions, and bindings:
+PrimeStruct uses a single syntactic form called an **Envelope** for definitions, executions, and bindings:
 
 ```
 [transform-list] name<template-list>(param-list) { body-list }
@@ -17,7 +17,7 @@ PrimeStruct uses a **uniform envelope** for definitions, executions, and binding
 - `(...)` contains parameters or arguments.
 - `{...}` contains a definition body or execution body arguments.
 
-The parser accepts convenient surface forms (operator expressions, `if(...) { ... } else { ... }`,
+The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
 indexing `value[index]`), then rewrites them into a small canonical core before semantic analysis
 and IR lowering.
 
@@ -118,7 +118,7 @@ transform_list = transform { transform } ;
 transform      = identifier template_opt args_opt ;
 // Commas between transforms are allowed but not required.
 // Transform template args accept a single type expression (not a list).
-// Transform argument lists accept identifier, number, or string tokens (no expressions).
+// Transform argument lists accept identifier, number, or string tokens (no nested envelopes).
 
 template_opt   = [ "<" template_list ">" ] ;
 template_list  = type_expr { "," type_expr } ;
@@ -130,48 +130,44 @@ param          = binding ;
 
 body_block     = "{" stmt_list_opt "}" ;
 exec_body_opt  = [ "{" exec_body_list_opt "}" ] ;
-exec_body_list_opt = [ expr { [ "," ] expr } ] ;
+exec_body_list_opt = [ form { [ "," ] form } ] ;
 body_args_opt  = [ "{" exec_body_list_opt "}" ] ;
 
 stmt_list_opt  = [ stmt { stmt } ] ;
-stmt           = binding | expr ;
+stmt           = binding | form ;
 
 binding        = transforms_opt name template_opt args_opt ;
 
 args_opt       = [ "(" arg_list_opt ")" ] ;
 arg_list_opt   = [ arg { "," arg } ] ;
-arg            = named_arg | expr ;
-named_arg      = identifier "=" expr ;
+arg            = named_arg | form ;
+named_arg      = identifier "=" form ;
 
-expr           = literal
+form           = literal
                | name
                | call
                | index_expr
-               | block_if_expr
-               | block_then_expr
-               | block_else_expr ;
+               | block_if_expr ;
 
 call           = name template_opt args_opt body_args_opt ;
 name           = identifier | slash_path ;
 
-index_expr     = expr "[" expr "]" ;
+index_expr     = form "[" form "]" ;
 
-block_if_expr  = "if" "(" expr ")" block_if_body ;
-block_then_expr= "then" block_if_body ;
-block_else_expr= "else" block_if_body ;
+block_if_expr  = "if" "(" form ")" block_if_body "else" block_if_body ;
 block_if_body  = "{" stmt_list_opt "}" ;
 
 literal        = int_lit | float_lit | bool_lit | string_lit ;
 ```
 
 Notes:
-- `binding` reuses the uniform envelope; it becomes a local declaration.
+- `binding` reuses the Envelope; it becomes a local declaration.
 - `execution` is syntactically the same as `definition` but has no body block or has an execution body list.
-- `expr` includes surface `if` blocks, which are rewritten into canonical calls.
+- `form` includes surface `if` blocks, which are rewritten into canonical calls.
 - Transform lists may include optional commas between transforms; trailing commas are not allowed.
 - Parameter and argument lists require commas between items; trailing commas are not allowed.
-- Execution/body brace lists accept comma-separated or whitespace-separated expressions; trailing commas are not allowed.
-- Calls may include brace body arguments (e.g. `execute_task(...) { work() work() }` or `then{ ... }`).
+- Execution/body brace lists accept comma-separated or whitespace-separated forms; trailing commas are not allowed.
+- Calls may include brace body arguments (e.g. `execute_task(...) { work() work() }` or `block{ ... }`).
 - `quoted_string` in include declarations is a raw quoted string without suffixes.
 
 ## 5. Desugaring and Canonical Core
@@ -182,11 +178,14 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   The exact whitespace sensitivity of text filters is defined by the active filter set (see design doc).
 
 - `return(value)` / `return()` are the only return forms; parentheses are always required.
-- Control flow: `if(cond, then{...}, else{...})` with `then{}` and `else{}` blocks as arguments.
+- Control flow: `if(condition, trueBranch, falseBranch)` in canonical call form.
+  - Signature: `if(Envelope, Envelope, Envelope)`
+  - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
+  - 2) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `true`
+  - 3) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `false`
   - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted only in
-    statement lists and brace argument lists; use canonical `if(...)` inside expression arguments.
-  - When `if(...)` appears in an expression context, `then{}` and `else{}` must each contain exactly one
-    expression; that expression becomes the value of the `if(...)`.
+    statement lists and brace argument lists; it is rewritten into canonical `if(...)` by wrapping the two blocks as envelopes.
+  - Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
@@ -224,8 +223,8 @@ execute_task(count = 2i32) { main() main() }
 - Executions are call-style constructs that may include a body list of calls.
 - Execution bodies may only contain calls (no bindings, no `return`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
-- Execution body brace lists accept comma-separated or whitespace-separated call expressions.
-  - The parser accepts any expression in brace lists, but semantic validation rejects non-call entries in executions.
+- Execution body brace lists accept comma-separated or whitespace-separated calls.
+  - The parser accepts any form in brace lists, but semantic validation rejects non-call entries in executions.
 
 ## 7. Parameters, Arguments, and Bindings
 
@@ -247,7 +246,7 @@ Parameters use the same binding envelope as locals:
 main([array<string>] args, [i32] limit(10i32)) { ... }
 ```
 
-Defaults are limited to literal/pure expressions (no name references).
+Defaults are limited to literal/pure forms (no name references).
 
 ### 7.3 Named Arguments
 

@@ -25,9 +25,9 @@ PrimeStruct is designed to:
 
 ## Core Ideas
 
-### Uniform Envelope
+### Envelope
 
-Everything in PrimeStruct uses one structural envelope:
+Everything in PrimeStruct uses one structural envelope ("Envelope"):
 
     [transforms] name<templates>(parameters) { body }
 
@@ -63,7 +63,7 @@ A definition introduces a named body with explicit return/effects transforms:
 ### Executions
 
 Executions are call-style constructs (top-level scheduling nodes). They may
-include brace bodies that list call expressions:
+include brace bodies that list calls:
 
     execute_repeat(count = 2i32) { main() main() }
 
@@ -102,11 +102,19 @@ requires an `else` block:
 
 Canonical form:
 
-    if<bool>(
+    if(
       less_than(value, min),
-      then{ return(min) },
-      else{ return(value) }
+      return(min),
+      return(value)
     )
+
+`if` takes three **envelopes**:
+
+1) The condition: must evaluate to `bool` (a boolean value or a call returning `bool`).
+2) The true branch: must be a function or a value; the function return or the value is returned by the `if` if the condition is `true`.
+3) The false branch: must be a function or a value; the function return or the value is returned by the `if` if the condition is `false`.
+
+Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
 
 Operators are also rewritten into prefix calls (`a + b` -> `plus(a, b)`).
 
