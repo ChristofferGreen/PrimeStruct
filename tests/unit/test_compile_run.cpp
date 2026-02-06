@@ -111,6 +111,18 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("runs vm with argv count helper") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(count(args))
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_count_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("runs vm with argv i64 index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -540,6 +552,22 @@ main([array<string>] args) {
   CHECK(runCommand(exePath + " alpha beta") == 3);
 }
 
+TEST_CASE("compiles and runs argv count helper") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(count(args))
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_count_helper.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_count_helper_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath + " alpha beta") == 3);
+}
+
 TEST_CASE("compiles and runs argv print in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -895,6 +923,22 @@ main([array<string>] args) {
 )";
   const std::string srcPath = writeTemp("compile_native_args.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_args_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath + " alpha beta") == 3);
+}
+
+TEST_CASE("compiles and runs native argv count helper") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(count(args))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_args_count_helper.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_args_count_helper_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
