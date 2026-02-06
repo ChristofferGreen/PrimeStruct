@@ -2050,6 +2050,34 @@ main([array<string>] args) {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir lowerer supports entry args count helper") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(count(args))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions[0].instructions.size() == 2);
+  CHECK(module.functions[0].instructions[0].op == primec::IrOpcode::PushArgc);
+  CHECK(module.functions[0].instructions[1].op == primec::IrOpcode::ReturnI32);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error, 4));
+  CHECK(error.empty());
+  CHECK(result == 4);
+}
+
 TEST_CASE("ir lowerer supports entry args print index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
