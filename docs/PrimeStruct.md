@@ -58,37 +58,6 @@ module {
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
   - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
-- Optional: `primec --default-effects io_out,io_err` supplies default effects for definitions/executions that omit `[effects]`.
-- Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
-- All generated outputs land in the current directory (configurable by `--out-dir`).
-
-### Example source and expected IR (sketch)
-PrimeStruct:
-```
-[return<int>]
-main() {
-  return(42i32)
-}
-```
-
-Expected IR (shape only):
-```
-module {
-  def main(): i32 {
-    return 42
-  }
-}
-```
-
-### Compiler driver behavior (plan)
-- `primec --emit=cpp input.prime -o hello.cpp`
-- `primec --emit=exe input.prime -o hello`
-  - Uses the C++ emitter plus the host toolchain (initially `clang++`).
-  - Bundles a minimal runtime shim that maps `main` to `int main()`.
-- `primec --emit=native input.prime -o hello`
-  - Emits a self-contained macOS/arm64 executable directly (no external linker).
-  - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, if/then/else, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
 - All generated outputs land in the current directory (configurable by `--out-dir`).
 
@@ -479,7 +448,7 @@ module {
 - Static analysis/lint integrated into CI to catch undefined constructs before codegen.
 
 ## Next Steps (Exploratory)
-1. Draft detailed syntax/semantics spec and circulate for review. _(Draft v0.1 captured in `docs/PrimeStruct_SyntaxSpec.md` on 2025-11-21; review/feedback tracking TBD.)_
+1. Draft detailed syntax/semantics spec and circulate for review. _(Draft v0.1 captured in a separate syntax spec on 2025-11-21; review/feedback tracking TBD.)_
 2. Prototype parser + IR builder (Phase 0).
 3. Evaluate reuse of existing shader toolchains (glslang, SPIRV-Cross) vs bespoke emitters.
 4. Design import/package system (module syntax, search paths, visibility rules, transform distribution).
