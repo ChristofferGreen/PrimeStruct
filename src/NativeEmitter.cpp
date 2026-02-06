@@ -7,7 +7,14 @@
 #include <filesystem>
 #include <fstream>
 #include <limits>
+#include <string>
 #include <vector>
+
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 
 #if defined(__APPLE__)
 #include <mach/machine.h>
@@ -893,24 +900,61 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
 }
 
 bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error) {
-  std::ofstream file(path, std::ios::binary);
+  std::filesystem::path outputPath(path);
+  std::filesystem::path parent = outputPath.parent_path();
+  if (parent.empty()) {
+    parent = ".";
+  }
+
+  // Write to a temporary file and rename into place. This avoids keeping a
+  // potentially problematic inode alive across runs (e.g. when tests leave
+  // behind executing processes).
+  const long long pid =
+#if defined(_WIN32)
+      static_cast<long long>(::_getpid());
+#else
+      static_cast<long long>(::getpid());
+#endif
+  std::filesystem::path tempPath =
+      parent / (outputPath.filename().string() + ".tmp." + std::to_string(pid));
+
+  {
+    std::error_code cleanupEc;
+    std::filesystem::remove(tempPath, cleanupEc);
+  }
+
+  std::ofstream file(tempPath, std::ios::binary | std::ios::trunc);
   if (!file) {
     error = "failed to open output file";
     return false;
   }
   file.write(reinterpret_cast<const char *>(data.data()), static_cast<std::streamsize>(data.size()));
   if (!file.good()) {
+    std::error_code cleanupEc;
+    std::filesystem::remove(tempPath, cleanupEc);
     error = "failed to write output file";
     return false;
   }
+  file.close();
+
   std::error_code ec;
-  std::filesystem::permissions(path,
+  std::filesystem::permissions(tempPath,
                                std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec |
                                    std::filesystem::perms::others_exec,
                                std::filesystem::perm_options::add,
                                ec);
   if (ec) {
+    std::filesystem::remove(tempPath, ec);
     error = "failed to set executable permissions";
+    return false;
+  }
+
+  std::filesystem::remove(outputPath, ec);
+  ec.clear();
+  std::filesystem::rename(tempPath, outputPath, ec);
+  if (ec) {
+    std::filesystem::remove(tempPath, ec);
+    error = "failed to move output file into place";
     return false;
   }
   return true;
