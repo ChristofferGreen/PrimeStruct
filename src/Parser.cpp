@@ -94,6 +94,21 @@ bool validateIdentifierText(const std::string &text, std::string &error) {
   return true;
 }
 
+bool validateTransformName(const std::string &text, std::string &error) {
+  if (text == "return" || text == "mut") {
+    return true;
+  }
+  if (text.empty()) {
+    error = "invalid transform identifier";
+    return false;
+  }
+  if (text[0] == '/' || text.find('/') != std::string::npos) {
+    error = "transform identifiers cannot be slash paths";
+    return false;
+  }
+  return validateIdentifierText(text, error);
+}
+
 bool isStructTransformName(const std::string &text) {
   return text == "struct" || text == "pod" || text == "stack" || text == "heap" || text == "buffer" ||
          text == "handle" || text == "gpu_lane";
@@ -356,6 +371,10 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (name.kind == TokenKind::End) {
       return false;
     }
+    std::string nameError;
+    if (!validateTransformName(name.text, nameError)) {
+      return fail(nameError);
+    }
     Transform transform;
     transform.name = name.text;
     if (match(TokenKind::LAngle)) {
@@ -375,10 +394,17 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return fail("transform argument list cannot be empty");
       }
       while (true) {
+        if (match(TokenKind::Comment)) {
+          return fail("comments are not supported");
+        }
         if (match(TokenKind::Identifier)) {
           Token arg = consume(TokenKind::Identifier, "expected transform argument");
           if (arg.kind == TokenKind::End) {
             return false;
+          }
+          std::string argError;
+          if (!validateIdentifierText(arg.text, argError)) {
+            return fail(argError);
           }
           transform.arguments.push_back(arg.text);
         } else if (match(TokenKind::Number)) {

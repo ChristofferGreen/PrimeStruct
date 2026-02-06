@@ -251,6 +251,51 @@ main() {
   CHECK(error.find("trailing comma not allowed in transform list") != std::string::npos);
 }
 
+TEST_CASE("non-ascii transform identifier rejected") {
+  const std::string source = std::string(R"(
+[tr)") + "\xC3\xA9" + R"(]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid identifier") != std::string::npos);
+}
+
+TEST_CASE("slash path transform identifier rejected") {
+  const std::string source = R"(
+[/demo]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform identifiers cannot be slash paths") != std::string::npos);
+}
+
+TEST_CASE("non-ascii transform argument rejected") {
+  const std::string source = std::string(R"(
+[effects(i)") + "\xC3\xA9" + R"(o)]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid identifier") != std::string::npos);
+}
+
 TEST_CASE("trailing comma in template argument list is rejected") {
   const std::string source = R"(
 [return<int>]
