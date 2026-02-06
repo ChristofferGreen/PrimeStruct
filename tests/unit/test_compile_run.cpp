@@ -373,6 +373,19 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm array access with u64 index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(plus(100i32, values[1u64]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_u64.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 107);
+}
+
 TEST_CASE("vm array access rejects negative index") {
   const std::string source = R"(
 [return<int>]
@@ -1000,6 +1013,22 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_array_index.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_index_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs array index sugar with u64") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(values[1u64])
+}
+)";
+  const std::string srcPath = writeTemp("compile_array_index_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_index_u64_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2222,6 +2251,22 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_array_literal.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_array_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native array access with u64 index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(values[1u64])
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_array_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_array_u64_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
