@@ -377,6 +377,21 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm argv access rejects negative index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[-1i32])
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_negative.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_negative_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_CASE("vm argv unsafe access skips bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -1204,6 +1219,25 @@ main([array<string>] args) {
   const std::string srcPath = writeTemp("compile_native_argv_bounds.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_bounds_exe").string();
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_argv_bounds_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("compiles and runs native argv access rejects negative index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[-1i32])
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_negative.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_negative_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_argv_negative_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
