@@ -92,6 +92,22 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == srcPath + "\n");
 }
 
+TEST_CASE("runs vm with argv printing without newline") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print(args[0i32])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_print_no_newline.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_argv_print_no_newline_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath) == srcPath);
+}
+
 TEST_CASE("runs vm with forwarded argv") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -804,6 +820,29 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\nbeta\n");
 }
 
+TEST_CASE("compiles and runs argv print without newline in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print(args[1i32])
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_print_no_newline.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_print_no_newline_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_args_print_no_newline_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha");
+}
+
 TEST_CASE("compiles and runs argv print with u64 index in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -1359,6 +1398,30 @@ main([array<string>] args) {
   const std::string runCmd = exePath + " alpha > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
+}
+
+TEST_CASE("compiles and runs native argv print without newline") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print(args[1i32])
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_print_no_newline.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_print_no_newline_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_print_no_newline_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha");
 }
 
 TEST_CASE("compiles and runs native argv print with u64 index") {
