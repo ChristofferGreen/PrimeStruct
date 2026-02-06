@@ -102,6 +102,13 @@ module {
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Intermediate representation:** strongly-typed SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
+- **IR definition (draft):**
+  - **Module:** `{ string_table, functions, entry_index, version }`.
+  - **Function:** `{ name, instructions }` where instructions are linear, stack-based ops with immediates.
+  - **Instruction:** `{ op, imm }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning depends on `op`.
+  - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
+  - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR versioning).
+  - **Entry:** `entry_index` points to the entry function in `functions`; its signature is enforced by the front-end.
 - **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
