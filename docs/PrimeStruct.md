@@ -1,6 +1,6 @@
 # PrimeStruct Plan
 
-PrimeStruct is built around a simple philosophy: program meaning emerges from two primitives—**definitions** (potential) and **executions** (actual). Rather than bolting on dozens of bespoke constructs, we give both forms the same syntactic envelope and let compile-time transforms massage the surface into a canonical core. From that small nucleus we can target C++, GLSL, or the PrimeStruct VM, wire into PathSpace, and even feed future visual editors, all without sacrificing deterministic semantics.
+PrimeStruct is built around a simple idea: program meaning comes from two primitives—**definitions** (potential) and **executions** (actual). Both share the same syntactic envelope, and compile-time transforms rewrite the surface into a small canonical core. That core is what we target to C++, GLSL, and the PrimeStruct VM. It also keeps semantics deterministic and leaves room for future tooling (PathSpace integration, visual editors).
 
 ### Source-processing pipeline
 1. **Include resolver:** first pass walks the raw text and expands every `include<...>` inline (C-style) so the compiler always works on a single flattened source stream.
@@ -9,11 +9,11 @@ PrimeStruct is built around a simple philosophy: program meaning emerges from tw
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully typed.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
-Each filter stage halts on error (reporting diagnostics immediately) and exposes a `--dump-stage=<name>` switch so tooling/tests can capture the textual/tree output produced just before the failure. The text filter pipeline is configured with `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals), and adding `implicit-i32` will auto-append `i32` suffixes. Use `--no-transforms` to disable all text filters and require canonical syntax.
+Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text filters are configured via `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals). Add `implicit-i32` to auto-append `i32` suffixes. Use `--no-transforms` to disable all text filters and require canonical syntax.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct v0, and list anything explicitly deferred to later phases.
-- **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs) 
+- **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs)
 - **Ownership map:** assign leads for parser, IR/type system, first backend, and test infrastructure, plus security/runtime reviewers.
 - **Integration plan:** describe how the compiler/test suite slots into the build (targets, CI loops, feature flags, artifact publishing).
 - **Risk log:** record open questions (borrow checker, capability taxonomy, GPU backend constraints) and mitigation/rollback strategies.
