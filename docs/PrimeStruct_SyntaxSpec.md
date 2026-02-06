@@ -53,7 +53,7 @@ and IR lowering.
 - Bool literals: `true`, `false`.
 - String literals:
   - Double-quoted or single-quoted: `"hello"utf8`, `'hi'utf8`.
-  - Raw form: `R"(raw text)"utf8` (no escape processing inside the raw body).
+  - Raw form: `R"(raw text)"utf8` (no escape processing inside the raw body; no custom delimiters).
   - Canonical form requires `utf8` or `ascii` suffix.
   - The `implicit-utf8` filter appends `utf8` to bare strings.
   - `ascii` rejects non-ASCII bytes.
@@ -77,8 +77,9 @@ file = { include | namespace | definition | execution }
 include<"/path", version="1.2.0">
 ```
 
-Includes expand inline before text filters run. Multiple paths may be listed in a single include.
-Version selection follows the rules in `docs/PrimeStruct.md`.
+Includes expand inline before text filters run. Include paths are raw quoted strings without suffixes
+and are parsed before the string-literal rules in this spec; treat them as literal paths. Multiple
+paths may be listed in a single include. Version selection follows the rules in `docs/PrimeStruct.md`.
 
 ### 3.2 Namespace Blocks
 
@@ -101,7 +102,8 @@ top_item       = include_decl | namespace_decl | definition | execution ;
 
 include_decl   = "include" "<" include_list ">" ;
 include_list   = include_entry { "," include_entry } ;
-include_entry  = string_literal | "version" "=" string_literal ;
+include_entry  = include_string | "version" "=" include_string ;
+include_string = quoted_string ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 
@@ -114,6 +116,8 @@ transforms_opt = [ "[" transform_list "]" ] ;
 transform_list = transform { transform } ;
 transform      = identifier template_opt args_opt ;
 // Commas between transforms are allowed but not required.
+// Transform template args accept a single type expression (not a list).
+// Transform argument lists accept identifier, number, or string tokens (no expressions).
 
 template_opt   = [ "<" template_list ">" ] ;
 template_list  = type_expr { "," type_expr } ;
@@ -126,6 +130,7 @@ param          = binding ;
 body_block     = "{" stmt_list_opt "}" ;
 exec_body_opt  = [ "{" exec_body_list_opt "}" ] ;
 exec_body_list_opt = [ expr { [ "," ] expr } ] ;
+body_args_opt  = [ "{" exec_body_list_opt "}" ] ;
 
 stmt_list_opt  = [ stmt { stmt } ] ;
 stmt           = binding | expr ;
@@ -145,7 +150,7 @@ expr           = literal
                | block_then_expr
                | block_else_expr ;
 
-call           = name template_opt args_opt ;
+call           = name template_opt args_opt body_args_opt ;
 name           = identifier | slash_path ;
 
 index_expr     = expr "[" expr "]" ;
@@ -165,6 +170,8 @@ Notes:
 - Transform lists may include optional commas between transforms; trailing commas are not allowed.
 - Parameter and argument lists require commas between items; trailing commas are not allowed.
 - Execution/body brace lists accept comma-separated or whitespace-separated expressions; trailing commas are not allowed.
+- Calls may include brace body arguments (e.g. `execute_task(...) { work(), work() }` or `then{ ... }`).
+- `quoted_string` in include declarations is a raw quoted string without suffixes.
 
 ## 5. Desugaring and Canonical Core
 
@@ -173,8 +180,10 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Operator and control-flow sugar are applied by text filters and parser sugar before semantic analysis.
   The exact whitespace sensitivity of text filters is defined by the active filter set (see design doc).
 
-- `return(value)` is the only return form.
+- `return(value)` / `return()` are the only return forms; parentheses are always required.
 - Control flow: `if(cond, then{...}, else{...})` with `then{}` and `else{}` blocks as arguments.
+  - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted only in
+    statement lists and brace argument lists; use canonical `if(...)` inside expression arguments.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
@@ -213,6 +222,7 @@ execute_task(count = 2i32) { main(), main() }
 - Execution bodies may only contain calls (no bindings, no `return`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
 - Execution body brace lists accept comma-separated or whitespace-separated call expressions.
+  - The parser accepts any expression in brace lists, but semantic validation rejects non-call entries in executions.
 
 ## 7. Parameters, Arguments, and Bindings
 
@@ -275,7 +285,7 @@ Map IR lowering is currently limited in VM/native backends.
 
 ## 10. Return Semantics
 
-- `return(value)` is explicit and canonical.
+- `return(value)` is explicit and canonical; parentheses are required.
 - `return()` is valid for `void` definitions.
 - Non-void definitions must return along all control paths.
 
@@ -300,3 +310,4 @@ Map IR lowering is currently limited in VM/native backends.
 - `return` in execution bodies is rejected.
 - Semicolons are rejected.
 - Transform argument lists may not be empty.
+- `if` statement sugar requires an `else` block.
