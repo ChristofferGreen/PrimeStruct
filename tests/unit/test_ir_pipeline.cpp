@@ -2135,6 +2135,51 @@ main([array<string>] args) {
   CHECK(sawPrintArgvUnsafe);
 }
 
+TEST_CASE("ir serialize roundtrip preserves unsafe argv prints") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(at_unsafe(args, 1i32))
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  bool sawUnsafe = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgvUnsafe) {
+      sawUnsafe = true;
+      break;
+    }
+  }
+  CHECK(sawUnsafe);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.functions.size() == 1);
+  bool sawUnsafeDecoded = false;
+  for (const auto &inst : decoded.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgvUnsafe) {
+      sawUnsafeDecoded = true;
+      break;
+    }
+  }
+  CHECK(sawUnsafeDecoded);
+}
+
 TEST_CASE("ir lowers map literal call as statement") {
   const std::string source = R"(
 [return<int>]
