@@ -34,7 +34,8 @@ and IR lowering.
 ### 2.2 Whitespace and Comments
 
 - Whitespace separates tokens but is otherwise insignificant.
-- Statements are separated by whitespace/newlines; semicolons are rejected by the parser.
+- Statements are separated by whitespace/newlines; there is no line-based parsing.
+- Semicolons are rejected by the parser.
 - Comments are not supported; `//` and `/* ... */` are tokenized as regular input and will cause parse errors.
 
 ### 2.3 Literals
@@ -124,7 +125,7 @@ param          = binding ;
 
 body_block     = "{" stmt_list_opt "}" ;
 exec_body_opt  = [ "{" exec_body_list_opt "}" ] ;
-exec_body_list_opt = [ expr { "," expr } ] ;
+exec_body_list_opt = [ expr { [ "," ] expr } ] ;
 
 stmt_list_opt  = [ stmt { stmt } ] ;
 stmt           = binding | expr ;
@@ -162,13 +163,15 @@ Notes:
 - `execution` is syntactically the same as `definition` but has no body block or has an execution body list.
 - `expr` includes surface `if` blocks, which are rewritten into canonical calls.
 - Transform lists may include optional commas between transforms; trailing commas are not allowed.
+- Parameter and argument lists require commas between items; trailing commas are not allowed.
+- Execution/body brace lists accept comma-separated or whitespace-separated expressions; trailing commas are not allowed.
 
 ## 5. Desugaring and Canonical Core
 
 The compiler rewrites surface forms into canonical call syntax. The core uses prefix calls:
 
 - Operator and control-flow sugar are applied by text filters and parser sugar before semantic analysis.
-  The exact whitespace sensitivity of text filters is defined by the active filter set.
+  The exact whitespace sensitivity of text filters is defined by the active filter set (see design doc).
 
 - `return(value)` is the only return form.
 - Control flow: `if(cond, then{...}, else{...})` with `then{}` and `else{}` blocks as arguments.
