@@ -763,6 +763,28 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\nbeta\n");
 }
 
+TEST_CASE("compiles and runs argv print with u64 index in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print_line(args[1u64])
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_print_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_print_u64_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_args_print_u64_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("compiles and runs argv unsafe access in C++ emitter") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -784,6 +806,28 @@ main([array<string>] args) {
   const std::string runCmd = exePath + " alpha beta > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\nbeta\n");
+}
+
+TEST_CASE("compiles and runs argv unsafe access with u64 index in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 1i32)) {
+    print_line(at_unsafe(args, 1u64))
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_unsafe_u64.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_unsafe_u64_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_args_unsafe_u64_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
 }
 
 TEST_CASE("compiles and runs array literal") {
