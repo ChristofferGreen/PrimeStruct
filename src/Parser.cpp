@@ -684,11 +684,13 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
   thenCall.kind = Expr::Kind::Call;
   thenCall.name = "then";
   thenCall.namespacePrefix = namespacePrefix;
+  thenCall.hasBodyArguments = true;
   thenCall.bodyArguments = std::move(thenBody);
   Expr elseCall;
   elseCall.kind = Expr::Kind::Call;
   elseCall.name = "else";
   elseCall.namespacePrefix = namespacePrefix;
+  elseCall.hasBodyArguments = true;
   elseCall.bodyArguments = std::move(elseBody);
   Expr ifCall;
   ifCall.kind = Expr::Kind::Call;
@@ -996,6 +998,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         return false;
       }
       if (match(TokenKind::LBrace)) {
+        callExpr.hasBodyArguments = true;
         if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
           return false;
         }
@@ -1241,6 +1244,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       if (match(TokenKind::LBrace)) {
         hasCallSyntax = true;
+        call.hasBodyArguments = true;
         if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
           return false;
         }
@@ -1304,6 +1308,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.args.insert(call.args.begin(), current);
       call.argNames.insert(call.argNames.begin(), std::nullopt);
       if (match(TokenKind::LBrace)) {
+        call.hasBodyArguments = true;
         if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
           return false;
         }

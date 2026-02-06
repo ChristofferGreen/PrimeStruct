@@ -26,6 +26,8 @@ struct Expr {
   std::vector<Expr> args;
   std::vector<std::optional<std::string>> argNames;
   std::vector<Expr> bodyArguments;
+  // True when `{ ... }` was present in the source, even if the list is empty.
+  bool hasBodyArguments = false;
   std::vector<std::string> templateArgs;
   std::string namespacePrefix;
   std::vector<Transform> transforms;

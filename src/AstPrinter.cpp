@@ -107,7 +107,7 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
       }
       out << ")";
     }
-    if (!expr.bodyArguments.empty()) {
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       out << " { ";
       for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
         if (i > 0) {

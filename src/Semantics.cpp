@@ -382,14 +382,6 @@ bool isIfCall(const Expr &expr) {
   return isSimpleCallName(expr, "if");
 }
 
-bool isThenCall(const Expr &expr) {
-  return isSimpleCallName(expr, "then");
-}
-
-bool isElseCall(const Expr &expr) {
-  return isSimpleCallName(expr, "else");
-}
-
 bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }
@@ -786,7 +778,7 @@ bool isDefaultExprAllowed(const Expr &expr) {
     return false;
   }
   if (expr.kind == Expr::Kind::Call) {
-    if (!expr.bodyArguments.empty()) {
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return false;
     }
     for (const auto &arg : expr.args) {
@@ -1035,7 +1027,7 @@ bool Semantics::validate(const Program &program,
         error = "parameters must use binding syntax: " + def.fullPath;
         return false;
       }
-      if (!param.bodyArguments.empty()) {
+      if (param.hasBodyArguments || !param.bodyArguments.empty()) {
         error = "parameter does not accept block arguments: " + param.name;
         return false;
       }
@@ -1197,16 +1189,37 @@ bool Semantics::validate(const Program &program,
     }
     if (expr.kind == Expr::Kind::Call) {
       if (isIfCall(expr) && expr.args.size() == 3) {
-        const Expr &thenBlock = expr.args[1];
-        const Expr &elseBlock = expr.args[2];
-        if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+        auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+          if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+            return false;
+          }
+          if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+            return false;
+          }
+          if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+            return false;
+          }
+          const std::string resolved = resolveCalleePath(candidate);
+          return defMap.find(resolved) == defMap.end();
+        };
+        auto unwrapBlockEnvelopeValue = [&](const Expr &candidate) -> const Expr * {
+          if (!isIfBlockEnvelope(candidate)) {
+            return &candidate;
+          }
+          if (candidate.bodyArguments.size() != 1) {
+            return nullptr;
+          }
+          return &candidate.bodyArguments.front();
+        };
+
+        const Expr *thenValueExpr = unwrapBlockEnvelopeValue(expr.args[1]);
+        const Expr *elseValueExpr = unwrapBlockEnvelopeValue(expr.args[2]);
+        if (!thenValueExpr || !elseValueExpr) {
           return ReturnKind::Unknown;
         }
-        if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
-          return ReturnKind::Unknown;
-        }
-        ReturnKind thenKind = inferExprReturnKind(thenBlock.bodyArguments.front(), params, locals);
-        ReturnKind elseKind = inferExprReturnKind(elseBlock.bodyArguments.front(), params, locals);
+
+        ReturnKind thenKind = inferExprReturnKind(*thenValueExpr, params, locals);
+        ReturnKind elseKind = inferExprReturnKind(*elseValueExpr, params, locals);
         if (thenKind == elseKind) {
           return thenKind;
         }
@@ -1806,13 +1819,13 @@ bool Semantics::validate(const Program &program,
       error = "unknown identifier: " + expr.name;
       return false;
     }
-    if (expr.kind == Expr::Kind::Call) {
-      if (expr.isBinding) {
-        error = "binding not allowed in expression context";
-        return false;
-      }
+      if (expr.kind == Expr::Kind::Call) {
+        if (expr.isBinding) {
+          error = "binding not allowed in expression context";
+          return false;
+        }
       if (isIfCall(expr)) {
-        if (!expr.bodyArguments.empty()) {
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
           error = "if does not accept trailing block arguments";
           return false;
         }
@@ -1821,65 +1834,69 @@ bool Semantics::validate(const Program &program,
           return false;
         }
         const Expr &cond = expr.args[0];
-        const Expr &thenBlock = expr.args[1];
-        const Expr &elseBlock = expr.args[2];
+        const Expr &thenArg = expr.args[1];
+        const Expr &elseArg = expr.args[2];
         if (!validateExpr(params, locals, cond)) {
           return false;
         }
-        if (!isIntegerOrBoolExpr(cond, params, locals)) {
-          error = "if condition requires integer or bool";
+        ReturnKind condKind = inferExprReturnKind(cond, params, locals);
+        if (condKind != ReturnKind::Bool) {
+          error = "if condition requires bool";
           return false;
         }
-        auto validateValueBlock = [&](const Expr &block, const char *label, const Expr *&valueExprOut) -> bool {
-          if (block.kind != Expr::Kind::Call) {
-            error = std::string(label) + " must be a call";
+        auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+          if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
             return false;
           }
-          if ((std::string(label) == "then" && !isThenCall(block)) || (std::string(label) == "else" && !isElseCall(block))) {
-            error = std::string(label) + " must use the " + label + " wrapper";
+          if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
             return false;
           }
-          if (!block.args.empty()) {
-            error = std::string(label) + " does not accept arguments";
+          if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
             return false;
           }
-          if (block.bodyArguments.size() != 1) {
-            error = std::string(label) + " must contain exactly one expression";
-            return false;
+          const std::string resolved = resolveCalleePath(candidate);
+          return defMap.find(resolved) == defMap.end();
+        };
+        auto validateBranchValue = [&](const Expr &branch, const char *label, const Expr *&valueExprOut) -> bool {
+          if (isIfBlockEnvelope(branch)) {
+            if (branch.bodyArguments.size() != 1) {
+              error = std::string(label) + " block must contain exactly one expression";
+              return false;
+            }
+            valueExprOut = &branch.bodyArguments.front();
+          } else {
+            valueExprOut = &branch;
           }
-          valueExprOut = &block.bodyArguments.front();
           if (!validateExpr(params, locals, *valueExprOut)) {
             return false;
           }
           ReturnKind kind = inferExprReturnKind(*valueExprOut, params, locals);
           if (kind == ReturnKind::Void) {
-            error = "if expression blocks must produce a value";
+            error = "if branches must produce a value";
             return false;
           }
           return true;
         };
+
         const Expr *thenExpr = nullptr;
         const Expr *elseExpr = nullptr;
-        if (!validateValueBlock(thenBlock, "then", thenExpr)) {
+        if (!validateBranchValue(thenArg, "then", thenExpr)) {
           return false;
         }
-        if (!validateValueBlock(elseBlock, "else", elseExpr)) {
+        if (!validateBranchValue(elseArg, "else", elseExpr)) {
           return false;
         }
+
         ReturnKind thenKind = inferExprReturnKind(*thenExpr, params, locals);
         ReturnKind elseKind = inferExprReturnKind(*elseExpr, params, locals);
         ReturnKind combined = inferExprReturnKind(expr, params, locals);
         if (thenKind != ReturnKind::Unknown && elseKind != ReturnKind::Unknown && combined == ReturnKind::Unknown) {
-          error = "if expression blocks must return compatible types";
+          error = "if branches must return compatible types";
           return false;
         }
         return true;
       }
-      if (isThenCall(expr) || isElseCall(expr)) {
-        error = "then/else blocks must be nested inside if";
-        return false;
-      }
-      if (!expr.bodyArguments.empty()) {
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
         error = "block arguments are only supported on statement calls";
         return false;
       }
@@ -2362,7 +2379,7 @@ bool Semantics::validate(const Program &program,
         error = "binding not allowed in execution body";
         return false;
       }
-      if (!stmt.bodyArguments.empty()) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
         error = "binding does not accept block arguments";
         return false;
       }
@@ -2405,7 +2422,7 @@ bool Semantics::validate(const Program &program,
         error = "return not allowed in execution body";
         return false;
       }
-      if (!stmt.bodyArguments.empty()) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
         error = "return does not accept block arguments";
         return false;
       }
@@ -2429,7 +2446,7 @@ bool Semantics::validate(const Program &program,
       return true;
     }
     if (isIfCall(stmt)) {
-      if (!stmt.bodyArguments.empty()) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
         error = "if does not accept trailing block arguments";
         return false;
       }
@@ -2438,48 +2455,53 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       const Expr &cond = stmt.args[0];
-      const Expr &thenBlock = stmt.args[1];
-      const Expr &elseBlock = stmt.args[2];
+      const Expr &thenArg = stmt.args[1];
+      const Expr &elseArg = stmt.args[2];
       if (!validateExpr(params, locals, cond)) {
         return false;
       }
-      if (!isIntegerOrBoolExpr(cond, params, locals)) {
-        error = "if condition requires integer or bool";
+      ReturnKind condKind = inferExprReturnKind(cond, params, locals);
+      if (condKind != ReturnKind::Bool) {
+        error = "if condition requires bool";
         return false;
       }
-      auto validateBlock = [&](const Expr &block, const char *label) -> bool {
-        if (block.kind != Expr::Kind::Call) {
-          error = std::string(label) + " must be a call";
+      auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
           return false;
         }
-        if ((std::string(label) == "then" && !isThenCall(block)) ||
-            (std::string(label) == "else" && !isElseCall(block))) {
-          error = std::string(label) + " must use the " + label + " wrapper";
+        if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
           return false;
         }
-        if (!block.args.empty()) {
-          error = std::string(label) + " does not accept arguments";
+        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
           return false;
         }
-        std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-        for (const auto &bodyExpr : block.bodyArguments) {
-          if (!validateStatement(params,
-                                 blockLocals,
-                                 bodyExpr,
-                                 returnKind,
-                                 allowReturn,
-                                 allowBindings,
-                                 sawReturn,
-                                 namespacePrefix)) {
-            return false;
-          }
-        }
-        return true;
+        const std::string resolved = resolveCalleePath(candidate);
+        return defMap.find(resolved) == defMap.end();
       };
-      if (!validateBlock(thenBlock, "then")) {
+      auto validateBranch = [&](const Expr &branch) -> bool {
+        std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+        if (isIfBlockEnvelope(branch)) {
+          for (const auto &bodyExpr : branch.bodyArguments) {
+            if (!validateStatement(params,
+                                   branchLocals,
+                                   bodyExpr,
+                                   returnKind,
+                                   allowReturn,
+                                   allowBindings,
+                                   sawReturn,
+                                   namespacePrefix)) {
+              return false;
+            }
+          }
+          return true;
+        }
+        return validateStatement(
+            params, branchLocals, branch, returnKind, allowReturn, allowBindings, sawReturn, namespacePrefix);
+      };
+      if (!validateBranch(thenArg)) {
         return false;
       }
-      if (!validateBlock(elseBlock, "else")) {
+      if (!validateBranch(elseArg)) {
         return false;
       }
       return true;
@@ -2528,7 +2550,7 @@ bool Semantics::validate(const Program &program,
         error = "named arguments not supported for builtin calls";
         return false;
       }
-      if (!stmt.bodyArguments.empty()) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
         error = printBuiltin.name + " does not accept block arguments";
         return false;
       }
@@ -2550,11 +2572,7 @@ bool Semantics::validate(const Program &program,
       }
       return true;
     }
-    if (!stmt.bodyArguments.empty()) {
-      if (isThenCall(stmt) || isElseCall(stmt)) {
-        error = "then/else blocks must be nested inside if";
-        return false;
-      }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       std::string resolved = resolveCalleePath(stmt);
       if (defMap.count(resolved) == 0) {
         error = "block arguments require a definition target: " + resolved;
@@ -2562,6 +2580,7 @@ bool Semantics::validate(const Program &program,
       }
       Expr call = stmt;
       call.bodyArguments.clear();
+      call.hasBodyArguments = false;
       if (!validateExpr(params, locals, call)) {
         return false;
       }
@@ -2579,16 +2598,31 @@ bool Semantics::validate(const Program &program,
   std::function<bool(const std::vector<Expr> &)> blockAlwaysReturns;
   std::function<bool(const Expr &)> statementAlwaysReturns;
   statementAlwaysReturns = [&](const Expr &stmt) -> bool {
+    auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      const std::string resolved = resolveCalleePath(candidate);
+      return defMap.find(resolved) == defMap.end();
+    };
+    auto branchAlwaysReturns = [&](const Expr &branch) -> bool {
+      if (isIfBlockEnvelope(branch)) {
+        return blockAlwaysReturns(branch.bodyArguments);
+      }
+      return statementAlwaysReturns(branch);
+    };
+
     if (isReturnCall(stmt)) {
       return true;
     }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
-      const Expr &thenBlock = stmt.args[1];
-      const Expr &elseBlock = stmt.args[2];
-      if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
-        return false;
-      }
-      return blockAlwaysReturns(thenBlock.bodyArguments) && blockAlwaysReturns(elseBlock.bodyArguments);
+      return branchAlwaysReturns(stmt.args[1]) && branchAlwaysReturns(stmt.args[2]);
     }
     return false;
   };

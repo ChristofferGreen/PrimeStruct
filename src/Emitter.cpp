@@ -694,14 +694,6 @@ bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::st
   return isSimpleCallName(expr, "if");
 }
 
-bool isThenCall(const Expr &expr) {
-  return isSimpleCallName(expr, "then");
-}
-
-bool isElseCall(const Expr &expr) {
-  return isSimpleCallName(expr, "else");
-}
-
 bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
 }
@@ -782,20 +774,37 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
   }
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
-    const Expr &thenBlock = expr.args[1];
-    const Expr &elseBlock = expr.args[2];
-    if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+    auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      const std::string resolved = resolveExprPath(candidate);
+      return nameMap.count(resolved) == 0;
+    };
+    auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+      if (!isIfBlockEnvelope(candidate)) {
+        return &candidate;
+      }
+      if (candidate.bodyArguments.size() != 1) {
+        return nullptr;
+      }
+      return &candidate.bodyArguments.front();
+    };
+    const Expr *thenExpr = unwrapIfBranchValue(expr.args[1]);
+    const Expr *elseExpr = unwrapIfBranchValue(expr.args[2]);
+    if (!thenExpr || !elseExpr) {
       return "0";
     }
-    if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
-      return "0";
-    }
-    const Expr &thenExpr = thenBlock.bodyArguments.front();
-    const Expr &elseExpr = elseBlock.bodyArguments.front();
     std::ostringstream out;
     out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " ? "
-        << emitExpr(thenExpr, nameMap, paramMap, localTypes, returnKinds) << " : "
-        << emitExpr(elseExpr, nameMap, paramMap, localTypes, returnKinds) << ")";
+        << emitExpr(*thenExpr, nameMap, paramMap, localTypes, returnKinds) << " : "
+        << emitExpr(*elseExpr, nameMap, paramMap, localTypes, returnKinds) << ")";
     return out.str();
   }
   auto it = nameMap.find(full);
@@ -1050,16 +1059,35 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         return calleeKind;
       }
       if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
-        const Expr &thenBlock = expr.args[1];
-        const Expr &elseBlock = expr.args[2];
-        if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+        auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+          if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+            return false;
+          }
+          if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+            return false;
+          }
+          if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+            return false;
+          }
+          const std::string resolved = resolveExprPath(candidate);
+          return defMap.find(resolved) == defMap.end();
+        };
+        auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+          if (!isIfBlockEnvelope(candidate)) {
+            return &candidate;
+          }
+          if (candidate.bodyArguments.size() != 1) {
+            return nullptr;
+          }
+          return &candidate.bodyArguments.front();
+        };
+        const Expr *thenExpr = unwrapIfBranchValue(expr.args[1]);
+        const Expr *elseExpr = unwrapIfBranchValue(expr.args[2]);
+        if (!thenExpr || !elseExpr) {
           return ReturnKind::Unknown;
         }
-        if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
-          return ReturnKind::Unknown;
-        }
-        ReturnKind thenKind = inferExprReturnKind(thenBlock.bodyArguments.front(), params, locals);
-        ReturnKind elseKind = inferExprReturnKind(elseBlock.bodyArguments.front(), params, locals);
+        ReturnKind thenKind = inferExprReturnKind(*thenExpr, params, locals);
+        ReturnKind elseKind = inferExprReturnKind(*elseExpr, params, locals);
         if (thenKind == elseKind) {
           return thenKind;
         }
@@ -1352,20 +1380,41 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (isBuiltinIf(stmt, nameMap) && stmt.args.size() == 3) {
         const Expr &cond = stmt.args[0];
-        const Expr &thenBlock = stmt.args[1];
-        const Expr &elseBlock = stmt.args[2];
+        const Expr &thenArg = stmt.args[1];
+        const Expr &elseArg = stmt.args[2];
+        auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+          if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+            return false;
+          }
+          if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+            return false;
+          }
+          if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+            return false;
+          }
+          const std::string resolved = resolveExprPath(candidate);
+          return nameMap.count(resolved) == 0;
+        };
         out << pad << "if (" << emitExpr(cond, nameMap, paramMap, localTypes, returnKinds) << ") {\n";
-        if (isThenCall(thenBlock)) {
+        {
           auto blockTypes = localTypes;
-          for (const auto &bodyStmt : thenBlock.bodyArguments) {
-            emitStatement(bodyStmt, indent + 1, blockTypes);
+          if (isIfBlockEnvelope(thenArg)) {
+            for (const auto &bodyStmt : thenArg.bodyArguments) {
+              emitStatement(bodyStmt, indent + 1, blockTypes);
+            }
+          } else {
+            emitStatement(thenArg, indent + 1, blockTypes);
           }
         }
         out << pad << "} else {\n";
-        if (isElseCall(elseBlock)) {
+        {
           auto blockTypes = localTypes;
-          for (const auto &bodyStmt : elseBlock.bodyArguments) {
-            emitStatement(bodyStmt, indent + 1, blockTypes);
+          if (isIfBlockEnvelope(elseArg)) {
+            for (const auto &bodyStmt : elseArg.bodyArguments) {
+              emitStatement(bodyStmt, indent + 1, blockTypes);
+            }
+          } else {
+            emitStatement(elseArg, indent + 1, blockTypes);
           }
         }
         out << pad << "}\n";
@@ -1392,7 +1441,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << "}\n";
         return;
       }
-      if (stmt.kind == Expr::Kind::Call && !stmt.bodyArguments.empty()) {
+      if (stmt.kind == Expr::Kind::Call && (stmt.hasBodyArguments || !stmt.bodyArguments.empty())) {
         std::string full = resolveExprPath(stmt);
         if (stmt.isMethodCall && !isArrayCountCall(stmt, localTypes)) {
           std::string methodPath;

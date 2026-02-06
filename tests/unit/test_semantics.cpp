@@ -416,7 +416,7 @@ execute_repeat([i32] x) {
   return()
 }
 
-execute_repeat(3i32) { if(1i32, then{ [i32] value(2i32) }, else{ }) }
+execute_repeat(3i32) { if(true, then{ [i32] value(2i32) }, else{ }) }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -435,7 +435,7 @@ execute_repeat([i32] x) {
   return()
 }
 
-execute_repeat(3i32) { if(1i32, then{ 1i32 }, else{ main() }) }
+execute_repeat(3i32) { if(true, then{ 1i32 }, else{ main() }) }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -454,7 +454,7 @@ execute_repeat([i32] x) {
   return()
 }
 
-execute_repeat(3i32) { if(1i32) { main() } else { main() } }
+execute_repeat(3i32) { if(true) { main() } else { main() } }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
@@ -2300,7 +2300,7 @@ TEST_CASE("if validates block arguments") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(1i32, then{
+  if(true, then{
     [i32] temp(2i32)
     assign(value, temp)
   }, else{ assign(value, 3i32) })
@@ -2321,7 +2321,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("if condition requires integer or bool") != std::string::npos);
+  CHECK(error.find("if condition requires bool") != std::string::npos);
 }
 
 TEST_CASE("if expression rejects void blocks") {
@@ -2333,12 +2333,12 @@ noop() {
 
 [return<int>]
 main() {
-  return(if(1i32, then{ noop() }, else{ 1i32 }))
+  return(if(true, then{ noop() }, else{ 1i32 }))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("if expression blocks must produce a value") != std::string::npos);
+  CHECK(error.find("if branches must produce a value") != std::string::npos);
 }
 
 TEST_CASE("repeat validates block arguments") {
@@ -2475,7 +2475,7 @@ TEST_CASE("if missing else fails") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(1i32, then{ assign(value, 2i32) })
+  if(true, then{ assign(value, 2i32) })
   return(value)
 }
 )";
@@ -2765,7 +2765,7 @@ TEST_CASE("if statement sugar validates") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(1i32) {
+  if(true) {
     assign(value, 2i32)
   } else {
     assign(value, 3i32)
@@ -2782,7 +2782,7 @@ TEST_CASE("return inside if block validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(1i32) {
+  if(true) {
     return(2i32)
   } else {
     return(3i32)
@@ -2798,7 +2798,7 @@ TEST_CASE("missing return on some control paths fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(1i32, then{ return(2i32) }, else{ })
+  if(true, then{ return(2i32) }, else{ })
 }
 )";
   std::string error;
@@ -2810,7 +2810,7 @@ TEST_CASE("return after partial if validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(1i32, then{ return(2i32) }, else{ })
+  if(true, then{ return(2i32) }, else{ })
   return(3i32)
 }
 )";

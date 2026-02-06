@@ -55,7 +55,7 @@ main() {
 }
 
 execute_repeat(1i32) {
-  if(1i32) { main() } else { main() }
+  if(true) { main() } else { main() }
 }
 )";
   const auto program = parseProgram(source);

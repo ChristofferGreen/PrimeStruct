@@ -701,7 +701,7 @@ TEST_CASE("ir lowers if expression to jumps") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+  return(if(false, 4i32, 9i32))
 }
 )";
   primec::Program program;

@@ -11,6 +11,13 @@ primec::Expr makeLiteral(int value) {
   return expr;
 }
 
+primec::Expr makeBool(bool value) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::BoolLiteral;
+  expr.boolValue = value;
+  return expr;
+}
+
 primec::Transform makeTransform(const std::string &name,
                                 std::optional<std::string> templateArg = std::nullopt) {
   primec::Transform transform;
@@ -172,7 +179,7 @@ TEST_CASE("if trailing blocks are rejected") {
   primec::Program program;
   primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
   primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
-  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock}, {}, {makeLiteral(3)});
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock}, {}, {makeLiteral(3)});
   program.definitions.push_back(
       makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
   std::string error;
@@ -180,16 +187,17 @@ TEST_CASE("if trailing blocks are rejected") {
   CHECK(error.find("if does not accept trailing block arguments") != std::string::npos);
 }
 
-TEST_CASE("then wrapper mismatch fails") {
+TEST_CASE("if block wrappers do not require special names") {
   primec::Program program;
   primec::Expr thenBlock = makeCall("wrong", {}, {}, {makeCall("/return", {makeLiteral(1)})});
-  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
-  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock});
-  program.definitions.push_back(
-      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  primec::Expr elseBlock = makeCall("also_wrong", {}, {}, {makeCall("/return", {makeLiteral(2)})});
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("int"))},
+                                               {ifCall}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("then must use the then wrapper") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("block arguments allowed on statement calls") {
@@ -312,15 +320,15 @@ TEST_CASE("return not allowed in expression context") {
   CHECK(error.find("return not allowed in expression context") != std::string::npos);
 }
 
-TEST_CASE("then/else blocks not allowed in expressions") {
+TEST_CASE("empty block arguments not allowed in expressions") {
   primec::Program program;
-  primec::Expr thenCall = makeCall("then", {}, {}, {makeLiteral(1)});
-  primec::Expr plusCall = makeCall("plus", {thenCall, makeLiteral(2)});
+  primec::Expr blockCall = makeCall("task");
+  blockCall.hasBodyArguments = true;
   program.definitions.push_back(makeDefinition(
-      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {plusCall})}));
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("then/else blocks must be nested inside if") != std::string::npos);
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
 }
 
 TEST_CASE("block arguments not allowed in expression context") {
@@ -419,29 +427,32 @@ TEST_CASE("array literal requires exactly one template argument") {
   CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("then block must be a call") {
+TEST_CASE("if expression blocks must contain one expression") {
   primec::Program program;
-  primec::Expr thenBlock = makeLiteral(1);
-  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
-  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock});
-  program.definitions.push_back(
-      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  primec::Expr thenBlock = makeCall("block", {}, {}, {makeLiteral(1), makeLiteral(2)});
+  primec::Expr elseBlock = makeCall("block", {}, {}, {makeLiteral(3)});
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {ifCall})}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("then must be a call") != std::string::npos);
+  CHECK(error.find("then block must contain exactly one expression") != std::string::npos);
 }
 
-TEST_CASE("else block cannot take arguments") {
+TEST_CASE("if statement allows empty branch blocks") {
   primec::Program program;
-  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
-  primec::Expr elseBlock =
-      makeCall("else", {makeLiteral(1)}, {}, {makeCall("/return", {makeLiteral(2)})});
-  primec::Expr ifCall = makeCall("if", {makeLiteral(1), thenBlock, elseBlock});
-  program.definitions.push_back(
-      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  primec::Expr thenBlock = makeCall("then");
+  thenBlock.hasBodyArguments = true;
+  primec::Expr elseBlock = makeCall("else");
+  elseBlock.hasBodyArguments = true;
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(makeDefinition(
+      "/main",
+      {makeTransform("return", std::string("int"))},
+      {ifCall, makeCall("/return", {makeLiteral(1)})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("else does not accept arguments") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("execution positional argument after named fails") {

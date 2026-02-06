@@ -1333,7 +1333,7 @@ TEST_CASE("compiles and runs if expression in native backend") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+  return(if(false, 4i32, 9i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_if_expr.prime", source);
@@ -3553,7 +3553,7 @@ TEST_CASE("compiles and runs if") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(0i32, then{
+  if(false, then{
     [i32] temp(4i32)
     assign(value, temp)
   }, else{ assign(value, 9i32) })
@@ -3572,7 +3572,7 @@ TEST_CASE("compiles and runs if expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+  return(if(false, 4i32, 9i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr.prime", source);
@@ -3587,7 +3587,7 @@ TEST_CASE("runs if expression in vm") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(0i32, then{ 4i32 }, else{ 9i32 }))
+  return(if(false, 4i32, 9i32))
 }
 )";
   const std::string srcPath = writeTemp("vm_if_expr.prime", source);
@@ -3988,7 +3988,7 @@ TEST_CASE("compiles and runs if statement sugar") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(0i32) {
+  if(false) {
     assign(value, 4i32)
   } else {
     assign(value, 9i32)
@@ -4008,7 +4008,7 @@ TEST_CASE("compiles and runs early return in if") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(1i32) {
+  if(true) {
     return(5i32)
   } else {
     return(2i32)

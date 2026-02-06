@@ -559,7 +559,7 @@ TEST_CASE("if statement cannot have transforms") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [trace] if(1i32) {
+  [trace] if(true) {
     return(1i32)
   } else {
     return(2i32)
@@ -652,7 +652,7 @@ TEST_CASE("if statement requires else block") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(1i32) {
+  if(true) {
     return(1i32)
   }
 }

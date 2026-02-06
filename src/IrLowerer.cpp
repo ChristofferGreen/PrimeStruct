@@ -31,14 +31,6 @@ bool isIfCall(const Expr &expr) {
   return isSimpleCallName(expr, "if");
 }
 
-bool isThenCall(const Expr &expr) {
-  return isSimpleCallName(expr, "then");
-}
-
-bool isElseCall(const Expr &expr) {
-  return isSimpleCallName(expr, "else");
-}
-
 bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
 }
@@ -887,16 +879,37 @@ bool IrLowerer::lower(const Program &program,
           return LocalInfo::ValueKind::Unknown;
         }
         if (isIfCall(expr) && expr.args.size() == 3) {
-          const Expr &thenBlock = expr.args[1];
-          const Expr &elseBlock = expr.args[2];
-          if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
+          auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+            if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+              return false;
+            }
+            if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+              return false;
+            }
+            if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+              return false;
+            }
+            const std::string resolved = resolveExprPath(candidate);
+            return defMap.find(resolved) == defMap.end();
+          };
+          auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+            if (!isIfBlockEnvelope(candidate)) {
+              return &candidate;
+            }
+            if (candidate.bodyArguments.size() != 1) {
+              return nullptr;
+            }
+            return &candidate.bodyArguments.front();
+          };
+
+          const Expr *thenExpr = unwrapIfBranchValue(expr.args[1]);
+          const Expr *elseExpr = unwrapIfBranchValue(expr.args[2]);
+          if (!thenExpr || !elseExpr) {
             return LocalInfo::ValueKind::Unknown;
           }
-          if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          LocalInfo::ValueKind thenKind = inferExprKind(thenBlock.bodyArguments.front(), localsIn);
-          LocalInfo::ValueKind elseKind = inferExprKind(elseBlock.bodyArguments.front(), localsIn);
+
+          LocalInfo::ValueKind thenKind = inferExprKind(*thenExpr, localsIn);
+          LocalInfo::ValueKind elseKind = inferExprKind(*elseExpr, localsIn);
           if (thenKind == elseKind) {
             return thenKind;
           }
@@ -1136,11 +1149,11 @@ bool IrLowerer::lower(const Program &program,
 
   auto emitBlock = [&](const Expr &blockExpr, LocalMap &blockLocals) -> bool {
     if (blockExpr.kind != Expr::Kind::Call) {
-      error = "native backend expects then/else blocks to be calls";
+      error = "native backend expects if branch blocks to be calls";
       return false;
     }
     if (!blockExpr.args.empty()) {
-      error = "native backend does not support arguments on then/else blocks";
+      error = "native backend does not support arguments on if branch blocks";
       return false;
     }
     for (const auto &stmt : blockExpr.bodyArguments) {
@@ -1495,14 +1508,14 @@ bool IrLowerer::lower(const Program &program,
           if (!callee) {
             return false;
           }
-          if (!expr.bodyArguments.empty()) {
+          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
             error = "native backend does not support block arguments on calls";
             return false;
           }
           return emitInlineDefinitionCall(expr, *callee, localsIn, true);
         }
         if (const Definition *callee = resolveDefinitionCall(expr)) {
-          if (!expr.bodyArguments.empty()) {
+          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
             error = "native backend does not support block arguments on calls";
             return false;
           }
@@ -2257,39 +2270,51 @@ bool IrLowerer::lower(const Program &program,
             error = "if requires condition, then, else";
             return false;
           }
-          if (!expr.bodyArguments.empty()) {
+          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
             error = "if does not accept trailing block arguments";
             return false;
           }
           const Expr &cond = expr.args[0];
-          const Expr &thenBlock = expr.args[1];
-          const Expr &elseBlock = expr.args[2];
-          if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
-            error = "if requires then/else blocks";
-            return false;
-          }
-          if (!thenBlock.args.empty() || !elseBlock.args.empty()) {
-            error = "if blocks do not accept arguments";
-            return false;
-          }
-          if (thenBlock.bodyArguments.size() != 1 || elseBlock.bodyArguments.size() != 1) {
-            error = "if blocks must contain exactly one expression";
+          const Expr &thenArg = expr.args[1];
+          const Expr &elseArg = expr.args[2];
+          auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+            if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+              return false;
+            }
+            if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+              return false;
+            }
+            if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+              return false;
+            }
+            return resolveDefinitionCall(candidate) == nullptr;
+          };
+          auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+            if (!isIfBlockEnvelope(candidate)) {
+              return &candidate;
+            }
+            if (candidate.bodyArguments.size() != 1) {
+              return nullptr;
+            }
+            return &candidate.bodyArguments.front();
+          };
+          const Expr *thenExpr = unwrapIfBranchValue(thenArg);
+          const Expr *elseExpr = unwrapIfBranchValue(elseArg);
+          if (!thenExpr || !elseExpr) {
+            error = "if branch blocks must contain exactly one expression";
             return false;
           }
           if (!emitExpr(cond, localsIn)) {
             return false;
           }
           LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
-          if (condKind != LocalInfo::ValueKind::Int32 && condKind != LocalInfo::ValueKind::Int64 &&
-              condKind != LocalInfo::ValueKind::UInt64 && condKind != LocalInfo::ValueKind::Bool) {
-            error = "if condition requires integer or bool";
+          if (condKind != LocalInfo::ValueKind::Bool) {
+            error = "if condition requires bool";
             return false;
           }
 
-          const Expr &thenExpr = thenBlock.bodyArguments.front();
-          const Expr &elseExpr = elseBlock.bodyArguments.front();
-          LocalInfo::ValueKind thenKind = inferExprKind(thenExpr, localsIn);
-          LocalInfo::ValueKind elseKind = inferExprKind(elseExpr, localsIn);
+          LocalInfo::ValueKind thenKind = inferExprKind(*thenExpr, localsIn);
+          LocalInfo::ValueKind elseKind = inferExprKind(*elseExpr, localsIn);
           LocalInfo::ValueKind resultKind = LocalInfo::ValueKind::Unknown;
           if (thenKind == elseKind) {
             resultKind = thenKind;
@@ -2297,29 +2322,25 @@ bool IrLowerer::lower(const Program &program,
             resultKind = combineNumericKinds(thenKind, elseKind);
           }
           if (resultKind == LocalInfo::ValueKind::Unknown) {
-            error = "if expression blocks must return compatible types";
+            error = "if branches must return compatible types";
             return false;
           }
 
           size_t jumpIfZeroIndex = function.instructions.size();
           function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-          if (!emitExpr(thenExpr, localsIn)) {
+          if (!emitExpr(*thenExpr, localsIn)) {
             return false;
           }
           size_t jumpEndIndex = function.instructions.size();
           function.instructions.push_back({IrOpcode::Jump, 0});
           size_t elseIndex = function.instructions.size();
           function.instructions[jumpIfZeroIndex].imm = static_cast<int32_t>(elseIndex);
-          if (!emitExpr(elseExpr, localsIn)) {
+          if (!emitExpr(*elseExpr, localsIn)) {
             return false;
           }
           size_t endIndex = function.instructions.size();
           function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
           return true;
-        }
-        if (isThenCall(expr) || isElseCall(expr)) {
-          error = "then/else blocks must be nested inside if";
-          return false;
         }
         error = "native backend only supports arithmetic/comparison/clamp/convert/pointer/assign calls in expressions";
         return false;
@@ -2573,7 +2594,7 @@ bool IrLowerer::lower(const Program &program,
     }
     PrintBuiltin printBuiltin;
     if (stmt.kind == Expr::Kind::Call && getPrintBuiltin(stmt, printBuiltin)) {
-      if (!stmt.bodyArguments.empty()) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
         error = printBuiltin.name + " does not support body arguments";
         return false;
       }
@@ -2661,23 +2682,42 @@ bool IrLowerer::lower(const Program &program,
         error = "if requires condition, then, else";
         return false;
       }
-      if (!stmt.bodyArguments.empty()) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
         error = "if does not accept trailing block arguments";
         return false;
       }
       if (!emitExpr(stmt.args[0], localsIn)) {
         return false;
       }
-      const Expr &thenBlock = stmt.args[1];
-      const Expr &elseBlock = stmt.args[2];
-      if (!isThenCall(thenBlock) || !isElseCall(elseBlock)) {
-        error = "if requires then/else blocks";
+      LocalInfo::ValueKind condKind = inferExprKind(stmt.args[0], localsIn);
+      if (condKind != LocalInfo::ValueKind::Bool) {
+        error = "if condition requires bool";
         return false;
       }
+      const Expr &thenArg = stmt.args[1];
+      const Expr &elseArg = stmt.args[2];
+      auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+          return false;
+        }
+        if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+          return false;
+        }
+        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+          return false;
+        }
+        return resolveDefinitionCall(candidate) == nullptr;
+      };
+      auto emitBranch = [&](const Expr &branch, LocalMap &branchLocals) -> bool {
+        if (isIfBlockEnvelope(branch)) {
+          return emitBlock(branch, branchLocals);
+        }
+        return emitStatement(branch, branchLocals);
+      };
       size_t jumpIfZeroIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
       LocalMap thenLocals = localsIn;
-      if (!emitBlock(thenBlock, thenLocals)) {
+      if (!emitBranch(thenArg, thenLocals)) {
         return false;
       }
       size_t jumpIndex = function.instructions.size();
@@ -2685,7 +2725,7 @@ bool IrLowerer::lower(const Program &program,
       size_t elseIndex = function.instructions.size();
       function.instructions[jumpIfZeroIndex].imm = static_cast<int32_t>(elseIndex);
       LocalMap elseLocals = localsIn;
-      if (!emitBlock(elseBlock, elseLocals)) {
+      if (!emitBranch(elseArg, elseLocals)) {
         return false;
       }
       size_t endIndex = function.instructions.size();
@@ -2757,14 +2797,14 @@ bool IrLowerer::lower(const Program &program,
         if (!callee) {
           return false;
         }
-        if (!stmt.bodyArguments.empty()) {
+        if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
           error = "native backend does not support block arguments on calls";
           return false;
         }
         return emitInlineDefinitionCall(stmt, *callee, localsIn, false);
       }
       if (const Definition *callee = resolveDefinitionCall(stmt)) {
-        if (!stmt.bodyArguments.empty()) {
+        if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
           error = "native backend does not support block arguments on calls";
           return false;
         }
