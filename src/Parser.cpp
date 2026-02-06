@@ -520,6 +520,9 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
     out.push_back(std::move(param));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RParen)) {
+        return fail("trailing comma not allowed in parameter list");
+      }
       continue;
     }
     break;
@@ -557,6 +560,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     argNames.push_back(std::move(argName));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RParen)) {
+        return fail("trailing comma not allowed in argument list");
+      }
     } else {
       break;
     }
@@ -633,6 +639,9 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     out.push_back(std::move(arg));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RBrace)) {
+        return fail("trailing comma not allowed in brace list");
+      }
       continue;
     }
     if (match(TokenKind::RBrace)) {

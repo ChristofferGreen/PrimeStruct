@@ -168,6 +168,48 @@ main() {
   CHECK(error.find("trailing comma not allowed in template argument list") != std::string::npos);
 }
 
+TEST_CASE("trailing comma in parameter list is rejected") {
+  const std::string source = R"(
+[return<int>]
+main([i32] value(1i32),) {
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in parameter list") != std::string::npos);
+}
+
+TEST_CASE("trailing comma in argument list is rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32,))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in argument list") != std::string::npos);
+}
+
+TEST_CASE("trailing comma in brace list is rejected") {
+  const std::string source = R"(
+execute_repeat(2i32) { main(), }
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in brace list") != std::string::npos);
+}
+
 TEST_CASE("string literal requires suffix") {
   const std::string source = R"(
 [return<void>]
