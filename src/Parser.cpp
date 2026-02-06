@@ -459,6 +459,8 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
       if (match(TokenKind::RAngle)) {
         return fail("trailing comma not allowed in template argument list");
       }
+    } else if (match(TokenKind::Identifier)) {
+      return fail("expected ',' between template arguments");
     } else {
       break;
     }
@@ -499,6 +501,9 @@ bool Parser::parseTypeName(std::string &out) {
           return fail("trailing comma not allowed in template argument list");
         }
         continue;
+      }
+      if (match(TokenKind::Identifier)) {
+        return fail("expected ',' between template arguments");
       }
       break;
     }
