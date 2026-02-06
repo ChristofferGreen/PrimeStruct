@@ -30,6 +30,27 @@ bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "package" || name == "static";
 }
 
+bool isBindingAuxTransformName(const std::string &name) {
+  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
+         isBindingQualifierName(name);
+}
+
+bool hasExplicitBindingTypeTransform(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
 bool isPrimitiveBindingTypeName(const std::string &name) {
   return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
          name == "f64" || name == "bool" || name == "string";
@@ -474,6 +495,7 @@ bool parseBindingInfo(const Expr &expr,
                       const std::string &namespacePrefix,
                       const std::unordered_set<std::string> &structTypes,
                       BindingInfo &info,
+                      std::optional<std::string> &restrictTypeOut,
                       std::string &error) {
   std::string typeName;
   bool typeHasTemplate = false;
@@ -612,6 +634,7 @@ bool parseBindingInfo(const Expr &expr,
   if (typeName.empty()) {
     typeName = "int";
   }
+  restrictTypeOut = restrictType;
   if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
     std::string resolved = resolveTypePath(typeName, namespacePrefix);
     if (structTypes.count(resolved) == 0) {
@@ -636,12 +659,6 @@ bool parseBindingInfo(const Expr &expr,
     }
     if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
       error = "unsupported reference target type: " + info.typeTemplateArg;
-      return false;
-    }
-  }
-  if (restrictType.has_value()) {
-    if (!restrictMatchesBinding(*restrictType, typeName, info.typeTemplateArg, typeHasTemplate, namespacePrefix)) {
-      error = "restrict type does not match binding type";
       return false;
     }
   }
@@ -1069,7 +1086,8 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       BindingInfo binding;
-      if (!parseBindingInfo(param, def.namespacePrefix, structNames, binding, error)) {
+      std::optional<std::string> restrictType;
+      if (!parseBindingInfo(param, def.namespacePrefix, structNames, binding, restrictType, error)) {
         return false;
       }
       if (param.args.size() > 1) {
@@ -1085,6 +1103,17 @@ bool Semantics::validate(const Program &program,
       info.binding = std::move(binding);
       if (param.args.size() == 1) {
         info.defaultExpr = &param.args.front();
+      }
+      if (restrictType.has_value()) {
+        const bool hasTemplate = !info.binding.typeTemplateArg.empty();
+        if (!restrictMatchesBinding(*restrictType,
+                                    info.binding.typeName,
+                                    info.binding.typeTemplateArg,
+                                    hasTemplate,
+                                    def.namespacePrefix)) {
+          error = "restrict type does not match binding type";
+          return false;
+        }
       }
       params.push_back(std::move(info));
     }
@@ -1463,8 +1492,24 @@ bool Semantics::validate(const Program &program,
     inferStatement = [&](const Expr &stmt, std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
       if (stmt.isBinding) {
         BindingInfo info;
-        if (!parseBindingInfo(stmt, def.namespacePrefix, structNames, info, error)) {
+        std::optional<std::string> restrictType;
+        if (!parseBindingInfo(stmt, def.namespacePrefix, structNames, info, restrictType, error)) {
           return false;
+        }
+        if (restrictType.has_value()) {
+          const bool hasTemplate = !info.typeTemplateArg.empty();
+          if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, def.namespacePrefix)) {
+            error = "restrict type does not match binding type";
+            return false;
+          }
+        }
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), defParams, activeLocals);
+          std::string inferredName = typeNameForReturnKind(initKind);
+          if (!inferredName.empty()) {
+            info.typeName = inferredName;
+            info.typeTemplateArg.clear();
+          }
         }
         activeLocals.emplace(stmt.name, std::move(info));
         return true;
@@ -2426,7 +2471,8 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       BindingInfo info;
-      if (!parseBindingInfo(stmt, namespacePrefix, structNames, info, error)) {
+      std::optional<std::string> restrictType;
+      if (!parseBindingInfo(stmt, namespacePrefix, structNames, info, restrictType, error)) {
         return false;
       }
       if (stmt.args.size() != 1) {
@@ -2435,6 +2481,21 @@ bool Semantics::validate(const Program &program,
       }
       if (!validateExpr(params, locals, stmt.args.front())) {
         return false;
+      }
+      if (!hasExplicitBindingTypeTransform(stmt)) {
+        ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, locals);
+        std::string inferredName = typeNameForReturnKind(initKind);
+        if (!inferredName.empty()) {
+          info.typeName = inferredName;
+          info.typeTemplateArg.clear();
+        }
+      }
+      if (restrictType.has_value()) {
+        const bool hasTemplate = !info.typeTemplateArg.empty();
+        if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
+          error = "restrict type does not match binding type";
+          return false;
+        }
       }
       if (info.typeName == "Reference") {
         const Expr &init = stmt.args.front();

@@ -366,6 +366,19 @@ bool IrLowerer::lower(const Program &program,
            name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes";
   };
 
+  auto hasExplicitBindingTypeTransform = [&](const Expr &expr) -> bool {
+    for (const auto &transform : expr.transforms) {
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  };
+
   bool hasEntryArgs = false;
   std::string entryArgsName;
   auto isEntryArgsParam = [&](const Expr &param) -> bool {
@@ -1055,8 +1068,17 @@ bool IrLowerer::lower(const Program &program,
             bindingInfo.index = 0;
             bindingInfo.isMutable = isBindingMutable(stmt);
             bindingInfo.kind = bindingKind(stmt);
-            bindingInfo.valueKind = bindingValueKind(stmt, bindingInfo.kind);
-            if (isStringBinding(stmt) && bindingInfo.kind != LocalInfo::Kind::Value) {
+            if (hasExplicitBindingTypeTransform(stmt)) {
+              bindingInfo.valueKind = bindingValueKind(stmt, bindingInfo.kind);
+            } else if (stmt.args.size() == 1 && bindingInfo.kind == LocalInfo::Kind::Value) {
+              bindingInfo.valueKind = inferExprKind(stmt.args.front(), activeLocals);
+              if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+                bindingInfo.valueKind = LocalInfo::ValueKind::Int32;
+              }
+            } else {
+              bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
+            }
+            if (bindingInfo.valueKind == LocalInfo::ValueKind::String && bindingInfo.kind != LocalInfo::Kind::Value) {
               error = "native backend does not support string pointers or references";
               return false;
             }
@@ -2494,12 +2516,22 @@ bool IrLowerer::lower(const Program &program,
         error = "native backend does not support float types";
         return false;
       }
-      if (isStringBinding(stmt)) {
-        if (bindingKind(stmt) != LocalInfo::Kind::Value) {
+      const LocalInfo::Kind kind = bindingKind(stmt);
+      const Expr &init = stmt.args.front();
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      if (hasExplicitBindingTypeTransform(stmt)) {
+        valueKind = bindingValueKind(stmt, kind);
+      } else if (kind == LocalInfo::Kind::Value) {
+        valueKind = inferExprKind(init, localsIn);
+        if (valueKind == LocalInfo::ValueKind::Unknown) {
+          valueKind = LocalInfo::ValueKind::Int32;
+        }
+      }
+      if (valueKind == LocalInfo::ValueKind::String) {
+        if (kind != LocalInfo::Kind::Value) {
           error = "native backend does not support string pointers or references";
           return false;
         }
-        const Expr &init = stmt.args.front();
         int32_t index = -1;
         LocalInfo::StringSource source = LocalInfo::StringSource::None;
         bool argvChecked = true;
@@ -2597,16 +2629,19 @@ bool IrLowerer::lower(const Program &program,
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         return true;
       }
-      if (!emitExpr(stmt.args.front(), localsIn)) {
+      if (valueKind == LocalInfo::ValueKind::Unknown) {
+        error = "native backend requires typed bindings";
+        return false;
+      }
+      if (!emitExpr(init, localsIn)) {
         return false;
       }
       LocalInfo info;
       info.index = nextLocal++;
       info.isMutable = isBindingMutable(stmt);
-      info.kind = bindingKind(stmt);
-      info.valueKind = bindingValueKind(stmt, info.kind);
+      info.kind = kind;
+      info.valueKind = valueKind;
       if (info.kind == LocalInfo::Kind::Reference) {
-        const Expr &init = stmt.args.front();
         if (init.kind != Expr::Kind::Call || !isSimpleCallName(init, "location") || init.args.size() != 1) {
           error = "reference binding requires location(...) initializer";
           return false;

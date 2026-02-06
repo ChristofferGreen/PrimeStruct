@@ -237,7 +237,9 @@ execute_task(count = 2i32) { main() main() }
 [string] message("hi"utf8)
 ```
 
-- A binding is a stack value execution; type defaults to `int` when omitted.
+- A binding is a stack value execution.
+- If the binding omits an explicit type, the compiler first tries to infer the type from the
+  initializer expression; if inference fails, the type defaults to `int`.
 - `mut` marks the binding as writable; otherwise immutable.
 
 ### 7.2 Parameters

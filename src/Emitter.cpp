@@ -65,6 +65,31 @@ std::string normalizeBindingTypeName(const std::string &name) {
   return name;
 }
 
+bool isBindingQualifierName(const std::string &name) {
+  return name == "public" || name == "private" || name == "package" || name == "static";
+}
+
+bool isBindingAuxTransformName(const std::string &name) {
+  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
+         isBindingQualifierName(name);
+}
+
+bool hasExplicitBindingTypeTransform(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
 BindingInfo getBindingInfo(const Expr &expr) {
   BindingInfo info;
   for (const auto &transform : expr.transforms) {
@@ -77,8 +102,7 @@ BindingInfo getBindingInfo(const Expr &expr) {
       continue;
     }
     if (transform.arguments.empty()) {
-      if (transform.name == "public" || transform.name == "private" || transform.name == "package" ||
-          transform.name == "static") {
+      if (isBindingQualifierName(transform.name)) {
         continue;
       }
       if (!transform.templateArg) {
@@ -1154,6 +1178,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (stmt.isBinding) {
         BindingInfo info = getBindingInfo(stmt);
         ReturnKind bindingKind = returnKindForTypeName(info.typeName);
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), def.parameters, activeLocals);
+          if (initKind != ReturnKind::Unknown && initKind != ReturnKind::Void) {
+            bindingKind = initKind;
+          }
+        }
         activeLocals.emplace(stmt.name, bindingKind);
         return;
       }
@@ -1364,6 +1394,19 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          std::unordered_map<std::string, ReturnKind> locals;
+          locals.reserve(localTypes.size());
+          for (const auto &entry : localTypes) {
+            locals.emplace(entry.first, returnKindForTypeName(entry.second.typeName));
+          }
+          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), def.parameters, locals);
+          std::string inferred = typeNameForReturnKind(initKind);
+          if (!inferred.empty()) {
+            binding.typeName = inferred;
+            binding.typeTemplateArg.clear();
+          }
+        }
         std::string type = bindingTypeToCpp(binding);
         bool isReference = binding.typeName == "Reference";
         localTypes[stmt.name] = binding;
