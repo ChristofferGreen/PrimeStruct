@@ -21,6 +21,10 @@ Run via:
 You can change the number of runs with `BENCH_RUNS` and control the output
 folder with `BENCH_DIR`.
 
+PrimeStruct benchmarks report two backends:
+- `primestruct_cpp`: C++ emitter (`--emit=cpp`) compiled with `clang++ -O3`.
+- `primestruct_native`: native codegen backend (`--emit=native`) when available.
+
 ## JSON Scan (token counting)
 
 This benchmark scans a fixed JSON payload encoded as ASCII bytes and counts

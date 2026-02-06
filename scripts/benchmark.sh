@@ -37,6 +37,14 @@ if [[ ! -x "$PRIMEC_BIN" ]]; then
   exit 2
 fi
 
+RUN_NATIVE=0
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  machine="$(uname -m)"
+  if [[ "$machine" == "arm64" || "$machine" == "aarch64" ]]; then
+    RUN_NATIVE=1
+  fi
+fi
+
 CC="${CC:-cc}"
 CXX="${CXX:-c++}"
 RUSTC="${RUSTC:-rustc}"
@@ -77,59 +85,86 @@ PRIME_JSON_PARSE_SRC="$ROOT_DIR/benchmarks/json_parse.prime"
 C_EXE="$BENCH_DIR/aggregate_c"
 CPP_EXE="$BENCH_DIR/aggregate_cpp"
 RS_EXE="$BENCH_DIR/aggregate_rust"
-PRIME_EXE="$BENCH_DIR/aggregate_primestruct"
+PRIME_CPP="$BENCH_DIR/aggregate_primestruct.cpp"
+PRIME_CPP_EXE="$BENCH_DIR/aggregate_primestruct_cpp"
+PRIME_NATIVE_EXE="$BENCH_DIR/aggregate_primestruct_native"
 C_JSON_EXE="$BENCH_DIR/json_scan_c"
 CPP_JSON_EXE="$BENCH_DIR/json_scan_cpp"
 RS_JSON_EXE="$BENCH_DIR/json_scan_rust"
-PRIME_JSON_EXE="$BENCH_DIR/json_scan_primestruct"
+PRIME_JSON_CPP="$BENCH_DIR/json_scan_primestruct.cpp"
+PRIME_JSON_CPP_EXE="$BENCH_DIR/json_scan_primestruct_cpp"
+PRIME_JSON_NATIVE_EXE="$BENCH_DIR/json_scan_primestruct_native"
 C_JSON_PARSE_EXE="$BENCH_DIR/json_parse_c"
 CPP_JSON_PARSE_EXE="$BENCH_DIR/json_parse_cpp"
 RS_JSON_PARSE_EXE="$BENCH_DIR/json_parse_rust"
-PRIME_JSON_PARSE_EXE="$BENCH_DIR/json_parse_primestruct"
+PRIME_JSON_PARSE_CPP="$BENCH_DIR/json_parse_primestruct.cpp"
+PRIME_JSON_PARSE_CPP_EXE="$BENCH_DIR/json_parse_primestruct_cpp"
+PRIME_JSON_PARSE_NATIVE_EXE="$BENCH_DIR/json_parse_primestruct_native"
 
 "$CC" -O3 -DNDEBUG -std=c11 "$C_SRC" -o "$C_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_SRC" -o "$CPP_EXE"
 "$RUSTC" -O "$RS_SRC" -o "$RS_EXE"
-"$PRIMEC_BIN" --emit=exe "$PRIME_SRC" -o "$PRIME_EXE" --entry /main
+"$PRIMEC_BIN" --emit=cpp "$PRIME_SRC" -o "$PRIME_CPP" --entry /main
+"$CXX" -O3 -DNDEBUG -std=c++23 "$PRIME_CPP" -o "$PRIME_CPP_EXE"
+if [[ $RUN_NATIVE -eq 1 ]]; then
+  "$PRIMEC_BIN" --emit=native "$PRIME_SRC" -o "$PRIME_NATIVE_EXE" --entry /main
+fi
 "$CC" -O3 -DNDEBUG -std=c11 "$C_JSON_SRC" -o "$C_JSON_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_JSON_SRC" -o "$CPP_JSON_EXE"
 "$RUSTC" -O "$RS_JSON_SRC" -o "$RS_JSON_EXE"
-"$PRIMEC_BIN" --emit=exe "$PRIME_JSON_SRC" -o "$PRIME_JSON_EXE" --entry /main
+"$PRIMEC_BIN" --emit=cpp "$PRIME_JSON_SRC" -o "$PRIME_JSON_CPP" --entry /main
+"$CXX" -O3 -DNDEBUG -std=c++23 "$PRIME_JSON_CPP" -o "$PRIME_JSON_CPP_EXE"
+if [[ $RUN_NATIVE -eq 1 ]]; then
+  "$PRIMEC_BIN" --emit=native "$PRIME_JSON_SRC" -o "$PRIME_JSON_NATIVE_EXE" --entry /main
+fi
 "$CC" -O3 -DNDEBUG -std=c11 "$C_JSON_PARSE_SRC" -o "$C_JSON_PARSE_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_JSON_PARSE_SRC" -o "$CPP_JSON_PARSE_EXE"
 "$RUSTC" -O "$RS_JSON_PARSE_SRC" -o "$RS_JSON_PARSE_EXE"
-"$PRIMEC_BIN" --emit=exe "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_EXE" --entry /main
+"$PRIMEC_BIN" --emit=cpp "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_CPP" --entry /main
+"$CXX" -O3 -DNDEBUG -std=c++23 "$PRIME_JSON_PARSE_CPP" -o "$PRIME_JSON_PARSE_CPP_EXE"
+if [[ $RUN_NATIVE -eq 1 ]]; then
+  "$PRIMEC_BIN" --emit=native "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_NATIVE_EXE" --entry /main
+fi
 
 (
   cd "$BENCH_DIR"
-  "$PYTHON" - "$RUNS" <<'PY'
+  "$PYTHON" - "$RUNS" "$RUN_NATIVE" <<'PY'
 import subprocess
 import sys
 import time
 
 runs = int(sys.argv[1])
+run_native = int(sys.argv[2]) != 0
+
+def primestruct_entries(name: str):
+    entries = [
+        ("primestruct_cpp", f"./{name}_primestruct_cpp"),
+    ]
+    if run_native:
+        entries.append(("primestruct_native", f"./{name}_primestruct_native"))
+    return entries
+
 benchmarks = [
     ("aggregate", [
         ("c", "./aggregate_c"),
         ("cpp", "./aggregate_cpp"),
         ("rust", "./aggregate_rust"),
-        ("primestruct", "./aggregate_primestruct"),
-    ]),
+    ] + primestruct_entries("aggregate")),
     ("json_scan", [
         ("c", "./json_scan_c"),
         ("cpp", "./json_scan_cpp"),
         ("rust", "./json_scan_rust"),
-        ("primestruct", "./json_scan_primestruct"),
-    ]),
+    ] + primestruct_entries("json_scan")),
     ("json_parse", [
         ("c", "./json_parse_c"),
         ("cpp", "./json_parse_cpp"),
         ("rust", "./json_parse_rust"),
-        ("primestruct", "./json_parse_primestruct"),
-    ]),
+    ] + primestruct_entries("json_parse")),
 ]
 
 print("Benchmark runs:", runs)
+if not run_native:
+    print("Note: PrimeStruct native backend not available; skipping.")
 
 def run_entry(label: str, path: str) -> None:
     print(f"\n== {label} ==")
