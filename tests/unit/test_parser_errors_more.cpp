@@ -62,6 +62,39 @@ TEST_CASE("non-ascii identifier rejected") {
   CHECK(error.find("invalid identifier") != std::string::npos);
 }
 
+TEST_CASE("non-ascii type identifier rejected") {
+  const std::string source = std::string(R"(
+[return<int>]
+main() {
+  [array<)") + "\xC3\xA9" + R"(>]
+  values(array<i32>(1i32))
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid identifier") != std::string::npos);
+}
+
+TEST_CASE("reserved keyword rejected in type identifier") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<return>] values(array<i32>(1i32))
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword") != std::string::npos);
+}
+
 TEST_CASE("return without argument fails") {
   const std::string source = R"(
 [return<int>]

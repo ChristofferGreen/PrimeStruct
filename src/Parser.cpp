@@ -433,6 +433,10 @@ bool Parser::parseTypeName(std::string &out) {
   if (name.kind == TokenKind::End) {
     return false;
   }
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    return fail(nameError);
+  }
   out = name.text;
   if (match(TokenKind::LAngle)) {
     expect(TokenKind::LAngle, "expected '<'");
