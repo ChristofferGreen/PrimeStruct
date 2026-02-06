@@ -35,3 +35,20 @@ Files:
 - `benchmarks/json_scan.prime`
 
 The payload is scanned 20,000 times in each implementation.
+
+## JSON Parse (strings + integer parsing)
+
+This benchmark performs a simple streaming JSON parse over a fixed payload:
+
+- Skips strings correctly (handles `\\` escapes and `\\uXXXX` sequences).
+- Parses signed base-10 integers and accumulates a checksum.
+- Counts structural tokens (`{ } [ ] : ,`) outside of strings.
+
+It is still small enough to keep implementations comparable, but is closer to a
+real tokenizer/parser workload than `json_scan`.
+
+Files:
+- `benchmarks/json_parse.c`
+- `benchmarks/json_parse.cpp`
+- `benchmarks/json_parse.rs`
+- `benchmarks/json_parse.prime`

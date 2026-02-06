@@ -69,6 +69,10 @@ C_JSON_SRC="$ROOT_DIR/benchmarks/json_scan.c"
 CPP_JSON_SRC="$ROOT_DIR/benchmarks/json_scan.cpp"
 RS_JSON_SRC="$ROOT_DIR/benchmarks/json_scan.rs"
 PRIME_JSON_SRC="$ROOT_DIR/benchmarks/json_scan.prime"
+C_JSON_PARSE_SRC="$ROOT_DIR/benchmarks/json_parse.c"
+CPP_JSON_PARSE_SRC="$ROOT_DIR/benchmarks/json_parse.cpp"
+RS_JSON_PARSE_SRC="$ROOT_DIR/benchmarks/json_parse.rs"
+PRIME_JSON_PARSE_SRC="$ROOT_DIR/benchmarks/json_parse.prime"
 
 C_EXE="$BENCH_DIR/aggregate_c"
 CPP_EXE="$BENCH_DIR/aggregate_cpp"
@@ -78,6 +82,10 @@ C_JSON_EXE="$BENCH_DIR/json_scan_c"
 CPP_JSON_EXE="$BENCH_DIR/json_scan_cpp"
 RS_JSON_EXE="$BENCH_DIR/json_scan_rust"
 PRIME_JSON_EXE="$BENCH_DIR/json_scan_primestruct"
+C_JSON_PARSE_EXE="$BENCH_DIR/json_parse_c"
+CPP_JSON_PARSE_EXE="$BENCH_DIR/json_parse_cpp"
+RS_JSON_PARSE_EXE="$BENCH_DIR/json_parse_rust"
+PRIME_JSON_PARSE_EXE="$BENCH_DIR/json_parse_primestruct"
 
 "$CC" -O3 -DNDEBUG -std=c11 "$C_SRC" -o "$C_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_SRC" -o "$CPP_EXE"
@@ -87,6 +95,10 @@ PRIME_JSON_EXE="$BENCH_DIR/json_scan_primestruct"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_JSON_SRC" -o "$CPP_JSON_EXE"
 "$RUSTC" -O "$RS_JSON_SRC" -o "$RS_JSON_EXE"
 "$PRIMEC_BIN" --emit=exe "$PRIME_JSON_SRC" -o "$PRIME_JSON_EXE" --entry /main
+"$CC" -O3 -DNDEBUG -std=c11 "$C_JSON_PARSE_SRC" -o "$C_JSON_PARSE_EXE"
+"$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_JSON_PARSE_SRC" -o "$CPP_JSON_PARSE_EXE"
+"$RUSTC" -O "$RS_JSON_PARSE_SRC" -o "$RS_JSON_PARSE_EXE"
+"$PRIMEC_BIN" --emit=exe "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_EXE" --entry /main
 
 (
   cd "$BENCH_DIR"
@@ -108,6 +120,12 @@ benchmarks = [
         ("cpp", "./json_scan_cpp"),
         ("rust", "./json_scan_rust"),
         ("primestruct", "./json_scan_primestruct"),
+    ]),
+    ("json_parse", [
+        ("c", "./json_parse_c"),
+        ("cpp", "./json_parse_cpp"),
+        ("rust", "./json_parse_rust"),
+        ("primestruct", "./json_parse_primestruct"),
     ]),
 ]
 

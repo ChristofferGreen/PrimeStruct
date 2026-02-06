@@ -1,0 +1,111 @@
+[return<int> effects(io_out)]
+main() {
+  [string] data('{"users":[{"id":1,"name":"alice","score":12},{"id":2,"name":"bob","score":7},{"id":3,"name":"carol","score":42}],"active":true,"count":3,"misc":{"neg":-7,"escape":"a\n\"b\"","unicode":"\u0041","zip":90210},"tags":["a","b","c"]}'raw_utf8)
+  [i32] len(count(data))
+  [i32] outer(20000i32)
+
+  [i64 mut] tokenTotal(0i64)
+  [i64 mut] numberCount(0i64)
+  [i64 mut] numberSum(0i64)
+  [i64 mut] stringBytes(0i64)
+
+  repeat(outer) {
+    [i64 mut] localTokens(0i64)
+    [i64 mut] localNumberCount(0i64)
+    [i64 mut] localNumberSum(0i64)
+    [i64 mut] localStringBytes(0i64)
+
+    [bool mut] inString(false)
+    [bool mut] escape(false)
+    [i32 mut] unicodeDigits(0i32)
+    [bool mut] inNumber(false)
+    [i64 mut] sign(1i64)
+    [i64 mut] value(0i64)
+
+    [i32 mut] idx(0i32)
+    repeat(len) {
+      [i32] ch(at_unsafe(data, idx))
+
+      if(inString) {
+        if(greater_than(unicodeDigits, 0i32)) {
+          assign(unicodeDigits, minus(unicodeDigits, 1i32))
+        } else {
+          if(escape) {
+            assign(escape, false)
+            if(equal(ch, 117i32)) {
+              assign(unicodeDigits, 4i32)
+              assign(localStringBytes, plus(localStringBytes, 1i64))
+            } else {
+              assign(localStringBytes, plus(localStringBytes, 1i64))
+            }
+          } else {
+            if(equal(ch, 92i32)) {
+              assign(escape, true)
+            } else {
+              if(equal(ch, 34i32)) {
+                assign(inString, false)
+              } else {
+                assign(localStringBytes, plus(localStringBytes, 1i64))
+              }
+            }
+          }
+        }
+      } else {
+        if(inNumber) {
+          if(and(greater_equal(ch, 48i32), less_equal(ch, 57i32))) {
+            [i64] digit(convert<i64>(minus(ch, 48i32)))
+            assign(value, plus(multiply(value, 10i64), digit))
+          } else {
+            assign(localNumberSum, plus(localNumberSum, multiply(sign, value)))
+            assign(localNumberCount, plus(localNumberCount, 1i64))
+            assign(inNumber, false)
+            assign(sign, 1i64)
+            assign(value, 0i64)
+          }
+        } else { }
+
+        if(not(inNumber)) {
+          if(equal(ch, 34i32)) {
+            assign(inString, true)
+          } else {
+            if(equal(ch, 45i32)) {
+              assign(inNumber, true)
+              assign(sign, -1i64)
+              assign(value, 0i64)
+            } else {
+              if(and(greater_equal(ch, 48i32), less_equal(ch, 57i32))) {
+                [i64] digit(convert<i64>(minus(ch, 48i32)))
+                assign(inNumber, true)
+                assign(sign, 1i64)
+                assign(value, digit)
+              } else {
+                if(equal(ch, 123i32)) { assign(localTokens, plus(localTokens, 1i64)) } else { }
+                if(equal(ch, 125i32)) { assign(localTokens, plus(localTokens, 1i64)) } else { }
+                if(equal(ch, 91i32)) { assign(localTokens, plus(localTokens, 1i64)) } else { }
+                if(equal(ch, 93i32)) { assign(localTokens, plus(localTokens, 1i64)) } else { }
+                if(equal(ch, 58i32)) { assign(localTokens, plus(localTokens, 1i64)) } else { }
+                if(equal(ch, 44i32)) { assign(localTokens, plus(localTokens, 1i64)) } else { }
+              }
+            }
+          }
+        } else { }
+      }
+
+      assign(idx, plus(idx, 1i32))
+    }
+
+    if(inNumber) {
+      assign(localNumberSum, plus(localNumberSum, multiply(sign, value)))
+      assign(localNumberCount, plus(localNumberCount, 1i64))
+    } else { }
+
+    assign(tokenTotal, plus(tokenTotal, localTokens))
+    assign(numberCount, plus(numberCount, localNumberCount))
+    assign(numberSum, plus(numberSum, localNumberSum))
+    assign(stringBytes, plus(stringBytes, localStringBytes))
+  }
+
+  print_line(plus(plus(numberSum, stringBytes),
+    plus(multiply(tokenTotal, 1000000000i64), multiply(numberCount, 1000000i64))))
+  return(0i32)
+}
