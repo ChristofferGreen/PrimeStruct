@@ -138,6 +138,21 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("runs vm with argv u64 index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[1u64])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_u64.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_u64_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("runs vm with argv error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]

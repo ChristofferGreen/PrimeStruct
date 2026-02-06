@@ -2155,6 +2155,34 @@ main([array<string>] args) {
   CHECK(sawPrintArgv);
 }
 
+TEST_CASE("ir lowerer supports entry args print u64 index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[1u64])
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  bool sawPrintArgv = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgv) {
+      sawPrintArgv = true;
+      break;
+    }
+  }
+  CHECK(sawPrintArgv);
+}
+
 TEST_CASE("ir lowerer supports entry args print unsafe index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
