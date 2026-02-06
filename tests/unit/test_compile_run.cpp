@@ -278,6 +278,22 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm array unsafe access reads element") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  print_line(at_unsafe(values, 1i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_array_unsafe.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_array_unsafe_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "7\n");
+}
+
 TEST_CASE("vm argv access checks bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -1689,6 +1705,22 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_array_literal.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_array_literal_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs native array unsafe access") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_array_unsafe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_array_unsafe_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
