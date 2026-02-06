@@ -1,14 +1,13 @@
 # PrimeStruct
 
-**PrimeStruct** is a systems programming language focused on expressive
-structure and deterministic compilation. Every program is treated as a
-single structural form and lowered to a canonical intermediate
-representation (IR) that targets CPU, GPU, and VM backends.
+PrimeStruct is a systems programming language focused on explicit structure,
+deterministic compilation, and a small canonical core that targets CPU, GPU,
+and VM backends. Every program is treated as a single structural form and
+lowered to a canonical IR before code generation.
 
 The same core model supports both ahead-of-time compilation and scripted
-execution via the **PrimeScript VM**, making the language approachable
-from C while enabling powerful, consistent cross-backend semantics and
-tooling.
+execution via the PrimeScript VM. There is no separate scripting language:
+PrimeScript is PrimeStruct running in VM mode.
 
 ------------------------------------------------------------------------
 
@@ -16,64 +15,36 @@ tooling.
 
 PrimeStruct is designed to:
 
--   Provide **systems-level power comparable to C**, without implicit
-    control flow or hidden allocation
--   Treat **all constructs uniformly as structure**, rather than
-    special-casing functions, statements, or types
--   Support **multiple execution modes** (native, GPU, VM) from a single
-    semantic core
--   Remain **deterministic and analyzable**, suitable for testing,
-    replay, and tooling
--   Be **approachable from C**, with explicit types, predictable layout,
-    and minimal magic
+- Provide systems-level power comparable to C without hidden control flow
+- Treat all constructs uniformly as structure, not special cases
+- Support multiple execution modes (native, GPU, VM) from a single core
+- Remain deterministic and analyzable for tooling and testing
+- Stay approachable from C with explicit types and minimal magic
 
 ------------------------------------------------------------------------
 
 ## Core Ideas
 
-### Everything Is Structure
+### Uniform Envelope
 
-In PrimeStruct, there is no fundamental distinction between:
-
--   functions\
--   statements\
--   blocks\
--   stack values\
--   control flow
-
-All of these are expressed using a **single structural envelope**:
+Everything in PrimeStruct uses one structural envelope:
 
     [transforms] name<templates>(parameters) { body }
 
-This uniform representation simplifies parsing, transformation, and
-lowering, while keeping the language explicit and predictable.
+- `[...]` lists transforms (attributes) applied in order.
+- `<...>` is an optional template list.
+- `(...)` contains parameters or arguments.
+- `{...}` contains a definition body or execution body arguments.
+
+This uniform representation simplifies parsing, transformation, and lowering.
 
 ------------------------------------------------------------------------
 
 ### Canonical IR
 
-All PrimeStruct programs lower to a **single canonical IR** before code
-generation.\
-Backends (C++, GPU, VM) never see surface syntax or syntactic sugar.
-
-This ensures:
-
--   consistent semantics across backends\
--   identical optimization opportunities\
--   deterministic behavior independent of target
-
-------------------------------------------------------------------------
-
-### Compiled vs Scripted Execution
-
-PrimeStruct code can be used in two modes:
-
--   **Compiled**: ahead-of-time or JIT compilation to native CPU or GPU
-    code\
--   **Scripted**: execution via the embedded **PrimeScript VM**
-
-There is no separate "scripting language" --- **PrimeScript is
-PrimeStruct running in VM mode**.
+All PrimeStruct programs lower to a single canonical IR before code generation.
+Backends never see surface syntax or syntactic sugar, ensuring consistent
+semantics and deterministic behavior across targets.
 
 ------------------------------------------------------------------------
 
@@ -81,164 +52,135 @@ PrimeStruct running in VM mode**.
 
 ### Definitions
 
-A definition introduces a structural unit with a body:
+A definition introduces a named body with explicit return/effects transforms:
 
-    add(a: i32, b: i32) {
-      return(a + b)
+    [return<int> effects(io_out)]
+    main([array<string>] args) {
+      print_line("Hello, world!"utf8)
+      return(0i32)
     }
-
-Definitions may represent functions, blocks, or higher-level constructs.
-
-------------------------------------------------------------------------
 
 ### Executions
 
-An execution invokes a definition:
+Executions are call-style constructs (top-level scheduling nodes). They may
+include brace bodies that list call expressions:
 
-    result(add(2, 3))
+    execute_repeat(count = 2i32) { main() main() }
 
-Executions never have bodies --- only arguments.
+Execution bodies may only contain calls (no bindings, no `return`).
 
-------------------------------------------------------------------------
+### Bindings (Stack Values)
 
-### Stack Values
+Local values are introduced as stack-value executions:
 
-Local values are introduced as structural executions:
+    [i32] value(7i32)
+    [string] message("hi"utf8)
 
-    count(i32, 10)
-    exposure(float, 1.25)
-
-Values are immutable by default.
-
-------------------------------------------------------------------------
+Bindings are immutable by default.
 
 ### Mutability
 
-Mutation must be explicitly opted into:
+Mutation must be explicitly opted into with `mut` inside the binding:
 
-    exposure(mut float, 1.25)
-    assign(exposure, exposure + 0.5)
+    [i32 mut] value(1i32)
+    assign(value, 6i32)
 
-Only values declared as `mut` may be written to.
+Only mutable bindings can be assigned to.
 
 ------------------------------------------------------------------------
 
 ## Control Flow
 
-Control flow is expressed structurally, not via keywords.
+PrimeStruct desugars control flow into canonical calls. The surface `if` form
+requires an `else` block:
 
-### Conditional Execution
-
-    if(cond,
-       then {
-         log("true branch")
-       },
-       else {
-         log("false branch")
-       })
-
-There is no implicit branching or fallthrough --- control flow is
-explicit and analyzable.
-
-------------------------------------------------------------------------
-
-### Loops
-
-    repeat(count) {
-      process()
+    if(less_than(value, min)) {
+      return(min)
+    } else {
+      return(value)
     }
 
-Loops are structural executions, not statements.
+Canonical form:
+
+    if<bool>(
+      less_than(value, min),
+      then{ return(min) },
+      else{ return(value) }
+    )
+
+Operators are also rewritten into prefix calls (`a + b` -> `plus(a, b)`).
 
 ------------------------------------------------------------------------
 
-## Structures
+## Strings
 
-Structures are defined using the same envelope as everything else.
+- Surface strings accept `"..."utf8`, `"..."ascii`, or raw forms
+  `"..."raw_utf8` / `"..."raw_ascii` (no escape processing in raw bodies).
+- `implicit-utf8` (enabled by default) appends `utf8` when omitted.
+- Canonical/bottom-level form always uses `raw_utf8` / `raw_ascii` after
+  escape decoding.
 
-    color_grade() {
-      exposure(mut float, 1.0)
-      gamma(float, 2.2)
-    }
+Example:
 
-There is no special "struct syntax" --- a structure is simply a
-definition with structured members.
-
-------------------------------------------------------------------------
-
-### Construction
-
-    grade(color_grade)
-    assign(grade.exposure, 1.5)
-
-Layout, alignment, and placement are explicit and validated during
-compilation.
+    [string] path("C:\\temp"raw_ascii)
 
 ------------------------------------------------------------------------
 
-## Examples
+## Collections
 
-### Simple Function
+Collections desugar into helper calls:
 
-    clamp_exposure(value: float) {
-      result(mut float, value)
+    array<i32>{1i32, 2i32, 3i32}
+    map<i32, i32>{1i32=10i32, 2i32=20i32}
 
-      if(result > 1.0,
-         then { assign(result, 1.0) },
-         else { })
+------------------------------------------------------------------------
 
-      return(result)
+## Includes and Namespaces
+
+Includes splice text inline before text filters:
+
+    include<"/std/io", version="1.2.0">
+
+Namespaces prefix enclosed names:
+
+    namespace demo {
+      [return<int>]
+      get_value() {
+        return(19i32)
+      }
     }
 
 ------------------------------------------------------------------------
 
-### Scripted Execution (PrimeScript)
+## Entry Definition
 
-    log("Running scripted execution")
-
-    value(float, 0.75)
-    assign(value, clamp_exposure(value))
-
-    log(value)
-
-The same code can be:
-
--   executed immediately via the PrimeScript VM\
--   compiled to native code without modification
+The default entry path is `/main`. For VM/native backends, the entry
+definition must take a single `array<string>` parameter.
 
 ------------------------------------------------------------------------
 
 ## Tooling
 
-Planned tooling includes:
-
--   **Compiler**: `primestructc`\
--   **VM / Interpreter**: PrimeScript VM\
--   **IR inspection**: dump and visualize canonical IR\
--   **Backends**:
-    -   C++ / native\
-    -   GPU shading (GLSL / SPIR-V)\
-    -   VM bytecode
+- Compiler: `primec`
+- VM / Interpreter: PrimeScript VM
+- IR inspection: dump canonical IR and diagnostics
+- Backends:
+  - C++ / native
+  - GPU shading (GLSL / SPIR-V)
+  - VM bytecode
 
 ------------------------------------------------------------------------
 
 ## Status
 
-PrimeStruct is currently **experimental** and under active design.
-
-The syntax, IR, and execution model are being refined alongside the
-compiler and VM implementation. Backward compatibility is **not yet
-guaranteed**.
+PrimeStruct is experimental and under active design. Syntax, IR, and
+execution semantics are still evolving, and backward compatibility is
+not yet guaranteed.
 
 ------------------------------------------------------------------------
 
 ## Philosophy
 
-PrimeStruct favors:
-
--   explicit structure over implicit behavior\
--   uniform representation over convenience syntax\
--   deterministic semantics over cleverness\
--   systems clarity over abstraction layering
-
-If something happens, you should be able to **see it in the structure**.
+PrimeStruct favors explicit structure over implicit behavior, deterministic
+semantics over cleverness, and systems clarity over abstraction layering. If
+something happens, you should be able to see it in the structure.

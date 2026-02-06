@@ -92,7 +92,7 @@ module {
 
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
-- **String literals:** canonical form requires an explicit suffix (`utf8` or `ascii`); the `implicit-utf8` text filter (enabled by default) appends `utf8` when omitted in surface syntax. `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example: `"hello"utf8`, `"moo"ascii` (surface `"hello"` becomes `"hello"utf8`).
+- **String literals:** surface forms accept `"..."utf8`, `"..."ascii`, or raw `"..."raw_utf8` / `"..."raw_ascii` (no escape processing in raw bodies). The `implicit-utf8` text filter (enabled by default) appends `utf8` when omitted in surface syntax. **Canonical/bottom-level form always uses `raw_utf8` or `raw_ascii` after escape decoding.** `ascii`/`raw_ascii` enforce 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface: `"hello"utf8`, `"moo"ascii`. Example canonical: `"hello"raw_utf8`. Raw example: `"C:\\temp"raw_ascii` keeps backslashes verbatim.
 - **Uniform envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
