@@ -540,6 +540,52 @@ main([array<string>] args) {
   CHECK(runCommand(exePath + " alpha beta") == 3);
 }
 
+TEST_CASE("compiles and runs argv print in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 2i32)) {
+    print_line(args[1i32])
+    print_line(args[2i32])
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_print.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_print_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_args_print_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\nbeta\n");
+}
+
+TEST_CASE("compiles and runs argv unsafe access in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  if(greater_than(args.count(), 2i32)) {
+    print_line(at_unsafe(args, 1i32))
+    print_line(at_unsafe(args, 2i32))
+  } else {
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_args_unsafe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_args_unsafe_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_args_unsafe_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\nbeta\n");
+}
+
 TEST_CASE("compiles and runs array literal") {
   const std::string source = R"(
 [return<int>]
