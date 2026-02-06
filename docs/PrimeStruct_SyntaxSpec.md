@@ -52,10 +52,11 @@ and IR lowering.
   - Examples: `0.5f`, `1.0f32`, `2.0f64`, `1e-3f64`.
 - Bool literals: `true`, `false`.
 - String literals:
-  - Double-quoted or single-quoted: `"hello"utf8`, `'hi'utf8`.
-  - Raw form: `"raw text"raw_utf8` / `"raw text"raw_ascii` (no escape processing inside the raw body).
-  - Canonical form requires `utf8` or `ascii` suffix for non-raw literals, and `raw_utf8` or `raw_ascii` for raw literals.
-  - The `implicit-utf8` filter appends `utf8` to bare strings.
+  - Double-quoted or single-quoted surface forms: `"hello"utf8`, `'hi'utf8`.
+  - Raw surface form: `"raw text"raw_utf8` / `"raw text"raw_ascii` (no escape processing inside the raw body).
+  - Surface form accepts `utf8`/`ascii` suffixes; the `implicit-utf8` filter appends `utf8` to bare strings.
+  - **Canonical/bottom-level form uses only `raw_utf8` and `raw_ascii`.** After parsing and escape decoding,
+    string literals are normalized to `raw_*` with decoded contents.
   - `ascii`/`raw_ascii` reject non-ASCII bytes.
   - Escape sequences in non-raw strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
 
