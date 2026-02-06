@@ -351,33 +351,41 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
         std::vector<std::string> paths;
         std::optional<std::string> versionTag;
         size_t pos = 0;
-        while (pos < payload.size()) {
+        auto skipWhitespace = [&]() {
           while (pos < payload.size() && std::isspace(static_cast<unsigned char>(payload[pos]))) {
             ++pos;
           }
+        };
+        while (true) {
+          skipWhitespace();
           if (pos >= payload.size()) {
             break;
           }
           if (payload.compare(pos, 8, "version=") == 0) {
             pos += 8;
-            if (pos < payload.size() && payload[pos] == '\"') {
-              ++pos;
-              size_t quoteEnd = payload.find('\"', pos);
-              if (quoteEnd == std::string::npos) {
-                error = "unterminated version string in include<...>";
-                return false;
-              }
-              if (versionTag) {
-                error = "duplicate version attribute in include<...>";
-                return false;
-              }
-              std::string versionValue = payload.substr(pos, quoteEnd - pos);
-              versionTag = trim(versionValue);
-              pos = quoteEnd + 1;
-              continue;
+            if (pos >= payload.size() || payload[pos] != '\"') {
+              error = "expected version string in include<...>";
+              return false;
             }
-          }
-          if (payload[pos] == '\"') {
+            ++pos;
+            size_t quoteEnd = payload.find('\"', pos);
+            if (quoteEnd == std::string::npos) {
+              error = "unterminated version string in include<...>";
+              return false;
+            }
+            if (versionTag) {
+              error = "duplicate version attribute in include<...>";
+              return false;
+            }
+            std::string versionValue = payload.substr(pos, quoteEnd - pos);
+            versionTag = trim(versionValue);
+            pos = quoteEnd + 1;
+            if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
+                payload[pos] != ',') {
+              error = "unexpected characters after include version";
+              return false;
+            }
+          } else if (payload[pos] == '\"') {
             ++pos;
             size_t quoteEnd = payload.find('\"', pos);
             if (quoteEnd == std::string::npos) {
@@ -387,16 +395,24 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             std::string path = payload.substr(pos, quoteEnd - pos);
             paths.push_back(trim(path));
             pos = quoteEnd + 1;
-          } else {
-            size_t next = payload.find(',', pos);
-            if (next == std::string::npos) {
-              next = payload.size();
+            if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
+                payload[pos] != ',') {
+              error = "include path cannot have suffix";
+              return false;
             }
-            pos = next + 1;
+          } else {
+            error = "invalid include entry in include<...>";
+            return false;
           }
-          if (pos < payload.size() && payload[pos] == ',') {
-            ++pos;
+          skipWhitespace();
+          if (pos >= payload.size()) {
+            break;
           }
+          if (payload[pos] != ',') {
+            error = "expected ',' between include entries";
+            return false;
+          }
+          ++pos;
         }
 
         if (paths.empty()) {

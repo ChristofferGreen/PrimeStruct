@@ -48,6 +48,25 @@ TEST_CASE("missing include path fails") {
   CHECK(error.find("requires at least one quoted path") != std::string::npos);
 }
 
+TEST_CASE("include path suffix fails") {
+  const std::string srcPath = writeTemp("main_include_suffix.prime", "include<\"/lib.prime\"utf8>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("suffix") != std::string::npos);
+}
+
+TEST_CASE("include entry missing comma fails") {
+  const std::string srcPath =
+      writeTemp("main_include_missing_comma.prime", "include<\"/lib_a.prime\" \"/lib_b.prime\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("expected ',' between include entries") != std::string::npos);
+}
+
 TEST_CASE("invalid include version fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bad_version";
   std::filesystem::remove_all(dir);
