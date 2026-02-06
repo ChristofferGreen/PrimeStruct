@@ -1,0 +1,14 @@
+[return<int> effects(io_out)]
+main() {
+  [i32] n(5000000i32)
+  [i64 mut] sum(0i64)
+  [i64 mut] sumsq(0i64)
+  [i64 mut] value(0i64)
+  repeat(n) {
+    assign(sum, plus(sum, value))
+    assign(sumsq, plus(sumsq, multiply(value, value)))
+    assign(value, plus(value, 1i64))
+  }
+  print_line(plus(sum, sumsq))
+  return(0i32)
+}

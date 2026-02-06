@@ -1,0 +1,27 @@
+[return<int> effects(io_out)]
+main() {
+  [array<i32>] data(array<i32>(
+    123i32, 34i32, 117i32, 115i32, 101i32, 114i32, 115i32, 34i32, 58i32, 91i32, 123i32, 34i32, 105i32, 100i32, 34i32, 58i32, 49i32, 44i32, 34i32, 110i32, 97i32, 109i32, 101i32, 34i32, 58i32, 34i32, 97i32, 108i32, 105i32, 99i32, 101i32, 34i32, 125i32, 44i32, 123i32, 34i32, 105i32, 100i32, 34i32, 58i32, 50i32, 44i32, 34i32, 110i32, 97i32, 109i32, 101i32, 34i32, 58i32, 34i32, 98i32, 111i32, 98i32, 34i32, 125i32, 44i32, 123i32, 34i32, 105i32, 100i32, 34i32, 58i32, 51i32, 44i32, 34i32, 110i32, 97i32, 109i32, 101i32, 34i32, 58i32, 34i32, 99i32, 97i32, 114i32, 111i32, 108i32, 34i32, 125i32, 93i32, 44i32, 34i32, 97i32, 99i32, 116i32, 105i32, 118i32, 101i32, 34i32, 58i32, 116i32, 114i32, 117i32, 101i32, 44i32, 34i32, 99i32, 111i32, 117i32, 110i32, 116i32, 34i32, 58i32, 51i32, 44i32, 34i32, 116i32, 97i32, 103i32, 115i32, 34i32, 58i32, 91i32, 34i32, 97i32, 34i32, 44i32, 34i32, 98i32, 34i32, 44i32, 34i32, 99i32, 34i32, 93i32, 125i32
+  ))
+  [i32] len(count(data))
+  [i32] outer(20000i32)
+  [i64 mut] total(0i64)
+  repeat(outer) {
+    [i64 mut] local(0i64)
+    [i32 mut] idx(0i32)
+    repeat(len) {
+      [i32] ch(at_unsafe(data, idx))
+      if(equal(ch, 123i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 125i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 91i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 93i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 58i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 44i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 34i32)) { assign(local, plus(local, 1i64)) } else { }
+      assign(idx, plus(idx, 1i32))
+    }
+    assign(total, plus(total, local))
+  }
+  print_line(total)
+  return(0i32)
+}

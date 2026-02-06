@@ -7,6 +7,7 @@ BUILD_TYPE="Debug"
 RUN_TESTS=1
 CONFIGURE_ONLY=0
 COVERAGE=0
+RUN_BENCHMARK=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,6 +28,10 @@ while [[ $# -gt 0 ]]; do
       RUN_TESTS=0
       shift
       ;;
+    --benchmark)
+      RUN_BENCHMARK=1
+      shift
+      ;;
     *)
       echo "Unknown arg: $1" >&2
       exit 2
@@ -35,6 +40,14 @@ while [[ $# -gt 0 ]]; do
  done
 
 COVERAGE_CMAKE_ARGS=()
+
+if command -v nproc >/dev/null 2>&1; then
+  BUILD_JOBS="$(nproc)"
+elif command -v sysctl >/dev/null 2>&1; then
+  BUILD_JOBS="$(sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+else
+  BUILD_JOBS=4
+fi
 if [[ $COVERAGE -eq 1 ]]; then
   if [[ $RUN_TESTS -eq 0 ]]; then
     echo "[compile.sh] ERROR: --coverage requires tests; remove --skip-tests." >&2
@@ -55,7 +68,7 @@ if [[ $COVERAGE -eq 1 ]]; then
 fi
 
 cmake -S "$ROOT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" "${COVERAGE_CMAKE_ARGS[@]}"
-cmake --build "$BUILD_DIR"
+cmake --build "$BUILD_DIR" --parallel "$BUILD_JOBS"
 
 if [[ $CONFIGURE_ONLY -eq 1 ]]; then
   exit 0
@@ -125,4 +138,11 @@ if [[ $RUN_TESTS -eq 1 ]]; then
   else
     (cd "$BUILD_DIR" && ctest --output-on-failure)
   fi
+fi
+
+if [[ $RUN_BENCHMARK -eq 1 ]]; then
+  if [[ "$BUILD_TYPE" != "Release" ]]; then
+    echo "[compile.sh] WARN: benchmarks run in $BUILD_TYPE mode; consider --release." >&2
+  fi
+  "$ROOT_DIR/scripts/benchmark.sh" --build-dir "$BUILD_DIR"
 fi
