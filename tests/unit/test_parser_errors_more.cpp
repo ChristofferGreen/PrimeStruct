@@ -311,37 +311,6 @@ main() {
   CHECK(error.find("trailing comma not allowed in template argument list") != std::string::npos);
 }
 
-TEST_CASE("missing comma in template argument list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(convert<i64 i32>(1i32))
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected ',' between template arguments") != std::string::npos);
-}
-
-TEST_CASE("missing comma in nested template argument list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<map<i32 i64>>] values(array<i32>(1i32))
-  return(0i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected ',' between template arguments") != std::string::npos);
-}
-
 TEST_CASE("trailing comma in nested type template list is rejected") {
   const std::string source = R"(
 [return<int>]
@@ -386,21 +355,6 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("trailing comma not allowed in argument list") != std::string::npos);
-}
-
-TEST_CASE("missing comma in argument list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(plus(1i32 2i32))
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected ',' between arguments") != std::string::npos);
 }
 
 TEST_CASE("trailing comma in brace list is rejected") {
@@ -880,21 +834,6 @@ main {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("expected '(' after identifier") != std::string::npos);
-}
-
-TEST_CASE("missing comma between parameters fails") {
-  const std::string source = R"(
-[return<int>]
-main([i32] a(1i32) [i32] b(2i32)) {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected ',' between parameters") != std::string::npos);
 }
 
 TEST_CASE("return missing parentheses fails") {

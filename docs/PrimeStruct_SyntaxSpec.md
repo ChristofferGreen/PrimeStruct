@@ -121,11 +121,11 @@ transform      = identifier template_opt args_opt ;
 // Transform argument lists accept identifier, number, or string tokens (no nested envelopes).
 
 template_opt   = [ "<" template_list ">" ] ;
-template_list  = type_expr { "," type_expr } ;
+template_list  = type_expr { [ "," ] type_expr } ;
 type_expr      = identifier [ "<" type_expr { "," type_expr } ">" ] ;
 
 params         = "(" param_list_opt ")" ;
-param_list_opt = [ param { "," param } ] ;
+param_list_opt = [ param { [ "," ] param } ] ;
 param          = binding ;
 
 body_block     = "{" stmt_list_opt "}" ;
@@ -139,7 +139,7 @@ stmt           = binding | form ;
 binding        = transforms_opt name template_opt args_opt ;
 
 args_opt       = [ "(" arg_list_opt ")" ] ;
-arg_list_opt   = [ arg { "," arg } ] ;
+arg_list_opt   = [ arg { [ "," ] arg } ] ;
 arg            = named_arg | form ;
 named_arg      = identifier "=" form ;
 
@@ -165,7 +165,7 @@ Notes:
 - `execution` is syntactically the same as `definition` but has no body block or has an execution body list.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
 - Transform lists may include optional commas between transforms; trailing commas are not allowed.
-- Parameter and argument lists require commas between items; trailing commas are not allowed.
+- Template, parameter, and argument lists allow optional commas between items; trailing commas are not allowed.
 - Execution/body brace lists accept comma-separated or whitespace-separated forms; trailing commas are not allowed.
 - Calls may include brace body arguments (e.g. `execute_task(...) { work() work() }` or `block{ ... }`).
 - `quoted_string` in include declarations is a raw quoted string without suffixes.

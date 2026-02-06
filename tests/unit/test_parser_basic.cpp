@@ -85,6 +85,49 @@ execute_repeat(3i32) { main() }
   CHECK(program.executions[0].bodyArguments.size() == 1);
 }
 
+TEST_CASE("parses arguments without commas") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = program.definitions[0].returnExpr.value();
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "plus");
+  CHECK(expr.args.size() == 2);
+}
+
+TEST_CASE("parses parameters without commas") {
+  const std::string source = R"(
+[return<int>]
+main([i32] a(1i32) [i32] b(2i32)) {
+  return(plus(a b))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].parameters.size() == 2);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->args.size() == 2);
+}
+
+TEST_CASE("parses template arguments without commas") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<i64 i32>(1i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->templateArgs.size() == 2);
+}
+
 TEST_CASE("parses local binding statements") {
   const std::string source = R"(
 [return<int>]

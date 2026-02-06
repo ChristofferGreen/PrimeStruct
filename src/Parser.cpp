@@ -459,11 +459,15 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
       if (match(TokenKind::RAngle)) {
         return fail("trailing comma not allowed in template argument list");
       }
-    } else if (match(TokenKind::Identifier)) {
-      return fail("expected ',' between template arguments");
-    } else {
+      continue;
+    }
+    if (match(TokenKind::RAngle)) {
       break;
     }
+    if (match(TokenKind::Identifier)) {
+      continue;
+    }
+    return fail("expected '>'");
   }
   if (!expect(TokenKind::RAngle, "expected '>'")) {
     return false;
@@ -502,10 +506,13 @@ bool Parser::parseTypeName(std::string &out) {
         }
         continue;
       }
-      if (match(TokenKind::Identifier)) {
-        return fail("expected ',' between template arguments");
+      if (match(TokenKind::RAngle)) {
+        break;
       }
-      break;
+      if (match(TokenKind::Identifier)) {
+        continue;
+      }
+      return fail("expected '>'");
     }
     if (!expect(TokenKind::RAngle, "expected '>'")) {
       return false;
@@ -578,10 +585,10 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
       }
       continue;
     }
-    if (!match(TokenKind::RParen)) {
-      return fail("expected ',' between parameters");
+    if (match(TokenKind::RParen)) {
+      break;
     }
-    break;
+    continue;
   }
   return true;
 }
@@ -623,10 +630,10 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
         return fail("trailing comma not allowed in argument list");
       }
     } else {
-      if (!match(TokenKind::RParen)) {
-        return fail("expected ',' between arguments");
+      if (match(TokenKind::RParen)) {
+        break;
       }
-      break;
+      continue;
     }
   }
   return true;
