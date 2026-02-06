@@ -424,6 +424,21 @@ main([array<string>] args) {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("vm argv unsafe access with u64 index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(at_unsafe(args, 1u64))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_unsafe_u64.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_unsafe_u64_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("vm argv unsafe access skips negative index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -1280,6 +1295,27 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath).empty());
   CHECK(readFile(outPath).empty());
+}
+
+TEST_CASE("compiles and runs native argv unsafe access with u64 index") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(at_unsafe(args, 1u64))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_unsafe_u64.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_unsafe_u64_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_unsafe_u64_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "alpha\n");
 }
 
 TEST_CASE("compiles and runs native argv unsafe access skips negative index") {
