@@ -347,6 +347,28 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm argv call argument unsafe skips bounds") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+echo([string] msg) {
+  print_line(msg)
+}
+
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  echo(at_unsafe(args, 9i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_call_unsafe.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_call_unsafe_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_argv_call_unsafe_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("writes serialized ir output") {
   const std::string source = R"(
 [return<int>]
@@ -890,6 +912,34 @@ main([array<string>] args) {
   const std::string runCmd = exePath + " alpha > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
+}
+
+TEST_CASE("compiles and runs native argv call argument unsafe skips bounds") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+echo([string] msg) {
+  print_line(msg)
+}
+
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  echo(at_unsafe(args, 9i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_call_unsafe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_call_unsafe_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_call_unsafe_out.txt").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_call_unsafe_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("compiles and runs native void executable") {

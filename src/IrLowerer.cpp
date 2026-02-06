@@ -1142,9 +1142,11 @@ bool IrLowerer::lower(const Program &program,
   auto emitStringValueForCall = [&](const Expr &arg,
                                     const LocalMap &callerLocals,
                                     LocalInfo::StringSource &sourceOut,
-                                    int32_t &stringIndexOut) -> bool {
+                                    int32_t &stringIndexOut,
+                                    bool &argvCheckedOut) -> bool {
     sourceOut = LocalInfo::StringSource::None;
     stringIndexOut = -1;
+    argvCheckedOut = true;
     if (arg.kind == Expr::Kind::StringLiteral) {
       std::string decoded;
       if (!parseStringLiteral(arg.stringValue, decoded)) {
@@ -1168,6 +1170,7 @@ bool IrLowerer::lower(const Program &program,
       }
       sourceOut = it->second.stringSource;
       stringIndexOut = it->second.stringIndex;
+      argvCheckedOut = it->second.argvChecked;
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
       return true;
     }
@@ -1221,6 +1224,7 @@ bool IrLowerer::lower(const Program &program,
 
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
       sourceOut = LocalInfo::StringSource::ArgvIndex;
+      argvCheckedOut = (accessName == "at");
       return true;
     }
     error = "native backend requires string arguments to use string literals, bindings, or entry args";
@@ -1277,13 +1281,15 @@ bool IrLowerer::lower(const Program &program,
         }
         LocalInfo::StringSource source = LocalInfo::StringSource::None;
         int32_t index = -1;
-        if (!emitStringValueForCall(*orderedArgs[i], callerLocals, source, index)) {
+        bool argvChecked = true;
+        if (!emitStringValueForCall(*orderedArgs[i], callerLocals, source, index, argvChecked)) {
           inlineStack.erase(callee.fullPath);
           return false;
         }
         paramInfo.valueKind = LocalInfo::ValueKind::String;
         paramInfo.stringSource = source;
         paramInfo.stringIndex = index;
+        paramInfo.argvChecked = argvChecked;
         calleeLocals.emplace(param.name, paramInfo);
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
         continue;
