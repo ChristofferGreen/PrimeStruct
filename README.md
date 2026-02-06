@@ -110,7 +110,7 @@ Canonical form:
 
 `if` takes three **envelopes**:
 
-1) The condition: must evaluate to `bool` (a boolean value or a call returning `bool`).
+1) The condition: must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean.
 2) The true branch: must be a function or a value; the function return or the value is returned by the `if` if the condition is `true`.
 3) The false branch: must be a function or a value; the function return or the value is returned by the `if` if the condition is `false`.
 
