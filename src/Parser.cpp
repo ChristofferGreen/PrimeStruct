@@ -1189,7 +1189,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return fail("invalid string literal");
       }
       if (suffix.empty()) {
-        return fail("string literal requires utf8/ascii suffix");
+        return fail("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix");
       }
       out.kind = Expr::Kind::StringLiteral;
       out.namespacePrefix = namespacePrefix;

@@ -198,13 +198,13 @@ TEST_CASE("rewrites plus operator with string literals") {
 }
 
 TEST_CASE("rewrites plus operator with raw string literals") {
-  const std::string source = "main(){ return(R\"(a)\"+R\"(b)\") }\n";
+  const std::string source = "main(){ return(\"a\"raw_utf8+\"b\"raw_utf8) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("plus(R\"(a)\"utf8, R\"(b)\"utf8)") != std::string::npos);
+  CHECK(output.find("plus(\"a\"raw_utf8, \"b\"raw_utf8)") != std::string::npos);
 }
 
 TEST_CASE("rewrites multiply operator with unary minus operand") {
@@ -632,13 +632,13 @@ TEST_CASE("does not rewrite numbers inside strings") {
 }
 
 TEST_CASE("does not rewrite numbers inside raw strings") {
-  const std::string source = "main(){ log(R\"(42+7)\") }\n";
+  const std::string source = "main(){ log(\"42+7\"raw_utf8) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == "main(){ log(R\"(42+7)\"utf8) }\n");
+  CHECK(output == "main(){ log(\"42+7\"raw_utf8) }\n");
 }
 
 TEST_CASE("does not add suffix to float literal") {

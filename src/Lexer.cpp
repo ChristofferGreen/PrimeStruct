@@ -15,9 +15,7 @@ std::vector<Token> Lexer::tokenize() {
       break;
     }
     char c = source_[pos_];
-    if (c == 'R' && pos_ + 2 < source_.size() && source_[pos_ + 1] == '"' && source_[pos_ + 2] == '(') {
-      tokens.push_back(readRawString());
-    } else if (c == '"' || c == '\'') {
+    if (c == '"' || c == '\'') {
       tokens.push_back(readString(c));
     } else if (isIdentifierStart(c)) {
       tokens.push_back(readIdentifier());
@@ -175,35 +173,6 @@ Token Lexer::readString(char quote) {
       continue;
     }
     if (c == quote) {
-      advance();
-      if (pos_ < source_.size() && isStringSuffixStart(source_[pos_])) {
-        while (pos_ < source_.size() && isStringSuffixBody(source_[pos_])) {
-          advance();
-        }
-      }
-      return {TokenKind::String, source_.substr(start, pos_ - start), startLine, startColumn};
-    }
-    advance();
-  }
-  return {TokenKind::End, "", startLine, startColumn};
-}
-
-Token Lexer::readRawString() {
-  int startLine = line_;
-  int startColumn = column_;
-  size_t start = pos_;
-  advance();
-  if (pos_ >= source_.size() || source_[pos_] != '"') {
-    return {TokenKind::End, "", startLine, startColumn};
-  }
-  advance();
-  if (pos_ >= source_.size() || source_[pos_] != '(') {
-    return {TokenKind::End, "", startLine, startColumn};
-  }
-  advance();
-  while (pos_ + 1 < source_.size()) {
-    if (source_[pos_] == ')' && source_[pos_ + 1] == '"') {
-      advance();
       advance();
       if (pos_ < source_.size() && isStringSuffixStart(source_[pos_])) {
         while (pos_ < source_.size() && isStringSuffixBody(source_[pos_])) {

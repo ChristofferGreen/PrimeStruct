@@ -1871,7 +1871,7 @@ TEST_CASE("ir lowerer accepts string literal suffixes") {
 [return<int> effects(io_out)]
 main() {
   print_line("hello"ascii)
-  print_line(R"(world)"utf8)
+  print_line("world"raw_utf8)
   return(1i32)
 }
  )PS";
@@ -1887,6 +1887,27 @@ main() {
   CHECK(module.stringTable.size() == 2);
   CHECK(module.stringTable[0] == "hello");
   CHECK(module.stringTable[1] == "world");
+}
+
+TEST_CASE("ir lowerer preserves raw string bytes") {
+  const std::string source = R"PS(
+[return<int> effects(io_out)]
+main() {
+  print_line("line\nnext"raw_utf8)
+  return(1i32)
+}
+)PS";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  CHECK(module.stringTable.size() == 1);
+  CHECK(module.stringTable[0] == "line\\nnext");
 }
 
 TEST_CASE("ir lowerer rejects mixed signed/unsigned arithmetic") {

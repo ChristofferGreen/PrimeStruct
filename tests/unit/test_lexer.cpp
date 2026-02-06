@@ -28,11 +28,11 @@ TEST_CASE("lexes slash paths as identifiers") {
   CHECK(tokens[0].text == "/foo/bar");
 }
 
-TEST_CASE("lexes raw string literals") {
-  const auto tokens = lex("R\"(hello world)\"");
+TEST_CASE("lexes raw string literal suffixes") {
+  const auto tokens = lex("\"hello world\"raw_utf8");
   REQUIRE(tokens.size() >= 1);
   CHECK(tokens[0].kind == primec::TokenKind::String);
-  CHECK(tokens[0].text == "R\"(hello world)\"");
+  CHECK(tokens[0].text == "\"hello world\"raw_utf8");
 }
 
 TEST_CASE("lexes string literals with escapes") {

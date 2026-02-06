@@ -134,7 +134,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("string literal requires utf8/ascii suffix") != std::string::npos);
+  CHECK(error.find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
 }
 
 TEST_CASE("named arguments rejected for print builtin") {

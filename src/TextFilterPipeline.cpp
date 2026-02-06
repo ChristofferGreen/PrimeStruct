@@ -71,9 +71,6 @@ bool isRightOperandStartChar(const std::string &input, size_t index) {
   if (isOperatorTokenChar(c) || c == '(' || c == '"' || c == '\'' || c == '[' || c == '{') {
     return true;
   }
-  if (c == 'R' && index + 2 < input.size() && input[index + 1] == '"' && input[index + 2] == '(') {
-    return true;
-  }
   if (c == '-' && isUnaryPrefixPosition(input, index)) {
     return true;
   }
@@ -128,13 +125,6 @@ size_t findQuotedStart(const std::string &text, size_t endQuote) {
   return std::string::npos;
 }
 
-size_t findRawStringStart(const std::string &text, size_t endQuote) {
-  if (endQuote < 2 || text[endQuote - 1] != ')') {
-    return std::string::npos;
-  }
-  return text.rfind("R\"(", endQuote);
-}
-
 size_t skipQuotedForward(const std::string &text, size_t start) {
   char quote = text[start];
   size_t pos = start + 1;
@@ -145,17 +135,6 @@ size_t skipQuotedForward(const std::string &text, size_t start) {
     }
     if (text[pos] == quote) {
       return pos + 1;
-    }
-    ++pos;
-  }
-  return std::string::npos;
-}
-
-size_t skipRawStringForward(const std::string &text, size_t start) {
-  size_t pos = start + 3;
-  while (pos + 1 < text.size()) {
-    if (text[pos] == ')' && text[pos + 1] == '"') {
-      return pos + 2;
     }
     ++pos;
   }
@@ -178,14 +157,6 @@ size_t findMatchingClose(const std::string &text, size_t openIndex, char openCha
         return pos;
       }
       ++pos;
-      continue;
-    }
-    if (c == 'R' && pos + 2 < text.size() && text[pos + 1] == '"' && text[pos + 2] == '(') {
-      size_t end = skipRawStringForward(text, pos);
-      if (end == std::string::npos) {
-        return std::string::npos;
-      }
-      pos = end;
       continue;
     }
     if (c == '"' || c == '\'') {
@@ -219,11 +190,6 @@ size_t findMatchingOpen(const std::string &text, size_t closeIndex, char openCha
       continue;
     }
     if (c == '"' || c == '\'') {
-      size_t rawStart = (c == '"') ? findRawStringStart(text, pos) : std::string::npos;
-      if (rawStart != std::string::npos) {
-        pos = rawStart;
-        continue;
-      }
       size_t start = findQuotedStart(text, pos);
       if (start == std::string::npos || start == 0) {
         return std::string::npos;
@@ -247,10 +213,6 @@ size_t findLeftTokenStart(const std::string &text, size_t end) {
   if (suffixStart < end && isStringSuffixStart(text[suffixStart])) {
     if (suffixStart > 0 && (text[suffixStart - 1] == '"' || text[suffixStart - 1] == '\'')) {
       size_t quoteEnd = suffixStart - 1;
-      size_t rawStart = (text[quoteEnd] == '"') ? findRawStringStart(text, quoteEnd) : std::string::npos;
-      if (rawStart != std::string::npos) {
-        return rawStart;
-      }
       size_t quoteStart = findQuotedStart(text, quoteEnd);
       if (quoteStart != std::string::npos) {
         return quoteStart;
@@ -280,10 +242,6 @@ size_t findLeftTokenStart(const std::string &text, size_t end) {
     return start;
   }
   if (tail == '"' || tail == '\'') {
-    size_t rawStart = (tail == '"') ? findRawStringStart(text, end - 1) : std::string::npos;
-    if (rawStart != std::string::npos) {
-      return rawStart;
-    }
     size_t quoteStart = findQuotedStart(text, end - 1);
     if (quoteStart != std::string::npos) {
       return quoteStart;
@@ -316,20 +274,6 @@ size_t findRightTokenEnd(const std::string &text, size_t start) {
     char closeChar = lead == '(' ? ')' : (lead == '[' ? ']' : '}');
     size_t closePos = findMatchingClose(text, start, lead, closeChar);
     return closePos == std::string::npos ? start : closePos + 1;
-  }
-  if (lead == 'R' && start + 2 < text.size() && text[start + 1] == '"' && text[start + 2] == '(') {
-    size_t end = skipRawStringForward(text, start);
-    if (end == std::string::npos) {
-      return start;
-    }
-    if (end < text.size() && isStringSuffixStart(text[end])) {
-      size_t suffixEnd = end + 1;
-      while (suffixEnd < text.size() && isStringSuffixBody(text[suffixEnd])) {
-        ++suffixEnd;
-      }
-      end = suffixEnd;
-    }
-    return end;
   }
   if (lead == '"' || lead == '\'') {
     size_t end = skipQuotedForward(text, start);
@@ -710,16 +654,6 @@ bool TextFilterPipeline::apply(const std::string &input,
           if (std::isspace(static_cast<unsigned char>(c))) {
             rewritten.push_back(c);
             ++scan;
-            continue;
-          }
-          if (c == 'R' && scan + 2 < inner.size() && inner[scan + 1] == '"' && inner[scan + 2] == '(') {
-            size_t end = skipRawStringForward(inner, scan);
-            if (end == std::string::npos) {
-              error = "unterminated raw string in map literal";
-              return false;
-            }
-            rewritten.append(inner.substr(scan, end - scan));
-            scan = end;
             continue;
           }
           if (c == '"' || c == '\'') {

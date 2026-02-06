@@ -13,15 +13,6 @@ struct ParsedStringLiteral {
 };
 
 inline bool splitStringLiteralToken(const std::string &token, std::string &literalText, std::string &suffix) {
-  if (token.rfind("R\"(", 0) == 0) {
-    size_t closePos = token.rfind(")\"");
-    if (closePos == std::string::npos) {
-      return false;
-    }
-    literalText = token.substr(0, closePos + 2);
-    suffix = token.substr(closePos + 2);
-    return true;
-  }
   if (!token.empty() && (token.front() == '"' || token.front() == '\'')) {
     char quote = token.front();
     size_t closePos = token.rfind(quote);
@@ -35,13 +26,16 @@ inline bool splitStringLiteralToken(const std::string &token, std::string &liter
   return false;
 }
 
-inline bool decodeStringLiteralText(const std::string &literal, std::string &decoded, std::string &error) {
-  if (literal.size() >= 5 && literal.rfind("R\"(", 0) == 0 && literal.substr(literal.size() - 2) == ")\"") {
-    decoded = literal.substr(3, literal.size() - 5);
-    return true;
-  }
+inline bool decodeStringLiteralText(const std::string &literal,
+                                    std::string &decoded,
+                                    std::string &error,
+                                    bool raw) {
   if (literal.size() >= 2 &&
       ((literal.front() == '"' && literal.back() == '"') || (literal.front() == '\'' && literal.back() == '\''))) {
+    if (raw) {
+      decoded = literal.substr(1, literal.size() - 2);
+      return true;
+    }
     decoded.clear();
     decoded.reserve(literal.size() - 2);
     for (size_t i = 1; i + 1 < literal.size(); ++i) {
@@ -92,20 +86,27 @@ inline bool parseStringLiteralToken(const std::string &token, ParsedStringLitera
     return false;
   }
   if (suffix.empty()) {
-    error = "string literal requires utf8/ascii suffix";
+    error = "string literal requires utf8/ascii/raw_utf8/raw_ascii suffix";
     return false;
   }
   StringEncoding encoding = StringEncoding::Utf8;
+  bool raw = false;
   if (suffix == "utf8") {
     encoding = StringEncoding::Utf8;
   } else if (suffix == "ascii") {
     encoding = StringEncoding::Ascii;
+  } else if (suffix == "raw_utf8") {
+    encoding = StringEncoding::Utf8;
+    raw = true;
+  } else if (suffix == "raw_ascii") {
+    encoding = StringEncoding::Ascii;
+    raw = true;
   } else {
     error = "unknown string literal suffix: " + suffix;
     return false;
   }
   std::string decoded;
-  if (!decodeStringLiteralText(literalText, decoded, error)) {
+  if (!decodeStringLiteralText(literalText, decoded, error, raw)) {
     return false;
   }
   out.literalText = std::move(literalText);

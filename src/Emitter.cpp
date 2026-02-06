@@ -337,6 +337,43 @@ std::string stripStringLiteralSuffix(const std::string &token) {
   if (suffix.empty() || suffix == "utf8" || suffix == "ascii") {
     return literalText;
   }
+  if (suffix == "raw_utf8" || suffix == "raw_ascii") {
+    std::string decoded;
+    std::string error;
+    if (decodeStringLiteralText(literalText, decoded, error, true)) {
+      std::string escaped;
+      escaped.reserve(decoded.size() + 2);
+      escaped.push_back('"');
+      for (char c : decoded) {
+        switch (c) {
+          case '\\':
+            escaped += "\\\\";
+            break;
+          case '"':
+            escaped += "\\\"";
+            break;
+          case '\n':
+            escaped += "\\n";
+            break;
+          case '\r':
+            escaped += "\\r";
+            break;
+          case '\t':
+            escaped += "\\t";
+            break;
+          case '\0':
+            escaped += "\\0";
+            break;
+          default:
+            escaped.push_back(c);
+            break;
+        }
+      }
+      escaped.push_back('"');
+      return escaped;
+    }
+    return literalText;
+  }
   return token;
 }
 
