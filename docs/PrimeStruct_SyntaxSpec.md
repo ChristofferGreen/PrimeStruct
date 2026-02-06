@@ -27,28 +27,40 @@ and IR lowering.
 
 - Base identifier: `[A-Za-z_][A-Za-z0-9_]*`
 - Slash path: `/segment/segment/...` where each segment is a base identifier.
-- Identifiers are ASCII only; Unicode is not yet accepted.
+- Identifiers are ASCII only; non-ASCII characters are rejected by the parser.
 - Reserved keywords: `mut`, `return`, `include`, `namespace`, `true`, `false`.
+- Reserved keywords may not appear as identifier segments in slash paths.
 
 ### 2.2 Whitespace and Comments
 
 - Whitespace separates tokens but is otherwise insignificant.
-- Statements are separated by newlines; semicolons are not used.
-- Comments are not yet specified; treat `//` and `/* ... */` as reserved for future use.
+- Statements are separated by whitespace/newlines; semicolons are rejected by the parser.
+- Comments are not supported; `//` and `/* ... */` are tokenized as regular input and will cause parse errors.
 
 ### 2.3 Literals
 
 - Integer literals:
+  - Optional leading `-` is part of the literal token (e.g. `-1i32`).
+  - Decimal and hex forms are accepted (`0x` / `0X` prefix for hex).
   - `i32`, `i64`, `u64` suffixes required (unless the `implicit-i32` text filter is enabled).
-  - Examples: `0i32`, `42i64`, `7u64`.
+  - Examples: `0i32`, `42i64`, `7u64`, `-1i32`, `0xFFu64`.
 - Float literals:
-  - `f32`, `f64` suffixes required for canonical form (surface forms may be normalized by filters).
-  - Examples: `0.5f`, `1.0f32`, `2.0f64`.
+  - Optional leading `-` is part of the literal token.
+  - Decimal forms with optional exponent `e`/`E` are accepted.
+  - `f32`, `f64`, or `f` suffixes are accepted by the lexer; canonical form uses `f32`/`f64`.
+  - Examples: `0.5f`, `1.0f32`, `2.0f64`, `1e-3f64`.
 - Bool literals: `true`, `false`.
 - String literals:
-  - Canonical form requires `utf8` or `ascii` suffix: `"hello"utf8`, `"moo"ascii`.
+  - Double-quoted or single-quoted: `"hello"utf8`, `'hi'utf8`.
+  - Raw form: `R"(raw text)"utf8` (no escape processing inside the raw body).
+  - Canonical form requires `utf8` or `ascii` suffix.
   - The `implicit-utf8` filter appends `utf8` to bare strings.
   - `ascii` rejects non-ASCII bytes.
+  - Escape sequences in non-raw strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
+
+### 2.4 Punctuation Tokens
+
+The lexer emits punctuation tokens for: `[](){}<>,.=;` and `.`. Semicolons are currently rejected by the parser.
 
 ## 3. File Structure
 
@@ -100,13 +112,15 @@ envelope       = transforms_opt name template_opt params ;
 transforms_opt = [ "[" transform_list "]" ] ;
 transform_list = transform { transform } ;
 transform      = identifier template_opt args_opt ;
+// Commas between transforms are allowed but not required.
 
 template_opt   = [ "<" template_list ">" ] ;
 template_list  = type_expr { "," type_expr } ;
+type_expr      = identifier [ "<" type_expr { "," type_expr } ">" ] ;
 
 params         = "(" param_list_opt ")" ;
 param_list_opt = [ param { "," param } ] ;
-param          = binding | expr ;
+param          = binding ;
 
 body_block     = "{" stmt_list_opt "}" ;
 exec_body_opt  = [ "{" exec_body_list_opt "}" ] ;
@@ -147,10 +161,14 @@ Notes:
 - `binding` reuses the uniform envelope; it becomes a local declaration.
 - `execution` is syntactically the same as `definition` but has no body block or has an execution body list.
 - `expr` includes surface `if` blocks, which are rewritten into canonical calls.
+- Transform lists may include optional commas between transforms; trailing commas are not allowed.
 
 ## 5. Desugaring and Canonical Core
 
 The compiler rewrites surface forms into canonical call syntax. The core uses prefix calls:
+
+- Operator and control-flow sugar are applied by text filters and parser sugar before semantic analysis.
+  The exact whitespace sensitivity of text filters is defined by the active filter set.
 
 - `return(value)` is the only return form.
 - Control flow: `if(cond, then{...}, else{...})` with `then{}` and `else{}` blocks as arguments.
@@ -160,6 +178,9 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `a * b` -> `multiply(a, b)`
   - `a / b` -> `divide(a, b)`
   - `a == b` -> `equal(a, b)` etc.
+- Method calls:
+  - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
+    `/type/method(value, args...)`. Parentheses are required after the method name.
 - Indexing:
   - `value[index]` -> `at(value, index)`
 
@@ -188,6 +209,7 @@ execute_task(count = 2i32) { main(), main() }
 - Executions are call-style constructs that may include a body list of calls.
 - Execution bodies may only contain calls (no bindings, no `return`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
+- Execution body brace lists accept comma-separated or whitespace-separated call expressions.
 
 ## 7. Parameters, Arguments, and Bindings
 
@@ -216,6 +238,8 @@ Defaults are limited to literal/pure expressions (no name references).
 - Named arguments are allowed in calls and executions.
 - Positional arguments must come before named arguments.
 - Each parameter may be bound once; duplicates are rejected.
+- Named arguments are rejected for builtin calls (e.g. `assign`, `plus`, `count`, `at`, `print*`).
+- Parameter defaults do not accept named arguments.
 
 ## 8. Collections and Helpers
 
@@ -271,4 +295,5 @@ Map IR lowering is currently limited in VM/native backends.
 - Named arguments after positional ones are rejected.
 - Duplicate named arguments are rejected.
 - `return` in execution bodies is rejected.
-
+- Semicolons are rejected.
+- Transform argument lists may not be empty.
