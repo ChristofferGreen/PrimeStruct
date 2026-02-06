@@ -122,6 +122,52 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("trailing comma in transform list is rejected") {
+  const std::string source = R"(
+[return<int>,]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in transform list") != std::string::npos);
+}
+
+TEST_CASE("trailing comma in template argument list is rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<i64,>(1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in template argument list") != std::string::npos);
+}
+
+TEST_CASE("trailing comma in nested type template list is rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<map<i32,>>] values(array<i32>(1i32))
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in template argument list") != std::string::npos);
+}
+
 TEST_CASE("string literal requires suffix") {
   const std::string source = R"(
 [return<void>]

@@ -394,6 +394,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     out.push_back(std::move(transform));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RBracket)) {
+        return fail("trailing comma not allowed in transform list");
+      }
     }
   }
   expect(TokenKind::RBracket, "expected ']'" );
@@ -412,6 +415,9 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
     out.push_back(typeName);
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RAngle)) {
+        return fail("trailing comma not allowed in template argument list");
+      }
     } else {
       break;
     }
@@ -444,6 +450,9 @@ bool Parser::parseTypeName(std::string &out) {
       first = false;
       if (match(TokenKind::Comma)) {
         expect(TokenKind::Comma, "expected ','");
+        if (match(TokenKind::RAngle)) {
+          return fail("trailing comma not allowed in template argument list");
+        }
         continue;
       }
       break;
