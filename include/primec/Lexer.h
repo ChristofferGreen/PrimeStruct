@@ -22,6 +22,7 @@ private:
   Token readIdentifier();
   Token readNumber();
   Token readString(char quote);
+  Token readComment();
   Token readPunct();
 
   const std::string &source_;

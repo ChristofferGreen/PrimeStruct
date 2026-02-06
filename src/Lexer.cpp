@@ -17,6 +17,8 @@ std::vector<Token> Lexer::tokenize() {
     char c = source_[pos_];
     if (c == '"' || c == '\'') {
       tokens.push_back(readString(c));
+    } else if (c == '/' && pos_ + 1 < source_.size() && (source_[pos_ + 1] == '/' || source_[pos_ + 1] == '*')) {
+      tokens.push_back(readComment());
     } else if (isIdentifierStart(c)) {
       tokens.push_back(readIdentifier());
     } else if (std::isdigit(static_cast<unsigned char>(c)) ||
@@ -183,6 +185,40 @@ Token Lexer::readString(char quote) {
     }
     advance();
   }
+  return {TokenKind::End, "", startLine, startColumn};
+}
+
+Token Lexer::readComment() {
+  int startLine = line_;
+  int startColumn = column_;
+  size_t start = pos_;
+  if (pos_ + 1 >= source_.size() || source_[pos_] != '/') {
+    advance();
+    return {TokenKind::End, "", startLine, startColumn};
+  }
+  char next = source_[pos_ + 1];
+  if (next == '/') {
+    advance();
+    advance();
+    while (pos_ < source_.size() && source_[pos_] != '\n') {
+      advance();
+    }
+    return {TokenKind::Comment, source_.substr(start, pos_ - start), startLine, startColumn};
+  }
+  if (next == '*') {
+    advance();
+    advance();
+    while (pos_ < source_.size()) {
+      if (source_[pos_] == '*' && pos_ + 1 < source_.size() && source_[pos_ + 1] == '/') {
+        advance();
+        advance();
+        break;
+      }
+      advance();
+    }
+    return {TokenKind::Comment, source_.substr(start, pos_ - start), startLine, startColumn};
+  }
+  advance();
   return {TokenKind::End, "", startLine, startColumn};
 }
 
