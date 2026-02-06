@@ -485,11 +485,47 @@ bool isArrayValue(const Expr &target, const std::unordered_map<std::string, Bind
   return false;
 }
 
+bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (target.kind == Expr::Kind::StringLiteral) {
+    return true;
+  }
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(target.name);
+    return it != localTypes.end() && it->second.typeName == "string";
+  }
+  if (target.kind == Expr::Kind::Call) {
+    if ((target.name == "at" || target.name == "at_unsafe") && target.args.size() == 2) {
+      const Expr &receiver = target.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        auto it = localTypes.find(receiver.name);
+        if (it != localTypes.end() && it->second.typeName == "array" && it->second.typeTemplateArg == "string") {
+          return true;
+        }
+      }
+      if (receiver.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(receiver, collection) && collection == "array" && receiver.templateArgs.size() == 1 &&
+            receiver.templateArgs.front() == "string") {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
     return false;
   }
   return isArrayValue(call.args.front(), localTypes);
+}
+
+bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+    return false;
+  }
+  return isStringValue(call.args.front(), localTypes);
 }
 
 bool resolveMethodCallPath(const Expr &call,
@@ -732,7 +768,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     return expr.name;
   }
   std::string full = resolveExprPath(expr);
-  if (expr.isMethodCall && !isArrayCountCall(expr, localTypes)) {
+  if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isStringCountCall(expr, localTypes)) {
     std::string methodPath;
     if (resolveMethodCallPath(expr, localTypes, returnKinds, methodPath)) {
       full = methodPath;
@@ -745,16 +781,33 @@ std::string Emitter::emitExpr(const Expr &expr,
       out << "ps_array_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
       return out.str();
     }
+    if (isStringCountCall(expr, localTypes)) {
+      std::ostringstream out;
+      out << "ps_string_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
+      return out.str();
+    }
     if (expr.name == "at" && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "ps_array_at(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      const Expr &target = expr.args[0];
+      if (isStringValue(target, localTypes)) {
+        out << "ps_string_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      } else {
+        out << "ps_array_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      }
       return out.str();
     }
     if (expr.name == "at_unsafe" && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "ps_array_at_unsafe(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      const Expr &target = expr.args[0];
+      if (isStringValue(target, localTypes)) {
+        out << "ps_string_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      } else {
+        out << "ps_array_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      }
       return out.str();
     }
     char op = '\0';
@@ -1140,6 +1193,22 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at_unsafe(const std::vector<T> &value, Index index) {\n";
   out << "  return value[static_cast<size_t>(index)];\n";
+  out << "}\n";
+  out << "static inline int ps_string_count(std::string_view value) {\n";
+  out << "  return static_cast<int>(value.size());\n";
+  out << "}\n";
+  out << "template <typename Index>\n";
+  out << "static inline int ps_string_at(std::string_view value, Index index) {\n";
+  out << "  int64_t i = static_cast<int64_t>(index);\n";
+  out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
+  out << "    std::fprintf(stderr, \"string index out of bounds\\n\");\n";
+  out << "    std::abort();\n";
+  out << "  }\n";
+  out << "  return static_cast<unsigned char>(value[static_cast<size_t>(i)]);\n";
+  out << "}\n";
+  out << "template <typename Index>\n";
+  out << "static inline int ps_string_at_unsafe(std::string_view value, Index index) {\n";
+  out << "  return static_cast<unsigned char>(value[static_cast<size_t>(index)]);\n";
   out << "}\n";
   out << "static inline void ps_write(FILE *stream, const char *data, size_t len, bool newline) {\n";
   out << "  if (len > 0) {\n";

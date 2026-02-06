@@ -1224,6 +1224,28 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
+      auto resolveStringTarget = [&](const Expr &target) -> bool {
+        if (target.kind == Expr::Kind::StringLiteral) {
+          return true;
+        }
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            return paramBinding->typeName == "string";
+          }
+          auto it = locals.find(target.name);
+          return it != locals.end() && it->second.typeName == "string";
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string builtinName;
+          if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+            std::string elemType;
+            if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
       auto resolveMethodCallPath = [&](std::string &resolvedOut) -> bool {
         if (expr.args.empty()) {
           return false;
@@ -1269,7 +1291,7 @@ bool Semantics::validate(const Program &program,
       bool hasResolvedPath = !expr.isMethodCall;
       if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
         std::string elemType;
-        if (resolveArrayTarget(expr.args.front(), elemType)) {
+        if (resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front())) {
           return ReturnKind::Int;
         }
       }
@@ -1293,7 +1315,7 @@ bool Semantics::validate(const Program &program,
       }
       if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
         std::string elemType;
-        if (!resolveArrayTarget(expr.args.front(), elemType)) {
+        if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front())) {
           return ReturnKind::Unknown;
         }
         return ReturnKind::Int;
@@ -1301,6 +1323,9 @@ bool Semantics::validate(const Program &program,
       std::string builtinName;
       if (getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2) {
         std::string elemType;
+        if (resolveStringTarget(expr.args.front())) {
+          return ReturnKind::Int;
+        }
         if (resolveArrayTarget(expr.args.front(), elemType)) {
           ReturnKind kind = returnKindForTypeName(elemType);
           if (kind != ReturnKind::Unknown) {
@@ -1810,14 +1835,43 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
+      auto resolveStringTarget = [&](const Expr &target) -> bool {
+        if (target.kind == Expr::Kind::StringLiteral) {
+          return true;
+        }
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            return paramBinding->typeName == "string";
+          }
+          auto it = locals.find(target.name);
+          return it != locals.end() && it->second.typeName == "string";
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string builtinName;
+          if (getBuiltinArrayAccessName(target, builtinName) && target.args.size() == 2) {
+            std::string elemType;
+            if (resolveArrayTarget(target.args.front(), elemType) && elemType == "string") {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
       auto resolveMethodTarget =
           [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
         isBuiltinOut = false;
         std::string elemType;
-        if (methodName == "count" && resolveArrayTarget(receiver, elemType)) {
-          resolvedOut = "/array/count";
-          isBuiltinOut = true;
-          return true;
+        if (methodName == "count") {
+          if (resolveArrayTarget(receiver, elemType)) {
+            resolvedOut = "/array/count";
+            isBuiltinOut = true;
+            return true;
+          }
+          if (resolveStringTarget(receiver)) {
+            resolvedOut = "/string/count";
+            isBuiltinOut = true;
+            return true;
+          }
         }
         std::string typeName;
         std::string typeTemplateArg;
@@ -1877,12 +1931,16 @@ bool Semantics::validate(const Program &program,
         resolvedMethod = isBuiltinMethod;
       } else if (expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
         std::string elemType;
-        if (!resolveArrayTarget(expr.args.front(), elemType)) {
+        if (resolveArrayTarget(expr.args.front(), elemType)) {
+          resolved = "/array/count";
+          resolvedMethod = true;
+        } else if (resolveStringTarget(expr.args.front())) {
+          resolved = "/string/count";
+          resolvedMethod = true;
+        } else {
           error = "unknown method target for count";
           return false;
         }
-        resolved = "/array/count";
-        resolvedMethod = true;
       }
 
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, error)) {
@@ -1894,7 +1952,7 @@ bool Semantics::validate(const Program &program,
           error = "named arguments not supported for builtin calls";
           return false;
         }
-        if (resolvedMethod && resolved == "/array/count") {
+        if (resolvedMethod && (resolved == "/array/count" || resolved == "/string/count")) {
           if (expr.args.size() != 1) {
             error = "argument count mismatch for builtin count";
             return false;
@@ -2044,8 +2102,8 @@ bool Semantics::validate(const Program &program,
             return false;
           }
           std::string elemType;
-          if (!resolveArrayTarget(expr.args.front(), elemType)) {
-            error = builtinName + " requires array target";
+          if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front())) {
+            error = builtinName + " requires array or string target";
             return false;
           }
           if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
