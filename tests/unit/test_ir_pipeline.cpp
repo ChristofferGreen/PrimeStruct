@@ -2022,6 +2022,30 @@ main() {
   CHECK(result == 10);
 }
 
+TEST_CASE("ir lowerer supports array literal unsafe access") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(array<i32>(4i32, 7i32, 9i32), 1i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
 TEST_CASE("ir lowerer supports array unsafe access") {
   const std::string source = R"(
 [return<int>]
