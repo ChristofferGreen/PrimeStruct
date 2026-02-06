@@ -2254,6 +2254,36 @@ main([array<string>] args) {
   CHECK(sawPrintArgv);
 }
 
+TEST_CASE("ir lowerer supports entry args print without newline") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print(args[1i32])
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  bool sawPrintArgv = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintArgv) {
+      sawPrintArgv = true;
+      CHECK((primec::decodePrintFlags(inst.imm) & primec::PrintFlagNewline) == 0);
+      CHECK((primec::decodePrintFlags(inst.imm) & primec::PrintFlagStderr) == 0);
+      break;
+    }
+  }
+  CHECK(sawPrintArgv);
+}
+
 TEST_CASE("ir lowerer supports entry args print u64 index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
