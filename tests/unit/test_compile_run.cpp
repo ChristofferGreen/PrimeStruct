@@ -806,6 +806,22 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs array unsafe access in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_array_unsafe_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_unsafe_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs repeat loop") {
   const std::string source = R"(
 [return<int>]
