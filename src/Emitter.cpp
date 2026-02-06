@@ -1254,7 +1254,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "  int64_t i = static_cast<int64_t>(index);\n";
   out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
   out << "    std::fprintf(stderr, \"array index out of bounds\\n\");\n";
-  out << "    std::abort();\n";
+  out << "    std::exit(3);\n";
   out << "  }\n";
   out << "  return value[static_cast<size_t>(i)];\n";
   out << "}\n";
@@ -1270,7 +1270,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "  int64_t i = static_cast<int64_t>(index);\n";
   out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
   out << "    std::fprintf(stderr, \"string index out of bounds\\n\");\n";
-  out << "    std::abort();\n";
+  out << "    std::exit(3);\n";
   out << "  }\n";
   out << "  return static_cast<unsigned char>(value[static_cast<size_t>(i)]);\n";
   out << "}\n";

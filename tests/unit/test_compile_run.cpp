@@ -103,6 +103,44 @@ main() {
   CHECK(runCommand(exePath) == (107 + 118 + 9));
 }
 
+TEST_CASE("C++ emitter array access checks bounds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32))
+  return(values[9i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_array_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_cpp_array_bounds_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_cpp_array_bounds_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("C++ emitter string access checks bounds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  return(at(text, 9i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_string_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_cpp_string_bounds_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_cpp_string_bounds_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "string index out of bounds\n");
+}
+
 TEST_CASE("runs program in vm") {
   const std::string source = R"(
 [return<int>]
