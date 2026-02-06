@@ -70,6 +70,41 @@ TEST_CASE("expands single include") {
   CHECK(source.find("helper") != std::string::npos);
 }
 
+TEST_CASE("expands include with whitespace") {
+  const std::string marker = "LIB_WS_MARKER";
+  const std::string libPath = writeTemp("lib_ws.prime", "// " + marker + "\n");
+  const std::string srcPath = writeTemp("main_ws.prime", "include  <  \"" + libPath + "\"  >\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find(marker) != std::string::npos);
+}
+
+TEST_CASE("resolves versioned include with single quotes") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_SINGLE_QUOTE_120\n");
+  writeFile(includeRoot / "1.2.3" / "lib.prime", "// INCLUDE_SINGLE_QUOTE_123\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include < '/lib.prime', version = '1.2' >\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_SINGLE_QUOTE_123") != std::string::npos);
+  CHECK(source.find("INCLUDE_SINGLE_QUOTE_120") == std::string::npos);
+}
+
 TEST_CASE("ignores duplicate includes") {
   const std::string marker = "LIB_B_MARKER";
   const std::string libPath = writeTemp("lib_b.prime",

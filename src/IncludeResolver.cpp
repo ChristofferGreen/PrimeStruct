@@ -16,6 +16,10 @@
 namespace primec {
 namespace {
 
+bool isIncludeBoundaryChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_' || c == '/';
+}
+
 bool readFile(const std::string &path, std::string &out) {
   std::ifstream file(path);
   if (!file) {
@@ -73,6 +77,63 @@ size_t skipBlockComment(const std::string &text, size_t start) {
     return text.size();
   }
   return end + 2;
+}
+
+bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payloadStart, size_t &payloadEnd) {
+  if (pos + 7 > source.size()) {
+    return false;
+  }
+  if (source.compare(pos, 7, "include") != 0) {
+    return false;
+  }
+  if (pos > 0 && isIncludeBoundaryChar(source[pos - 1])) {
+    return false;
+  }
+  size_t scan = pos + 7;
+  if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
+    return false;
+  }
+  while (scan < source.size() && std::isspace(static_cast<unsigned char>(source[scan]))) {
+    ++scan;
+  }
+  if (scan >= source.size() || source[scan] != '<') {
+    return false;
+  }
+  payloadStart = scan + 1;
+  payloadEnd = source.find('>', payloadStart);
+  return true;
+}
+
+bool readQuotedString(const std::string &payload, size_t &pos, std::string &out, std::string &error) {
+  if (pos >= payload.size() || (payload[pos] != '"' && payload[pos] != '\'')) {
+    error = "expected quoted string in include<...>";
+    return false;
+  }
+  char quote = payload[pos];
+  ++pos;
+  size_t quoteEnd = payload.find(quote, pos);
+  if (quoteEnd == std::string::npos) {
+    error = "unterminated include string literal";
+    return false;
+  }
+  out = payload.substr(pos, quoteEnd - pos);
+  pos = quoteEnd + 1;
+  return true;
+}
+
+bool tryConsumeIncludeKeyword(const std::string &payload, size_t &pos, const std::string &keyword) {
+  if (payload.compare(pos, keyword.size(), keyword) != 0) {
+    return false;
+  }
+  size_t end = pos + keyword.size();
+  if (end < payload.size()) {
+    char c = payload[end];
+    if (isIncludeBoundaryChar(c)) {
+      return false;
+    }
+  }
+  pos = end;
+  return true;
 }
 
 std::string quoteShellArg(const std::string &value) {
@@ -396,14 +457,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           continue;
         }
       }
-      if (source.compare(i, 8, "include<") == 0) {
-        size_t start = i + 8;
-        size_t end = source.find('>', start);
+      size_t payloadStart = 0;
+      size_t end = 0;
+      if (scanIncludeDirective(source, i, payloadStart, end)) {
         if (end == std::string::npos) {
           error = "unterminated include<...> directive";
           return false;
         }
-        std::string payload = source.substr(start, end - start);
+        std::string payload = source.substr(payloadStart, end - payloadStart);
         std::vector<std::string> paths;
         std::optional<std::string> versionTag;
         size_t pos = 0;
@@ -417,40 +478,40 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           if (pos >= payload.size()) {
             break;
           }
-          if (payload.compare(pos, 8, "version=") == 0) {
-            pos += 8;
-            if (pos >= payload.size() || payload[pos] != '\"') {
-              error = "expected version string in include<...>";
+          size_t entryPos = pos;
+          if (tryConsumeIncludeKeyword(payload, entryPos, "version")) {
+            pos = entryPos;
+            skipWhitespace();
+            if (pos >= payload.size() || payload[pos] != '=') {
+              error = "expected '=' after include version";
               return false;
             }
             ++pos;
-            size_t quoteEnd = payload.find('\"', pos);
-            if (quoteEnd == std::string::npos) {
-              error = "unterminated version string in include<...>";
-              return false;
-            }
+            skipWhitespace();
             if (versionTag) {
               error = "duplicate version attribute in include<...>";
               return false;
             }
-            std::string versionValue = payload.substr(pos, quoteEnd - pos);
+            std::string versionValue;
+            std::string parseError;
+            if (!readQuotedString(payload, pos, versionValue, parseError)) {
+              error = parseError;
+              return false;
+            }
             versionTag = trim(versionValue);
-            pos = quoteEnd + 1;
             if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
                 payload[pos] != ',') {
               error = "unexpected characters after include version";
               return false;
             }
-          } else if (payload[pos] == '\"') {
-            ++pos;
-            size_t quoteEnd = payload.find('\"', pos);
-            if (quoteEnd == std::string::npos) {
-              error = "unterminated include path string";
+          } else if (payload[pos] == '"' || payload[pos] == '\'') {
+            std::string path;
+            std::string parseError;
+            if (!readQuotedString(payload, pos, path, parseError)) {
+              error = parseError;
               return false;
             }
-            std::string path = payload.substr(pos, quoteEnd - pos);
             paths.push_back(trim(path));
-            pos = quoteEnd + 1;
             if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
                 payload[pos] != ',') {
               error = "include path cannot have suffix";

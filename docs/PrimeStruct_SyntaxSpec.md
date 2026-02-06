@@ -81,6 +81,8 @@ include<"/path", version="1.2.0">
 Includes expand inline before text filters run. Include paths are raw quoted strings without suffixes
 and are parsed before the string-literal rules in this spec; treat them as literal paths. Multiple
 paths may be listed in a single include. Version selection follows the rules in `docs/PrimeStruct.md`.
+Whitespace is allowed between `include` and `<` and around `=` in the `version` attribute. Include paths
+and version strings may use either single-quoted or double-quoted string literals.
 
 ### 3.2 Namespace Blocks
 

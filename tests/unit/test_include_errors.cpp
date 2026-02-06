@@ -39,6 +39,15 @@ TEST_CASE("unterminated include fails") {
   CHECK(error.find("unterminated include") != std::string::npos);
 }
 
+TEST_CASE("unterminated include with whitespace fails") {
+  const std::string srcPath = writeTemp("main_bad_include_ws.prime", "include < \"/tmp/missing.prime\"\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("unterminated include") != std::string::npos);
+}
+
 TEST_CASE("missing include path fails") {
   const std::string srcPath = writeTemp("main_missing_path.prime", "include<version=\"1.2.3\">\n");
   std::string source;
