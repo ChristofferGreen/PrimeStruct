@@ -2078,6 +2078,31 @@ main([array<string>] args) {
   CHECK(result == 4);
 }
 
+TEST_CASE("ir lowerer supports array count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(1i32, 2i32, 3i32))
+  return(count(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
 TEST_CASE("ir lowerer supports entry args print index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
