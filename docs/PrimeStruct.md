@@ -109,7 +109,7 @@ module {
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` is supported, `print*` calls accept `args[index]`, and string bindings may be initialised from `args[index]` (print-only), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` is supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body expressions so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
@@ -364,7 +364,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 
 ## VM Design (draft)
 - **Instruction set:** ~50 stack-based ops covering control flow, stack manipulation, memory/pointer access, optional coroutine primitives. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR versioning:** current portable IR is PSIR v8 (adds `PrintArgv` for entry argument strings, plus `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
+- **PSIR versioning:** current portable IR is PSIR v9 (adds `PrintArgvUnsafe` for unchecked entry-arg prints, plus `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.
