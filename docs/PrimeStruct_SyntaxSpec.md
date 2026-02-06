@@ -170,7 +170,7 @@ Notes:
 - Transform lists may include optional commas between transforms; trailing commas are not allowed.
 - Parameter and argument lists require commas between items; trailing commas are not allowed.
 - Execution/body brace lists accept comma-separated or whitespace-separated expressions; trailing commas are not allowed.
-- Calls may include brace body arguments (e.g. `execute_task(...) { work(), work() }` or `then{ ... }`).
+- Calls may include brace body arguments (e.g. `execute_task(...) { work() work() }` or `then{ ... }`).
 - `quoted_string` in include declarations is a raw quoted string without suffixes.
 
 ## 5. Desugaring and Canonical Core
@@ -215,7 +215,7 @@ main() {
 ### 6.2 Executions
 
 ```
-execute_task(count = 2i32) { main(), main() }
+execute_task(count = 2i32) { main() main() }
 ```
 
 - Executions are call-style constructs that may include a body list of calls.
