@@ -53,10 +53,10 @@ and IR lowering.
 - Bool literals: `true`, `false`.
 - String literals:
   - Double-quoted or single-quoted: `"hello"utf8`, `'hi'utf8`.
-  - Raw form: `R"(raw text)"utf8` (no escape processing inside the raw body; no custom delimiters).
-  - Canonical form requires `utf8` or `ascii` suffix.
+  - Raw form: `"raw text"raw_utf8` / `"raw text"raw_ascii` (no escape processing inside the raw body).
+  - Canonical form requires `utf8` or `ascii` suffix for non-raw literals, and `raw_utf8` or `raw_ascii` for raw literals.
   - The `implicit-utf8` filter appends `utf8` to bare strings.
-  - `ascii` rejects non-ASCII bytes.
+  - `ascii`/`raw_ascii` reject non-ASCII bytes.
   - Escape sequences in non-raw strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
 
 ### 2.4 Punctuation Tokens
