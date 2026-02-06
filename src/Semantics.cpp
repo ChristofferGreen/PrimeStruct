@@ -398,6 +398,15 @@ struct PrintBuiltin {
   std::string name;
 };
 
+enum class PathSpaceTarget { Notify, Insert, Take };
+
+struct PathSpaceBuiltin {
+  PathSpaceTarget target = PathSpaceTarget::Notify;
+  std::string name;
+  std::string requiredEffect;
+  size_t argumentCount = 0;
+};
+
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
   if (isSimpleCallName(expr, "print")) {
     out.target = PrintTarget::Out;
@@ -421,6 +430,31 @@ bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
     out.target = PrintTarget::Err;
     out.newline = true;
     out.name = "print_line_error";
+    return true;
+  }
+  return false;
+}
+
+bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out) {
+  if (isSimpleCallName(expr, "notify")) {
+    out.target = PathSpaceTarget::Notify;
+    out.name = "notify";
+    out.requiredEffect = "pathspace_notify";
+    out.argumentCount = 2;
+    return true;
+  }
+  if (isSimpleCallName(expr, "insert")) {
+    out.target = PathSpaceTarget::Insert;
+    out.name = "insert";
+    out.requiredEffect = "pathspace_insert";
+    out.argumentCount = 2;
+    return true;
+  }
+  if (isSimpleCallName(expr, "take")) {
+    out.target = PathSpaceTarget::Take;
+    out.name = "take";
+    out.requiredEffect = "pathspace_take";
+    out.argumentCount = 1;
     return true;
   }
   return false;
@@ -2039,6 +2073,11 @@ bool Semantics::validate(const Program &program,
           return false;
         }
       }
+      PathSpaceBuiltin pathSpaceBuiltin;
+      if (getPathSpaceBuiltin(expr, pathSpaceBuiltin) && defMap.find(resolved) == defMap.end()) {
+        error = pathSpaceBuiltin.name + " is statement-only";
+        return false;
+      }
 
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, error)) {
         return false;
@@ -2569,6 +2608,53 @@ bool Semantics::validate(const Program &program,
       if (!isPrintableExpr(stmt.args.front(), params, locals)) {
         error = printBuiltin.name + " requires a numeric/bool or string literal/binding argument";
         return false;
+      }
+      return true;
+    }
+    PathSpaceBuiltin pathSpaceBuiltin;
+    if (getPathSpaceBuiltin(stmt, pathSpaceBuiltin) && defMap.find(resolveCalleePath(stmt)) == defMap.end()) {
+      if (hasNamedArguments(stmt.argNames)) {
+        error = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!stmt.templateArgs.empty()) {
+        error = pathSpaceBuiltin.name + " does not accept template arguments";
+        return false;
+      }
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error = pathSpaceBuiltin.name + " does not accept block arguments";
+        return false;
+      }
+      if (stmt.args.size() != pathSpaceBuiltin.argumentCount) {
+        error = pathSpaceBuiltin.name + " requires exactly " + std::to_string(pathSpaceBuiltin.argumentCount) +
+                " argument" + (pathSpaceBuiltin.argumentCount == 1 ? "" : "s");
+        return false;
+      }
+      if (activeEffects.count(pathSpaceBuiltin.requiredEffect) == 0) {
+        error = pathSpaceBuiltin.name + " requires " + pathSpaceBuiltin.requiredEffect + " effect";
+        return false;
+      }
+      auto isStringExpr = [&](const Expr &candidate) -> bool {
+        if (candidate.kind == Expr::Kind::StringLiteral) {
+          return true;
+        }
+        if (candidate.kind != Expr::Kind::Name) {
+          return false;
+        }
+        if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+          return paramBinding->typeName == "string";
+        }
+        auto it = locals.find(candidate.name);
+        return it != locals.end() && it->second.typeName == "string";
+      };
+      if (!isStringExpr(stmt.args.front())) {
+        error = pathSpaceBuiltin.name + " requires string path argument";
+        return false;
+      }
+      for (const auto &arg : stmt.args) {
+        if (!validateExpr(params, locals, arg)) {
+          return false;
+        }
       }
       return true;
     }

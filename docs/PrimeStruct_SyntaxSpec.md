@@ -279,7 +279,7 @@ map<i32, i32>(1i32, 2i32)
 map<i32, i32>{1i32=2i32}
 ```
 
-Map IR lowering is currently limited in VM/native backends.
+Map IR lowering is currently limited in VM/native backends (currently numeric/bool keys and values only).
 
 ## 9. Effects
 

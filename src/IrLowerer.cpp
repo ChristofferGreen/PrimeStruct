@@ -43,6 +43,11 @@ struct PrintBuiltin {
   std::string name;
 };
 
+struct PathSpaceBuiltin {
+  std::string name;
+  size_t argumentCount = 0;
+};
+
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
   if (isSimpleCallName(expr, "print")) {
     out.target = PrintTarget::Out;
@@ -66,6 +71,25 @@ bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
     out.target = PrintTarget::Err;
     out.newline = true;
     out.name = "print_line_error";
+    return true;
+  }
+  return false;
+}
+
+bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out) {
+  if (isSimpleCallName(expr, "notify")) {
+    out.name = "notify";
+    out.argumentCount = 2;
+    return true;
+  }
+  if (isSimpleCallName(expr, "insert")) {
+    out.name = "insert";
+    out.argumentCount = 2;
+    return true;
+  }
+  if (isSimpleCallName(expr, "take")) {
+    out.name = "take";
+    out.argumentCount = 1;
     return true;
   }
   return false;
@@ -2603,6 +2627,32 @@ bool IrLowerer::lower(const Program &program,
         return false;
       }
       return emitPrintArg(stmt.args.front(), localsIn, printBuiltin);
+    }
+    PathSpaceBuiltin pathSpaceBuiltin;
+    if (stmt.kind == Expr::Kind::Call && getPathSpaceBuiltin(stmt, pathSpaceBuiltin) && !resolveDefinitionCall(stmt)) {
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error = pathSpaceBuiltin.name + " does not support body arguments";
+        return false;
+      }
+      if (!stmt.templateArgs.empty()) {
+        error = pathSpaceBuiltin.name + " does not support template arguments";
+        return false;
+      }
+      if (stmt.args.size() != pathSpaceBuiltin.argumentCount) {
+        error = pathSpaceBuiltin.name + " requires exactly " + std::to_string(pathSpaceBuiltin.argumentCount) +
+                " argument" + (pathSpaceBuiltin.argumentCount == 1 ? "" : "s");
+        return false;
+      }
+      for (const auto &arg : stmt.args) {
+        if (arg.kind == Expr::Kind::StringLiteral) {
+          continue;
+        }
+        if (!emitExpr(arg, localsIn)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::Pop, 0});
+      }
+      return true;
     }
     if (isReturnCall(stmt)) {
       if (activeInlineContext) {

@@ -2861,6 +2861,41 @@ main() {
   CHECK(error.find("io_err") != std::string::npos);
 }
 
+TEST_CASE("notify requires pathspace_notify effect") {
+  const std::string source = R"(
+main() {
+  notify("/events/test"utf8, 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pathspace_notify") != std::string::npos);
+}
+
+TEST_CASE("notify rejects non-string path argument") {
+  const std::string source = R"(
+[effects(pathspace_notify)]
+main() {
+  notify(1i32, 2i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("notify not allowed in expression context") {
+  const std::string source = R"(
+[return<int> effects(pathspace_notify)]
+main() {
+  return(notify("/events/test"utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("statement-only") != std::string::npos);
+}
+
 TEST_CASE("string literal rejects unknown suffix") {
   const std::string source = R"(
 [effects(io_out)]

@@ -328,6 +328,10 @@ bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
   return false;
 }
 
+bool isPathSpaceBuiltinName(const Expr &expr) {
+  return isSimpleCallName(expr, "notify") || isSimpleCallName(expr, "insert") || isSimpleCallName(expr, "take");
+}
+
 std::string stripStringLiteralSuffix(const std::string &token) {
   std::string literalText;
   std::string suffix;
@@ -1485,6 +1489,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           stmt.args.front().kind == Expr::Kind::Name) {
         out << pad << stmt.args.front().name << " = "
             << emitExpr(stmt.args[1], nameMap, paramMap, localTypes, returnKinds) << ";\n";
+        return;
+      }
+      if (stmt.kind == Expr::Kind::Call && isPathSpaceBuiltinName(stmt) && nameMap.find(resolveExprPath(stmt)) == nameMap.end()) {
+        for (const auto &arg : stmt.args) {
+          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, localTypes, returnKinds) << ");\n";
+        }
         return;
       }
       out << pad << emitExpr(stmt, nameMap, paramMap, localTypes, returnKinds) << ";\n";
