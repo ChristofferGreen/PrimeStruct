@@ -265,6 +265,21 @@ main() {
   CHECK(error.find("trailing comma not allowed in argument list") != std::string::npos);
 }
 
+TEST_CASE("missing comma in argument list is rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32 2i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected ',' between arguments") != std::string::npos);
+}
+
 TEST_CASE("trailing comma in brace list is rejected") {
   const std::string source = R"(
 execute_repeat(2i32) { main(), }
@@ -744,10 +759,10 @@ main {
   CHECK(error.find("expected '(' after identifier") != std::string::npos);
 }
 
-TEST_CASE("missing ')' after parameters fails") {
+TEST_CASE("missing comma between parameters fails") {
   const std::string source = R"(
 [return<int>]
-main([i32] a {
+main([i32] a(1i32) [i32] b(2i32)) {
   return(1i32)
 }
 )";
@@ -756,7 +771,7 @@ main([i32] a {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected ')' after parameters") != std::string::npos);
+  CHECK(error.find("expected ',' between parameters") != std::string::npos);
 }
 
 TEST_CASE("return missing parentheses fails") {

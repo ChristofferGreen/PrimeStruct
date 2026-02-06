@@ -535,6 +535,9 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
       }
       continue;
     }
+    if (!match(TokenKind::RParen)) {
+      return fail("expected ',' between parameters");
+    }
     break;
   }
   return true;
@@ -574,6 +577,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
         return fail("trailing comma not allowed in argument list");
       }
     } else {
+      if (!match(TokenKind::RParen)) {
+        return fail("expected ',' between arguments");
+      }
       break;
     }
   }
