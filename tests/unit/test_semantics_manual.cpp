@@ -154,15 +154,15 @@ TEST_CASE("binding requires exactly one type") {
   CHECK(error.find("binding requires exactly one type") != std::string::npos);
 }
 
-TEST_CASE("binding requires a type") {
+TEST_CASE("binding defaults to int when omitted") {
   primec::Program program;
   primec::Expr binding = makeBinding("value", {makeTransform("mut")}, {makeLiteral(1)});
   program.definitions.push_back(
       makeDefinition("/main", {makeTransform("return", std::string("int"))},
                      {binding, makeCall("/return", {makeLiteral(1)})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("binding requires a type") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("return blocks are rejected") {

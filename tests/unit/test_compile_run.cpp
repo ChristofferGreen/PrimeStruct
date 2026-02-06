@@ -131,6 +131,31 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
+TEST_CASE("compiles and runs binding without explicit type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] value(1i32)
+  assign(value, plus(value, 2i32))
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_type_binding.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_default_type_binding_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_default_type_binding_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 3);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 3);
+}
+
 TEST_CASE("C++ emitter array access checks bounds") {
   const std::string source = R"(
 [return<int>]

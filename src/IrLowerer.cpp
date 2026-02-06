@@ -594,7 +594,7 @@ bool IrLowerer::lower(const Program &program,
     if (kind != LocalInfo::Kind::Value) {
       return LocalInfo::ValueKind::Unknown;
     }
-    return LocalInfo::ValueKind::Unknown;
+    return LocalInfo::ValueKind::Int32;
   };
 
   auto combineNumericKinds = [&](LocalInfo::ValueKind left,

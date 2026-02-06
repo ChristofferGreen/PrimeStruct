@@ -610,8 +610,7 @@ bool parseBindingInfo(const Expr &expr,
     typeName = transform.name;
   }
   if (typeName.empty()) {
-    error = "binding requires a type";
-    return false;
+    typeName = "int";
   }
   if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
     std::string resolved = resolveTypePath(typeName, namespacePrefix);
