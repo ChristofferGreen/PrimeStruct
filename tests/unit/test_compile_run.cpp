@@ -3598,11 +3598,44 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_suffix.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_suffix_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_suffix_native").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-filters=default,implicit-i32";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 8);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-filters=default,implicit-i32";
+  CHECK(runCommand(runVmCmd) == 8);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-filters=default,implicit-i32";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 8);
+}
+
+TEST_CASE("compiles and runs implicit utf8 suffix by default") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("hello")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_implicit_utf8.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_implicit_utf8_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_implicit_utf8_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 0);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 0);
 }
 
 TEST_CASE("compiles and runs implicit hex literal") {
