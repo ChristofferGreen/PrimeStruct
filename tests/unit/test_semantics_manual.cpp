@@ -18,6 +18,13 @@ primec::Expr makeBool(bool value) {
   return expr;
 }
 
+primec::Expr makeName(const std::string &name) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Name;
+  expr.name = name;
+  return expr;
+}
+
 primec::Transform makeTransform(const std::string &name,
                                 std::optional<std::string> templateArg = std::nullopt) {
   primec::Transform transform;
@@ -339,6 +346,42 @@ TEST_CASE("block arguments not allowed in expression context") {
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+}
+
+TEST_CASE("block expression yields last expression") {
+  primec::Program program;
+  primec::Expr binding = makeBinding("x", {makeTransform("i32")}, {makeLiteral(4)});
+  primec::Expr plusCall = makeCall("plus", {makeName("x"), makeLiteral(1)});
+  primec::Expr blockCall = makeCall("block", {}, {}, {binding, plusCall});
+  blockCall.hasBodyArguments = true;
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("block expression requires a value") {
+  primec::Program program;
+  primec::Expr blockCall = makeCall("block");
+  blockCall.hasBodyArguments = true;
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("block expression requires a value") != std::string::npos);
+}
+
+TEST_CASE("block statement can contain return") {
+  primec::Program program;
+  primec::Expr innerReturn = makeCall("/return", {makeLiteral(1)});
+  primec::Expr blockStmt = makeCall("block", {}, {}, {innerReturn});
+  blockStmt.hasBodyArguments = true;
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {blockStmt}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("named arguments not allowed on builtin calls") {

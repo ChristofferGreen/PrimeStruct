@@ -411,6 +411,10 @@ bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
 }
 
+bool isBlockCall(const Expr &expr) {
+  return isSimpleCallName(expr, "block");
+}
+
 enum class PrintTarget { Out, Err };
 
 struct PrintBuiltin {
@@ -1350,6 +1354,48 @@ bool Semantics::validate(const Program &program,
         }
         return combineNumeric(thenKind, elseKind);
       }
+      if (isBlockCall(expr) && expr.hasBodyArguments) {
+        const std::string resolved = resolveCalleePath(expr);
+        if (defMap.find(resolved) == defMap.end() && expr.args.empty() && expr.templateArgs.empty() &&
+            !hasNamedArguments(expr.argNames)) {
+          if (expr.bodyArguments.empty()) {
+            return ReturnKind::Unknown;
+          }
+          std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+          ReturnKind result = ReturnKind::Unknown;
+          for (const auto &bodyExpr : expr.bodyArguments) {
+            if (bodyExpr.isBinding) {
+              BindingInfo info;
+              std::optional<std::string> restrictType;
+              if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames, info, restrictType, error)) {
+                return ReturnKind::Unknown;
+              }
+              if (restrictType.has_value()) {
+                const bool hasTemplate = !info.typeTemplateArg.empty();
+                if (!restrictMatchesBinding(*restrictType,
+                                            info.typeName,
+                                            info.typeTemplateArg,
+                                            hasTemplate,
+                                            bodyExpr.namespacePrefix)) {
+                  return ReturnKind::Unknown;
+                }
+              }
+              if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+                std::string inferredName = typeNameForReturnKind(initKind);
+                if (!inferredName.empty()) {
+                  info.typeName = inferredName;
+                  info.typeTemplateArg.clear();
+                }
+              }
+              blockLocals.emplace(bodyExpr.name, std::move(info));
+              continue;
+            }
+            result = inferExprReturnKind(bodyExpr, params, blockLocals);
+          }
+          return result;
+        }
+      }
       auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
         if (target.kind == Expr::Kind::Name) {
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
@@ -1618,6 +1664,15 @@ bool Semantics::validate(const Program &program,
         return true;
       }
       if (isRepeatCall(stmt)) {
+        std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
+        for (const auto &bodyExpr : stmt.bodyArguments) {
+          if (!inferStatement(bodyExpr, blockLocals)) {
+            return false;
+          }
+        }
+        return true;
+      }
+      if (isBlockCall(stmt) && stmt.hasBodyArguments) {
         std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
         for (const auto &bodyExpr : stmt.bodyArguments) {
           if (!inferStatement(bodyExpr, blockLocals)) {
@@ -2097,6 +2152,89 @@ bool Semantics::validate(const Program &program,
         if (thenKind != ReturnKind::Unknown && elseKind != ReturnKind::Unknown && combined == ReturnKind::Unknown) {
           error = "if branches must return compatible types";
           return false;
+        }
+        return true;
+      }
+      if (isBlockCall(expr) && expr.hasBodyArguments) {
+        const std::string resolved = resolveCalleePath(expr);
+        if (defMap.find(resolved) != defMap.end()) {
+          error = "block arguments require a definition target: " + resolved;
+          return false;
+        }
+        if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+          error = "block expression does not accept arguments";
+          return false;
+        }
+        if (expr.bodyArguments.empty()) {
+          error = "block expression requires a value";
+          return false;
+        }
+        std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+        for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
+          const Expr &bodyExpr = expr.bodyArguments[i];
+          const bool isLast = (i + 1 == expr.bodyArguments.size());
+          if (bodyExpr.isBinding) {
+            if (isLast) {
+              error = "block expression must end with an expression";
+              return false;
+            }
+            if (isParam(params, bodyExpr.name) || blockLocals.count(bodyExpr.name) > 0) {
+              error = "duplicate binding name: " + bodyExpr.name;
+              return false;
+            }
+            BindingInfo info;
+            std::optional<std::string> restrictType;
+            if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames, info, restrictType, error)) {
+              return false;
+            }
+            if (bodyExpr.args.size() != 1) {
+              error = "binding requires exactly one argument";
+              return false;
+            }
+            if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
+              return false;
+            }
+            if (!hasExplicitBindingTypeTransform(bodyExpr)) {
+              ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+              std::string inferredName = typeNameForReturnKind(initKind);
+              if (!inferredName.empty()) {
+                info.typeName = inferredName;
+                info.typeTemplateArg.clear();
+              }
+            }
+            if (restrictType.has_value()) {
+              const bool hasTemplate = !info.typeTemplateArg.empty();
+              if (!restrictMatchesBinding(*restrictType,
+                                          info.typeName,
+                                          info.typeTemplateArg,
+                                          hasTemplate,
+                                          bodyExpr.namespacePrefix)) {
+                error = "restrict type does not match binding type";
+                return false;
+              }
+            }
+            if (info.typeName == "Reference") {
+              const Expr &init = bodyExpr.args.front();
+              std::string pointerName;
+              if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
+                  pointerName != "location" || init.args.size() != 1) {
+                error = "Reference bindings require location(...)";
+                return false;
+              }
+            }
+            blockLocals.emplace(bodyExpr.name, info);
+            continue;
+          }
+          if (!validateExpr(params, blockLocals, bodyExpr)) {
+            return false;
+          }
+          if (isLast) {
+            ReturnKind kind = inferExprReturnKind(bodyExpr, params, blockLocals);
+            if (kind == ReturnKind::Void) {
+              error = "block expression requires a value";
+              return false;
+            }
+          }
         }
         return true;
       }
@@ -2769,6 +2907,31 @@ bool Semantics::validate(const Program &program,
       }
       return true;
     }
+    if (isBlockCall(stmt) && stmt.hasBodyArguments) {
+      const std::string resolved = resolveCalleePath(stmt);
+      if (defMap.find(resolved) != defMap.end()) {
+        error = "block arguments require a definition target: " + resolved;
+        return false;
+      }
+      if (hasNamedArguments(stmt.argNames) || !stmt.args.empty() || !stmt.templateArgs.empty()) {
+        error = "block does not accept arguments";
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      for (const auto &bodyExpr : stmt.bodyArguments) {
+        if (!validateStatement(params,
+                               blockLocals,
+                               bodyExpr,
+                               returnKind,
+                               allowReturn,
+                               allowBindings,
+                               sawReturn,
+                               namespacePrefix)) {
+          return false;
+        }
+      }
+      return true;
+    }
     PrintBuiltin printBuiltin;
     if (getPrintBuiltin(stmt, printBuiltin)) {
       if (hasNamedArguments(stmt.argNames)) {
@@ -2895,6 +3058,12 @@ bool Semantics::validate(const Program &program,
     }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
       return branchAlwaysReturns(stmt.args[1]) && branchAlwaysReturns(stmt.args[2]);
+    }
+    if (isBlockCall(stmt) && stmt.hasBodyArguments) {
+      const std::string resolved = resolveCalleePath(stmt);
+      if (defMap.find(resolved) == defMap.end()) {
+        return blockAlwaysReturns(stmt.bodyArguments);
+      }
     }
     return false;
   };

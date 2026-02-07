@@ -745,8 +745,25 @@ bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::st
   return isSimpleCallName(expr, "if");
 }
 
+bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
+  std::string full = resolveExprPath(expr);
+  if (nameMap.count(full) > 0) {
+    return false;
+  }
+  return isSimpleCallName(expr, "block");
+}
+
 bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
+}
+
+bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {
+  for (const auto &name : argNames) {
+    if (name.has_value()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool isReturnCall(const Expr &expr) {
@@ -823,6 +840,57 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (resolveMethodCallPath(expr, localTypes, returnKinds, methodPath)) {
       full = methodPath;
     }
+  }
+  if (isBuiltinBlock(expr, nameMap) && expr.hasBodyArguments) {
+    if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+      return "0";
+    }
+    if (expr.bodyArguments.empty()) {
+      return "0";
+    }
+    std::unordered_map<std::string, BindingInfo> blockTypes = localTypes;
+    std::ostringstream out;
+    out << "([&]() { ";
+    for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
+      const Expr &stmt = expr.bodyArguments[i];
+      const bool isLast = (i + 1 == expr.bodyArguments.size());
+      if (isLast) {
+        if (stmt.isBinding) {
+          out << "return 0; ";
+          break;
+        }
+        out << "return " << emitExpr(stmt, nameMap, paramMap, blockTypes, returnKinds) << "; ";
+        break;
+      }
+      if (stmt.isBinding) {
+        BindingInfo binding = getBindingInfo(stmt);
+        blockTypes[stmt.name] = binding;
+        bool needsConst = !binding.isMutable;
+        if (hasExplicitBindingTypeTransform(stmt)) {
+          std::string type = bindingTypeToCpp(binding);
+          bool isReference = binding.typeName == "Reference";
+          out << (needsConst ? "const " : "") << type << " " << stmt.name;
+          if (!stmt.args.empty()) {
+            if (isReference) {
+              out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, blockTypes, returnKinds) << ")";
+            } else {
+              out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, blockTypes, returnKinds);
+            }
+          }
+          out << "; ";
+        } else {
+          out << (needsConst ? "const " : "") << "auto " << stmt.name;
+          if (!stmt.args.empty()) {
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, blockTypes, returnKinds);
+          }
+          out << "; ";
+        }
+        continue;
+      }
+      out << "(void)" << emitExpr(stmt, nameMap, paramMap, blockTypes, returnKinds) << "; ";
+    }
+    out << "}())";
+    return out.str();
   }
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
     auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
@@ -1144,6 +1212,31 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           return ReturnKind::Unknown;
         }
         return calleeKind;
+      }
+      if (isBuiltinBlock(expr, nameMap) && expr.hasBodyArguments) {
+        if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+          return ReturnKind::Unknown;
+        }
+        std::unordered_map<std::string, ReturnKind> blockLocals = locals;
+        bool sawValue = false;
+        ReturnKind last = ReturnKind::Unknown;
+        for (const auto &bodyExpr : expr.bodyArguments) {
+          if (bodyExpr.isBinding) {
+            BindingInfo info = getBindingInfo(bodyExpr);
+            ReturnKind bindingKind = returnKindForTypeName(info.typeName);
+            if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+              ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+              if (initKind != ReturnKind::Unknown && initKind != ReturnKind::Void) {
+                bindingKind = initKind;
+              }
+            }
+            blockLocals.emplace(bodyExpr.name, bindingKind);
+            continue;
+          }
+          sawValue = true;
+          last = inferExprReturnKind(bodyExpr, params, blockLocals);
+        }
+        return sawValue ? last : ReturnKind::Unknown;
       }
       if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
         auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
@@ -1560,6 +1653,15 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           emitStatement(bodyStmt, indent + 2, blockTypes);
         }
         out << innerPad << "}\n";
+        out << pad << "}\n";
+        return;
+      }
+      if (stmt.kind == Expr::Kind::Call && isBuiltinBlock(stmt, nameMap) && (stmt.hasBodyArguments || !stmt.bodyArguments.empty())) {
+        out << pad << "{\n";
+        auto blockTypes = localTypes;
+        for (const auto &bodyStmt : stmt.bodyArguments) {
+          emitStatement(bodyStmt, indent + 1, blockTypes);
+        }
         out << pad << "}\n";
         return;
       }

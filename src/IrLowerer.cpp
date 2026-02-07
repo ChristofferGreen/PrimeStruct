@@ -35,6 +35,19 @@ bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
 }
 
+bool isBlockCall(const Expr &expr) {
+  return isSimpleCallName(expr, "block");
+}
+
+bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {
+  for (const auto &name : argNames) {
+    if (name.has_value()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 enum class PrintTarget { Out, Err };
 
 struct PrintBuiltin {
@@ -973,6 +986,42 @@ bool IrLowerer::lower(const Program &program,
             return thenKind;
           }
           return combineNumericKinds(thenKind, elseKind);
+        }
+        if (isBlockCall(expr) && expr.hasBodyArguments) {
+          const std::string resolved = resolveExprPath(expr);
+          if (defMap.find(resolved) == defMap.end() && expr.args.empty() && expr.templateArgs.empty() &&
+              !hasNamedArguments(expr.argNames)) {
+            if (expr.bodyArguments.empty()) {
+              return LocalInfo::ValueKind::Unknown;
+            }
+            LocalMap blockLocals = localsIn;
+            LocalInfo::ValueKind result = LocalInfo::ValueKind::Unknown;
+            for (const auto &bodyExpr : expr.bodyArguments) {
+              if (bodyExpr.isBinding) {
+                if (bodyExpr.args.size() != 1) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                LocalInfo info;
+                info.index = 0;
+                info.isMutable = isBindingMutable(bodyExpr);
+                info.kind = bindingKind(bodyExpr);
+                LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+                if (hasExplicitBindingTypeTransform(bodyExpr)) {
+                  valueKind = bindingValueKind(bodyExpr, info.kind);
+                } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
+                  valueKind = inferExprKind(bodyExpr.args.front(), blockLocals);
+                  if (valueKind == LocalInfo::ValueKind::Unknown) {
+                    valueKind = LocalInfo::ValueKind::Int32;
+                  }
+                }
+                info.valueKind = valueKind;
+                blockLocals.emplace(bodyExpr.name, info);
+                continue;
+              }
+              result = inferExprKind(bodyExpr, blockLocals);
+            }
+            return result;
+          }
         }
         if (getBuiltinPointerName(expr, builtin)) {
           if (builtin == "dereference") {
@@ -2351,6 +2400,37 @@ bool IrLowerer::lower(const Program &program,
           error = "native backend only supports assign to local names or dereference";
           return false;
         }
+        if (isBlockCall(expr) && expr.hasBodyArguments) {
+          if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+            error = "block expression does not accept arguments";
+            return false;
+          }
+          if (resolveDefinitionCall(expr) != nullptr) {
+            error = "block arguments require a definition target: " + resolveExprPath(expr);
+            return false;
+          }
+          if (expr.bodyArguments.empty()) {
+            error = "block expression requires a value";
+            return false;
+          }
+          LocalMap blockLocals = localsIn;
+          for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
+            const Expr &bodyStmt = expr.bodyArguments[i];
+            const bool isLast = (i + 1 == expr.bodyArguments.size());
+            if (isLast) {
+              if (bodyStmt.isBinding) {
+                error = "block expression must end with an expression";
+                return false;
+              }
+              return emitExpr(bodyStmt, blockLocals);
+            }
+            if (!emitStatement(bodyStmt, blockLocals)) {
+              return false;
+            }
+          }
+          error = "block expression requires a value";
+          return false;
+        }
         if (isIfCall(expr)) {
           if (expr.args.size() != 3) {
             error = "if requires condition, then, else";
@@ -2960,6 +3040,19 @@ bool IrLowerer::lower(const Program &program,
 
       const size_t endIndex = function.instructions.size();
       function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+      return true;
+    }
+    if (stmt.kind == Expr::Kind::Call && isBlockCall(stmt) && stmt.hasBodyArguments && resolveDefinitionCall(stmt) == nullptr) {
+      if (!stmt.args.empty() || !stmt.templateArgs.empty() || hasNamedArguments(stmt.argNames)) {
+        error = "block does not accept arguments";
+        return false;
+      }
+      LocalMap blockLocals = localsIn;
+      for (const auto &bodyStmt : stmt.bodyArguments) {
+        if (!emitStatement(bodyStmt, blockLocals)) {
+          return false;
+        }
+      }
       return true;
     }
     if (stmt.kind == Expr::Kind::Call) {

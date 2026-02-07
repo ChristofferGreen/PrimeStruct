@@ -189,6 +189,10 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
     (including statement lists and call arguments); it is rewritten into canonical `if(...)` by wrapping the two blocks
     as envelopes.
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
+- `block{ ... }` is a builtin block form.
+  - As a statement, it introduces a local scope.
+  - As an expression, it evaluates each form in order and yields the last form’s value; the block must end with a
+    non-binding expression.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
