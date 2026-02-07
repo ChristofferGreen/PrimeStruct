@@ -451,6 +451,23 @@ main() {
   CHECK(program.definitions[0].returnExpr->floatWidth == 64);
 }
 
+TEST_CASE("parses signed i64 min literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(-9223372036854775808i64)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Literal);
+  CHECK_FALSE(expr.isUnsigned);
+  CHECK(expr.intWidth == 64);
+  CHECK(expr.literalValue == 0x8000000000000000ULL);
+}
+
 TEST_CASE("parses string literal arguments") {
   const std::string source = R"(
 [return<void>]

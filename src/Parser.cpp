@@ -1285,9 +1285,20 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           unsigned long long value = std::stoull(digits, nullptr, base);
           out.literalValue = static_cast<uint64_t>(value);
         } else {
-          long long value = std::stoll(digits, nullptr, base);
+          long long value = 0;
           if (negative) {
-            value = -value;
+            unsigned long long magnitude = std::stoull(digits, nullptr, base);
+            const unsigned long long maxMagnitude = (1ULL << 63);
+            if (magnitude > maxMagnitude) {
+              return fail("integer literal out of range");
+            }
+            if (magnitude == maxMagnitude) {
+              value = std::numeric_limits<long long>::min();
+            } else {
+              value = -static_cast<long long>(magnitude);
+            }
+          } else {
+            value = std::stoll(digits, nullptr, base);
           }
           if (intWidth == 32) {
             if (value < std::numeric_limits<int32_t>::min() || value > std::numeric_limits<int32_t>::max()) {
