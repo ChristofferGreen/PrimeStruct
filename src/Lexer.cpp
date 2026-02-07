@@ -18,7 +18,10 @@ std::vector<Token> Lexer::tokenize() {
     if (c == '"' || c == '\'') {
       tokens.push_back(readString(c));
     } else if (c == '/' && pos_ + 1 < source_.size() && (source_[pos_ + 1] == '/' || source_[pos_ + 1] == '*')) {
-      readComment();
+      Token comment = readComment();
+      if (comment.kind == TokenKind::Invalid) {
+        tokens.push_back(std::move(comment));
+      }
     } else if (isIdentifierStart(c)) {
       tokens.push_back(readIdentifier());
     } else if (std::isdigit(static_cast<unsigned char>(c)) ||
@@ -204,13 +207,18 @@ Token Lexer::readComment() {
   if (next == '*') {
     advance();
     advance();
+    bool closed = false;
     while (pos_ < source_.size()) {
       if (source_[pos_] == '*' && pos_ + 1 < source_.size() && source_[pos_ + 1] == '/') {
         advance();
         advance();
+        closed = true;
         break;
       }
       advance();
+    }
+    if (!closed) {
+      return {TokenKind::Invalid, "unterminated block comment", startLine, startColumn};
     }
     return {TokenKind::Comment, source_.substr(start, pos_ - start), startLine, startColumn};
   }

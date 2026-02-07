@@ -63,4 +63,11 @@ TEST_CASE("lexes unknown punctuation as end token") {
   CHECK(tokens[0].kind == primec::TokenKind::Invalid);
 }
 
+TEST_CASE("lexes unterminated block comment as invalid token") {
+  const auto tokens = lex("/* nope");
+  REQUIRE(tokens.size() >= 1);
+  CHECK(tokens[0].kind == primec::TokenKind::Invalid);
+  CHECK(tokens[0].text.find("unterminated block comment") != std::string::npos);
+}
+
 TEST_SUITE_END();
