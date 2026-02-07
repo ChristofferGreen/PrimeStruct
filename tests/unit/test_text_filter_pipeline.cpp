@@ -64,6 +64,16 @@ TEST_CASE("rewrites array literal brackets to call") {
   CHECK(output.find("array<i32>(1i32,2i32)") != std::string::npos);
 }
 
+TEST_CASE("array bracket literal rewrite does not consume following indexing") {
+  const std::string source = "main(){ return(array<i32>[1i32,2i32][0i32]) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("array<i32>(1i32,2i32)[0i32]") != std::string::npos);
+}
+
 TEST_CASE("rewrites map literal braces to call") {
   const std::string source = "main(){ return(map<i32,i32>{1i32,2i32}) }\n";
   primec::TextFilterPipeline pipeline;
