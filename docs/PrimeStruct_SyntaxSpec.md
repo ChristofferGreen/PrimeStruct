@@ -185,8 +185,9 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
   - 2) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `true`
   - 3) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `false`
-  - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted only in
-    statement lists and brace argument lists; it is rewritten into canonical `if(...)` by wrapping the two blocks as envelopes.
+  - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted in any form position
+    (including statement lists and call arguments); it is rewritten into canonical `if(...)` by wrapping the two blocks
+    as envelopes.
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`

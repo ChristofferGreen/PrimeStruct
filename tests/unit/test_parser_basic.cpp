@@ -527,6 +527,28 @@ main() {
   CHECK(stmt.args[2].bodyArguments.size() == 1);
 }
 
+TEST_CASE("parses if sugar in return argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(true) { 4i32 } else { 9i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "if");
+  REQUIRE(expr.args.size() == 3);
+  CHECK(expr.args[1].name == "then");
+  CHECK(expr.args[2].name == "else");
+  REQUIRE(expr.args[1].bodyArguments.size() == 1);
+  REQUIRE(expr.args[2].bodyArguments.size() == 1);
+  CHECK(expr.args[1].bodyArguments[0].kind == primec::Expr::Kind::Literal);
+  CHECK(expr.args[2].bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses call with body arguments in expression") {
   const std::string source = R"(
 [return<int>]
