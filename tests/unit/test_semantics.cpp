@@ -69,6 +69,57 @@ main([i32] x) {
   CHECK(error.find("unknown identifier") != std::string::npos);
 }
 
+TEST_CASE("parameter default literal is allowed") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right(10i32)) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("parameter default expression rejects name references") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right(plus(left, 1i32))) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
+}
+
+TEST_CASE("infers parameter type from default initializer") {
+  const std::string source = R"(
+[return<i64>]
+id([mut] value(3i64)) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(convert<i32>(id()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers return type without transform") {
   const std::string source = R"(
 main() {

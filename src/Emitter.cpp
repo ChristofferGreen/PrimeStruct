@@ -65,6 +65,8 @@ std::string normalizeBindingTypeName(const std::string &name) {
   return name;
 }
 
+bool getBuiltinConvertName(const Expr &expr, std::string &out);
+
 bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "package" || name == "static";
 }
@@ -114,7 +116,28 @@ BindingInfo getBindingInfo(const Expr &expr) {
     }
   }
   if (info.typeName.empty()) {
-    info.typeName = "int";
+    if (expr.args.size() == 1) {
+      const Expr &init = expr.args.front();
+      if (init.kind == Expr::Kind::Literal) {
+        if (init.isUnsigned) {
+          info.typeName = "u64";
+        } else {
+          info.typeName = init.intWidth == 64 ? "i64" : "i32";
+        }
+      } else if (init.kind == Expr::Kind::BoolLiteral) {
+        info.typeName = "bool";
+      } else if (init.kind == Expr::Kind::FloatLiteral) {
+        info.typeName = init.floatWidth == 64 ? "f64" : "f32";
+      } else if (init.kind == Expr::Kind::Call) {
+        std::string convertName;
+        if (getBuiltinConvertName(init, convertName) && init.templateArgs.size() == 1) {
+          info.typeName = init.templateArgs.front();
+        }
+      }
+    }
+    if (info.typeName.empty()) {
+      info.typeName = "int";
+    }
   }
   return info;
 }

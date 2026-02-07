@@ -841,6 +841,29 @@ bool isDefaultExprAllowed(const Expr &expr) {
   return true;
 }
 
+std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr) {
+  if (expr.kind == Expr::Kind::Literal) {
+    if (expr.isUnsigned) {
+      return "u64";
+    }
+    return expr.intWidth == 64 ? "i64" : "i32";
+  }
+  if (expr.kind == Expr::Kind::BoolLiteral) {
+    return "bool";
+  }
+  if (expr.kind == Expr::Kind::FloatLiteral) {
+    return expr.floatWidth == 64 ? "f64" : "f32";
+  }
+  std::string builtinName;
+  if (expr.kind == Expr::Kind::Call && getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
+    const std::string &typeName = expr.templateArgs.front();
+    if (isPrimitiveBindingTypeName(typeName)) {
+      return typeName;
+    }
+  }
+  return "";
+}
+
 bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
                            const std::vector<Expr> &args,
                            const std::vector<std::optional<std::string>> &argNames,
@@ -1097,6 +1120,13 @@ bool Semantics::validate(const Program &program,
       if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front())) {
         error = "parameter default must be a literal or pure expression: " + param.name;
         return false;
+      }
+      if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
+        std::string inferred = inferPrimitiveBindingTypeFromInitializer(param.args.front());
+        if (!inferred.empty()) {
+          binding.typeName = inferred;
+          binding.typeTemplateArg.clear();
+        }
       }
       ParameterInfo info;
       info.name = param.name;

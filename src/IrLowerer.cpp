@@ -368,6 +368,9 @@ bool IrLowerer::lower(const Program &program,
 
   auto hasExplicitBindingTypeTransform = [&](const Expr &expr) -> bool {
     for (const auto &transform : expr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
       if (isBindingQualifierName(transform.name)) {
         continue;
       }
@@ -1038,7 +1041,16 @@ bool IrLowerer::lower(const Program &program,
           paramInfo.index = 0;
           paramInfo.isMutable = isBindingMutable(param);
           paramInfo.kind = bindingKind(param);
-          paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+          if (hasExplicitBindingTypeTransform(param)) {
+            paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+          } else if (param.args.size() == 1 && paramInfo.kind == LocalInfo::Kind::Value) {
+            paramInfo.valueKind = inferExprKind(param.args.front(), localsForInference);
+            if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+              paramInfo.valueKind = LocalInfo::ValueKind::Int32;
+            }
+          } else {
+            paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+          }
           if (isStringBinding(param)) {
             if (paramInfo.kind != LocalInfo::Kind::Value) {
               error = "native backend does not support string pointers or references";
@@ -1413,7 +1425,16 @@ bool IrLowerer::lower(const Program &program,
       paramInfo.index = nextLocal++;
       paramInfo.isMutable = isBindingMutable(param);
       paramInfo.kind = bindingKind(param);
-      paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+      if (hasExplicitBindingTypeTransform(param)) {
+        paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+      } else if (param.args.size() == 1 && paramInfo.kind == LocalInfo::Kind::Value) {
+        paramInfo.valueKind = inferExprKind(param.args.front(), callerLocals);
+        if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+          paramInfo.valueKind = LocalInfo::ValueKind::Int32;
+        }
+      } else {
+        paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+      }
 
       if (isStringBinding(param)) {
         if (paramInfo.kind != LocalInfo::Kind::Value) {
