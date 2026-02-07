@@ -3169,6 +3169,18 @@ TEST_CASE("compiles and runs include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs with duplicate includes ignored") {
+  const std::string libPath = writeTemp("compile_lib_dupe.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
+  const std::string source = "include<\"" + libPath + "\">\ninclude<\"" + libPath +
+                             "\">\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_include_dupe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_dupe_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("rejects include path with suffix") {
   const std::string srcPath =
       writeTemp("compile_include_suffix.prime", "include<\"/std/io\"utf8>\n[return<int>]\nmain(){ return(0i32) }\n");
