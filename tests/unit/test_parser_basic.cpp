@@ -549,6 +549,26 @@ main() {
   CHECK(expr.args[2].bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses if sugar with block statements in return argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(true) { [i32] x(4i32) plus(x, 1i32) } else { 0i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "if");
+  REQUIRE(expr.args.size() == 3);
+  REQUIRE(expr.args[1].bodyArguments.size() == 2);
+  CHECK(expr.args[1].bodyArguments[0].isBinding);
+  CHECK(expr.args[1].bodyArguments[0].name == "x");
+  CHECK(expr.args[1].bodyArguments[1].kind == primec::Expr::Kind::Call);
+}
+
 TEST_CASE("parses call with body arguments in expression") {
   const std::string source = R"(
 [return<int>]

@@ -427,16 +427,17 @@ TEST_CASE("array literal requires exactly one template argument") {
   CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("if expression blocks must contain one expression") {
+TEST_CASE("if expression blocks require a value expression") {
   primec::Program program;
-  primec::Expr thenBlock = makeCall("block", {}, {}, {makeLiteral(1), makeLiteral(2)});
+  primec::Expr thenBlock = makeCall("block");
+  thenBlock.hasBodyArguments = true;
   primec::Expr elseBlock = makeCall("block", {}, {}, {makeLiteral(3)});
   primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock});
   program.definitions.push_back(makeDefinition(
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {ifCall})}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("then block must contain exactly one expression") != std::string::npos);
+  CHECK(error.find("then block must produce a value") != std::string::npos);
 }
 
 TEST_CASE("if statement allows empty branch blocks") {

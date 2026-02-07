@@ -838,24 +838,60 @@ std::string Emitter::emitExpr(const Expr &expr,
       const std::string resolved = resolveExprPath(candidate);
       return nameMap.count(resolved) == 0;
     };
-    auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+    auto emitBranchValueExpr =
+        [&](const Expr &candidate, std::unordered_map<std::string, BindingInfo> branchTypes) -> std::string {
       if (!isIfBlockEnvelope(candidate)) {
-        return &candidate;
+        return emitExpr(candidate, nameMap, paramMap, branchTypes, returnKinds);
       }
-      if (candidate.bodyArguments.size() != 1) {
-        return nullptr;
+      if (candidate.bodyArguments.empty()) {
+        return "0";
       }
-      return &candidate.bodyArguments.front();
+      std::ostringstream out;
+      out << "([&]() { ";
+      for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
+        const Expr &stmt = candidate.bodyArguments[i];
+        const bool isLast = (i + 1 == candidate.bodyArguments.size());
+        if (isLast) {
+          if (stmt.isBinding) {
+            out << "return 0; ";
+            break;
+          }
+          out << "return " << emitExpr(stmt, nameMap, paramMap, branchTypes, returnKinds) << "; ";
+          break;
+        }
+        if (stmt.isBinding) {
+          BindingInfo binding = getBindingInfo(stmt);
+          branchTypes[stmt.name] = binding;
+          bool needsConst = !binding.isMutable;
+          if (hasExplicitBindingTypeTransform(stmt)) {
+            std::string type = bindingTypeToCpp(binding);
+            bool isReference = binding.typeName == "Reference";
+            out << (needsConst ? "const " : "") << type << " " << stmt.name;
+            if (!stmt.args.empty()) {
+              if (isReference) {
+                out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, branchTypes, returnKinds) << ")";
+              } else {
+                out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, branchTypes, returnKinds);
+              }
+            }
+            out << "; ";
+          } else {
+            out << (needsConst ? "const " : "") << "auto " << stmt.name;
+            if (!stmt.args.empty()) {
+              out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, branchTypes, returnKinds);
+            }
+            out << "; ";
+          }
+          continue;
+        }
+        out << "(void)" << emitExpr(stmt, nameMap, paramMap, branchTypes, returnKinds) << "; ";
+      }
+      out << "}())";
+      return out.str();
     };
-    const Expr *thenExpr = unwrapIfBranchValue(expr.args[1]);
-    const Expr *elseExpr = unwrapIfBranchValue(expr.args[2]);
-    if (!thenExpr || !elseExpr) {
-      return "0";
-    }
     std::ostringstream out;
     out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " ? "
-        << emitExpr(*thenExpr, nameMap, paramMap, localTypes, returnKinds) << " : "
-        << emitExpr(*elseExpr, nameMap, paramMap, localTypes, returnKinds) << ")";
+        << emitBranchValueExpr(expr.args[1], localTypes) << " : " << emitBranchValueExpr(expr.args[2], localTypes) << ")";
     return out.str();
   }
   auto it = nameMap.find(full);
@@ -1123,22 +1159,38 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           const std::string resolved = resolveExprPath(candidate);
           return defMap.find(resolved) == defMap.end();
         };
-        auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+        auto inferBranchValueKind = [&](const Expr &candidate,
+                                        const std::unordered_map<std::string, ReturnKind> &localsBase) -> ReturnKind {
           if (!isIfBlockEnvelope(candidate)) {
-            return &candidate;
+            return inferExprReturnKind(candidate, params, localsBase);
           }
-          if (candidate.bodyArguments.size() != 1) {
-            return nullptr;
+          std::unordered_map<std::string, ReturnKind> branchLocals = localsBase;
+          bool sawValue = false;
+          ReturnKind lastKind = ReturnKind::Unknown;
+          for (const auto &bodyExpr : candidate.bodyArguments) {
+            if (bodyExpr.isBinding) {
+              BindingInfo info = getBindingInfo(bodyExpr);
+              ReturnKind bindingKind = returnKindForTypeName(info.typeName);
+              if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
+                if (initKind != ReturnKind::Unknown && initKind != ReturnKind::Void) {
+                  bindingKind = initKind;
+                }
+              }
+              branchLocals.emplace(bodyExpr.name, bindingKind);
+              continue;
+            }
+            sawValue = true;
+            lastKind = inferExprReturnKind(bodyExpr, params, branchLocals);
           }
-          return &candidate.bodyArguments.front();
+          return sawValue ? lastKind : ReturnKind::Unknown;
         };
-        const Expr *thenExpr = unwrapIfBranchValue(expr.args[1]);
-        const Expr *elseExpr = unwrapIfBranchValue(expr.args[2]);
-        if (!thenExpr || !elseExpr) {
+
+        ReturnKind thenKind = inferBranchValueKind(expr.args[1], locals);
+        ReturnKind elseKind = inferBranchValueKind(expr.args[2], locals);
+        if (thenKind == ReturnKind::Unknown || elseKind == ReturnKind::Unknown) {
           return ReturnKind::Unknown;
         }
-        ReturnKind thenKind = inferExprReturnKind(*thenExpr, params, locals);
-        ReturnKind elseKind = inferExprReturnKind(*elseExpr, params, locals);
         if (thenKind == elseKind) {
           return thenKind;
         }

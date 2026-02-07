@@ -932,24 +932,43 @@ bool IrLowerer::lower(const Program &program,
             const std::string resolved = resolveExprPath(candidate);
             return defMap.find(resolved) == defMap.end();
           };
-          auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+          auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
             if (!isIfBlockEnvelope(candidate)) {
-              return &candidate;
+              return inferExprKind(candidate, localsBase);
             }
-            if (candidate.bodyArguments.size() != 1) {
-              return nullptr;
+            LocalMap branchLocals = localsBase;
+            bool sawValue = false;
+            LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;
+            for (const auto &bodyExpr : candidate.bodyArguments) {
+              if (bodyExpr.isBinding) {
+                if (bodyExpr.args.size() != 1) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                LocalInfo info;
+                info.index = 0;
+                info.isMutable = isBindingMutable(bodyExpr);
+                info.kind = bindingKind(bodyExpr);
+                LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+                if (hasExplicitBindingTypeTransform(bodyExpr)) {
+                  valueKind = bindingValueKind(bodyExpr, info.kind);
+                } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
+                  valueKind = inferExprKind(bodyExpr.args.front(), branchLocals);
+                  if (valueKind == LocalInfo::ValueKind::Unknown) {
+                    valueKind = LocalInfo::ValueKind::Int32;
+                  }
+                }
+                info.valueKind = valueKind;
+                branchLocals.emplace(bodyExpr.name, info);
+                continue;
+              }
+              sawValue = true;
+              lastKind = inferExprKind(bodyExpr, branchLocals);
             }
-            return &candidate.bodyArguments.front();
+            return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
           };
 
-          const Expr *thenExpr = unwrapIfBranchValue(expr.args[1]);
-          const Expr *elseExpr = unwrapIfBranchValue(expr.args[2]);
-          if (!thenExpr || !elseExpr) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-
-          LocalInfo::ValueKind thenKind = inferExprKind(*thenExpr, localsIn);
-          LocalInfo::ValueKind elseKind = inferExprKind(*elseExpr, localsIn);
+          LocalInfo::ValueKind thenKind = inferBranchValueKind(expr.args[1], localsIn);
+          LocalInfo::ValueKind elseKind = inferBranchValueKind(expr.args[2], localsIn);
           if (thenKind == elseKind) {
             return thenKind;
           }
@@ -2356,21 +2375,67 @@ bool IrLowerer::lower(const Program &program,
             }
             return resolveDefinitionCall(candidate) == nullptr;
           };
-          auto unwrapIfBranchValue = [&](const Expr &candidate) -> const Expr * {
+          auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
             if (!isIfBlockEnvelope(candidate)) {
-              return &candidate;
+              return inferExprKind(candidate, localsBase);
             }
-            if (candidate.bodyArguments.size() != 1) {
-              return nullptr;
+            LocalMap branchLocals = localsBase;
+            bool sawValue = false;
+            LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;
+            for (const auto &bodyExpr : candidate.bodyArguments) {
+              if (bodyExpr.isBinding) {
+                if (bodyExpr.args.size() != 1) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                LocalInfo info;
+                info.index = 0;
+                info.isMutable = isBindingMutable(bodyExpr);
+                info.kind = bindingKind(bodyExpr);
+                LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+                if (hasExplicitBindingTypeTransform(bodyExpr)) {
+                  valueKind = bindingValueKind(bodyExpr, info.kind);
+                } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
+                  valueKind = inferExprKind(bodyExpr.args.front(), branchLocals);
+                  if (valueKind == LocalInfo::ValueKind::Unknown) {
+                    valueKind = LocalInfo::ValueKind::Int32;
+                  }
+                }
+                info.valueKind = valueKind;
+                branchLocals.emplace(bodyExpr.name, info);
+                continue;
+              }
+              sawValue = true;
+              lastKind = inferExprKind(bodyExpr, branchLocals);
             }
-            return &candidate.bodyArguments.front();
+            return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
           };
-          const Expr *thenExpr = unwrapIfBranchValue(thenArg);
-          const Expr *elseExpr = unwrapIfBranchValue(elseArg);
-          if (!thenExpr || !elseExpr) {
-            error = "if branch blocks must contain exactly one expression";
+          auto emitBranchValue = [&](const Expr &candidate, const LocalMap &localsBase) -> bool {
+            if (!isIfBlockEnvelope(candidate)) {
+              return emitExpr(candidate, localsBase);
+            }
+            if (candidate.bodyArguments.empty()) {
+              error = "if branch blocks must produce a value";
+              return false;
+            }
+            LocalMap branchLocals = localsBase;
+            for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
+              const Expr &bodyStmt = candidate.bodyArguments[i];
+              const bool isLast = (i + 1 == candidate.bodyArguments.size());
+              if (isLast) {
+                if (bodyStmt.isBinding) {
+                  error = "if branch blocks must end with an expression";
+                  return false;
+                }
+                return emitExpr(bodyStmt, branchLocals);
+              }
+              if (!emitStatement(bodyStmt, branchLocals)) {
+                return false;
+              }
+            }
+            error = "if branch blocks must produce a value";
             return false;
-          }
+          };
+
           if (!emitExpr(cond, localsIn)) {
             return false;
           }
@@ -2380,8 +2445,8 @@ bool IrLowerer::lower(const Program &program,
             return false;
           }
 
-          LocalInfo::ValueKind thenKind = inferExprKind(*thenExpr, localsIn);
-          LocalInfo::ValueKind elseKind = inferExprKind(*elseExpr, localsIn);
+          LocalInfo::ValueKind thenKind = inferBranchValueKind(thenArg, localsIn);
+          LocalInfo::ValueKind elseKind = inferBranchValueKind(elseArg, localsIn);
           LocalInfo::ValueKind resultKind = LocalInfo::ValueKind::Unknown;
           if (thenKind == elseKind) {
             resultKind = thenKind;
@@ -2395,14 +2460,14 @@ bool IrLowerer::lower(const Program &program,
 
           size_t jumpIfZeroIndex = function.instructions.size();
           function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-          if (!emitExpr(*thenExpr, localsIn)) {
+          if (!emitBranchValue(thenArg, localsIn)) {
             return false;
           }
           size_t jumpEndIndex = function.instructions.size();
           function.instructions.push_back({IrOpcode::Jump, 0});
           size_t elseIndex = function.instructions.size();
           function.instructions[jumpIfZeroIndex].imm = static_cast<int32_t>(elseIndex);
-          if (!emitExpr(*elseExpr, localsIn)) {
+          if (!emitBranchValue(elseArg, localsIn)) {
             return false;
           }
           size_t endIndex = function.instructions.size();

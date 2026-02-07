@@ -1301,24 +1301,50 @@ bool Semantics::validate(const Program &program,
           const std::string resolved = resolveCalleePath(candidate);
           return defMap.find(resolved) == defMap.end();
         };
-        auto unwrapBlockEnvelopeValue = [&](const Expr &candidate) -> const Expr * {
+        auto inferBlockEnvelopeValue = [&](const Expr &candidate,
+                                           const std::unordered_map<std::string, BindingInfo> &localsIn,
+                                           const Expr *&valueExprOut,
+                                           std::unordered_map<std::string, BindingInfo> &localsOut) -> bool {
+          valueExprOut = nullptr;
+          localsOut = localsIn;
           if (!isIfBlockEnvelope(candidate)) {
-            return &candidate;
+            valueExprOut = &candidate;
+            return true;
           }
-          if (candidate.bodyArguments.size() != 1) {
-            return nullptr;
+          for (const auto &bodyExpr : candidate.bodyArguments) {
+            if (bodyExpr.isBinding) {
+              BindingInfo binding;
+              std::optional<std::string> restrictType;
+              if (!parseBindingInfo(bodyExpr, candidate.namespacePrefix, structNames, binding, restrictType, error)) {
+                return false;
+              }
+              if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, localsOut);
+                std::string inferredName = typeNameForReturnKind(initKind);
+                if (!inferredName.empty()) {
+                  binding.typeName = inferredName;
+                  binding.typeTemplateArg.clear();
+                }
+              }
+              localsOut.emplace(bodyExpr.name, std::move(binding));
+              continue;
+            }
+            valueExprOut = &bodyExpr;
           }
-          return &candidate.bodyArguments.front();
+          return valueExprOut != nullptr;
         };
 
-        const Expr *thenValueExpr = unwrapBlockEnvelopeValue(expr.args[1]);
-        const Expr *elseValueExpr = unwrapBlockEnvelopeValue(expr.args[2]);
-        if (!thenValueExpr || !elseValueExpr) {
+        const Expr *thenValueExpr = nullptr;
+        const Expr *elseValueExpr = nullptr;
+        std::unordered_map<std::string, BindingInfo> thenLocals;
+        std::unordered_map<std::string, BindingInfo> elseLocals;
+        if (!inferBlockEnvelopeValue(expr.args[1], locals, thenValueExpr, thenLocals) ||
+            !inferBlockEnvelopeValue(expr.args[2], locals, elseValueExpr, elseLocals)) {
           return ReturnKind::Unknown;
         }
 
-        ReturnKind thenKind = inferExprReturnKind(*thenValueExpr, params, locals);
-        ReturnKind elseKind = inferExprReturnKind(*elseValueExpr, params, locals);
+        ReturnKind thenKind = inferExprReturnKind(*thenValueExpr, params, thenLocals);
+        ReturnKind elseKind = inferExprReturnKind(*elseValueExpr, params, elseLocals);
         if (thenKind == elseKind) {
           return thenKind;
         }
@@ -1972,38 +1998,101 @@ bool Semantics::validate(const Program &program,
           const std::string resolved = resolveCalleePath(candidate);
           return defMap.find(resolved) == defMap.end();
         };
-        auto validateBranchValue = [&](const Expr &branch, const char *label, const Expr *&valueExprOut) -> bool {
+        auto validateBranchValueKind = [&](const Expr &branch, const char *label, ReturnKind &kindOut) -> bool {
+          kindOut = ReturnKind::Unknown;
           if (isIfBlockEnvelope(branch)) {
-            if (branch.bodyArguments.size() != 1) {
-              error = std::string(label) + " block must contain exactly one expression";
+            if (branch.bodyArguments.empty()) {
+              error = std::string(label) + " block must produce a value";
               return false;
             }
-            valueExprOut = &branch.bodyArguments.front();
-          } else {
-            valueExprOut = &branch;
+            std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+            const Expr *valueExpr = nullptr;
+            for (const auto &bodyExpr : branch.bodyArguments) {
+              if (bodyExpr.isBinding) {
+                if (isParam(params, bodyExpr.name) || branchLocals.count(bodyExpr.name) > 0) {
+                  error = "duplicate binding name: " + bodyExpr.name;
+                  return false;
+                }
+                BindingInfo info;
+                std::optional<std::string> restrictType;
+                if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames, info, restrictType, error)) {
+                  return false;
+                }
+                if (bodyExpr.args.size() != 1) {
+                  error = "binding requires exactly one argument";
+                  return false;
+                }
+                if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
+                  return false;
+                }
+                if (!hasExplicitBindingTypeTransform(bodyExpr)) {
+                  ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
+                  std::string inferredName = typeNameForReturnKind(initKind);
+                  if (!inferredName.empty()) {
+                    info.typeName = inferredName;
+                    info.typeTemplateArg.clear();
+                  }
+                }
+                if (restrictType.has_value()) {
+                  const bool hasTemplate = !info.typeTemplateArg.empty();
+                  if (!restrictMatchesBinding(*restrictType,
+                                              info.typeName,
+                                              info.typeTemplateArg,
+                                              hasTemplate,
+                                              bodyExpr.namespacePrefix)) {
+                    error = "restrict type does not match binding type";
+                    return false;
+                  }
+                }
+                if (info.typeName == "Reference") {
+                  const Expr &init = bodyExpr.args.front();
+                  std::string pointerName;
+                  if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
+                      pointerName != "location" || init.args.size() != 1) {
+                    error = "Reference bindings require location(...)";
+                    return false;
+                  }
+                }
+                branchLocals.emplace(bodyExpr.name, info);
+                continue;
+              }
+              if (!validateExpr(params, branchLocals, bodyExpr)) {
+                return false;
+              }
+              valueExpr = &bodyExpr;
+            }
+            if (!valueExpr) {
+              error = std::string(label) + " block must end with an expression";
+              return false;
+            }
+            kindOut = inferExprReturnKind(*valueExpr, params, branchLocals);
+            if (kindOut == ReturnKind::Void) {
+              error = "if branches must produce a value";
+              return false;
+            }
+            return true;
           }
-          if (!validateExpr(params, locals, *valueExprOut)) {
+
+          if (!validateExpr(params, locals, branch)) {
             return false;
           }
-          ReturnKind kind = inferExprReturnKind(*valueExprOut, params, locals);
-          if (kind == ReturnKind::Void) {
+          kindOut = inferExprReturnKind(branch, params, locals);
+          if (kindOut == ReturnKind::Void) {
             error = "if branches must produce a value";
             return false;
           }
           return true;
         };
 
-        const Expr *thenExpr = nullptr;
-        const Expr *elseExpr = nullptr;
-        if (!validateBranchValue(thenArg, "then", thenExpr)) {
+        ReturnKind thenKind = ReturnKind::Unknown;
+        ReturnKind elseKind = ReturnKind::Unknown;
+        if (!validateBranchValueKind(thenArg, "then", thenKind)) {
           return false;
         }
-        if (!validateBranchValue(elseArg, "else", elseExpr)) {
+        if (!validateBranchValueKind(elseArg, "else", elseKind)) {
           return false;
         }
 
-        ReturnKind thenKind = inferExprReturnKind(*thenExpr, params, locals);
-        ReturnKind elseKind = inferExprReturnKind(*elseExpr, params, locals);
         ReturnKind combined = inferExprReturnKind(expr, params, locals);
         if (thenKind != ReturnKind::Unknown && elseKind != ReturnKind::Unknown && combined == ReturnKind::Unknown) {
           error = "if branches must return compatible types";
