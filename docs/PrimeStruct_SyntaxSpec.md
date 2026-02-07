@@ -298,7 +298,9 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 ## 11. Entry Definition
 
 - The compiler entry point is selected with `--entry /path` (default `/main`).
-- For VM/native backends, the entry definition must take a single `array<string>` parameter.
+- For VM/native backends, the entry definition may take a single `array<string>` parameter.
+  - If a parameter is present, it must be exactly one `array<string>` parameter.
+  - The entry parameter does not allow a default value.
 - `args.count()` and `count(args)` are supported; indexing `args[index]` is bounds-checked unless
   `at_unsafe` is used.
 

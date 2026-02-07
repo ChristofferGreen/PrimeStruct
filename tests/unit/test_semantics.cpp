@@ -57,6 +57,18 @@ main([i32] value) {
   CHECK(error.find("entry definition must take a single array<string> parameter") != std::string::npos);
 }
 
+TEST_CASE("entry definition without args parameter is allowed") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]
