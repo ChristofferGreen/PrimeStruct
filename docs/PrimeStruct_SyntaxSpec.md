@@ -333,3 +333,4 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 - Semicolons are rejected.
 - Transform argument lists may not be empty.
 - `if` statement sugar requires an `else` block.
+- `if(condition, thenBlock, elseBlock)` requires both branches to produce a value when used in expression position.

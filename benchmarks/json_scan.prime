@@ -9,13 +9,13 @@ main() {
     [i32 mut] idx(0i32)
     repeat(len) {
       [i32] ch(at_unsafe(data, idx))
-      if(equal(ch, 123i32)) { assign(local, plus(local, 1i64)) } else { }
-      if(equal(ch, 125i32)) { assign(local, plus(local, 1i64)) } else { }
-      if(equal(ch, 91i32)) { assign(local, plus(local, 1i64)) } else { }
-      if(equal(ch, 93i32)) { assign(local, plus(local, 1i64)) } else { }
-      if(equal(ch, 58i32)) { assign(local, plus(local, 1i64)) } else { }
-      if(equal(ch, 44i32)) { assign(local, plus(local, 1i64)) } else { }
-      if(equal(ch, 34i32)) { assign(local, plus(local, 1i64)) } else { }
+      if(equal(ch, 123i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
+      if(equal(ch, 125i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
+      if(equal(ch, 91i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
+      if(equal(ch, 93i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
+      if(equal(ch, 58i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
+      if(equal(ch, 44i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
+      if(equal(ch, 34i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
       assign(idx, plus(idx, 1i32))
     }
     assign(total, plus(total, local))

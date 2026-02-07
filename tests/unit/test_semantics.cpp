@@ -69,6 +69,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("entry definition rejects default args parameter") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args(array<string>("hi"utf8))) {
+  return(args.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("entry parameter does not allow a default value") != std::string::npos);
+}
+
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]
@@ -91,6 +103,19 @@ main() {
 [return<int>]
 add([i32] left, [i32] right(10i32)) {
   return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("if statement sugar allows empty else block in statement position") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(true) { 1i32 } else { }
+  return(0i32)
 }
 )";
   std::string error;
