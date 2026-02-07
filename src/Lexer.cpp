@@ -18,7 +18,7 @@ std::vector<Token> Lexer::tokenize() {
     if (c == '"' || c == '\'') {
       tokens.push_back(readString(c));
     } else if (c == '/' && pos_ + 1 < source_.size() && (source_[pos_ + 1] == '/' || source_[pos_ + 1] == '*')) {
-      tokens.push_back(readComment());
+      readComment();
     } else if (isIdentifierStart(c)) {
       tokens.push_back(readIdentifier());
     } else if (std::isdigit(static_cast<unsigned char>(c)) ||

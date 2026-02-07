@@ -155,53 +155,6 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
-TEST_CASE("line comments are rejected") {
-  const std::string source = R"(
-// not allowed
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("comments are not supported") != std::string::npos);
-}
-
-TEST_CASE("block comments are rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  /* not allowed */
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("comments are not supported") != std::string::npos);
-}
-
-TEST_CASE("comments rejected in argument list") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(plus(1i32, /* nope */ 2i32))
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("comments are not supported") != std::string::npos);
-}
-
 TEST_CASE("semicolon rejected at top level") {
   const std::string source = R"(
 ;

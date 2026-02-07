@@ -569,6 +569,38 @@ main() {
   CHECK(expr.args[1].bodyArguments[1].kind == primec::Expr::Kind::Call);
 }
 
+TEST_CASE("ignores line comments") {
+  const std::string source = R"(
+// header
+[return<int>]
+main() {
+  // inside body
+  return(1i32) // trailing
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Literal);
+}
+
+TEST_CASE("ignores block comments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32, /* comment */ 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "plus");
+  REQUIRE(expr.args.size() == 2);
+}
+
 TEST_CASE("parses call with body arguments in expression") {
   const std::string source = R"(
 [return<int>]

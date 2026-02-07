@@ -36,7 +36,7 @@ and IR lowering.
 - Whitespace separates tokens but is otherwise insignificant.
 - Statements are separated by whitespace/newlines; there is no line-based parsing.
 - Semicolons are rejected by the parser.
-- Comments are not supported; `//` and `/* ... */` are tokenized as regular input and will cause parse errors.
+- Line comments (`// ...`) and block comments (`/* ... */`) are supported and ignored by the lexer (treated as whitespace).
 
 ### 2.3 Literals
 
