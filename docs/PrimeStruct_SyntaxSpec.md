@@ -62,6 +62,7 @@ spelled directly in transform position (e.g. `[array<i32>] values(...)`, `[map<i
     string literals are normalized to `raw_*` with decoded contents.
   - `ascii`/`raw_ascii` reject non-ASCII bytes.
   - Escape sequences in non-raw strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
+  - Any other escape sequence is rejected.
 
 ### 2.4 Punctuation Tokens
 

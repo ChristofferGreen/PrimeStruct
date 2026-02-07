@@ -3005,6 +3005,18 @@ main() {
   CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
 }
 
+TEST_CASE("string literal rejects unknown escape sequences") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print("hello\\q"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown escape sequence") != std::string::npos);
+}
+
 TEST_CASE("print not allowed in expression context") {
   const std::string source = R"(
 [return<int> effects(io_out)]

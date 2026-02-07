@@ -65,8 +65,8 @@ inline bool decodeStringLiteralText(const std::string &literal,
             decoded.push_back('\0');
             break;
           default:
-            decoded.push_back(next);
-            break;
+            error = std::string("unknown escape sequence: \\") + next;
+            return false;
         }
       } else {
         decoded.push_back(c);
