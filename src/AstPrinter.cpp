@@ -131,8 +131,15 @@ void printTransforms(std::ostringstream &out, const std::vector<Transform> &tran
       out << ", ";
     }
     out << transforms[i].name;
-    if (transforms[i].templateArg) {
-      out << "<" << *transforms[i].templateArg << ">";
+    if (!transforms[i].templateArgs.empty()) {
+      out << "<";
+      for (size_t t = 0; t < transforms[i].templateArgs.size(); ++t) {
+        if (t > 0) {
+          out << ", ";
+        }
+        out << transforms[i].templateArgs[t];
+      }
+      out << ">";
     }
     if (!transforms[i].arguments.empty()) {
       out << "(";

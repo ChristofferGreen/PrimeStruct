@@ -379,13 +379,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     Transform transform;
     transform.name = name.text;
     if (match(TokenKind::LAngle)) {
-      expect(TokenKind::LAngle, "expected '<'");
-      std::string typeName;
-      if (!parseTypeName(typeName)) {
-        return false;
-      }
-      transform.templateArg = typeName;
-      if (!expect(TokenKind::RAngle, "expected '>'")) {
+      if (!parseTemplateList(transform.templateArgs)) {
         return false;
       }
     }
@@ -969,7 +963,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
   bool returnsVoid = false;
   bool hasReturnTransform = false;
   for (const auto &transform : def.transforms) {
-    if (transform.name == "return" && transform.templateArg && *transform.templateArg == "void") {
+    if (transform.name == "return" && transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
       returnsVoid = true;
     }
     if (transform.name == "return") {

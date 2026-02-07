@@ -82,8 +82,8 @@ main() {
   REQUIRE(program.definitions.size() == 1);
   const auto &def = program.definitions[0];
   REQUIRE(def.transforms.size() == 1);
-  REQUIRE(def.transforms[0].templateArg);
-  CHECK(*def.transforms[0].templateArg == "array<i32>");
+  REQUIRE(def.transforms[0].templateArgs.size() == 1);
+  CHECK(def.transforms[0].templateArgs[0] == "array<i32>");
 }
 
 TEST_SUITE_END();

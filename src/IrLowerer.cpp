@@ -260,7 +260,7 @@ bool IrLowerer::lower(const Program &program,
       continue;
     }
     hasReturnTransform = true;
-    if (transform.templateArg && *transform.templateArg == "void") {
+    if (transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
       returnsVoid = true;
     }
   }
@@ -274,7 +274,7 @@ bool IrLowerer::lower(const Program &program,
   struct LocalInfo {
     int32_t index = 0;
     bool isMutable = false;
-    enum class Kind { Value, Pointer, Reference, Array } kind = Kind::Value;
+    enum class Kind { Value, Pointer, Reference, Array, Map } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
     enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
@@ -409,8 +409,8 @@ bool IrLowerer::lower(const Program &program,
         continue;
       }
       typeName = transform.name;
-      if (transform.templateArg) {
-        templateArg = *transform.templateArg;
+      if (transform.templateArgs.size() == 1) {
+        templateArg = transform.templateArgs.front();
         hasTemplateArg = true;
       } else {
         hasTemplateArg = false;
@@ -562,6 +562,9 @@ bool IrLowerer::lower(const Program &program,
       if (transform.name == "array") {
         return LocalInfo::Kind::Array;
       }
+      if (transform.name == "map") {
+        return LocalInfo::Kind::Map;
+      }
     }
     return LocalInfo::Kind::Value;
   };
@@ -574,8 +577,8 @@ bool IrLowerer::lower(const Program &program,
       if (isFloatTypeName(transform.name)) {
         return true;
       }
-      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArg &&
-          isFloatTypeName(*transform.templateArg)) {
+      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArgs.size() == 1 &&
+          isFloatTypeName(transform.templateArgs.front())) {
         return true;
       }
     }
@@ -590,8 +593,8 @@ bool IrLowerer::lower(const Program &program,
       if (isStringTypeName(transform.name)) {
         return true;
       }
-      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArg &&
-          isStringTypeName(*transform.templateArg)) {
+      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArgs.size() == 1 &&
+          isStringTypeName(transform.templateArgs.front())) {
         return true;
       }
     }
@@ -604,14 +607,14 @@ bool IrLowerer::lower(const Program &program,
         continue;
       }
       if (transform.name == "Pointer" || transform.name == "Reference") {
-        if (transform.templateArg) {
-          return valueKindFromTypeName(*transform.templateArg);
+        if (transform.templateArgs.size() == 1) {
+          return valueKindFromTypeName(transform.templateArgs.front());
         }
         return LocalInfo::ValueKind::Unknown;
       }
       if (transform.name == "array") {
-        if (transform.templateArg) {
-          return valueKindFromTypeName(*transform.templateArg);
+        if (transform.templateArgs.size() == 1) {
+          return valueKindFromTypeName(transform.templateArgs.front());
         }
         return LocalInfo::ValueKind::Unknown;
       }
@@ -1069,14 +1072,15 @@ bool IrLowerer::lower(const Program &program,
         continue;
       }
       hasReturnTransformLocal = true;
-      if (!transform.templateArg) {
+      if (transform.templateArgs.size() != 1) {
         continue;
       }
-      if (*transform.templateArg == "void") {
+      const std::string &typeName = transform.templateArgs.front();
+      if (typeName == "void") {
         info.returnsVoid = true;
         break;
       }
-      info.kind = valueKindFromTypeName(*transform.templateArg);
+      info.kind = valueKindFromTypeName(typeName);
       info.returnsVoid = false;
       break;
     }
@@ -2795,7 +2799,7 @@ bool IrLowerer::lower(const Program &program,
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         return true;
       }
-      if (valueKind == LocalInfo::ValueKind::Unknown) {
+      if (valueKind == LocalInfo::ValueKind::Unknown && kind != LocalInfo::Kind::Map) {
         error = "native backend requires typed bindings";
         return false;
       }

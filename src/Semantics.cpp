@@ -66,6 +66,17 @@ std::string normalizeBindingTypeName(const std::string &name) {
   return name;
 }
 
+std::string joinTemplateArgs(const std::vector<std::string> &args) {
+  std::string out;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out += ", ";
+    }
+    out += args[i];
+  }
+  return out;
+}
+
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
   size_t lt = text.find('<');
   if (lt == std::string::npos) {
@@ -164,11 +175,11 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
     if (transform.name != "return") {
       continue;
     }
-    if (!transform.templateArg) {
+    if (transform.templateArgs.size() != 1) {
       error = "return transform requires a type on " + def.fullPath;
       return ReturnKind::Unknown;
     }
-    ReturnKind nextKind = returnKindForTypeName(*transform.templateArg);
+    ReturnKind nextKind = returnKindForTypeName(transform.templateArgs.front());
     if (nextKind == ReturnKind::Unknown) {
       error = "unsupported return type on " + def.fullPath;
       return ReturnKind::Unknown;
@@ -510,7 +521,7 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
     if (transform.name == "mut") {
-      if (transform.templateArg) {
+      if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;
       }
@@ -522,7 +533,7 @@ bool parseBindingInfo(const Expr &expr,
       continue;
     }
     if (transform.name == "copy") {
-      if (transform.templateArg) {
+      if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;
       }
@@ -533,7 +544,7 @@ bool parseBindingInfo(const Expr &expr,
       continue;
     }
     if (transform.name == "restrict") {
-      if (!transform.templateArg) {
+      if (transform.templateArgs.size() != 1) {
         error = "restrict requires a template argument";
         return false;
       }
@@ -545,11 +556,11 @@ bool parseBindingInfo(const Expr &expr,
         error = "duplicate restrict transform";
         return false;
       }
-      restrictType = *transform.templateArg;
+      restrictType = transform.templateArgs.front();
       continue;
     }
     if (isBindingQualifierName(transform.name)) {
-      if (transform.templateArg) {
+      if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;
       }
@@ -566,7 +577,7 @@ bool parseBindingInfo(const Expr &expr,
       continue;
     }
     if (isPrimitiveBindingTypeName(transform.name)) {
-      if (transform.templateArg) {
+      if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;
       }
@@ -576,7 +587,7 @@ bool parseBindingInfo(const Expr &expr,
       }
     }
     if (transform.name == "Pointer") {
-      if (!transform.templateArg) {
+      if (transform.templateArgs.size() != 1) {
         error = "Pointer requires a template argument";
         return false;
       }
@@ -590,11 +601,11 @@ bool parseBindingInfo(const Expr &expr,
       }
       typeName = transform.name;
       typeHasTemplate = true;
-      info.typeTemplateArg = *transform.templateArg;
+      info.typeTemplateArg = transform.templateArgs.front();
       continue;
     }
     if (transform.name == "Reference") {
-      if (!transform.templateArg) {
+      if (transform.templateArgs.size() != 1) {
         error = "Reference requires a template argument";
         return false;
       }
@@ -608,10 +619,10 @@ bool parseBindingInfo(const Expr &expr,
       }
       typeName = transform.name;
       typeHasTemplate = true;
-      info.typeTemplateArg = *transform.templateArg;
+      info.typeTemplateArg = transform.templateArgs.front();
       continue;
     }
-    if (transform.templateArg) {
+    if (!transform.templateArgs.empty()) {
       if (!transform.arguments.empty()) {
         error = "binding transforms do not take arguments";
         return false;
@@ -620,9 +631,17 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
+      if (transform.name == "array" && transform.templateArgs.size() != 1) {
+        error = "array requires exactly one template argument";
+        return false;
+      }
+      if (transform.name == "map" && transform.templateArgs.size() != 2) {
+        error = "map requires exactly two template arguments";
+        return false;
+      }
       typeName = transform.name;
       typeHasTemplate = true;
-      info.typeTemplateArg = *transform.templateArg;
+      info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
       continue;
     }
     if (!transform.arguments.empty()) {
@@ -702,7 +721,7 @@ bool isEffectName(const std::string &text) {
 }
 
 bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error) {
-  if (transform.templateArg) {
+  if (!transform.templateArgs.empty()) {
     error = "effects transform does not accept template arguments on " + context;
     return false;
   }
@@ -721,7 +740,7 @@ bool validateEffectsTransform(const Transform &transform, const std::string &con
 }
 
 bool validateCapabilitiesTransform(const Transform &transform, const std::string &context, std::string &error) {
-  if (transform.templateArg) {
+  if (!transform.templateArgs.empty()) {
     error = "capabilities transform does not accept template arguments on " + context;
     return false;
   }
@@ -766,7 +785,7 @@ bool parsePositiveIntArg(const std::string &text, int &value) {
 }
 
 bool validateAlignTransform(const Transform &transform, const std::string &context, std::string &error) {
-  if (transform.templateArg) {
+  if (!transform.templateArgs.empty()) {
     error = transform.name + " does not accept template arguments on " + context;
     return false;
   }
@@ -1015,7 +1034,7 @@ bool Semantics::validate(const Program &program,
           return false;
         }
       } else if (isStructTransformName(transform.name)) {
-        if (transform.templateArg) {
+        if (!transform.templateArgs.empty()) {
           error = "struct transform does not accept template arguments on " + def.fullPath;
           return false;
         }

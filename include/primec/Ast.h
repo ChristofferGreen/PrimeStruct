@@ -9,7 +9,7 @@ namespace primec {
 
 struct Transform {
   std::string name;
-  std::optional<std::string> templateArg;
+  std::vector<std::string> templateArgs;
   std::vector<std::string> arguments;
 };
 

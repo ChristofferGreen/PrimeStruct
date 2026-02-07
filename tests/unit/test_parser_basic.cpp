@@ -329,8 +329,8 @@ main() {
   REQUIRE(transforms[1].arguments.size() == 1);
   CHECK(transforms[1].arguments[0] == "16");
   CHECK(transforms[2].name == "return");
-  REQUIRE(transforms[2].templateArg.has_value());
-  CHECK(*transforms[2].templateArg == "int");
+  REQUIRE(transforms[2].templateArgs.size() == 1);
+  CHECK(transforms[2].templateArgs[0] == "int");
 }
 
 TEST_CASE("parses transform string arguments") {

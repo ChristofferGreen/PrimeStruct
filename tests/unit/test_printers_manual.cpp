@@ -35,11 +35,11 @@ primec::Expr makeName(const std::string &name) {
 }
 
 primec::Transform makeTransform(const std::string &name,
-                                std::optional<std::string> templateArg = std::nullopt,
+                                std::vector<std::string> templateArgs = {},
                                 std::vector<std::string> arguments = {}) {
   primec::Transform transform;
   transform.name = name;
-  transform.templateArg = std::move(templateArg);
+  transform.templateArgs = std::move(templateArgs);
   transform.arguments = std::move(arguments);
   return transform;
 }
@@ -67,7 +67,7 @@ TEST_SUITE_BEGIN("primestruct.printers.manual");
 TEST_CASE("ast printer includes call transforms and bodies") {
   primec::Definition def;
   def.fullPath = "/main";
-  def.transforms = {makeTransform("return", std::string("int"))};
+  def.transforms = {makeTransform("return", {"int"})};
 
   primec::Expr returnCall = makeCall("/return", {makeLiteral(7)});
 
@@ -76,7 +76,7 @@ TEST_CASE("ast printer includes call transforms and bodies") {
       {makeName("first"), makeString("\"hi\"utf8"), makeLiteral(2)},
       {std::string("lhs"), std::nullopt, std::string("rhs")},
       {makeLiteral(1), makeCall("inner", {makeFloat("3.5", 64)})},
-      {makeTransform("trace", std::string("i32"), {"fast"}), makeTransform("tag")},
+      {makeTransform("trace", {"i32"}, {"fast"}), makeTransform("tag")},
       {"f64", "i32"});
 
   def.statements = {returnCall, complexCall};
@@ -99,7 +99,7 @@ TEST_CASE("ast printer includes call transforms and bodies") {
 TEST_CASE("ir printer covers bindings assigns and exec bodies") {
   primec::Definition def;
   def.fullPath = "/calc";
-  def.transforms = {makeTransform("return", std::string("f64"))};
+  def.transforms = {makeTransform("return", {"f64"})};
 
   primec::Expr binding;
   binding.kind = primec::Expr::Kind::Call;
@@ -117,7 +117,7 @@ TEST_CASE("ir printer covers bindings assigns and exec bodies") {
 
   primec::Execution exec;
   exec.fullPath = "/run";
-  exec.transforms = {makeTransform("effects", std::string("io"))};
+  exec.transforms = {makeTransform("effects", {"io"})};
   exec.arguments = {makeLiteral(1)};
   exec.bodyArguments = {makeCall("step", {makeLiteral(2)})};
 
@@ -145,7 +145,7 @@ TEST_CASE("ast printer covers executions with templates and bodies") {
 
   primec::Execution execWithBody;
   execWithBody.fullPath = "/run";
-  execWithBody.transforms = {makeTransform("effects", std::string("io"))};
+  execWithBody.transforms = {makeTransform("effects", {"io"})};
   execWithBody.templateArgs = {"i32"};
   execWithBody.arguments = {makeLiteral(1), makeLiteral(2)};
   execWithBody.argumentNames = {std::string("count"), std::nullopt};

@@ -11,6 +11,17 @@ namespace primec {
 namespace {
 enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
 
+std::string joinTemplateArgs(const std::vector<std::string> &args) {
+  std::ostringstream out;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out << ", ";
+    }
+    out << args[i];
+  }
+  return out.str();
+}
+
 std::string bindingTypeName(const Expr &expr) {
   std::string typeName;
   for (const auto &transform : expr.transforms) {
@@ -22,8 +33,8 @@ std::string bindingTypeName(const Expr &expr) {
     if (!transform.arguments.empty()) {
       continue;
     }
-    if (transform.templateArg) {
-      typeName = transform.name + "<" + *transform.templateArg + ">";
+    if (!transform.templateArgs.empty()) {
+      typeName = transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
     } else {
       typeName = transform.name;
     }
@@ -177,31 +188,32 @@ ReturnKind getReturnKind(const Definition &def) {
         transform.name == "heap" || transform.name == "buffer") {
       return ReturnKind::Void;
     }
-    if (transform.name != "return" || !transform.templateArg) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
-    if (*transform.templateArg == "void") {
+    const std::string &typeName = transform.templateArgs.front();
+    if (typeName == "void") {
       return ReturnKind::Void;
     }
-    if (*transform.templateArg == "int") {
+    if (typeName == "int") {
       return ReturnKind::Int;
     }
-    if (*transform.templateArg == "i64") {
+    if (typeName == "i64") {
       return ReturnKind::Int64;
     }
-    if (*transform.templateArg == "u64") {
+    if (typeName == "u64") {
       return ReturnKind::UInt64;
     }
-    if (*transform.templateArg == "bool") {
+    if (typeName == "bool") {
       return ReturnKind::Bool;
     }
-    if (*transform.templateArg == "i32") {
+    if (typeName == "i32") {
       return ReturnKind::Int;
     }
-    if (*transform.templateArg == "float" || *transform.templateArg == "f32") {
+    if (typeName == "float" || typeName == "f32") {
       return ReturnKind::Float32;
     }
-    if (*transform.templateArg == "f64") {
+    if (typeName == "f64") {
       return ReturnKind::Float64;
     }
   }
@@ -337,8 +349,8 @@ void printParameter(std::ostringstream &out, const Expr &param) {
         out << ", ";
       }
       out << param.transforms[i].name;
-      if (param.transforms[i].templateArg) {
-        out << "<" << *param.transforms[i].templateArg << ">";
+      if (!param.transforms[i].templateArgs.empty()) {
+        out << "<" << joinTemplateArgs(param.transforms[i].templateArgs) << ">";
       }
     }
     out << "] ";
@@ -428,8 +440,8 @@ void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
         out << ", ";
       }
       out << exec.transforms[i].name;
-      if (exec.transforms[i].templateArg) {
-        out << "<" << *exec.transforms[i].templateArg << ">";
+      if (!exec.transforms[i].templateArgs.empty()) {
+        out << "<" << joinTemplateArgs(exec.transforms[i].templateArgs) << ">";
       }
       if (!exec.transforms[i].arguments.empty()) {
         out << "(";

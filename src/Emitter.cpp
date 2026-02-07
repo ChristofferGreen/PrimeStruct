@@ -2,6 +2,7 @@
 #include "primec/StringLiteral.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <functional>
 #include <sstream>
@@ -13,39 +14,49 @@ namespace {
 using BindingInfo = Emitter::BindingInfo;
 using ReturnKind = Emitter::ReturnKind;
 
+std::string joinTemplateArgs(const std::vector<std::string> &args) {
+  std::string out;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out += ", ";
+    }
+    out += args[i];
+  }
+  return out;
+}
+
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
     if (transform.name == "struct" || transform.name == "pod" || transform.name == "stack" ||
         transform.name == "heap" || transform.name == "buffer") {
       return ReturnKind::Void;
     }
-    if (transform.name != "return" || !transform.templateArg) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
-    if (*transform.templateArg == "void") {
+    const std::string &typeName = transform.templateArgs.front();
+    if (typeName == "void") {
       return ReturnKind::Void;
     }
-  if (*transform.templateArg == "int") {
-    return ReturnKind::Int;
-  }
-  if (*transform.templateArg == "bool") {
-    return ReturnKind::Bool;
-  }
-  if (*transform.templateArg == "i32") {
-    return ReturnKind::Int;
-  }
-  if (*transform.templateArg == "i64") {
-    return ReturnKind::Int64;
-  }
-  if (*transform.templateArg == "u64") {
-    return ReturnKind::UInt64;
-  }
-  if (*transform.templateArg == "float" || *transform.templateArg == "f32") {
-    return ReturnKind::Float32;
-  }
-  if (*transform.templateArg == "f64") {
-    return ReturnKind::Float64;
+    if (typeName == "int" || typeName == "i32") {
+      return ReturnKind::Int;
     }
+    if (typeName == "bool") {
+      return ReturnKind::Bool;
+    }
+    if (typeName == "i64") {
+      return ReturnKind::Int64;
+    }
+    if (typeName == "u64") {
+      return ReturnKind::UInt64;
+    }
+    if (typeName == "float" || typeName == "f32") {
+      return ReturnKind::Float32;
+    }
+    if (typeName == "f64") {
+      return ReturnKind::Float64;
+    }
+    break;
   }
   return ReturnKind::Unknown;
 }
@@ -66,6 +77,47 @@ std::string normalizeBindingTypeName(const std::string &name) {
 }
 
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
+
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+  out.clear();
+  int depth = 0;
+  size_t start = 0;
+  auto pushSegment = [&](size_t end) {
+    size_t segStart = start;
+    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
+      ++segStart;
+    }
+    size_t segEnd = end;
+    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+      --segEnd;
+    }
+    out.push_back(text.substr(segStart, segEnd - segStart));
+  };
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+      }
+      continue;
+    }
+    if (c == ',' && depth == 0) {
+      pushSegment(i);
+      start = i + 1;
+    }
+  }
+  pushSegment(text.size());
+  for (const auto &seg : out) {
+    if (seg.empty()) {
+      return false;
+    }
+  }
+  return !out.empty();
+}
 
 bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "package" || name == "static";
@@ -95,7 +147,7 @@ bool hasExplicitBindingTypeTransform(const Expr &expr) {
 BindingInfo getBindingInfo(const Expr &expr) {
   BindingInfo info;
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "mut" && !transform.templateArg && transform.arguments.empty()) {
+    if (transform.name == "mut" && transform.templateArgs.empty() && transform.arguments.empty()) {
       info.isMutable = true;
       continue;
     }
@@ -107,11 +159,11 @@ BindingInfo getBindingInfo(const Expr &expr) {
       if (isBindingQualifierName(transform.name)) {
         continue;
       }
-      if (!transform.templateArg) {
+      if (transform.templateArgs.empty()) {
         info.typeName = transform.name;
       } else if (info.typeName.empty()) {
         info.typeName = transform.name;
-        info.typeTemplateArg = *transform.templateArg;
+        info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
       }
     }
   }
@@ -173,6 +225,15 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
   if (info.typeName == "array") {
     std::string elemType = bindingTypeToCpp(info.typeTemplateArg);
     return "std::vector<" + elemType + ">";
+  }
+  if (info.typeName == "map") {
+    std::vector<std::string> parts;
+    if (splitTopLevelTemplateArgs(info.typeTemplateArg, parts) && parts.size() == 2) {
+      std::string keyType = bindingTypeToCpp(parts[0]);
+      std::string valueType = bindingTypeToCpp(parts[1]);
+      return "std::unordered_map<" + keyType + ", " + valueType + ">";
+    }
+    return "std::unordered_map<int, int>";
   }
   if (info.typeName == "Pointer") {
     std::string base = bindingTypeToCpp(info.typeTemplateArg);

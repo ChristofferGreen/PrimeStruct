@@ -29,7 +29,9 @@ primec::Transform makeTransform(const std::string &name,
                                 std::optional<std::string> templateArg = std::nullopt) {
   primec::Transform transform;
   transform.name = name;
-  transform.templateArg = std::move(templateArg);
+  if (templateArg.has_value()) {
+    transform.templateArgs = {*templateArg};
+  }
   return transform;
 }
 
