@@ -231,6 +231,30 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
+TEST_CASE("compiles and runs binding inferring map type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] values(map<i32, i32>{1i32=2i32, 3i32=4i32})
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_infer_map_binding.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_infer_map_binding_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_infer_map_binding_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 0);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 0);
+}
+
 TEST_CASE("compiles and runs parameter inferring i64 from default initializer") {
   const std::string source = R"(
 [return<i64>]
