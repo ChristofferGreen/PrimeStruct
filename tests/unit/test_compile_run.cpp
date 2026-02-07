@@ -3183,6 +3183,63 @@ TEST_CASE("compiles and runs versioned include expansion") {
   CHECK(runCommand(nativePath) == 7);
 }
 
+TEST_CASE("compiles and runs versioned include expansion with multiple include entries") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_multi";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories(includeRoot / "1.2.0" / "std" / "io");
+    std::ofstream ioLib(includeRoot / "1.2.0" / "std" / "io" / "lib.prime");
+    CHECK(ioLib.good());
+    ioLib << "[return<int>]\nio_helper(){ return(6i32) }\n";
+    CHECK(ioLib.good());
+
+    std::filesystem::create_directories(includeRoot / "1.2.0" / "std" / "math");
+    std::ofstream mathLib(includeRoot / "1.2.0" / "std" / "math" / "lib.prime");
+    CHECK(mathLib.good());
+    mathLib << "[return<int>]\nmath_helper(){ return(3i32) }\n";
+    CHECK(mathLib.good());
+  }
+  {
+    std::filesystem::create_directories(includeRoot / "1.2.1" / "std" / "io");
+    std::ofstream ioLib(includeRoot / "1.2.1" / "std" / "io" / "lib.prime");
+    CHECK(ioLib.good());
+    ioLib << "[return<int>]\nio_helper(){ return(7i32) }\n";
+    CHECK(ioLib.good());
+
+    std::filesystem::create_directories(includeRoot / "1.2.1" / "std" / "math");
+    std::ofstream mathLib(includeRoot / "1.2.1" / "std" / "math" / "lib.prime");
+    CHECK(mathLib.good());
+    mathLib << "[return<int>]\nmath_helper(){ return(4i32) }\n";
+    CHECK(mathLib.good());
+  }
+
+  const std::string source =
+      "include</std/io, /std/math, version=\"1.2\">\n"
+      "[return<int>]\n"
+      "main(){ return(plus(io_helper(), math_helper())) }\n";
+  const std::string srcPath = writeTemp("compile_versioned_include_multi.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_inc_multi_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_inc_multi_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                    " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(runVmCmd) == 11);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
+                                       " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 11);
+}
+
 TEST_CASE("compiles and runs archive include expansion") {
   if (!hasZipTools()) {
     return;
