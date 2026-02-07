@@ -77,6 +77,7 @@ std::string normalizeBindingTypeName(const std::string &name) {
 }
 
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
+bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   out.clear();
@@ -184,6 +185,17 @@ BindingInfo getBindingInfo(const Expr &expr) {
         std::string convertName;
         if (getBuiltinConvertName(init, convertName) && init.templateArgs.size() == 1) {
           info.typeName = init.templateArgs.front();
+        } else {
+          std::string collection;
+          if (getBuiltinCollectionName(init, collection)) {
+            if (collection == "array" && init.templateArgs.size() == 1) {
+              info.typeName = "array";
+              info.typeTemplateArg = init.templateArgs.front();
+            } else if (collection == "map" && init.templateArgs.size() == 2) {
+              info.typeName = "map";
+              info.typeTemplateArg = joinTemplateArgs(init.templateArgs);
+            }
+          }
         }
       }
     }

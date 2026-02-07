@@ -890,6 +890,58 @@ std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr) {
   return "";
 }
 
+bool tryInferBindingTypeFromInitializer(const Expr &initializer,
+                                        const std::vector<ParameterInfo> &params,
+                                        const std::unordered_map<std::string, BindingInfo> &locals,
+                                        BindingInfo &bindingOut) {
+  const auto findParamBinding = [&](const std::string &name) -> const BindingInfo * {
+    for (const auto &param : params) {
+      if (param.name == name) {
+        return &param.binding;
+      }
+    }
+    return nullptr;
+  };
+
+  std::string inferredPrimitive = inferPrimitiveBindingTypeFromInitializer(initializer);
+  if (!inferredPrimitive.empty()) {
+    bindingOut.typeName = inferredPrimitive;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  }
+  if (initializer.kind == Expr::Kind::Name) {
+    const std::string &name = initializer.name;
+    if (const BindingInfo *paramBinding = findParamBinding(name)) {
+      bindingOut.typeName = paramBinding->typeName;
+      bindingOut.typeTemplateArg = paramBinding->typeTemplateArg;
+      return true;
+    }
+    auto it = locals.find(name);
+    if (it != locals.end()) {
+      bindingOut.typeName = it->second.typeName;
+      bindingOut.typeTemplateArg = it->second.typeTemplateArg;
+      return true;
+    }
+    return false;
+  }
+  if (initializer.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(initializer, collection)) {
+      if (collection == "array" && initializer.templateArgs.size() == 1) {
+        bindingOut.typeName = "array";
+        bindingOut.typeTemplateArg = initializer.templateArgs.front();
+        return true;
+      }
+      if (collection == "map" && initializer.templateArgs.size() == 2) {
+        bindingOut.typeName = "map";
+        bindingOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
                            const std::vector<Expr> &args,
                            const std::vector<std::optional<std::string>> &argNames,
@@ -1152,11 +1204,7 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
-        std::string inferred = inferPrimitiveBindingTypeFromInitializer(param.args.front());
-        if (!inferred.empty()) {
-          binding.typeName = inferred;
-          binding.typeTemplateArg.clear();
-        }
+        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding);
       }
       ParameterInfo info;
       info.name = param.name;
@@ -1342,12 +1390,7 @@ bool Semantics::validate(const Program &program,
                 return false;
               }
               if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, localsOut);
-                std::string inferredName = typeNameForReturnKind(initKind);
-                if (!inferredName.empty()) {
-                  binding.typeName = inferredName;
-                  binding.typeTemplateArg.clear();
-                }
+                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding);
               }
               localsOut.emplace(bodyExpr.name, std::move(binding));
               continue;
@@ -1400,12 +1443,7 @@ bool Semantics::validate(const Program &program,
                 }
               }
               if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
-                std::string inferredName = typeNameForReturnKind(initKind);
-                if (!inferredName.empty()) {
-                  info.typeName = inferredName;
-                  info.typeTemplateArg.clear();
-                }
+                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
               }
               blockLocals.emplace(bodyExpr.name, std::move(info));
               continue;
@@ -1632,12 +1670,7 @@ bool Semantics::validate(const Program &program,
           }
         }
         if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), defParams, activeLocals);
-          std::string inferredName = typeNameForReturnKind(initKind);
-          if (!inferredName.empty()) {
-            info.typeName = inferredName;
-            info.typeTemplateArg.clear();
-          }
+          (void)tryInferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
         }
         activeLocals.emplace(stmt.name, std::move(info));
         return true;
@@ -2766,12 +2799,7 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       if (!hasExplicitBindingTypeTransform(stmt)) {
-        ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, locals);
-        std::string inferredName = typeNameForReturnKind(initKind);
-        if (!inferredName.empty()) {
-          info.typeName = inferredName;
-          info.typeTemplateArg.clear();
-        }
+        (void)tryInferBindingTypeFromInitializer(stmt.args.front(), params, locals, info);
       }
       if (restrictType.has_value()) {
         const bool hasTemplate = !info.typeTemplateArg.empty();

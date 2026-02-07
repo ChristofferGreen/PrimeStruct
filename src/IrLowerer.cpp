@@ -2686,8 +2686,25 @@ bool IrLowerer::lower(const Program &program,
         error = "native backend does not support float types";
         return false;
       }
-      const LocalInfo::Kind kind = bindingKind(stmt);
       const Expr &init = stmt.args.front();
+      LocalInfo::Kind kind = bindingKind(stmt);
+      if (!hasExplicitBindingTypeTransform(stmt) && kind == LocalInfo::Kind::Value) {
+        if (init.kind == Expr::Kind::Name) {
+          auto it = localsIn.find(init.name);
+          if (it != localsIn.end()) {
+            kind = it->second.kind;
+          }
+        } else if (init.kind == Expr::Kind::Call) {
+          std::string collection;
+          if (getBuiltinCollectionName(init, collection)) {
+            if (collection == "array") {
+              kind = LocalInfo::Kind::Array;
+            } else if (collection == "map") {
+              kind = LocalInfo::Kind::Map;
+            }
+          }
+        }
+      }
       LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
       if (hasExplicitBindingTypeTransform(stmt)) {
         valueKind = bindingValueKind(stmt, kind);
@@ -2695,6 +2712,18 @@ bool IrLowerer::lower(const Program &program,
         valueKind = inferExprKind(init, localsIn);
         if (valueKind == LocalInfo::ValueKind::Unknown) {
           valueKind = LocalInfo::ValueKind::Int32;
+        }
+      } else if (kind == LocalInfo::Kind::Array) {
+        if (init.kind == Expr::Kind::Name) {
+          auto it = localsIn.find(init.name);
+          if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+            valueKind = it->second.valueKind;
+          }
+        } else if (init.kind == Expr::Kind::Call) {
+          std::string collection;
+          if (getBuiltinCollectionName(init, collection) && collection == "array" && init.templateArgs.size() == 1) {
+            valueKind = valueKindFromTypeName(init.templateArgs.front());
+          }
         }
       }
       if (valueKind == LocalInfo::ValueKind::String) {
