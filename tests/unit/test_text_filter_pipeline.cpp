@@ -541,6 +541,26 @@ TEST_CASE("does not rewrite line comments") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not rewrite block comments") {
+  const std::string source = "/* a/b */\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not rewrite operators around block comments") {
+  const std::string source = "main(){ return(a/*x*/b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("adds i32 suffix to bare integer literal") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;

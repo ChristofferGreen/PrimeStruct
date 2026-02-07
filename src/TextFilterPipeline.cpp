@@ -879,6 +879,18 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
 
+    if (input[i] == '/' && i + 1 < input.size() && input[i + 1] == '*') {
+      size_t end = input.find("*/", i + 2);
+      if (end == std::string::npos) {
+        output.append(input.substr(i));
+        break;
+      }
+      end += 2;
+      output.append(input.substr(i, end - i));
+      i = end > 0 ? end - 1 : i;
+      continue;
+    }
+
     if (input[i] == 'R' && i + 2 < input.size() && input[i + 1] == '"' && input[i + 2] == '(') {
       size_t end = i + 3;
       bool foundTerminator = false;
