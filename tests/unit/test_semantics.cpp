@@ -210,6 +210,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("restrict matches inferred binding type during return inference") {
+  const std::string source = R"(
+main() {
+  [restrict<i64>] value(1i64)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("restrict matches inferred binding type inside block return inference") {
+  const std::string source = R"(
+main() {
+  return(block{
+    [restrict<i64>] value(1i64)
+    value
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("implicit void definition without return validates") {
   const std::string source = R"(
 main() {
@@ -3108,7 +3134,7 @@ TEST_CASE("string literal rejects unknown escape sequences") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  print("hello\\q"utf8)
+  print("hello\q"utf8)
 }
 )";
   std::string error;

@@ -1582,6 +1582,9 @@ bool Semantics::validate(const Program &program,
               if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames, info, restrictType, error)) {
                 return ReturnKind::Unknown;
               }
+              if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+              }
               if (restrictType.has_value()) {
                 const bool hasTemplate = !info.typeTemplateArg.empty();
                 if (!restrictMatchesBinding(*restrictType,
@@ -1591,9 +1594,6 @@ bool Semantics::validate(const Program &program,
                                             bodyExpr.namespacePrefix)) {
                   return ReturnKind::Unknown;
                 }
-              }
-              if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
               }
               blockLocals.emplace(bodyExpr.name, std::move(info));
               continue;
@@ -1812,15 +1812,15 @@ bool Semantics::validate(const Program &program,
         if (!parseBindingInfo(stmt, def.namespacePrefix, structNames, info, restrictType, error)) {
           return false;
         }
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          (void)tryInferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
+        }
         if (restrictType.has_value()) {
           const bool hasTemplate = !info.typeTemplateArg.empty();
           if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, def.namespacePrefix)) {
             error = "restrict type does not match binding type";
             return false;
           }
-        }
-        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-          (void)tryInferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
         }
         activeLocals.emplace(stmt.name, std::move(info));
         return true;
