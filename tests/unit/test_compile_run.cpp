@@ -3087,6 +3087,49 @@ TEST_CASE("compiles and runs unquoted include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs versioned include expansion") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories((includeRoot / "1.2.0"));
+    std::ofstream oldLib(includeRoot / "1.2.0" / "lib.prime");
+    CHECK(oldLib.good());
+    oldLib << "[return<int>]\nhelper(){ return(5i32) }\n";
+    CHECK(oldLib.good());
+  }
+  {
+    std::filesystem::create_directories((includeRoot / "1.2.3"));
+    std::ofstream newLib(includeRoot / "1.2.3" / "lib.prime");
+    CHECK(newLib.good());
+    newLib << "[return<int>]\nhelper(){ return(7i32) }\n";
+    CHECK(newLib.good());
+  }
+
+  const std::string source =
+      "include</lib.prime, version=\"1.2\">\n"
+      "[return<int>]\n"
+      "main(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_versioned_include.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_versioned_inc_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_versioned_inc_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                    " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(runVmCmd) == 7);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
+                                       " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 7);
+}
+
 TEST_CASE("compiles and runs operator rewrite") {
   const std::string source = R"(
 [return<int>]
