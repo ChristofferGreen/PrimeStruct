@@ -40,6 +40,7 @@ spelled directly in transform position (e.g. `[array<i32>] values(...)`, `[map<i
 - Statements are separated by whitespace/newlines; there is no line-based parsing.
 - Semicolons are rejected by the parser.
 - Line comments (`// ...`) and block comments (`/* ... */`) are supported and ignored by the lexer (treated as whitespace).
+- Text filters also treat comments as opaque spans; operator/collection rewrites never run inside comments.
 
 ### 2.3 Literals
 
