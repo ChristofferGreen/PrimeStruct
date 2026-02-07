@@ -3066,6 +3066,27 @@ TEST_CASE("compiles and runs include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs unquoted include expansion") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_unquoted";
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::ofstream libFile(includeRoot / "lib.prime");
+    CHECK(libFile.good());
+    libFile << "[return<int>]\nhelper(){ return(5i32) }\n";
+    CHECK(libFile.good());
+  }
+
+  const std::string source = "include</lib.prime>\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_unquoted_include.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_unquoted_inc_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                 " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs operator rewrite") {
   const std::string source = R"(
 [return<int>]
