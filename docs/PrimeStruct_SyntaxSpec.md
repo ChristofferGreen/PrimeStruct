@@ -281,6 +281,7 @@ Defaults are limited to literal/pure forms (no name references).
 ```
 array<i32>(1i32, 2i32)
 array<i32>{1i32, 2i32}   // surface form
+array<i32>[1i32, 2i32]   // surface form
 ```
 
 Helpers:
@@ -293,6 +294,7 @@ Helpers:
 ```
 map<i32, i32>(1i32, 2i32)
 map<i32, i32>{1i32=2i32}
+map<i32, i32>[1i32=2i32]
 ```
 
 Map IR lowering is currently limited in VM/native backends (currently numeric/bool keys and values only).

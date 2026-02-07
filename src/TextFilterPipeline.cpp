@@ -599,51 +599,58 @@ bool TextFilterPipeline::apply(const std::string &input,
   const bool enableOperators = options.hasFilter("operators");
   const bool enableImplicitUtf8 = options.hasFilter("implicit-utf8");
 
-  auto rewriteCollectionLiteral = [&](size_t &index) -> bool {
-    if (!enableCollections) {
-      return false;
-    }
-    const std::string names[] = {"array", "map"};
-    for (const auto &name : names) {
-      const size_t nameLen = name.size();
-      if (index + nameLen > input.size()) {
-        continue;
-      }
-      if (input.compare(index, nameLen, name) != 0) {
-        continue;
-      }
-      if (index > 0 && (isTokenChar(input[index - 1]) || input[index - 1] == '/')) {
-        continue;
-      }
-      if (index + nameLen < input.size() && isTokenChar(input[index + nameLen])) {
-        continue;
-      }
-      size_t pos = index + nameLen;
-      while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
-        ++pos;
-      }
-      if (pos < input.size() && input[pos] == '<') {
-        size_t close = findMatchingClose(input, pos, '<', '>');
-        if (close == std::string::npos) {
-          error = "unterminated template list in collection literal";
-          return false;
-        }
-        pos = close + 1;
-        while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
-          ++pos;
-        }
-      }
-      if (pos >= input.size() || input[pos] != '{') {
-        continue;
-      }
-      size_t closeBrace = findMatchingClose(input, pos, '{', '}');
-      if (closeBrace == std::string::npos) {
-        error = "unterminated collection literal";
-        return false;
-      }
-      std::string inner = input.substr(pos + 1, closeBrace - (pos + 1));
-      if (name == "map") {
-        std::string rewritten;
+	  auto rewriteCollectionLiteral = [&](size_t &index) -> bool {
+	    if (!enableCollections) {
+	      return false;
+	    }
+	    const std::string names[] = {"array", "map"};
+	    for (const auto &name : names) {
+	      const size_t nameLen = name.size();
+	      if (index + nameLen > input.size()) {
+	        continue;
+	      }
+	      if (input.compare(index, nameLen, name) != 0) {
+	        continue;
+	      }
+	      if (index > 0 && (isTokenChar(input[index - 1]) || input[index - 1] == '/')) {
+	        continue;
+	      }
+	      if (index + nameLen < input.size() && isTokenChar(input[index + nameLen])) {
+	        continue;
+	      }
+	      size_t pos = index + nameLen;
+	      while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
+	        ++pos;
+	      }
+	      bool sawTemplateList = false;
+	      if (pos < input.size() && input[pos] == '<') {
+	        size_t close = findMatchingClose(input, pos, '<', '>');
+	        if (close == std::string::npos) {
+	          error = "unterminated template list in collection literal";
+	          return false;
+	        }
+	        pos = close + 1;
+	        sawTemplateList = true;
+	        while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
+	          ++pos;
+	        }
+	      }
+	      if (pos >= input.size() || (input[pos] != '{' && input[pos] != '[')) {
+	        continue;
+	      }
+	      const char openChar = input[pos];
+	      const char closeChar = (openChar == '{') ? '}' : ']';
+	      if (openChar == '[' && !sawTemplateList) {
+	        continue;
+	      }
+	      size_t closeBrace = findMatchingClose(input, pos, openChar, closeChar);
+	      if (closeBrace == std::string::npos) {
+	        error = "unterminated collection literal";
+	        return false;
+	      }
+	      std::string inner = input.substr(pos + 1, closeBrace - (pos + 1));
+	      if (name == "map") {
+	        std::string rewritten;
         rewritten.reserve(inner.size());
         size_t scan = 0;
         bool entryHasPairEquals = false;
