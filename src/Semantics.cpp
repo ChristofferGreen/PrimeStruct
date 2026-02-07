@@ -828,6 +828,9 @@ bool isDefaultExprAllowed(const Expr &expr) {
     return false;
   }
   if (expr.kind == Expr::Kind::Call) {
+    if (hasNamedArguments(expr.argNames)) {
+      return false;
+    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return false;
     }
@@ -1118,7 +1121,11 @@ bool Semantics::validate(const Program &program,
         return false;
       }
       if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front())) {
-        error = "parameter default must be a literal or pure expression: " + param.name;
+        if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
+          error = "parameter default does not accept named arguments: " + param.name;
+        } else {
+          error = "parameter default must be a literal or pure expression: " + param.name;
+        }
         return false;
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
