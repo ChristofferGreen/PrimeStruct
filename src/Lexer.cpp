@@ -44,10 +44,6 @@ static bool isAsciiDigit(char c) {
   return c >= '0' && c <= '9';
 }
 
-static bool isNonAscii(char c) {
-  return static_cast<unsigned char>(c) >= 0x80;
-}
-
 static bool isStringSuffixStart(char c) {
   return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
 }
@@ -57,11 +53,11 @@ static bool isStringSuffixBody(char c) {
 }
 
 bool Lexer::isIdentifierStart(char c) const {
-  return isAsciiAlpha(c) || c == '_' || c == '/' || isNonAscii(c);
+  return isAsciiAlpha(c) || c == '_' || c == '/';
 }
 
 bool Lexer::isIdentifierBody(char c) const {
-  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_' || c == '/' || isNonAscii(c);
+  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_' || c == '/';
 }
 
 void Lexer::skipWhitespace() {
@@ -253,7 +249,7 @@ Token Lexer::readPunct() {
   case ';':
     return {TokenKind::Semicolon, ";", startLine, startColumn};
   default:
-    return {TokenKind::End, "", startLine, startColumn};
+    return {TokenKind::Invalid, std::string(1, c), startLine, startColumn};
   }
 }
 

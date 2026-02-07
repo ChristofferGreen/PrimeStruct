@@ -22,6 +22,7 @@ enum class TokenKind {
   Semicolon,
   Comment,
   KeywordNamespace,
+  Invalid,
   End
 };
 

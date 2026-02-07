@@ -59,7 +59,7 @@ TEST_CASE("non-ascii identifier rejected") {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("invalid identifier") != std::string::npos);
+  CHECK(error.find("invalid character") != std::string::npos);
 }
 
 TEST_CASE("non-ascii type identifier rejected") {
@@ -76,7 +76,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("invalid identifier") != std::string::npos);
+  CHECK(error.find("invalid character") != std::string::npos);
 }
 
 TEST_CASE("reserved keyword rejected in type identifier") {
@@ -216,7 +216,23 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("invalid identifier") != std::string::npos);
+  CHECK(error.find("invalid character") != std::string::npos);
+}
+
+TEST_CASE("invalid punctuation character rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  @
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid character") != std::string::npos);
 }
 
 TEST_CASE("slash path transform identifier rejected") {
@@ -246,7 +262,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("invalid identifier") != std::string::npos);
+  CHECK(error.find("invalid character") != std::string::npos);
 }
 
 TEST_CASE("trailing comma in template argument list is rejected") {
