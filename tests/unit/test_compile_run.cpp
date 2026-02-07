@@ -3819,6 +3819,23 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs string-keyed map literals with bracket sugar in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<string, i32>["a"=1i32, "b"=2i32]
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_collections_string_map_brackets.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_collections_string_map_brackets_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles with executions using collection arguments") {
   const std::string source = R"(
 [return<int>]

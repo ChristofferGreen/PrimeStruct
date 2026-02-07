@@ -114,6 +114,16 @@ TEST_CASE("rewrites map literal with equals pairs") {
   CHECK(output.find("map<i32,i32>(1i32, 2i32,3i32, 4i32)") != std::string::npos);
 }
 
+TEST_CASE("rewrites map literal brackets with string keys") {
+  const std::string source = "main(){ return(map<string, i32>[\"a\"=1i32, \"b\"=2i32]) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<string, i32>(\"a\"utf8, 1i32, \"b\"utf8, 2i32)") != std::string::npos);
+}
+
 TEST_CASE("does not rewrite bracket collections without template list") {
   const std::string source = "main(){ return(array[1i32]) }\n";
   primec::TextFilterPipeline pipeline;
