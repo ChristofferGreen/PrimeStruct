@@ -358,6 +358,71 @@ main() {
   CHECK(runCommand(nativePath) == 0);
 }
 
+TEST_CASE("compiles and runs binding inference feeding method call") {
+  const std::string source = R"(
+namespace i64 {
+  [return<i64>]
+  inc([i64] self) {
+    return(plus(self, 1i64))
+  }
+}
+
+[return<int>]
+main() {
+  [mut] value(plus(1i64, 2i64))
+  return(convert<i32>(value.inc()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_infer_binding_method.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_infer_binding_method_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_infer_binding_method_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 4);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 4);
+}
+
+TEST_CASE("compiles and runs binding inference from if expression feeding method call") {
+  const std::string source = R"(
+namespace i64 {
+  [return<i64>]
+  inc([i64] self) {
+    return(plus(self, 1i64))
+  }
+}
+
+[return<int>]
+main() {
+  [mut] value(if(true) { 3i64 } else { 7i64 })
+  return(convert<i32>(value.inc()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_infer_binding_if_method.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_infer_binding_if_method_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_infer_binding_if_method_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 4);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 4);
+}
+
 TEST_CASE("compiles and runs parameter inferring i64 from default initializer") {
   const std::string source = R"(
 [return<i64>]

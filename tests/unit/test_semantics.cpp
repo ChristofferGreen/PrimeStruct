@@ -93,6 +93,26 @@ main([i32] x) {
   CHECK(error.find("unknown identifier") != std::string::npos);
 }
 
+TEST_CASE("binding inference from expression enables method call validation") {
+  const std::string source = R"(
+namespace i64 {
+  [return<i64>]
+  inc([i64] self) {
+    return(plus(self, 1i64))
+  }
+}
+
+[return<i64>]
+main() {
+  [mut] value(plus(1i64, 2i64))
+  return(value.inc())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("parameter default literal is allowed") {
   const std::string source = R"(
 [return<int>]
