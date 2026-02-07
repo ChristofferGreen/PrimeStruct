@@ -2458,6 +2458,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression validates and introduces scope") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(block{
+    [i32] inner(1i32)
+    plus(inner, 2i32)
+  })
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("block scope does not leak bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  block{
+    [i32] inner(1i32)
+    inner
+  }
+  return(inner)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown identifier") != std::string::npos);
+}
+
 TEST_CASE("repeat rejects float count") {
   const std::string source = R"(
 [return<int>]

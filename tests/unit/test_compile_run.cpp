@@ -3216,6 +3216,33 @@ TEST_CASE("compiles and runs archive include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs block expression with multiline body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{
+    [i32] x(1i32)
+    plus(x, 2i32)
+  })
+}
+)";
+  const std::string srcPath = writeTemp("compile_block_expr_multiline.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_block_expr_multiline_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_block_expr_multiline_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 3);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 3);
+}
+
 TEST_CASE("compiles and runs operator rewrite") {
   const std::string source = R"(
 [return<int>]
@@ -4118,7 +4145,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("compiles and runs block expression") {
+TEST_CASE("compiles and runs block expression with outer scope capture") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -4126,9 +4153,10 @@ main() {
   return(block { [i32] x(4i32) plus(x, y) })
 }
 )";
-  const std::string srcPath = writeTemp("compile_block_expr.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_block_expr_exe").string();
-  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_block_expr_native").string();
+  const std::string srcPath = writeTemp("compile_block_expr_capture.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_block_expr_capture_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_block_expr_capture_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCppCmd) == 0);
