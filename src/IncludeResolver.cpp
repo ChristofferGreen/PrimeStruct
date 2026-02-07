@@ -539,7 +539,12 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               error = "invalid include entry in include<...>";
               return false;
             }
-            paths.push_back(trim(path));
+            path = trim(path);
+            if (path.empty() || path.front() != '/') {
+              error = "unquoted include paths must be slash paths";
+              return false;
+            }
+            paths.push_back(path);
           }
           skipWhitespace();
           if (pos >= payload.size()) {

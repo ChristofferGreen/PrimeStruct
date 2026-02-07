@@ -76,6 +76,15 @@ TEST_CASE("include entry missing comma fails") {
   CHECK(error.find("expected ',' between include entries") != std::string::npos);
 }
 
+TEST_CASE("unquoted non-slash include path fails") {
+  const std::string srcPath = writeTemp("main_include_bare_relative.prime", "include<lib.prime>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("unquoted include paths must be slash paths") != std::string::npos);
+}
+
 TEST_CASE("invalid include version fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bad_version";
   std::filesystem::remove_all(dir);
