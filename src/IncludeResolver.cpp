@@ -121,6 +121,22 @@ bool readQuotedString(const std::string &payload, size_t &pos, std::string &out,
   return true;
 }
 
+bool readBareIncludePath(const std::string &payload, size_t &pos, std::string &out) {
+  size_t start = pos;
+  while (pos < payload.size()) {
+    char c = payload[pos];
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
+      break;
+    }
+    ++pos;
+  }
+  if (pos <= start) {
+    return false;
+  }
+  out = payload.substr(start, pos - start);
+  return true;
+}
+
 bool tryConsumeIncludeKeyword(const std::string &payload, size_t &pos, const std::string &keyword) {
   if (payload.compare(pos, keyword.size(), keyword) != 0) {
     return false;
@@ -518,8 +534,12 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               return false;
             }
           } else {
-            error = "invalid include entry in include<...>";
-            return false;
+            std::string path;
+            if (!readBareIncludePath(payload, pos, path)) {
+              error = "invalid include entry in include<...>";
+              return false;
+            }
+            paths.push_back(trim(path));
           }
           skipWhitespace();
           if (pos >= payload.size()) {
@@ -533,7 +553,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
         }
 
         if (paths.empty()) {
-          error = "include<...> requires at least one quoted path";
+          error = "include<...> requires at least one path";
           return false;
         }
 

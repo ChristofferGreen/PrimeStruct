@@ -54,7 +54,7 @@ TEST_CASE("missing include path fails") {
   std::string error;
   primec::IncludeResolver resolver;
   CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("requires at least one quoted path") != std::string::npos);
+  CHECK(error.find("requires at least one path") != std::string::npos);
 }
 
 TEST_CASE("include path suffix fails") {

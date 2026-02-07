@@ -83,6 +83,25 @@ TEST_CASE("expands include with whitespace") {
   CHECK(source.find(marker) != std::string::npos);
 }
 
+TEST_CASE("expands include with bare slash path") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "lib.prime", "// INCLUDE_BARE_PATH\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib.prime>\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_BARE_PATH") != std::string::npos);
+}
+
 TEST_CASE("resolves versioned include with single quotes") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_root";

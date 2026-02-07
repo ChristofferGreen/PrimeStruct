@@ -87,6 +87,9 @@ paths may be listed in a single include. Version selection follows the rules in 
 Whitespace is allowed between `include` and `<` and around `=` in the `version` attribute. Include paths
 and version strings may use either single-quoted or double-quoted string literals.
 
+Include paths may also be written as unquoted slash paths (e.g. `include</std/io>`), which are treated
+as logical include paths resolved via the configured include roots.
+
 ### 3.2 Namespace Blocks
 
 ```
@@ -108,8 +111,9 @@ top_item       = include_decl | namespace_decl | definition | execution ;
 
 include_decl   = "include" "<" include_list ">" ;
 include_list   = include_entry { "," include_entry } ;
-include_entry  = include_string | "version" "=" include_string ;
+include_entry  = include_path | "version" "=" include_string ;
 include_string = quoted_string ;
+include_path   = quoted_string | slash_path ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 
