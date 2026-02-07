@@ -181,7 +181,7 @@ Token Lexer::readString(char quote) {
     }
     advance();
   }
-  return {TokenKind::End, "", startLine, startColumn};
+  return {TokenKind::Invalid, "unterminated string literal", startLine, startColumn};
 }
 
 Token Lexer::readComment() {

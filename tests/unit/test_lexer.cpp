@@ -60,7 +60,7 @@ TEST_CASE("lexes numeric literals with suffixes and exponents") {
 TEST_CASE("lexes unknown punctuation as end token") {
   const auto tokens = lex("@");
   REQUIRE(tokens.size() >= 1);
-  CHECK(tokens[0].kind == primec::TokenKind::End);
+  CHECK(tokens[0].kind == primec::TokenKind::Invalid);
 }
 
 TEST_SUITE_END();

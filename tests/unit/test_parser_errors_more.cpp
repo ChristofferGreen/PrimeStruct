@@ -235,6 +235,22 @@ main() {
   CHECK(error.find("invalid character") != std::string::npos);
 }
 
+TEST_CASE("unterminated string literal rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print("hello)
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("unterminated string literal") != std::string::npos);
+}
+
 TEST_CASE("slash path transform identifier rejected") {
   const std::string source = R"(
 [/demo]

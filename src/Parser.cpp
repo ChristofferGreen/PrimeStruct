@@ -11,16 +11,16 @@ namespace primec {
 
 namespace {
 std::string describeInvalidToken(const Token &token) {
-  if (!token.text.empty()) {
-    const unsigned char byte = static_cast<unsigned char>(token.text[0]);
-    if (byte >= 0x20 && byte <= 0x7E) {
-      return std::string("'") + static_cast<char>(byte) + "'";
-    }
-    std::ostringstream out;
-    out << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
-    return out.str();
+  if (token.text.size() != 1) {
+    return token.text.empty() ? "<unknown>" : token.text;
   }
-  return "<unknown>";
+  const unsigned char byte = static_cast<unsigned char>(token.text[0]);
+  if (byte >= 0x20 && byte <= 0x7E) {
+    return std::string("'") + static_cast<char>(byte) + "'";
+  }
+  std::ostringstream out;
+  out << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+  return out.str();
 }
 
 bool isReservedKeyword(const std::string &text) {
@@ -1489,7 +1489,7 @@ bool Parser::match(TokenKind kind) const {
 
 bool Parser::expect(TokenKind kind, const std::string &message) {
   if (match(TokenKind::Invalid)) {
-    return fail("invalid character: " + describeInvalidToken(tokens_[pos_]));
+    return fail(describeInvalidToken(tokens_[pos_]));
   }
   if (!match(kind)) {
     return fail(message);
@@ -1500,7 +1500,7 @@ bool Parser::expect(TokenKind kind, const std::string &message) {
 
 Token Parser::consume(TokenKind kind, const std::string &message) {
   if (match(TokenKind::Invalid)) {
-    fail("invalid character: " + describeInvalidToken(tokens_[pos_]));
+    fail(describeInvalidToken(tokens_[pos_]));
     return {TokenKind::End, ""};
   }
   if (!match(kind)) {
@@ -1515,7 +1515,12 @@ bool Parser::fail(const std::string &message) {
     const Token &token = tokens_[pos_];
     std::ostringstream out;
     if (token.kind == TokenKind::Invalid) {
-      out << "invalid character: " << describeInvalidToken(token) << " at " << token.line << ":" << token.column;
+      if (token.text.size() == 1) {
+        out << "invalid character: " << describeInvalidToken(token);
+      } else {
+        out << describeInvalidToken(token);
+      }
+      out << " at " << token.line << ":" << token.column;
     } else {
       out << message << " at " << token.line << ":" << token.column;
     }
