@@ -939,6 +939,156 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
       }
     }
   }
+  const auto typeNameForKind = [](ReturnKind kind) -> std::string {
+    switch (kind) {
+      case ReturnKind::Int:
+        return "i32";
+      case ReturnKind::Int64:
+        return "i64";
+      case ReturnKind::UInt64:
+        return "u64";
+      case ReturnKind::Bool:
+        return "bool";
+      case ReturnKind::Float32:
+        return "f32";
+      case ReturnKind::Float64:
+        return "f64";
+      default:
+        return "";
+    }
+  };
+  const auto combineNumeric = [](ReturnKind left, ReturnKind right) -> ReturnKind {
+    if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
+      return ReturnKind::Unknown;
+    }
+    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+      return ReturnKind::Unknown;
+    }
+    if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
+      return ReturnKind::Float64;
+    }
+    if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
+      return ReturnKind::Float32;
+    }
+    if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
+      return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
+    }
+    if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
+      if ((left == ReturnKind::Int64 || left == ReturnKind::Int) && (right == ReturnKind::Int64 || right == ReturnKind::Int)) {
+        return ReturnKind::Int64;
+      }
+      return ReturnKind::Unknown;
+    }
+    if (left == ReturnKind::Int && right == ReturnKind::Int) {
+      return ReturnKind::Int;
+    }
+    return ReturnKind::Unknown;
+  };
+
+  std::function<ReturnKind(const Expr &)> inferPrimitiveReturnKind;
+  inferPrimitiveReturnKind = [&](const Expr &expr) -> ReturnKind {
+    std::string inferred = inferPrimitiveBindingTypeFromInitializer(expr);
+    if (!inferred.empty()) {
+      return returnKindForTypeName(normalizeBindingTypeName(inferred));
+    }
+    if (expr.kind == Expr::Kind::Name) {
+      const BindingInfo *binding = findParamBinding(expr.name);
+      if (!binding) {
+        auto it = locals.find(expr.name);
+        if (it != locals.end()) {
+          binding = &it->second;
+        }
+      }
+      if (!binding) {
+        return ReturnKind::Unknown;
+      }
+      if (binding->typeName == "Reference" && !binding->typeTemplateArg.empty()) {
+        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(binding->typeTemplateArg));
+        return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
+      }
+      ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(binding->typeName));
+      return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      if (expr.isMethodCall) {
+        return ReturnKind::Unknown;
+      }
+      if (expr.hasBodyArguments && expr.args.empty()) {
+        ReturnKind last = ReturnKind::Unknown;
+        bool sawValue = false;
+        for (const auto &bodyExpr : expr.bodyArguments) {
+          if (bodyExpr.isBinding) {
+            continue;
+          }
+          sawValue = true;
+          last = inferPrimitiveReturnKind(bodyExpr);
+        }
+        return sawValue ? last : ReturnKind::Unknown;
+      }
+      std::string builtinName;
+      if (getBuiltinComparisonName(expr, builtinName)) {
+        return ReturnKind::Bool;
+      }
+      if (getBuiltinOperatorName(expr, builtinName)) {
+        if (builtinName == "negate") {
+          if (expr.args.size() != 1) {
+            return ReturnKind::Unknown;
+          }
+          ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front());
+          if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+            return ReturnKind::Unknown;
+          }
+          return argKind;
+        }
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind left = inferPrimitiveReturnKind(expr.args[0]);
+        ReturnKind right = inferPrimitiveReturnKind(expr.args[1]);
+        return combineNumeric(left, right);
+      }
+      if (getBuiltinClampName(expr, builtinName)) {
+        if (expr.args.size() != 3) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind result = inferPrimitiveReturnKind(expr.args[0]);
+        result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[1]));
+        result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[2]));
+        return result;
+      }
+      if (getBuiltinConvertName(expr, builtinName)) {
+        if (expr.templateArgs.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
+        return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
+      }
+      if (isAssignCall(expr)) {
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        return inferPrimitiveReturnKind(expr.args[1]);
+      }
+      if (isIfCall(expr)) {
+        if (expr.args.size() != 3) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1]);
+        ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2]);
+        return thenKind == elseKind ? thenKind : ReturnKind::Unknown;
+      }
+      return ReturnKind::Unknown;
+    }
+    return ReturnKind::Unknown;
+  };
+
+  ReturnKind inferredKind = inferPrimitiveReturnKind(initializer);
+  std::string inferredType = typeNameForKind(inferredKind);
+  if (!inferredType.empty()) {
+    bindingOut.typeName = inferredType;
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  }
   return false;
 }
 

@@ -2490,6 +2490,28 @@ main() {
   CHECK(error.find("unknown identifier") != std::string::npos);
 }
 
+TEST_CASE("block bindings infer primitive type from initializer expressions") {
+  const std::string source = R"(
+namespace i64 {
+  [return<i64>]
+  inc([i64] self) {
+    return(plus(self, 1i64))
+  }
+}
+
+[return<i64>]
+main() {
+  return(block{
+    [mut] value(plus(1i64, 2i64))
+    value.inc()
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("repeat rejects float count") {
   const std::string source = R"(
 [return<int>]

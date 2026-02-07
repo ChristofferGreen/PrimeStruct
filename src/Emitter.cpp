@@ -78,6 +78,11 @@ std::string normalizeBindingTypeName(const std::string &name) {
 
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
+bool getBuiltinOperator(const Expr &expr, char &out);
+bool getBuiltinComparison(const Expr &expr, const char *&out);
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
+bool isBuiltinClamp(const Expr &expr);
+std::string resolveExprPath(const Expr &expr);
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   out.clear();
@@ -314,6 +319,138 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "void") {
     return ReturnKind::Void;
+  }
+  return ReturnKind::Unknown;
+}
+
+ReturnKind combineNumericKinds(ReturnKind left, ReturnKind right) {
+  if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
+    return ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+    return ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
+    return ReturnKind::Float64;
+  }
+  if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
+    return ReturnKind::Float32;
+  }
+  if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
+    return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Int64 || right == ReturnKind::Int64) {
+    if ((left == ReturnKind::Int64 || left == ReturnKind::Int) && (right == ReturnKind::Int64 || right == ReturnKind::Int)) {
+      return ReturnKind::Int64;
+    }
+    return ReturnKind::Unknown;
+  }
+  if (left == ReturnKind::Int && right == ReturnKind::Int) {
+    return ReturnKind::Int;
+  }
+  return ReturnKind::Unknown;
+}
+
+ReturnKind inferPrimitiveReturnKind(const Expr &expr,
+                                   const std::unordered_map<std::string, BindingInfo> &localTypes,
+                                   const std::unordered_map<std::string, ReturnKind> &returnKinds) {
+  if (expr.kind == Expr::Kind::Literal) {
+    if (expr.isUnsigned) {
+      return ReturnKind::UInt64;
+    }
+    return expr.intWidth == 64 ? ReturnKind::Int64 : ReturnKind::Int;
+  }
+  if (expr.kind == Expr::Kind::BoolLiteral) {
+    return ReturnKind::Bool;
+  }
+  if (expr.kind == Expr::Kind::FloatLiteral) {
+    return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
+  }
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(expr.name);
+    if (it == localTypes.end()) {
+      return ReturnKind::Unknown;
+    }
+    if (!isPrimitiveBindingTypeName(it->second.typeName)) {
+      return ReturnKind::Unknown;
+    }
+    return returnKindForTypeName(normalizeBindingTypeName(it->second.typeName));
+  }
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return ReturnKind::Unknown;
+  }
+  if (expr.hasBodyArguments && expr.args.empty()) {
+    std::unordered_map<std::string, BindingInfo> blockTypes = localTypes;
+    ReturnKind lastKind = ReturnKind::Unknown;
+    bool sawValue = false;
+    for (const auto &bodyExpr : expr.bodyArguments) {
+      if (bodyExpr.isBinding && bodyExpr.args.size() == 1) {
+        BindingInfo binding = getBindingInfo(bodyExpr);
+        if (!hasExplicitBindingTypeTransform(bodyExpr)) {
+          ReturnKind initKind = inferPrimitiveReturnKind(bodyExpr.args.front(), blockTypes, returnKinds);
+          std::string inferred = typeNameForReturnKind(initKind);
+          if (!inferred.empty()) {
+            binding.typeName = inferred;
+            binding.typeTemplateArg.clear();
+          }
+        }
+        blockTypes[bodyExpr.name] = binding;
+        continue;
+      }
+      if (bodyExpr.isBinding) {
+        continue;
+      }
+      sawValue = true;
+      lastKind = inferPrimitiveReturnKind(bodyExpr, blockTypes, returnKinds);
+    }
+    return sawValue ? lastKind : ReturnKind::Unknown;
+  }
+  std::string resolved = resolveExprPath(expr);
+  auto kindIt = returnKinds.find(resolved);
+  if (kindIt != returnKinds.end()) {
+    ReturnKind kind = kindIt->second;
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+      return kind;
+    }
+  }
+  std::string builtinName;
+  if (getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
+    return returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
+  }
+  if (isSimpleCallName(expr, "negate") && expr.args.size() == 1) {
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+      return ReturnKind::Unknown;
+    }
+    return argKind;
+  }
+  if (isSimpleCallName(expr, "assign") && expr.args.size() == 2) {
+    return inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
+  }
+  if (isSimpleCallName(expr, "if") && expr.args.size() == 3) {
+    ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
+    ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds);
+    return thenKind == elseKind ? thenKind : ReturnKind::Unknown;
+  }
+  if (isSimpleCallName(expr, "and") || isSimpleCallName(expr, "or") || isSimpleCallName(expr, "not")) {
+    return ReturnKind::Bool;
+  }
+  if (isBuiltinClamp(expr) && expr.args.size() == 3) {
+    ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
+    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
+    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds));
+    return result;
+  }
+  const char *cmp = nullptr;
+  if (getBuiltinComparison(expr, cmp)) {
+    return ReturnKind::Bool;
+  }
+  char op = '\0';
+  if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
+    ReturnKind left = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
+    ReturnKind right = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
+    return combineNumericKinds(left, right);
   }
   return ReturnKind::Unknown;
 }
@@ -937,6 +1074,14 @@ std::string Emitter::emitExpr(const Expr &expr,
       }
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
+        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+          ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), blockTypes, returnKinds);
+          std::string inferred = typeNameForReturnKind(initKind);
+          if (!inferred.empty()) {
+            binding.typeName = inferred;
+            binding.typeTemplateArg.clear();
+          }
+        }
         blockTypes[stmt.name] = binding;
         bool needsConst = !binding.isMutable;
         if (hasExplicitBindingTypeTransform(stmt)) {
@@ -1002,6 +1147,14 @@ std::string Emitter::emitExpr(const Expr &expr,
         }
         if (stmt.isBinding) {
           BindingInfo binding = getBindingInfo(stmt);
+          if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+            ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), branchTypes, returnKinds);
+            std::string inferred = typeNameForReturnKind(initKind);
+            if (!inferred.empty()) {
+              binding.typeName = inferred;
+              binding.typeTemplateArg.clear();
+            }
+          }
           branchTypes[stmt.name] = binding;
           bool needsConst = !binding.isMutable;
           if (hasExplicitBindingTypeTransform(stmt)) {
