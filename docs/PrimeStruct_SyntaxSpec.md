@@ -21,6 +21,9 @@ The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ..
 indexing `value[index]`), then rewrites them into a small canonical core before semantic analysis
 and IR lowering.
 
+Transform template lists accept one or more type expressions, so generic binding types can be
+spelled directly in transform position (e.g. `[array<i32>] values(...)`, `[map<i32, i32>] pairs(...)`).
+
 ## 2. Lexical Structure
 
 ### 2.1 Identifiers

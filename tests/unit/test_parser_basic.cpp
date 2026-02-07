@@ -146,6 +146,27 @@ main() {
   CHECK(stmt.transforms[0].name == "i32");
 }
 
+TEST_CASE("parses binding type transforms with multiple template args") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  return(0i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.isBinding);
+  CHECK(stmt.name == "values");
+  REQUIRE(stmt.transforms.size() == 1);
+  CHECK(stmt.transforms[0].name == "map");
+  REQUIRE(stmt.transforms[0].templateArgs.size() == 2);
+  CHECK(stmt.transforms[0].templateArgs[0] == "i32");
+  CHECK(stmt.transforms[0].templateArgs[1] == "i32");
+}
+
 TEST_CASE("parses literal statement") {
   const std::string source = R"(
 [return<int>]
