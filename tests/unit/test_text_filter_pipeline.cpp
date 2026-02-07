@@ -731,6 +731,16 @@ TEST_CASE("map literal preserves equality operators") {
   CHECK(output.find("equal(3i32, 4i32)") != std::string::npos);
 }
 
+TEST_CASE("map literal preserves nested assignment operators in values") {
+  const std::string source = "main(){ map<i32, i32>{1i32=value=2i32} }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32, i32>(1i32, assign(value, 2i32))") != std::string::npos);
+}
+
 TEST_CASE("rewrites nested expressions inside array literal") {
   const std::string source = "main(){ array<i32>{1i32+2i32} }\n";
   primec::TextFilterPipeline pipeline;

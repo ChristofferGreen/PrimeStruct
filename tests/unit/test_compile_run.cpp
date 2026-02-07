@@ -235,6 +235,31 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
+TEST_CASE("compiles and runs map literal preserving assignment value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(0i32)
+  map<i32, i32>{1i32=value=2i32}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_value_assign.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_value_assign_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_map_value_assign_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 2);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 2);
+}
+
 TEST_CASE("C++ emitter array access checks bounds") {
   const std::string source = R"(
 [return<int>]

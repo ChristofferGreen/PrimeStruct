@@ -646,6 +646,7 @@ bool TextFilterPipeline::apply(const std::string &input,
         std::string rewritten;
         rewritten.reserve(inner.size());
         size_t scan = 0;
+        bool entryHasPairEquals = false;
         int parenDepth = 0;
         int braceDepth = 0;
         int bracketDepth = 0;
@@ -708,6 +709,12 @@ bool TextFilterPipeline::apply(const std::string &input,
             ++scan;
             continue;
           }
+          if (c == ',' && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+            entryHasPairEquals = false;
+            rewritten.push_back(c);
+            ++scan;
+            continue;
+          }
           if (c == '=') {
             char prev = scan > 0 ? inner[scan - 1] : '\0';
             char next = scan + 1 < inner.size() ? inner[scan + 1] : '\0';
@@ -735,7 +742,12 @@ bool TextFilterPipeline::apply(const std::string &input,
               ++scan;
               continue;
             }
-            rewritten.append(", ");
+            if (!entryHasPairEquals) {
+              rewritten.append(", ");
+              entryHasPairEquals = true;
+            } else {
+              rewritten.push_back(c);
+            }
             ++scan;
             continue;
           }
