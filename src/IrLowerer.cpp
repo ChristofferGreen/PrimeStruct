@@ -159,6 +159,24 @@ bool getBuiltinClampName(const Expr &expr) {
   return name == "clamp";
 }
 
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "min" || name == "max") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -943,6 +961,14 @@ bool IrLowerer::lower(const Program &program,
           auto second = inferExprKind(expr.args[1], localsIn);
           auto third = inferExprKind(expr.args[2], localsIn);
           return combineNumericKinds(combineNumericKinds(first, second), third);
+        }
+        if (getBuiltinMinMaxName(expr, builtin)) {
+          if (expr.args.size() != 2) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          auto left = inferExprKind(expr.args[0], localsIn);
+          auto right = inferExprKind(expr.args[1], localsIn);
+          return combineNumericKinds(left, right);
         }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
@@ -2334,6 +2360,74 @@ bool IrLowerer::lower(const Program &program,
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           return true;
         }
+        std::string minMaxName;
+        if (getBuiltinMinMaxName(expr, minMaxName)) {
+          if (expr.args.size() != 2) {
+            error = minMaxName + " requires exactly two arguments";
+            return false;
+          }
+          bool sawUnsigned = false;
+          bool sawSigned = false;
+          for (const auto &arg : expr.args) {
+            LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
+            if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
+              sawUnsigned = true;
+            }
+            if (kind == LocalInfo::ValueKind::UInt64) {
+              sawUnsigned = true;
+            } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
+              sawSigned = true;
+            }
+          }
+          if (sawUnsigned && sawSigned) {
+            error = minMaxName + " requires numeric arguments of the same type";
+            return false;
+          }
+          LocalInfo::ValueKind minMaxKind =
+              combineNumericKinds(inferExprKind(expr.args[0], localsIn), inferExprKind(expr.args[1], localsIn));
+          if (minMaxKind == LocalInfo::ValueKind::Unknown) {
+            error = minMaxName + " requires numeric arguments of the same type";
+            return false;
+          }
+          IrOpcode cmpOp = IrOpcode::CmpLtI32;
+          if (minMaxName == "max") {
+            cmpOp = IrOpcode::CmpGtI32;
+          }
+          if (minMaxKind == LocalInfo::ValueKind::UInt64) {
+            cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtU64 : IrOpcode::CmpLtU64;
+          } else if (minMaxKind == LocalInfo::ValueKind::Int64) {
+            cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtI64 : IrOpcode::CmpLtI64;
+          }
+          int32_t tempLeft = allocTempLocal();
+          int32_t tempRight = allocTempLocal();
+          int32_t tempOut = allocTempLocal();
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempLeft)});
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempRight)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempLeft)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempRight)});
+          function.instructions.push_back({cmpOp, 0});
+          size_t useRight = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempLeft)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpToEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t useRightIndex = function.instructions.size();
+          function.instructions[useRight].imm = static_cast<int32_t>(useRightIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempRight)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          return true;
+        }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
             error = "convert requires exactly one template argument";
@@ -2717,7 +2811,7 @@ bool IrLowerer::lower(const Program &program,
           function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
           return true;
         }
-        error = "native backend only supports arithmetic/comparison/clamp/convert/pointer/assign calls in expressions";
+        error = "native backend only supports arithmetic/comparison/clamp/min/max/convert/pointer/assign calls in expressions";
         return false;
       }
       default:

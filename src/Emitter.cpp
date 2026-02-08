@@ -82,6 +82,7 @@ bool getBuiltinOperator(const Expr &expr, char &out);
 bool getBuiltinComparison(const Expr &expr, const char *&out);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isBuiltinClamp(const Expr &expr);
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 std::string resolveExprPath(const Expr &expr);
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
@@ -445,6 +446,12 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds));
     return result;
   }
+  std::string minMaxName;
+  if (getBuiltinMinMaxName(expr, minMaxName) && expr.args.size() == 2) {
+    ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
+    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
+    return result;
+  }
   const char *cmp = nullptr;
   if (getBuiltinComparison(expr, cmp)) {
     return ReturnKind::Bool;
@@ -674,6 +681,24 @@ bool isBuiltinClamp(const Expr &expr) {
     return false;
   }
   return name == "clamp";
+}
+
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "min" || name == "max") {
+    out = name;
+    return true;
+  }
+  return false;
 }
 
 bool getBuiltinPointerOperator(const Expr &expr, char &out) {
@@ -1303,6 +1328,14 @@ std::string Emitter::emitExpr(const Expr &expr,
           << emitExpr(expr.args[2], nameMap, paramMap, localTypes, returnKinds) << ")";
       return out.str();
     }
+    std::string minMaxName;
+    if (getBuiltinMinMaxName(expr, minMaxName) && expr.args.size() == 2) {
+      std::ostringstream out;
+      out << "ps_builtin_" << minMaxName << "("
+          << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      return out.str();
+    }
     std::string convertName;
     if (getBuiltinConvertName(expr, convertName) && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
       std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
@@ -1695,6 +1728,20 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "template <typename T, typename Offset>\n";
   out << "static inline T *ps_pointer_add(T &ref, Offset offset) {\n";
   out << "  return ps_pointer_add(&ref, offset);\n";
+  out << "}\n";
+  out << "template <typename T, typename U>\n";
+  out << "static inline std::common_type_t<T, U> ps_builtin_min(T left, U right) {\n";
+  out << "  using R = std::common_type_t<T, U>;\n";
+  out << "  R lhs = static_cast<R>(left);\n";
+  out << "  R rhs = static_cast<R>(right);\n";
+  out << "  return lhs < rhs ? lhs : rhs;\n";
+  out << "}\n";
+  out << "template <typename T, typename U>\n";
+  out << "static inline std::common_type_t<T, U> ps_builtin_max(T left, U right) {\n";
+  out << "  using R = std::common_type_t<T, U>;\n";
+  out << "  R lhs = static_cast<R>(left);\n";
+  out << "  R rhs = static_cast<R>(right);\n";
+  out << "  return lhs > rhs ? lhs : rhs;\n";
   out << "}\n";
   out << "template <typename T, typename U, typename V>\n";
   out << "static inline std::common_type_t<T, U, V> ps_builtin_clamp(T value, U minValue, V maxValue) {\n";

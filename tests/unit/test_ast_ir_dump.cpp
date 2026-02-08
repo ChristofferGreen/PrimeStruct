@@ -378,6 +378,24 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump infers return type from builtin min") {
+  const std::string source = R"(
+main() {
+  return(min(2i32, 5i32))
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return min(2, 5)\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump infers void return without transform") {
   const std::string source = R"(
 main() {

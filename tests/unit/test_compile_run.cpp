@@ -5026,6 +5026,36 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs min") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(min(5i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_min.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_min_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("compiles and runs max f32") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(max(1.25f, 2.5f)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_max_f32.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_max_f32_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs clamp") {
   const std::string source = R"(
 [return<int>]

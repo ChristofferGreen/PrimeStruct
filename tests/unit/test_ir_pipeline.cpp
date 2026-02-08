@@ -1382,6 +1382,105 @@ main() {
   CHECK(result == 4);
 }
 
+TEST_CASE("ir lowers min") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(min(5i32, 2i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawMinCompare = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::CmpLtI32) {
+      sawMinCompare = true;
+      break;
+    }
+  }
+  CHECK(sawMinCompare);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
+}
+
+TEST_CASE("ir lowers max u64") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(max(3u64, 7u64))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawMaxCompare = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::CmpGtU64) {
+      sawMaxCompare = true;
+      break;
+    }
+  }
+  CHECK(sawMaxCompare);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
+TEST_CASE("ir lowers max mixed i32/i64") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(max(3i32, 7i64))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawMaxCompare = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::CmpGtI64) {
+      sawMaxCompare = true;
+      break;
+    }
+  }
+  CHECK(sawMaxCompare);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
 TEST_CASE("ir lowers clamp u64") {
   const std::string source = R"(
 [return<u64>]

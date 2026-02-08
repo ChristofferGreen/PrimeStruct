@@ -294,6 +294,24 @@ bool getBuiltinClampName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "min" || name == "max") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -1097,6 +1115,14 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[2]));
         return result;
       }
+      if (getBuiltinMinMaxName(expr, builtinName)) {
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind result = inferPrimitiveReturnKind(expr.args[0]);
+        result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[1]));
+        return result;
+      }
       if (getBuiltinConvertName(expr, builtinName)) {
         if (expr.templateArgs.size() != 1) {
           return ReturnKind::Unknown;
@@ -1864,6 +1890,14 @@ bool Semantics::validate(const Program &program,
         ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
         result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
         result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
+        return result;
+      }
+      if (getBuiltinMinMaxName(expr, builtinName)) {
+        if (expr.args.size() != 2) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
+        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
         return result;
       }
       if (getBuiltinConvertName(expr, builtinName)) {
@@ -2850,6 +2884,32 @@ bool Semantics::validate(const Program &program,
           }
           if (hasMixedNumericCategory(expr.args)) {
             error = "clamp does not support mixed int/float operands";
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!validateExpr(params, locals, arg)) {
+              return false;
+            }
+          }
+          return true;
+        }
+        if (getBuiltinMinMaxName(expr, builtinName)) {
+          if (expr.args.size() != 2) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          for (const auto &arg : expr.args) {
+            if (!isNumericExpr(arg)) {
+              error = builtinName + " requires numeric operands";
+              return false;
+            }
+          }
+          if (hasMixedSignedness(expr.args, false)) {
+            error = builtinName + " does not support mixed signed/unsigned operands";
+            return false;
+          }
+          if (hasMixedNumericCategory(expr.args)) {
+            error = builtinName + " does not support mixed int/float operands";
             return false;
           }
           for (const auto &arg : expr.args) {
