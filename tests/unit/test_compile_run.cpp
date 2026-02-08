@@ -579,6 +579,38 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
+TEST_CASE("compiles and runs binding inference from mixed if branches") {
+  const std::string source = R"(
+namespace i64 {
+  [return<i64>]
+  inc([i64] self) {
+    return(plus(self, 1i64))
+  }
+}
+
+[return<int>]
+main() {
+  [mut] value(if(false, 2i32, 5i64))
+  return(convert<i32>(value.inc()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_infer_if_mixed_numeric.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_infer_if_mixed_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_infer_if_mixed_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 6);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 6);
+}
+
 TEST_CASE("compiles and runs parameter inferring i64 from default initializer") {
   const std::string source = R"(
 [return<i64>]

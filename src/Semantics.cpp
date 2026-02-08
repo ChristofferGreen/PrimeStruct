@@ -1116,7 +1116,10 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         }
         ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1]);
         ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2]);
-        return thenKind == elseKind ? thenKind : ReturnKind::Unknown;
+        if (thenKind == elseKind) {
+          return thenKind;
+        }
+        return combineNumeric(thenKind, elseKind);
       }
       return ReturnKind::Unknown;
     }
