@@ -1040,8 +1040,10 @@ bool TextFilterPipeline::apply(const std::string &input,
           }
         }
         size_t digitsEnd = i;
+        bool hasDot = false;
         bool hasExponent = false;
-        if (!isHex && i + 1 < input.size() && input[i] == '.' && isDigitChar(input[i + 1])) {
+        if (!isHex && i < input.size() && input[i] == '.') {
+          hasDot = true;
           ++i;
           while (i < input.size() && isDigitChar(input[i])) {
             ++i;
@@ -1084,7 +1086,7 @@ bool TextFilterPipeline::apply(const std::string &input,
           i = literalEnd + floatSuffixLen - 1;
           continue;
         }
-        if (literalEnd > digitsEnd || hasExponent) {
+        if (hasDot || hasExponent) {
           output.append(input.substr(start, literalEnd - start));
           i = literalEnd - 1;
           continue;

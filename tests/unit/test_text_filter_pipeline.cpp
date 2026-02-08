@@ -723,6 +723,42 @@ TEST_CASE("does not add suffix to i64 or u64 literals with implicit filter") {
   CHECK(output == source);
 }
 
+TEST_CASE("implicit i32 filter skips float with trailing dot") {
+  const std::string source = "main(){ return(1.) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("implicit i32 filter skips float with suffix after dot") {
+  const std::string source = "main(){ return(1.f32) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("implicit i32 filter skips float with exponent after dot") {
+  const std::string source = "main(){ return(1.e2) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("does not rewrite numbers inside strings") {
   const std::string source = "main(){ log(\"42\") }\n";
   primec::TextFilterPipeline pipeline;
