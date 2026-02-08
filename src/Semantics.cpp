@@ -77,6 +77,47 @@ std::string joinTemplateArgs(const std::vector<std::string> &args) {
   return out;
 }
 
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+  out.clear();
+  int depth = 0;
+  size_t start = 0;
+  auto pushSegment = [&](size_t end) {
+    size_t segStart = start;
+    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
+      ++segStart;
+    }
+    size_t segEnd = end;
+    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+      --segEnd;
+    }
+    out.push_back(text.substr(segStart, segEnd - segStart));
+  };
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+      }
+      continue;
+    }
+    if (c == ',' && depth == 0) {
+      pushSegment(i);
+      start = i + 1;
+    }
+  }
+  pushSegment(text.size());
+  for (const auto &seg : out) {
+    if (seg.empty()) {
+      return false;
+    }
+  }
+  return !out.empty();
+}
+
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
   size_t lt = text.find('<');
   if (lt == std::string::npos) {
@@ -1653,17 +1694,42 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
-      auto resolveMapTarget = [&](const Expr &target) -> bool {
+      auto resolveMapTarget = [&](const Expr &target, std::string &keyTypeOut, std::string &valueTypeOut) -> bool {
+        keyTypeOut.clear();
+        valueTypeOut.clear();
         if (target.kind == Expr::Kind::Name) {
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-            return paramBinding->typeName == "map";
+            if (paramBinding->typeName != "map") {
+              return false;
+            }
+            std::vector<std::string> parts;
+            if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
+              return false;
+            }
+            keyTypeOut = parts[0];
+            valueTypeOut = parts[1];
+            return true;
           }
           auto it = locals.find(target.name);
-          return it != locals.end() && it->second.typeName == "map";
+          if (it == locals.end() || it->second.typeName != "map") {
+            return false;
+          }
+          std::vector<std::string> parts;
+          if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
+            return false;
+          }
+          keyTypeOut = parts[0];
+          valueTypeOut = parts[1];
+          return true;
         }
         if (target.kind == Expr::Kind::Call) {
           std::string collection;
-          return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
+          if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
+            return false;
+          }
+          keyTypeOut = target.templateArgs[0];
+          valueTypeOut = target.templateArgs[1];
+          return true;
         }
         return false;
       };
@@ -1712,8 +1778,10 @@ bool Semantics::validate(const Program &program,
       bool hasResolvedPath = !expr.isMethodCall;
       if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
         std::string elemType;
+        std::string keyType;
+        std::string valueType;
         if (resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front()) ||
-            resolveMapTarget(expr.args.front())) {
+            resolveMapTarget(expr.args.front(), keyType, valueType)) {
           return ReturnKind::Int;
         }
       }
@@ -1737,8 +1805,10 @@ bool Semantics::validate(const Program &program,
       }
       if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
         std::string elemType;
+        std::string keyType;
+        std::string valueType;
         if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front()) &&
-            !resolveMapTarget(expr.args.front())) {
+            !resolveMapTarget(expr.args.front(), keyType, valueType)) {
           return ReturnKind::Unknown;
         }
         return ReturnKind::Int;
@@ -1748,6 +1818,12 @@ bool Semantics::validate(const Program &program,
         std::string elemType;
         if (resolveStringTarget(expr.args.front())) {
           return ReturnKind::Int;
+        }
+        std::string keyType;
+        std::string valueType;
+        if (resolveMapTarget(expr.args.front(), keyType, valueType)) {
+          ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(valueType));
+          return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
         }
         if (resolveArrayTarget(expr.args.front(), elemType)) {
           ReturnKind kind = returnKindForTypeName(elemType);
@@ -2786,13 +2862,18 @@ bool Semantics::validate(const Program &program,
             return false;
           }
           std::string elemType;
-          if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front())) {
-            error = builtinName + " requires array or string target";
+          bool isArrayOrString =
+              resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front());
+          bool isMap = resolveMapTarget(expr.args.front());
+          if (!isArrayOrString && !isMap) {
+            error = builtinName + " requires array, map, or string target";
             return false;
           }
-          if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
-            error = builtinName + " requires integer index";
-            return false;
+          if (!isMap) {
+            if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
+              error = builtinName + " requires integer index";
+              return false;
+            }
           }
           for (const auto &arg : expr.args) {
             if (!validateExpr(params, locals, arg)) {

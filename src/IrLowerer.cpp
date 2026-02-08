@@ -276,6 +276,8 @@ bool IrLowerer::lower(const Program &program,
     bool isMutable = false;
     enum class Kind { Value, Pointer, Reference, Array, Map } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
+    ValueKind mapKeyKind = ValueKind::Unknown;
+    ValueKind mapValueKind = ValueKind::Unknown;
     enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
     bool argvChecked = true;
@@ -307,6 +309,15 @@ bool IrLowerer::lower(const Program &program,
   auto emitStringIndexOutOfBounds = [&]() {
     uint64_t flags = encodePrintFlags(true, true);
     int32_t msgIndex = internString("string index out of bounds");
+    function.instructions.push_back(
+        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+    function.instructions.push_back({IrOpcode::PushI32, 3});
+    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+  };
+
+  auto emitMapKeyNotFound = [&]() {
+    uint64_t flags = encodePrintFlags(true, true);
+    int32_t msgIndex = internString("map key not found");
     function.instructions.push_back(
         {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
     function.instructions.push_back({IrOpcode::PushI32, 3});
@@ -871,6 +882,23 @@ bool IrLowerer::lower(const Program &program,
           }
           if (isEntryArgsName(target, localsIn)) {
             return LocalInfo::ValueKind::Unknown;
+          }
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+              if (it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
+                  it->second.mapValueKind != LocalInfo::ValueKind::String) {
+                return it->second.mapValueKind;
+              }
+            }
+          } else if (target.kind == Expr::Kind::Call) {
+            std::string collection;
+            if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
+              LocalInfo::ValueKind kind = valueKindFromTypeName(target.templateArgs[1]);
+              if (kind != LocalInfo::ValueKind::Unknown && kind != LocalInfo::ValueKind::String) {
+                return kind;
+              }
+            }
           }
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
           if (target.kind == Expr::Kind::Name) {
@@ -1775,6 +1803,128 @@ bool IrLowerer::lower(const Program &program,
           if (isEntryArgsName(target, localsIn)) {
             error = "native backend only supports entry argument indexing in print calls or string bindings";
             return false;
+          }
+
+          bool isMapTarget = false;
+          LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
+          LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+              isMapTarget = true;
+              mapKeyKind = it->second.mapKeyKind;
+              mapValueKind = it->second.mapValueKind;
+            }
+          } else if (target.kind == Expr::Kind::Call) {
+            std::string collection;
+            if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
+              isMapTarget = true;
+              mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
+              mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+            }
+          }
+          if (isMapTarget) {
+            if (mapKeyKind == LocalInfo::ValueKind::Unknown || mapValueKind == LocalInfo::ValueKind::Unknown) {
+              error = "native backend requires typed map bindings for " + accessName;
+              return false;
+            }
+            if (mapKeyKind == LocalInfo::ValueKind::String || mapValueKind == LocalInfo::ValueKind::String) {
+              error = "native backend only supports at() on numeric/bool maps";
+              return false;
+            }
+
+            LocalInfo::ValueKind lookupKeyKind = inferExprKind(expr.args[1], localsIn);
+            if (lookupKeyKind == LocalInfo::ValueKind::Unknown || lookupKeyKind == LocalInfo::ValueKind::String) {
+              error = "native backend requires map lookup key to be numeric/bool";
+              return false;
+            }
+            if (lookupKeyKind != mapKeyKind) {
+              error = "native backend requires map lookup key type to match map key type";
+              return false;
+            }
+
+            const int32_t ptrLocal = allocTempLocal();
+            if (!emitExpr(expr.args[0], localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+
+            const int32_t keyLocal = allocTempLocal();
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
+
+            const int32_t countLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+            const int32_t indexLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+            size_t loopStart = function.instructions.size();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+            size_t jumpLoopEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 2});
+            function.instructions.push_back({IrOpcode::MulI32, 0});
+            function.instructions.push_back({IrOpcode::PushI32, 1});
+            function.instructions.push_back({IrOpcode::AddI32, 0});
+            function.instructions.push_back({IrOpcode::PushI32, 16});
+            function.instructions.push_back({IrOpcode::MulI32, 0});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal)});
+            IrOpcode cmpKeyOp = (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64)
+                                    ? IrOpcode::CmpEqI64
+                                    : IrOpcode::CmpEqI32;
+            function.instructions.push_back({cmpKeyOp, 0});
+            size_t jumpNotMatch = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            size_t jumpFound = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+
+            size_t notMatchIndex = function.instructions.size();
+            function.instructions[jumpNotMatch].imm = static_cast<int32_t>(notMatchIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 1});
+            function.instructions.push_back({IrOpcode::AddI32, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+
+            size_t loopEndIndex = function.instructions.size();
+            function.instructions[jumpLoopEnd].imm = static_cast<int32_t>(loopEndIndex);
+            function.instructions[jumpFound].imm = static_cast<int32_t>(loopEndIndex);
+
+            if (accessName == "at") {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+              function.instructions.push_back({IrOpcode::CmpEqI32, 0});
+              size_t jumpKeyFound = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitMapKeyNotFound();
+              size_t keyFoundIndex = function.instructions.size();
+              function.instructions[jumpKeyFound].imm = static_cast<int32_t>(keyFoundIndex);
+            }
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 2});
+            function.instructions.push_back({IrOpcode::MulI32, 0});
+            function.instructions.push_back({IrOpcode::PushI32, 2});
+            function.instructions.push_back({IrOpcode::AddI32, 0});
+            function.instructions.push_back({IrOpcode::PushI32, 16});
+            function.instructions.push_back({IrOpcode::MulI32, 0});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            return true;
           }
 
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
@@ -2715,7 +2865,32 @@ bool IrLowerer::lower(const Program &program,
         }
       }
       LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-      if (hasExplicitBindingTypeTransform(stmt)) {
+      LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
+      LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+      if (kind == LocalInfo::Kind::Map) {
+        if (hasExplicitBindingTypeTransform(stmt)) {
+          for (const auto &transform : stmt.transforms) {
+            if (transform.name == "map" && transform.templateArgs.size() == 2) {
+              mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
+              mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+              break;
+            }
+          }
+        } else if (init.kind == Expr::Kind::Name) {
+          auto it = localsIn.find(init.name);
+          if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+            mapKeyKind = it->second.mapKeyKind;
+            mapValueKind = it->second.mapValueKind;
+          }
+        } else if (init.kind == Expr::Kind::Call) {
+          std::string collection;
+          if (getBuiltinCollectionName(init, collection) && collection == "map" && init.templateArgs.size() == 2) {
+            mapKeyKind = valueKindFromTypeName(init.templateArgs[0]);
+            mapValueKind = valueKindFromTypeName(init.templateArgs[1]);
+          }
+        }
+        valueKind = mapValueKind;
+      } else if (hasExplicitBindingTypeTransform(stmt)) {
         valueKind = bindingValueKind(stmt, kind);
       } else if (kind == LocalInfo::Kind::Value) {
         valueKind = inferExprKind(init, localsIn);
@@ -2849,6 +3024,8 @@ bool IrLowerer::lower(const Program &program,
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;
       info.valueKind = valueKind;
+      info.mapKeyKind = mapKeyKind;
+      info.mapValueKind = mapValueKind;
       if (info.kind == LocalInfo::Kind::Reference) {
         if (init.kind != Expr::Kind::Call || !isSimpleCallName(init, "location") || init.args.size() != 1) {
           error = "reference binding requires location(...) initializer";

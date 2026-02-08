@@ -1234,6 +1234,9 @@ std::string Emitter::emitExpr(const Expr &expr,
       if (isStringValue(target, localTypes)) {
         out << "ps_string_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      } else if (isMapValue(target, localTypes)) {
+        out << "ps_map_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
       } else {
         out << "ps_array_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
@@ -1245,6 +1248,9 @@ std::string Emitter::emitExpr(const Expr &expr,
       const Expr &target = expr.args[0];
       if (isStringValue(target, localTypes)) {
         out << "ps_string_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      } else if (isMapValue(target, localTypes)) {
+        out << "ps_map_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
       } else {
         out << "ps_array_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
@@ -1708,6 +1714,19 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "template <typename Key, typename Value>\n";
   out << "static inline int ps_map_count(const std::unordered_map<Key, Value> &value) {\n";
   out << "  return static_cast<int>(value.size());\n";
+  out << "}\n";
+  out << "template <typename Key, typename Value, typename K>\n";
+  out << "static inline const Value &ps_map_at(const std::unordered_map<Key, Value> &value, const K &key) {\n";
+  out << "  auto it = value.find(key);\n";
+  out << "  if (it == value.end()) {\n";
+  out << "    std::fprintf(stderr, \"map key not found\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  return it->second;\n";
+  out << "}\n";
+  out << "template <typename Key, typename Value, typename K>\n";
+  out << "static inline const Value &ps_map_at_unsafe(const std::unordered_map<Key, Value> &value, const K &key) {\n";
+  out << "  return value.find(key)->second;\n";
   out << "}\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at(const std::vector<T> &value, Index index) {\n";

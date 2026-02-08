@@ -383,6 +383,58 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
+TEST_CASE("compiles and runs map indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] values(map<i32, i32>{1i32=10i32, 2i32=20i32})
+  return(values[2i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_indexing.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_indexing_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_map_indexing_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 20);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 20);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 20);
+}
+
+TEST_CASE("map indexing checks missing key") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] values(map<i32, i32>{1i32=10i32, 2i32=20i32})
+  return(values[9i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_bounds_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_map_bounds_native").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_map_bounds_err.txt").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + errPath) == 3);
+  CHECK(readFile(errPath) == "map key not found\n");
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runVmCmd) == 3);
+  CHECK(readFile(errPath) == "map key not found\n");
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath + " 2> " + errPath) == 3);
+  CHECK(readFile(errPath) == "map key not found\n");
+}
+
 TEST_CASE("compiles and runs binding inference feeding method call") {
   const std::string source = R"(
 namespace i64 {
