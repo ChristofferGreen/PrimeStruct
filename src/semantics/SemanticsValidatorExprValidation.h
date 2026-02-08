@@ -524,7 +524,7 @@
           }
         } else if (!mapKeyType.empty()) {
           if (normalizeBindingTypeName(mapKeyType) == "string") {
-            if (!resolveStringTarget(expr.args[1])) {
+            if (!isStringExpr(expr.args[1])) {
               error_ = builtinName + " requires string map key";
               return false;
             }

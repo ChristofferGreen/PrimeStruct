@@ -496,6 +496,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map access accepts string key expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values(map<string, i32>("a"utf8, 1i32))
+  [map<i32, string>] keys(map<i32, string>(1i32, "a"utf8))
+  return(at(values, at(keys, 1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("boolean literal validates") {
   const std::string source = R"(
 [return<int>]
