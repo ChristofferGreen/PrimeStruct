@@ -4529,6 +4529,74 @@ main() {
   CHECK(runCommand(nativePath) == 5);
 }
 
+TEST_CASE("compiles and runs lazy if expression taking then branch") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32))
+  [i32] n(values.count())
+  return(if(equal(n, 1i32), values[0i32], values[9i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_if_lazy_then.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_then_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_then_native").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_if_lazy_then_err.txt").string();
+
+  const std::string compileCppCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(errPath).empty());
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runVmCmd) == 4);
+  CHECK(readFile(errPath).empty());
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  const std::string runNativeCmd = quoteShellArg(nativePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runNativeCmd) == 4);
+  CHECK(readFile(errPath).empty());
+}
+
+TEST_CASE("compiles and runs lazy if expression taking else branch") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(4i32))
+  [i32] n(values.count())
+  return(if(equal(n, 0i32), values[9i32], values[0i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_if_lazy_else.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_else_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_if_lazy_else_native").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_if_lazy_else_err.txt").string();
+
+  const std::string compileCppCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(errPath).empty());
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runVmCmd) == 4);
+  CHECK(readFile(errPath).empty());
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  const std::string runNativeCmd = quoteShellArg(nativePath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runNativeCmd) == 4);
+  CHECK(readFile(errPath).empty());
+}
+
 TEST_CASE("compiles and runs with comments") {
   const std::string source = R"(
 // comment at top
