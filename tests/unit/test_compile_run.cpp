@@ -568,6 +568,36 @@ main() {
   CHECK(runCommand(runVmCmd) == (97 + 98 + 3));
 }
 
+TEST_CASE("vm string access checks bounds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  return(plus(100i32, text[9i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_bounds.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_bounds_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "string index out of bounds\n");
+}
+
+TEST_CASE("vm string access rejects negative index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  return(plus(100i32, text[-1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_negative.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_negative_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "string index out of bounds\n");
+}
+
 TEST_CASE("runs vm with argv printing") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -2562,6 +2592,44 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == (97 + 98 + 3));
+}
+
+TEST_CASE("compiles and runs native string access checks bounds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  return(plus(100i32, text[9i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_bounds_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_string_bounds_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "string index out of bounds\n");
+}
+
+TEST_CASE("compiles and runs native string access rejects negative index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  return(plus(100i32, text[-1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_negative.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_negative_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_string_negative_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "string index out of bounds\n");
 }
 
 TEST_CASE("compiles and runs native hello world example") {
