@@ -68,7 +68,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     return expr.floatValue + "f";
   }
   if (expr.kind == Expr::Kind::StringLiteral) {
-    return stripStringLiteralSuffix(expr.stringValue);
+    return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
   }
   if (expr.kind == Expr::Kind::Name) {
     return expr.name;

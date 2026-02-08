@@ -68,6 +68,56 @@
       }
       return false;
     };
+    auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
+      valueTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName != "map") {
+            return false;
+          }
+          std::vector<std::string> parts;
+          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
+            return false;
+          }
+          valueTypeOut = parts[1];
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it == locals.end() || it->second.typeName != "map") {
+          return false;
+        }
+        std::vector<std::string> parts;
+        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
+          return false;
+        }
+        valueTypeOut = parts[1];
+        return true;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
+          return false;
+        }
+        valueTypeOut = target.templateArgs[1];
+        return true;
+      }
+      return false;
+    };
+    auto isStringExpr = [&](const Expr &arg) -> bool {
+      if (resolveStringTarget(arg)) {
+        return true;
+      }
+      if (arg.kind == Expr::Kind::Call) {
+        std::string accessName;
+        if (getBuiltinArrayAccessName(arg, accessName) && arg.args.size() == 2) {
+          std::string mapValueType;
+          if (resolveMapValueType(arg.args.front(), mapValueType) && normalizeBindingTypeName(mapValueType) == "string") {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
@@ -303,27 +353,43 @@
           return false;
         }
         const bool isBooleanOp = builtinName == "and" || builtinName == "or" || builtinName == "not";
-        for (const auto &arg : expr.args) {
-          if (isBooleanOp) {
+        if (isBooleanOp) {
+          for (const auto &arg : expr.args) {
             if (!isIntegerOrBoolExpr(arg, params, locals)) {
               error_ = "boolean operators require integer or bool operands";
               return false;
             }
-          } else {
-            if (!isComparisonOperand(arg)) {
-              error_ = "comparisons require numeric or bool operands";
-              return false;
+          }
+        } else {
+          bool sawString = false;
+          bool sawNonString = false;
+          for (const auto &arg : expr.args) {
+            if (isStringExpr(arg)) {
+              sawString = true;
+            } else {
+              sawNonString = true;
             }
           }
-        }
-        if (!isBooleanOp) {
-          if (hasMixedSignedness(expr.args, true)) {
-            error_ = "comparisons do not support mixed signed/unsigned operands";
-            return false;
-          }
-          if (hasMixedNumericCategory(expr.args)) {
-            error_ = "comparisons do not support mixed int/float operands";
-            return false;
+          if (sawString) {
+            if (sawNonString) {
+              error_ = "comparisons do not support mixed string/numeric operands";
+              return false;
+            }
+          } else {
+            for (const auto &arg : expr.args) {
+              if (!isComparisonOperand(arg)) {
+                error_ = "comparisons require numeric, bool, or string operands";
+                return false;
+              }
+            }
+            if (hasMixedSignedness(expr.args, true)) {
+              error_ = "comparisons do not support mixed signed/unsigned operands";
+              return false;
+            }
+            if (hasMixedNumericCategory(expr.args)) {
+              error_ = "comparisons do not support mixed int/float operands";
+              return false;
+            }
           }
         }
         for (const auto &arg : expr.args) {

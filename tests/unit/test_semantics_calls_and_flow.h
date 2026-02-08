@@ -327,6 +327,30 @@ main() {
   CHECK(error.find("convert requires numeric or bool operand") != std::string::npos);
 }
 
+TEST_CASE("string comparisons validate") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal("alpha"utf8, "beta"utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("string comparisons reject mixed types") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal("alpha"utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
+}
+
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]

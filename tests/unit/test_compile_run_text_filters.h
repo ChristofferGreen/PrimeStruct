@@ -94,6 +94,21 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs string comparison") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal("alpha"utf8, "alpha"utf8))
+}
+)";
+  const std::string srcPath = writeTemp("compile_string_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("rejects mixed int/float arithmetic") {
   const std::string source = R"(
 [return<int>]
@@ -899,4 +914,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
 }
-
