@@ -18,8 +18,12 @@ add_library(primec_lib
   src/Lexer.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
-  src/Parser.cpp
-  src/Semantics.cpp
+  src/parser/ParserCore.cpp
+  src/parser/ParserExpr.cpp
+  src/parser/ParserHelpers.cpp
+  src/parser/ParserLists.cpp
+  src/semantics/SemanticsHelpers.cpp
+  src/semantics/SemanticsValidate.cpp
   src/TextFilterPipeline.cpp
   src/Vm.cpp
 )
