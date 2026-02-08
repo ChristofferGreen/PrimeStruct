@@ -337,14 +337,63 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (candidate.kind == Expr::Kind::StringLiteral) {
         return true;
       }
-      if (candidate.kind != Expr::Kind::Name) {
+      auto isStringTypeName = [&](const std::string &typeName) -> bool {
+        return normalizeBindingTypeName(typeName) == "string";
+      };
+      auto isStringArrayBinding = [&](const BindingInfo &binding) -> bool {
+        if (binding.typeName != "array") {
+          return false;
+        }
+        return isStringTypeName(binding.typeTemplateArg);
+      };
+      auto isStringMapBinding = [&](const BindingInfo &binding) -> bool {
+        if (binding.typeName != "map") {
+          return false;
+        }
+        std::vector<std::string> parts;
+        if (!splitTopLevelTemplateArgs(binding.typeTemplateArg, parts) || parts.size() != 2) {
+          return false;
+        }
+        return isStringTypeName(parts[1]);
+      };
+      auto isStringCollectionTarget = [&](const Expr &target) -> bool {
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            return isStringArrayBinding(*paramBinding) || isStringMapBinding(*paramBinding);
+          }
+          auto it = locals.find(target.name);
+          if (it != locals.end()) {
+            return isStringArrayBinding(it->second) || isStringMapBinding(it->second);
+          }
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string collection;
+          if (!getBuiltinCollectionName(target, collection)) {
+            return false;
+          }
+          if (collection == "array" && target.templateArgs.size() == 1) {
+            return isStringTypeName(target.templateArgs.front());
+          }
+          if (collection == "map" && target.templateArgs.size() == 2) {
+            return isStringTypeName(target.templateArgs[1]);
+          }
+        }
         return false;
+      };
+      if (candidate.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+          return isStringTypeName(paramBinding->typeName);
+        }
+        auto it = locals.find(candidate.name);
+        return it != locals.end() && isStringTypeName(it->second.typeName);
       }
-      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
-        return paramBinding->typeName == "string";
+      if (candidate.kind == Expr::Kind::Call) {
+        std::string accessName;
+        if (getBuiltinArrayAccessName(candidate, accessName) && candidate.args.size() == 2) {
+          return isStringCollectionTarget(candidate.args.front());
+        }
       }
-      auto it = locals.find(candidate.name);
-      return it != locals.end() && it->second.typeName == "string";
+      return false;
     };
     if (!isStringExpr(stmt.args.front())) {
       error_ = pathSpaceBuiltin.name + " requires string path argument";

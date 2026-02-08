@@ -681,6 +681,32 @@ main() {
   CHECK(error.find("requires string path argument") != std::string::npos);
 }
 
+TEST_CASE("notify accepts string array access") {
+  const std::string source = R"(
+[effects(pathspace_notify)]
+main() {
+  [array<string>] values(array<string>("a"utf8))
+  notify(values[0i32], 1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("notify accepts string map access") {
+  const std::string source = R"(
+[effects(pathspace_notify)]
+main() {
+  [map<i32, string>] values(map<i32, string>(1i32, "/events/test"utf8))
+  notify(values[1i32], 1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("notify not allowed in expression context") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify)]
