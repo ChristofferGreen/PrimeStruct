@@ -2,6 +2,7 @@
 
 #include "primec/IrSerializer.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -5125,6 +5126,39 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles examples to IR") {
+  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";
+  REQUIRE(std::filesystem::exists(examplesDir));
+
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_examples_ir";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  std::vector<std::filesystem::path> exampleFiles;
+  for (const auto &entry : std::filesystem::directory_iterator(examplesDir)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::filesystem::path path = entry.path();
+    if (path.extension() != ".prime") {
+      continue;
+    }
+    exampleFiles.push_back(path);
+  }
+  std::sort(exampleFiles.begin(), exampleFiles.end());
+  REQUIRE(!exampleFiles.empty());
+
+  for (const auto &path : exampleFiles) {
+    const std::string compileCmd =
+        "./primec --emit=ir " + quoteShellArg(path.string()) + " --out-dir " + quoteShellArg(outDir.string()) +
+        " --entry /main";
+    CHECK(runCommand(compileCmd) == 0);
+    CHECK(std::filesystem::exists(outDir / (path.stem().string() + ".psir")));
+  }
 }
 
 TEST_SUITE_END();

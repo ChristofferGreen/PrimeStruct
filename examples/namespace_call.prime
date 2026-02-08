@@ -9,3 +9,8 @@ namespace demo {
     return(get_value())
   }
 }
+
+[return<int>]
+main() {
+  return(/demo/main())
+}
