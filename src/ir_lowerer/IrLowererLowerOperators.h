@@ -787,11 +787,18 @@
               return false;
             }
             if (it->second.kind == LocalInfo::Kind::Reference) {
+              const int32_t ptrLocal = allocTempLocal();
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              const int32_t valueLocal = allocTempLocal();
               if (!emitExpr(expr.args[1], localsIn)) {
                 return false;
               }
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               return true;
             }
             if (!emitExpr(expr.args[1], localsIn)) {
@@ -807,6 +814,7 @@
               return false;
             }
             const Expr &pointerExpr = target.args.front();
+            const int32_t ptrLocal = allocTempLocal();
             if (pointerExpr.kind == Expr::Kind::Name) {
               auto it = localsIn.find(pointerExpr.name);
               if (it == localsIn.end() || !it->second.isMutable) {
@@ -823,10 +831,16 @@
                 return false;
               }
             }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+            const int32_t valueLocal = allocTempLocal();
             if (!emitExpr(expr.args[1], localsIn)) {
               return false;
             }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
             return true;
           }
           error = "native backend only supports assign to local names or dereference";

@@ -112,6 +112,58 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("assign returns value for reference targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [Reference<i32> mut] ref(location(value))
+  return(assign(ref, 7i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
+TEST_CASE("assign returns value for dereference targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  [Pointer<i32> mut] ptr(location(value))
+  return(assign(dereference(ptr), 9i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 9);
+}
+
 TEST_CASE("ir lowers pointer minus") {
   const std::string source = R"(
 [return<int>]
