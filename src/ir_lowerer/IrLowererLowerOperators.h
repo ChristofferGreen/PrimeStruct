@@ -191,16 +191,16 @@
             error = builtin + " requires exactly two arguments";
             return false;
           }
-          if (!emitExpr(expr.args[0], localsIn)) {
-            return false;
-          }
-          if (!emitExpr(expr.args[1], localsIn)) {
-            return false;
-          }
           LocalInfo::ValueKind leftKind = inferExprKind(expr.args[0], localsIn);
           LocalInfo::ValueKind rightKind = inferExprKind(expr.args[1], localsIn);
           if (leftKind == LocalInfo::ValueKind::String || rightKind == LocalInfo::ValueKind::String) {
             error = "native backend does not support string comparisons";
+            return false;
+          }
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          if (!emitExpr(expr.args[1], localsIn)) {
             return false;
           }
           LocalInfo::ValueKind numericKind = comparisonKind(leftKind, rightKind);

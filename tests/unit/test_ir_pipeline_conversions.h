@@ -146,9 +146,7 @@ TEST_CASE("ir lowerer rejects string comparisons") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  [string] left("a"utf8)
-  [string] right("b"utf8)
-  return(equal(left, right))
+  return(equal("a"utf8, "b"utf8))
 }
 )";
   primec::Program program;
