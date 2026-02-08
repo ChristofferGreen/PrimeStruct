@@ -11,7 +11,8 @@ add_library(primec_lib
   src/AstPrinter.cpp
   src/Emitter.cpp
   src/IncludeResolver.cpp
-  src/IrLowerer.cpp
+  src/ir_lowerer/IrLowererHelpers.cpp
+  src/ir_lowerer/IrLowererLower.cpp
   src/IrPrinter.cpp
   src/IrSerializer.cpp
   src/Lexer.cpp
