@@ -362,6 +362,43 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct constructor accepts named arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+  [i32] count(2i32)
+}
+
+[return<int>]
+main() {
+  thing(count = 3i32, value = 4i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct constructor rejects unknown named arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  thing(missing = 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: missing") != std::string::npos);
+}
+
 TEST_CASE("binding resolves struct types in namespace") {
   const std::string source = R"(
 namespace demo {
@@ -886,4 +923,3 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("repeat count requires integer or bool") != std::string::npos);
 }
-

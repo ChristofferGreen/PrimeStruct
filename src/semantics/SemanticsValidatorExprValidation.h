@@ -478,6 +478,49 @@
       return false;
     }
     const auto &calleeParams = paramsByDef_[resolved];
+    if (calleeParams.empty() && structNames_.count(resolved) > 0) {
+      std::vector<ParameterInfo> fieldParams;
+      fieldParams.reserve(it->second->statements.size());
+      for (const auto &stmt : it->second->statements) {
+        if (!stmt.isBinding) {
+          error_ = "struct definitions may only contain field bindings: " + resolved;
+          return false;
+        }
+        ParameterInfo field;
+        field.name = stmt.name;
+        if (stmt.args.size() == 1) {
+          field.defaultExpr = &stmt.args.front();
+        }
+        fieldParams.push_back(field);
+      }
+      if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
+        return false;
+      }
+      std::vector<const Expr *> orderedArgs;
+      std::string orderError;
+      if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+        if (orderError.find("argument count mismatch") != std::string::npos) {
+          error_ = "argument count mismatch for " + resolved;
+        } else {
+          error_ = orderError;
+        }
+        return false;
+      }
+      std::unordered_set<const Expr *> explicitArgs;
+      explicitArgs.reserve(expr.args.size());
+      for (const auto &arg : expr.args) {
+        explicitArgs.insert(&arg);
+      }
+      for (const auto *arg : orderedArgs) {
+        if (!arg || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        if (!validateExpr(params, locals, *arg)) {
+          return false;
+        }
+      }
+      return true;
+    }
     if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, error_)) {
       return false;
     }
