@@ -20,8 +20,8 @@ std::string joinTemplateArgs(const std::vector<std::string> &args) {
 
 ReturnKind getReturnKind(const Definition &def) {
   for (const auto &transform : def.transforms) {
-    if (transform.name == "struct" || transform.name == "pod" || transform.name == "stack" ||
-        transform.name == "heap" || transform.name == "buffer") {
+    if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
+        transform.name == "gpu_lane") {
       return ReturnKind::Void;
     }
     if (transform.name != "return" || transform.templateArgs.size() != 1) {

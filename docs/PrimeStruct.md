@@ -143,18 +143,18 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - Because includes expand first, slash paths survive every filter untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
 
 ### Struct & type categories (draft)
-- **Struct tag as transform:** `[struct ...]` in the envelope is purely declarative. It records a layout manifest (field names, types, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Placement tags (`[pod]`, `[stack]`, `[heap]`, `[buffer]`) follow the same field-only constraints. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform (e.g. `[stack]`) demands it.
-- **Placement tags (`[stack]`, `[heap]`, `[buffer]`):** placement transforms consume the manifest and enforce where the shape may live. `[stack]` means “legal to instantiate on the stack”; attempting to allocate it on the heap triggers a compile-time error. Future tags like `[heap allocator=arena::frame]` or `[buffer std=std140]` follow the same pattern.
+- **Struct tag as transform:** `[struct ...]` in the envelope is purely declarative. It records a layout manifest (field names, types, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
+- **Placement policy (draft):** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Types may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities.
 - **POD tag as validation:** `[pod]` asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
 - **Member syntax:** every field is just a stack-value execution (`[float mut] exposure(1.0f)`, `[handle<PathNode>] target(get_default())`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
 - **Method calls & indexing:** `value.method(args...)` desugars to `/type/method(value, args...)` in the method namespace (no hidden object model). For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
 - **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
 - **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations again produce diagnostics instead of silent adjustments.
-- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name(args)` so stack frames remain declarative (e.g., `[float mut] exposure(1.0f)`). Default initializers are mandatory for `[stack]` layouts to keep frames fully initialized.
+- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name(args)` so stack frames remain declarative (e.g., `[float mut] exposure(1.0f)`). Default initializers are mandatory to keep frames fully initialized.
 - **Lifecycle helpers (Create/Destroy):** Within a struct-tagged definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. `this` is implicitly available inside helpers (mutable by default) so they can either mutate the instance or merely perform side effects such as logging. Add `mut` to the helper’s transform list when it writes to `this`; omit it for pure helpers. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
   ```
   namespace demo {
-    [struct pod stack]
+    [struct pod]
     color_grade() {
       [float mut] exposure(1.0f)
 
@@ -172,7 +172,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   ```
 - **IR layout manifest:** `[struct]` extends the IR descriptor with `layout.total_size_bytes`, `layout.alignment_bytes`, and ordered `layout.fields`. Each field record stores `{ name, type, offset_bytes, size_bytes, padding_kind, category }`. Placement transforms consume this manifest verbatim, ensuring C++, VM, and GPU backends share one source of truth.
 - **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for borrow/resource rules. Handles remain opaque tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
-- **Documentation TODO:** finalise how manifest categories map to PathSpace storage classes and ensure placement transforms emit consistent diagnostics when tags conflict (`[stack]` + `[gpu_lane]`, etc.).
+- **Documentation TODO:** finalise how manifest categories map to PathSpace storage classes and ensure validation emits consistent diagnostics when tags conflict (`[pod]` + `[handle]`, etc.).
 
 ### Built-in transforms (draft)
 - **Purpose:** built-in transforms are metafunctions that stamp semantic flags on the AST; later passes (borrow checker, backend filters) consume those flags. They do not emit code directly.
@@ -185,7 +185,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
 - **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
 - **Capability helpers:** `capabilities(...)` reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
-- **`struct`, `pod`, `stack`, `heap`, `buffer`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[stack]` forbids heap placement, `[pod]` forbids handles/async fields).
+- **`struct`, `pod`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
 - **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
 
 ### Core library surface (draft)
@@ -268,7 +268,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`"…"raw_utf8` / `"…"raw_ascii`). Surface literals accept `utf8`/`ascii` suffixes, but the canonical/bottom-level form uses only `raw_utf8`/`raw_ascii` after escape decoding. `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
-- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the Envelope. Named arguments map to fields, and every field must have either an explicit argument or a placement-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
+- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the Envelope. Named arguments map to fields, and every field must have either an explicit argument or a type-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
 - **Named arguments:** named arguments may be reordered (including on executions), but cannot repeat a parameter name or follow a positional argument. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept named arguments.
   - Example: `array<i32>(first = 1i32)` is rejected because collections are builtin calls.
   - Example: `execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32))` is invalid because the positional map argument follows a named argument.

@@ -354,33 +354,33 @@ main() {
   CHECK(error.find("struct definitions cannot contain return statements") != std::string::npos);
 }
 
-TEST_CASE("stack transform rejects return statements") {
+TEST_CASE("placement transforms are rejected") {
   const std::string source = R"(
 [stack]
 main() {
-  return(1i32)
+  [i32] value(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("struct definitions cannot contain return statements") != std::string::npos);
+  CHECK(error.find("placement transforms are not supported") != std::string::npos);
 }
 
-TEST_CASE("stack transform requires field initializers") {
+TEST_CASE("struct definitions require field initializers") {
   const std::string source = R"(
-[stack]
+[struct]
 main() {
   [i32] value()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("stack definitions require field initializers") != std::string::npos);
+  CHECK(error.find("struct definitions require field initializers") != std::string::npos);
 }
 
-TEST_CASE("stack transform allows initialized fields") {
+TEST_CASE("struct definitions allow initialized fields") {
   const std::string source = R"(
-[stack]
+[struct]
 main() {
   [i32] value(1i32)
 }
@@ -490,25 +490,9 @@ thing() {
   CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
 }
 
-TEST_CASE("lifecycle helpers require matching placement") {
-  const std::string source = R"(
-[struct]
-thing() {
-  [i32] value(1i32)
-}
-
-[return<void>]
-/thing/CreateStack() {
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/thing", error));
-  CHECK(error.find("lifecycle helper requires stack struct") != std::string::npos);
-}
-
 TEST_CASE("lifecycle helpers accept placement variants") {
   const std::string source = R"(
-[stack]
+[struct]
 thing() {
   [i32] value(1i32)
 }

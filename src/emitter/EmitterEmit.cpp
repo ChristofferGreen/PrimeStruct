@@ -18,8 +18,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
   auto isStructTransformName = [](const std::string &name) {
-    return name == "struct" || name == "pod" || name == "stack" || name == "heap" || name == "buffer" ||
-           name == "handle" || name == "gpu_lane";
+    return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane";
   };
   auto isStructDefinition = [&](const Definition &def) {
     bool hasStruct = false;

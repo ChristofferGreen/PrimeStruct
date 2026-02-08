@@ -34,6 +34,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
           error_ = "return transform does not accept arguments on " + def.fullPath;
           return false;
         }
+      } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
+        error_ = "placement transforms are not supported: " + def.fullPath;
+        return false;
       } else if (transform.name == "effects") {
         if (sawEffects) {
           error_ = "duplicate effects transform on " + def.fullPath;
@@ -69,16 +72,12 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     bool isStruct = false;
     bool hasReturnTransform = false;
-    bool isStack = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "return") {
         hasReturnTransform = true;
       }
       if (isStructTransformName(transform.name)) {
         isStruct = true;
-        if (transform.name == "stack") {
-          isStack = true;
-        }
       }
     }
     bool isFieldOnlyStruct = false;
@@ -117,8 +116,12 @@ bool SemanticsValidator::buildDefinitionMaps() {
           error_ = "struct definitions may only contain field bindings: " + def.fullPath;
           return false;
         }
-        if (isStack && stmt.args.empty()) {
-          error_ = "stack definitions require field initializers: " + def.fullPath;
+      }
+    }
+    if (isStruct || isFieldOnlyStruct) {
+      for (const auto &stmt : def.statements) {
+        if (stmt.isBinding && stmt.args.empty()) {
+          error_ = "struct definitions require field initializers: " + def.fullPath;
           return false;
         }
       }
@@ -179,24 +182,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (parentPath.empty() || structNames_.count(parentPath) == 0) {
       error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
       return false;
-    }
-    if (!placement.empty()) {
-      auto parentIt = defMap_.find(parentPath);
-      if (parentIt == defMap_.end()) {
-        error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
-        return false;
-      }
-      bool hasPlacement = false;
-      for (const auto &transform : parentIt->second->transforms) {
-        if (transform.name == placement) {
-          hasPlacement = true;
-          break;
-        }
-      }
-      if (!hasPlacement) {
-        error_ = "lifecycle helper requires " + placement + " struct: " + def.fullPath;
-        return false;
-      }
     }
   }
 

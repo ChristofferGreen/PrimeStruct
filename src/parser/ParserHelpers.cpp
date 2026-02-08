@@ -123,8 +123,7 @@ bool validateTransformName(const std::string &text, std::string &error) {
 }
 
 bool isStructTransformName(const std::string &text) {
-  return text == "struct" || text == "pod" || text == "stack" || text == "heap" || text == "buffer" ||
-         text == "handle" || text == "gpu_lane";
+  return text == "struct" || text == "pod" || text == "handle" || text == "gpu_lane";
 }
 
 bool isBuiltinName(const std::string &name) {

@@ -1,7 +1,7 @@
     bool hasReturnTransformLocal = false;
     for (const auto &transform : def.transforms) {
-      if (transform.name == "struct" || transform.name == "pod" || transform.name == "stack" || transform.name == "heap" ||
-          transform.name == "buffer") {
+      if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
+          transform.name == "gpu_lane") {
         info.returnsVoid = true;
         hasReturnTransformLocal = true;
         break;
@@ -259,8 +259,7 @@
     return it->second;
   };
   auto isStructTransformName = [](const std::string &name) {
-    return name == "struct" || name == "pod" || name == "stack" || name == "heap" || name == "buffer" ||
-           name == "handle" || name == "gpu_lane";
+    return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane";
   };
   auto isStructDefinition = [&](const Definition &def) {
     bool hasStruct = false;
