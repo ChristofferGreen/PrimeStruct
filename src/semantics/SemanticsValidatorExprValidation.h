@@ -108,20 +108,17 @@
       }
       resolvedMethod = isBuiltinMethod;
     } else if (expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
-      std::string elemType;
-      if (resolveArrayTarget(expr.args.front(), elemType)) {
-        resolved = "/array/count";
-        resolvedMethod = true;
-      } else if (resolveStringTarget(expr.args.front())) {
-        resolved = "/string/count";
-        resolvedMethod = true;
-      } else if (resolveMapTarget(expr.args.front())) {
-        resolved = "/map/count";
-        resolvedMethod = true;
-      } else {
-        error_ = "unknown method target for count";
+      bool isBuiltinMethod = false;
+      std::string methodResolved;
+      if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
         return false;
       }
+      if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        error_ = "unknown method: " + methodResolved;
+        return false;
+      }
+      resolved = methodResolved;
+      resolvedMethod = isBuiltinMethod;
     }
     PathSpaceBuiltin pathSpaceBuiltin;
     if (getPathSpaceBuiltin(expr, pathSpaceBuiltin) && defMap_.find(resolved) == defMap_.end()) {

@@ -81,6 +81,15 @@ std::string Emitter::emitExpr(const Expr &expr,
       full = methodPath;
     }
   }
+  if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 && nameMap.count(full) == 0 &&
+      !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) && !isStringCountCall(expr, localTypes)) {
+    Expr methodExpr = expr;
+    methodExpr.isMethodCall = true;
+    std::string methodPath;
+    if (resolveMethodCallPath(methodExpr, localTypes, returnKinds, methodPath)) {
+      full = methodPath;
+    }
+  }
   if (isBuiltinBlock(expr, nameMap) && expr.hasBodyArguments) {
     if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
       return "0";

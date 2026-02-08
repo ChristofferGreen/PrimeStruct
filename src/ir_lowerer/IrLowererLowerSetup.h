@@ -618,6 +618,19 @@ bool IrLowerer::lower(const Program &program,
             }
             return LocalInfo::ValueKind::Unknown;
           }
+          if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && !isArrayCountCall(expr, localsIn) &&
+              !isStringCountCall(expr, localsIn)) {
+            Expr methodExpr = expr;
+            methodExpr.isMethodCall = true;
+            const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
+            if (callee) {
+              ReturnInfo info;
+              if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid) {
+                return info.kind;
+              }
+              return LocalInfo::ValueKind::Unknown;
+            }
+          }
         } else {
           const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
           if (callee) {
