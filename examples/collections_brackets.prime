@@ -1,0 +1,6 @@
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>[1i32, 2i32, 3i32])
+  map<i32, i32>[1i32=10i32, 2i32=20i32]
+  return(values[1i32])
+}

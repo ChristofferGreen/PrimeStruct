@@ -1,0 +1,13 @@
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat([i32] count) {
+  return(1i32)
+}
+
+execute_repeat(2i32) {
+  main(),
+  main()
+}

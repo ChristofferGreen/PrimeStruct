@@ -1,0 +1,8 @@
+[return<int>]
+main() {
+  [i32 mut] value(4i32)
+  [Reference<i32> mut] ref(location(value))
+  [Pointer<i32>] ptr(location(ref))
+  assign(ref, plus(ref, 3i32))
+  return(dereference(ptr))
+}
