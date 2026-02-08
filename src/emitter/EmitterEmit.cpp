@@ -17,9 +17,41 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, std::vector<Expr>> paramMap;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
+  auto isStructTransformName = [](const std::string &name) {
+    return name == "struct" || name == "pod" || name == "stack" || name == "heap" || name == "buffer" ||
+           name == "handle" || name == "gpu_lane";
+  };
+  auto isStructDefinition = [&](const Definition &def) {
+    bool hasStruct = false;
+    bool hasReturn = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return") {
+        hasReturn = true;
+      }
+      if (isStructTransformName(transform.name)) {
+        hasStruct = true;
+      }
+    }
+    if (hasStruct) {
+      return true;
+    }
+    if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        return false;
+      }
+    }
+    return true;
+  };
   for (const auto &def : program.definitions) {
     nameMap[def.fullPath] = toCppName(def.fullPath);
-    paramMap[def.fullPath] = def.parameters;
+    if (isStructDefinition(def)) {
+      paramMap[def.fullPath] = def.statements;
+    } else {
+      paramMap[def.fullPath] = def.parameters;
+    }
     defMap[def.fullPath] = &def;
     returnKinds[def.fullPath] = getReturnKind(def);
   }
@@ -236,6 +268,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (!inferenceStack.insert(def.fullPath).second) {
       return ReturnKind::Unknown;
     }
+    const auto &params = paramMap[def.fullPath];
     ReturnKind inferred = ReturnKind::Unknown;
     bool sawReturn = false;
     std::unordered_map<std::string, ReturnKind> locals;
@@ -245,7 +278,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         BindingInfo info = getBindingInfo(stmt);
         ReturnKind bindingKind = returnKindForTypeName(info.typeName);
         if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), def.parameters, activeLocals);
+          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, activeLocals);
           if (initKind != ReturnKind::Unknown && initKind != ReturnKind::Void) {
             bindingKind = initKind;
           }
@@ -257,7 +290,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         sawReturn = true;
         ReturnKind exprKind = ReturnKind::Void;
         if (!stmt.args.empty()) {
-          exprKind = inferExprReturnKind(stmt.args.front(), def.parameters, activeLocals);
+          exprKind = inferExprReturnKind(stmt.args.front(), params, activeLocals);
         }
         if (exprKind == ReturnKind::Unknown) {
           inferred = ReturnKind::Unknown;
@@ -483,18 +516,20 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     } else if (returnKind == ReturnKind::Bool) {
       returnType = "bool";
     }
+    const auto &params = paramMap[def.fullPath];
+    const bool structDef = isStructDefinition(def);
     out << "static " << returnType << " " << nameMap[def.fullPath] << "(";
-    for (size_t i = 0; i < def.parameters.size(); ++i) {
+    for (size_t i = 0; i < params.size(); ++i) {
       if (i > 0) {
         out << ", ";
       }
-      BindingInfo paramInfo = getBindingInfo(def.parameters[i]);
+      BindingInfo paramInfo = getBindingInfo(params[i]);
       std::string paramType = bindingTypeToCpp(paramInfo);
       bool needsConst = !paramInfo.isMutable;
       if (needsConst && paramType.rfind("const ", 0) == 0) {
         needsConst = false;
       }
-      out << (needsConst ? "const " : "") << paramType << " " << def.parameters[i].name;
+      out << (needsConst ? "const " : "") << paramType << " " << params[i].name;
     }
     out << ") {\n";
     std::function<void(const Expr &, int, std::unordered_map<std::string, BindingInfo> &)> emitStatement;
@@ -530,7 +565,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           for (const auto &entry : localTypes) {
             locals.emplace(entry.first, returnKindForTypeName(entry.second.typeName));
           }
-          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), def.parameters, locals);
+          ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, locals);
           std::string inferred = typeNameForReturnKind(initKind);
           if (!inferred.empty()) {
             binding.typeName = inferred;
@@ -682,11 +717,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       out << pad << emitExpr(stmt, nameMap, paramMap, localTypes, returnKinds) << ";\n";
     };
     std::unordered_map<std::string, BindingInfo> localTypes;
-    for (const auto &param : def.parameters) {
+    for (const auto &param : params) {
       localTypes[param.name] = getBindingInfo(param);
     }
-    for (const auto &stmt : def.statements) {
-      emitStatement(stmt, 1, localTypes);
+    if (!structDef) {
+      for (const auto &stmt : def.statements) {
+        emitStatement(stmt, 1, localTypes);
+      }
     }
     if (returnKind == ReturnKind::Void) {
       out << "  return;\n";

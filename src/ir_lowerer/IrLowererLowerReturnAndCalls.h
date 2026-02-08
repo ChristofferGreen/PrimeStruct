@@ -258,22 +258,50 @@
     }
     return it->second;
   };
+  auto isStructTransformName = [](const std::string &name) {
+    return name == "struct" || name == "pod" || name == "stack" || name == "heap" || name == "buffer" ||
+           name == "handle" || name == "gpu_lane";
+  };
+  auto isStructDefinition = [&](const Definition &def) {
+    bool hasStruct = false;
+    bool hasReturn = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return") {
+        hasReturn = true;
+      }
+      if (isStructTransformName(transform.name)) {
+        hasStruct = true;
+      }
+    }
+    if (hasStruct) {
+      return true;
+    }
+    if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        return false;
+      }
+    }
+    return true;
+  };
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
-                                       const Definition &callee,
+                                       const std::vector<Expr> &params,
                                        std::vector<const Expr *> &ordered) -> bool {
-    ordered.assign(callee.parameters.size(), nullptr);
+    ordered.assign(params.size(), nullptr);
     size_t positionalIndex = 0;
     for (size_t i = 0; i < callExpr.args.size(); ++i) {
       if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
         const std::string &name = *callExpr.argNames[i];
-        size_t index = callee.parameters.size();
-        for (size_t p = 0; p < callee.parameters.size(); ++p) {
-          if (callee.parameters[p].name == name) {
+        size_t index = params.size();
+        for (size_t p = 0; p < params.size(); ++p) {
+          if (params[p].name == name) {
             index = p;
             break;
           }
         }
-        if (index >= callee.parameters.size()) {
+        if (index >= params.size()) {
           error = "unknown named argument: " + name;
           return false;
         }
@@ -298,8 +326,8 @@
       if (ordered[i] != nullptr) {
         continue;
       }
-      if (!callee.parameters[i].args.empty()) {
-        ordered[i] = &callee.parameters[i].args.front();
+      if (!params[i].args.empty()) {
+        ordered[i] = &params[i].args.front();
         continue;
       }
       error = "argument count mismatch";
@@ -417,15 +445,27 @@
       return false;
     }
 
+    const bool structDef = isStructDefinition(callee);
+    const std::vector<Expr> &callParams = structDef ? callee.statements : callee.parameters;
+    if (structDef) {
+      for (const auto &param : callParams) {
+        if (!param.isBinding) {
+          error = "struct definitions may only contain field bindings: " + callee.fullPath;
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+      }
+    }
+
     std::vector<const Expr *> orderedArgs;
-    if (!buildOrderedCallArguments(callExpr, callee, orderedArgs)) {
+    if (!buildOrderedCallArguments(callExpr, callParams, orderedArgs)) {
       inlineStack.erase(callee.fullPath);
       return false;
     }
 
     LocalMap calleeLocals;
-    for (size_t i = 0; i < callee.parameters.size(); ++i) {
-      const Expr &param = callee.parameters[i];
+    for (size_t i = 0; i < callParams.size(); ++i) {
+      const Expr &param = callParams[i];
       if (isFloatBinding(param)) {
         error = "native backend does not support float types";
         inlineStack.erase(callee.fullPath);
@@ -508,11 +548,13 @@
 
     InlineContext *prevContext = activeInlineContext;
     activeInlineContext = &context;
-    for (const auto &stmt : callee.statements) {
-      if (!emitStatement(stmt, calleeLocals)) {
-        activeInlineContext = prevContext;
-        inlineStack.erase(callee.fullPath);
-        return false;
+    if (!structDef) {
+      for (const auto &stmt : callee.statements) {
+        if (!emitStatement(stmt, calleeLocals)) {
+          activeInlineContext = prevContext;
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
       }
     }
     size_t endIndex = function.instructions.size();

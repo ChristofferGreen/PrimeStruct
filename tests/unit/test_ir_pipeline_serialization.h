@@ -39,6 +39,31 @@ main() {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir lowers struct constructor call") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+  [i32] count(2i32)
+}
+
+[return<int>]
+main() {
+  thing(count = 3i32)
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir serialize roundtrip with implicit void return") {
   const std::string source = R"(
 [return<void>]
@@ -860,4 +885,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 9);
 }
-
