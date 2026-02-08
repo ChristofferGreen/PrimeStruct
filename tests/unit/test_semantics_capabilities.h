@@ -490,6 +490,47 @@ thing() {
   CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
 }
 
+TEST_CASE("lifecycle helpers require matching placement") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/CreateStack() {
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/thing", error));
+  CHECK(error.find("lifecycle helper requires stack struct") != std::string::npos);
+}
+
+TEST_CASE("lifecycle helpers accept placement variants") {
+  const std::string source = R"(
+[stack]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/CreateStack() {
+}
+
+[return<void>]
+/thing/DestroyStack() {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct transforms are rejected on executions") {
   const std::string source = R"(
 [return<int>]

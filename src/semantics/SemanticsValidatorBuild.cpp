@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <array>
+#include <string_view>
 #include <utility>
 
 namespace primec::semantics {
@@ -133,11 +134,25 @@ bool SemanticsValidator::buildDefinitionMaps() {
     defMap_[def.fullPath] = &def;
   }
 
-  auto isLifecycleHelper = [](const std::string &fullPath, std::string &parentOut) -> bool {
-    static const std::array<std::string_view, 8> suffixes = {
-        "Create",      "Destroy",      "CreateStack", "DestroyStack",
-        "CreateHeap",  "DestroyHeap",  "CreateBuffer", "DestroyBuffer"};
-    for (const auto &suffix : suffixes) {
+  struct HelperSuffixInfo {
+    std::string_view suffix;
+    std::string_view placement;
+  };
+
+  auto isLifecycleHelper =
+      [](const std::string &fullPath, std::string &parentOut, std::string &placementOut) -> bool {
+    static const std::array<HelperSuffixInfo, 8> suffixes = {{
+        {"Create", ""},
+        {"Destroy", ""},
+        {"CreateStack", "stack"},
+        {"DestroyStack", "stack"},
+        {"CreateHeap", "heap"},
+        {"DestroyHeap", "heap"},
+        {"CreateBuffer", "buffer"},
+        {"DestroyBuffer", "buffer"},
+    }};
+    for (const auto &info : suffixes) {
+      const std::string_view suffix = info.suffix;
       if (fullPath.size() < suffix.size() + 1) {
         continue;
       }
@@ -145,10 +160,11 @@ bool SemanticsValidator::buildDefinitionMaps() {
       if (fullPath[suffixStart - 1] != '/') {
         continue;
       }
-      if (fullPath.compare(suffixStart, suffix.size(), suffix) != 0) {
+      if (fullPath.compare(suffixStart, suffix.size(), suffix.data(), suffix.size()) != 0) {
         continue;
       }
       parentOut = fullPath.substr(0, suffixStart - 1);
+      placementOut = std::string(info.placement);
       return true;
     }
     return false;
@@ -156,12 +172,31 @@ bool SemanticsValidator::buildDefinitionMaps() {
 
   for (const auto &def : program_.definitions) {
     std::string parentPath;
-    if (!isLifecycleHelper(def.fullPath, parentPath)) {
+    std::string placement;
+    if (!isLifecycleHelper(def.fullPath, parentPath, placement)) {
       continue;
     }
     if (parentPath.empty() || structNames_.count(parentPath) == 0) {
       error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
       return false;
+    }
+    if (!placement.empty()) {
+      auto parentIt = defMap_.find(parentPath);
+      if (parentIt == defMap_.end()) {
+        error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
+        return false;
+      }
+      bool hasPlacement = false;
+      for (const auto &transform : parentIt->second->transforms) {
+        if (transform.name == placement) {
+          hasPlacement = true;
+          break;
+        }
+      }
+      if (!hasPlacement) {
+        error_ = "lifecycle helper requires " + placement + " struct: " + def.fullPath;
+        return false;
+      }
     }
   }
 
