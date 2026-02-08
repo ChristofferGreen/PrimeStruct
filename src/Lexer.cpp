@@ -115,8 +115,7 @@ Token Lexer::readNumber() {
     while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
       advance();
     }
-    if (pos_ + 1 < source_.size() && source_[pos_] == '.' &&
-        std::isdigit(static_cast<unsigned char>(source_[pos_ + 1]))) {
+    if (pos_ < source_.size() && source_[pos_] == '.') {
       advance();
       while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
         advance();

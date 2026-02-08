@@ -406,6 +406,51 @@ main() {
   CHECK(program.definitions[0].returnExpr->floatWidth == 32);
 }
 
+TEST_CASE("parses float literals with trailing dot") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1.");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses float literals with suffix after dot") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.f32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1.");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses float literals with exponent after dot") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.e2)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1.e2");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
 TEST_CASE("parses float literals with exponent") {
   const std::string source = R"(
 [return<float>]
