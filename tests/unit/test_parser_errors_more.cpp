@@ -611,6 +611,21 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named args reject slash identifiers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(add(/foo = 1i32, 2i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named argument must be a simple identifier") != std::string::npos);
+}
+
 TEST_CASE("named args for array access fail in parser") {
   const std::string source = R"(
 [return<int>]

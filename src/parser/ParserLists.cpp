@@ -245,6 +245,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       if (name.kind == TokenKind::End) {
         return false;
       }
+      if (name.text.find('/') != std::string::npos) {
+        return fail("named argument must be a simple identifier");
+      }
       std::string nameError;
       if (!validateIdentifierText(name.text, nameError)) {
         return fail(nameError);
