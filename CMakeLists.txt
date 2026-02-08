@@ -16,7 +16,8 @@ add_library(primec_lib
   src/IrPrinter.cpp
   src/IrSerializer.cpp
   src/Lexer.cpp
-  src/NativeEmitter.cpp
+  src/native_emitter/NativeEmitterHelpers.cpp
+  src/native_emitter/NativeEmitterEmit.cpp
   src/Parser.cpp
   src/Semantics.cpp
   src/TextFilterPipeline.cpp

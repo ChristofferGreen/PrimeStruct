@@ -1,0 +1,652 @@
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "primec/Ir.h"
+
+#if defined(__APPLE__)
+#include <sys/syscall.h>
+#endif
+
+namespace primec::native_emitter {
+
+constexpr uint64_t PageSize =
+#if defined(__arm64__) || defined(__aarch64__)
+    0x4000;
+#else
+    0x1000;
+#endif
+constexpr uint64_t PageZeroSize = 0x100000000ull;
+constexpr uint64_t TextVmAddr = 0x100000000ull;
+#if defined(__APPLE__)
+constexpr uint32_t PrintScratchBytes = 32;
+constexpr uint32_t PrintScratchSlots = (PrintScratchBytes + 15) / 16;
+#endif
+#if defined(__APPLE__)
+constexpr uint64_t SysWrite = SYS_write;
+#else
+constexpr uint64_t SysWrite = 0;
+#endif
+
+inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
+  if (alignment == 0) {
+    return value;
+  }
+  uint64_t mask = alignment - 1;
+  return (value + mask) & ~mask;
+}
+
+class Arm64Emitter {
+ public:
+  bool beginFunction(uint64_t frameSize, std::string &error) {
+    frameSize_ = frameSize;
+    if (frameSize_ > 4095) {
+      error = "native backend frame size too large";
+      return false;
+    }
+    if (frameSize_ > 0) {
+      emit(encodeSubSpImm(static_cast<uint16_t>(frameSize_)));
+    }
+    emit(encodeAddRegImm(27, 31, 0));
+    emit(encodeAddRegImm(28, 31, static_cast<uint16_t>(frameSize_)));
+    return true;
+  }
+
+  void emitPushI32(int32_t value) {
+    emitMovImm64(0, static_cast<uint64_t>(static_cast<int64_t>(value)));
+    emitPushReg(0);
+  }
+
+  void emitPushI64(uint64_t value) {
+    emitMovImm64(0, value);
+    emitPushReg(0);
+  }
+
+  void emitLoadLocal(uint32_t index) {
+    emit(encodeLdrRegBase(0, 27, localOffset(index)));
+    emitPushReg(0);
+  }
+
+  void emitAddressOfLocal(uint32_t index) {
+    uint32_t offset = localOffset(index);
+    if (offset <= 4095) {
+      emit(encodeAddRegImm(0, 27, static_cast<uint16_t>(offset)));
+    } else {
+      emitMovImm64(1, offset);
+      emit(encodeAddReg(0, 27, 1));
+    }
+    emitPushReg(0);
+  }
+
+  void emitStoreLocal(uint32_t index) {
+    emitPopReg(0);
+    emit(encodeStrRegBase(0, 27, localOffset(index)));
+  }
+
+  void emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
+    emit(encodeStrRegBase(reg, 27, localOffset(index)));
+  }
+
+  void emitLoadIndirect() {
+    emitPopReg(0);
+    emit(encodeLdrRegBase(1, 0, 0));
+    emitPushReg(1);
+  }
+
+  void emitStoreIndirect() {
+    emitPopReg(0);
+    emitPopReg(1);
+    emit(encodeStrRegBase(0, 1, 0));
+    emitPushReg(0);
+  }
+
+  void emitDup() {
+    emitPopReg(0);
+    emitPushReg(0);
+    emitPushReg(0);
+  }
+
+  void emitPop() {
+    emitPopReg(0);
+  }
+
+  void emitAdd() {
+    emitBinaryOp(encodeAddReg(0, 1, 0));
+  }
+
+  void emitSub() {
+    emitBinaryOp(encodeSubReg(0, 1, 0));
+  }
+
+  void emitMul() {
+    emitBinaryOp(encodeMulReg(0, 1, 0));
+  }
+
+  void emitDiv() {
+    emitBinaryOp(encodeSdivReg(0, 1, 0));
+  }
+
+  void emitDivU() {
+    emitBinaryOp(encodeUdivReg(0, 1, 0));
+  }
+
+  void emitNeg() {
+    emitPopReg(0);
+    emit(encodeSubReg(0, 31, 0));
+    emitPushReg(0);
+  }
+
+  void emitCmpEq() {
+    emitCompareAndPush(CondCode::Eq);
+  }
+
+  void emitCmpNe() {
+    emitCompareAndPush(CondCode::Ne);
+  }
+
+  void emitCmpLt() {
+    emitCompareAndPush(CondCode::Lt);
+  }
+
+  void emitCmpLe() {
+    emitCompareAndPush(CondCode::Le);
+  }
+
+  void emitCmpGt() {
+    emitCompareAndPush(CondCode::Gt);
+  }
+
+  void emitCmpGe() {
+    emitCompareAndPush(CondCode::Ge);
+  }
+
+  void emitCmpLtU() {
+    emitCompareAndPush(CondCode::Lo);
+  }
+
+  void emitCmpLeU() {
+    emitCompareAndPush(CondCode::Ls);
+  }
+
+  void emitCmpGtU() {
+    emitCompareAndPush(CondCode::Hi);
+  }
+
+  void emitCmpGeU() {
+    emitCompareAndPush(CondCode::Hs);
+  }
+
+  size_t emitJumpPlaceholder() {
+    size_t index = currentWordIndex();
+    emit(encodeB(0));
+    return index;
+  }
+
+  size_t emitJumpIfZeroPlaceholder() {
+    emitPopReg(0);
+    size_t index = currentWordIndex();
+    emit(encodeCbz(0, 0));
+    return index;
+  }
+
+  void patchJump(size_t index, int32_t offsetWords) {
+    patchWord(index, encodeB(offsetWords));
+  }
+
+  void patchJumpIfZero(size_t index, int32_t offsetWords) {
+    patchWord(index, encodeCbz(0, offsetWords));
+  }
+
+  size_t currentWordIndex() const {
+    return code_.size();
+  }
+
+  void emitReturn() {
+    emitPopReg(0);
+    if (frameSize_ > 0) {
+      emit(encodeAddSpImm(static_cast<uint16_t>(frameSize_)));
+    }
+    emit(encodeRet());
+  }
+
+  void emitReturnVoid() {
+    emitMovImm64(0, 0);
+    if (frameSize_ > 0) {
+      emit(encodeAddSpImm(static_cast<uint16_t>(frameSize_)));
+    }
+    emit(encodeRet());
+  }
+
+  void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd) {
+    emitPopReg(0);
+    emitCompareRegZero(0);
+    size_t nonNegative = emitCondBranchPlaceholder(CondCode::Ge);
+    emitSubReg(0, 31, 0);
+    emitMovImm64(5, 1);
+    size_t afterSign = emitJumpPlaceholder();
+    size_t nonNegativeIndex = currentWordIndex();
+    patchCondBranch(nonNegative, static_cast<int32_t>(nonNegativeIndex - nonNegative), CondCode::Ge);
+    emitMovImm64(5, 0);
+    size_t afterSignIndex = currentWordIndex();
+    patchJump(afterSign, static_cast<int32_t>(afterSignIndex - afterSign));
+    emitPrintUnsignedInternal(scratchOffset, scratchBytes, true, 5, newline, fd);
+  }
+
+  void emitPrintUnsigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd) {
+    emitPopReg(0);
+    emitPrintUnsignedInternal(scratchOffset, scratchBytes, false, 0, newline, fd);
+  }
+
+  size_t emitPrintStringPlaceholder(uint64_t lengthBytes, uint32_t scratchOffset, bool newline, uint64_t fd) {
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitMovImm64(2, lengthBytes);
+    emitWriteSyscall(fd, 1, 2);
+    if (newline) {
+      emitWriteNewline(fd, scratchOffset);
+    }
+    return fixupIndex;
+  }
+
+  size_t emitLoadStringBytePlaceholder() {
+    emitPopReg(0);
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitAddReg(1, 1, 0);
+    emit(encodeLdrbRegBase(2, 1, 0));
+    emitPushReg(2);
+    return fixupIndex;
+  }
+
+  void emitPrintArgv(uint32_t argcLocalIndex,
+                     uint32_t argvLocalIndex,
+                     uint32_t scratchOffset,
+                     bool newline,
+                     uint64_t fd) {
+    emitPopReg(0);
+    emitCompareRegZero(0);
+    size_t negativeBranch = emitCondBranchPlaceholder(CondCode::Lt);
+
+    emit(encodeLdrRegBase(1, 27, localOffset(argcLocalIndex)));
+    emitCompareReg(0, 1);
+    size_t oobBranch = emitCondBranchPlaceholder(CondCode::Ge);
+
+    emit(encodeLdrRegBase(2, 27, localOffset(argvLocalIndex)));
+    emitMovImm64(3, 8);
+    emitMulReg(3, 0, 3);
+    emitAddReg(2, 2, 3);
+    emit(encodeLdrRegBase(1, 2, 0));
+    emitCompareRegZero(1);
+    size_t nullBranch = emitCondBranchPlaceholder(CondCode::Eq);
+
+    emitMovReg(3, 1);
+    emitMovImm64(2, 0);
+    size_t loopStart = currentWordIndex();
+    emit(encodeLdrbRegBase(4, 3, 0));
+    emitCompareRegZero(4);
+    size_t doneBranch = emitCondBranchPlaceholder(CondCode::Eq);
+    emitAddRegImm(2, 2, 1);
+    emitAddRegImm(3, 3, 1);
+    size_t loopJump = emitJumpPlaceholder();
+    patchJump(loopJump, static_cast<int32_t>(loopStart - loopJump));
+    size_t doneIndex = currentWordIndex();
+    patchCondBranch(doneBranch, static_cast<int32_t>(doneIndex - doneBranch), CondCode::Eq);
+
+    emitWriteSyscall(fd, 1, 2);
+    if (newline) {
+      emitWriteNewline(fd, scratchOffset);
+    }
+
+    size_t skipIndex = currentWordIndex();
+    patchCondBranch(negativeBranch, static_cast<int32_t>(skipIndex - negativeBranch), CondCode::Lt);
+    patchCondBranch(oobBranch, static_cast<int32_t>(skipIndex - oobBranch), CondCode::Ge);
+    patchCondBranch(nullBranch, static_cast<int32_t>(skipIndex - nullBranch), CondCode::Eq);
+  }
+
+  void patchAdr(size_t index, uint8_t rd, int32_t imm21) {
+    patchWord(index, encodeAdr(rd, imm21));
+  }
+
+  std::vector<uint8_t> finalize() const {
+    std::vector<uint8_t> bytes;
+    bytes.reserve(code_.size() * 4);
+    for (uint32_t word : code_) {
+      bytes.push_back(static_cast<uint8_t>(word & 0xFF));
+      bytes.push_back(static_cast<uint8_t>((word >> 8) & 0xFF));
+      bytes.push_back(static_cast<uint8_t>((word >> 16) & 0xFF));
+      bytes.push_back(static_cast<uint8_t>((word >> 24) & 0xFF));
+    }
+    return bytes;
+  }
+
+ private:
+  enum class CondCode : uint8_t {
+    Eq = 0x0,
+    Ne = 0x1,
+    Hs = 0x2,
+    Lo = 0x3,
+    Hi = 0x8,
+    Ls = 0x9,
+    Ge = 0xA,
+    Lt = 0xB,
+    Gt = 0xC,
+    Le = 0xD,
+  };
+
+  void emit(uint32_t word) {
+    code_.push_back(word);
+  }
+
+  void patchWord(size_t index, uint32_t word) {
+    if (index < code_.size()) {
+      code_[index] = word;
+    }
+  }
+
+  void emitBinaryOp(uint32_t opWord) {
+    emitPopReg(0);
+    emitPopReg(1);
+    emit(opWord);
+    emitPushReg(0);
+  }
+
+  void emitCompareRegZero(uint8_t reg) {
+    emit(encodeSubsReg(31, reg, 31));
+  }
+
+  void emitCompareReg(uint8_t left, uint8_t right) {
+    emit(encodeSubsReg(31, left, right));
+  }
+
+  size_t emitCondBranchPlaceholder(CondCode cond) {
+    size_t index = currentWordIndex();
+    emit(encodeBCond(0, static_cast<uint8_t>(cond)));
+    return index;
+  }
+
+  void patchCondBranch(size_t index, int32_t offsetWords, CondCode cond) {
+    patchWord(index, encodeBCond(offsetWords, static_cast<uint8_t>(cond)));
+  }
+
+  size_t emitCbzPlaceholder(uint8_t reg) {
+    size_t index = currentWordIndex();
+    emit(encodeCbz(reg, 0));
+    return index;
+  }
+
+  void patchCbz(size_t index, uint8_t reg, int32_t offsetWords) {
+    patchWord(index, encodeCbz(reg, offsetWords));
+  }
+
+  void emitCompareAndPush(CondCode cond) {
+    emitPopReg(0);
+    emitPopReg(1);
+    emit(encodeSubsReg(31, 1, 0));
+    // Offsets assume emitMovImm64 emits 4 instructions and emitPushReg emits 2.
+    emit(encodeBCond(6, static_cast<uint8_t>(cond)));
+    emitMovImm64(0, 0);
+    emit(encodeB(5));
+    emitMovImm64(0, 1);
+    emitPushReg(0);
+  }
+
+  void emitPushReg(uint8_t reg) {
+    emit(encodeSubRegImm(28, 28, 16));
+    emit(encodeStrRegBase(reg, 28, 8));
+  }
+
+  void emitPopReg(uint8_t reg) {
+    emit(encodeLdrRegBase(reg, 28, 8));
+    emit(encodeAddRegImm(28, 28, 16));
+  }
+
+  void emitMovImm64(uint8_t rd, uint64_t value) {
+    emit(encodeMovz(rd, static_cast<uint16_t>(value & 0xFFFF), 0));
+    emit(encodeMovk(rd, static_cast<uint16_t>((value >> 16) & 0xFFFF), 16));
+    emit(encodeMovk(rd, static_cast<uint16_t>((value >> 32) & 0xFFFF), 32));
+    emit(encodeMovk(rd, static_cast<uint16_t>((value >> 48) & 0xFFFF), 48));
+  }
+
+  size_t emitAdrPlaceholder(uint8_t rd) {
+    size_t index = currentWordIndex();
+    emit(encodeAdr(rd, 0));
+    return index;
+  }
+
+  void emitMovReg(uint8_t rd, uint8_t rn) {
+    emit(encodeAddRegImm(rd, rn, 0));
+  }
+
+  void emitAddRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    emit(encodeAddRegImm(rd, rn, imm));
+  }
+
+  void emitSubRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    emit(encodeSubRegImm(rd, rn, imm));
+  }
+
+  void emitAddReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeAddReg(rd, rn, rm));
+  }
+
+  void emitSubReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeSubReg(rd, rn, rm));
+  }
+
+  void emitMulReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeMulReg(rd, rn, rm));
+  }
+
+  void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    emit(encodeUdivReg(rd, rn, rm));
+  }
+
+  void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    emit(encodeStrbRegBase(rt, rn, offsetBytes));
+  }
+
+  void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg) {
+    emitMovImm64(0, fd);
+    emitMovReg(1, bufferReg);
+    emitMovReg(2, lengthReg);
+    emitMovImm64(16, SysWrite);
+    emit(encodeSvc());
+  }
+
+  void emitWriteNewline(uint64_t fd, uint32_t scratchOffset) {
+    emitLoadFrameOffset(1, scratchOffset);
+    emitMovImm64(4, '\n');
+    emitStrbRegBase(4, 1, 0);
+    emitMovImm64(2, 1);
+    emitWriteSyscall(fd, 1, 2);
+  }
+
+  void emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes) {
+    if (offsetBytes <= 4095) {
+      emitAddRegImm(rd, 27, static_cast<uint16_t>(offsetBytes));
+      return;
+    }
+    emitMovImm64(9, offsetBytes);
+    emitAddReg(rd, 27, 9);
+  }
+
+  void emitAddOffset(uint8_t rd, uint8_t rn, uint32_t offsetBytes) {
+    if (offsetBytes <= 4095) {
+      emitAddRegImm(rd, rn, static_cast<uint16_t>(offsetBytes));
+      return;
+    }
+    emitMovImm64(9, offsetBytes);
+    emitAddReg(rd, rn, 9);
+  }
+
+  void emitPrintUnsignedInternal(uint32_t scratchOffset,
+                                 uint32_t scratchBytes,
+                                 bool includeSign,
+                                 uint8_t signReg,
+                                 bool newline,
+                                 uint64_t fd) {
+    emitLoadFrameOffset(1, scratchOffset);
+    emitAddOffset(1, 1, scratchBytes);
+    emitMovReg(2, 1);
+    if (newline) {
+      emitSubRegImm(2, 2, 1);
+      emitMovImm64(4, '\n');
+      emitStrbRegBase(4, 2, 0);
+    }
+    emitMovImm64(10, 10);
+
+    size_t loopStart = currentWordIndex();
+    emitUdivReg(3, 0, 10);
+    emitMulReg(4, 3, 10);
+    emitSubReg(4, 0, 4);
+    emitAddRegImm(4, 4, static_cast<uint16_t>('0'));
+    emitSubRegImm(2, 2, 1);
+    emitStrbRegBase(4, 2, 0);
+    emitMovReg(0, 3);
+    size_t doneBranch = emitCbzPlaceholder(0);
+    size_t jumpBack = emitJumpPlaceholder();
+    int32_t loopDelta = static_cast<int32_t>(static_cast<int64_t>(loopStart) - static_cast<int64_t>(jumpBack));
+    patchJump(jumpBack, loopDelta);
+    size_t doneIndex = currentWordIndex();
+    int32_t doneDelta = static_cast<int32_t>(static_cast<int64_t>(doneIndex) - static_cast<int64_t>(doneBranch));
+    patchCbz(doneBranch, 0, doneDelta);
+
+    if (includeSign) {
+      size_t skipSign = emitCbzPlaceholder(signReg);
+      emitSubRegImm(2, 2, 1);
+      emitMovImm64(4, '-');
+      emitStrbRegBase(4, 2, 0);
+      size_t afterSign = currentWordIndex();
+      int32_t signDelta = static_cast<int32_t>(static_cast<int64_t>(afterSign) - static_cast<int64_t>(skipSign));
+      patchCbz(skipSign, signReg, signDelta);
+    }
+
+    emitSubReg(3, 1, 2);
+    emitWriteSyscall(fd, 2, 3);
+  }
+
+  static uint32_t encodeAddSpImm(uint16_t imm) {
+    return 0x910003FF | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10);
+  }
+
+  static uint32_t encodeSubSpImm(uint16_t imm) {
+    return 0xD10003FF | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10);
+  }
+
+  static uint32_t encodeAddRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    return 0x91000000 | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeSubRegImm(uint8_t rd, uint8_t rn, uint16_t imm) {
+    return 0xD1000000 | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeStrRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>((offsetBytes / 8) & 0xFFFu);
+    return 0xF9000000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeLdrRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>((offsetBytes / 8) & 0xFFFu);
+    return 0xF9400000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeAddReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0x8B000000 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeSubReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0xCB000000 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeSubsReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0xEB000000 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeMulReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0x9B007C00 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeSdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0x9AC00C00 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeUdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
+    return 0x9AC00800 | (static_cast<uint32_t>(rm) << 16) |
+           (static_cast<uint32_t>(rn) << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeMovz(uint8_t rd, uint16_t imm, uint8_t shift) {
+    uint32_t shiftField = static_cast<uint32_t>((shift / 16) & 0x3u);
+    return 0xD2800000 | (shiftField << 21) | (static_cast<uint32_t>(imm) << 5) |
+           static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeMovk(uint8_t rd, uint16_t imm, uint8_t shift) {
+    uint32_t shiftField = static_cast<uint32_t>((shift / 16) & 0x3u);
+    return 0xF2800000 | (shiftField << 21) | (static_cast<uint32_t>(imm) << 5) |
+           static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeAdr(uint8_t rd, int32_t imm21) {
+    uint32_t imm = static_cast<uint32_t>(imm21) & 0x1FFFFFu;
+    uint32_t immlo = imm & 0x3u;
+    uint32_t immhi = (imm >> 2) & 0x7FFFFu;
+    return 0x10000000 | (immlo << 29) | (immhi << 5) | static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeB(int32_t imm26) {
+    uint32_t imm = static_cast<uint32_t>(imm26) & 0x03FFFFFFu;
+    return 0x14000000 | imm;
+  }
+
+  static uint32_t encodeBCond(int32_t imm19, uint8_t cond) {
+    uint32_t imm = static_cast<uint32_t>(imm19) & 0x7FFFFu;
+    return 0x54000000 | (imm << 5) | (static_cast<uint32_t>(cond) & 0xFu);
+  }
+
+  static uint32_t encodeCbz(uint8_t rt, int32_t imm19) {
+    uint32_t imm = static_cast<uint32_t>(imm19) & 0x7FFFFu;
+    return 0xB4000000 | (imm << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>(offsetBytes & 0xFFFu);
+    return 0x39000000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeLdrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes) {
+    uint32_t imm = static_cast<uint32_t>(offsetBytes & 0xFFFu);
+    return 0x39400000 | (imm << 10) | (static_cast<uint32_t>(rn) << 5) | (static_cast<uint32_t>(rt) & 0x1Fu);
+  }
+
+  static uint32_t encodeSvc() {
+    return 0xD4001001;
+  }
+
+  static uint32_t encodeRet() {
+    return 0xD65F03C0;
+  }
+
+  static uint16_t localOffset(uint32_t index) {
+    return static_cast<uint16_t>(index * 16 + 8);
+  }
+
+  std::vector<uint32_t> code_;
+  uint64_t frameSize_ = 0;
+};
+
+bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);
+
+bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error);
+
+bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);
+
+} // namespace primec::native_emitter
