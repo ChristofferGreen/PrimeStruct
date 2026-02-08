@@ -490,6 +490,30 @@ main() {
   CHECK(readFile(errPath) == "map key not found\n");
 }
 
+TEST_CASE("map indexing rejects mismatched key type in vm/native") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values(map<i32, i32>{1i32=10i32})
+  return(values[1u64])
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_key_mismatch.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_map_key_mismatch_err.txt").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_map_key_mismatch_native").string();
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runVmCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "VM lowering error: vm backend requires map lookup key type to match map key type\n");
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileNativeCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend requires map lookup key type to match map key type\n");
+}
+
 TEST_CASE("compiles and runs binding inference feeding method call") {
   const std::string source = R"(
 namespace i64 {
