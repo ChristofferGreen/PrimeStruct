@@ -10,6 +10,7 @@ From `build-debug/`:
 ```bash
 ./primec --emit=exe ../examples/hello_world.prime -o /tmp/hello --entry /main
 /tmp/hello
+./primevm ../examples/hello_world.prime --entry /main
 ```
 
 ## Files

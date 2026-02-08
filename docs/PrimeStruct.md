@@ -58,6 +58,8 @@ module {
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
   - Current subset: fixed-width integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, `if`, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+- `primevm input.prime --entry /main -- <args>`
+  - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
 - All generated outputs land in the current directory (configurable by `--out-dir`).
 
@@ -85,7 +87,7 @@ module {
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
   - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
-- **Tooling:** CLI compiler `primec` plus build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` and `count(args)` are supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
+- **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` and `count(args)` are supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body forms so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
   - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).

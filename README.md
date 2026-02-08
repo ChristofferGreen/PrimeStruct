@@ -170,7 +170,7 @@ definition must take a single `array<string>` parameter.
 ## Tooling
 
 - Compiler: `primec`
-- VM / Interpreter: PrimeScript VM
+- VM runner: `primevm` (PrimeScript VM)
 - IR inspection: dump canonical IR and diagnostics
 - Backends:
   - C++ / native

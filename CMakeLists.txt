@@ -29,6 +29,10 @@ add_executable(primec src/main.cpp)
 target_link_libraries(primec PRIVATE primec_lib)
 target_compile_options(primec PRIVATE -Wall -Wextra -Wpedantic)
 
+add_executable(primevm src/primevm_main.cpp)
+target_link_libraries(primevm PRIVATE primec_lib)
+target_compile_options(primevm PRIVATE -Wall -Wextra -Wpedantic)
+
 if(PRIMESTRUCT_BUILD_TESTS)
   enable_testing()
   add_executable(PrimeStruct_tests
