@@ -103,10 +103,25 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_string_compare.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_compare_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_string_compare_native").string();
+  const std::string vmErrPath = (std::filesystem::temp_directory_path() / "primec_string_compare_vm_err.txt").string();
+  const std::string nativeErrPath =
+      (std::filesystem::temp_directory_path() / "primec_string_compare_native_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
+  CHECK(runCommand(runVmCmd) == 2);
+  CHECK(readFile(vmErrPath).find("vm backend does not support string comparisons") != std::string::npos);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o " + quoteShellArg(nativePath) + " --entry /main 2> " +
+      quoteShellArg(nativeErrPath);
+  CHECK(runCommand(compileNativeCmd) == 2);
+  CHECK(readFile(nativeErrPath).find("native backend does not support string comparisons") != std::string::npos);
 }
 
 TEST_CASE("rejects mixed int/float arithmetic") {
