@@ -773,6 +773,21 @@ main() {
   CHECK(error.find("expected template identifier") != std::string::npos);
 }
 
+TEST_CASE("transform template arguments accept one type") {
+  const std::string source = R"(
+[return<int, i32>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform template arguments accept a single type") != std::string::npos);
+}
+
 TEST_CASE("binding requires argument list in expression") {
   const std::string source = R"(
 [return<int>]

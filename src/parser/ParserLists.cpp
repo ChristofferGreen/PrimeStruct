@@ -26,6 +26,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       if (!parseTemplateList(transform.templateArgs)) {
         return false;
       }
+      if (transform.templateArgs.size() > 1 && transform.name != "map") {
+        return fail("transform template arguments accept a single type");
+      }
     }
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '('");
