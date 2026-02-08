@@ -146,6 +146,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (!validateExpr(params, locals, stmt.args.front())) {
         return false;
       }
+      if (returnKind != ReturnKind::Unknown) {
+        ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
+        if (exprKind != returnKind) {
+          error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
+          return false;
+        }
+      }
     }
     if (sawReturn) {
       *sawReturn = true;

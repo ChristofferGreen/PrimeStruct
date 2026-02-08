@@ -748,6 +748,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("return type mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(true)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+}
+
+TEST_CASE("return type mismatch for bool fails") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+}
+
 TEST_CASE("return transform rejects arguments") {
   const std::string source = R"(
 [return<int>(foo)]
