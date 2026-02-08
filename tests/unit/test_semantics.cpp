@@ -402,6 +402,17 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("infers return type from builtin saturate") {
+  const std::string source = R"(
+main() {
+  return(saturate(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("clamp argument count fails") {
   const std::string source = R"(
 [return<int>]
@@ -431,6 +442,18 @@ TEST_CASE("abs argument count fails") {
 [return<int>]
 main() {
   return(abs(2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count") != std::string::npos);
+}
+
+TEST_CASE("saturate argument count fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(saturate(2i32, 3i32))
 }
 )";
   std::string error;
@@ -479,6 +502,18 @@ TEST_CASE("sign rejects non-numeric operand") {
 [return<int>]
 main() {
   return(sign(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("numeric") != std::string::npos);
+}
+
+TEST_CASE("saturate rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(saturate(true))
 }
 )";
   std::string error;

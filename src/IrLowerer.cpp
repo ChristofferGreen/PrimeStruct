@@ -195,6 +195,24 @@ bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "saturate") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -989,6 +1007,12 @@ bool IrLowerer::lower(const Program &program,
           return combineNumericKinds(left, right);
         }
         if (getBuiltinAbsSignName(expr, builtin)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinSaturateName(expr, builtin)) {
           if (expr.args.size() != 1) {
             return LocalInfo::ValueKind::Unknown;
           }
@@ -2566,6 +2590,87 @@ bool IrLowerer::lower(const Program &program,
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           return true;
         }
+        std::string saturateName;
+        if (getBuiltinSaturateName(expr, saturateName)) {
+          if (expr.args.size() != 1) {
+            error = saturateName + " requires exactly one argument";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::Bool ||
+              argKind == LocalInfo::ValueKind::String) {
+            error = saturateName + " requires numeric argument";
+            return false;
+          }
+          int32_t tempValue = allocTempLocal();
+          int32_t tempOut = allocTempLocal();
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+
+          auto pushConst = [&](int64_t value) {
+            if (argKind == LocalInfo::ValueKind::Int32) {
+              function.instructions.push_back(
+                  {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
+            } else {
+              function.instructions.push_back(
+                  {IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(value))});
+            }
+          };
+
+          if (argKind == LocalInfo::ValueKind::UInt64) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            pushConst(1);
+            function.instructions.push_back({IrOpcode::CmpGtU64, 0});
+            size_t useValue = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            pushConst(1);
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+            size_t jumpToEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            size_t useValueIndex = function.instructions.size();
+            function.instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+            size_t endIndex = function.instructions.size();
+            function.instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            return true;
+          }
+
+          IrOpcode cmpLt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtI32;
+          IrOpcode cmpGt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpGtI64 : IrOpcode::CmpGtI32;
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          pushConst(0);
+          function.instructions.push_back({cmpLt, 0});
+          size_t checkMax = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          pushConst(0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpToEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t checkMaxIndex = function.instructions.size();
+          function.instructions[checkMax].imm = static_cast<int32_t>(checkMaxIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          pushConst(1);
+          function.instructions.push_back({cmpGt, 0});
+          size_t useValue = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          pushConst(1);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpToEnd2 = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t useValueIndex = function.instructions.size();
+          function.instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
+          function.instructions[jumpToEnd2].imm = static_cast<int32_t>(endIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          return true;
+        }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
             error = "convert requires exactly one template argument";
@@ -2950,7 +3055,7 @@ bool IrLowerer::lower(const Program &program,
           return true;
         }
         error =
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/convert/pointer/assign calls in expressions";
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign calls in expressions";
         return false;
       }
       default:

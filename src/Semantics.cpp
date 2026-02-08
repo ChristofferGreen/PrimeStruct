@@ -330,6 +330,24 @@ bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "saturate") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -1151,6 +1169,16 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         }
         return argKind;
       }
+      if (getBuiltinSaturateName(expr, builtinName)) {
+        if (expr.args.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front());
+        if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+          return ReturnKind::Unknown;
+        }
+        return argKind;
+      }
       if (getBuiltinConvertName(expr, builtinName)) {
         if (expr.templateArgs.size() != 1) {
           return ReturnKind::Unknown;
@@ -1929,6 +1957,16 @@ bool Semantics::validate(const Program &program,
         return result;
       }
       if (getBuiltinAbsSignName(expr, builtinName)) {
+        if (expr.args.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind argKind = inferExprReturnKind(expr.args.front(), params, locals);
+        if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+          return ReturnKind::Unknown;
+        }
+        return argKind;
+      }
+      if (getBuiltinSaturateName(expr, builtinName)) {
         if (expr.args.size() != 1) {
           return ReturnKind::Unknown;
         }
@@ -2958,6 +2996,20 @@ bool Semantics::validate(const Program &program,
           return true;
         }
         if (getBuiltinAbsSignName(expr, builtinName)) {
+          if (expr.args.size() != 1) {
+            error = "argument count mismatch for builtin " + builtinName;
+            return false;
+          }
+          if (!isNumericExpr(expr.args.front())) {
+            error = builtinName + " requires numeric operand";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args.front())) {
+            return false;
+          }
+          return true;
+        }
+        if (getBuiltinSaturateName(expr, builtinName)) {
           if (expr.args.size() != 1) {
             error = "argument count mismatch for builtin " + builtinName;
             return false;
