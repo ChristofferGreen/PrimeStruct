@@ -94,6 +94,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
       error_ = "pod definitions cannot be tagged as handle or gpu_lane: " + def.fullPath;
       return false;
     }
+    if (hasHandle && hasGpuLane) {
+      error_ = "handle definitions cannot be tagged as gpu_lane: " + def.fullPath;
+      return false;
+    }
     bool isFieldOnlyStruct = false;
     if (!isStruct && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
         !def.returnExpr.has_value()) {
@@ -138,12 +142,23 @@ bool SemanticsValidator::buildDefinitionMaps() {
           error_ = "struct definitions require field initializers: " + def.fullPath;
           return false;
         }
-        if (hasPod && stmt.isBinding) {
+        if (stmt.isBinding) {
+          bool fieldHasHandle = false;
+          bool fieldHasGpuLane = false;
           for (const auto &transform : stmt.transforms) {
-            if (transform.name == "handle" || transform.name == "gpu_lane") {
-              error_ = "pod definitions cannot contain handle or gpu_lane fields: " + def.fullPath;
-              return false;
+            if (transform.name == "handle") {
+              fieldHasHandle = true;
+            } else if (transform.name == "gpu_lane") {
+              fieldHasGpuLane = true;
             }
+          }
+          if (hasPod && (fieldHasHandle || fieldHasGpuLane)) {
+            error_ = "pod definitions cannot contain handle or gpu_lane fields: " + def.fullPath;
+            return false;
+          }
+          if (fieldHasHandle && fieldHasGpuLane) {
+            error_ = "fields cannot be tagged as handle and gpu_lane: " + def.fullPath;
+            return false;
           }
         }
       }
