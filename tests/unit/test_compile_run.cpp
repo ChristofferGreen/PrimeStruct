@@ -3858,6 +3858,28 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
+TEST_CASE("compiles and runs block binding inference for mixed if numeric types") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line(block{
+    [mut] value(if(false, 1i32, 5000000000i64))
+    value
+  })
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_block_infer_if_numeric.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_block_infer_if_numeric_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_block_infer_if_numeric_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "5000000000\n");
+}
+
 TEST_CASE("compiles and runs operator rewrite") {
   const std::string source = R"(
 [return<int>]

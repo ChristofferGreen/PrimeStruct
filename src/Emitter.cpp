@@ -431,7 +431,10 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   if (isSimpleCallName(expr, "if") && expr.args.size() == 3) {
     ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
     ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds);
-    return thenKind == elseKind ? thenKind : ReturnKind::Unknown;
+    if (thenKind == elseKind) {
+      return thenKind;
+    }
+    return combineNumericKinds(thenKind, elseKind);
   }
   if (isSimpleCallName(expr, "and") || isSimpleCallName(expr, "or") || isSimpleCallName(expr, "not")) {
     return ReturnKind::Bool;
