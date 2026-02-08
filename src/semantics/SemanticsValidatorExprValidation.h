@@ -33,6 +33,41 @@
       }
       return false;
     };
+    auto resolveMapKeyType = [&](const Expr &target, std::string &keyTypeOut) -> bool {
+      keyTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName != "map") {
+            return false;
+          }
+          std::vector<std::string> parts;
+          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
+            return false;
+          }
+          keyTypeOut = parts[0];
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it == locals.end() || it->second.typeName != "map") {
+          return false;
+        }
+        std::vector<std::string> parts;
+        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
+          return false;
+        }
+        keyTypeOut = parts[0];
+        return true;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
+          return false;
+        }
+        keyTypeOut = target.templateArgs[0];
+        return true;
+      }
+      return false;
+    };
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
@@ -385,7 +420,8 @@
         }
         std::string elemType;
         bool isArrayOrString = resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front());
-        bool isMap = resolveMapTarget(expr.args.front());
+        std::string mapKeyType;
+        bool isMap = resolveMapKeyType(expr.args.front(), mapKeyType);
         if (!isArrayOrString && !isMap) {
           error_ = builtinName + " requires array, map, or string target";
           return false;
@@ -394,6 +430,26 @@
           if (!isIntegerOrBoolExpr(expr.args[1], params, locals)) {
             error_ = builtinName + " requires integer index";
             return false;
+          }
+        } else if (!mapKeyType.empty()) {
+          if (normalizeBindingTypeName(mapKeyType) == "string") {
+            if (!resolveStringTarget(expr.args[1])) {
+              error_ = builtinName + " requires string map key";
+              return false;
+            }
+          } else {
+            ReturnKind keyKind = returnKindForTypeName(normalizeBindingTypeName(mapKeyType));
+            if (keyKind != ReturnKind::Unknown) {
+              if (resolveStringTarget(expr.args[1])) {
+                error_ = builtinName + " requires map key type " + mapKeyType;
+                return false;
+              }
+              ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
+              if (indexKind != ReturnKind::Unknown && indexKind != keyKind) {
+                error_ = builtinName + " requires map key type " + mapKeyType;
+                return false;
+              }
+            }
           }
         }
         for (const auto &arg : expr.args) {

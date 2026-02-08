@@ -395,6 +395,32 @@ main() {
   CHECK(error.find("map literal requires an even number of arguments") != std::string::npos);
 }
 
+TEST_CASE("map access validates key type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  return(at(values, "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires map key type i32") != std::string::npos);
+}
+
+TEST_CASE("map access accepts matching key type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values(map<string, i32>("a"utf8, 3i32))
+  return(at(values, "a"utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("boolean literal validates") {
   const std::string source = R"(
 [return<int>]
