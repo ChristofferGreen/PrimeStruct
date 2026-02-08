@@ -23,4 +23,4 @@ From `build-debug/`:
 - `examples/if_expression.prime`: `if` in expression position (both branches yield values).
 - `examples/infer_method_call.prime`: omitted binding type inference feeding a method call.
 - `examples/pointers_and_references.prime`: `Pointer<T>`, `Reference<T>`, `location`, `dereference`.
-- `examples/executions.prime`: top-level executions (parsed/validated; not emitted by the C++ backend).
+- `examples/executions.prime`: top-level executions via `execute_task(...) { ... }` (parsed/validated; not emitted by the C++ backend).
