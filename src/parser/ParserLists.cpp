@@ -283,7 +283,14 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
 
 bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
                                              const std::vector<std::optional<std::string>> &argNames) {
-  if (!isBuiltinName(name)) {
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.find('/') != std::string::npos) {
+    return true;
+  }
+  if (!isBuiltinName(normalized)) {
     return true;
   }
   for (const auto &argName : argNames) {
