@@ -147,6 +147,18 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("runs vm with map literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(map<i32, i32>{1i32=2i32, 3i32=4i32}))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_literal_count.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm map literal odd args") {
   const std::string source = R"(
 [return<int>]
@@ -893,4 +905,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
 }
-

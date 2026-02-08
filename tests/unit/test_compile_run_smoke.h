@@ -742,6 +742,18 @@ main() {
   CHECK(runCommand(runVmCmd) == (3 + 2));
 }
 
+TEST_CASE("runs vm with string literal method count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return("hi"utf8.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_literal_method_count.prime", source);
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 2);
+}
+
 TEST_CASE("vm string access checks bounds") {
   const std::string source = R"(
 [return<int>]

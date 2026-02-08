@@ -107,6 +107,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("string literal method count validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return("hi"utf8.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("duplicate named arguments fail") {
   const std::string source = R"(
 [return<int>]
