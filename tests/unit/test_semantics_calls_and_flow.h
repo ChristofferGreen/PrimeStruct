@@ -385,6 +385,23 @@ main() {
   CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("array literal type mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+use([array<i32>] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(array<i32>(1i32, "hi"utf8)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array literal requires element type i32") != std::string::npos);
+}
+
 TEST_CASE("map literal missing template args fails") {
   const std::string source = R"(
 [return<int>]
@@ -400,6 +417,40 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("map literal requires exactly two template arguments") != std::string::npos);
+}
+
+TEST_CASE("map literal key type mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+use([i32] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(map<i32, i32>("a"utf8, 2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map literal requires key type i32") != std::string::npos);
+}
+
+TEST_CASE("map literal value type mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+use([i32] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(map<string, i32>("a"utf8, "b"utf8)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map literal requires value type i32") != std::string::npos);
 }
 
 TEST_CASE("map literal requires even argument count") {

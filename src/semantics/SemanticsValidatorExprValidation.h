@@ -118,6 +118,31 @@
       }
       return false;
     };
+    auto validateCollectionElementType = [&](const Expr &arg, const std::string &typeName,
+                                              const std::string &errorPrefix) -> bool {
+      const std::string normalizedType = normalizeBindingTypeName(typeName);
+      if (normalizedType == "string") {
+        if (!isStringExpr(arg)) {
+          error_ = errorPrefix + typeName;
+          return false;
+        }
+        return true;
+      }
+      ReturnKind expectedKind = returnKindForTypeName(normalizedType);
+      if (expectedKind == ReturnKind::Unknown) {
+        return true;
+      }
+      if (isStringExpr(arg)) {
+        error_ = errorPrefix + typeName;
+        return false;
+      }
+      ReturnKind argKind = inferExprReturnKind(arg, params, locals);
+      if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
+        error_ = errorPrefix + typeName;
+        return false;
+      }
+      return true;
+    };
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
@@ -604,6 +629,26 @@
         for (const auto &arg : expr.args) {
           if (!validateExpr(params, locals, arg)) {
             return false;
+          }
+        }
+        if (builtinName == "array" && !expr.templateArgs.empty()) {
+          const std::string &elemType = expr.templateArgs.front();
+          for (const auto &arg : expr.args) {
+            if (!validateCollectionElementType(arg, elemType, "array literal requires element type ")) {
+              return false;
+            }
+          }
+        }
+        if (builtinName == "map" && expr.templateArgs.size() == 2) {
+          const std::string &keyType = expr.templateArgs[0];
+          const std::string &valueType = expr.templateArgs[1];
+          for (size_t i = 0; i + 1 < expr.args.size(); i += 2) {
+            if (!validateCollectionElementType(expr.args[i], keyType, "map literal requires key type ")) {
+              return false;
+            }
+            if (!validateCollectionElementType(expr.args[i + 1], valueType, "map literal requires value type ")) {
+              return false;
+            }
           }
         }
         return true;
