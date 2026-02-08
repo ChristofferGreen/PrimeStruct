@@ -132,9 +132,6 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
   auto parsePrimary = [&](Expr &out) -> bool {
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
-    }
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsed = false;
       if (!tryParseIfStatementSugar(out, namespacePrefix, parsed)) {

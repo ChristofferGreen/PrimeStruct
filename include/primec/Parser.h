@@ -40,7 +40,8 @@ private:
   std::string currentNamespacePrefix() const;
   std::string makeFullPath(const std::string &name, const std::string &prefix) const;
 
-  bool match(TokenKind kind) const;
+  void skipComments();
+  bool match(TokenKind kind);
   bool expect(TokenKind kind, const std::string &message);
   Token consume(TokenKind kind, const std::string &message);
   bool fail(const std::string &message);

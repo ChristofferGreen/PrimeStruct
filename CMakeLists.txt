@@ -9,7 +9,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(primec_lib
   src/AstPrinter.cpp
-  src/Emitter.cpp
+  src/emitter/EmitterEmit.cpp
+  src/emitter/EmitterExpr.cpp
+  src/emitter/EmitterHelpersBuiltins.cpp
+  src/emitter/EmitterHelpersTypes.cpp
   src/IncludeResolver.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererLower.cpp
@@ -22,9 +25,17 @@ add_library(primec_lib
   src/parser/ParserExpr.cpp
   src/parser/ParserHelpers.cpp
   src/parser/ParserLists.cpp
-  src/semantics/SemanticsHelpers.cpp
+  src/semantics/SemanticsHelpersCore.cpp
+  src/semantics/SemanticsHelpersValidation.cpp
   src/semantics/SemanticsValidate.cpp
-  src/TextFilterPipeline.cpp
+  src/semantics/SemanticsValidator.cpp
+  src/semantics/SemanticsValidatorBuild.cpp
+  src/semantics/SemanticsValidatorExpr.cpp
+  src/semantics/SemanticsValidatorInfer.cpp
+  src/semantics/SemanticsValidatorPasses.cpp
+  src/semantics/SemanticsValidatorStatement.cpp
+  src/text_filter/TextFilterHelpers.cpp
+  src/text_filter/TextFilterPipeline.cpp
   src/Vm.cpp
 )
 

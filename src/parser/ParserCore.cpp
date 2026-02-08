@@ -13,9 +13,6 @@ Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
   while (!match(TokenKind::End)) {
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
-    }
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
     }
@@ -54,9 +51,6 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   while (!match(TokenKind::RBrace)) {
     if (match(TokenKind::End)) {
       return fail("unexpected end of file inside namespace block");
-    }
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
     }
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
@@ -197,6 +191,10 @@ bool Parser::definitionHasReturnBeforeClose() const {
   int depth = 1;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::Comment) {
+      ++index;
+      continue;
+    }
     if (kind == TokenKind::LParen) {
       ++depth;
     } else if (kind == TokenKind::RParen) {
@@ -221,6 +219,10 @@ bool Parser::definitionHasReturnBeforeClose() const {
   int braceDepth = 0;
   while (braceIndex < tokens_.size()) {
     TokenKind kind = tokens_[braceIndex].kind;
+    if (kind == TokenKind::Comment) {
+      ++braceIndex;
+      continue;
+    }
     if (kind == TokenKind::LBrace) {
       ++braceDepth;
     } else if (kind == TokenKind::RBrace) {
@@ -243,6 +245,10 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   bool sawBindingSyntax = false;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::Comment) {
+      ++index;
+      continue;
+    }
     if (kind == TokenKind::LParen) {
       ++depth;
     } else if (kind == TokenKind::RParen) {
@@ -282,6 +288,10 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   bool sawBindingSyntax = false;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
+    if (kind == TokenKind::Comment) {
+      ++index;
+      continue;
+    }
     if (kind == TokenKind::LParen) {
       ++depth;
     } else if (kind == TokenKind::RParen) {
@@ -350,9 +360,6 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
   while (!match(TokenKind::RBrace)) {
     if (match(TokenKind::End)) {
       return fail("unexpected end of file inside definition body");
-    }
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
     }
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
@@ -484,7 +491,14 @@ std::string Parser::makeFullPath(const std::string &name, const std::string &pre
   return prefix + "/" + name;
 }
 
-bool Parser::match(TokenKind kind) const {
+void Parser::skipComments() {
+  while (tokens_[pos_].kind == TokenKind::Comment) {
+    ++pos_;
+  }
+}
+
+bool Parser::match(TokenKind kind) {
+  skipComments();
   return tokens_[pos_].kind == kind;
 }
 

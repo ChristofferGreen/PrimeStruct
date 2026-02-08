@@ -128,6 +128,21 @@ main() {
   CHECK(program.definitions[0].returnExpr->templateArgs.size() == 2);
 }
 
+TEST_CASE("parses comments as whitespace") {
+  const std::string source = R"(
+[return<int> /* transform */]
+main(/* params */ [i32] value(1i32) /* end params */) {
+  // line comment before binding
+  [i32] total(plus(value, /* mid-arg */ 2i32))
+  return(convert<i64 /* tmpl */ i32>(total))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->templateArgs.size() == 2);
+}
+
 TEST_CASE("parses local binding statements") {
   const std::string source = R"(
 [return<int>]

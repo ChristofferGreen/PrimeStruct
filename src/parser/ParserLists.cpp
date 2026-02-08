@@ -12,9 +12,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return false;
   }
   while (!match(TokenKind::RBracket)) {
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
-    }
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -36,9 +33,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return fail("transform argument list cannot be empty");
       }
       while (true) {
-        if (match(TokenKind::Comment)) {
-          return fail("comments are not supported");
-        }
         if (match(TokenKind::Identifier)) {
           Token arg = consume(TokenKind::Identifier, "expected transform argument");
           if (arg.kind == TokenKind::End) {
@@ -218,9 +212,6 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
     return true;
   }
   while (true) {
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
-    }
     Expr param;
     if (!parseParameterBinding(param, namespacePrefix)) {
       return false;
@@ -248,9 +239,6 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     return true;
   }
   while (true) {
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
-    }
     std::optional<std::string> argName;
     if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Equal) {
       Token name = consume(TokenKind::Identifier, "expected argument name");
@@ -323,9 +311,6 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     return true;
   }
   while (true) {
-    if (match(TokenKind::Comment)) {
-      return fail("comments are not supported");
-    }
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
     }
