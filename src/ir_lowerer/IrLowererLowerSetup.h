@@ -597,6 +597,8 @@ bool IrLowerer::lower(const Program &program,
         return LocalInfo::ValueKind::Int32;
       case Expr::Kind::BoolLiteral:
         return LocalInfo::ValueKind::Bool;
+      case Expr::Kind::StringLiteral:
+        return LocalInfo::ValueKind::String;
       case Expr::Kind::Name: {
         auto it = localsIn.find(expr.name);
         if (it == localsIn.end()) {

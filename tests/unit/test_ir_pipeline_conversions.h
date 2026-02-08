@@ -142,6 +142,26 @@ main() {
   CHECK(error.find("native backend does not support float literals") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer rejects string comparisons") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [string] left("a"utf8)
+  [string] right("b"utf8)
+  return(equal(left, right))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend does not support string comparisons") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer rejects float bindings") {
   const std::string source = R"(
 [return<int>]
@@ -890,4 +910,3 @@ main([array<string>] args) {
   }
   CHECK(sawPrintArgvUnsafe);
 }
-
