@@ -430,6 +430,38 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
+TEST_CASE("compiles and runs string-keyed map indexing in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(map<string, i32>{"a"utf8=1i32, "b"utf8=4i32}["b"utf8])
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_string_indexing.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_string_indexing_exe").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("string-keyed map indexing checks missing key in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(map<string, i32>{"a"utf8=1i32}["missing"utf8])
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_string_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_string_bounds_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_map_string_bounds_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " 2> " + errPath) == 3);
+  CHECK(readFile(errPath) == "map key not found\n");
+}
+
 TEST_CASE("map indexing checks missing key") {
   const std::string source = R"(
 [return<int>]
