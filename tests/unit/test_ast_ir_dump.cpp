@@ -396,6 +396,24 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ir dump infers return type from builtin abs") {
+  const std::string source = R"(
+main() {
+  return(abs(negate(2i32)))
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return abs(negate(2))\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ir dump infers void return without transform") {
   const std::string source = R"(
 main() {

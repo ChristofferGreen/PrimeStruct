@@ -1481,6 +1481,76 @@ main() {
   CHECK(result == 7);
 }
 
+TEST_CASE("ir lowers abs") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(abs(negate(5i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawAbsCompare = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::CmpLtI32) {
+      sawAbsCompare = true;
+      break;
+    }
+  }
+  CHECK(sawAbsCompare);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
+TEST_CASE("ir lowers sign") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(sign(5i32), sign(negate(4i32))))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawSignCompare = false;
+  bool sawSignCompareGt = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::CmpLtI32) {
+      sawSignCompare = true;
+    }
+    if (inst.op == primec::IrOpcode::CmpGtI32) {
+      sawSignCompareGt = true;
+    }
+  }
+  CHECK(sawSignCompare);
+  CHECK(sawSignCompareGt);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 0);
+}
+
 TEST_CASE("ir lowers clamp u64") {
   const std::string source = R"(
 [return<u64>]

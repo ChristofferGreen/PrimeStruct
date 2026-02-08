@@ -83,6 +83,7 @@ bool getBuiltinComparison(const Expr &expr, const char *&out);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isBuiltinClamp(const Expr &expr);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 std::string resolveExprPath(const Expr &expr);
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
@@ -452,6 +453,14 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
     return result;
   }
+  std::string absSignName;
+  if (getBuiltinAbsSignName(expr, absSignName) && expr.args.size() == 1) {
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+      return ReturnKind::Unknown;
+    }
+    return argKind;
+  }
   const char *cmp = nullptr;
   if (getBuiltinComparison(expr, cmp)) {
     return ReturnKind::Bool;
@@ -695,6 +704,24 @@ bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
     return false;
   }
   if (name == "min" || name == "max") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "abs" || name == "sign") {
     out = name;
     return true;
   }
@@ -1336,6 +1363,13 @@ std::string Emitter::emitExpr(const Expr &expr,
           << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
       return out.str();
     }
+    std::string absSignName;
+    if (getBuiltinAbsSignName(expr, absSignName) && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "ps_builtin_" << absSignName << "("
+          << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+      return out.str();
+    }
     std::string convertName;
     if (getBuiltinConvertName(expr, convertName) && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
       std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
@@ -1728,6 +1762,26 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "template <typename T, typename Offset>\n";
   out << "static inline T *ps_pointer_add(T &ref, Offset offset) {\n";
   out << "  return ps_pointer_add(&ref, offset);\n";
+  out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline T ps_builtin_abs(T value) {\n";
+  out << "  if constexpr (std::is_unsigned_v<T>) {\n";
+  out << "    return value;\n";
+  out << "  }\n";
+  out << "  return value < static_cast<T>(0) ? -value : value;\n";
+  out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline T ps_builtin_sign(T value) {\n";
+  out << "  if constexpr (std::is_unsigned_v<T>) {\n";
+  out << "    return value == static_cast<T>(0) ? static_cast<T>(0) : static_cast<T>(1);\n";
+  out << "  }\n";
+  out << "  if (value < static_cast<T>(0)) {\n";
+  out << "    return static_cast<T>(-1);\n";
+  out << "  }\n";
+  out << "  if (value > static_cast<T>(0)) {\n";
+  out << "    return static_cast<T>(1);\n";
+  out << "  }\n";
+  out << "  return static_cast<T>(0);\n";
   out << "}\n";
   out << "template <typename T, typename U>\n";
   out << "static inline std::common_type_t<T, U> ps_builtin_min(T left, U right) {\n";

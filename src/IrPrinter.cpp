@@ -182,6 +182,24 @@ bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "abs" || name == "sign") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -638,6 +656,16 @@ std::string IrPrinter::print(const Program &program) const {
         ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
         result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
         return result;
+      }
+      if (getBuiltinAbsSignName(expr, builtinName)) {
+        if (expr.args.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind argKind = inferExprReturnKind(expr.args.front(), params, locals);
+        if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
+          return ReturnKind::Unknown;
+        }
+        return argKind;
       }
       if (getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
         return returnKindForTypeName(expr.templateArgs.front());

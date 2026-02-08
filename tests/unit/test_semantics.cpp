@@ -391,6 +391,17 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("infers return type from builtin abs") {
+  const std::string source = R"(
+main() {
+  return(abs(negate(2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("clamp argument count fails") {
   const std::string source = R"(
 [return<int>]
@@ -408,6 +419,18 @@ TEST_CASE("min argument count fails") {
 [return<int>]
 main() {
   return(min(2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count") != std::string::npos);
+}
+
+TEST_CASE("abs argument count fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(abs(2i32, 3i32))
 }
 )";
   std::string error;
@@ -449,6 +472,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
+TEST_CASE("sign rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(sign(true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("numeric") != std::string::npos);
 }
 
 TEST_CASE("assign through non-mut pointer fails") {

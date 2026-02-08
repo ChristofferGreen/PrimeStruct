@@ -5056,6 +5056,36 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs abs") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(abs(negate(7i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_abs.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_abs_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("compiles and runs sign f32") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(plus(sign(1.5f), sign(negate(2.0f)))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_sign_f32.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_sign_f32_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs clamp") {
   const std::string source = R"(
 [return<int>]

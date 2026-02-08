@@ -132,11 +132,12 @@ bool isBuiltinName(const std::string &name) {
   return name == "assign" || name == "plus" || name == "minus" || name == "multiply" || name == "divide" ||
          name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
          name == "less_equal" || name == "equal" || name == "not_equal" || name == "and" || name == "or" ||
-         name == "not" || name == "clamp" || name == "min" || name == "max" || name == "if" || name == "then" ||
-         name == "else" || name == "repeat" || name == "return" || name == "array" || name == "map" ||
-         name == "count" || name == "at" || name == "at_unsafe" || name == "convert" || name == "location" ||
-         name == "dereference" || name == "print" || name == "print_line" || name == "print_error" ||
-         name == "print_line_error" || name == "notify" || name == "insert" || name == "take";
+         name == "not" || name == "clamp" || name == "min" || name == "max" || name == "abs" || name == "sign" ||
+         name == "if" || name == "then" || name == "else" || name == "repeat" || name == "return" ||
+         name == "array" || name == "map" || name == "count" || name == "at" || name == "at_unsafe" ||
+         name == "convert" || name == "location" || name == "dereference" || name == "print" ||
+         name == "print_line" || name == "print_error" || name == "print_line_error" || name == "notify" ||
+         name == "insert" || name == "take";
 }
 
 bool isHexDigitChar(char c) {
