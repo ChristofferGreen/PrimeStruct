@@ -1,3 +1,6 @@
+      if (target.kind == Expr::Kind::StringLiteral) {
+        return true;
+      }
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
           return paramBinding->typeName == "string";

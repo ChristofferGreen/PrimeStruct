@@ -93,6 +93,20 @@ main() {
   CHECK(error.find("binding not allowed in expression") != std::string::npos);
 }
 
+TEST_CASE("string literal count validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] a(count("abc"utf8))
+  [i32] b(count("hi"utf8))
+  return(plus(a, b))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("duplicate named arguments fail") {
   const std::string source = R"(
 [return<int>]
