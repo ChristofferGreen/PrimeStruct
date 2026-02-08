@@ -303,6 +303,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("convert<bool> rejects float operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<bool>(1.5f))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("convert<bool> requires integer or bool operand") != std::string::npos);
+}
+
 TEST_CASE("convert rejects string operand") {
   const std::string source = R"(
 [return<int>]
