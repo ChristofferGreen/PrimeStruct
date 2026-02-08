@@ -187,6 +187,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("named arguments on method calls allow builtin names") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+/Foo/plus([Foo] self, [i32] rhs) {
+  return(rhs)
+}
+
+[return<int>]
+main() {
+  [Foo] item(1i32)
+  return(item.plus(rhs = 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("named arguments reject builtin method calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(array<i32>(1i32, 2i32).count(value = 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
