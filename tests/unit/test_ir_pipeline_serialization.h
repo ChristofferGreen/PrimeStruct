@@ -161,7 +161,7 @@ main() {
 
 TEST_CASE("ir lowers u64 comparison") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(0xFFFFFFFFFFFFFFFFu64, 1u64))
 }
@@ -495,7 +495,7 @@ main() {
 
 TEST_CASE("ir lowers comparisons and boolean ops") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(and(greater_than(5i32, 2i32), not_equal(3i32, 0i32)))
 }
@@ -528,7 +528,7 @@ main() {
 
 TEST_CASE("ir lowers boolean not/or") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(or(not(false), false))
 }
@@ -552,7 +552,7 @@ main() {
 
 TEST_CASE("ir lowers numeric boolean ops") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(and(1i32, not(0i32)))
 }

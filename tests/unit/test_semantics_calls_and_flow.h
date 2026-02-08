@@ -293,7 +293,7 @@ main() {
 
 TEST_CASE("convert<bool> accepts u64 literal") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(1u64))
 }
@@ -305,7 +305,7 @@ main() {
 
 TEST_CASE("convert<bool> rejects float operand") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(1.5f))
 }
@@ -512,7 +512,7 @@ main() {
 
 TEST_CASE("boolean literal validates") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(false)
 }

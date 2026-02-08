@@ -1,6 +1,11 @@
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
+task([i32] x) {
+  return(x)
+}
+
+[return<int>]
 main() {
   return(1i32)
 }
@@ -492,7 +497,7 @@ main() {
 
 TEST_CASE("builtin comparison calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(2i32, 1i32))
 }
@@ -504,7 +509,7 @@ main() {
 
 TEST_CASE("builtin comparison accepts bool operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(true, false))
 }
@@ -516,7 +521,7 @@ main() {
 
 TEST_CASE("builtin comparison accepts bool and signed int") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(equal(true, 1i32))
 }
@@ -528,7 +533,7 @@ main() {
 
 TEST_CASE("builtin comparison rejects bool with u64") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(true, 1u64))
 }
@@ -540,7 +545,7 @@ main() {
 
 TEST_CASE("builtin less_than calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(less_than(1i32, 2i32))
 }
@@ -552,7 +557,7 @@ main() {
 
 TEST_CASE("builtin equal calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(equal(2i32, 2i32))
 }
@@ -564,7 +569,7 @@ main() {
 
 TEST_CASE("builtin not_equal calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(not_equal(2i32, 3i32))
 }
@@ -576,7 +581,7 @@ main() {
 
 TEST_CASE("builtin greater_equal calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_equal(2i32, 2i32))
 }
@@ -588,7 +593,7 @@ main() {
 
 TEST_CASE("builtin less_equal calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(less_equal(2i32, 3i32))
 }
@@ -600,7 +605,7 @@ main() {
 
 TEST_CASE("builtin and calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(and(1i32, 1i32))
 }
@@ -612,7 +617,7 @@ main() {
 
 TEST_CASE("builtin and rejects float operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(and(1.5f, 1i32))
 }
@@ -628,7 +633,7 @@ thing() {
   [i32] value(1i32)
 }
 
-[return<int>]
+[return<bool>]
 main() {
   [thing] item(1i32)
   return(and(item, 1i32))
@@ -641,7 +646,7 @@ main() {
 
 TEST_CASE("builtin or calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(or(0i32, 1i32))
 }
@@ -653,7 +658,7 @@ main() {
 
 TEST_CASE("builtin not calls validate") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(not(0i32))
 }
@@ -665,7 +670,7 @@ main() {
 
 TEST_CASE("builtin comparison accepts float operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(less_than(1.5f, 2.5f))
 }
@@ -677,7 +682,7 @@ main() {
 
 TEST_CASE("builtin comparison accepts string operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(equal("a"utf8, "b"utf8))
 }
@@ -689,7 +694,7 @@ main() {
 
 TEST_CASE("builtin comparison rejects pointer operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   [i32] value(1i32)
   return(greater_than(location(value), 1i32))
@@ -706,7 +711,7 @@ thing() {
   [i32] value(1i32)
 }
 
-[return<int>]
+[return<bool>]
 main() {
   [thing] item(1i32)
   return(equal(item, item))
@@ -719,7 +724,7 @@ main() {
 
 TEST_CASE("builtin comparison rejects mixed signed/unsigned operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(1i64, 2u64))
 }
@@ -731,7 +736,7 @@ main() {
 
 TEST_CASE("builtin comparison rejects mixed int/float operands") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(1i32, 2.5f))
 }
@@ -791,7 +796,7 @@ main() {
 
 TEST_CASE("builtin comparison arity mismatch fails") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(1i32))
 }
@@ -803,7 +808,7 @@ main() {
 
 TEST_CASE("builtin less_than arity mismatch fails") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(less_than(1i32))
 }
@@ -815,7 +820,7 @@ main() {
 
 TEST_CASE("builtin equal arity mismatch fails") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(equal(1i32))
 }
@@ -827,7 +832,7 @@ main() {
 
 TEST_CASE("builtin greater_equal arity mismatch fails") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_equal(1i32))
 }
@@ -839,7 +844,7 @@ main() {
 
 TEST_CASE("builtin and arity mismatch fails") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(and(1i32))
 }
@@ -851,7 +856,7 @@ main() {
 
 TEST_CASE("builtin not arity mismatch fails") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(not(1i32, 2i32))
 }

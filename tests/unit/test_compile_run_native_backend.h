@@ -1129,7 +1129,7 @@ main() {
 
 TEST_CASE("compiles and runs native boolean ops") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(or(and(true, false), not(false)))
 }
@@ -1144,7 +1144,7 @@ main() {
 
 TEST_CASE("compiles and runs native numeric boolean ops") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(or(and(0i32, 5i32), not(0i32)))
 }
@@ -1210,7 +1210,7 @@ main() {
 
 TEST_CASE("compiles and runs native convert bool") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(0i32))
 }

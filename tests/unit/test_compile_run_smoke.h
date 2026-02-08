@@ -501,14 +501,12 @@ main() {
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runVmCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "VM lowering error: vm backend requires map lookup key type to match map key type\n");
+  CHECK(readFile(errPath) == "Semantic error: at requires map key type i32\n");
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileNativeCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "Native lowering error: native backend requires map lookup key type to match map key type\n");
+  CHECK(readFile(errPath) == "Semantic error: at requires map key type i32\n");
 }
 
 TEST_CASE("compiles and runs binding inference feeding method call") {

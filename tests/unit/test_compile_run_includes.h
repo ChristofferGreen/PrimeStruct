@@ -437,7 +437,7 @@ main() {
 
 TEST_CASE("compiles and runs numeric boolean ops") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(or(0i32, 2i32))
 }
@@ -452,7 +452,7 @@ main() {
 
 TEST_CASE("compiles and runs convert<bool>") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(0i32))
 }
@@ -497,7 +497,7 @@ main() {
 
 TEST_CASE("compiles and runs convert<bool> from u64") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(1u64))
 }
@@ -512,7 +512,7 @@ main() {
 
 TEST_CASE("compiles and runs convert<bool> from negative i64") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(-1i64))
 }
@@ -768,7 +768,7 @@ main() {
 
 TEST_CASE("compiles and runs comparison operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(2i32>1i32)
 }
@@ -783,7 +783,7 @@ main() {
 
 TEST_CASE("compiles and runs less_than operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(1i32<2i32)
 }
@@ -798,7 +798,7 @@ main() {
 
 TEST_CASE("compiles and runs greater_equal operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(2i32>=2i32)
 }
@@ -813,7 +813,7 @@ main() {
 
 TEST_CASE("compiles and runs less_equal operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(2i32<=2i32)
 }
@@ -828,7 +828,7 @@ main() {
 
 TEST_CASE("compiles and runs and operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(1i32&&1i32)
 }
@@ -843,7 +843,7 @@ main() {
 
 TEST_CASE("compiles and runs or operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(0i32||1i32)
 }
@@ -858,7 +858,7 @@ main() {
 
 TEST_CASE("compiles and runs not operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(!0i32)
 }
@@ -873,7 +873,7 @@ main() {
 
 TEST_CASE("compiles and runs not operator with parentheses") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(!(0i32))
 }
@@ -904,7 +904,7 @@ main() {
 
 TEST_CASE("compiles and runs equality operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(2i32==2i32)
 }
@@ -919,7 +919,7 @@ main() {
 
 TEST_CASE("compiles and runs not_equal operator rewrite") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(2i32!=3i32)
 }
@@ -931,4 +931,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
 }
-

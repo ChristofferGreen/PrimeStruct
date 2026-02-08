@@ -542,6 +542,7 @@ TEST_CASE("compiles and runs implicit void main") {
   const std::string source = R"(
 main() {
   [i32] value(1i32)
+  value
 }
 )";
   const std::string srcPath = writeTemp("compile_void_implicit.prime", source);

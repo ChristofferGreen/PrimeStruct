@@ -429,7 +429,7 @@ main() {
 
 TEST_CASE("compiles and runs greater_than") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(2i32, 1i32))
 }
@@ -444,7 +444,7 @@ main() {
 
 TEST_CASE("compiles and runs less_than") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(less_than(1i32, 2i32))
 }
@@ -459,7 +459,7 @@ main() {
 
 TEST_CASE("compiles and runs equal") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(equal(3i32, 3i32))
 }
@@ -474,7 +474,7 @@ main() {
 
 TEST_CASE("compiles and runs not_equal") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(not_equal(3i32, 4i32))
 }
@@ -654,7 +654,7 @@ main() {
 
 TEST_CASE("compiles and runs boolean literal") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(true)
 }
@@ -684,7 +684,7 @@ main() {
 
 TEST_CASE("compiles and runs bool comparison") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(true, false))
 }
@@ -699,7 +699,7 @@ main() {
 
 TEST_CASE("compiles and runs bool and signed int comparison") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(equal(true, 1i32))
 }
@@ -714,7 +714,7 @@ main() {
 
 TEST_CASE("rejects bool and u64 comparison") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(greater_than(true, 1u64))
 }

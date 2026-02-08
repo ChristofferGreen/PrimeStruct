@@ -272,6 +272,57 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    std::function<ReturnKind(const Expr &)> pointerTargetKind = [&](const Expr &pointerExpr) -> ReturnKind {
+      if (pointerExpr.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, pointerExpr.name)) {
+          if ((paramBinding->typeName == "Pointer" || paramBinding->typeName == "Reference") &&
+              !paramBinding->typeTemplateArg.empty()) {
+            return returnKindForTypeName(paramBinding->typeTemplateArg);
+          }
+          return ReturnKind::Unknown;
+        }
+        auto it = locals.find(pointerExpr.name);
+        if (it != locals.end()) {
+          if ((it->second.typeName == "Pointer" || it->second.typeName == "Reference") &&
+              !it->second.typeTemplateArg.empty()) {
+            return returnKindForTypeName(it->second.typeTemplateArg);
+          }
+        }
+        return ReturnKind::Unknown;
+      }
+      if (pointerExpr.kind == Expr::Kind::Call) {
+        std::string pointerName;
+        if (getBuiltinPointerName(pointerExpr, pointerName) && pointerName == "location" && pointerExpr.args.size() == 1) {
+          const Expr &target = pointerExpr.args.front();
+          if (target.kind != Expr::Kind::Name) {
+            return ReturnKind::Unknown;
+          }
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
+              return returnKindForTypeName(paramBinding->typeTemplateArg);
+            }
+            return returnKindForTypeName(paramBinding->typeName);
+          }
+          auto it = locals.find(target.name);
+          if (it != locals.end()) {
+            if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
+              return returnKindForTypeName(it->second.typeTemplateArg);
+            }
+            return returnKindForTypeName(it->second.typeName);
+          }
+        }
+        std::string opName;
+        if (getBuiltinOperatorName(pointerExpr, opName) && (opName == "plus" || opName == "minus") &&
+            pointerExpr.args.size() == 2) {
+          ReturnKind leftKind = pointerTargetKind(pointerExpr.args[0]);
+          if (leftKind != ReturnKind::Unknown) {
+            return leftKind;
+          }
+          return pointerTargetKind(pointerExpr.args[1]);
+        }
+      }
+      return ReturnKind::Unknown;
+    };
     auto resolveMethodCallPath = [&](std::string &resolvedOut) -> bool {
       if (expr.args.empty()) {
         return false;
@@ -348,6 +399,19 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string valueType;
       if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front()) &&
           !resolveMapTarget(expr.args.front(), keyType, valueType)) {
+        std::string methodResolved;
+        if (resolveMethodCallPath(methodResolved)) {
+          auto methodIt = defMap_.find(methodResolved);
+          if (methodIt != defMap_.end()) {
+            if (!inferDefinitionReturnKind(*methodIt->second)) {
+              return ReturnKind::Unknown;
+            }
+            auto kindIt = returnKinds_.find(methodResolved);
+            if (kindIt != returnKinds_.end()) {
+              return kindIt->second;
+            }
+          }
+        }
         return ReturnKind::Unknown;
       }
       return ReturnKind::Int;
@@ -368,6 +432,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         ReturnKind kind = returnKindForTypeName(elemType);
         if (kind != ReturnKind::Unknown) {
           return kind;
+        }
+      }
+      return ReturnKind::Unknown;
+    }
+    if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
+      if (builtinName == "dereference") {
+        ReturnKind targetKind = pointerTargetKind(expr.args.front());
+        if (targetKind != ReturnKind::Unknown) {
+          return targetKind;
         }
       }
       return ReturnKind::Unknown;

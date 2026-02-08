@@ -270,6 +270,72 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "if condition requires bool";
         return false;
       }
+      auto isStringValue = [&](const Expr &valueExpr,
+                               const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
+        if (valueExpr.kind == Expr::Kind::StringLiteral) {
+          return true;
+        }
+        if (valueExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, valueExpr.name)) {
+            return paramBinding->typeName == "string";
+          }
+          auto it = localsIn.find(valueExpr.name);
+          return it != localsIn.end() && it->second.typeName == "string";
+        }
+        if (valueExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string accessName;
+        if (!getBuiltinArrayAccessName(valueExpr, accessName) || valueExpr.args.size() != 2) {
+          return false;
+        }
+        const Expr &target = valueExpr.args.front();
+        auto isStringCollectionTarget = [&](const Expr &collectionExpr) -> bool {
+          if (collectionExpr.kind == Expr::Kind::StringLiteral) {
+            return true;
+          }
+          if (collectionExpr.kind == Expr::Kind::Name) {
+            const BindingInfo *binding = findParamBinding(params, collectionExpr.name);
+            if (!binding) {
+              auto it = localsIn.find(collectionExpr.name);
+              if (it != localsIn.end()) {
+                binding = &it->second;
+              }
+            }
+            if (!binding) {
+              return false;
+            }
+            if (binding->typeName == "string") {
+              return true;
+            }
+            if (binding->typeName == "array") {
+              return normalizeBindingTypeName(binding->typeTemplateArg) == "string";
+            }
+            if (binding->typeName == "map") {
+              std::vector<std::string> parts;
+              if (!splitTopLevelTemplateArgs(binding->typeTemplateArg, parts) || parts.size() != 2) {
+                return false;
+              }
+              return normalizeBindingTypeName(parts[1]) == "string";
+            }
+            return false;
+          }
+          if (collectionExpr.kind == Expr::Kind::Call) {
+            std::string collection;
+            if (!getBuiltinCollectionName(collectionExpr, collection)) {
+              return false;
+            }
+            if (collection == "array" && collectionExpr.templateArgs.size() == 1) {
+              return normalizeBindingTypeName(collectionExpr.templateArgs.front()) == "string";
+            }
+            if (collection == "map" && collectionExpr.templateArgs.size() == 2) {
+              return normalizeBindingTypeName(collectionExpr.templateArgs[1]) == "string";
+            }
+          }
+          return false;
+        };
+        return isStringCollectionTarget(target);
+      };
       auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
           return false;
@@ -283,8 +349,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const std::string resolved = resolveCalleePath(candidate);
         return defMap_.find(resolved) == defMap_.end();
       };
-      auto validateBranchValueKind = [&](const Expr &branch, const char *label, ReturnKind &kindOut) -> bool {
+      auto validateBranchValueKind =
+          [&](const Expr &branch, const char *label, ReturnKind &kindOut, bool &stringOut) -> bool {
         kindOut = ReturnKind::Unknown;
+        stringOut = false;
         if (isIfBlockEnvelope(branch)) {
           if (branch.bodyArguments.empty()) {
             error_ = std::string(label) + " block must produce a value";
@@ -351,6 +419,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           kindOut = inferExprReturnKind(*valueExpr, params, branchLocals);
+          stringOut = isStringValue(*valueExpr, branchLocals);
           if (kindOut == ReturnKind::Void) {
             error_ = "if branches must produce a value";
             return false;
@@ -362,6 +431,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           return false;
         }
         kindOut = inferExprReturnKind(branch, params, locals);
+        stringOut = isStringValue(branch, locals);
         if (kindOut == ReturnKind::Void) {
           error_ = "if branches must produce a value";
           return false;
@@ -371,10 +441,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
 
       ReturnKind thenKind = ReturnKind::Unknown;
       ReturnKind elseKind = ReturnKind::Unknown;
-      if (!validateBranchValueKind(thenArg, "then", thenKind)) {
+      bool thenIsString = false;
+      bool elseIsString = false;
+      if (!validateBranchValueKind(thenArg, "then", thenKind, thenIsString)) {
         return false;
       }
-      if (!validateBranchValueKind(elseArg, "else", elseKind)) {
+      if (!validateBranchValueKind(elseArg, "else", elseKind, elseIsString)) {
+        return false;
+      }
+      if (thenIsString != elseIsString) {
+        error_ = "if branches must return compatible types";
         return false;
       }
 

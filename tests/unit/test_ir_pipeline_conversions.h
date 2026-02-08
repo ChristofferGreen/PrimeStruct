@@ -1,6 +1,6 @@
 TEST_CASE("ir lowers convert<bool> from u64") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(1u64))
 }
@@ -33,7 +33,7 @@ main() {
 
 TEST_CASE("ir lowers convert<bool> from negative i64") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(-1i64))
 }
@@ -108,7 +108,7 @@ main() {
 
 TEST_CASE("ir lowerer rejects unsupported convert") {
   const std::string source = R"(
-[return<int>]
+[return<float>]
 main() {
   return(convert<float>(1i32))
 }

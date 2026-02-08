@@ -888,7 +888,7 @@ main() {
 
 TEST_CASE("ir lowers convert to bool") {
   const std::string source = R"(
-[return<int>]
+[return<bool>]
 main() {
   return(convert<bool>(0i32))
 }
@@ -918,4 +918,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 0);
 }
-

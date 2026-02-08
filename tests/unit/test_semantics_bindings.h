@@ -29,6 +29,9 @@ TEST_CASE("field-only definition can be used as a type") {
 Foo() {
   [i32] field(1i32)
 }
+
+[return<int>]
+main() {
   [Foo] value(1i32)
   return(1i32)
 }
@@ -44,6 +47,9 @@ TEST_CASE("non-field definition is not a valid type") {
 Bar() {
   return(1i32)
 }
+
+[return<int>]
+main() {
   [Bar] value(1i32)
   return(1i32)
 }
@@ -267,6 +273,9 @@ TEST_CASE("dereference accepts pointer parameters") {
 read([Pointer<i32>] ptr) {
   return(dereference(ptr))
 }
+
+[return<int>]
+main() {
   [i32] value(7i32)
   return(read(location(value)))
 }
@@ -462,7 +471,7 @@ TEST_CASE("pointer plus validates") {
 [return<int>]
 main() {
   [i32] value(3i32)
-  return(plus(location(value), 1i32))
+  return(dereference(plus(location(value), 0i32)))
 }
 )";
   std::string error;
@@ -808,6 +817,17 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("if branches must produce a value") != std::string::npos);
+}
+
+TEST_CASE("if expression rejects mixed string/numeric branches") {
+  const std::string source = R"(
+main() {
+  [string] message(if(true, "hello"utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if branches must return compatible types") != std::string::npos);
 }
 
 TEST_CASE("repeat validates block arguments") {
