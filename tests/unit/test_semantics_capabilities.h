@@ -449,6 +449,47 @@ Create() {
   CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
 }
 
+TEST_CASE("lifecycle helpers allow struct parents") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/Create() {
+}
+
+[return<void>]
+/thing/Destroy() {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("lifecycle helpers reject non-struct parents") {
+  const std::string source = R"(
+[return<int>]
+thing() {
+  return(1i32)
+}
+
+[return<void>]
+/thing/Create() {
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/thing", error));
+  CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
+}
+
 TEST_CASE("struct transforms are rejected on executions") {
   const std::string source = R"(
 [return<int>]

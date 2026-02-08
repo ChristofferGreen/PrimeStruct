@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <array>
 #include <utility>
 
 namespace primec::semantics {
@@ -64,12 +65,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
           return false;
         }
       }
-    }
-    if (def.name == "Create" || def.name == "Destroy" || def.name == "CreateStack" ||
-        def.name == "DestroyStack" || def.name == "CreateHeap" || def.name == "DestroyHeap" ||
-        def.name == "CreateBuffer" || def.name == "DestroyBuffer") {
-      error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
-      return false;
     }
     bool isStruct = false;
     bool hasReturnTransform = false;
@@ -136,6 +131,38 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     returnKinds_[def.fullPath] = kind;
     defMap_[def.fullPath] = &def;
+  }
+
+  auto isLifecycleHelper = [](const std::string &fullPath, std::string &parentOut) -> bool {
+    static const std::array<std::string_view, 8> suffixes = {
+        "Create",      "Destroy",      "CreateStack", "DestroyStack",
+        "CreateHeap",  "DestroyHeap",  "CreateBuffer", "DestroyBuffer"};
+    for (const auto &suffix : suffixes) {
+      if (fullPath.size() < suffix.size() + 1) {
+        continue;
+      }
+      const size_t suffixStart = fullPath.size() - suffix.size();
+      if (fullPath[suffixStart - 1] != '/') {
+        continue;
+      }
+      if (fullPath.compare(suffixStart, suffix.size(), suffix) != 0) {
+        continue;
+      }
+      parentOut = fullPath.substr(0, suffixStart - 1);
+      return true;
+    }
+    return false;
+  };
+
+  for (const auto &def : program_.definitions) {
+    std::string parentPath;
+    if (!isLifecycleHelper(def.fullPath, parentPath)) {
+      continue;
+    }
+    if (parentPath.empty() || structNames_.count(parentPath) == 0) {
+      error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
+      return false;
+    }
   }
 
   return buildParameters();
