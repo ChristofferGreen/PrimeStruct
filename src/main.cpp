@@ -41,6 +41,17 @@ std::string trimWhitespace(const std::string &text) {
   return text.substr(start, end - start);
 }
 
+void replaceAll(std::string &text, std::string_view from, std::string_view to) {
+  if (from.empty()) {
+    return;
+  }
+  size_t pos = 0;
+  while ((pos = text.find(from, pos)) != std::string::npos) {
+    text.replace(pos, from.size(), to);
+    pos += to.size();
+  }
+}
+
 std::vector<std::string> parseTextFilters(const std::string &text) {
   std::vector<std::string> filters;
   size_t start = 0;
@@ -338,7 +349,9 @@ int main(int argc, char **argv) {
     primec::IrLowerer lowerer;
     primec::IrModule ir;
     if (!lowerer.lower(program, options.entryPath, ir, error)) {
-      std::cerr << "VM lowering error: " << error << "\n";
+      std::string vmError = error;
+      replaceAll(vmError, "native backend", "vm backend");
+      std::cerr << "VM lowering error: " << vmError << "\n";
       return 2;
     }
     primec::Vm vm;
