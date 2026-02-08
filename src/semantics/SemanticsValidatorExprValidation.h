@@ -93,6 +93,48 @@
       resolvedOut = resolveTypePath(typeName, receiver.namespacePrefix) + "/" + methodName;
       return true;
     };
+    auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
+      if (binding.typeName == "Reference") {
+        return returnKindForTypeName(binding.typeTemplateArg);
+      }
+      return returnKindForTypeName(binding.typeName);
+    };
+    auto isConvertibleExpr = [&](const Expr &arg) -> bool {
+      ReturnKind kind = inferExprReturnKind(arg, params, locals);
+      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+          kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool) {
+        return true;
+      }
+      if (kind == ReturnKind::Void) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::StringLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(arg, collection)) {
+          return false;
+        }
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+                 paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Bool;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+                 localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 || localKind == ReturnKind::Bool;
+        }
+      }
+      return true;
+    };
 
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
@@ -377,6 +419,10 @@
           return false;
         }
         if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        if (!isConvertibleExpr(expr.args.front())) {
+          error_ = "convert requires numeric or bool operand";
           return false;
         }
         return true;

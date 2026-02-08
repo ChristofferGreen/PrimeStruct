@@ -303,6 +303,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("convert rejects string operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>("hi"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("convert requires numeric or bool operand") != std::string::npos);
+}
+
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]
