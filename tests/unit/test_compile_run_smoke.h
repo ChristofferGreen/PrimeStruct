@@ -754,6 +754,18 @@ main() {
   CHECK(runCommand(runVmCmd) == 2);
 }
 
+TEST_CASE("runs primevm with argv count") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("primevm_args_count.prime", source);
+  const std::string runVmCmd = "./primevm " + srcPath + " --entry /main -- alpha beta";
+  CHECK(runCommand(runVmCmd) == 3);
+}
+
 TEST_CASE("vm string access checks bounds") {
   const std::string source = R"(
 [return<int>]
