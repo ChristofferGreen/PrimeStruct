@@ -14,6 +14,28 @@ TEST_CASE("pipeline passes through text") {
   CHECK(output == source);
 }
 
+TEST_CASE("pipeline preserves line comments") {
+  const std::string source = "main(){ value(1i32)// a+b should stay\n return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("// a+b should stay") != std::string::npos);
+  CHECK(output.find("plus(a, b)") == std::string::npos);
+}
+
+TEST_CASE("pipeline preserves block comments") {
+  const std::string source = "main(){ /* a*b should stay */ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("/* a*b should stay */") != std::string::npos);
+  CHECK(output.find("multiply(a, b)") == std::string::npos);
+}
+
 TEST_CASE("rewrites divide operator without spaces") {
   const std::string source = "main(){ return(a/b) }\n";
   primec::TextFilterPipeline pipeline;

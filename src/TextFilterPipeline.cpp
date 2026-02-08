@@ -966,6 +966,37 @@ bool TextFilterPipeline::apply(const std::string &input,
       continue;
     }
 
+    if (input[i] == '/' && i + 1 < input.size()) {
+      if (input[i + 1] == '/') {
+        size_t end = i + 2;
+        while (end < input.size() && input[end] != '\n') {
+          ++end;
+        }
+        output.append(input.substr(i, end - i));
+        i = end > 0 ? end - 1 : i;
+        continue;
+      }
+      if (input[i + 1] == '*') {
+        size_t end = i + 2;
+        bool closed = false;
+        while (end + 1 < input.size()) {
+          if (input[end] == '*' && input[end + 1] == '/') {
+            end += 2;
+            closed = true;
+            break;
+          }
+          ++end;
+        }
+        if (!closed) {
+          error = "unterminated block comment";
+          return false;
+        }
+        output.append(input.substr(i, end - i));
+        i = end > 0 ? end - 1 : i;
+        continue;
+      }
+    }
+
     if (rewriteCollectionLiteral(i)) {
       continue;
     }
