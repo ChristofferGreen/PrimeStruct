@@ -522,6 +522,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("lifecycle helpers provide this") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/Create() {
+  assign(this, this)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("lifecycle helpers reject non-struct parents") {
   const std::string source = R"(
 [return<int>]
@@ -536,6 +558,18 @@ thing() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/thing", error));
   CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
+}
+
+TEST_CASE("this is not available outside lifecycle helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(this)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown identifier") != std::string::npos);
 }
 
 TEST_CASE("lifecycle helpers accept placement variants") {
