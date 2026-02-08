@@ -306,6 +306,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pod transform rejects handle tag") {
+  const std::string source = R"(
+[pod, handle]
+main() {
+  [i32] value(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pod definitions cannot be tagged as handle or gpu_lane") != std::string::npos);
+}
+
+TEST_CASE("pod transform rejects handle fields") {
+  const std::string source = R"(
+[pod]
+main() {
+  [handle<PathNode>] target(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pod definitions cannot contain handle or gpu_lane fields") != std::string::npos);
+}
+
 TEST_CASE("struct transform rejects template arguments") {
   const std::string source = R"(
 [struct<i32>]
