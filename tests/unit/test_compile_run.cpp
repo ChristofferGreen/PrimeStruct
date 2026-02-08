@@ -407,6 +407,29 @@ main() {
   CHECK(runCommand(nativePath) == 20);
 }
 
+TEST_CASE("compiles and runs map indexing with u64 keys") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(map<u64, i32>{1u64=7i32, 9u64=1i32}[1u64])
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_u64_indexing.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_u64_indexing_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_map_u64_indexing_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 7);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 7);
+}
+
 TEST_CASE("map indexing checks missing key") {
   const std::string source = R"(
 [return<int>]

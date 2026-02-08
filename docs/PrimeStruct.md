@@ -57,7 +57,7 @@ module {
 - `primec --emit=native input.prime -o hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, `if`, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: fixed-width integer/bool literals (`i32`, `i64`, `u64`), locals + assign, basic arithmetic/comparisons (signed/unsigned 64-bit), boolean ops (`and`/`or`/`not`), `convert<int/i32/i64/u64/bool>`, clamp, `if`, `print`, `print_line`, `print_error`, and `print_line_error` for numeric/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
 - All generated outputs land in the current directory (configurable by `--out-dir`).
 
@@ -93,6 +93,7 @@ module {
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
 - **String literals:** surface forms accept `"..."utf8`, `"..."ascii`, or raw `"..."raw_utf8` / `"..."raw_ascii` (no escape processing in raw bodies). The `implicit-utf8` text filter (enabled by default) appends `utf8` when omitted in surface syntax. **Canonical/bottom-level form always uses `raw_utf8` or `raw_ascii` after escape decoding.** `ascii`/`raw_ascii` enforce 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface: `"hello"utf8`, `"moo"ascii`. Example canonical: `"hello"raw_utf8`. Raw example: `"C:\\temp"raw_ascii` keeps backslashes verbatim.
+- **Numeric types (draft):** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are the only numeric types accepted by GPU backends. `integer` is an arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping). `decimal` is an arbitrary-precision floating type with fixed 256-bit precision and deterministic round-to-nearest-even semantics. `complex` is a pair of `decimal` values (`real`, `imag`) using the same 256-bit precision and rounding rules. `integer`/`decimal`/`complex` are software-only and rejected by GPU backends; the current VM/native subset excludes them. Mixed ops between `integer`/`decimal`/`complex` and fixed-width types are rejected; use `convert<T>(value)` explicitly, and conversions that would overflow or lose information fail with diagnostics. When inference cannot select `integer`/`decimal`/`complex`, the existing `implicit-i32` rule still applies.
 - **Envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
@@ -185,6 +186,15 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
 
 ### Core library surface (draft)
+- **Standard math (draft):** the core math set is available as overloads on numeric types where meaningful, and unsupported type/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.
+  - **Constants:** `pi`, `tau`, `e`.
+  - **Basic:** `abs`, `sign`, `min`, `max`, `clamp`, `lerp`, `saturate`.
+  - **Rounding:** `floor`, `ceil`, `round`, `trunc`, `fract`.
+  - **Power/log:** `sqrt`, `cbrt`, `pow`, `exp`, `exp2`, `log`, `log2`, `log10`.
+  - **Trig:** `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `radians`, `degrees`.
+  - **Hyperbolic:** `sinh`, `cosh`, `tanh`, `asinh`, `acosh`, `atanh`.
+  - **Float utils:** `fma`, `hypot`, `copysign`.
+  - **Predicates:** `is_nan`, `is_inf`, `is_finite`.
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The call evaluates to `value`, so it can be nested or returned.
 - **`count(value)` / `value.count()` / `at(value, index)` / `at_unsafe(value, index)`:** collection helpers. `value.count()` is canonical; `count(value)` forwards to the method when available. `at` performs bounds checking; `at_unsafe` does not. In the VM/native backends, an out-of-bounds `at` aborts execution (prints a diagnostic to stderr and returns exit code `3`).
 - **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require `io_err`. VM/native backends support numeric/bool values plus string literals/bindings; other string operations still require the C++ emitter.
@@ -267,11 +277,11 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are rewritten as usual.
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
-  - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction only; map operations are still pending).
-  - String-keyed map literals compile through the C++ emitter only, using `const char *` keys.
+  - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
+  - String-keyed map literals compile through the C++ emitter only, using `std::string_view` keys.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
 - **Float note:** VM/native lowering currently rejects float literals, float bindings, and float arithmetic; use the C++ emitter for float-heavy scripts until float opcodes land in PSIR.
-- **String note:** VM/native lowering now accepts string literals and string bindings only when used by `print`/`print_line`/`print_error`/`print_line_error`; other string operations still require the C++ emitter for now.
+- **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
   - `convert<bool>` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.

@@ -297,6 +297,11 @@ map<i32, i32>{1i32=2i32}
 map<i32, i32>[1i32=2i32]
 ```
 
+Helpers:
+- `count(value)` / `value.count()`
+- `at(value, key)`
+- `at_unsafe(value, key)`
+
 Map IR lowering is currently limited in VM/native backends (currently numeric/bool keys and values only).
 
 ## 9. Effects
@@ -323,7 +328,7 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 ## 12. Backend Notes (Syntax-Relevant)
 
 - VM/native backends accept a restricted subset of types/operations (see design doc).
-- Strings are supported for printing and entry-arg access in VM/native backends.
+- Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
 - The C++ emitter supports broader operations and full string handling.
 
 ## 13. Error Rules (Selected)
