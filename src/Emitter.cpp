@@ -753,6 +753,18 @@ bool isArrayValue(const Expr &target, const std::unordered_map<std::string, Bind
   return false;
 }
 
+bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(target.name);
+    return it != localTypes.end() && it->second.typeName == "map";
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
+  }
+  return false;
+}
+
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::StringLiteral) {
     return true;
@@ -787,6 +799,13 @@ bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, Bi
     return false;
   }
   return isArrayValue(call.args.front(), localTypes);
+}
+
+bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+    return false;
+  }
+  return isMapValue(call.args.front(), localTypes);
 }
 
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
@@ -827,6 +846,9 @@ bool resolveMethodCallPath(const Expr &call,
       }
       case Expr::Kind::Call: {
         if (isArrayCountCall(expr, localTypes)) {
+          return "i32";
+        }
+        if (isMapCountCall(expr, localTypes)) {
           return "i32";
         }
         if (!expr.isMethodCall) {
@@ -1045,7 +1067,8 @@ std::string Emitter::emitExpr(const Expr &expr,
     return expr.name;
   }
   std::string full = resolveExprPath(expr);
-  if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isStringCountCall(expr, localTypes)) {
+  if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) &&
+      !isStringCountCall(expr, localTypes)) {
     std::string methodPath;
     if (resolveMethodCallPath(expr, localTypes, returnKinds, methodPath)) {
       full = methodPath;
@@ -1190,6 +1213,11 @@ std::string Emitter::emitExpr(const Expr &expr,
   }
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
+    if (isMapCountCall(expr, localTypes)) {
+      std::ostringstream out;
+      out << "ps_map_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
+      return out.str();
+    }
     if (isArrayCountCall(expr, localTypes)) {
       std::ostringstream out;
       out << "ps_array_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
@@ -1677,6 +1705,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "static inline int ps_array_count(const std::vector<T> &value) {\n";
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";
+  out << "template <typename Key, typename Value>\n";
+  out << "static inline int ps_map_count(const std::unordered_map<Key, Value> &value) {\n";
+  out << "  return static_cast<int>(value.size());\n";
+  out << "}\n";
   out << "template <typename T, typename Index>\n";
   out << "static inline const T &ps_array_at(const std::vector<T> &value, Index index) {\n";
   out << "  int64_t i = static_cast<int64_t>(index);\n";
@@ -1893,7 +1925,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.kind == Expr::Kind::Call && (stmt.hasBodyArguments || !stmt.bodyArguments.empty())) {
         std::string full = resolveExprPath(stmt);
-        if (stmt.isMethodCall && !isArrayCountCall(stmt, localTypes)) {
+        if (stmt.isMethodCall && !isArrayCountCall(stmt, localTypes) && !isMapCountCall(stmt, localTypes)) {
           std::string methodPath;
           if (resolveMethodCallPath(stmt, localTypes, returnKinds, methodPath)) {
             full = methodPath;

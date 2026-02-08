@@ -451,11 +451,20 @@ bool IrLowerer::lower(const Program &program,
     }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array;
+      return it != localsIn.end() && (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Map);
     }
     if (target.kind == Expr::Kind::Call) {
       std::string collection;
-      return getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1;
+      if (!getBuiltinCollectionName(target, collection)) {
+        return false;
+      }
+      if (collection == "array") {
+        return target.templateArgs.size() == 1;
+      }
+      if (collection == "map") {
+        return target.templateArgs.size() == 2;
+      }
+      return false;
     }
     return false;
   };
@@ -1690,7 +1699,7 @@ bool IrLowerer::lower(const Program &program,
           return true;
         }
         if (isSimpleCallName(expr, "count")) {
-          error = "count requires array or string target";
+          error = "count requires array, map, or string target";
           return false;
         }
         PrintBuiltin printBuiltin;

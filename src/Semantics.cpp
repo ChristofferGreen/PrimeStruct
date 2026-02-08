@@ -1653,6 +1653,20 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
+      auto resolveMapTarget = [&](const Expr &target) -> bool {
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            return paramBinding->typeName == "map";
+          }
+          auto it = locals.find(target.name);
+          return it != locals.end() && it->second.typeName == "map";
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string collection;
+          return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
+        }
+        return false;
+      };
       auto resolveMethodCallPath = [&](std::string &resolvedOut) -> bool {
         if (expr.args.empty()) {
           return false;
@@ -1698,7 +1712,8 @@ bool Semantics::validate(const Program &program,
       bool hasResolvedPath = !expr.isMethodCall;
       if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
         std::string elemType;
-        if (resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front())) {
+        if (resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front()) ||
+            resolveMapTarget(expr.args.front())) {
           return ReturnKind::Int;
         }
       }
@@ -1722,7 +1737,8 @@ bool Semantics::validate(const Program &program,
       }
       if (!expr.isMethodCall && expr.name == "count" && expr.args.size() == 1 && defMap.find(resolved) == defMap.end()) {
         std::string elemType;
-        if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front())) {
+        if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front()) &&
+            !resolveMapTarget(expr.args.front())) {
           return ReturnKind::Unknown;
         }
         return ReturnKind::Int;
@@ -2498,6 +2514,20 @@ bool Semantics::validate(const Program &program,
         }
         return false;
       };
+      auto resolveMapTarget = [&](const Expr &target) -> bool {
+        if (target.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+            return paramBinding->typeName == "map";
+          }
+          auto it = locals.find(target.name);
+          return it != locals.end() && it->second.typeName == "map";
+        }
+        if (target.kind == Expr::Kind::Call) {
+          std::string collection;
+          return getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2;
+        }
+        return false;
+      };
       auto resolveMethodTarget =
           [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
         isBuiltinOut = false;
@@ -2510,6 +2540,11 @@ bool Semantics::validate(const Program &program,
           }
           if (resolveStringTarget(receiver)) {
             resolvedOut = "/string/count";
+            isBuiltinOut = true;
+            return true;
+          }
+          if (resolveMapTarget(receiver)) {
+            resolvedOut = "/map/count";
             isBuiltinOut = true;
             return true;
           }
@@ -2578,6 +2613,9 @@ bool Semantics::validate(const Program &program,
         } else if (resolveStringTarget(expr.args.front())) {
           resolved = "/string/count";
           resolvedMethod = true;
+        } else if (resolveMapTarget(expr.args.front())) {
+          resolved = "/map/count";
+          resolvedMethod = true;
         } else {
           error = "unknown method target for count";
           return false;
@@ -2598,7 +2636,7 @@ bool Semantics::validate(const Program &program,
           error = "named arguments not supported for builtin calls";
           return false;
         }
-        if (resolvedMethod && (resolved == "/array/count" || resolved == "/string/count")) {
+        if (resolvedMethod && (resolved == "/array/count" || resolved == "/string/count" || resolved == "/map/count")) {
           if (expr.args.size() != 1) {
             error = "argument count mismatch for builtin count";
             return false;
