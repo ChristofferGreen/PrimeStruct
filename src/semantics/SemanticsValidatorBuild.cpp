@@ -209,6 +209,18 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     return false;
   };
+  auto isStructTaggedDefinition = [&](const std::string &path) -> bool {
+    auto it = defMap_.find(path);
+    if (it == defMap_.end()) {
+      return false;
+    }
+    for (const auto &transform : it->second->transforms) {
+      if (isStructTransformName(transform.name)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   for (const auto &def : program_.definitions) {
     std::string parentPath;
@@ -216,7 +228,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (!isLifecycleHelper(def.fullPath, parentPath, placement)) {
       continue;
     }
-    if (parentPath.empty() || structNames_.count(parentPath) == 0) {
+    if (parentPath.empty() || !isStructTaggedDefinition(parentPath)) {
       error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
       return false;
     }

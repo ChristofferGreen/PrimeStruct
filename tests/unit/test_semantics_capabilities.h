@@ -522,6 +522,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("lifecycle helpers require struct tag") {
+  const std::string source = R"(
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/Create() {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
+}
+
 TEST_CASE("lifecycle helpers provide this") {
   const std::string source = R"(
 [struct]
