@@ -215,6 +215,19 @@ main() {
   CHECK(error.find("restrict requires a template argument") != std::string::npos);
 }
 
+TEST_CASE("restrict rejects duplicate transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [restrict<i32> restrict<i32> i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate restrict transform") != std::string::npos);
+}
+
 TEST_CASE("restrict rejects mismatched type") {
   const std::string source = R"(
 [return<int>]
@@ -305,6 +318,62 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("pointer bindings require template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  [Pointer] ptr(location(value))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Pointer requires a template argument") != std::string::npos);
+}
+
+TEST_CASE("pointer bindings reject unsupported targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  [Pointer<Foo>] ptr(location(value))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported pointer target type") != std::string::npos);
+}
+
+TEST_CASE("reference bindings require template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  [Reference] ref(location(value))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Reference requires a template argument") != std::string::npos);
+}
+
+TEST_CASE("reference bindings reject unsupported targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  [Reference<Foo>] ref(location(value))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported reference target type") != std::string::npos);
 }
 
 TEST_CASE("location requires local binding name") {
