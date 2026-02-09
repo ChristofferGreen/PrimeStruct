@@ -200,6 +200,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return validateExpr(params, locals, stmt);
   }
   if (isReturnCall(stmt)) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
     if (!allowReturn) {
       error_ = "return not allowed in execution body";
       return false;
@@ -235,6 +239,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return true;
   }
   if (isIfCall(stmt)) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
       error_ = "if does not accept trailing block arguments";
       return false;

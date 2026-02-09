@@ -251,6 +251,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return false;
     }
     if (isIfCall(expr)) {
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
         error_ = "if does not accept trailing block arguments";
         return false;

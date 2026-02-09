@@ -398,6 +398,31 @@ TEST_CASE("block statement can contain return") {
   CHECK(error.empty());
 }
 
+TEST_CASE("return rejects named arguments") {
+  primec::Program program;
+  primec::Expr returnCall = makeCall("/return", {makeLiteral(1)}, {std::string("value")});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {returnCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("if rejects named arguments") {
+  primec::Program program;
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("/return", {makeLiteral(1)})});
+  thenBlock.hasBodyArguments = true;
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("/return", {makeLiteral(2)})});
+  elseBlock.hasBodyArguments = true;
+  primec::Expr ifCall = makeCall("if", {makeBool(true), thenBlock, elseBlock},
+                                 {std::string("cond"), std::string("yes"), std::string("no")});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {ifCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("named arguments not allowed on builtin calls") {
   primec::Program program;
   primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},
