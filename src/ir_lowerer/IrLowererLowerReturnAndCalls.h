@@ -484,6 +484,15 @@
       } else {
         paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
       }
+      if (paramInfo.kind == LocalInfo::Kind::Map) {
+        for (const auto &transform : param.transforms) {
+          if (transform.name == "map" && transform.templateArgs.size() == 2) {
+            paramInfo.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
+            paramInfo.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+            break;
+          }
+        }
+      }
 
       if (isStringBinding(param)) {
         if (paramInfo.kind != LocalInfo::Kind::Value) {

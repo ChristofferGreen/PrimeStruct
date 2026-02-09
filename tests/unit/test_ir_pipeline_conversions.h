@@ -727,6 +727,66 @@ main() {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir lowerer supports array method calls") {
+  const std::string source = R"(
+[return<int>]
+/array/first([array<i32>] items) {
+  return(items[0i32])
+}
+
+[return<int>]
+main() {
+  [array<i32>] items(array<i32>(5i32, 9i32))
+  return(items.first())
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
+TEST_CASE("ir lowerer supports map method calls") {
+  const std::string source = R"(
+[return<int>]
+/map/size([map<i32, i32>] items) {
+  return(count(items))
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] items(map<i32, i32>(1i32, 2i32))
+  return(items.size())
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
+}
+
 TEST_CASE("ir lowerer supports entry args print index") {
   const std::string source = R"(
 [return<int> effects(io_out)]

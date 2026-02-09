@@ -407,6 +407,12 @@ bool IrLowerer::lower(const Program &program,
         }
         return LocalInfo::ValueKind::Unknown;
       }
+      if (transform.name == "map") {
+        if (transform.templateArgs.size() == 2) {
+          return valueKindFromTypeName(transform.templateArgs[1]);
+        }
+        return LocalInfo::ValueKind::Unknown;
+      }
       LocalInfo::ValueKind kindValue = valueKindFromTypeName(transform.name);
       if (kindValue != LocalInfo::ValueKind::Unknown) {
         return kindValue;
@@ -509,18 +515,27 @@ bool IrLowerer::lower(const Program &program,
         return nullptr;
       }
       if (it->second.kind == LocalInfo::Kind::Array) {
-        error = "native backend does not support array method calls";
-        return nullptr;
-      }
-      if (it->second.kind == LocalInfo::Kind::Map) {
-        error = "native backend does not support map method calls";
-        return nullptr;
-      }
-      if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
+        typeName = "array";
+      } else if (it->second.kind == LocalInfo::Kind::Map) {
+        typeName = "map";
+      } else if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
         error = "unknown method target for " + callExpr.name;
         return nullptr;
+      } else {
+        typeName = typeNameForValueKind(it->second.valueKind);
       }
-      typeName = typeNameForValueKind(it->second.valueKind);
+    } else if (receiver.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(receiver, collection)) {
+        if (collection == "array" && receiver.templateArgs.size() == 1) {
+          typeName = "array";
+        } else if (collection == "map" && receiver.templateArgs.size() == 2) {
+          typeName = "map";
+        }
+      }
+      if (typeName.empty()) {
+        typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
+      }
     } else {
       typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
     }
