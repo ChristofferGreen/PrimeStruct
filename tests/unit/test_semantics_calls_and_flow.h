@@ -300,11 +300,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count helper validates on array binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(1i32, 2i32))
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count builtin validates on map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(count(map<i32, i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count helper validates on map binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  return(count(values))
 }
 )";
   std::string error;
@@ -343,6 +369,19 @@ TEST_CASE("count method validates on string binding") {
 main() {
   [string] text("abc"utf8)
   return(text.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count helper validates on string binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("abc"utf8)
+  return(count(text))
 }
 )";
   std::string error;
