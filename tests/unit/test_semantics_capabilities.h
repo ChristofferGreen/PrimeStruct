@@ -438,6 +438,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct definitions reject non-binding statements") {
+  const std::string source = R"(
+[struct]
+main() {
+  [i32] value(1i32)
+  plus(1i32, 2i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct definitions may only contain field bindings") != std::string::npos);
+}
+
 TEST_CASE("handle transform marks struct definitions") {
   const std::string source = R"(
 [handle]
