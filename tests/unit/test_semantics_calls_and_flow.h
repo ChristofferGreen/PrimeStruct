@@ -336,6 +336,47 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
+TEST_CASE("count forwards to type method") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+/Foo/count([Foo] self) {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  [Foo] item(1i32)
+  return(count(item))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count rejects missing type method") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  [Foo] item(1i32)
+  return(count(item))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Foo/count") != std::string::npos);
+}
+
 TEST_CASE("array method calls resolve to definitions") {
   const std::string source = R"(
 [return<int>]
