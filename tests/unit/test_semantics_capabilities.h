@@ -651,6 +651,26 @@ task(1i32)
   CHECK(error.find("struct transforms are not allowed on executions") != std::string::npos);
 }
 
+TEST_CASE("mut transforms are rejected on executions") {
+  const std::string source = R"(
+[return<int>]
+task([i32] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[mut]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform is not allowed on executions") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {

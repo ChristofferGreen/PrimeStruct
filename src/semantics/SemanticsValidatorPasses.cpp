@@ -94,6 +94,10 @@ bool SemanticsValidator::validateExecutions() {
         error_ = "return transform not allowed on executions: " + exec.fullPath;
         return false;
       }
+      if (transform.name == "mut") {
+        error_ = "mut transform is not allowed on executions: " + exec.fullPath;
+        return false;
+      }
       if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
         error_ = "placement transforms are not supported: " + exec.fullPath;
         return false;
