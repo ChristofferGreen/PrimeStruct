@@ -727,6 +727,7 @@ main() {
   CHECK(error.find("not all control paths return") != std::string::npos);
 }
 
+
 TEST_CASE("return after partial if validates") {
   const std::string source = R"(
 [return<int>]

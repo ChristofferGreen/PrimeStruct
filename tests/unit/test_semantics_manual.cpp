@@ -423,6 +423,16 @@ TEST_CASE("if rejects named arguments") {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("missing return statement fails") {
+  primec::Program program;
+  primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {binding}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("missing return statement") != std::string::npos);
+}
+
 TEST_CASE("named arguments not allowed on builtin calls") {
   primec::Program program;
   primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},
