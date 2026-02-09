@@ -1411,4 +1411,15 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("default effects reject invalid names") {
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgramWithDefaults(source, "/main", {"bad-effect"}, error));
+  CHECK(error.find("invalid default effect: bad-effect") != std::string::npos);
+}
+
 TEST_SUITE_END();
