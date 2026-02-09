@@ -363,6 +363,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count method validates on array binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values(array<i32>(1i32, 2i32))
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count method validates on map binding") {
   const std::string source = R"(
 [return<int>]
