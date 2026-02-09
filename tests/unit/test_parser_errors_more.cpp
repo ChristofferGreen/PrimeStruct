@@ -701,6 +701,23 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named args for pathspace builtins fail in parser") {
+  const std::string source = R"(
+[return<void> effects(pathspace_notify, pathspace_insert, pathspace_take)]
+main() {
+  notify(path = "/events/test"utf8, value = 1i32)
+  insert(path = "/events/test"utf8, value = 1i32)
+  take(path = "/events/test"utf8)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("named args reject slash identifiers") {
   const std::string source = R"(
 [return<int>]
