@@ -192,10 +192,6 @@
         error_ = "unknown method target for " + methodName;
         return false;
       }
-      if (typeName == "array" || typeName == "map") {
-        error_ = "unknown method: " + methodName;
-        return false;
-      }
       if (isPrimitiveBindingTypeName(typeName)) {
         resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
         return true;

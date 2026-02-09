@@ -509,7 +509,11 @@ bool IrLowerer::lower(const Program &program,
         return nullptr;
       }
       if (it->second.kind == LocalInfo::Kind::Array) {
-        error = "unknown method: " + callExpr.name;
+        error = "native backend does not support array method calls";
+        return nullptr;
+      }
+      if (it->second.kind == LocalInfo::Kind::Map) {
+        error = "native backend does not support map method calls";
         return nullptr;
       }
       if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {

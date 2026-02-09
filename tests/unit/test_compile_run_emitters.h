@@ -30,6 +30,27 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs array method calls in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+/array/first([array<i32>] items) {
+  return(items[0i32])
+}
+
+[return<int>]
+main() {
+  [array<i32>] items(array<i32>(7i32, 9i32))
+  return(items.first())
+}
+)";
+  const std::string srcPath = writeTemp("compile_array_method.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_array_method_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs array index sugar") {
   const std::string source = R"(
 [return<int>]
@@ -128,4 +149,3 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
 }
-

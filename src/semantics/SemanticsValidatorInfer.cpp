@@ -354,9 +354,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       if (typeName == "Pointer" || typeName == "Reference") {
         return false;
       }
-      if (typeName == "array" || typeName == "map") {
-        return false;
-      }
       if (isPrimitiveBindingTypeName(typeName)) {
         resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
         return true;

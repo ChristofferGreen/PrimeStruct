@@ -483,7 +483,7 @@ bool resolveMethodCallPath(const Expr &call,
   if (typeName.empty()) {
     return false;
   }
-  if (typeName == "Pointer" || typeName == "Reference" || typeName == "array" || typeName == "map") {
+  if (typeName == "Pointer" || typeName == "Reference") {
     return false;
   }
   if (isPrimitiveBindingTypeName(typeName)) {

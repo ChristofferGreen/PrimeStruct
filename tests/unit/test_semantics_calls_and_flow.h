@@ -246,6 +246,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array method calls resolve to definitions") {
+  const std::string source = R"(
+[return<int>]
+/array/first([array<i32>] items) {
+  return(items[0i32])
+}
+
+[return<int>]
+main() {
+  [array<i32>] items(array<i32>(4i32, 7i32))
+  return(items.first())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map method calls resolve to definitions") {
+  const std::string source = R"(
+[return<int>]
+/map/size([map<i32, i32>] items) {
+  return(count(items))
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] items(map<i32, i32>(1i32, 2i32))
+  return(items.size())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count builtin rejects template arguments") {
   const std::string source = R"(
 [return<int>]
