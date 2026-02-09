@@ -594,6 +594,18 @@ main() {
   CHECK(error.find("argument count mismatch for builtin at") != std::string::npos);
 }
 
+TEST_CASE("array access rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(array<i32>(1i32), 0i32) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+}
+
 TEST_CASE("unsafe array access rejects template arguments") {
   const std::string source = R"(
 [return<int>]
@@ -616,6 +628,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch for builtin at_unsafe") != std::string::npos);
+}
+
+TEST_CASE("unsafe array access rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(array<i32>(1i32), 0i32) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
 }
 
 TEST_CASE("array access rejects non-integer index") {
