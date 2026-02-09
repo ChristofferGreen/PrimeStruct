@@ -627,6 +627,10 @@
         return true;
       }
       if (getBuiltinCollectionName(expr, builtinName)) {
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = builtinName + " literal does not accept block arguments";
+          return false;
+        }
         if (builtinName == "array") {
           if (expr.templateArgs.size() != 1) {
             error_ = "array literal requires exactly one template argument";

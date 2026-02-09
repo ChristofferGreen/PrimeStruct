@@ -482,6 +482,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return true;
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+    std::string collectionName;
+    if (getBuiltinCollectionName(stmt, collectionName)) {
+      error_ = collectionName + " literal does not accept block arguments";
+      return false;
+    }
     std::string resolved = resolveCalleePath(stmt);
     if (defMap_.count(resolved) == 0) {
       error_ = "block arguments require a definition target: " + resolved;

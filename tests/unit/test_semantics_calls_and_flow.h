@@ -886,6 +886,32 @@ main() {
   CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
 }
 
+TEST_CASE("array literal rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<i32>{1i32}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array literal does not accept block arguments") != std::string::npos);
+}
+
+TEST_CASE("map literal rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<i32, i32>{1i32, 2i32}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map literal does not accept block arguments") != std::string::npos);
+}
+
 TEST_CASE("print accepts string array access") {
   const std::string source = R"(
 [effects(io_out)]
