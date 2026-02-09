@@ -608,6 +608,18 @@ main() {
   CHECK(error.find("at does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("array literal access validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(array<i32>(1i32, 2i32), 0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("array access rejects argument count mismatch") {
   const std::string source = R"(
 [return<int>]
@@ -1109,6 +1121,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("at requires map key type i32") != std::string::npos);
+}
+
+TEST_CASE("map literal access validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(map<i32, i32>(1i32, 2i32), 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("unsafe map access validates key type") {
