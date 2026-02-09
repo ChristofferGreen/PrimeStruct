@@ -1020,6 +1020,54 @@ main() {
   CHECK(error.find("print_line does not accept block arguments") != std::string::npos);
 }
 
+TEST_CASE("print_error rejects missing arguments") {
+  const std::string source = R"(
+[effects(io_err)]
+main() {
+  print_error()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_error requires exactly one argument") != std::string::npos);
+}
+
+TEST_CASE("print_error rejects block arguments") {
+  const std::string source = R"(
+[effects(io_err)]
+main() {
+  print_error("oops"utf8) { 1i32 }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_error does not accept block arguments") != std::string::npos);
+}
+
+TEST_CASE("print_line_error rejects missing arguments") {
+  const std::string source = R"(
+[effects(io_err)]
+main() {
+  print_line_error()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_line_error requires exactly one argument") != std::string::npos);
+}
+
+TEST_CASE("print_line_error rejects block arguments") {
+  const std::string source = R"(
+[effects(io_err)]
+main() {
+  print_line_error("oops"utf8) { 1i32 }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_line_error does not accept block arguments") != std::string::npos);
+}
+
 TEST_CASE("array literal rejects block arguments") {
   const std::string source = R"(
 [return<int>]
