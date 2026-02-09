@@ -60,6 +60,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block arguments require definition target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  plus(1i32, 2i32) { return(1i32) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+}
+
 TEST_CASE("statement call with block arguments rejects bindings") {
   const std::string source = R"(
 [return<void>]
