@@ -433,6 +433,20 @@ TEST_CASE("missing return statement fails") {
   CHECK(error.find("missing return statement") != std::string::npos);
 }
 
+TEST_CASE("method calls require a receiver") {
+  primec::Program program;
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "count";
+  primec::Expr returnCall = makeCall("/return", {methodCall});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {returnCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("method call missing receiver") != std::string::npos);
+}
+
 TEST_CASE("recursive return inference requires annotation") {
   primec::Program program;
   primec::Expr recursiveCall = makeCall("main");
