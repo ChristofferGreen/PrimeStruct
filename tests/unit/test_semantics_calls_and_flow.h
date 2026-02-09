@@ -913,6 +913,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("notify rejects template arguments") {
+  const std::string source = R"(
+[effects(pathspace_notify)]
+main() {
+  notify<i32>("/events/test"utf8, 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("notify does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("notify rejects argument count mismatch") {
+  const std::string source = R"(
+[effects(pathspace_notify)]
+main() {
+  notify("/events/test"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("notify requires exactly 2 arguments") != std::string::npos);
+}
+
 TEST_CASE("insert requires pathspace_insert effect") {
   const std::string source = R"(
 main() {
@@ -922,6 +946,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("pathspace_insert") != std::string::npos);
+}
+
+TEST_CASE("insert rejects template arguments") {
+  const std::string source = R"(
+[effects(pathspace_insert)]
+main() {
+  insert<i32>("/events/test"utf8, 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("insert does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("insert rejects non-string path argument") {
@@ -936,6 +972,30 @@ main() {
   CHECK(error.find("requires string path argument") != std::string::npos);
 }
 
+TEST_CASE("insert rejects block arguments") {
+  const std::string source = R"(
+[effects(pathspace_insert)]
+main() {
+  insert("/events/test"utf8, 1i32) { 2i32 }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("insert does not accept block arguments") != std::string::npos);
+}
+
+TEST_CASE("insert rejects argument count mismatch") {
+  const std::string source = R"(
+[effects(pathspace_insert)]
+main() {
+  insert("/events/test"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("insert requires exactly 2 arguments") != std::string::npos);
+}
+
 TEST_CASE("take requires pathspace_take effect") {
   const std::string source = R"(
 main() {
@@ -945,6 +1005,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("pathspace_take") != std::string::npos);
+}
+
+TEST_CASE("take rejects template arguments") {
+  const std::string source = R"(
+[effects(pathspace_take)]
+main() {
+  take<i32>("/events/test"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("take does not accept template arguments") != std::string::npos);
 }
 
 TEST_CASE("take rejects non-string path argument") {
@@ -957,6 +1029,30 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("take rejects block arguments") {
+  const std::string source = R"(
+[effects(pathspace_take)]
+main() {
+  take("/events/test"utf8) { 1i32 }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("take does not accept block arguments") != std::string::npos);
+}
+
+TEST_CASE("take rejects argument count mismatch") {
+  const std::string source = R"(
+[effects(pathspace_take)]
+main() {
+  take()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("take requires exactly 1 argument") != std::string::npos);
 }
 
 TEST_CASE("notify not allowed in expression context") {
