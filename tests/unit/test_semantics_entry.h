@@ -143,6 +143,23 @@ add([i32] left, [i32] right(block{ 1i32 })) {
   CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
 }
 
+TEST_CASE("parameter default expression rejects bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right(block{ [i32] temp(1i32) temp })) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
+}
+
 TEST_CASE("parameter default expression rejects named arguments") {
   const std::string source = R"(
 [return<int>]
