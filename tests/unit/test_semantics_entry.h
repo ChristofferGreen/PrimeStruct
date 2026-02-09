@@ -148,6 +148,23 @@ add([i32] left, [i32] right(add_one(value = 1i32))) {
   CHECK(error.find("parameter default does not accept named arguments") != std::string::npos);
 }
 
+TEST_CASE("parameter default rejects multiple arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right(1i32, 2i32)) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("parameter defaults accept at most one argument") != std::string::npos);
+}
+
 TEST_CASE("infers parameter type from default initializer") {
   const std::string source = R"(
 [return<i64>]
