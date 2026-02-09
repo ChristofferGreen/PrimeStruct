@@ -147,6 +147,18 @@ main() {
   CHECK(error.find("binding not allowed in expression") != std::string::npos);
 }
 
+TEST_CASE("unknown identifier fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(missing)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown identifier") != std::string::npos);
+}
+
 TEST_CASE("repeat is statement-only") {
   const std::string source = R"(
 [return<int>]
