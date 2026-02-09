@@ -495,6 +495,30 @@ main() {
   CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("count method rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(array<i32>(1i32, 2i32).count<i32>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("count method rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(array<i32>(1i32, 2i32).count() { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+}
+
 TEST_CASE("array access rejects template arguments") {
   const std::string source = R"(
 [return<int>]
