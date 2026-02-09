@@ -137,6 +137,45 @@ main() {
   CHECK(error.find("binding does not accept capabilities transform") != std::string::npos);
 }
 
+TEST_CASE("binding rejects return transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [return<int> i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding does not accept return transform") != std::string::npos);
+}
+
+TEST_CASE("binding rejects transform arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut(1) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding transforms do not take arguments") != std::string::npos);
+}
+
+TEST_CASE("binding rejects duplicate static transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [static static i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate static transform on binding") != std::string::npos);
+}
+
 TEST_CASE("restrict binding validates") {
   const std::string source = R"(
 [return<int>]
