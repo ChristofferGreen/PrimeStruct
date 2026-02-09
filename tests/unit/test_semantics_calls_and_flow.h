@@ -852,6 +852,18 @@ main() {
   CHECK(error.find("io_err") != std::string::npos);
 }
 
+TEST_CASE("print_line_error requires io_err effect") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print_line_error("oops"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("io_err") != std::string::npos);
+}
+
 TEST_CASE("notify requires pathspace_notify effect") {
   const std::string source = R"(
 main() {
