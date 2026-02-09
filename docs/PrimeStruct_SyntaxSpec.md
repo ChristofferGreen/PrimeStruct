@@ -202,6 +202,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - As a statement, it introduces a local scope.
   - As an expression, it evaluates each form in order and yields the last form’s value; the block must end with a
     non-binding expression.
+  - A block body is required; `block()` is invalid.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`

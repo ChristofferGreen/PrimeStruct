@@ -336,6 +336,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return true;
   }
+  if (isBlockCall(stmt) && !stmt.hasBodyArguments) {
+    error_ = "block requires block arguments";
+    return false;
+  }
   if (isBlockCall(stmt) && stmt.hasBodyArguments) {
     const std::string resolved = resolveCalleePath(stmt);
     if (defMap_.find(resolved) != defMap_.end()) {

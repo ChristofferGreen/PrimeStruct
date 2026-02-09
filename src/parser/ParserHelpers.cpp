@@ -133,7 +133,7 @@ bool isBuiltinName(const std::string &name) {
          name == "not" || name == "clamp" || name == "min" || name == "max" || name == "abs" || name == "sign" ||
          name == "saturate" || name == "if" || name == "then" || name == "else" || name == "repeat" ||
          name == "return" || name == "array" || name == "map" || name == "count" || name == "at" ||
-         name == "at_unsafe" || name == "convert" || name == "location" || name == "dereference" ||
+         name == "at_unsafe" || name == "convert" || name == "location" || name == "dereference" || name == "block" ||
          name == "print" || name == "print_line" || name == "print_error" || name == "print_line_error" ||
          name == "notify" || name == "insert" || name == "take";
 }
