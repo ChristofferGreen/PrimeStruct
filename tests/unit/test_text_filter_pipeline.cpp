@@ -14,6 +14,27 @@ TEST_CASE("pipeline passes through text") {
   CHECK(output == source);
 }
 
+TEST_CASE("pipeline preserves quoted include paths") {
+  const std::string source = "include<\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("pipeline preserves include with version attribute") {
+  const std::string source =
+      "include<\"/std/io\", version=\"1.2\">\n[return<int>]\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("pipeline preserves line comments") {
   const std::string source = "main(){ value(1i32)// a+b should stay\n return(1i32) }\n";
   primec::TextFilterPipeline pipeline;

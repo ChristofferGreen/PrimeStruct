@@ -294,7 +294,64 @@ bool TextFilterPipeline::apply(const std::string &input,
     return true;
   };
 
+  auto trySkipIncludeDirective = [&](size_t &index) -> bool {
+    constexpr size_t IncludeLen = 7;
+    if (index + IncludeLen > input.size()) {
+      return false;
+    }
+    if (input.compare(index, IncludeLen, "include") != 0) {
+      return false;
+    }
+    if (index > 0 && isTokenChar(input[index - 1])) {
+      return false;
+    }
+    size_t scan = index + IncludeLen;
+    if (scan < input.size() && isTokenChar(input[scan])) {
+      return false;
+    }
+    while (scan < input.size() && std::isspace(static_cast<unsigned char>(input[scan]))) {
+      ++scan;
+    }
+    if (scan >= input.size() || input[scan] != '<') {
+      return false;
+    }
+    size_t pos = scan + 1;
+    bool inString = false;
+    char quote = '\0';
+    while (pos < input.size()) {
+      char c = input[pos];
+      if (inString) {
+        if (c == '\\' && pos + 1 < input.size()) {
+          pos += 2;
+          continue;
+        }
+        if (c == quote) {
+          inString = false;
+        }
+        ++pos;
+        continue;
+      }
+      if (c == '"' || c == '\'') {
+        inString = true;
+        quote = c;
+        ++pos;
+        continue;
+      }
+      if (c == '>') {
+        ++pos;
+        output.append(input.substr(index, pos - index));
+        index = pos - 1;
+        return true;
+      }
+      ++pos;
+    }
+    return false;
+  };
+
   for (size_t i = 0; i < input.size(); ++i) {
+    if (trySkipIncludeDirective(i)) {
+      continue;
+    }
     if (input[i] == '/' && i + 1 < input.size() && input[i + 1] == '/') {
       size_t end = i + 2;
       while (end < input.size() && input[end] != '\n') {
