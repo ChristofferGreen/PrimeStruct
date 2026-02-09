@@ -810,7 +810,7 @@ main() {
 
 TEST_CASE("effects transform rejects invalid capability") {
   const std::string source = R"(
-[effects("io"), return<int>]
+[effects("io"utf8), return<int>]
 main() {
   return(1i32)
 }
@@ -870,7 +870,7 @@ main() {
 
 TEST_CASE("capabilities transform rejects invalid capability") {
   const std::string source = R"(
-[capabilities("io"), return<int>]
+[capabilities("io"utf8), return<int>]
 main() {
   return(1i32)
 }

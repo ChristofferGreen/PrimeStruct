@@ -757,6 +757,21 @@ main() {
   CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
 }
 
+TEST_CASE("transform string arguments require suffix") {
+  const std::string source = R"(
+[tag("oops")]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
+}
+
 TEST_CASE("transform argument requires value") {
   const std::string source = R"(
 [effects(,)]

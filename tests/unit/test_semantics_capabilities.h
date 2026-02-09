@@ -70,7 +70,7 @@ main() {
   return(1i32)
 }
 
-[capabilities("io")]
+[capabilities("io"utf8)]
 task(1i32)
 )";
   std::string error;
@@ -130,7 +130,7 @@ main() {
   return(1i32)
 }
 
-[effects("io")]
+[effects("io"utf8)]
 task(1i32)
 )";
   std::string error;
@@ -224,7 +224,7 @@ main() {
 
 TEST_CASE("capabilities transform rejects invalid capability") {
   const std::string source = R"(
-[capabilities("io"), return<int>]
+[capabilities("io"utf8), return<int>]
 main() {
   return(1i32)
 }

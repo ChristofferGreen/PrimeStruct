@@ -2,6 +2,8 @@
 
 #include "ParserHelpers.h"
 
+#include "primec/StringLiteral.h"
+
 #include <utility>
 
 namespace primec {
@@ -53,6 +55,11 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           Token arg = consume(TokenKind::String, "expected transform argument");
           if (arg.kind == TokenKind::End) {
             return false;
+          }
+          ParsedStringLiteral parsed;
+          std::string parseError;
+          if (!parseStringLiteralToken(arg.text, parsed, parseError)) {
+            return fail(parseError);
           }
           transform.arguments.push_back(arg.text);
         } else {

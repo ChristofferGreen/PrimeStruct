@@ -198,6 +198,21 @@ main() {
   CHECK(program.definitions[0].transforms[0].templateArgs[1] == "f32");
 }
 
+TEST_CASE("parses transform string arguments with suffix") {
+  const std::string source = R"(
+[tag("demo"utf8) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 2);
+  CHECK(program.definitions[0].transforms[0].name == "tag");
+  REQUIRE(program.definitions[0].transforms[0].arguments.size() == 1);
+  CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"utf8");
+}
+
 TEST_CASE("parses literal statement") {
   const std::string source = R"(
 [return<int>]
