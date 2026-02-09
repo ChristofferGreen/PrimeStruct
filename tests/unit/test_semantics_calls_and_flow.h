@@ -335,6 +335,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("unknown method calls fail") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+main() {
+  [Foo] item(Foo())
+  return(item.missing())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Foo/missing") != std::string::npos);
+}
+
 TEST_CASE("count builtin rejects template arguments") {
   const std::string source = R"(
 [return<int>]
