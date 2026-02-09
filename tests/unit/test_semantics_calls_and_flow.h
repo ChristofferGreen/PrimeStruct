@@ -949,6 +949,19 @@ main() {
   CHECK(error.find("at requires map key type i32") != std::string::npos);
 }
 
+TEST_CASE("unsafe map access validates key type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  return(at_unsafe(values, "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires map key type i32") != std::string::npos);
+}
+
 TEST_CASE("string map access rejects numeric index") {
   const std::string source = R"(
 [return<int>]
