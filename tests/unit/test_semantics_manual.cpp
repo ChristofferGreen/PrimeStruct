@@ -129,6 +129,16 @@ TEST_CASE("return transform rejects arguments") {
   CHECK(error.find("return transform does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("struct definition cannot return a value") {
+  primec::Program program;
+  primec::Definition def = makeDefinition("/main", {makeTransform("struct")}, {});
+  def.returnExpr = makeLiteral(1);
+  program.definitions.push_back(def);
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("struct definitions cannot return a value") != std::string::npos);
+}
+
 TEST_CASE("conflicting return types fail") {
   primec::Program program;
   program.definitions.push_back(makeDefinition(
