@@ -188,6 +188,9 @@ std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr) {
   if (expr.kind == Expr::Kind::FloatLiteral) {
     return expr.floatWidth == 64 ? "f64" : "f32";
   }
+  if (expr.kind == Expr::Kind::StringLiteral) {
+    return "string";
+  }
   std::string builtinName;
   if (expr.kind == Expr::Kind::Call && getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
     const std::string &typeName = expr.templateArgs.front();

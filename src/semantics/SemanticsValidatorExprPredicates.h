@@ -379,12 +379,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 return false;
               }
               if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
-                std::string inferredName = typeNameForReturnKind(initKind);
-                if (!inferredName.empty()) {
-                  info.typeName = inferredName;
-                  info.typeTemplateArg.clear();
-                }
+                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info);
               }
               if (restrictType.has_value()) {
                 const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -501,12 +496,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-            ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
-            std::string inferredName = typeNameForReturnKind(initKind);
-            if (!inferredName.empty()) {
-              info.typeName = inferredName;
-              info.typeTemplateArg.clear();
-            }
+            (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
           }
           if (restrictType.has_value()) {
             const bool hasTemplate = !info.typeTemplateArg.empty();

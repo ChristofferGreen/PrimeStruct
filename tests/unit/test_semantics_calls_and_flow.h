@@ -80,6 +80,21 @@ main() {
   CHECK(error.find("binding not allowed in execution body") != std::string::npos);
 }
 
+TEST_CASE("block binding infers string type") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(block{
+    [mut] value("hello"utf8)
+    equal(value, "hello"utf8)
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("if missing else fails") {
   const std::string source = R"(
 [return<int>]
