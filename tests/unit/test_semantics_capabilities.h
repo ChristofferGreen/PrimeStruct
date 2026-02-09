@@ -282,6 +282,30 @@ main() {
   CHECK(error.find("align_kbytes does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("align_kbytes validates integer argument") {
+  const std::string source = R"(
+[align_kbytes(4), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("align_kbytes rejects non-integer argument") {
+  const std::string source = R"(
+[align_kbytes(foo), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_kbytes requires a positive integer argument") != std::string::npos);
+}
+
 TEST_CASE("struct transform validates without args") {
   const std::string source = R"(
 [struct]
