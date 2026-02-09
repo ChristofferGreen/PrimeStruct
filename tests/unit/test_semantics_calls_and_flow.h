@@ -335,6 +335,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("method calls reject pointer receivers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  [Pointer<i32>] ptr(location(value))
+  return(ptr.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method target for count") != std::string::npos);
+}
+
 TEST_CASE("unknown method calls fail") {
   const std::string source = R"(
 [struct]
