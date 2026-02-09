@@ -235,6 +235,19 @@ TEST_CASE("block arguments allowed on statement calls") {
   CHECK(error.find("binding not allowed in execution body") != std::string::npos);
 }
 
+TEST_CASE("binding blocks are rejected") {
+  primec::Program program;
+  primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  binding.hasBodyArguments = true;
+  binding.bodyArguments = {makeLiteral(2)};
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {binding, makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("binding does not accept block arguments") != std::string::npos);
+}
+
 TEST_CASE("literal statements are allowed") {
   primec::Program program;
   primec::Expr literal = makeLiteral(1);
