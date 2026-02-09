@@ -385,6 +385,36 @@ main() {
   CHECK(error.find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
 }
 
+TEST_CASE("string literal rejects unknown suffix") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("hello"utf16)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("unknown string literal suffix") != std::string::npos);
+}
+
+TEST_CASE("string literal rejects unknown escape") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("hello\q"utf8)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("unknown escape sequence") != std::string::npos);
+}
+
 TEST_CASE("named arguments rejected for print builtin") {
   const std::string source = R"(
 [return<void> effects(io_out)]

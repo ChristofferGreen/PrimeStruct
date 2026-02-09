@@ -810,8 +810,11 @@ main() {
   print("hello"utf16)
 }
 )";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("unknown string literal suffix") != std::string::npos);
 }
 
@@ -834,8 +837,11 @@ main() {
   print("hello\q"utf8)
 }
 )";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("unknown escape sequence") != std::string::npos);
 }
 

@@ -313,13 +313,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (text.kind == TokenKind::End) {
         return false;
       }
-      std::string literalText;
-      std::string suffix;
-      if (!splitStringLiteralToken(text.text, literalText, suffix)) {
-        return fail("invalid string literal");
-      }
-      if (suffix.empty()) {
-        return fail("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix");
+      ParsedStringLiteral parsed;
+      std::string parseError;
+      if (!parseStringLiteralToken(text.text, parsed, parseError)) {
+        return fail(parseError);
       }
       out.kind = Expr::Kind::StringLiteral;
       out.namespacePrefix = namespacePrefix;
