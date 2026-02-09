@@ -566,6 +566,28 @@ main() {
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
+TEST_CASE("lifecycle helpers must return void") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<int>]
+/thing/Create() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("lifecycle helpers must return void") != std::string::npos);
+}
+
 TEST_CASE("mut transform is rejected on non-helpers") {
   const std::string source = R"(
 [mut return<int>]

@@ -1,6 +1,45 @@
 #include "SemanticsValidator.h"
 
+#include <array>
+
 namespace primec::semantics {
+
+namespace {
+
+struct HelperSuffixInfo {
+  std::string_view suffix;
+  std::string_view placement;
+};
+
+bool isLifecycleHelperName(const std::string &fullPath) {
+  static const std::array<HelperSuffixInfo, 8> suffixes = {{
+      {"Create", ""},
+      {"Destroy", ""},
+      {"CreateStack", "stack"},
+      {"DestroyStack", "stack"},
+      {"CreateHeap", "heap"},
+      {"DestroyHeap", "heap"},
+      {"CreateBuffer", "buffer"},
+      {"DestroyBuffer", "buffer"},
+  }};
+  for (const auto &info : suffixes) {
+    const std::string_view suffix = info.suffix;
+    if (fullPath.size() < suffix.size() + 1) {
+      continue;
+    }
+    const size_t suffixStart = fullPath.size() - suffix.size();
+    if (fullPath[suffixStart - 1] != '/') {
+      continue;
+    }
+    if (fullPath.compare(suffixStart, suffix.size(), suffix.data(), suffix.size()) != 0) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+} // namespace
 
 std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::vector<Transform> &transforms) const {
   bool sawEffects = false;
@@ -62,6 +101,10 @@ bool SemanticsValidator::validateDefinitions() {
     auto kindIt = returnKinds_.find(def.fullPath);
     if (kindIt != returnKinds_.end()) {
       kind = kindIt->second;
+    }
+    if (isLifecycleHelperName(def.fullPath) && kind != ReturnKind::Void) {
+      error_ = "lifecycle helpers must return void: " + def.fullPath;
+      return false;
     }
     bool sawReturn = false;
     for (const auto &stmt : def.statements) {
