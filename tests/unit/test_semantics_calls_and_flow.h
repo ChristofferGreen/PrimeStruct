@@ -1020,6 +1020,18 @@ main() {
   CHECK(error.find("print_line does not accept block arguments") != std::string::npos);
 }
 
+TEST_CASE("print_line rejects missing arguments") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print_line()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_line requires exactly one argument") != std::string::npos);
+}
+
 TEST_CASE("print_error rejects missing arguments") {
   const std::string source = R"(
 [effects(io_err)]
