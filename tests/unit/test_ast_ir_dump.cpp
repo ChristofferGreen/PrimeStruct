@@ -149,6 +149,44 @@ main() {
   CHECK(dump == expected);
 }
 
+TEST_CASE("ast dump prints method call template args") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32.wrap<i32>())
+}
+)";
+  const auto program = parseProgram(source);
+  primec::AstPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "ast {\n"
+      "  [return<int>] /main() {\n"
+      "    return 1.wrap<i32>()\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints method call template args") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32.wrap<i32>())
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): i32 {\n"
+      "    return 1.wrap<i32>()\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
 TEST_CASE("ast dump prints float literals") {
   const std::string source = R"(
 [return<float>]

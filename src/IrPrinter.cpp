@@ -357,7 +357,18 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
   case Expr::Kind::Call:
     if (expr.isMethodCall && !expr.args.empty()) {
       printExpr(out, expr.args.front());
-      out << "." << expr.name << "(";
+      out << "." << expr.name;
+      if (!expr.templateArgs.empty()) {
+        out << "<";
+        for (size_t i = 0; i < expr.templateArgs.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          out << expr.templateArgs[i];
+        }
+        out << ">";
+      }
+      out << "(";
       for (size_t i = 1; i < expr.args.size(); ++i) {
         if (i > 1) {
           out << ", ";
