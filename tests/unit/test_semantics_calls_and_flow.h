@@ -413,6 +413,18 @@ main() {
   CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
+TEST_CASE("count rejects non-collection target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
+}
+
 TEST_CASE("count forwards to type method") {
   const std::string source = R"(
 [struct]
