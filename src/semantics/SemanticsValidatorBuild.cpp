@@ -220,6 +220,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
       error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
       return false;
     }
+    if (!def.parameters.empty()) {
+      error_ = "lifecycle helpers do not accept parameters: " + def.fullPath;
+      return false;
+    }
   }
 
   return buildParameters();

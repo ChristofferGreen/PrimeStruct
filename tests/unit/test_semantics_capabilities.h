@@ -588,6 +588,27 @@ main() {
   CHECK(error.find("lifecycle helpers must return void") != std::string::npos);
 }
 
+TEST_CASE("lifecycle helpers reject parameters") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/Create([i32] x) {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("lifecycle helpers do not accept parameters") != std::string::npos);
+}
+
 TEST_CASE("mut transform is rejected on non-helpers") {
   const std::string source = R"(
 [mut return<int>]
