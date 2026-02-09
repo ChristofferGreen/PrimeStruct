@@ -464,6 +464,16 @@ TEST_CASE("execution unknown named argument fails") {
   CHECK(error.find("unknown named argument") != std::string::npos);
 }
 
+TEST_CASE("duplicate parameter name fails") {
+  primec::Program program;
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+      {makeParameter("value"), makeParameter("value")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("duplicate parameter") != std::string::npos);
+}
+
 TEST_CASE("call argument name count mismatch fails") {
   primec::Program program;
   primec::Expr call = makeCall("callee", {makeLiteral(1)});
