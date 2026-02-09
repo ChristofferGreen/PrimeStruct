@@ -254,6 +254,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding align_bytes rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_bytes<i32>(16) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_bytes does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("binding align_bytes rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_bytes(4, 8) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_bytes requires exactly one integer argument") != std::string::npos);
+}
+
 TEST_CASE("binding align_kbytes rejects template arguments") {
   const std::string source = R"(
 [return<int>]
