@@ -182,6 +182,22 @@ main() {
   CHECK(stmt.transforms[0].templateArgs[1] == "i32");
 }
 
+TEST_CASE("parses transform template lists with multiple args") {
+  const std::string source = R"(
+[custom<i32, f32>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  CHECK(program.definitions[0].transforms[0].name == "custom");
+  REQUIRE(program.definitions[0].transforms[0].templateArgs.size() == 2);
+  CHECK(program.definitions[0].transforms[0].templateArgs[0] == "i32");
+  CHECK(program.definitions[0].transforms[0].templateArgs[1] == "f32");
+}
+
 TEST_CASE("parses literal statement") {
   const std::string source = R"(
 [return<int>]

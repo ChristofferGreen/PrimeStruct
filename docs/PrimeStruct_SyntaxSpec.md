@@ -128,7 +128,7 @@ transforms_opt = [ "[" transform_list "]" ] ;
 transform_list = transform { transform } ;
 transform      = identifier template_opt args_opt ;
 // Commas between transforms are allowed but not required.
-// Transform template args accept a single type expression (not a list).
+// Transform template args accept one or more type expressions.
 // Transform argument lists accept identifier, number, or string tokens (no nested envelopes).
 
 template_opt   = [ "<" template_list ">" ] ;

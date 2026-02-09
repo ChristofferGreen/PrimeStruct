@@ -107,6 +107,18 @@ TEST_CASE("return transform requires template argument") {
   CHECK(error.find("return transform requires a type") != std::string::npos);
 }
 
+TEST_CASE("return transform rejects multiple template arguments") {
+  primec::Program program;
+  primec::Transform transform;
+  transform.name = "return";
+  transform.templateArgs = {"int", "i32"};
+  program.definitions.push_back(
+      makeDefinition("/main", {transform}, {makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return transform requires a type") != std::string::npos);
+}
+
 TEST_CASE("return transform rejects arguments") {
   primec::Program program;
   primec::Transform transform = makeTransform("return", std::string("int"));
