@@ -513,6 +513,14 @@
         return true;
       }
       if (getBuiltinArrayAccessName(expr, builtinName)) {
+        if (!expr.templateArgs.empty()) {
+          error_ = builtinName + " does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = builtinName + " does not accept block arguments";
+          return false;
+        }
         if (expr.args.size() != 2) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -594,6 +602,10 @@
       if (getBuiltinPointerName(expr, builtinName)) {
         if (!expr.templateArgs.empty()) {
           error_ = "pointer helpers do not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "pointer helpers do not accept block arguments";
           return false;
         }
         if (expr.args.size() != 1) {

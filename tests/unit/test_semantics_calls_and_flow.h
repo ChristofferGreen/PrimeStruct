@@ -258,6 +258,18 @@ main() {
   CHECK(error.find("count does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("array access rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at<i32>(array<i32>(1i32), 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
