@@ -20,6 +20,66 @@ bool isIncludeBoundaryChar(char c) {
   return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_' || c == '/';
 }
 
+bool isReservedKeyword(const std::string &text) {
+  return text == "mut" || text == "return" || text == "include" || text == "namespace" || text == "true" ||
+         text == "false";
+}
+
+bool isAsciiAlpha(char c) {
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+bool isAsciiDigit(char c) {
+  return c >= '0' && c <= '9';
+}
+
+bool isIdentifierSegmentStart(char c) {
+  return isAsciiAlpha(c) || c == '_';
+}
+
+bool isIdentifierSegmentChar(char c) {
+  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_';
+}
+
+bool isIncludeSegmentChar(char c) {
+  return isIdentifierSegmentChar(c) || c == '.';
+}
+
+bool validateSlashPath(const std::string &text, std::string &error) {
+  if (text.size() < 2 || text[0] != '/') {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  size_t start = 1;
+  while (start < text.size()) {
+    size_t end = text.find('/', start);
+    std::string segment = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (segment.empty() || !isIdentifierSegmentStart(segment[0])) {
+      error = "invalid slash path identifier: " + text;
+      return false;
+    }
+    for (size_t i = 1; i < segment.size(); ++i) {
+      if (!isIncludeSegmentChar(segment[i])) {
+        error = "invalid slash path identifier: " + text;
+        return false;
+      }
+    }
+    if (isReservedKeyword(segment)) {
+      error = "reserved keyword cannot be used as identifier: " + segment;
+      return false;
+    }
+    if (end == std::string::npos) {
+      break;
+    }
+    start = end + 1;
+  }
+  if (text.back() == '/') {
+    error = "invalid slash path identifier: " + text;
+    return false;
+  }
+  return true;
+}
+
 bool readFile(const std::string &path, std::string &out) {
   std::ifstream file(path);
   if (!file) {
@@ -542,6 +602,9 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             path = trim(path);
             if (path.empty() || path.front() != '/') {
               error = "unquoted include paths must be slash paths";
+              return false;
+            }
+            if (!validateSlashPath(path, error)) {
               return false;
             }
             paths.push_back(path);
