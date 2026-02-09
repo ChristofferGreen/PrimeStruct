@@ -655,12 +655,36 @@ main() {
   CHECK(error.find("at requires integer index") != std::string::npos);
 }
 
+TEST_CASE("string literal access rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at("hello"utf8, "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
 TEST_CASE("unsafe string access rejects non-integer index") {
   const std::string source = R"(
 [return<int>]
 main() {
   [string] text("hello"utf8)
   return(at_unsafe(text, "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires integer index") != std::string::npos);
+}
+
+TEST_CASE("unsafe string literal access rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe("hello"utf8, "nope"utf8))
 }
 )";
   std::string error;
