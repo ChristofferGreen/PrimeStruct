@@ -359,6 +359,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer helpers reject template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  return(dereference<i32>(location(value)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pointer helpers do not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("pointer helpers reject block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  return(dereference(location(value)) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+}
+
 TEST_CASE("binding array type requires one template argument") {
   const std::string source = R"(
 [return<int>]
