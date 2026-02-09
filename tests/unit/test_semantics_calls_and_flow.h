@@ -972,6 +972,19 @@ main() {
   CHECK(error.find("requires string path argument") != std::string::npos);
 }
 
+TEST_CASE("insert accepts string array access") {
+  const std::string source = R"(
+[effects(pathspace_insert)]
+main() {
+  [array<string>] values(array<string>("/events/test"utf8))
+  insert(values[0i32], 1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("insert rejects block arguments") {
   const std::string source = R"(
 [effects(pathspace_insert)]
@@ -994,6 +1007,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("insert requires exactly 2 arguments") != std::string::npos);
+}
+
+TEST_CASE("insert not allowed in expression context") {
+  const std::string source = R"(
+[return<int> effects(pathspace_insert)]
+main() {
+  return(insert("/events/test"utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("statement-only") != std::string::npos);
 }
 
 TEST_CASE("take requires pathspace_take effect") {
@@ -1031,6 +1056,19 @@ main() {
   CHECK(error.find("requires string path argument") != std::string::npos);
 }
 
+TEST_CASE("take accepts string map access") {
+  const std::string source = R"(
+[effects(pathspace_take)]
+main() {
+  [map<i32, string>] values(map<i32, string>(1i32, "/events/test"utf8))
+  take(values[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("take rejects block arguments") {
   const std::string source = R"(
 [effects(pathspace_take)]
@@ -1053,6 +1091,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("take requires exactly 1 argument") != std::string::npos);
+}
+
+TEST_CASE("take not allowed in expression context") {
+  const std::string source = R"(
+[return<int> effects(pathspace_take)]
+main() {
+  return(take("/events/test"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("statement-only") != std::string::npos);
 }
 
 TEST_CASE("notify not allowed in expression context") {
