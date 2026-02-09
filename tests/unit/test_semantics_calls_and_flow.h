@@ -1135,6 +1135,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map literal access validates for string keys") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(map<string, i32>("a"utf8, 2i32), "a"utf8))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("unsafe map access validates key type") {
   const std::string source = R"(
 [return<int>]
