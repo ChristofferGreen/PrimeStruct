@@ -548,6 +548,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "block requires block arguments";
       return false;
     }
+    if (isRepeatCall(expr)) {
+      error_ = "repeat is only supported as a statement";
+      return false;
+    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "block arguments are only supported on statement calls";
       return false;

@@ -106,6 +106,18 @@ main() {
   CHECK(error.find("binding not allowed in expression") != std::string::npos);
 }
 
+TEST_CASE("repeat is statement-only") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(repeat(1i32) { })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("repeat is only supported as a statement") != std::string::npos);
+}
+
 TEST_CASE("string literal count validates") {
   const std::string source = R"(
 [return<int>]
