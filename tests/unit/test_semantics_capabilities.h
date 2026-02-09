@@ -270,6 +270,30 @@ main() {
   CHECK(error.find("align_bytes requires a positive integer argument") != std::string::npos);
 }
 
+TEST_CASE("align_bytes rejects wrong argument count") {
+  const std::string source = R"(
+[align_bytes(4, 8), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_bytes requires exactly one integer argument") != std::string::npos);
+}
+
+TEST_CASE("align_kbytes rejects wrong argument count") {
+  const std::string source = R"(
+[align_kbytes(4, 8), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_kbytes requires exactly one integer argument") != std::string::npos);
+}
+
 TEST_CASE("align_kbytes rejects template arguments") {
   const std::string source = R"(
 [align_kbytes<i32>(4), return<int>]
