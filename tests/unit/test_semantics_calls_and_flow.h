@@ -428,6 +428,31 @@ main() {
   CHECK(error.find("at does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("array access rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(array<i32>(1i32, 2i32), "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
+TEST_CASE("string access rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("hello"utf8)
+  return(at(text, "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
@@ -758,6 +783,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("at requires map key type i32") != std::string::npos);
+}
+
+TEST_CASE("string map access rejects numeric index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values(map<string, i32>("a"utf8, 3i32))
+  return(at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires string map key") != std::string::npos);
 }
 
 TEST_CASE("map access accepts matching key type") {
