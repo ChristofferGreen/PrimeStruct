@@ -581,6 +581,10 @@ bool parseBindingInfo(const Expr &expr,
       error = "binding does not accept " + transform.name + " transform";
       return false;
     }
+    if (transform.name == "return") {
+      error = "binding does not accept return transform";
+      return false;
+    }
     if (transform.name == "mut") {
       if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";

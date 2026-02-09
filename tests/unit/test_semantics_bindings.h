@@ -215,6 +215,19 @@ main() {
   CHECK(error.find("align_bytes requires a positive integer argument") != std::string::npos);
 }
 
+TEST_CASE("binding rejects return transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [return<int>] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding does not accept return transform") != std::string::npos);
+}
+
 TEST_CASE("binding qualifiers are allowed") {
   const std::string source = R"(
 [return<int>]
