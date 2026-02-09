@@ -937,6 +937,18 @@ main() {
   CHECK(error.find("notify requires exactly 2 arguments") != std::string::npos);
 }
 
+TEST_CASE("notify rejects block arguments") {
+  const std::string source = R"(
+[effects(pathspace_notify)]
+main() {
+  notify("/events/test"utf8, 1i32) { 2i32 }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("notify does not accept block arguments") != std::string::npos);
+}
+
 TEST_CASE("insert requires pathspace_insert effect") {
   const std::string source = R"(
 main() {
