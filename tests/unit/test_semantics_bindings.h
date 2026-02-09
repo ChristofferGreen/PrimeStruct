@@ -994,6 +994,20 @@ main() {
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
+TEST_CASE("assign through non-pointer dereference fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value(1i32)
+  assign(dereference(value), 3i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable pointer binding") != std::string::npos);
+}
+
 TEST_CASE("reference binding assigns to target") {
   const std::string source = R"(
 [return<int>]
