@@ -306,6 +306,19 @@ main() {
   CHECK(error.find("align_kbytes requires a positive integer argument") != std::string::npos);
 }
 
+TEST_CASE("binding align_kbytes rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_kbytes(4, 8) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_kbytes requires exactly one integer argument") != std::string::npos);
+}
+
 TEST_CASE("binding align_kbytes validates") {
   const std::string source = R"(
 [return<int>]
