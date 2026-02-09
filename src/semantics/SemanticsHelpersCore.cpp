@@ -576,6 +576,8 @@ bool parseBindingInfo(const Expr &expr,
   std::string typeName;
   bool typeHasTemplate = false;
   std::optional<std::string> restrictType;
+  std::optional<std::string> visibilityTransform;
+  bool sawStatic = false;
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
       error = "binding does not accept " + transform.name + " transform";
@@ -625,6 +627,19 @@ bool parseBindingInfo(const Expr &expr,
       continue;
     }
     if (isBindingQualifierName(transform.name)) {
+      if (transform.name == "static") {
+        if (sawStatic) {
+          error = "duplicate static transform on binding";
+          return false;
+        }
+        sawStatic = true;
+      } else {
+        if (visibilityTransform.has_value()) {
+          error = "binding visibility transforms are mutually exclusive";
+          return false;
+        }
+        visibilityTransform = transform.name;
+      }
       if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;

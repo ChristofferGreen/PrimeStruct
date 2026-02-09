@@ -236,7 +236,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Generics:** classes accept template parameters (`class<Vector<T>>(…)`) and specialise through the transform pipeline.
 - **Nested generics:** template arguments may themselves be generic types (`map<i32, array<i32>>`), and the parser preserves the nested type string for later lowering.
 - **Interop:** generated code treats classes as structs plus free functions (`Name::method(instance, …)`); VM closures follow the same convention.
-- **Field visibility:** stack-value declarations accept `[public]`, `[package]`, or `[private]` transforms (default: private). The compiler records `visibility` metadata per field so tooling and backends enforce access rules consistently. `[package]` exposes the field to any module compiled into the same package; `[public]` emits accessors in the generated namespace surface.
+- **Field visibility:** stack-value declarations accept `[public]`, `[package]`, or `[private]` transforms (default: private); they are mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules consistently. `[package]` exposes the field to any module compiled into the same package; `[public]` emits accessors in the generated namespace surface.
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
 - **Example:**
   ```

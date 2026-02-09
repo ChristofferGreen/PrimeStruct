@@ -242,6 +242,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding rejects multiple visibility qualifiers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [public private i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility transforms are mutually exclusive") != std::string::npos);
+}
+
 TEST_CASE("pointer helpers validate") {
   const std::string source = R"(
 [return<int>]
