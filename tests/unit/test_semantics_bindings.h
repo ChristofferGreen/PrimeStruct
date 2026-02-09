@@ -254,6 +254,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding align_kbytes rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_kbytes<i32>(4) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_kbytes does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("binding align_kbytes rejects invalid") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_kbytes(0) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("align_kbytes requires a positive integer argument") != std::string::npos);
+}
+
+TEST_CASE("binding align_kbytes validates") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [align_kbytes(4) i32] value(1i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("binding align_bytes rejects invalid") {
   const std::string source = R"(
 [return<int>]
@@ -318,6 +357,32 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("binding array type requires one template argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32, i32>] value(array<i32>(1i32))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array requires exactly one template argument") != std::string::npos);
+}
+
+TEST_CASE("binding map type requires two template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32>] value(map<i32, i32>(1i32, 2i32))
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("map requires exactly two template arguments") != std::string::npos);
 }
 
 TEST_CASE("pointer bindings require template arguments") {
