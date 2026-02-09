@@ -415,6 +415,21 @@ main() {
   CHECK(error.find("unknown escape sequence") != std::string::npos);
 }
 
+TEST_CASE("ascii string literal rejects non-ASCII characters") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("héllo"ascii)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
+}
+
 TEST_CASE("named arguments rejected for print builtin") {
   const std::string source = R"(
 [return<void> effects(io_out)]
