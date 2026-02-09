@@ -592,6 +592,42 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
+TEST_CASE("comparisons allow bool with signed integers") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(true, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("comparisons reject bool with unsigned") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(true, 1u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons do not support mixed signed/unsigned operands") != std::string::npos);
+}
+
+TEST_CASE("comparisons reject mixed int and float operands") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(greater_than(1i32, 2.5f))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons do not support mixed int/float operands") != std::string::npos);
+}
+
 TEST_CASE("map literal validates") {
   const std::string source = R"(
 [return<int>]
