@@ -340,8 +340,10 @@ bool isNewerVersion(const std::vector<int> &lhs, const std::vector<int> &rhs) {
 }
 
 bool isPrivatePath(const std::filesystem::path &path) {
-  std::filesystem::path parent = path.parent_path();
-  for (const auto &part : parent) {
+  std::error_code ec;
+  const bool isDir = std::filesystem::is_directory(path, ec);
+  std::filesystem::path scanPath = isDir ? path : path.parent_path();
+  for (const auto &part : scanPath) {
     std::string segment = part.string();
     if (segment.empty()) {
       continue;

@@ -400,4 +400,20 @@ TEST_CASE("skips private subdirectories in directory include") {
   CHECK(source.find("SECRET") == std::string::npos);
 }
 
+TEST_CASE("rejects private include root directory") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir / "_private");
+
+  writeFile(baseDir / "_private" / "secret.prime", "// SECRET\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"" + (baseDir / "_private").string() + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("private folder") != std::string::npos);
+}
+
 TEST_SUITE_END();
