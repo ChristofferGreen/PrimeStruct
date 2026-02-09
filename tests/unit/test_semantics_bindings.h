@@ -1077,6 +1077,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression must end with value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{
+    [i32] inner(1i32)
+  })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block expression must end with an expression") != std::string::npos);
+}
+
+TEST_CASE("block expression rejects arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block(1i32){
+    1i32
+  })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block expression does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("block requires body arguments") {
   const std::string source = R"(
 [return<int>]
