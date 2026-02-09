@@ -561,7 +561,9 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
         exprKind = inferExprReturnKind(stmt.args.front(), defParams, activeLocals);
       }
       if (exprKind == ReturnKind::Unknown) {
-        error_ = "unable to infer return type on " + def.fullPath;
+        if (error_.empty()) {
+          error_ = "unable to infer return type on " + def.fullPath;
+        }
         return false;
       }
       if (inferred == ReturnKind::Unknown) {
@@ -569,7 +571,9 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
         return true;
       }
       if (inferred != exprKind) {
-        error_ = "conflicting return types on " + def.fullPath;
+        if (error_.empty()) {
+          error_ = "conflicting return types on " + def.fullPath;
+        }
         return false;
       }
       return true;
@@ -623,7 +627,9 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
   if (!sawReturn) {
     kindIt->second = ReturnKind::Void;
   } else if (inferred == ReturnKind::Unknown) {
-    error_ = "unable to infer return type on " + def.fullPath;
+    if (error_.empty()) {
+      error_ = "unable to infer return type on " + def.fullPath;
+    }
     return false;
   } else {
     kindIt->second = inferred;

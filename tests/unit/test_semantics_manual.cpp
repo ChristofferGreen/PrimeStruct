@@ -433,6 +433,16 @@ TEST_CASE("missing return statement fails") {
   CHECK(error.find("missing return statement") != std::string::npos);
 }
 
+TEST_CASE("recursive return inference requires annotation") {
+  primec::Program program;
+  primec::Expr recursiveCall = makeCall("main");
+  primec::Expr returnCall = makeCall("/return", {recursiveCall});
+  program.definitions.push_back(makeDefinition("/main", {}, {returnCall}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return type inference requires explicit annotation") != std::string::npos);
+}
+
 TEST_CASE("named arguments not allowed on builtin calls") {
   primec::Program program;
   primec::Expr plusCall = makeCall("plus", {makeLiteral(1), makeLiteral(2)},
