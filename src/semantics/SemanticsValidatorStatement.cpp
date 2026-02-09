@@ -295,6 +295,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return true;
   }
   if (isRepeatCall(stmt)) {
+    if (!stmt.hasBodyArguments) {
+      error_ = "repeat requires block arguments";
+      return false;
+    }
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
       return false;

@@ -210,6 +210,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - 2) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `true`
   - 3) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `false`
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
+- **`repeat(count) { ... }`:** statement-only loop helper. `count` must be integer/bool, and the body is required.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error.
 - **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` calls and `array<T>{...}` literals, plus `count`/`at`/`at_unsafe` on those arrays. Map literals are supported in VM/native when both key and value types are numeric/bool; string-keyed maps remain C++-emitter-only for now.
