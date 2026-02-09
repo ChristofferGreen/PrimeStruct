@@ -219,6 +219,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array literal validates bool elements") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<bool>(true, false)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("named arguments match parameters") {
   const std::string source = R"(
 [return<int>]
@@ -950,6 +963,19 @@ use([i32] x) {
 [return<int>]
 main() {
   return(use(map<i32, i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("map literal validates bool keys and values") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<bool, bool>(true, false)
+  return(1i32)
 }
 )";
   std::string error;
