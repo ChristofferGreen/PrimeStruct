@@ -30,6 +30,7 @@ execute_task(1i32) { }
   REQUIRE(program.executions.size() == 1);
   CHECK(program.executions[0].arguments.size() == 1);
   CHECK(program.executions[0].bodyArguments.empty());
+  CHECK(program.executions[0].hasBodyArguments);
 }
 
 TEST_CASE("parses execution with body arguments") {

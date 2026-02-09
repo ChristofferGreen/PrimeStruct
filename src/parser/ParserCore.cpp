@@ -167,6 +167,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     exec.templateArgs = std::move(templateArgs);
     exec.arguments = std::move(arguments);
     exec.argumentNames = std::move(argumentNames);
+    exec.hasBodyArguments = false;
     execs.push_back(std::move(exec));
     return true;
   }
@@ -182,6 +183,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
     return false;
   }
+  exec.hasBodyArguments = true;
   execs.push_back(std::move(exec));
   return true;
 }

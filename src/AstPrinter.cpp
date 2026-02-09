@@ -230,15 +230,19 @@ void printExecution(std::ostringstream &out, const Execution &exec, int depth) {
     printExpr(out, exec.arguments[i]);
   }
   out << ")";
-  if (!exec.bodyArguments.empty()) {
-    out << " { ";
-    for (size_t i = 0; i < exec.bodyArguments.size(); ++i) {
-      if (i > 0) {
-        out << ", ";
+  if (exec.hasBodyArguments || !exec.bodyArguments.empty()) {
+    if (exec.bodyArguments.empty()) {
+      out << " { }";
+    } else {
+      out << " { ";
+      for (size_t i = 0; i < exec.bodyArguments.size(); ++i) {
+        if (i > 0) {
+          out << ", ";
+        }
+        printExpr(out, exec.bodyArguments[i]);
       }
-      printExpr(out, exec.bodyArguments[i]);
+      out << " }";
     }
-    out << " }";
   }
   out << "\n";
 }

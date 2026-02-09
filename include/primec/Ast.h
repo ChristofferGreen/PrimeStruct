@@ -56,6 +56,8 @@ struct Execution {
   std::vector<Expr> arguments;
   std::vector<std::optional<std::string>> argumentNames;
   std::vector<Expr> bodyArguments;
+  // True when `{ ... }` was present in the source, even if the list is empty.
+  bool hasBodyArguments = false;
 };
 
 struct Program {

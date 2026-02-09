@@ -647,7 +647,7 @@ execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) {
       "  [return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
-      "  /execute_task(items = array<i32>(1, 2), pairs = map<i32, i32>(1, 2))\n"
+      "  /execute_task(items = array<i32>(1, 2), pairs = map<i32, i32>(1, 2)) { }\n"
       "}\n";
   CHECK(dump == expected);
 }
@@ -669,7 +669,7 @@ execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) {
       "  def /main(): i32 {\n"
       "    return 1\n"
       "  }\n"
-      "  exec /execute_task(items = array(1, 2), pairs = map(1, 2))\n"
+      "  exec /execute_task(items = array(1, 2), pairs = map(1, 2)) { }\n"
       "}\n";
   CHECK(dump == expected);
 }
