@@ -913,6 +913,52 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("insert requires pathspace_insert effect") {
+  const std::string source = R"(
+main() {
+  insert("/events/test"utf8, 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pathspace_insert") != std::string::npos);
+}
+
+TEST_CASE("insert rejects non-string path argument") {
+  const std::string source = R"(
+[effects(pathspace_insert)]
+main() {
+  insert(1i32, 2i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires string path argument") != std::string::npos);
+}
+
+TEST_CASE("take requires pathspace_take effect") {
+  const std::string source = R"(
+main() {
+  take("/events/test"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pathspace_take") != std::string::npos);
+}
+
+TEST_CASE("take rejects non-string path argument") {
+  const std::string source = R"(
+[effects(pathspace_take)]
+main() {
+  take(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires string path argument") != std::string::npos);
+}
+
 TEST_CASE("notify not allowed in expression context") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify)]
