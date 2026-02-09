@@ -299,6 +299,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count builtin rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(array<i32>(1i32, 2i32)) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+}
+
+TEST_CASE("count builtin rejects missing argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+}
+
 TEST_CASE("array method calls resolve to definitions") {
   const std::string source = R"(
 [return<int>]

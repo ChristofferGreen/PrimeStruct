@@ -304,6 +304,24 @@
         }
         return true;
       }
+      if (!resolvedMethod && expr.name == "count" && it == defMap_.end()) {
+        if (!expr.templateArgs.empty()) {
+          error_ = "count does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "count does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "argument count mismatch for builtin count";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        return true;
+      }
       std::string builtinName;
       if (getBuiltinOperatorName(expr, builtinName)) {
         size_t expectedArgs = builtinName == "negate" ? 1 : 2;
