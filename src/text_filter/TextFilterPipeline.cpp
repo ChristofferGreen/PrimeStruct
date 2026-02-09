@@ -73,12 +73,29 @@ bool TextFilterPipeline::apply(const std::string &input,
         rewritten.reserve(inner.size());
         size_t scan = 0;
         bool entryHasPairEquals = false;
+        bool sawValueBoundary = false;
         int parenDepth = 0;
         int braceDepth = 0;
         int bracketDepth = 0;
         while (scan < inner.size()) {
           char c = inner[scan];
           if (std::isspace(static_cast<unsigned char>(c))) {
+            if (entryHasPairEquals && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+              size_t prevIndex = scan;
+              while (prevIndex > 0 && std::isspace(static_cast<unsigned char>(inner[prevIndex - 1]))) {
+                --prevIndex;
+              }
+              char prev = prevIndex > 0 ? inner[prevIndex - 1] : '\0';
+              size_t nextIndex = scan + 1;
+              while (nextIndex < inner.size() && std::isspace(static_cast<unsigned char>(inner[nextIndex]))) {
+                ++nextIndex;
+              }
+              if (nextIndex < inner.size()) {
+                if (isLeftOperandEndChar(prev) && isRightOperandStartChar(inner, nextIndex)) {
+                  sawValueBoundary = true;
+                }
+              }
+            }
             rewritten.push_back(c);
             ++scan;
             continue;
@@ -137,6 +154,7 @@ bool TextFilterPipeline::apply(const std::string &input,
           }
           if (c == ',' && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
             entryHasPairEquals = false;
+            sawValueBoundary = false;
             rewritten.push_back(c);
             ++scan;
             continue;
@@ -168,12 +186,14 @@ bool TextFilterPipeline::apply(const std::string &input,
               ++scan;
               continue;
             }
-            if (!entryHasPairEquals) {
-              rewritten.append(", ");
-              entryHasPairEquals = true;
-            } else {
+            if (entryHasPairEquals && !sawValueBoundary) {
               rewritten.push_back(c);
+              ++scan;
+              continue;
             }
+            rewritten.append(", ");
+            entryHasPairEquals = true;
+            sawValueBoundary = false;
             ++scan;
             continue;
           }
