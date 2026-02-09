@@ -291,6 +291,14 @@
         return false;
       }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/string/count" || resolved == "/map/count")) {
+        if (!expr.templateArgs.empty()) {
+          error_ = "count does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "count does not accept block arguments";
+          return false;
+        }
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin count";
           return false;

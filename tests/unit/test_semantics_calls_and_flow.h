@@ -222,6 +222,42 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("count builtin validates on array literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(array<i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count builtin validates on method calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(array<i32>(1i32, 2i32).count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count builtin rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count<i32>(array<i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("count does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
