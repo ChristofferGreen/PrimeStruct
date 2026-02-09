@@ -641,6 +641,69 @@ main() {
   CHECK(error.find("mut transform is only supported on lifecycle helpers") != std::string::npos);
 }
 
+TEST_CASE("lifecycle helpers reject duplicate mut") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[mut mut return<void>]
+/thing/Create() {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate mut transform on /thing/Create") != std::string::npos);
+}
+
+TEST_CASE("lifecycle helpers reject mut template arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[mut<i32> return<void>]
+/thing/Create() {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform does not accept template arguments on /thing/Create") != std::string::npos);
+}
+
+TEST_CASE("lifecycle helpers reject mut arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[mut(1) return<void>]
+/thing/Create() {
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform does not accept arguments on /thing/Create") != std::string::npos);
+}
+
 TEST_CASE("lifecycle helpers reject non-struct parents") {
   const std::string source = R"(
 [return<int>]
