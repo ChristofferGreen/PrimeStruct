@@ -348,6 +348,13 @@ bool SemanticsValidator::buildParameters() {
       info.binding.typeName = parentPath;
       info.binding.isMutable = sawMut;
       params.insert(params.begin(), std::move(info));
+    } else {
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "mut") {
+          error_ = "mut transform is only supported on lifecycle helpers: " + def.fullPath;
+          return false;
+        }
+      }
     }
     paramsByDef_[def.fullPath] = std::move(params);
   }

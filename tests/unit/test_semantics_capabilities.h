@@ -566,6 +566,18 @@ main() {
   CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
+TEST_CASE("mut transform is rejected on non-helpers") {
+  const std::string source = R"(
+[mut return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform is only supported on lifecycle helpers") != std::string::npos);
+}
+
 TEST_CASE("lifecycle helpers reject non-struct parents") {
   const std::string source = R"(
 [return<int>]
