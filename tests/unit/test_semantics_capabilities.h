@@ -529,7 +529,7 @@ thing() {
   [i32] value(1i32)
 }
 
-[return<void>]
+[mut return<void>]
 /thing/Create() {
   assign(this, this)
 }
@@ -542,6 +542,28 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("lifecycle helpers require mut for assignment") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value(1i32)
+}
+
+[return<void>]
+/thing/Create() {
+  assign(this, this)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
 }
 
 TEST_CASE("lifecycle helpers reject non-struct parents") {

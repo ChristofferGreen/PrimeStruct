@@ -320,6 +320,25 @@ bool SemanticsValidator::buildParameters() {
     std::string parentPath;
     std::string placement;
     if (isLifecycleHelper(def.fullPath, parentPath, placement)) {
+      bool sawMut = false;
+      for (const auto &transform : def.transforms) {
+        if (transform.name != "mut") {
+          continue;
+        }
+        if (sawMut) {
+          error_ = "duplicate mut transform on " + def.fullPath;
+          return false;
+        }
+        sawMut = true;
+        if (!transform.templateArgs.empty()) {
+          error_ = "mut transform does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error_ = "mut transform does not accept arguments on " + def.fullPath;
+          return false;
+        }
+      }
       if (!seen.insert("this").second) {
         error_ = "duplicate parameter: this";
         return false;
@@ -327,7 +346,7 @@ bool SemanticsValidator::buildParameters() {
       ParameterInfo info;
       info.name = "this";
       info.binding.typeName = parentPath;
-      info.binding.isMutable = true;
+      info.binding.isMutable = sawMut;
       params.insert(params.begin(), std::move(info));
     }
     paramsByDef_[def.fullPath] = std::move(params);
