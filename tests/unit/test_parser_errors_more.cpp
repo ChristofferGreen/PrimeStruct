@@ -343,6 +343,36 @@ main([i32] value(1i32),) {
   CHECK(error.find("trailing comma not allowed in parameter list") != std::string::npos);
 }
 
+TEST_CASE("parameter identifiers reject template arguments") {
+  const std::string source = R"(
+[return<int>]
+main([i32] value<i32>) {
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("parameter identifiers do not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("parameter defaults reject named arguments") {
+  const std::string source = R"(
+[return<int>]
+main([i32] value(x = 1i32)) {
+  return(value)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("parameter defaults do not accept named arguments") != std::string::npos);
+}
+
 TEST_CASE("trailing comma in argument list is rejected") {
   const std::string source = R"(
 [return<int>]
