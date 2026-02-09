@@ -115,6 +115,27 @@ inline bool parseStringLiteralToken(const std::string &token, ParsedStringLitera
   return true;
 }
 
+inline bool normalizeStringLiteralToken(const std::string &token, std::string &normalized, std::string &error) {
+  ParsedStringLiteral parsed;
+  if (!parseStringLiteralToken(token, parsed, error)) {
+    return false;
+  }
+  const bool hasDoubleQuote = parsed.decoded.find('"') != std::string::npos;
+  const bool hasSingleQuote = parsed.decoded.find('\'') != std::string::npos;
+  if (hasDoubleQuote && hasSingleQuote) {
+    normalized = token;
+    return true;
+  }
+  const char quote = hasDoubleQuote ? '\'' : '"';
+  normalized.clear();
+  normalized.reserve(parsed.decoded.size() + 12);
+  normalized.push_back(quote);
+  normalized.append(parsed.decoded);
+  normalized.push_back(quote);
+  normalized.append(parsed.encoding == StringEncoding::Ascii ? "raw_ascii" : "raw_utf8");
+  return true;
+}
+
 inline bool isAsciiText(const std::string &text) {
   for (unsigned char c : text) {
     if (c > 0x7F) {

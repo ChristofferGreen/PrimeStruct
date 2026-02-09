@@ -211,6 +211,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
     `/type/method(value, args...)`. Parentheses are required after the method name.
+  - Method calls may include template arguments: `value.method<T>(args...)`.
 - Indexing:
   - `value[index]` -> `at(value, index)`
 

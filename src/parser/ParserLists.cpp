@@ -56,12 +56,12 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           if (arg.kind == TokenKind::End) {
             return false;
           }
-          ParsedStringLiteral parsed;
+          std::string normalized;
           std::string parseError;
-          if (!parseStringLiteralToken(arg.text, parsed, parseError)) {
+          if (!normalizeStringLiteralToken(arg.text, normalized, parseError)) {
             return fail(parseError);
           }
-          transform.arguments.push_back(arg.text);
+          transform.arguments.push_back(std::move(normalized));
         } else {
           return fail("expected transform argument");
         }

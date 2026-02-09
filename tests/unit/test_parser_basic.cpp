@@ -210,7 +210,33 @@ main() {
   REQUIRE(program.definitions[0].transforms.size() == 2);
   CHECK(program.definitions[0].transforms[0].name == "tag");
   REQUIRE(program.definitions[0].transforms[0].arguments.size() == 1);
-  CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"utf8");
+  CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"raw_utf8");
+}
+
+TEST_CASE("parses method calls with template arguments") {
+  const std::string source = R"(
+namespace i32 {
+  [return<i32>]
+  wrap([i32] value) {
+    return(value)
+  }
+}
+
+[return<i32>]
+main() {
+  [i32] value(1i32)
+  return(value.wrap<i32>())
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  REQUIRE(program.definitions[1].returnExpr.has_value());
+  const auto &call = program.definitions[1].returnExpr.value();
+  CHECK(call.kind == primec::Expr::Kind::Call);
+  CHECK(call.isMethodCall);
+  CHECK(call.name == "wrap");
+  REQUIRE(call.templateArgs.size() == 1);
+  CHECK(call.templateArgs[0] == "i32");
 }
 
 TEST_CASE("parses literal statement") {
@@ -413,7 +439,7 @@ main() {
   REQUIRE(transforms.size() == 2);
   CHECK(transforms[0].name == "doc");
   REQUIRE(transforms[0].arguments.size() == 1);
-  CHECK(transforms[0].arguments[0] == "\"hello world\"utf8");
+  CHECK(transforms[0].arguments[0] == "\"hello world\"raw_utf8");
   CHECK(transforms[1].name == "return");
 }
 
@@ -573,7 +599,7 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello\"utf8");
+  CHECK(stmt.args[0].stringValue == "\"hello\"raw_utf8");
 }
 
 TEST_CASE("parses raw string literal arguments") {

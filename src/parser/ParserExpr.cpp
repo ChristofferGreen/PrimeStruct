@@ -313,14 +313,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (text.kind == TokenKind::End) {
         return false;
       }
-      ParsedStringLiteral parsed;
+      std::string normalized;
       std::string parseError;
-      if (!parseStringLiteralToken(text.text, parsed, parseError)) {
+      if (!normalizeStringLiteralToken(text.text, normalized, parseError)) {
         return fail(parseError);
       }
       out.kind = Expr::Kind::StringLiteral;
       out.namespacePrefix = namespacePrefix;
-      out.stringValue = text.text;
+      out.stringValue = std::move(normalized);
       return true;
     }
     if (match(TokenKind::Identifier)) {
@@ -409,6 +409,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!validateIdentifierText(member.text, nameError)) {
         return fail(nameError);
       }
+      std::vector<std::string> templateArgs;
+      if (match(TokenKind::LAngle)) {
+        if (!parseTemplateList(templateArgs)) {
+          return false;
+        }
+      }
       if (!expect(TokenKind::LParen, "expected '(' after member name")) {
         return false;
       }
@@ -417,6 +423,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.name = member.text;
       call.namespacePrefix = namespacePrefix;
       call.isMethodCall = true;
+      call.templateArgs = std::move(templateArgs);
       if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
         return false;
       }
