@@ -886,6 +886,39 @@ main() {
   CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
 }
 
+TEST_CASE("print accepts string array access") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  [array<string>] values(array<string>("hi"utf8))
+  print_line(values[0i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("print rejects struct block value") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value(1i32)
+}
+
+[effects(io_out)]
+main() {
+  print_line(block{
+    [Thing] item(Thing())
+    item
+  })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
+}
+
 TEST_CASE("print accepts string binding") {
   const std::string source = R"(
 [effects(io_out)]

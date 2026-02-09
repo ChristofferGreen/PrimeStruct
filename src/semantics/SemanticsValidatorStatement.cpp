@@ -16,15 +16,105 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return returnKindForTypeName(binding.typeName);
   };
+  auto isStringExpr = [&](const Expr &arg,
+                          const std::vector<ParameterInfo> &paramsIn,
+                          const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
+    auto resolveArrayTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
+      elemTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(paramsIn, target.name)) {
+          if (paramBinding->typeName != "array" || paramBinding->typeTemplateArg.empty()) {
+            return false;
+          }
+          elemTypeOut = paramBinding->typeTemplateArg;
+          return true;
+        }
+        auto it = localsIn.find(target.name);
+        if (it == localsIn.end() || it->second.typeName != "array" || it->second.typeTemplateArg.empty()) {
+          return false;
+        }
+        elemTypeOut = it->second.typeTemplateArg;
+        return true;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+          elemTypeOut = target.templateArgs.front();
+          return true;
+        }
+      }
+      return false;
+    };
+    auto resolveMapValueType = [&](const Expr &target, std::string &valueTypeOut) -> bool {
+      valueTypeOut.clear();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(paramsIn, target.name)) {
+          if (paramBinding->typeName != "map") {
+            return false;
+          }
+          std::vector<std::string> parts;
+          if (!splitTopLevelTemplateArgs(paramBinding->typeTemplateArg, parts) || parts.size() != 2) {
+            return false;
+          }
+          valueTypeOut = parts[1];
+          return true;
+        }
+        auto it = localsIn.find(target.name);
+        if (it == localsIn.end() || it->second.typeName != "map") {
+          return false;
+        }
+        std::vector<std::string> parts;
+        if (!splitTopLevelTemplateArgs(it->second.typeTemplateArg, parts) || parts.size() != 2) {
+          return false;
+        }
+        valueTypeOut = parts[1];
+        return true;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (!getBuiltinCollectionName(target, collection) || collection != "map" || target.templateArgs.size() != 2) {
+          return false;
+        }
+        valueTypeOut = target.templateArgs[1];
+        return true;
+      }
+      return false;
+    };
+    if (arg.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (arg.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(paramsIn, arg.name)) {
+        return paramBinding->typeName == "string";
+      }
+      auto it = localsIn.find(arg.name);
+      return it != localsIn.end() && it->second.typeName == "string";
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      std::string accessName;
+      if (getBuiltinArrayAccessName(arg, accessName) && arg.args.size() == 2) {
+        std::string elemType;
+        if (resolveArrayTarget(arg.args.front(), elemType) && normalizeBindingTypeName(elemType) == "string") {
+          return true;
+        }
+        std::string mapValueType;
+        if (resolveMapValueType(arg.args.front(), mapValueType) &&
+            normalizeBindingTypeName(mapValueType) == "string") {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
   auto isPrintableExpr = [&](const Expr &arg,
                              const std::vector<ParameterInfo> &paramsIn,
                              const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
+    if (isStringExpr(arg, paramsIn, localsIn)) {
+      return true;
+    }
     ReturnKind kind = inferExprReturnKind(arg, paramsIn, localsIn);
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
         kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
-      return true;
-    }
-    if (arg.kind == Expr::Kind::StringLiteral) {
       return true;
     }
     if (kind == ReturnKind::Void) {
@@ -32,18 +122,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     if (arg.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(paramsIn, arg.name)) {
-        if (paramBinding->typeName == "string") {
-          return true;
-        }
         ReturnKind paramKind = returnKindForBinding(*paramBinding);
         return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
                paramKind == ReturnKind::Bool || paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
       }
       auto it = localsIn.find(arg.name);
       if (it != localsIn.end()) {
-        if (it->second.typeName == "string") {
-          return true;
-        }
         ReturnKind localKind = returnKindForBinding(it->second);
         return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
                localKind == ReturnKind::Bool || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
@@ -57,15 +141,6 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (getBuiltinCollectionName(arg, builtinName)) {
         return false;
       }
-    }
-    if (kind == ReturnKind::Unknown) {
-      if (arg.kind == Expr::Kind::StringLiteral) {
-        return true;
-      }
-      if (isPointerExpr(arg, paramsIn, localsIn)) {
-        return false;
-      }
-      return true;
     }
     return false;
   };
