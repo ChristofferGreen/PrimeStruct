@@ -996,6 +996,30 @@ main() {
   CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
 }
 
+TEST_CASE("print rejects missing arguments") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print requires exactly one argument") != std::string::npos);
+}
+
+TEST_CASE("print_line rejects block arguments") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print_line(1i32) { 2i32 }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_line does not accept block arguments") != std::string::npos);
+}
+
 TEST_CASE("array literal rejects block arguments") {
   const std::string source = R"(
 [return<int>]
