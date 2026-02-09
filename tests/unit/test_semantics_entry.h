@@ -700,6 +700,26 @@ execute_repeat(3i32) { if(true) { main() } else { main() } }
   CHECK(error.empty());
 }
 
+TEST_CASE("execution rejects alignment transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[align_bytes(16)]
+execute_repeat(3i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("alignment transforms are not supported on executions") != std::string::npos);
+}
+
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
 [return<u32>]

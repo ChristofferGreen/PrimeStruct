@@ -164,9 +164,8 @@ bool SemanticsValidator::validateExecutions() {
           return false;
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
-        if (!validateAlignTransform(transform, exec.fullPath, error_)) {
-          return false;
-        }
+        error_ = "alignment transforms are not supported on executions: " + exec.fullPath;
+        return false;
       } else if (isStructTransformName(transform.name)) {
         error_ = "struct transforms are not allowed on executions: " + exec.fullPath;
         return false;
