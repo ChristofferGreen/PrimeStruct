@@ -25,6 +25,19 @@ main() {
   CHECK(error.find("repeat requires block arguments") != std::string::npos);
 }
 
+TEST_CASE("repeat rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  repeat<i32>(2i32) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("repeat does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("reference participates in signedness checks") {
   const std::string source = R"(
 [return<int>]
