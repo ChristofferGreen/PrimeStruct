@@ -428,6 +428,18 @@ main() {
   CHECK(error.find("at does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("unsafe array access rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe<i32>(array<i32>(1i32), 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("array access rejects non-integer index") {
   const std::string source = R"(
 [return<int>]
@@ -438,6 +450,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
+TEST_CASE("unsafe array access rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(array<i32>(1i32, 2i32), "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires integer index") != std::string::npos);
 }
 
 TEST_CASE("string access rejects non-integer index") {
@@ -451,6 +475,43 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("at requires integer index") != std::string::npos);
+}
+
+TEST_CASE("unsafe string access rejects non-integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text("hello"utf8)
+  return(at_unsafe(text, "nope"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires integer index") != std::string::npos);
+}
+
+TEST_CASE("array access rejects non-collection target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at(1i32, 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at requires array, map, or string target") != std::string::npos);
+}
+
+TEST_CASE("unsafe array access rejects non-collection target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(1i32, 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires array, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("unknown named argument fails") {
@@ -796,6 +857,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("at requires string map key") != std::string::npos);
+}
+
+TEST_CASE("unsafe string map access rejects numeric index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values(map<string, i32>("a"utf8, 3i32))
+  return(at_unsafe(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("at_unsafe requires string map key") != std::string::npos);
 }
 
 TEST_CASE("map access accepts matching key type") {
