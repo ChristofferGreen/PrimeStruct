@@ -1262,6 +1262,21 @@ main() {
   CHECK(error.find("repeat count requires integer or bool") != std::string::npos);
 }
 
+TEST_CASE("repeat accepts bool count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [bool] enabled(true)
+  repeat(enabled) {
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("repeat rejects string count") {
   const std::string source = R"(
 [return<int>]
