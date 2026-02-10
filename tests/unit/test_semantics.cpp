@@ -36,4 +36,5 @@ TEST_SUITE_BEGIN("primestruct.semantics");
 #include "test_semantics_entry.h"
 #include "test_semantics_capabilities.h"
 #include "test_semantics_bindings.h"
+#include "test_semantics_imports.h"
 #include "test_semantics_calls_and_flow.h"
