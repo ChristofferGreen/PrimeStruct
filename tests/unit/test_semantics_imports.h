@@ -53,8 +53,7 @@ import /util
 [return<int>]
 main() {
   [Widget] item{Widget()}
-  [i32] result{item.get(5i32)}
-  return(result)
+  return(item.get(5i32))
 }
 )";
   std::string error;
