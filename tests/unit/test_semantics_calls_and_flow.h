@@ -869,7 +869,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at requires array, map, or string target") != std::string::npos);
+  CHECK(error.find("at requires array, vector, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("unsafe array access rejects non-collection target") {
@@ -881,7 +881,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("at_unsafe requires array, map, or string target") != std::string::npos);
+  CHECK(error.find("at_unsafe requires array, vector, map, or string target") != std::string::npos);
 }
 
 TEST_CASE("unknown named argument fails") {

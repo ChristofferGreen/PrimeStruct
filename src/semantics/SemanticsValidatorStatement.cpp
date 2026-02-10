@@ -23,14 +23,16 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       elemTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(paramsIn, target.name)) {
-          if (paramBinding->typeName != "array" || paramBinding->typeTemplateArg.empty()) {
+          if ((paramBinding->typeName != "array" && paramBinding->typeName != "vector") ||
+              paramBinding->typeTemplateArg.empty()) {
             return false;
           }
           elemTypeOut = paramBinding->typeTemplateArg;
           return true;
         }
         auto it = localsIn.find(target.name);
-        if (it == localsIn.end() || it->second.typeName != "array" || it->second.typeTemplateArg.empty()) {
+        if (it == localsIn.end() || (it->second.typeName != "array" && it->second.typeName != "vector") ||
+            it->second.typeTemplateArg.empty()) {
           return false;
         }
         elemTypeOut = it->second.typeTemplateArg;
@@ -38,7 +40,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
-        if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+        if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+            target.templateArgs.size() == 1) {
           elemTypeOut = target.templateArgs.front();
           return true;
         }
@@ -432,7 +435,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         return normalizeBindingTypeName(typeName) == "string";
       };
       auto isStringArrayBinding = [&](const BindingInfo &binding) -> bool {
-        if (binding.typeName != "array") {
+        if (binding.typeName != "array" && binding.typeName != "vector") {
           return false;
         }
         return isStringTypeName(binding.typeTemplateArg);
@@ -462,7 +465,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           if (!getBuiltinCollectionName(target, collection)) {
             return false;
           }
-          if (collection == "array" && target.templateArgs.size() == 1) {
+          if ((collection == "array" || collection == "vector") && target.templateArgs.size() == 1) {
             return isStringTypeName(target.templateArgs.front());
           }
           if (collection == "map" && target.templateArgs.size() == 2) {

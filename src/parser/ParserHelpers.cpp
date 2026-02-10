@@ -150,8 +150,9 @@ bool isBuiltinName(const std::string &name) {
          candidate == "and" || candidate == "or" || candidate == "not" || candidate == "clamp" || candidate == "min" ||
          candidate == "max" || candidate == "abs" || candidate == "sign" || candidate == "saturate" ||
          (isMathQualified && isMathBuiltin) || candidate == "if" || candidate == "then" || candidate == "else" ||
-         candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "map" ||
-         candidate == "count" || candidate == "at" || candidate == "at_unsafe" || candidate == "convert" ||
+         candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
+         candidate == "map" || candidate == "count" || candidate == "at" || candidate == "at_unsafe" ||
+         candidate == "convert" ||
          candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||
          candidate == "print_line" || candidate == "print_error" || candidate == "print_line_error" ||
          candidate == "notify" || candidate == "insert" || candidate == "take";

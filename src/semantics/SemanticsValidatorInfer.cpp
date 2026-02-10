@@ -191,7 +191,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-          if (paramBinding->typeName != "array" || paramBinding->typeTemplateArg.empty()) {
+          if ((paramBinding->typeName != "array" && paramBinding->typeName != "vector") ||
+              paramBinding->typeTemplateArg.empty()) {
             return false;
           }
           elemType = paramBinding->typeTemplateArg;
@@ -199,7 +200,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         auto it = locals.find(target.name);
         if (it != locals.end()) {
-          if (it->second.typeName != "array" || it->second.typeTemplateArg.empty()) {
+          if ((it->second.typeName != "array" && it->second.typeName != "vector") ||
+              it->second.typeTemplateArg.empty()) {
             return false;
           }
           elemType = it->second.typeTemplateArg;
@@ -209,7 +211,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       if (target.kind == Expr::Kind::Call) {
         std::string collection;
-        if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+        if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+            target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
           return true;
         }

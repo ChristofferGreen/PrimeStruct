@@ -459,7 +459,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "array" || name == "map") {
+  if (name == "array" || name == "vector" || name == "map") {
     out = name;
     return true;
   }
@@ -793,8 +793,8 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if (transform.name == "array" && transform.templateArgs.size() != 1) {
-        error = "array requires exactly one template argument";
+      if ((transform.name == "array" || transform.name == "vector") && transform.templateArgs.size() != 1) {
+        error = transform.name + " requires exactly one template argument";
         return false;
       }
       if (transform.name == "map" && transform.templateArgs.size() != 2) {

@@ -691,7 +691,7 @@
           return true;
         }
         if (isSimpleCallName(expr, "count")) {
-          error = "count requires array, map, or string target";
+          error = "count requires array, vector, map, or string target";
           return false;
         }
         PrintBuiltin printBuiltin;
@@ -899,12 +899,13 @@
             }
           } else if (target.kind == Expr::Kind::Call) {
             std::string collection;
-            if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+            if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+                target.templateArgs.size() == 1) {
               elemKind = valueKindFromTypeName(target.templateArgs.front());
             }
           }
           if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-            error = "native backend only supports at() on numeric/bool arrays";
+            error = "native backend only supports at() on numeric/bool arrays or vectors";
             return false;
           }
 

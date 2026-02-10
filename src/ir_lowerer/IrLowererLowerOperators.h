@@ -673,18 +673,18 @@
           return true;
         }
         if (getBuiltinCollectionName(expr, builtin)) {
-          if (builtin == "array") {
+          if (builtin == "array" || builtin == "vector") {
             if (expr.templateArgs.size() != 1) {
-              error = "array literal requires exactly one template argument";
+              error = builtin + " literal requires exactly one template argument";
               return false;
             }
             LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
             if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-              error = "native backend only supports numeric/bool array literals";
+              error = "native backend only supports numeric/bool " + builtin + " literals";
               return false;
             }
             if (expr.args.size() > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-              error = "array literal too large for native backend";
+              error = builtin + " literal too large for native backend";
               return false;
             }
 
@@ -698,11 +698,11 @@
               const Expr &arg = expr.args[i];
               LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
               if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
-                error = "native backend requires array literal elements to be numeric/bool values";
+                error = "native backend requires " + builtin + " literal elements to be numeric/bool values";
                 return false;
               }
               if (argKind != elemKind) {
-                error = "array literal element type mismatch";
+                error = builtin + " literal element type mismatch";
                 return false;
               }
               if (!emitExpr(arg, localsIn)) {

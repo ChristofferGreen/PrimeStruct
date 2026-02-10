@@ -372,7 +372,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (name.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "array" || name == "map") {
+  if (name == "array" || name == "vector" || name == "map") {
     out = name;
     return true;
   }
@@ -392,11 +392,12 @@ std::string resolveExprPath(const Expr &expr) {
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
-    return it != localTypes.end() && it->second.typeName == "array";
+    return it != localTypes.end() && (it->second.typeName == "array" || it->second.typeName == "vector");
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
-    return getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1;
+    return getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+           target.templateArgs.size() == 1;
   }
   return false;
 }
@@ -426,14 +427,16 @@ bool isStringValue(const Expr &target, const std::unordered_map<std::string, Bin
       const Expr &receiver = target.args.front();
       if (receiver.kind == Expr::Kind::Name) {
         auto it = localTypes.find(receiver.name);
-        if (it != localTypes.end() && it->second.typeName == "array" && it->second.typeTemplateArg == "string") {
+        if (it != localTypes.end() &&
+            (it->second.typeName == "array" || it->second.typeName == "vector") &&
+            it->second.typeTemplateArg == "string") {
           return true;
         }
       }
       if (receiver.kind == Expr::Kind::Call) {
         std::string collection;
-        if (getBuiltinCollectionName(receiver, collection) && collection == "array" && receiver.templateArgs.size() == 1 &&
-            receiver.templateArgs.front() == "string") {
+        if (getBuiltinCollectionName(receiver, collection) && (collection == "array" || collection == "vector") &&
+            receiver.templateArgs.size() == 1 && receiver.templateArgs.front() == "string") {
           return true;
         }
       }

@@ -477,7 +477,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     std::string collection;
     if (getBuiltinCollectionName(expr, collection)) {
-      if (collection == "array" && expr.templateArgs.size() == 1) {
+      if ((collection == "array" || collection == "vector") && expr.templateArgs.size() == 1) {
         std::ostringstream out;
         const std::string elemType = bindingTypeToCpp(expr.templateArgs[0]);
         out << "std::vector<" << elemType << ">{";

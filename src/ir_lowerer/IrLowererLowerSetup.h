@@ -256,7 +256,7 @@ bool IrLowerer::lower(const Program &program,
       if (!getBuiltinCollectionName(target, collection)) {
         return false;
       }
-      if (collection == "array") {
+      if (collection == "array" || collection == "vector") {
         return target.templateArgs.size() == 1;
       }
       if (collection == "map") {
@@ -366,7 +366,7 @@ bool IrLowerer::lower(const Program &program,
       if (transform.name == "Pointer") {
         return LocalInfo::Kind::Pointer;
       }
-      if (transform.name == "array") {
+      if (transform.name == "array" || transform.name == "vector") {
         return LocalInfo::Kind::Array;
       }
       if (transform.name == "map") {
@@ -419,7 +419,7 @@ bool IrLowerer::lower(const Program &program,
         }
         return LocalInfo::ValueKind::Unknown;
       }
-      if (transform.name == "array") {
+      if (transform.name == "array" || transform.name == "vector") {
         if (transform.templateArgs.size() == 1) {
           return valueKindFromTypeName(transform.templateArgs.front());
         }
@@ -545,7 +545,7 @@ bool IrLowerer::lower(const Program &program,
     } else if (receiver.kind == Expr::Kind::Call) {
       std::string collection;
       if (getBuiltinCollectionName(receiver, collection)) {
-        if (collection == "array" && receiver.templateArgs.size() == 1) {
+        if ((collection == "array" || collection == "vector") && receiver.templateArgs.size() == 1) {
           typeName = "array";
         } else if (collection == "map" && receiver.templateArgs.size() == 2) {
           typeName = "map";
@@ -729,7 +729,8 @@ bool IrLowerer::lower(const Program &program,
             }
           } else if (target.kind == Expr::Kind::Call) {
             std::string collection;
-            if (getBuiltinCollectionName(target, collection) && collection == "array" && target.templateArgs.size() == 1) {
+            if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+                target.templateArgs.size() == 1) {
               elemKind = valueKindFromTypeName(target.templateArgs.front());
             }
           }

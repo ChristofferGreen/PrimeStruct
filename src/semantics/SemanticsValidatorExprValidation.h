@@ -620,7 +620,7 @@
         std::string mapKeyType;
         bool isMap = resolveMapKeyType(expr.args.front(), mapKeyType);
         if (!isArrayOrString && !isMap) {
-          error_ = builtinName + " requires array, map, or string target";
+          error_ = builtinName + " requires array, vector, map, or string target";
           return false;
         }
         if (!isMap) {
@@ -725,9 +725,9 @@
           error_ = builtinName + " literal does not accept block arguments";
           return false;
         }
-        if (builtinName == "array") {
+        if (builtinName == "array" || builtinName == "vector") {
           if (expr.templateArgs.size() != 1) {
-            error_ = "array literal requires exactly one template argument";
+            error_ = builtinName + " literal requires exactly one template argument";
             return false;
           }
           if (auto softwareType = findSoftwareNumericType(expr.templateArgs.front())) {
@@ -757,10 +757,10 @@
             return false;
           }
         }
-        if (builtinName == "array" && !expr.templateArgs.empty()) {
+        if ((builtinName == "array" || builtinName == "vector") && !expr.templateArgs.empty()) {
           const std::string &elemType = expr.templateArgs.front();
           for (const auto &arg : expr.args) {
-            if (!validateCollectionElementType(arg, elemType, "array literal requires element type ")) {
+            if (!validateCollectionElementType(arg, elemType, builtinName + " literal requires element type ")) {
               return false;
             }
           }

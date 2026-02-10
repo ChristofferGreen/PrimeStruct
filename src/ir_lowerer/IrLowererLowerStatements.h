@@ -221,7 +221,7 @@
         } else if (init.kind == Expr::Kind::Call) {
           std::string collection;
           if (getBuiltinCollectionName(init, collection)) {
-            if (collection == "array") {
+            if (collection == "array" || collection == "vector") {
               kind = LocalInfo::Kind::Array;
             } else if (collection == "map") {
               kind = LocalInfo::Kind::Map;
@@ -270,7 +270,8 @@
           }
         } else if (init.kind == Expr::Kind::Call) {
           std::string collection;
-          if (getBuiltinCollectionName(init, collection) && collection == "array" && init.templateArgs.size() == 1) {
+          if (getBuiltinCollectionName(init, collection) && (collection == "array" || collection == "vector") &&
+              init.templateArgs.size() == 1) {
             valueKind = valueKindFromTypeName(init.templateArgs.front());
           }
         }
@@ -703,4 +704,3 @@
   out.stringTable = std::move(stringTable);
   return true;
 }
-

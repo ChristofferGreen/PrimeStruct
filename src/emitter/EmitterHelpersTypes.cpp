@@ -191,8 +191,8 @@ BindingInfo getBindingInfo(const Expr &expr) {
         } else {
           std::string collection;
           if (getBuiltinCollectionName(init, collection)) {
-            if (collection == "array" && init.templateArgs.size() == 1) {
-              info.typeName = "array";
+            if ((collection == "array" || collection == "vector") && init.templateArgs.size() == 1) {
+              info.typeName = collection;
               info.typeTemplateArg = init.templateArgs.front();
             } else if (collection == "map" && init.templateArgs.size() == 2) {
               info.typeName = "map";
@@ -237,7 +237,7 @@ std::string bindingTypeToCpp(const std::string &typeName) {
 }
 
 std::string bindingTypeToCpp(const BindingInfo &info) {
-  if (info.typeName == "array") {
+  if (info.typeName == "array" || info.typeName == "vector") {
     std::string elemType = bindingTypeToCpp(info.typeTemplateArg);
     return "std::vector<" + elemType + ">";
   }

@@ -216,7 +216,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`repeat(count) { ... }`:** statement-only loop helper. `count` must be integer/bool, and the body is required.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error.
-- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` calls and `array<T>{...}` literals, plus `count`/`at`/`at_unsafe` on those arrays. Map literals are supported in VM/native when both key and value types are numeric/bool; string-keyed maps remain C++-emitter-only for now. Vector support is pending unless the backend implements heap allocation and the vector ops.
+- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native when both key and value types are numeric/bool; string-keyed maps remain C++-emitter-only for now. Vector growth operations still require heap allocation and are not supported in VM/native yet.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
 
 ## Runtime Stack Model (draft)

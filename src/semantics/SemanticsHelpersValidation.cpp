@@ -239,8 +239,8 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
   if (initializer.kind == Expr::Kind::Call) {
     std::string collection;
     if (getBuiltinCollectionName(initializer, collection)) {
-      if (collection == "array" && initializer.templateArgs.size() == 1) {
-        bindingOut.typeName = "array";
+      if ((collection == "array" || collection == "vector") && initializer.templateArgs.size() == 1) {
+        bindingOut.typeName = collection;
         bindingOut.typeTemplateArg = initializer.templateArgs.front();
         return true;
       }
