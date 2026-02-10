@@ -1100,6 +1100,18 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
+TEST_CASE("arithmetic operators reject bool operands") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(true, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("arithmetic operators require numeric operands") != std::string::npos);
+}
+
 TEST_CASE("comparisons reject non-numeric operands") {
   const std::string source = R"(
 thing() {
