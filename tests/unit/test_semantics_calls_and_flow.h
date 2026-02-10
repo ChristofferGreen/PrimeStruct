@@ -932,6 +932,30 @@ main() {
   CHECK(error.find("convert requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("convert rejects missing argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin convert") != std::string::npos);
+}
+
+TEST_CASE("convert rejects extra arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin convert") != std::string::npos);
+}
+
 TEST_CASE("convert unsupported template arg fails") {
   const std::string source = R"(
 [return<int>]
