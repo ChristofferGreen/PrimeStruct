@@ -305,6 +305,12 @@ vector<i32>[1i32 2i32]
 ```
 
 Vectors are resizable sequences. Construction is variadic; zero or more arguments are accepted.
+Helpers:
+- `count(value)` / `value.count()`
+- `at(value, index)` / `at_unsafe(value, index)`
+- `push(value, item)` / `pop(value)`
+- `reserve(value, capacity)` / `capacity(value)`
+- `clear(value)` / `remove_at(value, index)` / `remove_swap(value, index)`
 
 ### 8.3 Maps
 
