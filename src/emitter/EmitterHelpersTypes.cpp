@@ -78,6 +78,8 @@ bool isBuiltinClamp(const Expr &expr);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
+bool getBuiltinMathName(const Expr &expr, std::string &out);
+bool isBuiltinMathConstantName(const std::string &name);
 std::string resolveExprPath(const Expr &expr);
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
@@ -363,6 +365,9 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
   }
   if (expr.kind == Expr::Kind::Name) {
+    if (isBuiltinMathConstantName(expr.name)) {
+      return ReturnKind::Float64;
+    }
     auto it = localTypes.find(expr.name);
     if (it == localTypes.end()) {
       return ReturnKind::Unknown;
@@ -462,6 +467,29 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     return argKind;
+  }
+  std::string mathName;
+  if (getBuiltinMathName(expr, mathName)) {
+    if (mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite") {
+      return ReturnKind::Bool;
+    }
+    if (mathName == "lerp" && expr.args.size() == 3) {
+      ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
+      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
+      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds));
+      return result;
+    }
+    if (expr.args.empty()) {
+      return ReturnKind::Unknown;
+    }
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    if (argKind == ReturnKind::Float64) {
+      return ReturnKind::Float64;
+    }
+    if (argKind == ReturnKind::Float32) {
+      return ReturnKind::Float32;
+    }
+    return ReturnKind::Unknown;
   }
   const char *cmp = nullptr;
   if (getBuiltinComparison(expr, cmp)) {

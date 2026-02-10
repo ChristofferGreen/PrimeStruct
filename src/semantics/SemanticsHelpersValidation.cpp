@@ -303,6 +303,9 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
       return returnKindForTypeName(normalizeBindingTypeName(inferred));
     }
     if (expr.kind == Expr::Kind::Name) {
+      if (isBuiltinMathConstant(expr.name)) {
+        return ReturnKind::Float64;
+      }
       const BindingInfo *binding = findParamBinding(expr.name);
       if (!binding) {
         auto it = locals.find(expr.name);
@@ -339,6 +342,28 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
       std::string builtinName;
       if (getBuiltinComparisonName(expr, builtinName)) {
         return ReturnKind::Bool;
+      }
+      if (getBuiltinMathName(expr, builtinName)) {
+        if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
+          return ReturnKind::Bool;
+        }
+        if (builtinName == "lerp" && expr.args.size() == 3) {
+          ReturnKind result = inferPrimitiveReturnKind(expr.args[0]);
+          result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[1]));
+          result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[2]));
+          return result;
+        }
+        if (expr.args.empty()) {
+          return ReturnKind::Unknown;
+        }
+        ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front());
+        if (argKind == ReturnKind::Float64) {
+          return ReturnKind::Float64;
+        }
+        if (argKind == ReturnKind::Float32) {
+          return ReturnKind::Float32;
+        }
+        return ReturnKind::Unknown;
       }
       if (getBuiltinOperatorName(expr, builtinName)) {
         if (builtinName == "negate") {

@@ -66,6 +66,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return ReturnKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Name) {
+    if (isBuiltinMathConstant(expr.name)) {
+      return ReturnKind::Float64;
+    }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
         ReturnKind refKind = returnKindForTypeName(paramBinding->typeTemplateArg);
@@ -444,6 +447,28 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (getBuiltinComparisonName(expr, builtinName)) {
       return ReturnKind::Bool;
+    }
+    if (getBuiltinMathName(expr, builtinName)) {
+      if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
+        return ReturnKind::Bool;
+      }
+      if (builtinName == "lerp" && expr.args.size() == 3) {
+        ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
+        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
+        result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
+        return result;
+      }
+      if (expr.args.empty()) {
+        return ReturnKind::Unknown;
+      }
+      ReturnKind argKind = inferExprReturnKind(expr.args.front(), params, locals);
+      if (argKind == ReturnKind::Float64) {
+        return ReturnKind::Float64;
+      }
+      if (argKind == ReturnKind::Float32) {
+        return ReturnKind::Float32;
+      }
+      return ReturnKind::Unknown;
     }
     if (getBuiltinOperatorName(expr, builtinName)) {
       if (builtinName == "negate") {

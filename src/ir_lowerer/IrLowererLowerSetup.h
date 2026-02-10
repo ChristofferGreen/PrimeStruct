@@ -16,6 +16,24 @@ bool IrLowerer::lower(const Program &program,
     return false;
   }
 
+  auto isSupportedEffect = [](const std::string &name) {
+    return name == "io_out" || name == "io_err" || name == "pathspace_notify" || name == "pathspace_insert" ||
+           name == "pathspace_take";
+  };
+  for (const auto &def : program.definitions) {
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "effects") {
+        continue;
+      }
+      for (const auto &effect : transform.arguments) {
+        if (!isSupportedEffect(effect)) {
+          error = "native backend does not support effect: " + effect + " on " + def.fullPath;
+          return false;
+        }
+      }
+    }
+  }
+
   std::unordered_map<std::string, const Definition *> defMap;
   defMap.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {

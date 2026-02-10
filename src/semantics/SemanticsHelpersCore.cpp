@@ -363,6 +363,35 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinMathName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "lerp" || name == "floor" || name == "ceil" || name == "round" || name == "trunc" ||
+      name == "fract" || name == "sqrt" || name == "cbrt" || name == "pow" || name == "exp" ||
+      name == "exp2" || name == "log" || name == "log2" || name == "log10" || name == "sin" ||
+      name == "cos" || name == "tan" || name == "asin" || name == "acos" || name == "atan" ||
+      name == "atan2" || name == "radians" || name == "degrees" || name == "sinh" || name == "cosh" ||
+      name == "tanh" || name == "asinh" || name == "acosh" || name == "atanh" || name == "fma" ||
+      name == "hypot" || name == "copysign" || name == "is_nan" || name == "is_inf" ||
+      name == "is_finite") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
+bool isBuiltinMathConstant(const std::string &name) {
+  return name == "pi" || name == "tau" || name == "e";
+}
+
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;

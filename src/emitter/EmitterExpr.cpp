@@ -71,6 +71,9 @@ std::string Emitter::emitExpr(const Expr &expr,
     return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
   }
   if (expr.kind == Expr::Kind::Name) {
+    if (localTypes.count(expr.name) == 0 && isBuiltinMathConstantName(expr.name)) {
+      return "ps_const_" + expr.name;
+    }
     return expr.name;
   }
   std::string full = resolveExprPath(expr);
@@ -336,6 +339,19 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::ostringstream out;
       out << "ps_builtin_" << saturateName << "("
           << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+      return out.str();
+    }
+    std::string mathName;
+    if (getBuiltinMathName(expr, mathName)) {
+      std::ostringstream out;
+      out << "ps_builtin_" << mathName << "(";
+      for (size_t i = 0; i < expr.args.size(); ++i) {
+        if (i > 0) {
+          out << ", ";
+        }
+        out << emitExpr(expr.args[i], nameMap, paramMap, localTypes, returnKinds);
+      }
+      out << ")";
       return out.str();
     }
     std::string convertName;

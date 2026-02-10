@@ -69,6 +69,8 @@ bool getBuiltinClampName(const Expr &expr, std::string &out);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
+bool getBuiltinMathName(const Expr &expr, std::string &out);
+bool isBuiltinMathConstant(const std::string &name);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);

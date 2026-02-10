@@ -526,6 +526,75 @@
         }
         return true;
       }
+      if (getBuiltinMathName(expr, builtinName)) {
+        if (!expr.templateArgs.empty()) {
+          error_ = builtinName + " does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = builtinName + " does not accept block arguments";
+          return false;
+        }
+        size_t expectedArgs = 1;
+        if (builtinName == "lerp" || builtinName == "fma") {
+          expectedArgs = 3;
+        } else if (builtinName == "pow" || builtinName == "atan2" || builtinName == "hypot" ||
+                   builtinName == "copysign") {
+          expectedArgs = 2;
+        }
+        if (expr.args.size() != expectedArgs) {
+          error_ = "argument count mismatch for builtin " + builtinName;
+          return false;
+        }
+        auto validateFloatArgs = [&](size_t count) -> bool {
+          for (size_t i = 0; i < count; ++i) {
+            if (!isFloatExpr(expr.args[i])) {
+              error_ = builtinName + " requires float operands";
+              return false;
+            }
+          }
+          return true;
+        };
+        if (builtinName == "lerp") {
+          for (const auto &arg : expr.args) {
+            if (!isNumericExpr(arg)) {
+              error_ = builtinName + " requires numeric operands";
+              return false;
+            }
+          }
+          if (hasMixedSignedness(expr.args, false)) {
+            error_ = builtinName + " does not support mixed signed/unsigned operands";
+            return false;
+          }
+          if (hasMixedNumericCategory(expr.args)) {
+            error_ = builtinName + " does not support mixed int/float operands";
+            return false;
+          }
+        } else if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
+          if (!validateFloatArgs(1)) {
+            return false;
+          }
+        } else if (builtinName == "fma") {
+          if (!validateFloatArgs(3)) {
+            return false;
+          }
+        } else if (builtinName == "pow" || builtinName == "atan2" || builtinName == "hypot" ||
+                   builtinName == "copysign") {
+          if (!validateFloatArgs(2)) {
+            return false;
+          }
+        } else {
+          if (!validateFloatArgs(1)) {
+            return false;
+          }
+        }
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        return true;
+      }
       if (getBuiltinArrayAccessName(expr, builtinName)) {
         if (!expr.templateArgs.empty()) {
           error_ = builtinName + " does not accept template arguments";

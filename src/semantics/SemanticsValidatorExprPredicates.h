@@ -83,6 +83,40 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return false;
   };
+  auto isFloatExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+      return true;
+    }
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
+        kind == ReturnKind::UInt64) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral) {
+        return true;
+      }
+      if (arg.kind == Expr::Kind::StringLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
   enum class NumericCategory { Unknown, Integer, Float };
   auto numericCategoryForExpr = [&](const Expr &arg) -> NumericCategory {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
@@ -240,6 +274,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
+      return true;
+    }
+    if (isBuiltinMathConstant(expr.name)) {
       return true;
     }
     error_ = "unknown identifier: " + expr.name;

@@ -131,7 +131,14 @@ bool isBuiltinName(const std::string &name) {
          name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
          name == "less_equal" || name == "equal" || name == "not_equal" || name == "and" || name == "or" ||
          name == "not" || name == "clamp" || name == "min" || name == "max" || name == "abs" || name == "sign" ||
-         name == "saturate" || name == "if" || name == "then" || name == "else" || name == "repeat" ||
+         name == "saturate" || name == "lerp" || name == "floor" || name == "ceil" || name == "round" ||
+         name == "trunc" || name == "fract" || name == "sqrt" || name == "cbrt" || name == "pow" ||
+         name == "exp" || name == "exp2" || name == "log" || name == "log2" || name == "log10" ||
+         name == "sin" || name == "cos" || name == "tan" || name == "asin" || name == "acos" ||
+         name == "atan" || name == "atan2" || name == "radians" || name == "degrees" || name == "sinh" ||
+         name == "cosh" || name == "tanh" || name == "asinh" || name == "acosh" || name == "atanh" ||
+         name == "fma" || name == "hypot" || name == "copysign" || name == "is_nan" || name == "is_inf" ||
+         name == "is_finite" || name == "if" || name == "then" || name == "else" || name == "repeat" ||
          name == "return" || name == "array" || name == "map" || name == "count" || name == "at" ||
          name == "at_unsafe" || name == "convert" || name == "location" || name == "dereference" || name == "block" ||
          name == "print" || name == "print_line" || name == "print_error" || name == "print_line_error" ||

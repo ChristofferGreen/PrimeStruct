@@ -50,6 +50,8 @@ bool isBuiltinClamp(const Expr &expr);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
+bool getBuiltinMathName(const Expr &expr, std::string &out);
+bool isBuiltinMathConstantName(const std::string &name);
 bool getBuiltinPointerOperator(const Expr &expr, char &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
