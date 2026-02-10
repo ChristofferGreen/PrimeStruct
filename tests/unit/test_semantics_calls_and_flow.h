@@ -2094,6 +2094,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("print_error accepts bool binding") {
+  const std::string source = R"(
+[effects(io_err)]
+main() {
+  [bool] ready(true)
+  print_error(ready)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("print_line_error accepts bool binding") {
+  const std::string source = R"(
+[effects(io_err)]
+main() {
+  [bool] ready(true)
+  print_line_error(ready)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("default effects allow print") {
   const std::string source = R"(
 [return<void>]
