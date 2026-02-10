@@ -160,6 +160,39 @@ main() {
   CHECK(error.find("native backend does not support string comparisons") != std::string::npos);
 }
 
+TEST_CASE("ir lowers bool comparison with signed integer") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(true, 1i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawCompare = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::CmpEqI32) {
+      sawCompare = true;
+      break;
+    }
+  }
+  CHECK(sawCompare);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
+}
+
 TEST_CASE("ir lowerer rejects string-keyed map literals") {
   const std::string source = R"(
 [return<int>]

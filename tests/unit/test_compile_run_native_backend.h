@@ -1113,6 +1113,22 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs native bool comparison with i32") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal(true, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_bool_compare.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_bool_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs native implicit void main") {
   const std::string source = R"(
 main() {
