@@ -135,15 +135,17 @@ bool isBuiltinName(const std::string &name) {
   } else if (candidate.find('/') != std::string::npos) {
     return false;
   }
-  bool isMathBuiltin = candidate == "lerp" || candidate == "floor" || candidate == "ceil" || candidate == "round" ||
-                       candidate == "trunc" || candidate == "fract" || candidate == "sqrt" || candidate == "cbrt" ||
-                       candidate == "pow" || candidate == "exp" || candidate == "exp2" || candidate == "log" ||
-                       candidate == "log2" || candidate == "log10" || candidate == "sin" || candidate == "cos" ||
-                       candidate == "tan" || candidate == "asin" || candidate == "acos" || candidate == "atan" ||
-                       candidate == "atan2" || candidate == "radians" || candidate == "degrees" || candidate == "sinh" ||
-                       candidate == "cosh" || candidate == "tanh" || candidate == "asinh" || candidate == "acosh" ||
-                       candidate == "atanh" || candidate == "fma" || candidate == "hypot" || candidate == "copysign" ||
-                       candidate == "is_nan" || candidate == "is_inf" || candidate == "is_finite";
+  bool isMathBuiltin = candidate == "abs" || candidate == "sign" || candidate == "min" || candidate == "max" ||
+                       candidate == "clamp" || candidate == "lerp" || candidate == "saturate" ||
+                       candidate == "floor" || candidate == "ceil" || candidate == "round" || candidate == "trunc" ||
+                       candidate == "fract" || candidate == "sqrt" || candidate == "cbrt" || candidate == "pow" ||
+                       candidate == "exp" || candidate == "exp2" || candidate == "log" || candidate == "log2" ||
+                       candidate == "log10" || candidate == "sin" || candidate == "cos" || candidate == "tan" ||
+                       candidate == "asin" || candidate == "acos" || candidate == "atan" || candidate == "atan2" ||
+                       candidate == "radians" || candidate == "degrees" || candidate == "sinh" || candidate == "cosh" ||
+                       candidate == "tanh" || candidate == "asinh" || candidate == "acosh" || candidate == "atanh" ||
+                       candidate == "fma" || candidate == "hypot" || candidate == "copysign" || candidate == "is_nan" ||
+                       candidate == "is_inf" || candidate == "is_finite";
   return candidate == "assign" || candidate == "plus" || candidate == "minus" || candidate == "multiply" ||
          candidate == "divide" || candidate == "negate" || candidate == "greater_than" || candidate == "less_than" ||
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
