@@ -25,3 +25,4 @@ From `build-debug/`:
 - `examples/infer_method_call.prime`: omitted binding type inference feeding a method call.
 - `examples/namespace_call.prime`: namespace blocks + slash-path calls.
 - `examples/pointers_and_references.prime`: `Pointer<T>`, `Reference<T>`, `location`, `dereference`.
+- `examples/syntax_braces.prime`: bindings use `{}` initializers; calls use `()`; mixed with `if`.

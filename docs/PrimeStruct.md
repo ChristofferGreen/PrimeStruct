@@ -71,7 +71,7 @@ module {
 ## Proposed Architecture
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit types, deterministic control flow, and borrow-checked resource usage.
 - **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
-- **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
+- **Transform pipeline:** ordered `[transform]` functions rewrite the forthcoming AST (or raw tokens) before semantic analysis. The compiler can auto-inject transforms per definition/execution (e.g., attach `operator_infix_default` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--transform-list` flags.
 - **Intermediate representation:** strongly-typed SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
 - **IR definition (draft):**
   - **Module:** `{ string_table, functions, entry_index, version }`.
@@ -97,33 +97,35 @@ module {
 - **String literals:** surface forms accept `"..."utf8`, `"..."ascii`, or raw `"..."raw_utf8` / `"..."raw_ascii` (no escape processing in raw bodies). The `implicit-utf8` text filter (enabled by default) appends `utf8` when omitted in surface syntax. **Canonical/bottom-level form always uses `raw_utf8` or `raw_ascii` after escape decoding.** `ascii`/`raw_ascii` enforce 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface: `"hello"utf8`, `"moo"ascii`. Example canonical: `"hello"raw_utf8`. Raw example: `"C:\\temp"raw_ascii` keeps backslashes verbatim.
 - **Numeric types (draft):** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are the only numeric types accepted by GPU backends. `integer` is an arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping). `decimal` is an arbitrary-precision floating type with fixed 256-bit precision and deterministic round-to-nearest-even semantics. `complex` is a pair of `decimal` values (`real`, `imag`) using the same 256-bit precision and rounding rules. `integer`/`decimal`/`complex` are software-only and rejected by GPU backends; the current VM/native subset excludes them. Mixed ops between `integer`/`decimal`/`complex` and fixed-width types are rejected; use `convert<T>(value)` explicitly, and conversions that would overflow or lose information fail with diagnostics. When inference cannot select `integer`/`decimal`/`complex`, the existing `implicit-i32` rule still applies.
   - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`, `1.e2`).
-- **Envelope:** every construct uses `[transform-list] identifier<template-list>(parameter-list) {body-list}`. Lists recursively reuse whitespace-separated tokens.
+- **Envelope:** definitions/executions use `[transform-list] identifier<template-list>(parameter-list) {body-list}`; bindings use the typed form `[Type qualifiers…] name{initializer}`. Lists recursively reuse whitespace-separated tokens.
+  - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code (definition bodies, execution bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
-  - `(...)` lists runtime parameters and captures.
-  - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit(10i32))`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
-  - `{...}` holds either a definition body or, in the execution case, an argument list for higher-order constructs.
-- **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`), optionally followed by a brace list of body arguments for higher-order scheduling (`execute_task(...) { work(), work() }`). Execution bodies may only contain calls (no bindings, no `return`), and they are treated as scheduling payloads rather than executable function bodies. The compiler decides whether to emit callable artifacts or schedule work based on that presence.
+  - `(...)` lists runtime parameters; calls always include `()` (even with no args), and `()` never appears on bindings.
+  - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
+  - `{...}` holds runtime code: definition bodies, execution bodies, and binding initializers (typically a single envelope; use helpers for multi-step setup).
+  - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
+- **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`), optionally followed by a brace list of body arguments for higher-order scheduling (`execute_task(...) { work(), work() }`). Execution bodies may only contain calls (no bindings, no `return`), and they are treated as scheduling payloads rather than executable function bodies. The compiler decides whether to emit callable artifacts or schedule work based on that presence. Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
   - Executions accept the same argument syntax as calls, including named arguments (with the same ordering rules).
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>(first = 1i32)` is rejected).
   - Example: `execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32))`.
   - Note: the current C++ emitter only generates code for definitions; executions are parsed/validated but not emitted.
   - Execution bodies are parsed as brace-delimited argument lists (e.g., `execute_repeat(2i32) { main(), main() }`).
-- **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical.
+- **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical. An optional `single_type_to_return` transform may rewrite a single bare type in the transform list into `return<type>` (e.g., `[int] main()` → `[return<int>] main()`), but it only runs when explicitly enabled via `--transform-list` or a per-definition transform.
 - **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_out)]`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies a default effect set for definitions/executions that omit `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
 - **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. Include paths are parsed before text filters, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private.
 - **Transform-driven control flow:** control structures desugar into prefix calls (`if(condition, trueBranch, falseBranch)`). A surface form like `if(condition) { … } else { … }` is accepted and rewritten into the canonical call form by wrapping the two blocks as envelopes. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
-- **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure(42)`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
+- **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
 ### Example function syntax
 ```
 namespace demo {
   [return<void> effects(io_out)]
   hello_values() {
-    [string] message("Hello PrimeStruct"utf8)
-    [i32] iterations(3i32)
-    [float mut] exposure(1.25f)
-    [float3] tone_curve(0.8f, 0.9f, 1.1f)
+    [string] message{"Hello PrimeStruct"utf8}
+    [i32] iterations{3i32}
+    [float mut] exposure{1.25f}
+    [float3] tone_curve{float3(0.8f, 0.9f, 1.1f)}
 
     print_line(message)
     assign(exposure, clamp(exposure, 0.0f, 2.0f))
@@ -146,17 +148,17 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Struct tag as transform:** `[struct ...]` in the envelope is purely declarative. It records a layout manifest (field names, types, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
 - **Placement policy (draft):** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Types may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities.
 - **POD tag as validation:** `[pod]` asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
-- **Member syntax:** every field is just a stack-value execution (`[float mut] exposure(1.0f)`, `[handle<PathNode>] target(get_default())`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
+- **Member syntax:** every field is just a stack-value execution (`[float mut] exposure{1.0f}`, `[handle<PathNode>] target{get_default()}`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
 - **Method calls & indexing:** `value.method(args...)` desugars to `/type/method(value, args...)` in the method namespace (no hidden object model). For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
 - **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
 - **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations again produce diagnostics instead of silent adjustments.
-- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name(args)` so stack frames remain declarative (e.g., `[float mut] exposure(1.0f)`). Default initializers are mandatory to keep frames fully initialized.
+- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[float mut] exposure{1.0f}`). Default initializers are mandatory to keep frames fully initialized.
 - **Lifecycle helpers (Create/Destroy):** Within a struct-tagged definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. `this` is implicitly available inside helpers. Add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable); omit it for pure helpers. Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
   ```
   namespace demo {
     [struct pod]
     color_grade() {
-      [float mut] exposure(1.0f)
+      [float mut] exposure{1.0f}
 
       [mut]
       Create() {
@@ -181,6 +183,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is only valid on lifecycle helpers to make `this` mutable; executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted type to `T` (or satisfy concept-like predicates once defined). Applied alongside `copy`/`mut` when needed.
 - **`return<T>`:** optional contract that pins the inferred return type. Recommended for public APIs or when disambiguation is required.
+- **`single_type_to_return`:** optional transform that rewrites a single bare type in a transform list into `return<type>` (e.g., `[int] main()` → `[return<int>] main()`); disabled by default and only runs when enabled in the transform list or CLI.
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
 - **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
@@ -243,9 +246,9 @@ example, `helper()` or `1i32` can appear as standalone statements).
   namespace demo {
     [struct]
     brush_settings() {
-      [public float] size(12.0f)
-      [private float] jitter(0.1f)
-      [package static handle<Texture>] palette(load_default_palette())
+      [public float] size{12.0f}
+      [private float] jitter{0.1f}
+      [package static handle<Texture>] palette{load_default_palette()}
 
       [public]
       Create() {
@@ -269,7 +272,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`"…"raw_utf8` / `"…"raw_ascii`). Surface literals accept `utf8`/`ascii` suffixes, but the canonical/bottom-level form uses only `raw_utf8`/`raw_ascii` after escape decoding. `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
-- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the Envelope. Named arguments map to fields, and every field must have either an explicit argument or a type-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
+- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the Envelope. Bindings wrap those executions in `{}` (e.g., `[ColorGrade] grade{ColorGrade(hue_shift = 0.1f, exposure = 0.95f)}`) to preserve the call-vs-binding distinction. Named arguments map to fields, and every field must have either an explicit argument or a type-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
 - **Named arguments:** named arguments may be reordered (including on executions), but cannot repeat a parameter name or follow a positional argument. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept named arguments.
   - Example: `array<i32>(first = 1i32)` is rejected because collections are builtin calls.
   - Example: `execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32))` is invalid because the positional map argument follows a named argument.
@@ -287,7 +290,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Float note:** VM/native lowering currently rejects float literals, float bindings, and float arithmetic; use the C++ emitter for float-heavy scripts until float opcodes land in PSIR.
 - **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
   - `convert<bool>` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
-- **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value(...)`).
+- **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).
 - **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
 
 ## Pointers & References (draft)
@@ -306,8 +309,8 @@ example, `helper()` or `1i32` can appear as standalone statements).
     ```
     [return<int>]
     main() {
-      [i32 mut] value(2i32)
-      [Pointer<i32> mut] ptr(location(value))
+      [i32 mut] value{2i32}
+      [Pointer<i32> mut] ptr{location(value)}
       assign(dereference(ptr), 4i32)
       return(value)
     }
@@ -330,8 +333,8 @@ example, `helper()` or `1i32` can appear as standalone statements).
     ```
     [return<int>]
     main() {
-      [i32 mut] value(2i32)
-      [Reference<i32> mut] ref(location(value))
+      [i32 mut] value{2i32}
+      [Reference<i32> mut] ref{location(value)}
       assign(ref, 4i32)
       return(ref)
     }

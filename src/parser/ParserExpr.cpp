@@ -160,10 +160,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           return false;
         }
       }
-      if (!match(TokenKind::LParen)) {
-        return fail("binding requires argument list");
-      }
-      expect(TokenKind::LParen, "expected '(' after identifier");
       Expr call;
       call.kind = Expr::Kind::Call;
       call.name = name.text;
@@ -171,14 +167,23 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.templateArgs = std::move(templateArgs);
       call.transforms = std::move(transforms);
       call.isBinding = true;
-      if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
-        return false;
-      }
-      if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
-        return false;
-      }
-      if (!expect(TokenKind::RParen, "expected ')' to close call")) {
-        return false;
+      if (match(TokenKind::LParen)) {
+        expect(TokenKind::LParen, "expected '(' after identifier");
+        if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+          return false;
+        }
+        if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
+          return false;
+        }
+        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+          return false;
+        }
+      } else if (match(TokenKind::LBrace)) {
+        if (!parseBindingInitializerList(call.args, namespacePrefix)) {
+          return false;
+        }
+      } else {
+        return fail("binding requires argument list");
       }
       out = std::move(call);
       return true;

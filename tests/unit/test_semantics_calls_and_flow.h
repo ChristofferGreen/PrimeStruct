@@ -154,8 +154,11 @@ main() {
   return(if(cond = true, then = 1i32, else = 2i32))
 }
 )";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 

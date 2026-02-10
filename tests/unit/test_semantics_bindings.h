@@ -11,6 +11,19 @@ main() {
   CHECK(error.find("binding requires exactly one argument") != std::string::npos);
 }
 
+TEST_CASE("local binding accepts brace initializer") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]

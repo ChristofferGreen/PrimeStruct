@@ -209,6 +209,10 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
     if (!expect(TokenKind::RParen, "expected ')' after parameter default")) {
       return false;
     }
+  } else if (match(TokenKind::LBrace)) {
+    if (!parseBindingInitializerList(param.args, namespacePrefix)) {
+      return false;
+    }
   }
   out = std::move(param);
   return true;
@@ -281,6 +285,40 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       }
       continue;
     }
+  }
+  return true;
+}
+
+bool Parser::parseBindingInitializerList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+  if (!expect(TokenKind::LBrace, "expected '{' after identifier")) {
+    return false;
+  }
+  if (match(TokenKind::RBrace)) {
+    expect(TokenKind::RBrace, "expected '}'");
+    return true;
+  }
+  while (true) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
+    Expr arg;
+    if (!parseExpr(arg, namespacePrefix)) {
+      return false;
+    }
+    out.push_back(std::move(arg));
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RBrace)) {
+        return fail("trailing comma not allowed in binding initializer");
+      }
+      continue;
+    }
+    if (match(TokenKind::RBrace)) {
+      break;
+    }
+  }
+  if (!expect(TokenKind::RBrace, "expected '}' after binding initializer")) {
+    return false;
   }
   return true;
 }
