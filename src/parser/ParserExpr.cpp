@@ -11,6 +11,20 @@
 namespace primec {
 using namespace parser;
 
+namespace {
+bool isArgumentLabelValueStart(TokenKind kind) {
+  switch (kind) {
+  case TokenKind::Identifier:
+  case TokenKind::Number:
+  case TokenKind::String:
+  case TokenKind::LBracket:
+    return true;
+  default:
+    return false;
+  }
+}
+} // namespace
+
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
   parsed = false;
   if (!match(TokenKind::Identifier) || tokens_[pos_].text != "if") {
@@ -171,7 +185,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return fail("binding initializers must use braces");
       }
       if (match(TokenKind::LBrace)) {
-        if (!parseBindingInitializerList(call.args, namespacePrefix)) {
+        if (!parseBindingInitializerList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }
       } else {
@@ -447,6 +461,16 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       continue;
     }
     if (match(TokenKind::LBracket)) {
+      if (allowArgumentLabels_ && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
+          tokens_[pos_ + 2].kind == TokenKind::RBracket) {
+        size_t nextIndex = pos_ + 3;
+        while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+          ++nextIndex;
+        }
+        if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+          break;
+        }
+      }
       expect(TokenKind::LBracket, "expected '[' after expression");
       Expr indexExpr;
       if (!parseExpr(indexExpr, namespacePrefix)) {

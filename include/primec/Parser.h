@@ -26,7 +26,9 @@ private:
   bool parseCallArgumentList(std::vector<Expr> &out,
                              std::vector<std::optional<std::string>> &argNames,
                              const std::string &namespacePrefix);
-  bool parseBindingInitializerList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool parseBindingInitializerList(std::vector<Expr> &out,
+                                   std::vector<std::optional<std::string>> &argNames,
+                                   const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
   bool validateNoBuiltinNamedArguments(const std::string &name,
                                        const std::vector<std::optional<std::string>> &argNames);
@@ -39,6 +41,19 @@ private:
   bool parseDefinitionBody(Definition &def, bool allowNoReturn);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
   bool applySingleTypeToReturn(std::vector<Transform> &transforms);
+
+  struct ArgumentLabelGuard {
+    explicit ArgumentLabelGuard(Parser &parser) : parser_(parser), previous_(parser_.allowArgumentLabels_) {
+      parser_.allowArgumentLabels_ = true;
+    }
+    ~ArgumentLabelGuard() { parser_.allowArgumentLabels_ = previous_; }
+    ArgumentLabelGuard(const ArgumentLabelGuard &) = delete;
+    ArgumentLabelGuard &operator=(const ArgumentLabelGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
 
   std::string currentNamespacePrefix() const;
   std::string makeFullPath(const std::string &name, const std::string &prefix) const;
@@ -56,6 +71,7 @@ private:
   bool *returnTracker_ = nullptr;
   bool returnsVoidContext_ = false;
   bool allowImplicitVoidReturn_ = false;
+  bool allowArgumentLabels_ = false;
 };
 
 } // namespace primec

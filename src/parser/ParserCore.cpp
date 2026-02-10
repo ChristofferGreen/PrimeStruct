@@ -588,7 +588,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         return fail("binding initializers must use braces");
       }
       if (match(TokenKind::LBrace)) {
-        if (!parseBindingInitializerList(callExpr.args, def.namespacePrefix)) {
+        if (!parseBindingInitializerList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
           return false;
         }
       } else {

@@ -200,7 +200,7 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
     return fail("parameter defaults must use braces");
   }
   if (match(TokenKind::LBrace)) {
-    if (!parseBindingInitializerList(param.args, namespacePrefix)) {
+    if (!parseBindingInitializerList(param.args, param.argNames, namespacePrefix)) {
       return false;
     }
   }
@@ -239,9 +239,29 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   if (match(TokenKind::RParen)) {
     return true;
   }
+  ArgumentLabelGuard labelGuard(*this);
   while (true) {
     std::optional<std::string> argName;
-    if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Equal) {
+    if (match(TokenKind::LBracket) && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
+        tokens_[pos_ + 2].kind == TokenKind::RBracket) {
+      expect(TokenKind::LBracket, "expected '['");
+      Token name = consume(TokenKind::Identifier, "expected argument label");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      if (name.text.find('/') != std::string::npos) {
+        return fail("named argument must be a simple identifier");
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
+      }
+      if (!expect(TokenKind::RBracket, "expected ']' after argument label")) {
+        return false;
+      }
+      argName = name.text;
+    } else if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() &&
+               tokens_[pos_ + 1].kind == TokenKind::Equal) {
       Token name = consume(TokenKind::Identifier, "expected argument name");
       if (name.kind == TokenKind::End) {
         return false;
@@ -279,7 +299,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   return true;
 }
 
-bool Parser::parseBindingInitializerList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
+                                         std::vector<std::optional<std::string>> &argNames,
+                                         const std::string &namespacePrefix) {
   if (!expect(TokenKind::LBrace, "expected '{' after identifier")) {
     return false;
   }
@@ -287,15 +309,37 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out, const std::stri
     expect(TokenKind::RBrace, "expected '}'");
     return true;
   }
+  ArgumentLabelGuard labelGuard(*this);
   while (true) {
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
+    }
+    std::optional<std::string> argName;
+    if (match(TokenKind::LBracket) && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
+        tokens_[pos_ + 2].kind == TokenKind::RBracket) {
+      expect(TokenKind::LBracket, "expected '['");
+      Token name = consume(TokenKind::Identifier, "expected argument label");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      if (name.text.find('/') != std::string::npos) {
+        return fail("named argument must be a simple identifier");
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
+      }
+      if (!expect(TokenKind::RBracket, "expected ']' after argument label")) {
+        return false;
+      }
+      argName = name.text;
     }
     Expr arg;
     if (!parseExpr(arg, namespacePrefix)) {
       return false;
     }
     out.push_back(std::move(arg));
+    argNames.push_back(std::move(argName));
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::RBrace)) {

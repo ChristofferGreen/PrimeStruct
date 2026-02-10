@@ -162,6 +162,23 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("labeled arguments accept bracket syntax") {
+  const std::string source = R"(
+[return<int>]
+sum3([i32] a, [i32] b, [i32] c) {
+  return(plus(plus(a, b), c))
+}
+
+[return<int>]
+main() {
+  return(sum3(1i32 [c] 3i32 [b] 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("binding not allowed in expression") {
   const std::string source = R"(
 [return<int>]
