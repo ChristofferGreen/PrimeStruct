@@ -10,7 +10,7 @@ namespace i32 {
 
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(plus(value.inc(), 2i32))
 }
 )";
@@ -71,7 +71,7 @@ TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   print_line(values.count())
   print_line(values[1i64])
   print_line(values[2u64])
@@ -113,7 +113,7 @@ TEST_CASE("runs vm with array count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32, 3i32))
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
   return(count(values))
 }
 )";
@@ -204,7 +204,7 @@ TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32))
+  [array<i32>] values{array<i32>(4i32)}
   return(plus(100i32, values[9i32]))
 }
 )";
@@ -219,7 +219,7 @@ TEST_CASE("vm array access with u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(plus(100i32, values[1u64]))
 }
 )";
@@ -232,7 +232,7 @@ TEST_CASE("vm array access rejects negative index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32))
+  [array<i32>] values{array<i32>(4i32)}
   return(plus(100i32, values[-1i32]))
 }
 )";
@@ -247,7 +247,7 @@ TEST_CASE("vm array unsafe access reads element") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   print_line(at_unsafe(values, 1i32))
   return(0i32)
 }
@@ -263,7 +263,7 @@ TEST_CASE("vm array unsafe access with u64 index") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   print_line(at_unsafe(values, 1u64))
   return(0i32)
 }
@@ -358,7 +358,7 @@ TEST_CASE("vm argv binding checks bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
-  [string] value(args[9i32])
+  [string] value{args[9i32]}
   print_line(value)
   return(0i32)
 }
@@ -375,7 +375,7 @@ TEST_CASE("vm argv binding unsafe skips bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
-  [string] value(at_unsafe(args, 9i32))
+  [string] value{at_unsafe(args, 9i32)}
   print_line(value)
   return(0i32)
 }
@@ -393,8 +393,8 @@ TEST_CASE("vm argv unsafe binding copy skips bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
-  [string] first(at_unsafe(args, 9i32))
-  [string] second(first)
+  [string] first{at_unsafe(args, 9i32)}
+  [string] second{first}
   print_line(second)
   return(0i32)
 }
@@ -512,7 +512,7 @@ TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const std::string srcPath = writeTemp("compile_void_main.prime", source);
@@ -541,7 +541,7 @@ main() {
 TEST_CASE("compiles and runs implicit void main") {
   const std::string source = R"(
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   value
 }
 )";
@@ -857,7 +857,7 @@ TEST_CASE("compiles and runs array count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32, 3i32))
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
   return(count(values))
 }
 )";

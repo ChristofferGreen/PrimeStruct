@@ -197,19 +197,9 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
   param.transforms = std::move(transforms);
   param.isBinding = true;
   if (match(TokenKind::LParen)) {
-    expect(TokenKind::LParen, "expected '(' after parameter identifier");
-    if (!parseCallArgumentList(param.args, param.argNames, namespacePrefix)) {
-      return false;
-    }
-    for (const auto &argName : param.argNames) {
-      if (argName.has_value()) {
-        return fail("parameter defaults do not accept named arguments");
-      }
-    }
-    if (!expect(TokenKind::RParen, "expected ')' after parameter default")) {
-      return false;
-    }
-  } else if (match(TokenKind::LBrace)) {
+    return fail("parameter defaults must use braces");
+  }
+  if (match(TokenKind::LBrace)) {
     if (!parseBindingInitializerList(param.args, namespacePrefix)) {
       return false;
     }

@@ -39,7 +39,7 @@ TEST_CASE("compiles and runs array method calls in C++ emitter") {
 
 [return<int>]
 main() {
-  [array<i32>] items(array<i32>(7i32, 9i32))
+  [array<i32>] items{array<i32>(7i32, 9i32)}
   return(items.first())
 }
 )";
@@ -55,7 +55,7 @@ TEST_CASE("compiles and runs array index sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(values[1i32])
 }
 )";
@@ -71,7 +71,7 @@ TEST_CASE("compiles and runs array index sugar with u64") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(values[1u64])
 }
 )";
@@ -87,7 +87,7 @@ TEST_CASE("compiles and runs array unsafe access in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(at_unsafe(values, 1i32))
 }
 )";
@@ -103,7 +103,7 @@ TEST_CASE("compiles and runs array unsafe access with u64 index in C++ emitter")
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(at_unsafe(values, 1u64))
 }
 )";
@@ -119,7 +119,7 @@ TEST_CASE("compiles and runs repeat loop") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   repeat(3i32) {
     assign(value, plus(value, 2i32))
   }

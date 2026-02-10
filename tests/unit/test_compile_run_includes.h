@@ -240,7 +240,7 @@ TEST_CASE("compiles and runs block expression with multiline body") {
 [return<int>]
 main() {
   return(block(){
-    [i32] x(1i32)
+    [i32] x{1i32}
     plus(x, 2i32)
   })
 }
@@ -274,7 +274,7 @@ namespace i64 {
 [return<int>]
 main() {
   return(convert<i32>(block(){
-    [mut] value(plus(1i64, 2i64))
+    [mut] value{plus(1i64, 2i64)}
     value.inc()
   }))
 }
@@ -302,7 +302,7 @@ TEST_CASE("compiles and runs block binding inference for mixed if numeric types"
 [return<int> effects(io_out)]
 main() {
   print_line(block(){
-    [mut] value(if(false, 1i32, 5000000000i64))
+    [mut] value{if(false, 1i32, 5000000000i64)}
     value
   })
   return(0i32)
@@ -373,7 +373,7 @@ TEST_CASE("compiles and runs operator rewrite with unary minus operand") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(2i32)
+  [i32] value{2i32}
   return(3i32+-value)
 }
 )";
@@ -403,8 +403,8 @@ TEST_CASE("compiles and runs short-circuit and") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [i32 mut] witness(0i32)
+  [i32 mut] value{1i32}
+  [i32 mut] witness{0i32}
   assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
   return(witness)
 }
@@ -421,8 +421,8 @@ TEST_CASE("compiles and runs short-circuit or") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [i32 mut] witness(0i32)
+  [i32 mut] value{1i32}
+  [i32 mut] witness{0i32}
   assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
   return(witness)
 }
@@ -529,7 +529,7 @@ TEST_CASE("compiles and runs pointer helpers") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(4i32)
+  [i32] value{4i32}
   return(dereference(location(value)))
 }
 )";
@@ -545,7 +545,7 @@ TEST_CASE("compiles and runs pointer plus helper") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(dereference(plus(location(value), 0i32)))
 }
 )";
@@ -561,8 +561,8 @@ TEST_CASE("compiles and runs pointer plus on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(8i32)
-  [Reference<i32>] ref(location(value))
+  [i32] value{8i32}
+  [Reference<i32>] ref{location(value)}
   return(dereference(plus(location(ref), 0i32)))
 }
 )";
@@ -578,8 +578,8 @@ TEST_CASE("compiles and runs pointer minus helper") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(second), 0i32)))
 }
 )";
@@ -595,7 +595,7 @@ TEST_CASE("compiles and runs pointer minus u64 offset") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(dereference(minus(location(value), 0u64)))
 }
 )";
@@ -707,7 +707,7 @@ TEST_CASE("compiles and runs pointer plus u64 offset") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(dereference(plus(location(value), 0u64)))
 }
 )";
@@ -753,7 +753,7 @@ TEST_CASE("compiles and runs assignment operator rewrite") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   value=2i32
   return(value)
 }
@@ -890,7 +890,7 @@ TEST_CASE("compiles and runs unary minus operator rewrite") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(3i32)
+  [i32] value{3i32}
   return(plus(-value, 5i32))
 }
 )";

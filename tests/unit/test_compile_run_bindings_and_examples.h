@@ -16,7 +16,7 @@ TEST_CASE("compiles and runs local binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(value)
 }
 )";
@@ -32,7 +32,7 @@ TEST_CASE("compiles with struct definition") {
   const std::string source = R"(
 [struct]
 data() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
@@ -52,7 +52,7 @@ TEST_CASE("compiles and runs assign to mutable binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   assign(value, 6i32)
   return(value)
 }
@@ -69,8 +69,8 @@ TEST_CASE("compiles and runs assign to reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{1i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, 9i32)
   return(value)
 }
@@ -87,9 +87,9 @@ TEST_CASE("compiles and runs location on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(8i32)
-  [Reference<i32> mut] ref(location(value))
-  [Pointer<i32>] ptr(location(ref))
+  [i32 mut] value{8i32}
+  [Reference<i32> mut] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
   return(dereference(ptr))
 }
 )";
@@ -105,8 +105,8 @@ TEST_CASE("compiles and runs reference arithmetic") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(4i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{4i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, plus(ref, 3i32))
   return(ref)
 }

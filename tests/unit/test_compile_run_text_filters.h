@@ -67,7 +67,7 @@ TEST_CASE("compiles and runs float binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [float] value(1.5f)
+  [float] value{1.5f}
   return(1i32)
 }
 )";
@@ -142,7 +142,7 @@ TEST_CASE("rejects method call on array") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32))
+  [array<i32>] values{array<i32>(1i32, 2i32)}
   return(values.inc())
 }
 )";
@@ -157,8 +157,8 @@ TEST_CASE("rejects method call on pointer") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(2i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32 mut] value{2i32}
+  [Pointer<i32>] ptr{location(value)}
   return(ptr.inc())
 }
 )";
@@ -173,8 +173,8 @@ TEST_CASE("rejects method call on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(2i32)
-  [Reference<i32>] ref(location(value))
+  [i32 mut] value{2i32}
+  [Reference<i32>] ref{location(value)}
   return(ref.inc())
 }
 )";
@@ -189,7 +189,7 @@ TEST_CASE("rejects method call on map") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>{1i32=2i32})
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32}}
   return(values.inc())
 }
 )";
@@ -219,9 +219,9 @@ TEST_CASE("compiles and runs if") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(false, then(){
-    [i32] temp(4i32)
+    [i32] temp{4i32}
     assign(value, temp)
   }, else(){ assign(value, 9i32) })
   return(value)
@@ -289,7 +289,7 @@ TEST_CASE("compiles and runs if expr block statements") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(true) { [i32] x(4i32) plus(x, 1i32) } else { 0i32 })
+  return(if(true) { [i32] x{4i32} plus(x, 1i32) } else { 0i32 })
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr_block_stmts.prime", source);
@@ -313,8 +313,8 @@ TEST_CASE("compiles and runs lazy if expression taking then branch") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32))
-  [i32] n(values.count())
+  [array<i32>] values{array<i32>(4i32)}
+  [i32] n{values.count()}
   return(if(equal(n, 1i32), values[0i32], values[9i32]))
 }
 )";
@@ -347,8 +347,8 @@ TEST_CASE("compiles and runs lazy if expression taking else branch") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32))
-  [i32] n(values.count())
+  [array<i32>] values{array<i32>(4i32)}
+  [i32] n{values.count()}
   return(if(equal(n, 0i32), values[9i32], values[0i32]))
 }
 )";
@@ -406,8 +406,8 @@ TEST_CASE("compiles and runs block expression with outer scope capture") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] y(2i32)
-  return(block() { [i32] x(4i32) plus(x, y) })
+  [i32] y{2i32}
+  return(block() { [i32] x{4i32} plus(x, y) })
 }
 )";
   const std::string srcPath = writeTemp("compile_block_expr_capture.prime", source);
@@ -730,7 +730,7 @@ TEST_CASE("compiles and runs string binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message("hello"utf8)
+  [string] message{"hello"utf8}
   return(1i32)
 }
 )";
@@ -894,7 +894,7 @@ TEST_CASE("compiles and runs if statement sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(false) {
     assign(value, 4i32)
   } else {

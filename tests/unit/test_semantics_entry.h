@@ -38,7 +38,7 @@ main() {
 TEST_CASE("entry definition rejects default args parameter") {
   const std::string source = R"(
 [return<int>]
-main([array<string>] args(array<string>("hi"utf8))) {
+main([array<string>] args{array<string>("hi"utf8)}) {
   return(args.count())
 }
 )";
@@ -70,7 +70,7 @@ namespace i64 {
 
 [return<i64>]
 main() {
-  [mut] value(plus(1i64, 2i64))
+  [mut] value{plus(1i64, 2i64)}
   return(value.inc())
 }
 )";
@@ -87,7 +87,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(10i32)) {
+add([i32] left, [i32] right{10i32}) {
   return(plus(left, right))
 }
 )";
@@ -117,7 +117,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(plus(left, 1i32))) {
+add([i32] left, [i32] right{plus(left, 1i32)}) {
   return(plus(left, right))
 }
 )";
@@ -134,7 +134,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(block(){ 1i32 })) {
+add([i32] left, [i32] right{block(){ 1i32 }}) {
   return(plus(left, right))
 }
 )";
@@ -151,7 +151,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(block(){ [i32] temp(1i32) temp })) {
+add([i32] left, [i32] right{block(){ [i32] temp{1i32} temp }}) {
   return(plus(left, right))
 }
 )";
@@ -173,7 +173,7 @@ add_one([i32] value) {
 }
 
 [return<int>]
-add([i32] left, [i32] right(add_one(value = 1i32))) {
+add([i32] left, [i32] right{add_one(value = 1i32)}) {
   return(plus(left, right))
 }
 )";
@@ -190,7 +190,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(1i32, 2i32)) {
+add([i32] left, [i32] right{1i32, 2i32}) {
   return(plus(left, right))
 }
 )";
@@ -202,7 +202,7 @@ add([i32] left, [i32] right(1i32, 2i32)) {
 TEST_CASE("infers parameter type from default initializer") {
   const std::string source = R"(
 [return<i64>]
-id([mut] value(3i64)) {
+id([mut] value{3i64}) {
   return(value)
 }
 
@@ -230,7 +230,7 @@ main() {
 TEST_CASE("restrict matches inferred binding type during return inference") {
   const std::string source = R"(
 main() {
-  [restrict<i64>] value(1i64)
+  [restrict<i64>] value{1i64}
   return(value)
 }
 )";
@@ -243,7 +243,7 @@ TEST_CASE("restrict matches inferred binding type inside block return inference"
   const std::string source = R"(
 main() {
   return(block(){
-    [restrict<i64>] value(1i64)
+    [restrict<i64>] value{1i64}
     value
   })
 }
@@ -256,7 +256,7 @@ main() {
 TEST_CASE("implicit void definition without return validates") {
   const std::string source = R"(
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -324,12 +324,12 @@ main() {
 TEST_CASE("arithmetic rejects struct operands") {
   const std::string source = R"(
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
 main() {
-  [thing] item(1i32)
+  [thing] item{1i32}
   return(plus(item, item))
 }
 )";
@@ -542,8 +542,8 @@ TEST_CASE("assign through non-mut pointer fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32 mut] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
   assign(dereference(ptr), 3i32)
   return(value)
 }
@@ -557,7 +557,7 @@ TEST_CASE("assign through non-pointer dereference fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   assign(dereference(value), 3i32)
   return(value)
 }
@@ -687,7 +687,7 @@ execute_repeat([i32] x) {
   return(x)
 }
 
-execute_repeat(3i32) { [i32] value(1i32) }
+execute_repeat(3i32) { [i32] value{1i32} }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -706,7 +706,7 @@ execute_repeat([i32] x) {
   return()
 }
 
-execute_repeat(3i32) { if(true, then(){ [i32] value(2i32) }, else(){ }) }
+execute_repeat(3i32) { if(true, then(){ [i32] value{2i32} }, else(){ }) }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));

@@ -60,7 +60,7 @@ namespace i32 {
 
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(value.inc())
 }
 )";
@@ -83,7 +83,7 @@ namespace i32 {
 
 [return<int>]
 main() {
-  [i32] value(3i32)
+  [i32] value{3i32}
   return(value.count())
 }
 )";
@@ -492,8 +492,8 @@ TEST_CASE("compiles and runs native argv binding") {
 [return<int> effects(io_out)]
 main([array<string>] args) {
   if(greater_than(args.count(), 1i32)) {
-    [string] first(args[1i32])
-    [string] copy(first)
+    [string] first{args[1i32]}
+    [string] copy{first}
     print_line(copy)
   } else {
     print_line("missing"utf8)
@@ -517,7 +517,7 @@ TEST_CASE("compiles and runs native argv binding unsafe skips bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
-  [string] value(at_unsafe(args, 9i32))
+  [string] value{at_unsafe(args, 9i32)}
   print_line(value)
   return(0i32)
 }
@@ -542,8 +542,8 @@ TEST_CASE("compiles and runs native argv unsafe binding copy skips bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
-  [string] first(at_unsafe(args, 9i32))
-  [string] second(first)
+  [string] first{at_unsafe(args, 9i32)}
+  [string] second{first}
   print_line(second)
   return(0i32)
 }
@@ -596,7 +596,7 @@ TEST_CASE("compiles and runs native void executable") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const std::string srcPath = writeTemp("compile_native_void.prime", source);
@@ -626,7 +626,7 @@ TEST_CASE("compiles and runs native locals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(2i32)
+  [i32 mut] value{2i32}
   assign(value, plus(value, 3i32))
   return(value)
 }
@@ -643,7 +643,7 @@ TEST_CASE("compiles and runs native if/else") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(4i32)
+  [i32] value{4i32}
   if(greater_equal(value, 4i32)) {
     return(9i32)
   } else {
@@ -663,7 +663,7 @@ TEST_CASE("compiles and runs native repeat loop") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   repeat(3i32) {
     assign(value, plus(value, 2i32))
   }
@@ -682,8 +682,8 @@ TEST_CASE("compiles and runs native pointer helpers") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Pointer<i32> mut] ptr(location(value))
+  [i32 mut] value{1i32}
+  [Pointer<i32> mut] ptr{location(value)}
   assign(dereference(ptr), 6i32)
   return(dereference(ptr))
 }
@@ -700,7 +700,7 @@ TEST_CASE("compiles and runs native pointer plus") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(dereference(plus(location(value), 0i32)))
 }
 )";
@@ -741,7 +741,7 @@ TEST_CASE("compiles and runs native string binding print") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] greeting("hi"ascii)
+  [string] greeting{"hi"ascii}
   print_line(greeting)
   return(0i32)
 }
@@ -762,8 +762,8 @@ TEST_CASE("compiles and runs native string binding copy") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] greeting("hey"utf8)
-  [string] copy(greeting)
+  [string] greeting{"hey"utf8}
+  [string] copy{greeting}
   print_line(copy)
   return(0i32)
 }
@@ -783,10 +783,10 @@ TEST_CASE("compiles and runs native string count and indexing") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
-  [i32] a(text[0i32])
-  [i32] b(at_unsafe(text, 1i32))
-  [i32] len(text.count())
+  [string] text{"abc"utf8}
+  [i32] a{text[0i32]}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{text.count()}
   return(plus(plus(a, b), len))
 }
 )";
@@ -802,7 +802,7 @@ TEST_CASE("compiles and runs native string access checks bounds") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(plus(100i32, text[9i32]))
 }
 )";
@@ -821,7 +821,7 @@ TEST_CASE("compiles and runs native string access rejects negative index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(plus(100i32, text[-1i32]))
 }
 )";
@@ -853,8 +853,8 @@ TEST_CASE("compiles and runs native pointer plus offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(first), 16i32)))
 }
 )";
@@ -870,9 +870,9 @@ TEST_CASE("compiles and runs native pointer plus on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
-  [Reference<i32>] ref(location(first))
+  [i32] first{4i32}
+  [i32] second{9i32}
+  [Reference<i32>] ref{location(first)}
   return(dereference(plus(location(ref), 16i32)))
 }
 )";
@@ -888,8 +888,8 @@ TEST_CASE("compiles and runs native pointer minus offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(second), 16i32)))
 }
 )";
@@ -905,8 +905,8 @@ TEST_CASE("compiles and runs native pointer minus u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(second), 16u64)))
 }
 )";
@@ -922,8 +922,8 @@ TEST_CASE("compiles and runs native pointer minus negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(first), -16i64)))
 }
 )";
@@ -939,8 +939,8 @@ TEST_CASE("compiles and runs native pointer plus u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(first), 16u64)))
 }
 )";
@@ -956,8 +956,8 @@ TEST_CASE("compiles and runs native pointer plus negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(second), -16i64)))
 }
 )";
@@ -973,8 +973,8 @@ TEST_CASE("compiles and runs native references") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(4i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{4i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, 7i32)
   return(ref)
 }
@@ -991,9 +991,9 @@ TEST_CASE("compiles and runs native location on reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(8i32)
-  [Reference<i32> mut] ref(location(value))
-  [Pointer<i32>] ptr(location(ref))
+  [i32 mut] value{8i32}
+  [Reference<i32> mut] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
   return(dereference(ptr))
 }
 )";
@@ -1009,8 +1009,8 @@ TEST_CASE("compiles and runs native reference arithmetic") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(4i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{4i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, plus(ref, 3i32))
   return(ref)
 }
@@ -1116,7 +1116,7 @@ main() {
 TEST_CASE("compiles and runs native implicit void main") {
   const std::string source = R"(
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const std::string srcPath = writeTemp("compile_native_void_implicit.prime", source);
@@ -1161,8 +1161,8 @@ TEST_CASE("compiles and runs native short-circuit and") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [i32 mut] witness(0i32)
+  [i32 mut] value{1i32}
+  [i32 mut] witness{0i32}
   assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
   return(witness)
 }
@@ -1179,8 +1179,8 @@ TEST_CASE("compiles and runs native short-circuit or") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [i32 mut] witness(0i32)
+  [i32 mut] value{1i32}
+  [i32 mut] witness{0i32}
   assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
   return(witness)
 }
@@ -1271,7 +1271,7 @@ TEST_CASE("rejects native float bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [float] value(1.5f)
+  [float] value{1.5f}
   return(1i32)
 }
 )";
@@ -1286,7 +1286,7 @@ TEST_CASE("rejects native non-literal string bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message(1i32)
+  [string] message{1i32}
   return(1i32)
 }
 )";
@@ -1301,7 +1301,7 @@ TEST_CASE("compiles and runs native array literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(values[1i32])
 }
 )";
@@ -1317,7 +1317,7 @@ TEST_CASE("compiles and runs native array access with u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(values[1u64])
 }
 )";
@@ -1333,7 +1333,7 @@ TEST_CASE("compiles and runs native array access rejects negative index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32))
+  [array<i32>] values{array<i32>(4i32)}
   return(plus(100i32, values[-1i32]))
 }
 )";
@@ -1352,7 +1352,7 @@ TEST_CASE("compiles and runs native array unsafe access") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(at_unsafe(values, 1i32))
 }
 )";
@@ -1368,7 +1368,7 @@ TEST_CASE("compiles and runs native array unsafe access with u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(at_unsafe(values, 1u64))
 }
 )";
@@ -1416,7 +1416,7 @@ TEST_CASE("compiles and runs native array count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32, 3i32))
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
   return(count(values))
 }
 )";
@@ -1465,7 +1465,7 @@ TEST_CASE("compiles and runs native typed map binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>{1i32=2i32, 3i32=4i32})
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
   return(0i32)
 }
 )";

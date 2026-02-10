@@ -67,7 +67,7 @@ TEST_CASE("non-ascii type identifier rejected") {
 [return<int>]
 main() {
   [array<)") + "\xC3\xA9" + R"(>]
-  values(array<i32>(1i32))
+  values{array<i32>(1i32)}
   return(0i32)
 }
 )";
@@ -83,7 +83,7 @@ TEST_CASE("reserved keyword rejected in type identifier") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<return>] values(array<i32>(1i32))
+  [array<return>] values{array<i32>(1i32)}
   return(0i32)
 }
 )";
@@ -316,7 +316,7 @@ TEST_CASE("trailing comma in nested type template list is rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<map<i32,>>] values(array<i32>(1i32))
+  [array<map<i32,>>] values{array<i32>(1i32)}
   return(0i32)
 }
 )";
@@ -331,7 +331,7 @@ main() {
 TEST_CASE("trailing comma in parameter list is rejected") {
   const std::string source = R"(
 [return<int>]
-main([i32] value(1i32),) {
+main([i32] value{1i32},) {
   return(0i32)
 }
 )";
@@ -358,10 +358,10 @@ main([i32] value<i32>) {
   CHECK(error.find("parameter identifiers do not accept template arguments") != std::string::npos);
 }
 
-TEST_CASE("parameter defaults reject named arguments") {
+TEST_CASE("parameter defaults reject trailing comma") {
   const std::string source = R"(
 [return<int>]
-main([i32] value(x = 1i32)) {
+main([i32] value{1i32,}) {
   return(value)
 }
 )";
@@ -370,7 +370,7 @@ main([i32] value(x = 1i32)) {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("parameter defaults do not accept named arguments") != std::string::npos);
+  CHECK(error.find("trailing comma not allowed in binding initializer") != std::string::npos);
 }
 
 TEST_CASE("trailing comma in argument list is rejected") {
@@ -674,7 +674,7 @@ TEST_CASE("named args for pointer helpers fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(dereference(ptr = location(value)))
 }
 )";
@@ -895,7 +895,7 @@ main() {
   CHECK(error.find("expected template identifier") != std::string::npos);
 }
 
-TEST_CASE("binding requires argument list in expression") {
+TEST_CASE("binding requires initializer in expression") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -907,7 +907,38 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("binding requires argument list") != std::string::npos);
+  CHECK(error.find("binding requires initializer") != std::string::npos);
+}
+
+TEST_CASE("binding rejects paren initializer") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value(1i32)
+  return(value)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("binding initializers must use braces") != std::string::npos);
+}
+
+TEST_CASE("parameter default rejects paren initializer") {
+  const std::string source = R"(
+[return<int>]
+add([i32] left(1i32), [i32] right) {
+  return(plus(left, right))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("parameter defaults must use braces") != std::string::npos);
 }
 
 TEST_CASE("call body requires parameter list") {
@@ -944,7 +975,7 @@ TEST_CASE("return statement cannot have transforms") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] return(1i32)
+[mut] return(1i32)
 }
 )";
   primec::Lexer lexer(source);

@@ -229,7 +229,7 @@ TEST_CASE("ir dump prints bool return type") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  [bool] flag(true)
+  [bool] flag{true}
   return(flag)
 }
 )";
@@ -269,7 +269,7 @@ TEST_CASE("ast dump prints struct definition") {
   const std::string source = R"(
 [struct]
 data() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const auto program = parseProgram(source);
@@ -278,7 +278,7 @@ data() {
   const std::string expected =
       "ast {\n"
       "  [struct] /data() {\n"
-      "    [i32] value(1)\n"
+      "    [i32] value{1}\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -288,7 +288,7 @@ TEST_CASE("ir dump prints struct definition") {
   const std::string source = R"(
 [struct]
 data() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const auto program = parseProgram(source);
@@ -308,7 +308,7 @@ TEST_CASE("ir dump prints pod definition") {
   const std::string source = R"(
 [pod]
 data() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const auto program = parseProgram(source);
@@ -722,7 +722,7 @@ TEST_CASE("ir dump prints local bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(4i32)
+  [i32] value{4i32}
   assign(value, 9i32)
   return(value)
 }
@@ -745,7 +745,7 @@ TEST_CASE("ir dump prints unary minus rewrite") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(3i32)
+  [i32] value{3i32}
   return(-value)
 }
 )";

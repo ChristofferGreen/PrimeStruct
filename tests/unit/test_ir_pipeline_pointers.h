@@ -2,9 +2,9 @@ TEST_CASE("ir lowers location of reference binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(2i32)
-  [Reference<i32> mut] ref(location(value))
-  [Pointer<i32>] ptr(location(ref))
+  [i32 mut] value{2i32}
+  [Reference<i32> mut] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
   return(dereference(ptr))
 }
 )";
@@ -42,7 +42,7 @@ TEST_CASE("ir lowers pointer plus") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(dereference(plus(location(value), 0i32)))
 }
 )";
@@ -78,9 +78,9 @@ TEST_CASE("ir lowers pointer plus on reference location") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
-  [Reference<i32>] ref(location(first))
+  [i32] first{4i32}
+  [i32] second{9i32}
+  [Reference<i32>] ref{location(first)}
   return(dereference(plus(location(ref), 16i32)))
 }
 )";
@@ -116,8 +116,8 @@ TEST_CASE("assign returns value for reference targets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{1i32}
+  [Reference<i32> mut] ref{location(value)}
   return(assign(ref, 7i32))
 }
 )";
@@ -142,8 +142,8 @@ TEST_CASE("assign returns value for dereference targets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Pointer<i32> mut] ptr(location(value))
+  [i32 mut] value{1i32}
+  [Pointer<i32> mut] ptr{location(value)}
   return(assign(dereference(ptr), 9i32))
 }
 )";
@@ -168,8 +168,8 @@ TEST_CASE("ir lowers pointer minus") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(second), 16i32)))
 }
 )";
@@ -205,8 +205,8 @@ TEST_CASE("ir lowers pointer minus u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(second), 16u64)))
 }
 )";
@@ -242,8 +242,8 @@ TEST_CASE("ir lowers pointer minus negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(minus(location(first), -16i64)))
 }
 )";
@@ -279,8 +279,8 @@ TEST_CASE("pointer plus uses byte offsets in VM") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(first), 16i32)))
 }
 )";
@@ -307,8 +307,8 @@ TEST_CASE("pointer plus accepts u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(first), 16u64)))
 }
 )";
@@ -335,8 +335,8 @@ TEST_CASE("pointer plus accepts negative i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(second), -16i64)))
 }
 )";
@@ -363,8 +363,8 @@ TEST_CASE("pointer plus accepts i64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(first), 16i64)))
 }
 )";
@@ -400,8 +400,8 @@ TEST_CASE("pointer plus accepts u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(4i32)
-  [i32] second(9i32)
+  [i32] first{4i32}
+  [i32] second{9i32}
   return(dereference(plus(location(first), 16u64)))
 }
 )";
@@ -437,8 +437,8 @@ TEST_CASE("ir lowers reference assignments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(3i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{3i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, 8i32)
   return(ref)
 }
@@ -479,9 +479,9 @@ TEST_CASE("ir lowers location on reference without extra address-of") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Reference<i32> mut] ref(location(value))
-  [Pointer<i32> mut] ptr(location(ref))
+  [i32 mut] value{1i32}
+  [Reference<i32> mut] ref{location(value)}
+  [Pointer<i32> mut] ptr{location(ref)}
   assign(dereference(ptr), 9i32)
   return(value)
 }

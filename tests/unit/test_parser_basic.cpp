@@ -104,7 +104,7 @@ main() {
 TEST_CASE("parses parameters without commas") {
   const std::string source = R"(
 [return<int>]
-main([i32] a(1i32) [i32] b(2i32)) {
+main([i32] a{1i32} [i32] b{2i32}) {
   return(plus(a b))
 }
 )";
@@ -131,9 +131,9 @@ main() {
 TEST_CASE("parses comments as whitespace") {
   const std::string source = R"(
 [return<int> /* transform */]
-main(/* params */ [i32] value(1i32) /* end params */) {
+main(/* params */ [i32] value{1i32} /* end params */) {
   // line comment before binding
-  [i32] total(plus(value, /* mid-arg */ 2i32))
+  [i32] total{plus(value, /* mid-arg */ 2i32)}
   return(convert<i64 /* tmpl */ i32>(total))
 }
 )";
@@ -147,7 +147,7 @@ TEST_CASE("parses local binding statements") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(7i32)
+  [i32] value{7i32}
   return(value)
 }
 )";
@@ -165,7 +165,7 @@ TEST_CASE("parses binding type transforms with multiple template args") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(0i32)
 }
 )";
@@ -224,7 +224,7 @@ namespace i32 {
 
 [return<i32>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(value.wrap<i32>())
 }
 )";
@@ -257,7 +257,7 @@ TEST_CASE("parses struct definition without return") {
   const std::string source = R"(
 [struct]
 data() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const auto program = parseProgram(source);
@@ -272,7 +272,7 @@ TEST_CASE("parses pod definition without return") {
   const std::string source = R"(
 [pod]
 data() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   const auto program = parseProgram(source);
@@ -287,9 +287,9 @@ TEST_CASE("parses if with block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(true, then(){
-    [i32] temp(2i32)
+    [i32] temp{2i32}
     assign(value, temp)
   }, else(){ assign(value, 3i32) })
   return(value)
@@ -314,7 +314,7 @@ TEST_CASE("parses statement call with block arguments") {
 [return<int>]
 main() {
   execute_repeat(3i32) {
-    [i32] temp(1i32)
+    [i32] temp{1i32}
     assign(temp, 2i32)
   }
   return(1i32)
@@ -660,7 +660,7 @@ TEST_CASE("parses if statement sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(true) {
     assign(value, 2i32)
   } else {
@@ -708,7 +708,7 @@ TEST_CASE("parses if sugar with block statements in return argument") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(true) { [i32] x(4i32) plus(x, 1i32) } else { 0i32 })
+  return(if(true) { [i32] x{4i32} plus(x, 1i32) } else { 0i32 })
 }
 )";
   const auto program = parseProgram(source);

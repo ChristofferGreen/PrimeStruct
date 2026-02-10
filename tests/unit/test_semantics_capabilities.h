@@ -334,7 +334,7 @@ TEST_CASE("struct transform validates without args") {
   const std::string source = R"(
 [struct]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -346,7 +346,7 @@ TEST_CASE("pod transform validates without args") {
   const std::string source = R"(
 [pod]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -358,7 +358,7 @@ TEST_CASE("pod transform rejects handle tag") {
   const std::string source = R"(
 [pod, handle]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -370,7 +370,7 @@ TEST_CASE("pod transform rejects handle fields") {
   const std::string source = R"(
 [pod]
 main() {
-  [handle<PathNode>] target(1i32)
+  [handle<PathNode>] target{1i32}
 }
 )";
   std::string error;
@@ -382,7 +382,7 @@ TEST_CASE("handle and gpu_lane tags conflict on definition") {
   const std::string source = R"(
 [handle, gpu_lane]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -394,7 +394,7 @@ TEST_CASE("handle and gpu_lane tags conflict on field") {
   const std::string source = R"(
 [struct]
 main() {
-  [handle<PathNode> gpu_lane] target(1i32)
+  [handle<PathNode> gpu_lane] target{1i32}
 }
 )";
   std::string error;
@@ -406,7 +406,7 @@ TEST_CASE("struct transform rejects template arguments") {
   const std::string source = R"(
 [struct<i32>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -418,7 +418,7 @@ TEST_CASE("struct transform rejects arguments") {
   const std::string source = R"(
 [struct(foo)]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -430,7 +430,7 @@ TEST_CASE("struct transform rejects return transform") {
   const std::string source = R"(
 [struct, return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -454,7 +454,7 @@ TEST_CASE("placement transforms are rejected") {
   const std::string source = R"(
 [stack]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -466,7 +466,7 @@ TEST_CASE("struct definitions require field initializers") {
   const std::string source = R"(
 [struct]
 main() {
-  [i32] value()
+  [i32] value{}
 }
 )";
   std::string error;
@@ -478,7 +478,7 @@ TEST_CASE("struct definitions allow initialized fields") {
   const std::string source = R"(
 [struct]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -490,7 +490,7 @@ TEST_CASE("struct definitions reject non-binding statements") {
   const std::string source = R"(
 [struct]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   plus(1i32, 2i32)
 }
 )";
@@ -503,12 +503,12 @@ TEST_CASE("handle transform marks struct definitions") {
   const std::string source = R"(
 [handle]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
 use() {
-  [main] item(1i32)
+  [main] item{1i32}
   return(1i32)
 }
 )";
@@ -521,12 +521,12 @@ TEST_CASE("gpu_lane transform marks struct definitions") {
   const std::string source = R"(
 [gpu_lane]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
 use() {
-  [main] item(1i32)
+  [main] item{1i32}
   return(1i32)
 }
 )";
@@ -539,7 +539,7 @@ TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
 main([i32] x) {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 )";
   std::string error;
@@ -562,7 +562,7 @@ TEST_CASE("lifecycle helpers allow struct parents") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<void>]
@@ -586,7 +586,7 @@ main() {
 TEST_CASE("lifecycle helpers require struct tag") {
   const std::string source = R"(
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<void>]
@@ -607,7 +607,7 @@ TEST_CASE("lifecycle helpers provide this") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [mut return<void>]
@@ -629,7 +629,7 @@ TEST_CASE("lifecycle helpers require mut for assignment") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<void>]
@@ -651,7 +651,7 @@ TEST_CASE("lifecycle helpers must return void") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
@@ -673,7 +673,7 @@ TEST_CASE("lifecycle helpers reject parameters") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<void>]
@@ -706,7 +706,7 @@ TEST_CASE("lifecycle helpers reject duplicate mut") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [mut mut return<void>]
@@ -727,7 +727,7 @@ TEST_CASE("lifecycle helpers reject mut template arguments") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [mut<i32> return<void>]
@@ -748,7 +748,7 @@ TEST_CASE("lifecycle helpers reject mut arguments") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [mut(1) return<void>]
@@ -797,7 +797,7 @@ TEST_CASE("lifecycle helpers accept placement variants") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<void>]
@@ -1019,12 +1019,12 @@ main() {
 TEST_CASE("builtin and rejects struct operands") {
   const std::string source = R"(
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<bool>]
 main() {
-  [thing] item(1i32)
+  [thing] item{1i32}
   return(and(item, 1i32))
 }
 )";
@@ -1085,7 +1085,7 @@ TEST_CASE("builtin comparison rejects pointer operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(greater_than(location(value), 1i32))
 }
 )";
@@ -1097,12 +1097,12 @@ main() {
 TEST_CASE("builtin comparison rejects struct operands") {
   const std::string source = R"(
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<bool>]
 main() {
-  [thing] item(1i32)
+  [thing] item{1i32}
   return(equal(item, item))
 }
 )";
@@ -1282,7 +1282,7 @@ TEST_CASE("local binding names are visible") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(6i32)
+  [i32] value{6i32}
   return(value)
 }
 )";

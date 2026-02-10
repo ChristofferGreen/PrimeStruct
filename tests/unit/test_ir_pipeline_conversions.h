@@ -68,8 +68,8 @@ TEST_CASE("ir lowers location of reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(5i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{5i32}
+  [Reference<i32> mut] ref{location(value)}
   return(dereference(location(ref)))
 }
 )";
@@ -164,7 +164,7 @@ TEST_CASE("ir lowerer rejects float bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [float] value(1.5f)
+  [float] value{1.5f}
   return(1i32)
 }
 )";
@@ -202,7 +202,7 @@ TEST_CASE("ir lowerer rejects non-literal string bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message(1i32)
+  [string] message{1i32}
   return(1i32)
 }
 )";
@@ -259,7 +259,7 @@ TEST_CASE("ir lowerer supports print_line with string bindings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] message("hello"utf8)
+  [string] message{"hello"utf8}
   print_line(message)
   return(1i32)
 }
@@ -290,8 +290,8 @@ TEST_CASE("ir lowerer supports string binding copy") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  [string] message("hello"utf8)
-  [string] copy(message)
+  [string] message{"hello"utf8}
+  [string] copy{message}
   print_line(copy)
   return(1i32)
 }
@@ -420,7 +420,7 @@ TEST_CASE("ir lowerer rejects dereference of value") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(dereference(value))
 }
 )";
@@ -456,8 +456,8 @@ TEST_CASE("semantics reject pointer on the right") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
   return(plus(1i32, ptr))
 }
 )";
@@ -484,7 +484,7 @@ TEST_CASE("ir lowerer supports numeric array literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(plus(values.count(), values[1i32]))
 }
 )";
@@ -527,7 +527,7 @@ TEST_CASE("ir lowerer supports array access u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(values[1u64])
 }
 )";
@@ -576,7 +576,7 @@ TEST_CASE("ir lowerer supports array unsafe access") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(at_unsafe(values, 1i32))
 }
 )";
@@ -601,7 +601,7 @@ TEST_CASE("ir lowerer supports array unsafe access u64 index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32, 7i32, 9i32))
+  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
   return(at_unsafe(values, 1u64))
 }
 )";
@@ -682,7 +682,7 @@ TEST_CASE("ir lowerer supports array count helper") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32, 3i32))
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
   return(count(values))
 }
 )";
@@ -736,7 +736,7 @@ TEST_CASE("ir lowerer supports array method calls") {
 
 [return<int>]
 main() {
-  [array<i32>] items(array<i32>(5i32, 9i32))
+  [array<i32>] items{array<i32>(5i32, 9i32)}
   return(items.first())
 }
 )";
@@ -766,7 +766,7 @@ TEST_CASE("ir lowerer supports map method calls") {
 
 [return<int>]
 main() {
-  [map<i32, i32>] items(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
   return(items.size())
 }
 )";

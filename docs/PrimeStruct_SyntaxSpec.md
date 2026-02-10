@@ -22,7 +22,7 @@ indexing `value[index]`), then rewrites them into a small canonical core before 
 and IR lowering.
 
 Transform template lists accept one or more type expressions, so generic binding types can be
-spelled directly in transform position (e.g. `[array<i32>] values(...)`, `[map<i32, i32>] pairs(...)`).
+spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
 
 ## 2. Lexical Structure
 
@@ -249,8 +249,8 @@ execute_task(count = 2i32) { main() main() }
 ### 7.1 Bindings
 
 ```
-[i32 mut] count(1i32)
-[string] message("hi"utf8)
+[i32 mut] count{1i32}
+[string] message{"hi"utf8}
 ```
 
 - A binding is a stack value execution.
@@ -263,7 +263,7 @@ execute_task(count = 2i32) { main() main() }
 Parameters use the same binding envelope as locals:
 
 ```
-main([array<string>] args, [i32] limit(10i32)) { ... }
+main([array<string>] args, [i32] limit{10i32}) { ... }
 ```
 
 Defaults are limited to literal/pure forms (no name references).

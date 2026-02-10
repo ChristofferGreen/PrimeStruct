@@ -432,31 +432,14 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         }
       }
       if (match(TokenKind::LParen)) {
-        expect(TokenKind::LParen, "expected '(' after identifier");
-        if (!parseCallArgumentList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
-          return false;
-        }
-        if (!validateNoBuiltinNamedArguments(callExpr.name, callExpr.argNames)) {
-          return false;
-        }
-        if (!validateNamedArgumentOrdering(callExpr.argNames)) {
-          return false;
-        }
-        if (!expect(TokenKind::RParen, "expected ')' after call statement")) {
-          return false;
-        }
-        if (match(TokenKind::LBrace)) {
-          callExpr.hasBodyArguments = true;
-          if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
-            return false;
-          }
-        }
-      } else if (match(TokenKind::LBrace)) {
+        return fail("binding initializers must use braces");
+      }
+      if (match(TokenKind::LBrace)) {
         if (!parseBindingInitializerList(callExpr.args, def.namespacePrefix)) {
           return false;
         }
       } else {
-        return fail("binding requires argument list");
+        return fail("binding requires initializer");
       }
       def.statements.push_back(std::move(callExpr));
       continue;

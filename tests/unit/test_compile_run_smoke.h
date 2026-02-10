@@ -36,7 +36,7 @@ TEST_CASE("compiles and runs with line comments after expressions") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(7i32)// comment with a+b and a/b should be ignored
+  [i32] value{7i32}// comment with a+b and a/b should be ignored
   return(value)
 }
 )";
@@ -60,10 +60,10 @@ TEST_CASE("compiles and runs string count and indexing in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
-  [i32] a(at(text, 0i32))
-  [i32] b(at_unsafe(text, 1i32))
-  [i32] len(count(text))
+  [string] text{"abc"utf8}
+  [i32] a{at(text, 0i32)}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{count(text)}
   return(plus(plus(a, b), len))
 }
 )";
@@ -79,10 +79,10 @@ TEST_CASE("compiles and runs single-quoted strings in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text('{"k":"v"}'utf8)
-  [i32] k(at(text, 2i32))
-  [i32] v(at_unsafe(text, 6i32))
-  [i32] len(count(text))
+  [string] text{'{"k":"v"}'utf8}
+  [i32] k{at(text, 2i32)}
+  [i32] v{at_unsafe(text, 6i32)}
+  [i32] len{count(text)}
   return(plus(plus(k, v), len))
 }
 )";
@@ -158,8 +158,8 @@ TEST_CASE("compiles and runs pathspace builtins as no-ops") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify, pathspace_insert, pathspace_take)]
 main() {
-  [string] path("/events/test"utf8)
-  [string] storePath("/store/value"utf8)
+  [string] path{"/events/test"utf8}
+  [string] storePath{"/store/value"utf8}
   notify(path, 1i32)
   insert(storePath, 2i32)
   take(storePath)
@@ -186,7 +186,7 @@ TEST_CASE("compiles and runs binding without explicit type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] value(1i32)
+  [mut] value{1i32}
   assign(value, plus(value, 2i32))
   return(value)
 }
@@ -211,7 +211,7 @@ TEST_CASE("compiles and runs binding inferring i64") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] value(1i64)
+  [mut] value{1i64}
   assign(value, plus(value, 2i64))
   return(convert<i32>(value))
 }
@@ -236,7 +236,7 @@ TEST_CASE("compiles and runs binding inferring u64") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] value(1u64)
+  [mut] value{1u64}
   assign(value, plus(value, 2u64))
   return(convert<i32>(value))
 }
@@ -261,7 +261,7 @@ TEST_CASE("compiles and runs binding inferring array type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] values(array<i32>(1i32, 2i32, 3i32))
+  [mut] values{array<i32>(1i32, 2i32, 3i32)}
   return(count(values))
 }
 )";
@@ -286,7 +286,7 @@ TEST_CASE("compiles and runs array and map bracket sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] len(count(array<i32>[1i32, 2i32, 3i32]))
+  [i32] len{count(array<i32>[1i32, 2i32, 3i32])}
   map<i32, i32>[1i32=2i32, 3i32=4i32]
   return(len)
 }
@@ -336,7 +336,7 @@ TEST_CASE("compiles and runs binding inferring map type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] values(map<i32, i32>{1i32=2i32, 3i32=4i32})
+  [mut] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
   return(0i32)
 }
 )";
@@ -360,7 +360,7 @@ TEST_CASE("compiles and runs map count") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>{1i32=2i32, 3i32=4i32})
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
   return(plus(count(values), values.count()))
 }
 )";
@@ -384,7 +384,7 @@ TEST_CASE("compiles and runs map indexing") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] values(map<i32, i32>{1i32=10i32, 2i32=20i32})
+  [mut] values{map<i32, i32>{1i32=10i32, 2i32=20i32}}
   return(values[2i32])
 }
 )";
@@ -463,7 +463,7 @@ TEST_CASE("map indexing checks missing key") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] values(map<i32, i32>{1i32=10i32, 2i32=20i32})
+  [mut] values{map<i32, i32>{1i32=10i32, 2i32=20i32}}
   return(values[9i32])
 }
 )";
@@ -491,7 +491,7 @@ TEST_CASE("map indexing rejects mismatched key type in vm/native") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>{1i32=10i32})
+  [map<i32, i32>] values{map<i32, i32>{1i32=10i32}}
   return(values[1u64])
 }
 )";
@@ -520,7 +520,7 @@ namespace i64 {
 
 [return<int>]
 main() {
-  [mut] value(plus(1i64, 2i64))
+  [mut] value{plus(1i64, 2i64)}
   return(convert<i32>(value.inc()))
 }
 )";
@@ -552,7 +552,7 @@ namespace i64 {
 
 [return<int>]
 main() {
-  [mut] value(if(true) { 3i64 } else { 7i64 })
+  [mut] value{if(true) { 3i64 } else { 7i64 }}
   return(convert<i32>(value.inc()))
 }
 )";
@@ -585,7 +585,7 @@ namespace i64 {
 
 [return<int>]
 main() {
-  [mut] value(if(false, 2i32, 5i64))
+  [mut] value{if(false, 2i32, 5i64)}
   return(convert<i32>(value.inc()))
 }
 )";
@@ -609,7 +609,7 @@ main() {
 TEST_CASE("compiles and runs parameter inferring i64 from default initializer") {
   const std::string source = R"(
 [return<i64>]
-id([mut] value(3i64)) {
+id([mut] value{3i64}) {
   return(value)
 }
 
@@ -639,7 +639,7 @@ TEST_CASE("compiles and runs map literal preserving assignment value") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   map<i32, i32>{1i32=value=2i32}
   return(value)
 }
@@ -664,7 +664,7 @@ TEST_CASE("C++ emitter array access checks bounds") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(4i32))
+  [array<i32>] values{array<i32>(4i32)}
   return(values[9i32])
 }
 )";
@@ -683,7 +683,7 @@ TEST_CASE("C++ emitter string access checks bounds") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(at(text, 9i32))
 }
 )";
@@ -714,10 +714,10 @@ TEST_CASE("runs vm with string count and indexing") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
-  [i32] a(text[0i32])
-  [i32] b(at_unsafe(text, 1i32))
-  [i32] len(text.count())
+  [string] text{"abc"utf8}
+  [i32] a{text[0i32]}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{text.count()}
   return(plus(plus(a, b), len))
 }
 )";
@@ -730,8 +730,8 @@ TEST_CASE("runs vm with string literal count") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] a(count("abc"utf8))
-  [i32] b(count("hi"utf8))
+  [i32] a{count("abc"utf8)}
+  [i32] b{count("hi"utf8)}
   return(plus(a, b))
 }
 )";
@@ -768,7 +768,7 @@ TEST_CASE("vm string access checks bounds") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(plus(100i32, text[9i32]))
 }
 )";
@@ -783,7 +783,7 @@ TEST_CASE("vm string access rejects negative index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(plus(100i32, text[-1i32]))
 }
 )";

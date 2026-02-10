@@ -43,8 +43,8 @@ TEST_CASE("ir lowers struct constructor call") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
-  [i32] count(2i32)
+  [i32] value{1i32}
+  [i32] count{2i32}
 }
 
 [return<int>]
@@ -68,7 +68,7 @@ TEST_CASE("ir serialize roundtrip with implicit void return") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [i32] value(2i32)
+  [i32] value{2i32}
 }
 )";
   primec::Program program;
@@ -196,7 +196,7 @@ TEST_CASE("ir lowers locals and assign") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(2i32)
+  [i32 mut] value{2i32}
   assign(value, plus(value, 3i32))
   return(value)
 }
@@ -234,7 +234,7 @@ TEST_CASE("ir lowers assign in return expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   return(assign(value, 4i32))
 }
 )";
@@ -296,7 +296,7 @@ main() {
 TEST_CASE("ir lowers definition call with defaults and named args") {
   const std::string source = R"(
 [return<int>]
-sum3([i32] a, [i32] b(2i32), [i32] c(3i32)) {
+sum3([i32] a, [i32] b{2i32}, [i32] c{3i32}) {
   return(plus(plus(a, b), c))
 }
 
@@ -380,7 +380,7 @@ TEST_CASE("ir lowers implicit void return") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [i32] value(4i32)
+  [i32] value{4i32}
 }
 )";
   primec::Program program;
@@ -408,7 +408,7 @@ main() {
 TEST_CASE("ir lowers implicit void return without transform") {
   const std::string source = R"(
 main() {
-  [i32] value(4i32)
+  [i32] value{4i32}
 }
 )";
   primec::Program program;
@@ -578,8 +578,8 @@ TEST_CASE("ir lowers short-circuit and") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [i32 mut] witness(0i32)
+  [i32 mut] value{1i32}
+  [i32 mut] witness{0i32}
   assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
   return(witness)
 }
@@ -617,8 +617,8 @@ TEST_CASE("ir lowers short-circuit or") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [i32 mut] witness(0i32)
+  [i32 mut] value{1i32}
+  [i32 mut] witness{0i32}
   assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
   return(witness)
 }
@@ -656,7 +656,7 @@ TEST_CASE("ir lowers if/else to jumps") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   if(less_equal(value, 1i32)) {
     return(7i32)
   } else {
@@ -737,7 +737,7 @@ TEST_CASE("ir lowers repeat to jumps") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   repeat(3i32) {
     assign(value, plus(value, 2i32))
   }
@@ -777,7 +777,7 @@ TEST_CASE("repeat count <= 0 skips body") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   repeat(-2i32) {
     assign(value, 9i32)
   }
@@ -805,8 +805,8 @@ TEST_CASE("ir lowers location/dereference assignments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Pointer<i32> mut] ptr(location(value))
+  [i32 mut] value{1i32}
+  [Pointer<i32> mut] ptr{location(value)}
   assign(dereference(ptr), 7i32)
   return(dereference(ptr))
 }
@@ -848,8 +848,8 @@ TEST_CASE("ir lowers pointer helper calls") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(2i32)
-  [Pointer<i32> mut] ptr(location(value))
+  [i32 mut] value{2i32}
+  [Pointer<i32> mut] ptr{location(value)}
   assign(dereference(ptr), 9i32)
   return(value)
 }

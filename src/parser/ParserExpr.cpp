@@ -168,22 +168,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.transforms = std::move(transforms);
       call.isBinding = true;
       if (match(TokenKind::LParen)) {
-        expect(TokenKind::LParen, "expected '(' after identifier");
-        if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
-          return false;
-        }
-        if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
-          return false;
-        }
-        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
-          return false;
-        }
-      } else if (match(TokenKind::LBrace)) {
+        return fail("binding initializers must use braces");
+      }
+      if (match(TokenKind::LBrace)) {
         if (!parseBindingInitializerList(call.args, namespacePrefix)) {
           return false;
         }
       } else {
-        return fail("binding requires argument list");
+        return fail("binding requires initializer");
       }
       out = std::move(call);
       return true;

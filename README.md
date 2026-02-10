@@ -73,8 +73,8 @@ Execution bodies may only contain calls (no bindings, no `return`).
 
 Local values are introduced as stack-value executions:
 
-    [i32] value(7i32)
-    [string] message("hi"utf8)
+    [i32] value{7i32}
+    [string] message{"hi"utf8}
 
 Bindings are immutable by default.
 
@@ -82,7 +82,7 @@ Bindings are immutable by default.
 
 Mutation must be explicitly opted into with `mut` inside the binding:
 
-    [i32 mut] value(1i32)
+    [i32 mut] value{1i32}
     assign(value, 6i32)
 
 Only mutable bindings can be assigned to.
@@ -130,7 +130,7 @@ Operators are also rewritten into prefix calls (`a + b` -> `plus(a, b)`).
 
 Example:
 
-    [string] path("C:\\temp"raw_ascii)
+    [string] path{"C:\\temp"raw_ascii}
 
 ------------------------------------------------------------------------
 

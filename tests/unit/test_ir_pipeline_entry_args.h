@@ -86,7 +86,7 @@ TEST_CASE("ir lowerer tracks unsafe argv bindings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main([array<string>] args) {
-  [string] first(at_unsafe(args, 1i32))
+  [string] first{at_unsafe(args, 1i32)}
   print_line(first)
   return(0i32)
 }
@@ -160,7 +160,7 @@ TEST_CASE("ir lowers map literal call as statement") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   map<i32, i32>(1i32, assign(value, 7i32))
   return(value)
 }

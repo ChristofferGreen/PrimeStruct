@@ -42,8 +42,8 @@ TEST_CASE("reference participates in signedness checks") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [u64 mut] value(1u64)
-  [Reference<u64>] ref(location(value))
+  [u64 mut] value{1u64}
+  [Reference<u64>] ref{location(value)}
   return(plus(ref, 1i32))
 }
 )";
@@ -61,7 +61,7 @@ execute_repeat([i32] count) {
 
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   execute_repeat(2i32) {
     assign(value, 3i32)
   }
@@ -96,7 +96,7 @@ execute_repeat([i32] count) {
 [return<int>]
 main() {
   execute_repeat(2i32) {
-    [i32] temp(3i32)
+    [i32] temp{3i32}
   }
   return(1i32)
 }
@@ -111,7 +111,7 @@ TEST_CASE("block binding infers string type") {
 [return<bool>]
 main() {
   return(block(){
-    [mut] value("hello"utf8)
+    [mut] value{"hello"utf8}
     equal(value, "hello"utf8)
   })
 }
@@ -125,7 +125,7 @@ TEST_CASE("if missing else fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(true, then(){ assign(value, 2i32) })
   return(value)
 }
@@ -166,7 +166,7 @@ TEST_CASE("binding not allowed in expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return([i32] value(1i32))
+  return([i32] value{1i32})
 }
 )";
   std::string error;
@@ -202,8 +202,8 @@ TEST_CASE("string literal count validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] a(count("abc"utf8))
-  [i32] b(count("hi"utf8))
+  [i32] a{count("abc"utf8)}
+  [i32] b{count("hi"utf8)}
   return(plus(a, b))
 }
 )";
@@ -309,7 +309,7 @@ TEST_CASE("named arguments on method calls allow builtin names") {
   const std::string source = R"(
 [struct]
 Foo() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
@@ -319,7 +319,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] item(1i32)
+  [Foo] item{1i32}
   return(item.plus(rhs = 2i32))
 }
 )";
@@ -356,7 +356,7 @@ TEST_CASE("count helper validates on array binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32))
+  [array<i32>] values{array<i32>(1i32, 2i32)}
   return(count(values))
 }
 )";
@@ -381,7 +381,7 @@ TEST_CASE("count helper validates on map binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(count(values))
 }
 )";
@@ -406,7 +406,7 @@ TEST_CASE("count method validates on array binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32>] values(array<i32>(1i32, 2i32))
+  [array<i32>] values{array<i32>(1i32, 2i32)}
   return(values.count())
 }
 )";
@@ -419,7 +419,7 @@ TEST_CASE("count method validates on map binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values.count())
 }
 )";
@@ -432,7 +432,7 @@ TEST_CASE("count method validates on string binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(text.count())
 }
 )";
@@ -445,7 +445,7 @@ TEST_CASE("count helper validates on string binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("abc"utf8)
+  [string] text{"abc"utf8}
   return(count(text))
 }
 )";
@@ -494,7 +494,7 @@ TEST_CASE("count forwards to type method") {
   const std::string source = R"(
 [struct]
 Foo() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
@@ -504,7 +504,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] item(1i32)
+  [Foo] item{1i32}
   return(count(item))
 }
 )";
@@ -517,12 +517,12 @@ TEST_CASE("count rejects missing type method") {
   const std::string source = R"(
 [struct]
 Foo() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
 main() {
-  [Foo] item(1i32)
+  [Foo] item{1i32}
   return(count(item))
 }
 )";
@@ -540,7 +540,7 @@ TEST_CASE("array method calls resolve to definitions") {
 
 [return<int>]
 main() {
-  [array<i32>] items(array<i32>(4i32, 7i32))
+  [array<i32>] items{array<i32>(4i32, 7i32)}
   return(items.first())
 }
 )";
@@ -558,7 +558,7 @@ TEST_CASE("map method calls resolve to definitions") {
 
 [return<int>]
 main() {
-  [map<i32, i32>] items(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
   return(items.size())
 }
 )";
@@ -571,8 +571,8 @@ TEST_CASE("method calls reject pointer receivers") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
   return(ptr.count())
 }
 )";
@@ -585,12 +585,12 @@ TEST_CASE("unknown method calls fail") {
   const std::string source = R"(
 [struct]
 Foo() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
 main() {
-  [Foo] item(Foo())
+  [Foo] item{Foo()}
   return(item.missing())
 }
 )";
@@ -747,7 +747,7 @@ TEST_CASE("string access rejects non-integer index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("hello"utf8)
+  [string] text{"hello"utf8}
   return(at(text, "nope"utf8))
 }
 )";
@@ -760,7 +760,7 @@ TEST_CASE("string access validates integer index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("hello"utf8)
+  [string] text{"hello"utf8}
   return(at(text, 0i32))
 }
 )";
@@ -797,7 +797,7 @@ TEST_CASE("unsafe string access rejects non-integer index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("hello"utf8)
+  [string] text{"hello"utf8}
   return(at_unsafe(text, "nope"utf8))
 }
 )";
@@ -810,7 +810,7 @@ TEST_CASE("unsafe string access validates integer index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] text("hello"utf8)
+  [string] text{"hello"utf8}
   return(at_unsafe(text, 1i32))
 }
 )";
@@ -1142,12 +1142,12 @@ main() {
 TEST_CASE("comparisons reject non-numeric operands") {
   const std::string source = R"(
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<bool>]
 main() {
-  [thing] item(1i32)
+  [thing] item{1i32}
   return(equal(item, item))
 }
 )";
@@ -1328,7 +1328,7 @@ TEST_CASE("map access validates key type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(at(values, "nope"utf8))
 }
 )";
@@ -1365,7 +1365,7 @@ TEST_CASE("unsafe map access validates key type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32, i32>] values(map<i32, i32>(1i32, 2i32))
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(at_unsafe(values, "nope"utf8))
 }
 )";
@@ -1378,7 +1378,7 @@ TEST_CASE("string map access rejects numeric index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<string, i32>] values(map<string, i32>("a"utf8, 3i32))
+  [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
   return(at(values, 1i32))
 }
 )";
@@ -1391,7 +1391,7 @@ TEST_CASE("unsafe string map access rejects numeric index") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<string, i32>] values(map<string, i32>("a"utf8, 3i32))
+  [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
   return(at_unsafe(values, 1i32))
 }
 )";
@@ -1404,7 +1404,7 @@ TEST_CASE("map access accepts matching key type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<string, i32>] values(map<string, i32>("a"utf8, 3i32))
+  [map<string, i32>] values{map<string, i32>("a"utf8, 3i32)}
   return(at(values, "a"utf8))
 }
 )";
@@ -1417,8 +1417,8 @@ TEST_CASE("map access accepts string key expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<string, i32>] values(map<string, i32>("a"utf8, 1i32))
-  [map<i32, string>] keys(map<i32, string>(1i32, "a"utf8))
+  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
+  [map<i32, string>] keys{map<i32, string>(1i32, "a"utf8)}
   return(at(values, at(keys, 1i32)))
 }
 )";
@@ -1431,8 +1431,8 @@ TEST_CASE("unsafe map access accepts string key expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<string, i32>] values(map<string, i32>("a"utf8, 1i32))
-  [map<i32, string>] keys(map<i32, string>(1i32, "a"utf8))
+  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32)}
+  [map<i32, string>] keys{map<i32, string>(1i32, "a"utf8)}
   return(at_unsafe(values, at(keys, 1i32)))
 }
 )";
@@ -1457,7 +1457,7 @@ TEST_CASE("if statement sugar validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(true) {
     assign(value, 2i32)
   } else {
@@ -1594,7 +1594,7 @@ TEST_CASE("notify accepts string array access") {
   const std::string source = R"(
 [effects(pathspace_notify)]
 main() {
-  [array<string>] values(array<string>("a"utf8))
+  [array<string>] values{array<string>("a"utf8)}
   notify(values[0i32], 1i32)
 }
 )";
@@ -1607,7 +1607,7 @@ TEST_CASE("notify accepts string map access") {
   const std::string source = R"(
 [effects(pathspace_notify)]
 main() {
-  [map<i32, string>] values(map<i32, string>(1i32, "/events/test"utf8))
+  [map<i32, string>] values{map<i32, string>(1i32, "/events/test"utf8)}
   notify(values[1i32], 1i32)
 }
 )";
@@ -1691,7 +1691,7 @@ TEST_CASE("insert accepts string array access") {
   const std::string source = R"(
 [effects(pathspace_insert)]
 main() {
-  [array<string>] values(array<string>("/events/test"utf8))
+  [array<string>] values{array<string>("/events/test"utf8)}
   insert(values[0i32], 1i32)
 }
 )";
@@ -1775,7 +1775,7 @@ TEST_CASE("take accepts string map access") {
   const std::string source = R"(
 [effects(pathspace_take)]
 main() {
-  [map<i32, string>] values(map<i32, string>(1i32, "/events/test"utf8))
+  [map<i32, string>] values{map<i32, string>(1i32, "/events/test"utf8)}
   take(values[1i32])
 }
 )";
@@ -1893,7 +1893,7 @@ TEST_CASE("print rejects pointer argument") {
   const std::string source = R"(
 [effects(io_out) return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   print(location(value))
   return(0i32)
 }
@@ -2029,7 +2029,7 @@ TEST_CASE("print accepts string array access") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  [array<string>] values(array<string>("hi"utf8))
+  [array<string>] values{array<string>("hi"utf8)}
   print_line(values[0i32])
 }
 )";
@@ -2042,7 +2042,7 @@ TEST_CASE("print accepts string map access") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  [map<i32, string>] values(map<i32, string>(1i32, "hi"utf8))
+  [map<i32, string>] values{map<i32, string>(1i32, "hi"utf8)}
   print_line(values[1i32])
 }
 )";
@@ -2055,13 +2055,13 @@ TEST_CASE("print rejects struct block value") {
   const std::string source = R"(
 [struct]
 Thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [effects(io_out)]
 main() {
   print_line(block(){
-    [Thing] item(Thing())
+    [Thing] item{Thing()}
     item
   })
 }
@@ -2075,7 +2075,7 @@ TEST_CASE("print accepts string binding") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  [string] greeting("hi"utf8)
+  [string] greeting{"hi"utf8}
   print_line(greeting)
 }
 )";
@@ -2088,7 +2088,7 @@ TEST_CASE("print accepts bool binding") {
   const std::string source = R"(
 [effects(io_out)]
 main() {
-  [bool] ready(true)
+  [bool] ready{true}
   print_line(ready)
 }
 )";
@@ -2113,7 +2113,7 @@ TEST_CASE("print_error accepts bool binding") {
   const std::string source = R"(
 [effects(io_err)]
 main() {
-  [bool] ready(true)
+  [bool] ready{true}
   print_error(ready)
 }
 )";
@@ -2126,7 +2126,7 @@ TEST_CASE("print_line_error accepts bool binding") {
   const std::string source = R"(
 [effects(io_err)]
 main() {
-  [bool] ready(true)
+  [bool] ready{true}
   print_line_error(ready)
 }
 )";

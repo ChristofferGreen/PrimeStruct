@@ -2,7 +2,7 @@ TEST_CASE("local binding requires initializer") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value()
+  [i32] value{}
   return(1i32)
 }
 )";
@@ -28,7 +28,7 @@ TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [u32] value(1i32)
+  [u32] value{1i32}
   return(1i32)
 }
 )";
@@ -40,12 +40,12 @@ main() {
 TEST_CASE("field-only definition can be used as a type") {
   const std::string source = R"(
 Foo() {
-  [i32] field(1i32)
+  [i32] field{1i32}
 }
 
 [return<int>]
 main() {
-  [Foo] value(1i32)
+  [Foo] value{1i32}
   return(1i32)
 }
 )";
@@ -63,7 +63,7 @@ Bar() {
 
 [return<int>]
 main() {
-  [Bar] value(1i32)
+  [Bar] value{1i32}
   return(1i32)
 }
 )";
@@ -76,7 +76,7 @@ TEST_CASE("float binding validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [float] value(1.5f)
+  [float] value{1.5f}
   return(1i32)
 }
 )";
@@ -89,7 +89,7 @@ TEST_CASE("bool binding validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [bool] value(true)
+  [bool] value{true}
   return(1i32)
 }
 )";
@@ -102,7 +102,7 @@ TEST_CASE("string binding validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [string] message("hello"utf8)
+  [string] message{"hello"utf8}
   return(1i32)
 }
 )";
@@ -115,7 +115,7 @@ TEST_CASE("copy binding validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [copy i32] value(1i32)
+  [copy i32] value{1i32}
   return(value)
 }
 )";
@@ -128,7 +128,7 @@ TEST_CASE("binding rejects effects transform arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [effects(io_out) i32] value(1i32)
+  [effects(io_out) i32] value{1i32}
   return(value)
 }
 )";
@@ -141,7 +141,7 @@ TEST_CASE("binding rejects capabilities transform arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [capabilities(io_out) i32] value(1i32)
+  [capabilities(io_out) i32] value{1i32}
   return(value)
 }
 )";
@@ -154,7 +154,7 @@ TEST_CASE("binding rejects return transform") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [return<int> i32] value(1i32)
+  [return<int> i32] value{1i32}
   return(value)
 }
 )";
@@ -167,7 +167,7 @@ TEST_CASE("binding rejects transform arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut(1) i32] value(1i32)
+  [mut(1) i32] value{1i32}
   return(value)
 }
 )";
@@ -180,7 +180,7 @@ TEST_CASE("binding rejects duplicate static transform") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [static static i32] value(1i32)
+  [static static i32] value{1i32}
   return(value)
 }
 )";
@@ -193,7 +193,7 @@ TEST_CASE("restrict binding validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [restrict<i32> i32] value(1i32)
+  [restrict<i32> i32] value{1i32}
   return(value)
 }
 )";
@@ -206,7 +206,7 @@ TEST_CASE("restrict binding accepts int alias") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [restrict<int> i32] value(1i32)
+  [restrict<int> i32] value{1i32}
   return(value)
 }
 )";
@@ -219,7 +219,7 @@ TEST_CASE("restrict requires template argument") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [restrict i32] value(1i32)
+  [restrict i32] value{1i32}
   return(value)
 }
 )";
@@ -232,7 +232,7 @@ TEST_CASE("restrict rejects duplicate transform") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [restrict<i32> restrict<i32> i32] value(1i32)
+  [restrict<i32> restrict<i32> i32] value{1i32}
   return(value)
 }
 )";
@@ -245,7 +245,7 @@ TEST_CASE("restrict rejects mismatched type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [restrict<i32> i64] value(1i64)
+  [restrict<i32> i64] value{1i64}
   return(value)
 }
 )";
@@ -258,7 +258,7 @@ TEST_CASE("binding align_bytes validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_bytes(16) i32] value(1i32)
+  [align_bytes(16) i32] value{1i32}
   return(value)
 }
 )";
@@ -271,7 +271,7 @@ TEST_CASE("binding align_bytes rejects template arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_bytes<i32>(16) i32] value(1i32)
+  [align_bytes<i32>(16) i32] value{1i32}
   return(value)
 }
 )";
@@ -284,7 +284,7 @@ TEST_CASE("binding align_bytes rejects wrong argument count") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_bytes(4, 8) i32] value(1i32)
+  [align_bytes(4, 8) i32] value{1i32}
   return(value)
 }
 )";
@@ -297,7 +297,7 @@ TEST_CASE("binding align_kbytes rejects template arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_kbytes<i32>(4) i32] value(1i32)
+  [align_kbytes<i32>(4) i32] value{1i32}
   return(value)
 }
 )";
@@ -310,7 +310,7 @@ TEST_CASE("binding align_kbytes rejects invalid") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_kbytes(0) i32] value(1i32)
+  [align_kbytes(0) i32] value{1i32}
   return(value)
 }
 )";
@@ -323,7 +323,7 @@ TEST_CASE("binding align_kbytes rejects wrong argument count") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_kbytes(4, 8) i32] value(1i32)
+  [align_kbytes(4, 8) i32] value{1i32}
   return(value)
 }
 )";
@@ -336,7 +336,7 @@ TEST_CASE("binding align_kbytes validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_kbytes(4) i32] value(1i32)
+  [align_kbytes(4) i32] value{1i32}
   return(value)
 }
 )";
@@ -349,7 +349,7 @@ TEST_CASE("binding align_bytes rejects invalid") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [align_bytes(0) i32] value(1i32)
+  [align_bytes(0) i32] value{1i32}
   return(value)
 }
 )";
@@ -362,7 +362,7 @@ TEST_CASE("binding rejects return transform") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [return<int>] value(1i32)
+  [return<int>] value{1i32}
   return(value)
 }
 )";
@@ -375,8 +375,8 @@ TEST_CASE("binding qualifiers are allowed") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [public float] exposure(1.5f)
-  [private align_bytes(16) i32 mut] count(1i32)
+  [public float] exposure{1.5f}
+  [private align_bytes(16) i32 mut] count{1i32}
   return(1i32)
 }
 )";
@@ -389,7 +389,7 @@ TEST_CASE("binding rejects multiple visibility qualifiers") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [public private i32] value(1i32)
+  [public private i32] value{1i32}
   return(value)
 }
 )";
@@ -402,7 +402,7 @@ TEST_CASE("pointer helpers validate") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(dereference(location(value)))
 }
 )";
@@ -415,7 +415,7 @@ TEST_CASE("pointer helpers reject template arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(dereference<i32>(location(value)))
 }
 )";
@@ -428,7 +428,7 @@ TEST_CASE("pointer helpers reject block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   return(dereference(location(value)) { 1i32 })
 }
 )";
@@ -441,7 +441,7 @@ TEST_CASE("binding array type requires one template argument") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<i32, i32>] value(array<i32>(1i32))
+  [array<i32, i32>] value{array<i32>(1i32)}
   return(1i32)
 }
 )";
@@ -454,7 +454,7 @@ TEST_CASE("binding map type requires two template arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [map<i32>] value(map<i32, i32>(1i32, 2i32))
+  [map<i32>] value{map<i32, i32>(1i32, 2i32)}
   return(1i32)
 }
 )";
@@ -467,8 +467,8 @@ TEST_CASE("pointer bindings require template arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
-  [Pointer] ptr(location(value))
+  [i32] value{1i32}
+  [Pointer] ptr{location(value)}
   return(1i32)
 }
 )";
@@ -481,8 +481,8 @@ TEST_CASE("pointer bindings reject unsupported targets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
-  [Pointer<Foo>] ptr(location(value))
+  [i32] value{1i32}
+  [Pointer<Foo>] ptr{location(value)}
   return(1i32)
 }
 )";
@@ -495,8 +495,8 @@ TEST_CASE("reference bindings require template arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
-  [Reference] ref(location(value))
+  [i32] value{1i32}
+  [Reference] ref{location(value)}
   return(1i32)
 }
 )";
@@ -509,8 +509,8 @@ TEST_CASE("reference bindings reject unsupported targets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
-  [Reference<Foo>] ref(location(value))
+  [i32] value{1i32}
+  [Reference<Foo>] ref{location(value)}
   return(1i32)
 }
 )";
@@ -535,7 +535,7 @@ TEST_CASE("location rejects parameters") {
   const std::string source = R"(
 [return<int>]
 main([i32] x) {
-  [Pointer<i32>] ptr(location(x))
+  [Pointer<i32>] ptr{location(x)}
   return(1i32)
 }
 )";
@@ -553,7 +553,7 @@ read([Pointer<i32>] ptr) {
 
 [return<int>]
 main() {
-  [i32] value(7i32)
+  [i32] value{7i32}
   return(read(location(value)))
 }
 )";
@@ -571,7 +571,7 @@ offset([Pointer<i32>] ptr) {
 
 [return<int>]
 main() {
-  [i32] value(9i32)
+  [i32] value{9i32}
   return(offset(location(value)))
 }
 )";
@@ -608,7 +608,7 @@ write([Pointer<i32> mut] ptr) {
 
 [return<int>]
 main() {
-  [i32 mut] value(3i32)
+  [i32 mut] value{3i32}
   return(write(location(value)))
 }
 )";
@@ -621,7 +621,7 @@ TEST_CASE("binding allows templated type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [handle<Texture>] value(1i32)
+  [handle<Texture>] value{1i32}
   return(1i32)
 }
 )";
@@ -634,12 +634,12 @@ TEST_CASE("binding allows struct types") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
 main() {
-  [thing] item(1i32)
+  [thing] item{1i32}
   return(1i32)
 }
 )";
@@ -652,8 +652,8 @@ TEST_CASE("struct constructor accepts named arguments") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
-  [i32] count(2i32)
+  [i32] value{1i32}
+  [i32] count{2i32}
 }
 
 [return<int>]
@@ -671,7 +671,7 @@ TEST_CASE("struct constructor rejects unknown named arguments") {
   const std::string source = R"(
 [struct]
 thing() {
-  [i32] value(1i32)
+  [i32] value{1i32}
 }
 
 [return<int>]
@@ -690,12 +690,12 @@ TEST_CASE("binding resolves struct types in namespace") {
 namespace demo {
   [struct]
   widget() {
-    [i32] value(1i32)
+    [i32] value{1i32}
   }
 
   [return<int>]
   main() {
-    [widget] item(1i32)
+    [widget] item{1i32}
     return(1i32)
   }
 }
@@ -709,9 +709,9 @@ TEST_CASE("binding allows pointer types") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
-  [Pointer<i32>] ptr(location(value))
-  [Reference<i32>] ref(location(value))
+  [i32 mut] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
+  [Reference<i32>] ref{location(value)}
   return(1i32)
 }
 )";
@@ -724,7 +724,7 @@ TEST_CASE("i64 and u64 bindings validate") {
   const std::string sourceSigned = R"(
 [return<i64>]
 main() {
-  [i64] value(9i64)
+  [i64] value{9i64}
   return(value)
 }
 )";
@@ -735,7 +735,7 @@ main() {
   const std::string sourceUnsigned = R"(
 [return<u64>]
 main() {
-  [u64] value(10u64)
+  [u64] value{10u64}
   return(value)
 }
 )";
@@ -747,7 +747,7 @@ TEST_CASE("pointer plus validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(3i32)
+  [i32] value{3i32}
   return(dereference(plus(location(value), 0i32)))
 }
 )";
@@ -760,8 +760,8 @@ TEST_CASE("pointer minus validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(3i32)
-  [i32] second(4i32)
+  [i32] first{3i32}
+  [i32] second{4i32}
   return(dereference(minus(location(second), 16i32)))
 }
 )";
@@ -774,8 +774,8 @@ TEST_CASE("pointer minus accepts u64 offsets") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(3i32)
-  [i32] second(4i32)
+  [i32] first{3i32}
+  [i32] second{4i32}
   return(dereference(minus(location(second), 16u64)))
 }
 )";
@@ -788,9 +788,9 @@ TEST_CASE("pointer plus accepts reference locations") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] first(3i32)
-  [i32] second(4i32)
-  [Reference<i32>] ref(location(first))
+  [i32] first{3i32}
+  [i32] second{4i32}
+  [Reference<i32>] ref{location(first)}
   return(dereference(plus(location(ref), 16i32)))
 }
 )";
@@ -803,8 +803,8 @@ TEST_CASE("pointer plus rejects pointer + pointer") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(3i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32] value{3i32}
+  [Pointer<i32>] ptr{location(value)}
   return(plus(location(value), ptr))
 }
 )";
@@ -817,8 +817,8 @@ TEST_CASE("pointer plus rejects pointer on right") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(3i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32] value{3i32}
+  [Pointer<i32>] ptr{location(value)}
   return(plus(1i32, ptr))
 }
 )";
@@ -831,7 +831,7 @@ TEST_CASE("pointer plus rejects non-integer offset") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(3i32)
+  [i32] value{3i32}
   return(plus(location(value), true))
 }
 )";
@@ -884,7 +884,7 @@ TEST_CASE("assign to mutable binding succeeds") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   assign(value, 4i32)
   return(value)
 }
@@ -898,7 +898,7 @@ TEST_CASE("assign to immutable binding fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(1i32)
+  [i32] value{1i32}
   assign(value, 2i32)
   return(value)
 }
@@ -912,7 +912,7 @@ TEST_CASE("assign allowed in expression context") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   return(assign(value, 2i32))
 }
 )";
@@ -925,8 +925,8 @@ TEST_CASE("pointer binding and dereference assignment validate") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(5i32)
-  [Pointer<i32> mut] ptr(location(value))
+  [i32 mut] value{5i32}
+  [Pointer<i32> mut] ptr{location(value)}
   assign(dereference(ptr), 4i32)
   return(value)
 }
@@ -940,8 +940,8 @@ TEST_CASE("reference participates in arithmetic") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(5i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{5i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, plus(ref, 2i32))
   return(plus(1i32, ref))
 }
@@ -955,9 +955,9 @@ TEST_CASE("location accepts reference binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(8i32)
-  [Reference<i32> mut] ref(location(value))
-  [Pointer<i32>] ptr(location(ref))
+  [i32 mut] value{8i32}
+  [Reference<i32> mut] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
   return(dereference(ptr))
 }
 )";
@@ -970,7 +970,7 @@ TEST_CASE("dereference requires pointer or reference") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(5i32)
+  [i32] value{5i32}
   return(dereference(value))
 }
 )";
@@ -996,8 +996,8 @@ TEST_CASE("pointer assignment requires mutable binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(5i32)
-  [Pointer<i32>] ptr(location(value))
+  [i32 mut] value{5i32}
+  [Pointer<i32>] ptr{location(value)}
   assign(dereference(ptr), 4i32)
   return(value)
 }
@@ -1011,7 +1011,7 @@ TEST_CASE("assign through non-pointer dereference fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   assign(dereference(value), 3i32)
   return(value)
 }
@@ -1025,8 +1025,8 @@ TEST_CASE("reference binding assigns to target") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(5i32)
-  [Reference<i32> mut] ref(location(value))
+  [i32 mut] value{5i32}
+  [Reference<i32> mut] ref{location(value)}
   assign(ref, 4i32)
   return(value)
 }
@@ -1040,8 +1040,8 @@ TEST_CASE("reference assignment requires mutable binding") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(5i32)
-  [Reference<i32>] ref(location(value))
+  [i32 mut] value{5i32}
+  [Reference<i32>] ref{location(value)}
   assign(ref, 4i32)
   return(value)
 }
@@ -1055,7 +1055,7 @@ TEST_CASE("reference binding requires location") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [Reference<i32>] ref(5i32)
+  [Reference<i32>] ref{5i32}
   return(1i32)
 }
 )";
@@ -1068,9 +1068,9 @@ TEST_CASE("if validates block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(1i32)
+  [i32 mut] value{1i32}
   if(true, then(){
-    [i32] temp(2i32)
+    [i32] temp{2i32}
     assign(value, temp)
   }, else(){ assign(value, 3i32) })
   return(value)
@@ -1113,7 +1113,7 @@ main() {
 TEST_CASE("if expression rejects mixed string/numeric branches") {
   const std::string source = R"(
 main() {
-  [string] message(if(true, "hello"utf8, 1i32))
+  [string] message{if(true, "hello"utf8, 1i32)}
 }
 )";
   std::string error;
@@ -1125,7 +1125,7 @@ TEST_CASE("repeat validates block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   repeat(3i32) {
     assign(value, plus(value, 2i32))
   }
@@ -1141,7 +1141,7 @@ TEST_CASE("repeat validates bool count") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value(0i32)
+  [i32 mut] value{0i32}
   repeat(true) {
     assign(value, 7i32)
   }
@@ -1157,10 +1157,10 @@ TEST_CASE("block expression validates and introduces scope") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(block(){
-    [i32] inner(1i32)
+  [i32] value{block(){
+    [i32] inner{1i32}
     plus(inner, 2i32)
-  })
+  }}
   return(value)
 }
 )";
@@ -1174,7 +1174,7 @@ TEST_CASE("block expression must end with value") {
 [return<int>]
 main() {
   return(block(){
-    [i32] inner(1i32)
+    [i32] inner{1i32}
   })
 }
 )";
@@ -1228,7 +1228,7 @@ TEST_CASE("block scope does not leak bindings") {
 [return<int>]
 main() {
   block(){
-    [i32] inner(1i32)
+    [i32] inner{1i32}
     inner
   }
   return(inner)
@@ -1251,7 +1251,7 @@ namespace i64 {
 [return<i64>]
 main() {
   return(block(){
-    [mut] value(plus(1i64, 2i64))
+    [mut] value{plus(1i64, 2i64)}
     value.inc()
   })
 }
@@ -1279,7 +1279,7 @@ TEST_CASE("repeat accepts bool count") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [bool] enabled(true)
+  [bool] enabled{true}
   repeat(enabled) {
   }
   return(0i32)

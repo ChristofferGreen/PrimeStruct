@@ -7,6 +7,6 @@ namespace i64 {
 
 [return<i64>]
 main() {
-  [mut] value(plus(1i64, 2i64))
+  [mut] value{plus(1i64, 2i64)}
   return(value.inc())
 }

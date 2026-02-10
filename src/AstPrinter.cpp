@@ -95,7 +95,8 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
         }
         out << ">";
       }
-      out << "(";
+      const bool useBraces = expr.isBinding;
+      out << (useBraces ? "{" : "(");
       for (size_t i = 0; i < expr.args.size(); ++i) {
         if (i > 0) {
           out << ", ";
@@ -105,7 +106,7 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
         }
         printExpr(out, expr.args[i]);
       }
-      out << ")";
+      out << (useBraces ? "}" : ")");
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       out << " { ";
