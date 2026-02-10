@@ -119,6 +119,7 @@ module {
 
 ### Example function syntax
 ```
+import /math
 namespace demo {
   [return<void> effects(io_out)]
   hello_values() {
@@ -155,6 +156,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[float mut] exposure{1.0f}`). Default initializers are mandatory to keep frames fully initialized.
 - **Lifecycle helpers (Create/Destroy):** Within a struct-tagged definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. `this` is implicitly available inside helpers. Add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable); omit it for pure helpers. Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
   ```
+  import /math
   namespace demo {
     [struct pod]
     color_grade() {
@@ -206,7 +208,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require `io_err`. VM/native backends support numeric/bool values plus string literals/bindings; other string operations still require the C++ emitter.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see Pointer arithmetic below).
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean combinators accept `bool` or integer inputs and treat zero as `false` and any non-zero value as `true`. The current IR/native subset accepts only integer/bool operands for comparisons and boolean ops (float/string comparisons are not yet supported outside the C++ emitter).
-- **`clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected. The C++ emitter also handles floats.
+- **`/math/clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected. The C++ emitter also handles floats.
 - **`if(condition, trueBranch, falseBranch)`:** canonical conditional form after control-flow desugaring.
   - Signature: `if(Envelope, Envelope, Envelope)`
   - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
@@ -243,6 +245,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
 - **Example:**
   ```
+  import /math
   namespace demo {
     [struct]
     brush_settings() {
@@ -382,6 +385,8 @@ main() {
 
 // Pull std::io at version 1.2.0
 include<"/std/io", version="1.2.0">
+
+import /math
 
 [return<int> default_operators] add<int>(a, b) { return(plus(a, b)) }
 

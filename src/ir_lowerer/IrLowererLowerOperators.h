@@ -253,7 +253,7 @@
           function.instructions.push_back({op, 0});
           return true;
         }
-        if (getBuiltinClampName(expr)) {
+        if (getBuiltinClampName(expr, hasMathImport)) {
           if (expr.args.size() != 3) {
             error = "clamp requires exactly three arguments";
             return false;
@@ -341,7 +341,7 @@
           return true;
         }
         std::string minMaxName;
-        if (getBuiltinMinMaxName(expr, minMaxName)) {
+        if (getBuiltinMinMaxName(expr, minMaxName, hasMathImport)) {
           if (expr.args.size() != 2) {
             error = minMaxName + " requires exactly two arguments";
             return false;
@@ -409,7 +409,7 @@
           return true;
         }
         std::string lerpName;
-        if (getBuiltinLerpName(expr, lerpName)) {
+        if (getBuiltinLerpName(expr, lerpName, hasMathImport)) {
           if (expr.args.size() != 3) {
             error = lerpName + " requires exactly three arguments";
             return false;
@@ -477,7 +477,7 @@
           return true;
         }
         std::string absSignName;
-        if (getBuiltinAbsSignName(expr, absSignName)) {
+        if (getBuiltinAbsSignName(expr, absSignName, hasMathImport)) {
           if (expr.args.size() != 1) {
             error = absSignName + " requires exactly one argument";
             return false;
@@ -591,7 +591,7 @@
           return true;
         }
         std::string saturateName;
-        if (getBuiltinSaturateName(expr, saturateName)) {
+        if (getBuiltinSaturateName(expr, saturateName, hasMathImport)) {
           if (expr.args.size() != 1) {
             error = saturateName + " requires exactly one argument";
             return false;

@@ -134,105 +134,81 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   return false;
 }
 
-bool getBuiltinClampName(const Expr &expr) {
+namespace {
+
+bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
+  if (name.empty()) {
+    return false;
+  }
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.rfind("math/", 0) == 0) {
+    out = normalized.substr(5);
+    return true;
+  }
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  if (!allowBare) {
+    return false;
+  }
+  out = normalized;
+  return true;
+}
+
+} // namespace
+
+bool getBuiltinClampName(const Expr &expr, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
+  std::string name;
+  if (!parseMathName(expr.name, name, allowBare)) {
     return false;
   }
   return name == "clamp";
 }
 
-bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  if (name == "min" || name == "max") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "min" || out == "max";
 }
 
-bool getBuiltinLerpName(const Expr &expr, std::string &out) {
+bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  if (name == "lerp") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "lerp";
 }
 
-bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  if (name == "abs" || name == "sign") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "abs" || out == "sign";
 }
 
-bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
+bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  if (name == "saturate") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "saturate";
 }
 
 bool getBuiltinConvertName(const Expr &expr) {

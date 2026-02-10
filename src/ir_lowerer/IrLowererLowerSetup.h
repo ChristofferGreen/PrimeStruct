@@ -814,7 +814,7 @@ bool IrLowerer::lower(const Program &program,
           auto right = inferExprKind(expr.args[1], localsIn);
           return combineNumericKinds(left, right);
         }
-        if (getBuiltinClampName(expr)) {
+        if (getBuiltinClampName(expr, hasMathImport)) {
           if (expr.args.size() != 3) {
             return LocalInfo::ValueKind::Unknown;
           }
@@ -823,7 +823,7 @@ bool IrLowerer::lower(const Program &program,
           auto third = inferExprKind(expr.args[2], localsIn);
           return combineNumericKinds(combineNumericKinds(first, second), third);
         }
-        if (getBuiltinMinMaxName(expr, builtin)) {
+        if (getBuiltinMinMaxName(expr, builtin, hasMathImport)) {
           if (expr.args.size() != 2) {
             return LocalInfo::ValueKind::Unknown;
           }
@@ -831,7 +831,7 @@ bool IrLowerer::lower(const Program &program,
           auto right = inferExprKind(expr.args[1], localsIn);
           return combineNumericKinds(left, right);
         }
-        if (getBuiltinLerpName(expr, builtin)) {
+        if (getBuiltinLerpName(expr, builtin, hasMathImport)) {
           if (expr.args.size() != 3) {
             return LocalInfo::ValueKind::Unknown;
           }
@@ -840,13 +840,13 @@ bool IrLowerer::lower(const Program &program,
           auto tKind = inferExprKind(expr.args[2], localsIn);
           return combineNumericKinds(combineNumericKinds(startKind, endKind), tKind);
         }
-        if (getBuiltinAbsSignName(expr, builtin)) {
+        if (getBuiltinAbsSignName(expr, builtin, hasMathImport)) {
           if (expr.args.size() != 1) {
             return LocalInfo::ValueKind::Unknown;
           }
           return inferExprKind(expr.args.front(), localsIn);
         }
-        if (getBuiltinSaturateName(expr, builtin)) {
+        if (getBuiltinSaturateName(expr, builtin, hasMathImport)) {
           if (expr.args.size() != 1) {
             return LocalInfo::ValueKind::Unknown;
           }

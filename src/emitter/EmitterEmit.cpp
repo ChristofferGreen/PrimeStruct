@@ -273,7 +273,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         return argKind;
       }
-      if (isBuiltinClamp(expr)) {
+      if (isBuiltinClamp(expr, hasMathImport)) {
         if (expr.args.size() != 3) {
           return ReturnKind::Unknown;
         }

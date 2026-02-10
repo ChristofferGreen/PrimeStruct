@@ -513,6 +513,7 @@ main() {
 
 TEST_CASE("ir lowers clamp") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(clamp(5i32, 2i32, 4i32))
@@ -546,6 +547,7 @@ main() {
 
 TEST_CASE("ir lowers min") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(min(5i32, 2i32))
@@ -579,6 +581,7 @@ main() {
 
 TEST_CASE("ir lowers max u64") {
   const std::string source = R"(
+import /math
 [return<u64>]
 main() {
   return(max(3u64, 7u64))
@@ -612,6 +615,7 @@ main() {
 
 TEST_CASE("ir lowers max mixed i32/i64") {
   const std::string source = R"(
+import /math
 [return<i64>]
 main() {
   return(max(3i32, 7i64))
@@ -645,6 +649,7 @@ main() {
 
 TEST_CASE("ir lowers abs") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(abs(negate(5i32)))
@@ -678,6 +683,7 @@ main() {
 
 TEST_CASE("ir lowers sign") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(plus(sign(5i32), sign(negate(4i32))))
@@ -715,6 +721,7 @@ main() {
 
 TEST_CASE("ir lowers saturate i32") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(saturate(negate(3i32)))
@@ -748,6 +755,7 @@ main() {
 
 TEST_CASE("ir lowers saturate u64") {
   const std::string source = R"(
+import /math
 [return<u64>]
 main() {
   return(saturate(9u64))
@@ -781,6 +789,7 @@ main() {
 
 TEST_CASE("ir lowers clamp u64") {
   const std::string source = R"(
+import /math
 [return<u64>]
 main() {
   return(clamp(9u64, 2u64, 6u64))
@@ -814,6 +823,7 @@ main() {
 
 TEST_CASE("ir lowers clamp mixed i32/i64") {
   const std::string source = R"(
+import /math
 [return<i64>]
 main() {
   return(clamp(9i32, 2i64, 6i32))
@@ -847,6 +857,7 @@ main() {
 
 TEST_CASE("ir lowerer rejects clamp mixed signed/unsigned") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(clamp(1i64, 2u64, 3i64))

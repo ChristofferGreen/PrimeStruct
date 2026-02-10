@@ -415,7 +415,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         return out.str();
       }
     }
-    if (isBuiltinClamp(expr) && expr.args.size() == 3) {
+    if (isBuiltinClamp(expr, allowMathBare) && expr.args.size() == 3) {
       std::ostringstream out;
       out << "ps_builtin_clamp("
           << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
@@ -425,7 +425,7 @@ std::string Emitter::emitExpr(const Expr &expr,
       return out.str();
     }
     std::string minMaxName;
-    if (getBuiltinMinMaxName(expr, minMaxName) && expr.args.size() == 2) {
+    if (getBuiltinMinMaxName(expr, minMaxName, allowMathBare) && expr.args.size() == 2) {
       std::ostringstream out;
       out << "ps_builtin_" << minMaxName << "("
           << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
@@ -433,14 +433,14 @@ std::string Emitter::emitExpr(const Expr &expr,
       return out.str();
     }
     std::string absSignName;
-    if (getBuiltinAbsSignName(expr, absSignName) && expr.args.size() == 1) {
+    if (getBuiltinAbsSignName(expr, absSignName, allowMathBare) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_builtin_" << absSignName << "("
           << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     std::string saturateName;
-    if (getBuiltinSaturateName(expr, saturateName) && expr.args.size() == 1) {
+    if (getBuiltinSaturateName(expr, saturateName, allowMathBare) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_builtin_" << saturateName << "("
           << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)

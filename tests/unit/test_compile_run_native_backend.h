@@ -1025,6 +1025,7 @@ main() {
 
 TEST_CASE("compiles and runs native clamp") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(clamp(9i32, 2i32, 6i32))
@@ -1040,6 +1041,7 @@ main() {
 
 TEST_CASE("compiles and runs native clamp i64") {
   const std::string source = R"(
+import /math
 [return<bool>]
 main() {
   return(equal(clamp(9i64, 2i64, 6i64), 6i64))

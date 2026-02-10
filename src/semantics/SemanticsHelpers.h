@@ -65,10 +65,10 @@ ReturnKind getReturnKind(const Definition &def, std::string &error);
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out);
 bool getBuiltinComparisonName(const Expr &expr, std::string &out);
-bool getBuiltinClampName(const Expr &expr, std::string &out);
-bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
-bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
-bool getBuiltinSaturateName(const Expr &expr, std::string &out);
+bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstant(const std::string &name, bool allowBare);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);

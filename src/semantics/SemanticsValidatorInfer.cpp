@@ -500,7 +500,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       ReturnKind right = inferExprReturnKind(expr.args[1], params, locals);
       return combineNumeric(left, right);
     }
-    if (getBuiltinClampName(expr, builtinName)) {
+    if (getBuiltinClampName(expr, builtinName, hasMathImport_)) {
       if (expr.args.size() != 3) {
         return ReturnKind::Unknown;
       }
@@ -509,7 +509,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
       return result;
     }
-    if (getBuiltinMinMaxName(expr, builtinName)) {
+    if (getBuiltinMinMaxName(expr, builtinName, hasMathImport_)) {
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;
       }
@@ -517,7 +517,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
       return result;
     }
-    if (getBuiltinAbsSignName(expr, builtinName)) {
+    if (getBuiltinAbsSignName(expr, builtinName, hasMathImport_)) {
       if (expr.args.size() != 1) {
         return ReturnKind::Unknown;
       }
@@ -527,7 +527,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return argKind;
     }
-    if (getBuiltinSaturateName(expr, builtinName)) {
+    if (getBuiltinSaturateName(expr, builtinName, hasMathImport_)) {
       if (expr.args.size() != 1) {
         return ReturnKind::Unknown;
       }

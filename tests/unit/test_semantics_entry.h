@@ -386,8 +386,21 @@ main() {
   CHECK(error.find("mixed int/float") != std::string::npos);
 }
 
+TEST_CASE("math builtin requires import") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp(2i32, 1i32, 5i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: clamp") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
+import /math
 main() {
   return(clamp(2i32, 1i32, 5i32))
 }
@@ -399,6 +412,7 @@ main() {
 
 TEST_CASE("infers return type from builtin min") {
   const std::string source = R"(
+import /math
 main() {
   return(min(2i32, 1i32))
 }
@@ -410,6 +424,7 @@ main() {
 
 TEST_CASE("infers return type from builtin abs") {
   const std::string source = R"(
+import /math
 main() {
   return(abs(negate(2i32)))
 }
@@ -421,6 +436,7 @@ main() {
 
 TEST_CASE("infers return type from builtin saturate") {
   const std::string source = R"(
+import /math
 main() {
   return(saturate(2i32))
 }
@@ -432,6 +448,7 @@ main() {
 
 TEST_CASE("clamp argument count fails") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(clamp(2i32, 1i32))
@@ -444,6 +461,7 @@ main() {
 
 TEST_CASE("min argument count fails") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(min(2i32))
@@ -456,6 +474,7 @@ main() {
 
 TEST_CASE("abs argument count fails") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(abs(2i32, 3i32))
@@ -468,6 +487,7 @@ main() {
 
 TEST_CASE("saturate argument count fails") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(saturate(2i32, 3i32))
@@ -480,6 +500,7 @@ main() {
 
 TEST_CASE("clamp rejects mixed int/float operands") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(clamp(1i32, 0.5f, 2i32))
@@ -492,6 +513,7 @@ main() {
 
 TEST_CASE("min rejects mixed int/float operands") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(min(1i32, 0.5f))
@@ -504,6 +526,7 @@ main() {
 
 TEST_CASE("max rejects mixed signed/unsigned operands") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(max(2i64, 1u64))
@@ -516,6 +539,7 @@ main() {
 
 TEST_CASE("sign rejects non-numeric operand") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(sign(true))
@@ -528,6 +552,7 @@ main() {
 
 TEST_CASE("saturate rejects non-numeric operand") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(saturate(true))

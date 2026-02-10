@@ -297,88 +297,38 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   return false;
 }
 
-bool getBuiltinClampName(const Expr &expr, std::string &out) {
-  if (expr.name.empty()) {
+namespace {
+
+bool parseMathName(const std::string &name, std::string &out, bool allowBare);
+
+} // namespace
+
+bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "clamp") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "clamp";
 }
 
-bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
-  if (expr.name.empty()) {
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "min" || name == "max") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "min" || out == "max";
 }
 
-bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
-  if (expr.name.empty()) {
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "abs" || name == "sign") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "abs" || out == "sign";
 }
 
-bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
-  if (expr.name.empty()) {
+bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) {
+  if (!parseMathName(expr.name, out, allowBare)) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("math/", 0) == 0) {
-    name.erase(0, 5);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "saturate") {
-    out = name;
-    return true;
-  }
-  return false;
+  return out == "saturate";
 }
 
 namespace {

@@ -74,10 +74,10 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool getBuiltinOperator(const Expr &expr, char &out);
 bool getBuiltinComparison(const Expr &expr, const char *&out);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
-bool isBuiltinClamp(const Expr &expr);
-bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
-bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
-bool getBuiltinSaturateName(const Expr &expr, std::string &out);
+bool isBuiltinClamp(const Expr &expr, bool allowBare);
+bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 std::string resolveExprPath(const Expr &expr);
@@ -441,20 +441,20 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   if (isSimpleCallName(expr, "and") || isSimpleCallName(expr, "or") || isSimpleCallName(expr, "not")) {
     return ReturnKind::Bool;
   }
-  if (isBuiltinClamp(expr) && expr.args.size() == 3) {
+  if (isBuiltinClamp(expr, allowMathBare) && expr.args.size() == 3) {
     ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
     result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare));
     result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds, allowMathBare));
     return result;
   }
   std::string minMaxName;
-  if (getBuiltinMinMaxName(expr, minMaxName) && expr.args.size() == 2) {
+  if (getBuiltinMinMaxName(expr, minMaxName, allowMathBare) && expr.args.size() == 2) {
     ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
     result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare));
     return result;
   }
   std::string absSignName;
-  if (getBuiltinAbsSignName(expr, absSignName) && expr.args.size() == 1) {
+  if (getBuiltinAbsSignName(expr, absSignName, allowMathBare) && expr.args.size() == 1) {
     ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
       return ReturnKind::Unknown;
@@ -462,7 +462,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     return argKind;
   }
   std::string saturateName;
-  if (getBuiltinSaturateName(expr, saturateName) && expr.args.size() == 1) {
+  if (getBuiltinSaturateName(expr, saturateName, allowMathBare) && expr.args.size() == 1) {
     ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
       return ReturnKind::Unknown;

@@ -453,7 +453,7 @@
         }
         return true;
       }
-      if (getBuiltinClampName(expr, builtinName)) {
+      if (getBuiltinClampName(expr, builtinName, hasMathImport_)) {
         if (expr.args.size() != 3) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -479,7 +479,7 @@
         }
         return true;
       }
-      if (getBuiltinMinMaxName(expr, builtinName)) {
+      if (getBuiltinMinMaxName(expr, builtinName, hasMathImport_)) {
         if (expr.args.size() != 2) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -505,7 +505,7 @@
         }
         return true;
       }
-      if (getBuiltinAbsSignName(expr, builtinName)) {
+      if (getBuiltinAbsSignName(expr, builtinName, hasMathImport_)) {
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -519,7 +519,7 @@
         }
         return true;
       }
-      if (getBuiltinSaturateName(expr, builtinName)) {
+      if (getBuiltinSaturateName(expr, builtinName, hasMathImport_)) {
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;

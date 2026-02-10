@@ -384,7 +384,7 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         ReturnKind right = inferPrimitiveReturnKind(expr.args[1]);
         return combineNumeric(left, right);
       }
-      if (getBuiltinClampName(expr, builtinName)) {
+      if (getBuiltinClampName(expr, builtinName, allowMathBare)) {
         if (expr.args.size() != 3) {
           return ReturnKind::Unknown;
         }
@@ -393,7 +393,7 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[2]));
         return result;
       }
-      if (getBuiltinMinMaxName(expr, builtinName)) {
+      if (getBuiltinMinMaxName(expr, builtinName, allowMathBare)) {
         if (expr.args.size() != 2) {
           return ReturnKind::Unknown;
         }
@@ -401,7 +401,7 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         result = combineNumeric(result, inferPrimitiveReturnKind(expr.args[1]));
         return result;
       }
-      if (getBuiltinAbsSignName(expr, builtinName)) {
+      if (getBuiltinAbsSignName(expr, builtinName, allowMathBare)) {
         if (expr.args.size() != 1) {
           return ReturnKind::Unknown;
         }
@@ -411,7 +411,7 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         }
         return argKind;
       }
-      if (getBuiltinSaturateName(expr, builtinName)) {
+      if (getBuiltinSaturateName(expr, builtinName, allowMathBare)) {
         if (expr.args.size() != 1) {
           return ReturnKind::Unknown;
         }
