@@ -1016,6 +1016,42 @@ main() {
   CHECK(error.find("saturate requires numeric operand") != std::string::npos);
 }
 
+TEST_CASE("min rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(min("hi"utf8, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("min requires numeric operands") != std::string::npos);
+}
+
+TEST_CASE("max rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(max(1i32, "hi"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("max requires numeric operands") != std::string::npos);
+}
+
+TEST_CASE("clamp rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(clamp("hi"utf8, 0i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clamp requires numeric operands") != std::string::npos);
+}
+
 TEST_CASE("string comparisons validate") {
   const std::string source = R"(
 [return<bool>]
