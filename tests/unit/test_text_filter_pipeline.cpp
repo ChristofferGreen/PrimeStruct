@@ -310,6 +310,38 @@ TEST_CASE("rewrites plus operator with string literals") {
   CHECK(output.find("plus(\"a\"utf8, \"b\"utf8)") != std::string::npos);
 }
 
+TEST_CASE("implicit utf8 appends to single-quoted strings") {
+  const std::string source = "main(){ return('a') }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == "main(){ return('a'utf8) }\n");
+}
+
+TEST_CASE("implicit utf8 preserves explicit suffix") {
+  const std::string source = "main(){ return(\"a\"ascii) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("implicit utf8 can be disabled") {
+  const std::string source = "main(){ return(\"a\") }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("rewrites plus operator with raw string literals") {
   const std::string source = "main(){ return(\"a\"raw_utf8+\"b\"raw_utf8) }\n";
   primec::TextFilterPipeline pipeline;
