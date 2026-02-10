@@ -706,6 +706,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding initializer accepts labeled arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+  [i32] count{2i32}
+}
+
+[return<int>]
+main() {
+  [thing] item{[count] 3i32 [value] 4i32}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct constructor rejects unknown named arguments") {
   const std::string source = R"(
 [struct]

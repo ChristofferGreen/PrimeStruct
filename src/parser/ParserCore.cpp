@@ -591,6 +591,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         if (!parseBindingInitializerList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
           return false;
         }
+        if (!finalizeBindingInitializer(callExpr)) {
+          return false;
+        }
       } else {
         return fail("binding requires initializer");
       }

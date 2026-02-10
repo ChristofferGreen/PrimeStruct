@@ -188,6 +188,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         if (!parseBindingInitializerList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }
+        if (!finalizeBindingInitializer(call)) {
+          return false;
+        }
       } else {
         return fail("binding requires initializer");
       }

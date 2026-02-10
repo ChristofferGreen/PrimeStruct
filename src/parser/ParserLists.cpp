@@ -9,6 +9,17 @@
 namespace primec {
 using namespace parser;
 
+namespace {
+bool isBindingQualifierName(const std::string &name) {
+  return name == "public" || name == "private" || name == "package" || name == "static";
+}
+
+bool isBindingAuxTransformName(const std::string &name) {
+  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
+         isBindingQualifierName(name);
+}
+} // namespace
+
 bool Parser::parseTransformList(std::vector<Transform> &out) {
   if (!expect(TokenKind::LBracket, "expected '['")) {
     return false;
@@ -203,6 +214,11 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
     if (!parseBindingInitializerList(param.args, param.argNames, namespacePrefix)) {
       return false;
     }
+    for (const auto &name : param.argNames) {
+      if (name.has_value()) {
+        return fail("parameter defaults do not accept named arguments");
+      }
+    }
   }
   out = std::move(param);
   return true;
@@ -354,6 +370,52 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
   if (!expect(TokenKind::RBrace, "expected '}' after binding initializer")) {
     return false;
   }
+  return true;
+}
+
+bool Parser::finalizeBindingInitializer(Expr &binding) {
+  bool hasNamed = false;
+  for (const auto &name : binding.argNames) {
+    if (name.has_value()) {
+      hasNamed = true;
+      break;
+    }
+  }
+  if (!hasNamed && binding.args.size() <= 1) {
+    return true;
+  }
+
+  std::string typeName;
+  std::vector<std::string> templateArgs;
+  for (const auto &transform : binding.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities" || transform.name == "return") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    typeName = transform.name;
+    templateArgs = transform.templateArgs;
+    break;
+  }
+  if (typeName.empty()) {
+    return fail("binding initializer requires explicit type");
+  }
+
+  Expr constructorCall;
+  constructorCall.kind = Expr::Kind::Call;
+  constructorCall.name = typeName;
+  constructorCall.namespacePrefix = binding.namespacePrefix;
+  constructorCall.templateArgs = std::move(templateArgs);
+  constructorCall.args = std::move(binding.args);
+  constructorCall.argNames = std::move(binding.argNames);
+  binding.args.clear();
+  binding.argNames.clear();
+  binding.args.push_back(std::move(constructorCall));
+  binding.argNames.push_back(std::nullopt);
   return true;
 }
 

@@ -41,6 +41,7 @@ private:
   bool parseDefinitionBody(Definition &def, bool allowNoReturn);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
   bool applySingleTypeToReturn(std::vector<Transform> &transforms);
+  bool finalizeBindingInitializer(Expr &binding);
 
   struct ArgumentLabelGuard {
     explicit ArgumentLabelGuard(Parser &parser) : parser_(parser), previous_(parser_.allowArgumentLabels_) {
