@@ -260,6 +260,25 @@ main() {
   CHECK(result == 8);
 }
 
+TEST_CASE("ir lowerer rejects unsupported math builtin") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(convert<int>(sin(0.5f)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend does not support math builtin: sin") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer supports math-qualified abs/sign/saturate") {
   const std::string source = R"(
 [return<int>]

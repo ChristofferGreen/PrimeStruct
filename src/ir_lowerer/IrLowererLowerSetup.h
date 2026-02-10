@@ -40,6 +40,14 @@ bool IrLowerer::lower(const Program &program,
     defMap.emplace(def.fullPath, &def);
   }
 
+  bool hasMathImport = false;
+  for (const auto &importPath : program.imports) {
+    if (importPath == "/math") {
+      hasMathImport = true;
+      break;
+    }
+  }
+
   bool hasReturnTransform = false;
   bool returnsVoid = false;
   for (const auto &transform : entryDef->transforms) {
@@ -337,6 +345,48 @@ bool IrLowerer::lower(const Program &program,
       return expr.namespacePrefix + "/" + expr.name;
     }
     return "/" + expr.name;
+  };
+
+  auto parseMathName = [&](const std::string &name, std::string &out) -> bool {
+    if (name.empty()) {
+      return false;
+    }
+    std::string normalized = name;
+    if (!normalized.empty() && normalized[0] == '/') {
+      normalized.erase(0, 1);
+    }
+    if (normalized.rfind("math/", 0) == 0) {
+      out = normalized.substr(5);
+      return true;
+    }
+    if (normalized.find('/') != std::string::npos) {
+      return false;
+    }
+    if (!hasMathImport) {
+      return false;
+    }
+    out = normalized;
+    return true;
+  };
+
+  auto getMathBuiltinName = [&](const Expr &expr, std::string &out) -> bool {
+    if (expr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (!parseMathName(expr.name, out)) {
+      return false;
+    }
+    if (out == "abs" || out == "sign" || out == "min" || out == "max" || out == "clamp" || out == "lerp" ||
+        out == "saturate" || out == "floor" || out == "ceil" || out == "round" || out == "trunc" ||
+        out == "fract" || out == "sqrt" || out == "cbrt" || out == "pow" || out == "exp" || out == "exp2" ||
+        out == "log" || out == "log2" || out == "log10" || out == "sin" || out == "cos" || out == "tan" ||
+        out == "asin" || out == "acos" || out == "atan" || out == "atan2" || out == "radians" ||
+        out == "degrees" || out == "sinh" || out == "cosh" || out == "tanh" || out == "asinh" ||
+        out == "acosh" || out == "atanh" || out == "fma" || out == "hypot" || out == "copysign" ||
+        out == "is_nan" || out == "is_inf" || out == "is_finite") {
+      return true;
+    }
+    return false;
   };
 
   auto valueKindFromTypeName = [](const std::string &name) -> LocalInfo::ValueKind {

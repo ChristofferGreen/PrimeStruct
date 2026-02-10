@@ -674,6 +674,16 @@
             return emitInlineDefinitionCall(methodExpr, *callee, localsIn, true);
           }
         }
+        std::string mathName;
+        if (getMathBuiltinName(expr, mathName)) {
+          if (mathName == "abs" || mathName == "sign" || mathName == "min" || mathName == "max" ||
+              mathName == "clamp" || mathName == "saturate" || mathName == "lerp") {
+            // Supported in native/VM lowering.
+          } else {
+            error = "native backend does not support math builtin: " + mathName;
+            return false;
+          }
+        }
         if (isArrayCountCall(expr, localsIn)) {
           if (isEntryArgsName(expr.args.front(), localsIn)) {
             function.instructions.push_back({IrOpcode::PushArgc, 0});
