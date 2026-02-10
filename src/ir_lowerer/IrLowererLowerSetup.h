@@ -40,6 +40,24 @@ bool IrLowerer::lower(const Program &program,
     defMap.emplace(def.fullPath, &def);
   }
 
+  std::unordered_map<std::string, std::string> importAliases;
+  for (const auto &importPath : program.imports) {
+    if (importPath.empty() || importPath[0] != '/') {
+      continue;
+    }
+    const std::string prefix = importPath + "/";
+    for (const auto &def : program.definitions) {
+      if (def.fullPath.rfind(prefix, 0) != 0) {
+        continue;
+      }
+      const std::string remainder = def.fullPath.substr(prefix.size());
+      if (remainder.empty() || remainder.find('/') != std::string::npos) {
+        continue;
+      }
+      importAliases.emplace(remainder, def.fullPath);
+    }
+  }
+
   bool hasMathImport = false;
   for (const auto &importPath : program.imports) {
     if (importPath == "/math") {
@@ -337,12 +355,16 @@ bool IrLowerer::lower(const Program &program,
     return name == "string";
   };
 
-  auto resolveExprPath = [](const Expr &expr) -> std::string {
+  auto resolveExprPath = [&](const Expr &expr) -> std::string {
     if (!expr.name.empty() && expr.name[0] == '/') {
       return expr.name;
     }
     if (!expr.namespacePrefix.empty()) {
       return expr.namespacePrefix + "/" + expr.name;
+    }
+    auto importIt = importAliases.find(expr.name);
+    if (importIt != importAliases.end()) {
+      return importIt->second;
     }
     return "/" + expr.name;
   };
