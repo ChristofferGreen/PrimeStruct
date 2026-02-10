@@ -146,11 +146,13 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
                        candidate == "tanh" || candidate == "asinh" || candidate == "acosh" || candidate == "atanh" ||
                        candidate == "fma" || candidate == "hypot" || candidate == "copysign" || candidate == "is_nan" ||
                        candidate == "is_inf" || candidate == "is_finite";
+  if (isMathQualified && !isMathBuiltin) {
+    return false;
+  }
   return candidate == "assign" || candidate == "plus" || candidate == "minus" || candidate == "multiply" ||
          candidate == "divide" || candidate == "negate" || candidate == "greater_than" || candidate == "less_than" ||
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
-         candidate == "and" || candidate == "or" || candidate == "not" || candidate == "clamp" || candidate == "min" ||
-         candidate == "max" || candidate == "abs" || candidate == "sign" || candidate == "saturate" ||
+         candidate == "and" || candidate == "or" || candidate == "not" ||
          (isMathBuiltin && (allowMathBare || isMathQualified)) ||
          candidate == "if" || candidate == "then" || candidate == "else" ||
          candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
