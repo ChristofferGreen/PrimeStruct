@@ -131,6 +131,24 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs string comparisons in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(
+    convert<int>(equal("alpha"raw_utf8, "alpha"raw_utf8)),
+    convert<int>(less_than("alpha"raw_utf8, "beta"raw_utf8))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("compile_string_compare.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_compare_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs power/log builtins in C++ emitter") {
   const std::string source = R"(
 [return<int>]
