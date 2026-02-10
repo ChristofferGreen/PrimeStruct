@@ -769,6 +769,12 @@ bool parseBindingInfo(const Expr &expr,
   if (typeName.empty()) {
     typeName = "int";
   }
+  if (restrictType.has_value()) {
+    if (auto softwareType = findSoftwareNumericType(*restrictType)) {
+      error = "software numeric types are not supported yet: " + *softwareType;
+      return false;
+    }
+  }
   restrictTypeOut = restrictType;
   std::string fullType = typeName;
   if (typeHasTemplate) {

@@ -1256,6 +1256,19 @@ main() {
   CHECK(error.find("array literal requires element type i32") != std::string::npos);
 }
 
+TEST_CASE("array literal rejects software numeric type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  array<decimal>(1.0f)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
 TEST_CASE("map literal missing template args fails") {
   const std::string source = R"(
 [return<int>]
@@ -1271,6 +1284,19 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("map literal requires exactly two template arguments") != std::string::npos);
+}
+
+TEST_CASE("map literal rejects software numeric types") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<integer, i32>(1i32, 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
 }
 
 TEST_CASE("map literal key type mismatch fails") {

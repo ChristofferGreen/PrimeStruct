@@ -48,6 +48,8 @@ bool isBindingQualifierName(const std::string &name);
 bool isBindingAuxTransformName(const std::string &name);
 bool hasExplicitBindingTypeTransform(const Expr &expr);
 bool isPrimitiveBindingTypeName(const std::string &name);
+bool isSoftwareNumericTypeName(const std::string &name);
+std::optional<std::string> findSoftwareNumericType(const std::string &typeName);
 std::string normalizeBindingTypeName(const std::string &name);
 std::string joinTemplateArgs(const std::vector<std::string> &args);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);

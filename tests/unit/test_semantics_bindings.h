@@ -280,6 +280,19 @@ main() {
   CHECK(error.find("restrict type does not match binding type") != std::string::npos);
 }
 
+TEST_CASE("restrict rejects software numeric types") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [restrict<decimal> i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
 TEST_CASE("binding align_bytes validates") {
   const std::string source = R"(
 [return<int>]

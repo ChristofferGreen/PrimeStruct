@@ -654,9 +654,21 @@
             error_ = "array literal requires exactly one template argument";
             return false;
           }
+          if (auto softwareType = findSoftwareNumericType(expr.templateArgs.front())) {
+            error_ = "software numeric types are not supported yet: " + *softwareType;
+            return false;
+          }
         } else {
           if (expr.templateArgs.size() != 2) {
             error_ = "map literal requires exactly two template arguments";
+            return false;
+          }
+          if (auto softwareType = findSoftwareNumericType(expr.templateArgs[0])) {
+            error_ = "software numeric types are not supported yet: " + *softwareType;
+            return false;
+          }
+          if (auto softwareType = findSoftwareNumericType(expr.templateArgs[1])) {
+            error_ = "software numeric types are not supported yet: " + *softwareType;
             return false;
           }
           if (expr.args.size() % 2 != 0) {
