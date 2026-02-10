@@ -2081,6 +2081,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("print accepts bool binding") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  [bool] ready(true)
+  print_line(ready)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("default effects allow print") {
   const std::string source = R"(
 [return<void>]
