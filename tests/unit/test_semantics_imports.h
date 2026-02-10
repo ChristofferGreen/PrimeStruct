@@ -39,6 +39,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import resolves methods on struct types") {
+  const std::string source = R"(
+import /util
+[struct]
+/util/Widget() {
+  [i32] value{1i32}
+}
+[return<int>]
+/util/Widget/get([Widget] self, [i32] value) {
+  return(value)
+}
+[return<int>]
+main() {
+  [Widget] item{Widget()}
+  [i32] result{item.get(5i32)}
+  return(result)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import does not alias nested definitions") {
   const std::string source = R"(
 import /util

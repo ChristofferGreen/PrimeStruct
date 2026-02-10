@@ -363,7 +363,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
         return true;
       }
-      resolvedOut = resolveTypePath(typeName, expr.namespacePrefix) + "/" + expr.name;
+      std::string resolvedType = resolveTypePath(typeName, expr.namespacePrefix);
+      if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end()) {
+          resolvedType = importIt->second;
+        }
+      }
+      resolvedOut = resolvedType + "/" + expr.name;
       return true;
     };
     std::string resolved = resolveCalleePath(expr);

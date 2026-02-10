@@ -196,7 +196,14 @@
         resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
         return true;
       }
-      resolvedOut = resolveTypePath(typeName, receiver.namespacePrefix) + "/" + methodName;
+      std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+      if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end()) {
+          resolvedType = importIt->second;
+        }
+      }
+      resolvedOut = resolvedType + "/" + methodName;
       return true;
     };
     auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {

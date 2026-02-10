@@ -465,6 +465,7 @@ bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, B
 
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
+                           const std::unordered_map<std::string, std::string> &importAliases,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
                            std::string &resolvedOut) {
   if (!call.isMethodCall || call.args.empty()) {
@@ -508,7 +509,7 @@ bool resolveMethodCallPath(const Expr &call,
           return "";
         }
         std::string methodPath;
-        if (resolveMethodCallPath(expr, localTypes, returnKinds, methodPath)) {
+        if (resolveMethodCallPath(expr, localTypes, importAliases, returnKinds, methodPath)) {
           auto it = returnKinds.find(methodPath);
           if (it != returnKinds.end()) {
             return typeNameForReturnKind(it->second);
@@ -539,7 +540,14 @@ bool resolveMethodCallPath(const Expr &call,
     resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + call.name;
     return true;
   }
-  resolvedOut = resolveTypePath(typeName, call.namespacePrefix) + "/" + call.name;
+  std::string resolvedType = resolveTypePath(typeName, call.namespacePrefix);
+  if (returnKinds.count(resolvedType) == 0) {
+    auto importIt = importAliases.find(typeName);
+    if (importIt != importAliases.end()) {
+      resolvedType = importIt->second;
+    }
+  }
+  resolvedOut = resolvedType + "/" + call.name;
   return true;
 }
 
