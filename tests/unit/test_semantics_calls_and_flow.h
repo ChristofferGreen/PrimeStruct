@@ -1019,7 +1019,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("convert<bool> rejects float operand") {
+TEST_CASE("convert<bool> accepts float operand") {
   const std::string source = R"(
 [return<bool>]
 main() {
@@ -1027,8 +1027,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("convert<bool> requires integer or bool operand") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("convert rejects string operand") {

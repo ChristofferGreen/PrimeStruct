@@ -606,10 +606,6 @@
           error_ = "convert requires numeric or bool operand";
           return false;
         }
-        if (typeName == "bool" && !isIntegerOrBoolExpr(expr.args.front(), params, locals)) {
-          error_ = "convert<bool> requires integer or bool operand";
-          return false;
-        }
         return true;
       }
       PrintBuiltin printBuiltin;
