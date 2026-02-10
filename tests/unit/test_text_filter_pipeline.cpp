@@ -330,6 +330,16 @@ TEST_CASE("implicit utf8 preserves explicit suffix") {
   CHECK(output == source);
 }
 
+TEST_CASE("implicit utf8 preserves raw_ascii suffix") {
+  const std::string source = "main(){ return(\"a\"raw_ascii) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("implicit utf8 can be disabled") {
   const std::string source = "main(){ return(\"a\") }\n";
   primec::TextFilterPipeline pipeline;
