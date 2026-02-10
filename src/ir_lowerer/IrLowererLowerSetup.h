@@ -389,6 +389,13 @@ bool IrLowerer::lower(const Program &program,
     return false;
   };
 
+  auto getMathConstantName = [&](const std::string &name, std::string &out) -> bool {
+    if (!parseMathName(name, out)) {
+      return false;
+    }
+    return out == "pi" || out == "tau" || out == "e";
+  };
+
   auto valueKindFromTypeName = [](const std::string &name) -> LocalInfo::ValueKind {
     if (name == "int" || name == "i32") {
       return LocalInfo::ValueKind::Int32;

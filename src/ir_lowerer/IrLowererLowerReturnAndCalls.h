@@ -614,6 +614,11 @@
         return true;
       }
       case Expr::Kind::Name: {
+        std::string mathConst;
+        if (getMathConstantName(expr.name, mathConst)) {
+          error = "native backend does not support math constant: " + mathConst;
+          return false;
+        }
         auto it = localsIn.find(expr.name);
         if (it != localsIn.end()) {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
