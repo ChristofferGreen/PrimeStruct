@@ -2035,6 +2035,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("print accepts string map access") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  [map<i32, string>] values(map<i32, string>(1i32, "hi"utf8))
+  print_line(values[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("print rejects struct block value") {
   const std::string source = R"(
 [struct]
