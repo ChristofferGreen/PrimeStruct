@@ -135,6 +135,30 @@ main() {
   CHECK(error.find("if requires condition") != std::string::npos);
 }
 
+TEST_CASE("if rejects trailing block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(true, 1i32, 2i32) { 3i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if does not accept trailing block arguments") != std::string::npos);
+}
+
+TEST_CASE("if rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(cond = true, then = 1i32, else = 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("binding not allowed in expression") {
   const std::string source = R"(
 [return<int>]
