@@ -39,6 +39,34 @@ bool isPrimitiveBindingTypeName(const std::string &name) {
          name == "f64" || name == "bool" || name == "string";
 }
 
+bool isSoftwareNumericTypeName(const std::string &name) {
+  return name == "integer" || name == "decimal" || name == "complex";
+}
+
+std::optional<std::string> findSoftwareNumericType(const std::string &typeName) {
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(typeName, base, arg)) {
+    if (isSoftwareNumericTypeName(normalizeBindingTypeName(typeName))) {
+      return normalizeBindingTypeName(typeName);
+    }
+    return std::nullopt;
+  }
+  if (isSoftwareNumericTypeName(normalizeBindingTypeName(base))) {
+    return normalizeBindingTypeName(base);
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(arg, args)) {
+    return std::nullopt;
+  }
+  for (const auto &nested : args) {
+    if (auto found = findSoftwareNumericType(nested)) {
+      return found;
+    }
+  }
+  return std::nullopt;
+}
+
 std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "int") {
     return "i32";
@@ -201,6 +229,10 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
     }
     if (transform.templateArgs.size() != 1) {
       error = "return transform requires a type on " + def.fullPath;
+      return ReturnKind::Unknown;
+    }
+    if (auto softwareType = findSoftwareNumericType(transform.templateArgs.front())) {
+      error = "software numeric types are not supported yet: " + *softwareType;
       return ReturnKind::Unknown;
     }
     ReturnKind nextKind = returnKindForTypeName(transform.templateArgs.front());
@@ -738,6 +770,14 @@ bool parseBindingInfo(const Expr &expr,
     typeName = "int";
   }
   restrictTypeOut = restrictType;
+  std::string fullType = typeName;
+  if (typeHasTemplate) {
+    fullType += "<" + info.typeTemplateArg + ">";
+  }
+  if (auto softwareType = findSoftwareNumericType(fullType)) {
+    error = "software numeric types are not supported yet: " + *softwareType;
+    return false;
+  }
   if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
     std::string resolved = resolveTypePath(typeName, namespacePrefix);
     if (structTypes.count(resolved) == 0) {

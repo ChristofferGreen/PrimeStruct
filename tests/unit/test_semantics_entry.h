@@ -783,6 +783,18 @@ main() {
   CHECK(error.find("unsupported return type") != std::string::npos);
 }
 
+TEST_CASE("software numeric return type fails") {
+  const std::string source = R"(
+[return<complex>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
 TEST_CASE("duplicate return transform fails") {
   const std::string source = R"(
 [return<int>, return<i32>]

@@ -37,6 +37,32 @@ main() {
   CHECK(error.find("unsupported binding type") != std::string::npos);
 }
 
+TEST_CASE("software numeric bindings are rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [integer] value{1i32}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
+TEST_CASE("software numeric collection bindings are rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<decimal>] values{array<decimal>(1.0f)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
 TEST_CASE("field-only definition can be used as a type") {
   const std::string source = R"(
 Foo() {
