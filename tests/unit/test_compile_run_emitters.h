@@ -129,6 +129,37 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs math-qualified constants in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(convert<int>(/math/pi), plus(convert<int>(/math/tau), convert<int>(/math/e))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_math_constants_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_constants_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
+TEST_CASE("compiles and runs imported math constants in C++ emitter") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_imported_math_constants_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_imported_math_constants_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("compiles and runs rounding builtins in C++ emitter") {
   const std::string source = R"(
 import /math
