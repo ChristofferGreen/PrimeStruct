@@ -395,7 +395,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: clamp") != std::string::npos);
+  CHECK(error.find("math builtin requires import /math: clamp") != std::string::npos);
 }
 
 TEST_CASE("infers return type from builtin clamp") {

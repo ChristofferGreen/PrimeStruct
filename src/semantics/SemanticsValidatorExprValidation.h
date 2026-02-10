@@ -817,6 +817,15 @@
         }
         return true;
       }
+      if (!hasMathImport_ && expr.name.find('/') == std::string::npos) {
+        std::string builtinName;
+        if (getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
+            getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
+            getBuiltinMathName(expr, builtinName, true)) {
+          error_ = "math builtin requires import /math: " + expr.name;
+          return false;
+        }
+      }
       error_ = "unknown call target: " + expr.name;
       return false;
     }
