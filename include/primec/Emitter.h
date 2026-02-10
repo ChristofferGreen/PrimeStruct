@@ -23,8 +23,10 @@ private:
   std::string emitExpr(const Expr &expr,
                        const std::unordered_map<std::string, std::string> &nameMap,
                        const std::unordered_map<std::string, std::vector<Expr>> &paramMap,
+                       const std::unordered_map<std::string, std::string> &importAliases,
                        const std::unordered_map<std::string, BindingInfo> &localTypes,
-                       const std::unordered_map<std::string, ReturnKind> &returnKinds) const;
+                       const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                       bool allowMathBare) const;
 };
 
 } // namespace primec

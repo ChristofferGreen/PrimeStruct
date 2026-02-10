@@ -85,6 +85,7 @@ main() {
 
 TEST_CASE("compiles and runs lerp in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(lerp(2i32, 6i32, 1i32))
@@ -100,6 +101,7 @@ main() {
 
 TEST_CASE("compiles and runs rounding builtins in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   [f32] value{1.5f}
@@ -151,6 +153,7 @@ main() {
 
 TEST_CASE("compiles and runs power/log builtins in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(plus(
@@ -175,6 +178,7 @@ main() {
 
 TEST_CASE("compiles and runs trig builtins in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   [f32] zero{0.0f}
@@ -204,6 +208,7 @@ main() {
 
 TEST_CASE("compiles and runs hyperbolic builtins in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   [f32] zero{0.0f}
@@ -226,6 +231,7 @@ main() {
 
 TEST_CASE("compiles and runs float utils in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(plus(
@@ -244,6 +250,7 @@ main() {
 
 TEST_CASE("compiles and runs float predicates in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   [f32] zero{0.0f}
@@ -266,6 +273,7 @@ main() {
 
 TEST_CASE("compiles and runs math constants in C++ emitter") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(plus(

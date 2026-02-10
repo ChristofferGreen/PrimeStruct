@@ -25,8 +25,10 @@ std::string Emitter::toCppName(const std::string &fullPath) const {
 std::string Emitter::emitExpr(const Expr &expr,
                               const std::unordered_map<std::string, std::string> &nameMap,
                               const std::unordered_map<std::string, std::vector<Expr>> &paramMap,
+                              const std::unordered_map<std::string, std::string> &importAliases,
                               const std::unordered_map<std::string, BindingInfo> &localTypes,
-                              const std::unordered_map<std::string, ReturnKind> &returnKinds) const {
+                              const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                              bool allowMathBare) const {
   std::function<bool(const Expr &)> isPointerExpr;
   isPointerExpr = [&](const Expr &candidate) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
@@ -71,8 +73,15 @@ std::string Emitter::emitExpr(const Expr &expr,
     return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
   }
   if (expr.kind == Expr::Kind::Name) {
-    if (localTypes.count(expr.name) == 0 && isBuiltinMathConstantName(expr.name)) {
-      return "ps_const_" + expr.name;
+    if (localTypes.count(expr.name) == 0 && isBuiltinMathConstantName(expr.name, allowMathBare)) {
+      std::string constantName = expr.name;
+      if (!constantName.empty() && constantName[0] == '/') {
+        constantName.erase(0, 1);
+      }
+      if (constantName.rfind("math/", 0) == 0) {
+        constantName.erase(0, 5);
+      }
+      return "ps_const_" + constantName;
     }
     return expr.name;
   }
@@ -82,6 +91,26 @@ std::string Emitter::emitExpr(const Expr &expr,
     std::string methodPath;
     if (resolveMethodCallPath(expr, localTypes, returnKinds, methodPath)) {
       full = methodPath;
+    }
+  }
+  if (!expr.isMethodCall && !expr.name.empty() && expr.name[0] != '/' && expr.name.find('/') == std::string::npos) {
+    if (nameMap.count(full) == 0) {
+      if (!expr.namespacePrefix.empty()) {
+        auto importIt = importAliases.find(expr.name);
+        if (importIt != importAliases.end()) {
+          full = importIt->second;
+        }
+      } else {
+        const std::string root = "/" + expr.name;
+        if (nameMap.count(root) > 0) {
+          full = root;
+        } else {
+          auto importIt = importAliases.find(expr.name);
+          if (importIt != importAliases.end()) {
+            full = importIt->second;
+          }
+        }
+      }
     }
   }
   if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 && nameMap.count(full) == 0 &&
@@ -111,13 +140,14 @@ std::string Emitter::emitExpr(const Expr &expr,
           out << "return 0; ";
           break;
         }
-        out << "return " << emitExpr(stmt, nameMap, paramMap, blockTypes, returnKinds) << "; ";
+        out << "return " << emitExpr(stmt, nameMap, paramMap, importAliases, blockTypes, returnKinds, allowMathBare)
+            << "; ";
         break;
       }
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
         if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-          ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), blockTypes, returnKinds);
+          ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), blockTypes, returnKinds, allowMathBare);
           std::string inferred = typeNameForReturnKind(initKind);
           if (!inferred.empty()) {
             binding.typeName = inferred;
@@ -132,22 +162,42 @@ std::string Emitter::emitExpr(const Expr &expr,
           out << (needsConst ? "const " : "") << type << " " << stmt.name;
           if (!stmt.args.empty()) {
             if (isReference) {
-              out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, blockTypes, returnKinds) << ")";
+              out << " = *(" << emitExpr(stmt.args.front(),
+                                         nameMap,
+                                         paramMap,
+                                         importAliases,
+                                         blockTypes,
+                                         returnKinds,
+                                         allowMathBare)
+                  << ")";
             } else {
-              out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, blockTypes, returnKinds);
+              out << " = " << emitExpr(stmt.args.front(),
+                                      nameMap,
+                                      paramMap,
+                                      importAliases,
+                                      blockTypes,
+                                      returnKinds,
+                                      allowMathBare);
             }
           }
           out << "; ";
         } else {
           out << (needsConst ? "const " : "") << "auto " << stmt.name;
           if (!stmt.args.empty()) {
-            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, blockTypes, returnKinds);
+            out << " = " << emitExpr(stmt.args.front(),
+                                    nameMap,
+                                    paramMap,
+                                    importAliases,
+                                    blockTypes,
+                                    returnKinds,
+                                    allowMathBare);
           }
           out << "; ";
         }
         continue;
       }
-      out << "(void)" << emitExpr(stmt, nameMap, paramMap, blockTypes, returnKinds) << "; ";
+      out << "(void)"
+          << emitExpr(stmt, nameMap, paramMap, importAliases, blockTypes, returnKinds, allowMathBare) << "; ";
     }
     out << "}())";
     return out.str();
@@ -169,7 +219,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     auto emitBranchValueExpr =
         [&](const Expr &candidate, std::unordered_map<std::string, BindingInfo> branchTypes) -> std::string {
       if (!isIfBlockEnvelope(candidate)) {
-        return emitExpr(candidate, nameMap, paramMap, branchTypes, returnKinds);
+        return emitExpr(candidate, nameMap, paramMap, importAliases, branchTypes, returnKinds, allowMathBare);
       }
       if (candidate.bodyArguments.empty()) {
         return "0";
@@ -184,13 +234,14 @@ std::string Emitter::emitExpr(const Expr &expr,
             out << "return 0; ";
             break;
           }
-          out << "return " << emitExpr(stmt, nameMap, paramMap, branchTypes, returnKinds) << "; ";
+          out << "return " << emitExpr(stmt, nameMap, paramMap, importAliases, branchTypes, returnKinds, allowMathBare)
+              << "; ";
           break;
         }
         if (stmt.isBinding) {
           BindingInfo binding = getBindingInfo(stmt);
           if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-            ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), branchTypes, returnKinds);
+            ReturnKind initKind = inferPrimitiveReturnKind(stmt.args.front(), branchTypes, returnKinds, allowMathBare);
             std::string inferred = typeNameForReturnKind(initKind);
             if (!inferred.empty()) {
               binding.typeName = inferred;
@@ -204,61 +255,95 @@ std::string Emitter::emitExpr(const Expr &expr,
             bool isReference = binding.typeName == "Reference";
             out << (needsConst ? "const " : "") << type << " " << stmt.name;
             if (!stmt.args.empty()) {
-              if (isReference) {
-                out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, branchTypes, returnKinds) << ")";
-              } else {
-                out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, branchTypes, returnKinds);
-              }
+            if (isReference) {
+              out << " = *(" << emitExpr(stmt.args.front(),
+                                         nameMap,
+                                         paramMap,
+                                         importAliases,
+                                         branchTypes,
+                                         returnKinds,
+                                         allowMathBare)
+                  << ")";
+            } else {
+              out << " = " << emitExpr(stmt.args.front(),
+                                      nameMap,
+                                      paramMap,
+                                      importAliases,
+                                      branchTypes,
+                                      returnKinds,
+                                      allowMathBare);
             }
-            out << "; ";
-          } else {
-            out << (needsConst ? "const " : "") << "auto " << stmt.name;
-            if (!stmt.args.empty()) {
-              out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, branchTypes, returnKinds);
-            }
-            out << "; ";
           }
-          continue;
+          out << "; ";
+        } else {
+          out << (needsConst ? "const " : "") << "auto " << stmt.name;
+          if (!stmt.args.empty()) {
+            out << " = " << emitExpr(stmt.args.front(),
+                                    nameMap,
+                                    paramMap,
+                                    importAliases,
+                                    branchTypes,
+                                    returnKinds,
+                                    allowMathBare);
+          }
+          out << "; ";
         }
-        out << "(void)" << emitExpr(stmt, nameMap, paramMap, branchTypes, returnKinds) << "; ";
+        continue;
       }
-      out << "}())";
-      return out.str();
-    };
-    std::ostringstream out;
-    out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " ? "
-        << emitBranchValueExpr(expr.args[1], localTypes) << " : " << emitBranchValueExpr(expr.args[2], localTypes) << ")";
+      out << "(void)"
+          << emitExpr(stmt, nameMap, paramMap, importAliases, branchTypes, returnKinds, allowMathBare) << "; ";
+    }
+    out << "}())";
+    return out.str();
+  };
+  std::ostringstream out;
+    out << "("
+        << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << " ? "
+        << emitBranchValueExpr(expr.args[1], localTypes) << " : " << emitBranchValueExpr(expr.args[2], localTypes)
+        << ")";
     return out.str();
   }
   auto it = nameMap.find(full);
   if (it == nameMap.end()) {
     if (isMapCountCall(expr, localTypes)) {
       std::ostringstream out;
-      out << "ps_map_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "ps_map_count("
+          << emitExpr(expr.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+          << ")";
       return out.str();
     }
     if (isArrayCountCall(expr, localTypes)) {
       std::ostringstream out;
-      out << "ps_array_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "ps_array_count("
+          << emitExpr(expr.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+          << ")";
       return out.str();
     }
     if (isStringCountCall(expr, localTypes)) {
       std::ostringstream out;
-      out << "ps_string_count(" << emitExpr(expr.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "ps_string_count("
+          << emitExpr(expr.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+          << ")";
       return out.str();
     }
     if (expr.name == "at" && expr.args.size() == 2) {
       std::ostringstream out;
       const Expr &target = expr.args[0];
       if (isStringValue(target, localTypes)) {
-        out << "ps_string_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "ps_string_at("
+            << emitExpr(target, nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
       } else if (isMapValue(target, localTypes)) {
-        out << "ps_map_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "ps_map_at("
+            << emitExpr(target, nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
       } else {
-        out << "ps_array_at(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "ps_array_at("
+            << emitExpr(target, nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
       }
       return out.str();
     }
@@ -266,14 +351,20 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::ostringstream out;
       const Expr &target = expr.args[0];
       if (isStringValue(target, localTypes)) {
-        out << "ps_string_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "ps_string_at_unsafe("
+            << emitExpr(target, nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
       } else if (isMapValue(target, localTypes)) {
-        out << "ps_map_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "ps_map_at_unsafe("
+            << emitExpr(target, nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
       } else {
-        out << "ps_array_at_unsafe(" << emitExpr(target, nameMap, paramMap, localTypes, returnKinds) << ", "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "ps_array_at_unsafe("
+            << emitExpr(target, nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
       }
       return out.str();
     }
@@ -281,75 +372,90 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
       std::ostringstream out;
       if ((op == '+' || op == '-') && isPointerExpr(expr.args[0])) {
-        out << "ps_pointer_add(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ", ";
+        out << "ps_pointer_add("
+            << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", ";
         if (op == '-') {
-          out << "-(" << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+          out << "-("
+              << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+              << ")";
         } else {
-          out << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds);
+          out << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare);
         }
         out << ")";
         return out.str();
       }
-      out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " " << op << " "
-          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "("
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << " "
+          << op << " "
+          << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     if (isBuiltinNegate(expr) && expr.args.size() == 1) {
       std::ostringstream out;
-      out << "(-" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "(-"
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     const char *cmp = nullptr;
     if (getBuiltinComparison(expr, cmp)) {
       std::ostringstream out;
       if (expr.args.size() == 1) {
-        out << "(" << cmp << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "("
+            << cmp
+            << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
         return out.str();
       }
       if (expr.args.size() == 2) {
-        out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " " << cmp << " "
-            << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+        out << "("
+            << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << " "
+            << cmp << " "
+            << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+            << ")";
         return out.str();
       }
     }
     if (isBuiltinClamp(expr) && expr.args.size() == 3) {
       std::ostringstream out;
-      out << "ps_builtin_clamp(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ", "
-          << emitExpr(expr.args[2], nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "ps_builtin_clamp("
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+          << emitExpr(expr.args[2], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+          << ")";
       return out.str();
     }
     std::string minMaxName;
     if (getBuiltinMinMaxName(expr, minMaxName) && expr.args.size() == 2) {
       std::ostringstream out;
       out << "ps_builtin_" << minMaxName << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ", "
-          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ", "
+          << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     std::string absSignName;
     if (getBuiltinAbsSignName(expr, absSignName) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_builtin_" << absSignName << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     std::string saturateName;
     if (getBuiltinSaturateName(expr, saturateName) && expr.args.size() == 1) {
       std::ostringstream out;
       out << "ps_builtin_" << saturateName << "("
-          << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+          << ")";
       return out.str();
     }
     std::string mathName;
-    if (getBuiltinMathName(expr, mathName)) {
+    if (getBuiltinMathName(expr, mathName, allowMathBare)) {
       std::ostringstream out;
       out << "ps_builtin_" << mathName << "(";
       for (size_t i = 0; i < expr.args.size(); ++i) {
         if (i > 0) {
           out << ", ";
         }
-        out << emitExpr(expr.args[i], nameMap, paramMap, localTypes, returnKinds);
+        out << emitExpr(expr.args[i], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare);
       }
       out << ")";
       return out.str();
@@ -359,13 +465,14 @@ std::string Emitter::emitExpr(const Expr &expr,
       std::string targetType = bindingTypeToCpp(expr.templateArgs[0]);
       std::ostringstream out;
       out << "static_cast<" << targetType << ">("
-          << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     char pointerOp = '\0';
     if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
       std::ostringstream out;
-      out << "(" << pointerOp << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "(" << pointerOp
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     std::string collection;
@@ -378,7 +485,7 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(expr.args[i], nameMap, paramMap, localTypes, returnKinds);
+          out << emitExpr(expr.args[i], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare);
         }
         out << "}";
         return out.str();
@@ -392,8 +499,11 @@ std::string Emitter::emitExpr(const Expr &expr,
           if (i > 0) {
             out << ", ";
           }
-          out << "{" << emitExpr(expr.args[i], nameMap, paramMap, localTypes, returnKinds) << ", "
-              << emitExpr(expr.args[i + 1], nameMap, paramMap, localTypes, returnKinds) << "}";
+          out << "{"
+              << emitExpr(expr.args[i], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+              << ", "
+              << emitExpr(expr.args[i + 1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+              << "}";
         }
         out << "}";
         return out.str();
@@ -401,8 +511,9 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     if (isBuiltinAssign(expr, nameMap) && expr.args.size() == 2) {
       std::ostringstream out;
-      out << "(" << emitExpr(expr.args[0], nameMap, paramMap, localTypes, returnKinds) << " = "
-          << emitExpr(expr.args[1], nameMap, paramMap, localTypes, returnKinds) << ")";
+      out << "("
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << " = "
+          << emitExpr(expr.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
     return "0";
@@ -422,7 +533,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (i > 0) {
       out << ", ";
     }
-    out << emitExpr(*orderedArgs[i], nameMap, paramMap, localTypes, returnKinds);
+    out << emitExpr(*orderedArgs[i], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare);
   }
   out << ")";
   return out.str();

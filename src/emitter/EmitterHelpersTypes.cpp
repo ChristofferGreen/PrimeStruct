@@ -78,8 +78,8 @@ bool isBuiltinClamp(const Expr &expr);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
-bool getBuiltinMathName(const Expr &expr, std::string &out);
-bool isBuiltinMathConstantName(const std::string &name);
+bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
+bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 std::string resolveExprPath(const Expr &expr);
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
@@ -351,7 +351,8 @@ ReturnKind combineNumericKinds(ReturnKind left, ReturnKind right) {
 
 ReturnKind inferPrimitiveReturnKind(const Expr &expr,
                                    const std::unordered_map<std::string, BindingInfo> &localTypes,
-                                   const std::unordered_map<std::string, ReturnKind> &returnKinds) {
+                                   const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                                   bool allowMathBare) {
   if (expr.kind == Expr::Kind::Literal) {
     if (expr.isUnsigned) {
       return ReturnKind::UInt64;
@@ -365,7 +366,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
   }
   if (expr.kind == Expr::Kind::Name) {
-    if (isBuiltinMathConstantName(expr.name)) {
+    if (isBuiltinMathConstantName(expr.name, allowMathBare)) {
       return ReturnKind::Float64;
     }
     auto it = localTypes.find(expr.name);
@@ -388,7 +389,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
       if (bodyExpr.isBinding && bodyExpr.args.size() == 1) {
         BindingInfo binding = getBindingInfo(bodyExpr);
         if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-          ReturnKind initKind = inferPrimitiveReturnKind(bodyExpr.args.front(), blockTypes, returnKinds);
+          ReturnKind initKind = inferPrimitiveReturnKind(bodyExpr.args.front(), blockTypes, returnKinds, allowMathBare);
           std::string inferred = typeNameForReturnKind(initKind);
           if (!inferred.empty()) {
             binding.typeName = inferred;
@@ -402,7 +403,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
         continue;
       }
       sawValue = true;
-      lastKind = inferPrimitiveReturnKind(bodyExpr, blockTypes, returnKinds);
+      lastKind = inferPrimitiveReturnKind(bodyExpr, blockTypes, returnKinds, allowMathBare);
     }
     return sawValue ? lastKind : ReturnKind::Unknown;
   }
@@ -420,18 +421,18 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     return returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
   }
   if (isSimpleCallName(expr, "negate") && expr.args.size() == 1) {
-    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
       return ReturnKind::Unknown;
     }
     return argKind;
   }
   if (isSimpleCallName(expr, "assign") && expr.args.size() == 2) {
-    return inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
+    return inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare);
   }
   if (isSimpleCallName(expr, "if") && expr.args.size() == 3) {
-    ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
-    ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds);
+    ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare);
+    ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds, allowMathBare);
     if (thenKind == elseKind) {
       return thenKind;
     }
@@ -441,20 +442,20 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     return ReturnKind::Bool;
   }
   if (isBuiltinClamp(expr) && expr.args.size() == 3) {
-    ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
-    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
-    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds));
+    ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
+    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare));
+    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds, allowMathBare));
     return result;
   }
   std::string minMaxName;
   if (getBuiltinMinMaxName(expr, minMaxName) && expr.args.size() == 2) {
-    ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
-    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
+    ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
+    result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare));
     return result;
   }
   std::string absSignName;
   if (getBuiltinAbsSignName(expr, absSignName) && expr.args.size() == 1) {
-    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
       return ReturnKind::Unknown;
     }
@@ -462,27 +463,27 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   }
   std::string saturateName;
   if (getBuiltinSaturateName(expr, saturateName) && expr.args.size() == 1) {
-    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
       return ReturnKind::Unknown;
     }
     return argKind;
   }
   std::string mathName;
-  if (getBuiltinMathName(expr, mathName)) {
+  if (getBuiltinMathName(expr, mathName, allowMathBare)) {
     if (mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite") {
       return ReturnKind::Bool;
     }
     if (mathName == "lerp" && expr.args.size() == 3) {
-      ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
-      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds));
-      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds));
+      ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
+      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare));
+      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds, allowMathBare));
       return result;
     }
     if (expr.args.empty()) {
       return ReturnKind::Unknown;
     }
-    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds);
+    ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Float64) {
       return ReturnKind::Float64;
     }
@@ -497,8 +498,8 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   }
   char op = '\0';
   if (getBuiltinOperator(expr, op) && expr.args.size() == 2) {
-    ReturnKind left = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds);
-    ReturnKind right = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds);
+    ReturnKind left = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
+    ReturnKind right = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare);
     return combineNumericKinds(left, right);
   }
   return ReturnKind::Unknown;

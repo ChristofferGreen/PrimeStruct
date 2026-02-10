@@ -15,6 +15,7 @@ public:
   bool parse(Program &program, std::string &error);
 
 private:
+  bool parseImport(Program &program);
   bool parseNamespace(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseDefinitionOrExecution(std::vector<Definition> &defs, std::vector<Execution> &execs);
   bool parseTransformList(std::vector<Transform> &out);

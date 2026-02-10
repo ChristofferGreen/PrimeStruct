@@ -69,8 +69,8 @@ bool getBuiltinClampName(const Expr &expr, std::string &out);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
-bool getBuiltinMathName(const Expr &expr, std::string &out);
-bool isBuiltinMathConstant(const std::string &name);
+bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
+bool isBuiltinMathConstant(const std::string &name, bool allowBare);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
@@ -97,6 +97,7 @@ bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out);
 bool parseBindingInfo(const Expr &expr,
                       const std::string &namespacePrefix,
                       const std::unordered_set<std::string> &structTypes,
+                      const std::unordered_map<std::string, std::string> &importAliases,
                       BindingInfo &info,
                       std::optional<std::string> &restrictTypeOut,
                       std::string &error);
@@ -115,7 +116,8 @@ std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr);
 bool tryInferBindingTypeFromInitializer(const Expr &initializer,
                                         const std::vector<ParameterInfo> &params,
                                         const std::unordered_map<std::string, BindingInfo> &locals,
-                                        BindingInfo &bindingOut);
+                                        BindingInfo &bindingOut,
+                                        bool allowMathBare);
 bool buildOrderedArguments(const std::vector<ParameterInfo> &params,
                            const std::vector<Expr> &args,
                            const std::vector<std::optional<std::string>> &argNames,

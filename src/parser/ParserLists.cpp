@@ -319,9 +319,6 @@ bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
-  if (normalized.find('/') != std::string::npos) {
-    return true;
-  }
   if (!isBuiltinName(normalized)) {
     return true;
   }

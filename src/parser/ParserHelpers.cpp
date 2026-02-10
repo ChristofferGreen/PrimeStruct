@@ -8,8 +8,8 @@ namespace primec::parser {
 namespace {
 
 bool isReservedKeyword(const std::string &text) {
-  return text == "mut" || text == "return" || text == "include" || text == "namespace" || text == "true" ||
-         text == "false";
+  return text == "mut" || text == "return" || text == "include" || text == "import" || text == "namespace" ||
+         text == "true" || text == "false";
 }
 
 bool isAsciiAlpha(char c) {
@@ -127,22 +127,34 @@ bool isStructTransformName(const std::string &text) {
 }
 
 bool isBuiltinName(const std::string &name) {
-  return name == "assign" || name == "plus" || name == "minus" || name == "multiply" || name == "divide" ||
-         name == "negate" || name == "greater_than" || name == "less_than" || name == "greater_equal" ||
-         name == "less_equal" || name == "equal" || name == "not_equal" || name == "and" || name == "or" ||
-         name == "not" || name == "clamp" || name == "min" || name == "max" || name == "abs" || name == "sign" ||
-         name == "saturate" || name == "lerp" || name == "floor" || name == "ceil" || name == "round" ||
-         name == "trunc" || name == "fract" || name == "sqrt" || name == "cbrt" || name == "pow" ||
-         name == "exp" || name == "exp2" || name == "log" || name == "log2" || name == "log10" ||
-         name == "sin" || name == "cos" || name == "tan" || name == "asin" || name == "acos" ||
-         name == "atan" || name == "atan2" || name == "radians" || name == "degrees" || name == "sinh" ||
-         name == "cosh" || name == "tanh" || name == "asinh" || name == "acosh" || name == "atanh" ||
-         name == "fma" || name == "hypot" || name == "copysign" || name == "is_nan" || name == "is_inf" ||
-         name == "is_finite" || name == "if" || name == "then" || name == "else" || name == "repeat" ||
-         name == "return" || name == "array" || name == "map" || name == "count" || name == "at" ||
-         name == "at_unsafe" || name == "convert" || name == "location" || name == "dereference" || name == "block" ||
-         name == "print" || name == "print_line" || name == "print_error" || name == "print_line_error" ||
-         name == "notify" || name == "insert" || name == "take";
+  std::string candidate = name;
+  bool isMathQualified = false;
+  if (candidate.rfind("math/", 0) == 0) {
+    candidate.erase(0, 5);
+    isMathQualified = true;
+  } else if (candidate.find('/') != std::string::npos) {
+    return false;
+  }
+  bool isMathBuiltin = candidate == "lerp" || candidate == "floor" || candidate == "ceil" || candidate == "round" ||
+                       candidate == "trunc" || candidate == "fract" || candidate == "sqrt" || candidate == "cbrt" ||
+                       candidate == "pow" || candidate == "exp" || candidate == "exp2" || candidate == "log" ||
+                       candidate == "log2" || candidate == "log10" || candidate == "sin" || candidate == "cos" ||
+                       candidate == "tan" || candidate == "asin" || candidate == "acos" || candidate == "atan" ||
+                       candidate == "atan2" || candidate == "radians" || candidate == "degrees" || candidate == "sinh" ||
+                       candidate == "cosh" || candidate == "tanh" || candidate == "asinh" || candidate == "acosh" ||
+                       candidate == "atanh" || candidate == "fma" || candidate == "hypot" || candidate == "copysign" ||
+                       candidate == "is_nan" || candidate == "is_inf" || candidate == "is_finite";
+  return candidate == "assign" || candidate == "plus" || candidate == "minus" || candidate == "multiply" ||
+         candidate == "divide" || candidate == "negate" || candidate == "greater_than" || candidate == "less_than" ||
+         candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
+         candidate == "and" || candidate == "or" || candidate == "not" || candidate == "clamp" || candidate == "min" ||
+         candidate == "max" || candidate == "abs" || candidate == "sign" || candidate == "saturate" ||
+         (isMathQualified && isMathBuiltin) || candidate == "if" || candidate == "then" || candidate == "else" ||
+         candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "map" ||
+         candidate == "count" || candidate == "at" || candidate == "at_unsafe" || candidate == "convert" ||
+         candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||
+         candidate == "print_line" || candidate == "print_error" || candidate == "print_line_error" ||
+         candidate == "notify" || candidate == "insert" || candidate == "take";
 }
 
 bool isHexDigitChar(char c) {

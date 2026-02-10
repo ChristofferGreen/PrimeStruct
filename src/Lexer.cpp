@@ -93,6 +93,9 @@ Token Lexer::readIdentifier() {
   if (text == "namespace") {
     return {TokenKind::KeywordNamespace, text, startLine, startColumn};
   }
+  if (text == "import") {
+    return {TokenKind::KeywordImport, text, startLine, startColumn};
+  }
   return {TokenKind::Identifier, text, startLine, startColumn};
 }
 

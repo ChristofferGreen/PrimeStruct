@@ -66,7 +66,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return ReturnKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Name) {
-    if (isBuiltinMathConstant(expr.name)) {
+    if (isBuiltinMathConstant(expr.name, hasMathImport_)) {
       return ReturnKind::Float64;
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
@@ -119,11 +119,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (bodyExpr.isBinding) {
             BindingInfo binding;
             std::optional<std::string> restrictType;
-            if (!parseBindingInfo(bodyExpr, candidate.namespacePrefix, structNames_, binding, restrictType, error_)) {
+            if (!parseBindingInfo(bodyExpr, candidate.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
               return false;
             }
             if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-              (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding);
+              (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding,
+                                                       hasMathImport_);
             }
             localsOut.emplace(bodyExpr.name, std::move(binding));
             continue;
@@ -162,11 +163,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           if (bodyExpr.isBinding) {
             BindingInfo info;
             std::optional<std::string> restrictType;
-            if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, info, restrictType, error_)) {
+            if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
               return ReturnKind::Unknown;
             }
             if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-              (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+              (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info,
+                                                       hasMathImport_);
             }
             if (restrictType.has_value()) {
               const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -448,7 +450,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (getBuiltinComparisonName(expr, builtinName)) {
       return ReturnKind::Bool;
     }
-    if (getBuiltinMathName(expr, builtinName)) {
+    if (getBuiltinMathName(expr, builtinName, hasMathImport_)) {
       if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
         return ReturnKind::Bool;
       }
@@ -563,11 +565,11 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     if (stmt.isBinding) {
       BindingInfo info;
       std::optional<std::string> restrictType;
-      if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, info, restrictType, error_)) {
+      if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
         return false;
       }
       if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-        (void)tryInferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
+        (void)tryInferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info, hasMathImport_);
       }
       if (restrictType.has_value()) {
         const bool hasTemplate = !info.typeTemplateArg.empty();

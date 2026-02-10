@@ -6,7 +6,14 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        const std::string &entryPath,
                                        std::string &error,
                                        const std::vector<std::string> &defaultEffects)
-    : program_(program), entryPath_(entryPath), error_(error), defaultEffects_(defaultEffects) {}
+    : program_(program), entryPath_(entryPath), error_(error), defaultEffects_(defaultEffects) {
+  for (const auto &importPath : program_.imports) {
+    if (importPath == "/math") {
+      hasMathImport_ = true;
+      break;
+    }
+  }
+}
 
 bool SemanticsValidator::run() {
   if (!buildDefinitionMaps()) {

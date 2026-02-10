@@ -204,7 +204,8 @@ std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr) {
 bool tryInferBindingTypeFromInitializer(const Expr &initializer,
                                         const std::vector<ParameterInfo> &params,
                                         const std::unordered_map<std::string, BindingInfo> &locals,
-                                        BindingInfo &bindingOut) {
+                                        BindingInfo &bindingOut,
+                                        bool allowMathBare) {
   const auto findParamBinding = [&](const std::string &name) -> const BindingInfo * {
     for (const auto &param : params) {
       if (param.name == name) {
@@ -303,7 +304,7 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
       return returnKindForTypeName(normalizeBindingTypeName(inferred));
     }
     if (expr.kind == Expr::Kind::Name) {
-      if (isBuiltinMathConstant(expr.name)) {
+      if (isBuiltinMathConstant(expr.name, allowMathBare)) {
         return ReturnKind::Float64;
       }
       const BindingInfo *binding = findParamBinding(expr.name);
@@ -343,7 +344,7 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
       if (getBuiltinComparisonName(expr, builtinName)) {
         return ReturnKind::Bool;
       }
-      if (getBuiltinMathName(expr, builtinName)) {
+      if (getBuiltinMathName(expr, builtinName, allowMathBare)) {
         if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
           return ReturnKind::Bool;
         }

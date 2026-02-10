@@ -174,6 +174,34 @@ bool SemanticsValidator::buildDefinitionMaps() {
     defMap_[def.fullPath] = &def;
   }
 
+  importAliases_.clear();
+  for (const auto &importPath : program_.imports) {
+    if (importPath.empty() || importPath[0] != '/') {
+      error_ = "import path must be a slash path";
+      return false;
+    }
+    const std::string prefix = importPath + "/";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath.rfind(prefix, 0) != 0) {
+        continue;
+      }
+      const std::string remainder = def.fullPath.substr(prefix.size());
+      if (remainder.empty() || remainder.find('/') != std::string::npos) {
+        continue;
+      }
+      const std::string rootPath = "/" + remainder;
+      if (defMap_.count(rootPath) > 0) {
+        error_ = "import creates name conflict: " + remainder;
+        return false;
+      }
+      auto [it, inserted] = importAliases_.emplace(remainder, def.fullPath);
+      if (!inserted && it->second != def.fullPath) {
+        error_ = "import creates name conflict: " + remainder;
+        return false;
+      }
+    }
+  }
+
   struct HelperSuffixInfo {
     std::string_view suffix;
     std::string_view placement;
@@ -296,7 +324,7 @@ bool SemanticsValidator::buildParameters() {
       }
       BindingInfo binding;
       std::optional<std::string> restrictType;
-      if (!parseBindingInfo(param, def.namespacePrefix, structNames_, binding, restrictType, error_)) {
+      if (!parseBindingInfo(param, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
         return false;
       }
       if (param.args.size() > 1) {
@@ -312,7 +340,7 @@ bool SemanticsValidator::buildParameters() {
         return false;
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
-        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding);
+        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasMathImport_);
       }
       ParameterInfo info;
       info.name = param.name;
@@ -384,10 +412,29 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   if (!expr.name.empty() && expr.name[0] == '/') {
     return expr.name;
   }
-  if (!expr.namespacePrefix.empty()) {
-    return expr.namespacePrefix + "/" + expr.name;
+  if (expr.name.find('/') != std::string::npos) {
+    return "/" + expr.name;
   }
-  return "/" + expr.name;
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix + "/" + expr.name;
+    if (defMap_.count(scoped) > 0) {
+      return scoped;
+    }
+    auto it = importAliases_.find(expr.name);
+    if (it != importAliases_.end()) {
+      return it->second;
+    }
+    return scoped;
+  }
+  std::string root = "/" + expr.name;
+  if (defMap_.count(root) > 0) {
+    return root;
+  }
+  auto it = importAliases_.find(expr.name);
+  if (it != importAliases_.end()) {
+    return it->second;
+  }
+  return root;
 }
 
 bool SemanticsValidator::isParam(const std::vector<ParameterInfo> &params, const std::string &name) const {

@@ -160,7 +160,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     BindingInfo info;
     std::optional<std::string> restrictType;
-    if (!parseBindingInfo(stmt, namespacePrefix, structNames_, info, restrictType, error_)) {
+    if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
       return false;
     }
     if (stmt.args.size() != 1) {
@@ -171,7 +171,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return false;
     }
     if (!hasExplicitBindingTypeTransform(stmt)) {
-      (void)tryInferBindingTypeFromInitializer(stmt.args.front(), params, locals, info);
+      (void)tryInferBindingTypeFromInitializer(stmt.args.front(), params, locals, info, hasMathImport_);
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();

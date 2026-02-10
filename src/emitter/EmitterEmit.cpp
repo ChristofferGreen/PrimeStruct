@@ -17,6 +17,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, std::vector<Expr>> paramMap;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
+  bool hasMathImport = false;
+  for (const auto &importPath : program.imports) {
+    if (importPath == "/math") {
+      hasMathImport = true;
+      break;
+    }
+  }
   auto isStructTransformName = [](const std::string &name) {
     return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane";
   };
@@ -53,6 +60,28 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     defMap[def.fullPath] = &def;
     returnKinds[def.fullPath] = getReturnKind(def);
+  }
+
+  std::unordered_map<std::string, std::string> importAliases;
+  for (const auto &importPath : program.imports) {
+    if (importPath.empty() || importPath[0] != '/') {
+      continue;
+    }
+    const std::string prefix = importPath + "/";
+    for (const auto &def : program.definitions) {
+      if (def.fullPath.rfind(prefix, 0) != 0) {
+        continue;
+      }
+      const std::string remainder = def.fullPath.substr(prefix.size());
+      if (remainder.empty() || remainder.find('/') != std::string::npos) {
+        continue;
+      }
+      const std::string rootPath = "/" + remainder;
+      if (nameMap.count(rootPath) > 0) {
+        continue;
+      }
+      importAliases.emplace(remainder, def.fullPath);
+    }
   }
 
   auto isParam = [](const std::vector<Expr> &params, const std::string &name) -> bool {
@@ -126,7 +155,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (isParam(params, expr.name)) {
         return ReturnKind::Unknown;
       }
-      if (isBuiltinMathConstantName(expr.name)) {
+      if (isBuiltinMathConstantName(expr.name, hasMathImport)) {
         return ReturnKind::Float64;
       }
       auto it = locals.find(expr.name);
@@ -254,7 +283,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         return result;
       }
       std::string mathName;
-      if (getBuiltinMathName(expr, mathName)) {
+      if (getBuiltinMathName(expr, mathName, hasMathImport)) {
         if (mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite") {
           return ReturnKind::Bool;
         }
@@ -718,7 +747,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
-          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes, returnKinds);
+          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
         }
         out << ";\n";
         return;
@@ -729,7 +758,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           const char *stream = (printBuiltin.target == PrintTarget::Err) ? "stderr" : "stdout";
           std::string argText = "\"\"";
           if (!stmt.args.empty()) {
-            argText = emitExpr(stmt.args.front(), nameMap, paramMap, localTypes, returnKinds);
+            argText = emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
           }
           out << pad << "ps_print_value(" << stream << ", " << argText << ", "
               << (printBuiltin.newline ? "true" : "false") << ");\n";
@@ -761,9 +790,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           if (isReference) {
-            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes, returnKinds) << ")";
+            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ")";
           } else {
-            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, localTypes, returnKinds);
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
           }
         }
         out << ";\n";
@@ -786,7 +815,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           const std::string resolved = resolveExprPath(candidate);
           return nameMap.count(resolved) == 0;
         };
-        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, localTypes, returnKinds) << ") {\n";
+        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
         {
           auto blockTypes = localTypes;
           if (isIfBlockEnvelope(thenArg)) {
@@ -819,7 +848,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
         std::string countExpr = "\"\"";
         if (!stmt.args.empty()) {
-          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, localTypes, returnKinds);
+          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
         }
         out << innerPad << "auto " << endVar << " = " << countExpr << ";\n";
         out << innerPad << "for (decltype(" << endVar << ") " << indexVar << " = 0; " << indexVar << " < " << endVar
@@ -851,7 +880,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         auto it = nameMap.find(full);
         if (it == nameMap.end()) {
-          out << pad << emitExpr(stmt, nameMap, paramMap, localTypes, returnKinds) << ";\n";
+          out << pad << emitExpr(stmt, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
           return;
         }
         out << pad << it->second << "(";
@@ -868,7 +897,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(*orderedArgs[i], nameMap, paramMap, localTypes, returnKinds);
+          out << emitExpr(*orderedArgs[i], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
         }
         if (!orderedArgs.empty()) {
           out << ", ";
@@ -884,16 +913,16 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
         out << pad << stmt.args.front().name << " = "
-            << emitExpr(stmt.args[1], nameMap, paramMap, localTypes, returnKinds) << ";\n";
+            << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isPathSpaceBuiltinName(stmt) && nameMap.find(resolveExprPath(stmt)) == nameMap.end()) {
         for (const auto &arg : stmt.args) {
-          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, localTypes, returnKinds) << ");\n";
+          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ");\n";
         }
         return;
       }
-      out << pad << emitExpr(stmt, nameMap, paramMap, localTypes, returnKinds) << ";\n";
+      out << pad << emitExpr(stmt, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
     };
     std::unordered_map<std::string, BindingInfo> localTypes;
     for (const auto &param : params) {

@@ -37,7 +37,8 @@ ReturnKind returnKindForTypeName(const std::string &name);
 ReturnKind combineNumericKinds(ReturnKind left, ReturnKind right);
 ReturnKind inferPrimitiveReturnKind(const Expr &expr,
                                    const std::unordered_map<std::string, BindingInfo> &localTypes,
-                                   const std::unordered_map<std::string, ReturnKind> &returnKinds);
+                                   const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                                   bool allowMathBare);
 
 bool getBuiltinOperator(const Expr &expr, char &out);
 bool getBuiltinComparison(const Expr &expr, const char *&out);
@@ -50,8 +51,8 @@ bool isBuiltinClamp(const Expr &expr);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
-bool getBuiltinMathName(const Expr &expr, std::string &out);
-bool isBuiltinMathConstantName(const std::string &name);
+bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
+bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 bool getBuiltinPointerOperator(const Expr &expr, char &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);

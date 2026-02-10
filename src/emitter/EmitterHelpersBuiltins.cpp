@@ -272,33 +272,53 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
   return false;
 }
 
-bool getBuiltinMathName(const Expr &expr, std::string &out) {
-  if (expr.name.empty()) {
+namespace {
+
+bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
+  if (name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
   }
-  if (name.find('/') != std::string::npos) {
+  if (normalized.rfind("math/", 0) == 0) {
+    out = normalized.substr(5);
+    return true;
+  }
+  if (normalized.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "lerp" || name == "floor" || name == "ceil" || name == "round" || name == "trunc" ||
-      name == "fract" || name == "sqrt" || name == "cbrt" || name == "pow" || name == "exp" ||
-      name == "exp2" || name == "log" || name == "log2" || name == "log10" || name == "sin" ||
-      name == "cos" || name == "tan" || name == "asin" || name == "acos" || name == "atan" ||
-      name == "atan2" || name == "radians" || name == "degrees" || name == "sinh" || name == "cosh" ||
-      name == "tanh" || name == "asinh" || name == "acosh" || name == "atanh" || name == "fma" ||
-      name == "hypot" || name == "copysign" || name == "is_nan" || name == "is_inf" ||
-      name == "is_finite") {
-    out = name;
+  if (!allowBare) {
+    return false;
+  }
+  out = normalized;
+  return true;
+}
+
+} // namespace
+
+bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare) {
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  if (out == "lerp" || out == "floor" || out == "ceil" || out == "round" || out == "trunc" || out == "fract" ||
+      out == "sqrt" || out == "cbrt" || out == "pow" || out == "exp" || out == "exp2" || out == "log" ||
+      out == "log2" || out == "log10" || out == "sin" || out == "cos" || out == "tan" || out == "asin" ||
+      out == "acos" || out == "atan" || out == "atan2" || out == "radians" || out == "degrees" || out == "sinh" ||
+      out == "cosh" || out == "tanh" || out == "asinh" || out == "acosh" || out == "atanh" || out == "fma" ||
+      out == "hypot" || out == "copysign" || out == "is_nan" || out == "is_inf" || out == "is_finite") {
     return true;
   }
   return false;
 }
 
-bool isBuiltinMathConstantName(const std::string &name) {
-  return name == "pi" || name == "tau" || name == "e";
+bool isBuiltinMathConstantName(const std::string &name, bool allowBare) {
+  std::string candidate;
+  if (!parseMathName(name, candidate, allowBare)) {
+    return false;
+  }
+  return candidate == "pi" || candidate == "tau" || candidate == "e";
 }
 
 bool getBuiltinPointerOperator(const Expr &expr, char &out) {

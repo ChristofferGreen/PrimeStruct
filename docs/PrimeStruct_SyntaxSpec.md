@@ -31,7 +31,7 @@ spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i
 - Base identifier: `[A-Za-z_][A-Za-z0-9_]*`
 - Slash path: `/segment/segment/...` where each segment is a base identifier.
 - Identifiers are ASCII only; non-ASCII characters are rejected by the parser.
-- Reserved keywords: `mut`, `return`, `include`, `namespace`, `true`, `false`.
+- Reserved keywords: `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`.
 - Reserved keywords may not appear as identifier segments in slash paths.
 
 ### 2.2 Whitespace and Comments
@@ -74,7 +74,7 @@ The lexer emits punctuation tokens for: `[](){}<>,.=;` and `.`. Semicolons are c
 A source file is a list of top-level items:
 
 ```
-file = { include | namespace | definition | execution }
+file = { include | import | namespace | definition | execution }
 ```
 
 ### 3.1 Includes
@@ -92,7 +92,18 @@ and version strings may use either single-quoted or double-quoted string literal
 Include paths may also be written as unquoted slash paths (e.g. `include</std/io>`), which are treated
 as logical include paths resolved via the configured include roots.
 
-### 3.2 Namespace Blocks
+### 3.2 Imports
+
+```
+import /math
+import /ui, /util
+```
+
+Imports are compile-time namespace aliases. Each imported path contributes its immediate children to the
+root namespace, so `import /math` allows `sin(...)` as shorthand for `/math/sin(...)`. Imports must
+appear at the top level (not inside `namespace` blocks).
+
+### 3.3 Namespace Blocks
 
 ```
 namespace foo {
@@ -109,13 +120,16 @@ This grammar describes surface syntax before text-filter rewriting.
 ```
 file           = { top_item } ;
 
-top_item       = include_decl | namespace_decl | definition | execution ;
+top_item       = include_decl | import_decl | namespace_decl | definition | execution ;
 
 include_decl   = "include" "<" include_list ">" ;
 include_list   = include_entry { "," include_entry } ;
 include_entry  = include_path | "version" "=" include_string ;
 include_string = quoted_string ;
 include_path   = quoted_string | slash_path ;
+
+import_decl    = "import" import_list ;
+import_list    = slash_path { "," slash_path } ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 

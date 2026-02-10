@@ -526,7 +526,7 @@
         }
         return true;
       }
-      if (getBuiltinMathName(expr, builtinName)) {
+      if (getBuiltinMathName(expr, builtinName, hasMathImport_)) {
         if (!expr.templateArgs.empty()) {
           error_ = builtinName + " does not accept template arguments";
           return false;

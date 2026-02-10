@@ -65,6 +65,8 @@ private:
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
   std::unordered_set<std::string> activeEffects_;
   std::unordered_set<std::string> inferenceStack_;
+  std::unordered_map<std::string, std::string> importAliases_;
+  bool hasMathImport_ = false;
 };
 
 } // namespace primec::semantics

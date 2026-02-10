@@ -2,6 +2,7 @@
 
 #include "ParserHelpers.h"
 
+#include <algorithm>
 #include <sstream>
 #include <utility>
 
@@ -64,6 +65,12 @@ bool Parser::parse(Program &program, std::string &error) {
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
     }
+    if (match(TokenKind::KeywordImport)) {
+      if (!parseImport(program)) {
+        return false;
+      }
+      continue;
+    }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(program.definitions, program.executions)) {
         return false;
@@ -73,6 +80,38 @@ bool Parser::parse(Program &program, std::string &error) {
         return false;
       }
     }
+  }
+  return true;
+}
+
+bool Parser::parseImport(Program &program) {
+  if (!expect(TokenKind::KeywordImport, "expected 'import'")) {
+    return false;
+  }
+  bool expectMore = true;
+  while (expectMore) {
+    Token path = consume(TokenKind::Identifier, "expected import path");
+    if (path.kind == TokenKind::End) {
+      return false;
+    }
+    std::string nameError;
+    if (!validateIdentifierText(path.text, nameError)) {
+      return fail(nameError);
+    }
+    if (path.text.empty() || path.text[0] != '/') {
+      return fail("import path must be a slash path");
+    }
+    if (std::find(program.imports.begin(), program.imports.end(), path.text) == program.imports.end()) {
+      program.imports.push_back(path.text);
+    }
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::End)) {
+        return fail("expected import path");
+      }
+      continue;
+    }
+    expectMore = false;
   }
   return true;
 }
@@ -102,6 +141,9 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
     }
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
+    }
+    if (match(TokenKind::KeywordImport)) {
+      return fail("import statements must appear at the top level");
     }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(defs, execs)) {

@@ -276,7 +276,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
       return true;
     }
-    if (isBuiltinMathConstant(expr.name)) {
+    if (isBuiltinMathConstant(expr.name, hasMathImport_)) {
       return true;
     }
     error_ = "unknown identifier: " + expr.name;
@@ -409,7 +409,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               }
               BindingInfo info;
               std::optional<std::string> restrictType;
-              if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, info, restrictType, error_)) {
+              if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
                 return false;
               }
               if (bodyExpr.args.size() != 1) {
@@ -420,7 +420,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 return false;
               }
               if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info);
+                (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info,
+                                                         hasMathImport_);
               }
               if (restrictType.has_value()) {
                 const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -526,7 +527,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           BindingInfo info;
           std::optional<std::string> restrictType;
-          if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, info, restrictType, error_)) {
+          if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
             return false;
           }
           if (bodyExpr.args.size() != 1) {
@@ -537,7 +538,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-            (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+            (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info,
+                                                     hasMathImport_);
           }
           if (restrictType.has_value()) {
             const bool hasTemplate = !info.typeTemplateArg.empty();
