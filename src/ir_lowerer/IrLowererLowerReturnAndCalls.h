@@ -661,6 +661,19 @@
           }
           return emitInlineDefinitionCall(expr, *callee, localsIn, true);
         }
+        if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
+            !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
+          Expr methodExpr = expr;
+          methodExpr.isMethodCall = true;
+          const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
+          if (callee) {
+            if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+              error = "native backend does not support block arguments on calls";
+              return false;
+            }
+            return emitInlineDefinitionCall(methodExpr, *callee, localsIn, true);
+          }
+        }
         if (isArrayCountCall(expr, localsIn)) {
           if (isEntryArgsName(expr.args.front(), localsIn)) {
             function.instructions.push_back({IrOpcode::PushArgc, 0});
