@@ -290,8 +290,23 @@
     auto it = defMap_.find(resolved);
     if (it == defMap_.end() || resolvedMethod) {
       if (hasNamedArguments(expr.argNames)) {
-        error_ = "named arguments not supported for builtin calls";
-        return false;
+        std::string builtinName;
+        bool isBuiltin = false;
+        if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
+            getBuiltinClampName(expr, builtinName, hasMathImport_) ||
+            getBuiltinMinMaxName(expr, builtinName, hasMathImport_) ||
+            getBuiltinAbsSignName(expr, builtinName, hasMathImport_) ||
+            getBuiltinSaturateName(expr, builtinName, hasMathImport_) ||
+            getBuiltinMathName(expr, builtinName, hasMathImport_) ||
+            getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
+            getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
+            isAssignCall(expr) || isIfCall(expr) || isRepeatCall(expr) || expr.name == "count") {
+          isBuiltin = true;
+        }
+        if (isBuiltin) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
       }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/string/count" || resolved == "/map/count")) {
         if (!expr.templateArgs.empty()) {

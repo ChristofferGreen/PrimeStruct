@@ -425,7 +425,7 @@ bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
-  if (!isBuiltinName(normalized)) {
+  if (!isBuiltinName(normalized, hasMathImport_)) {
     return true;
   }
   for (const auto &argName : argNames) {

@@ -73,6 +73,7 @@ private:
   bool returnsVoidContext_ = false;
   bool allowImplicitVoidReturn_ = false;
   bool allowArgumentLabels_ = false;
+  bool hasMathImport_ = false;
 };
 
 } // namespace primec

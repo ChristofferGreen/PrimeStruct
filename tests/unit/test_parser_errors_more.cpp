@@ -507,6 +507,7 @@ main() {
 
 TEST_CASE("named arguments rejected for math builtin") {
   const std::string source = R"(
+import /math
 [return<int>]
 main() {
   return(sin(angle = 0.5f))

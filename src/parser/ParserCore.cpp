@@ -104,6 +104,9 @@ bool Parser::parseImport(Program &program) {
     if (std::find(program.imports.begin(), program.imports.end(), path.text) == program.imports.end()) {
       program.imports.push_back(path.text);
     }
+    if (path.text == "/math") {
+      hasMathImport_ = true;
+    }
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::End)) {
