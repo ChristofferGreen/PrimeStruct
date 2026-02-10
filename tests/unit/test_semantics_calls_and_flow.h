@@ -2094,6 +2094,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("print accepts bool literal") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print_line(true)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("print_error accepts bool binding") {
   const std::string source = R"(
 [effects(io_err)]
