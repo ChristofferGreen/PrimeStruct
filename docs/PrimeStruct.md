@@ -90,7 +90,7 @@ module {
 - **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` and `count(args)` are supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists and body forms so tooling can capture scheduling intent in snapshots.
   - Dumps show collection literals after text-filter rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1, 2)`).
-  - Named execution arguments and body calls appear inline (e.g., `exec /execute_repeat(count = 2) { main(), main() }`).
+  - Labeled execution arguments and body calls appear inline (e.g., `exec /execute_repeat([count] 2) { main(), main() }`).
 
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `mut`, `return`, `include`, `namespace`, `true`, and `false` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
@@ -103,12 +103,12 @@ module {
   - `<...>` supplies compile-time types/templates—primarily for transforms or when inference must be overridden.
   - `(...)` lists runtime parameters; calls always include `()` (even with no args), and `()` never appears on bindings.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`. Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms (no name references).
-  - `{...}` holds runtime code: definition bodies, execution bodies, and binding initializers (typically a single envelope; use helpers for multi-step setup).
+  - `{...}` holds runtime code for definition/execution bodies, and constructor arguments for binding initializers. Binding initializers are whitespace-separated argument forms (optionally labeled with `[param]`) that desugar to a type constructor call; use helpers for multi-step setup.
   - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style (`execute_task<…>(args)`), optionally followed by a brace list of body arguments for higher-order scheduling (`execute_task(...) { work(), work() }`). Execution bodies may only contain calls (no bindings, no `return`), and they are treated as scheduling payloads rather than executable function bodies. The compiler decides whether to emit callable artifacts or schedule work based on that presence. Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
-  - Executions accept the same argument syntax as calls, including named arguments (with the same ordering rules).
-  - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>(first = 1i32)` is rejected).
-  - Example: `execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32))`.
+  - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
+  - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
+  - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
   - Note: the current C++ emitter only generates code for definitions; executions are parsed/validated but not emitted.
   - Execution bodies are parsed as brace-delimited argument lists (e.g., `execute_repeat(2i32) { main(), main() }`).
 - **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical. An optional `single_type_to_return` transform may rewrite a single bare type in the transform list into `return<type>` (e.g., `[int] main()` → `[return<int>] main()`), but it only runs when explicitly enabled via `--transform-list` or a per-definition transform.
@@ -272,16 +272,15 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - Float literals accept `f`, `f32`, or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f`) is supported.
 - **Strings:** quoted with escapes (`"…"`) or raw (`"…"raw_utf8` / `"…"raw_ascii`). Surface literals accept `utf8`/`ascii` suffixes, but the canonical/bottom-level form uses only `raw_utf8`/`raw_ascii` after escape decoding. `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
-- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade(hue_shift = 0.1f, exposure = 0.95f)`) or helper transforms that expand the Envelope. Bindings wrap those executions in `{}` (e.g., `[ColorGrade] grade{ColorGrade(hue_shift = 0.1f, exposure = 0.95f)}`) to preserve the call-vs-binding distinction. Named arguments map to fields, and every field must have either an explicit argument or a type-provided default before validation. Named arguments may only be used on user-defined calls, and once a named argument appears the remaining arguments must be named.
-- **Named arguments:** named arguments may be reordered (including on executions), but cannot repeat a parameter name or follow a positional argument. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept named arguments.
-  - Example: `array<i32>(first = 1i32)` is rejected because collections are builtin calls.
-  - Example: `execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32))` is invalid because the positional map argument follows a named argument.
-  - Duplicate named arguments are rejected for definitions and executions (`execute_task(a = 1i32, a = 2i32)`).
-- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals also accept `key = value` pairs inside braces/brackets.
+- **Composite constructors:** structured values are introduced through standard type executions (`ColorGrade([hue_shift] 0.1f [exposure] 0.95f)`) or helper transforms that expand the Envelope. Bindings pass constructor arguments directly in `{}` (e.g., `[ColorGrade] grade{[hue_shift] 0.1f [exposure] 0.95f}`), which desugars to a type constructor call internally. Labeled arguments map to fields, and every field must have either an explicit argument or a type-provided default before validation. Labeled arguments may only be used on user-defined calls.
+- **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.
+  - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
+  - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
+  - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
+- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
   - Requires the `collections` text filter (enabled by default in `--text-filters`).
-  - `key = value` pairs only trigger on single `=` tokens; `==`, `<=`, `>=`, and `!=` remain comparison operators.
-  - `key = value` pairs only trigger at the top level of the map literal; nested `=` tokens inside values (for example `assign(...)`) are preserved.
-  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are rewritten as usual.
+  - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
+  - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8 1i32}`), and nested forms inside braces are rewritten as usual.
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
@@ -406,8 +405,8 @@ convert_demo() {
 }
 
 [return<int>]
-named_args_demo() {
-  return(sum3(1i32, c = 3i32, b = 2i32))
+labeled_args_demo() {
+  return(sum3(1i32 [c] 3i32 [b] 2i32))
 }
 
 [return<float> default_operators control_flow desugar_assignment]
@@ -435,8 +434,8 @@ module {
   def /convert_demo(): i32 {
     return convert(1.5f32)
   }
-  def /named_args_demo(): i32 {
-    return sum3(1, c = 3, b = 2)
+  def /labeled_args_demo(): i32 {
+    return sum3(1, [c] 3, [b] 2)
   }
 }
 ```

@@ -151,8 +151,8 @@ binding        = transforms_opt name template_opt args_opt ;
 
 args_opt       = [ "(" arg_list_opt ")" ] ;
 arg_list_opt   = [ arg { [ "," ] arg } ] ;
-arg            = named_arg | form ;
-named_arg      = identifier "=" form ;
+arg            = labeled_arg | form ;
+labeled_arg    = "[" identifier "]" form ;
 
 form           = literal
                | name
@@ -235,7 +235,7 @@ main() {
 ### 6.2 Executions
 
 ```
-execute_task(count = 2i32) { main() main() }
+execute_task([count] 2i32) { main() main() }
 ```
 
 - Executions are call-style constructs that may include a body list of calls.
@@ -254,6 +254,10 @@ execute_task(count = 2i32) { main() main() }
 ```
 
 - A binding is a stack value execution.
+- Binding initializers supply constructor arguments. The forms inside `{ ... }` are evaluated left-to-right and
+  desugar to a type constructor call: `[T] name{a b [param] c}` -> `[T] name{T(a, b, [param] c)}`.
+  Binding initializers do not form a multi-statement block; use helper calls for multi-step setup. Commas are not
+  separators in binding initializers.
 - If the binding omits an explicit type, the compiler first tries to infer the type from the
   initializer expression; if inference fails, the type defaults to `int`.
 - `mut` marks the binding as writable; otherwise immutable.
@@ -268,13 +272,14 @@ main([array<string>] args, [i32] limit{10i32}) { ... }
 
 Defaults are limited to literal/pure forms (no name references).
 
-### 7.3 Named Arguments
+### 7.3 Labeled Arguments
 
-- Named arguments are allowed in calls and executions.
-- Positional arguments must come before named arguments.
-- Each parameter may be bound once; duplicates are rejected.
-- Named arguments are rejected for builtin calls (e.g. `assign`, `plus`, `count`, `at`, `print*`).
-- Parameter defaults do not accept named arguments.
+- Labeled arguments are allowed in calls and executions.
+- Syntax: `[param] form` in an argument list.
+- Labeled arguments may appear in any order and may be interleaved with positional arguments.
+- Positional arguments fill remaining parameters in declaration order, skipping labeled entries.
+- Each parameter may be bound once; duplicates or unknown labels are rejected.
+- Labeled arguments are rejected for builtin calls (e.g. `assign`, `plus`, `count`, `at`, `print*`).
 
 ## 8. Collections and Helpers
 
@@ -295,9 +300,11 @@ Helpers:
 
 ```
 map<i32, i32>(1i32, 2i32)
-map<i32, i32>{1i32=2i32}
-map<i32, i32>[1i32=2i32]
+map<i32, i32>{1i32 2i32}
+map<i32, i32>[1i32 2i32]
 ```
+
+Map literals supply alternating key/value forms; an odd number of entries is a diagnostic.
 
 Helpers:
 - `count(value)` / `value.count()`
@@ -336,8 +343,9 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 ## 13. Error Rules (Selected)
 
 - `at(value, index)` on non-collections is rejected.
-- Named arguments after positional ones are rejected.
-- Duplicate named arguments are rejected.
+- Duplicate labeled arguments are rejected.
+- Unknown labeled arguments are rejected.
+- Labeled arguments are rejected for builtin calls.
 - `return` in execution bodies is rejected.
 - Semicolons are rejected.
 - Transform argument lists may not be empty.
