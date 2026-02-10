@@ -995,6 +995,18 @@ main() {
   CHECK(error.find("unsupported convert target type") != std::string::npos);
 }
 
+TEST_CASE("convert rejects software numeric target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<decimal>(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
 TEST_CASE("convert<bool> accepts u64 literal") {
   const std::string source = R"(
 [return<bool>]

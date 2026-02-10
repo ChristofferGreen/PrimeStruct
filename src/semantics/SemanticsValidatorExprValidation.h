@@ -586,6 +586,10 @@
           return false;
         }
         const std::string &typeName = expr.templateArgs[0];
+        if (auto softwareType = findSoftwareNumericType(typeName)) {
+          error_ = "software numeric types are not supported yet: " + *softwareType;
+          return false;
+        }
         if (typeName != "int" && typeName != "i32" && typeName != "i64" && typeName != "u64" &&
             typeName != "bool" && typeName != "float" && typeName != "f32" && typeName != "f64") {
           error_ = "unsupported convert target type: " + typeName;
