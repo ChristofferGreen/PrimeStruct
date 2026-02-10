@@ -980,6 +980,42 @@ main() {
   CHECK(error.find("convert requires numeric or bool operand") != std::string::npos);
 }
 
+TEST_CASE("abs rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(abs("hi"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("abs requires numeric operand") != std::string::npos);
+}
+
+TEST_CASE("sign rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(sign("hi"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("sign requires numeric operand") != std::string::npos);
+}
+
+TEST_CASE("saturate rejects non-numeric operand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(saturate("hi"utf8))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("saturate requires numeric operand") != std::string::npos);
+}
+
 TEST_CASE("string comparisons validate") {
   const std::string source = R"(
 [return<bool>]
