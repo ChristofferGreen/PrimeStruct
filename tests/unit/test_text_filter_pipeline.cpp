@@ -137,6 +137,26 @@ TEST_CASE("rewrites map literal brackets to call") {
   CHECK(output.find("map<i32,i32>(1i32,2i32)") != std::string::npos);
 }
 
+TEST_CASE("rewrites vector literal braces to call") {
+  const std::string source = "main(){ return(vector<i32>{1i32,2i32}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("vector<i32>(1i32,2i32)") != std::string::npos);
+}
+
+TEST_CASE("rewrites vector literal brackets to call") {
+  const std::string source = "main(){ return(vector<i32>[1i32,2i32]) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("vector<i32>(1i32,2i32)") != std::string::npos);
+}
+
 TEST_CASE("rewrites map literal brackets with equals pairs") {
   const std::string source = "main(){ return(map<i32, i32>[1i32=2i32, 3i32=4i32]) }\n";
   primec::TextFilterPipeline pipeline;
