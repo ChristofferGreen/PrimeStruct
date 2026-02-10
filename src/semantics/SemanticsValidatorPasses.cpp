@@ -174,15 +174,23 @@ bool SemanticsValidator::validateExecutions() {
     if (!validateCapabilitiesSubset(exec.transforms, exec.fullPath)) {
       return false;
     }
-    auto it = defMap_.find(exec.fullPath);
+    Expr execTarget;
+    if (!exec.name.empty()) {
+      execTarget.name = exec.name;
+      execTarget.namespacePrefix = exec.namespacePrefix;
+    } else {
+      execTarget.name = exec.fullPath;
+    }
+    const std::string resolvedPath = resolveCalleePath(execTarget);
+    auto it = defMap_.find(resolvedPath);
     if (it == defMap_.end()) {
-      error_ = "unknown execution target: " + exec.fullPath;
+      error_ = "unknown execution target: " + resolvedPath;
       return false;
     }
-    if (!validateNamedArguments(exec.arguments, exec.argumentNames, exec.fullPath, error_)) {
+    if (!validateNamedArguments(exec.arguments, exec.argumentNames, resolvedPath, error_)) {
       return false;
     }
-    const auto &execParams = paramsByDef_[exec.fullPath];
+    const auto &execParams = paramsByDef_[resolvedPath];
     if (!validateNamedArgumentsAgainstParams(execParams, exec.argumentNames, error_)) {
       return false;
     }
@@ -190,7 +198,7 @@ bool SemanticsValidator::validateExecutions() {
     std::string orderError;
     if (!buildOrderedArguments(execParams, exec.arguments, exec.argumentNames, orderedExecArgs, orderError)) {
       if (orderError.find("argument count mismatch") != std::string::npos) {
-        error_ = "argument count mismatch for " + exec.fullPath;
+        error_ = "argument count mismatch for " + resolvedPath;
       } else {
         error_ = orderError;
       }

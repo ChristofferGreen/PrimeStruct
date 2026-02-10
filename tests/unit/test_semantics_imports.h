@@ -104,3 +104,23 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("import creates name conflict: dup") != std::string::npos);
 }
+
+TEST_CASE("import resolves execution targets") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<void>]
+  run([i32] count) {
+    return()
+  }
+}
+[return<int>]
+main() {
+  return(1i32)
+}
+run(1i32)
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
