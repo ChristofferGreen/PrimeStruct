@@ -296,7 +296,17 @@ Helpers:
 - `at(value, index)`
 - `at_unsafe(value, index)`
 
-### 8.2 Maps
+### 8.2 Vectors
+
+```
+vector<i32>(1i32, 2i32)
+vector<i32>{1i32 2i32}
+vector<i32>[1i32 2i32]
+```
+
+Vectors are resizable sequences. Construction is variadic; zero or more arguments are accepted.
+
+### 8.3 Maps
 
 ```
 map<i32, i32>(1i32, 2i32)

@@ -216,7 +216,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`repeat(count) { ... }`:** statement-only loop helper. `count` must be integer/bool, and the body is required.
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error.
-- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` calls and `array<T>{...}` literals, plus `count`/`at`/`at_unsafe` on those arrays. Map literals are supported in VM/native when both key and value types are numeric/bool; string-keyed maps remain C++-emitter-only for now.
+- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` calls and `array<T>{...}` literals, plus `count`/`at`/`at_unsafe` on those arrays. Map literals are supported in VM/native when both key and value types are numeric/bool; string-keyed maps remain C++-emitter-only for now. Vector support is pending unless the backend implements heap allocation and the vector ops.
 - **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
 
 ## Runtime Stack Model (draft)
@@ -277,12 +277,13 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
   - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
   - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
-- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)` and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
+- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{ … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply alternating key/value forms.
   - Requires the `collections` text filter (enabled by default in `--text-filters`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8 1i32}`), and nested forms inside braces are rewritten as usual.
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
+  - `vector<T>` is a resizable, owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Vector operations that grow capacity require `effects(heap_alloc)` (or the active default effects set). Backends that do not support heap allocation reject vector operations.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals compile through the C++ emitter only, using `std::string_view` keys.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `int/i32/i64/u64/bool` in the minimal native subset (integer conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float conversions are currently supported only by the C++ emitter.
