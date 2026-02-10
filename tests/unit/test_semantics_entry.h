@@ -410,6 +410,18 @@ main() {
   CHECK(error.find("math constant requires import /math: pi") != std::string::npos);
 }
 
+TEST_CASE("math-qualified non-math builtin fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(/math/plus(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /math/plus") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
