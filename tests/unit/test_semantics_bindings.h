@@ -1069,10 +1069,10 @@ TEST_CASE("if validates block arguments") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(true, then{
+  if(true, then(){
     [i32] temp(2i32)
     assign(value, temp)
-  }, else{ assign(value, 3i32) })
+  }, else(){ assign(value, 3i32) })
   return(value)
 }
 )";
@@ -1085,7 +1085,7 @@ TEST_CASE("if rejects float condition") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(1.5f, then{ return(1i32) }, else{ return(2i32) })
+  if(1.5f, then(){ return(1i32) }, else(){ return(2i32) })
 }
 )";
   std::string error;
@@ -1102,7 +1102,7 @@ noop() {
 
 [return<int>]
 main() {
-  return(if(true, then{ noop() }, else{ 1i32 }))
+  return(if(true, then(){ noop() }, else(){ 1i32 }))
 }
 )";
   std::string error;
@@ -1157,7 +1157,7 @@ TEST_CASE("block expression validates and introduces scope") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] value(block{
+  [i32] value(block(){
     [i32] inner(1i32)
     plus(inner, 2i32)
   })
@@ -1173,7 +1173,7 @@ TEST_CASE("block expression must end with value") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{
+  return(block(){
     [i32] inner(1i32)
   })
 }
@@ -1227,7 +1227,7 @@ TEST_CASE("block scope does not leak bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  block{
+  block(){
     [i32] inner(1i32)
     inner
   }
@@ -1250,7 +1250,7 @@ namespace i64 {
 
 [return<i64>]
 main() {
-  return(block{
+  return(block(){
     [mut] value(plus(1i64, 2i64))
     value.inc()
   })

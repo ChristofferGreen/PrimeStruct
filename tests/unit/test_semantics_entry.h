@@ -134,7 +134,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(block{ 1i32 })) {
+add([i32] left, [i32] right(block(){ 1i32 })) {
   return(plus(left, right))
 }
 )";
@@ -151,7 +151,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right(block{ [i32] temp(1i32) temp })) {
+add([i32] left, [i32] right(block(){ [i32] temp(1i32) temp })) {
   return(plus(left, right))
 }
 )";
@@ -242,7 +242,7 @@ main() {
 TEST_CASE("restrict matches inferred binding type inside block return inference") {
   const std::string source = R"(
 main() {
-  return(block{
+  return(block(){
     [restrict<i64>] value(1i64)
     value
   })
@@ -706,7 +706,7 @@ execute_repeat([i32] x) {
   return()
 }
 
-execute_repeat(3i32) { if(true, then{ [i32] value(2i32) }, else{ }) }
+execute_repeat(3i32) { if(true, then(){ [i32] value(2i32) }, else(){ }) }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -725,7 +725,7 @@ execute_repeat([i32] x) {
   return()
 }
 
-execute_repeat(3i32) { if(true, then{ 1i32 }, else{ main() }) }
+execute_repeat(3i32) { if(true, then(){ 1i32 }, else(){ main() }) }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));

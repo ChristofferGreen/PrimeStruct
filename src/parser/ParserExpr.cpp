@@ -355,9 +355,11 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.namespacePrefix = namespacePrefix;
       call.templateArgs = std::move(templateArgs);
       bool hasCallSyntax = false;
+      bool sawParen = false;
       if (match(TokenKind::LParen)) {
         expect(TokenKind::LParen, "expected '(' after identifier");
         hasCallSyntax = true;
+        sawParen = true;
         if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }
@@ -372,6 +374,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
       }
       if (match(TokenKind::LBrace)) {
+        if (!sawParen) {
+          return fail("call body requires parameter list");
+        }
         hasCallSyntax = true;
         call.hasBodyArguments = true;
         if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {

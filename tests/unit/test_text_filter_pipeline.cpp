@@ -647,7 +647,7 @@ TEST_CASE("rewrites dereference before name") {
 }
 
 TEST_CASE("does not rewrite template list syntax") {
-  const std::string source = "if<bool>(cond, then{ }, else{ })\n";
+  const std::string source = "if<bool>(cond, then(){ }, else(){ })\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;

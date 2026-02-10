@@ -910,6 +910,21 @@ main() {
   CHECK(error.find("binding requires argument list") != std::string::npos);
 }
 
+TEST_CASE("call body requires parameter list") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  helper { return(1i32) }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("call body requires parameter list") != std::string::npos);
+}
+
 TEST_CASE("template arguments require a call") {
   const std::string source = R"(
 [return<int>]

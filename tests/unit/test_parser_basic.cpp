@@ -288,10 +288,10 @@ TEST_CASE("parses if with block arguments") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(true, then{
+  if(true, then(){
     [i32] temp(2i32)
     assign(value, temp)
-  }, else{ assign(value, 3i32) })
+  }, else(){ assign(value, 3i32) })
   return(value)
 }
 )";
@@ -760,7 +760,7 @@ TEST_CASE("parses call with body arguments in expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(task { step() })
+  return(task() { step() })
 }
 )";
   const auto program = parseProgram(source);

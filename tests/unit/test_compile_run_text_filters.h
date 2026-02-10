@@ -220,10 +220,10 @@ TEST_CASE("compiles and runs if") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(false, then{
+  if(false, then(){
     [i32] temp(4i32)
     assign(value, temp)
-  }, else{ assign(value, 9i32) })
+  }, else(){ assign(value, 9i32) })
   return(value)
 }
 )";
@@ -407,7 +407,7 @@ TEST_CASE("compiles and runs block expression with outer scope capture") {
 [return<int>]
 main() {
   [i32] y(2i32)
-  return(block { [i32] x(4i32) plus(x, y) })
+  return(block() { [i32] x(4i32) plus(x, y) })
 }
 )";
   const std::string srcPath = writeTemp("compile_block_expr_capture.prime", source);

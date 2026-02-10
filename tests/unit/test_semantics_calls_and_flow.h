@@ -110,7 +110,7 @@ TEST_CASE("block binding infers string type") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(block{
+  return(block(){
     [mut] value("hello"utf8)
     equal(value, "hello"utf8)
   })
@@ -126,7 +126,7 @@ TEST_CASE("if missing else fails") {
 [return<int>]
 main() {
   [i32 mut] value(1i32)
-  if(true, then{ assign(value, 2i32) })
+  if(true, then(){ assign(value, 2i32) })
   return(value)
 }
 )";
@@ -1491,7 +1491,7 @@ TEST_CASE("missing return on some control paths fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(true, then{ return(2i32) }, else{ })
+  if(true, then(){ return(2i32) }, else(){ })
 }
 )";
   std::string error;
@@ -1504,7 +1504,7 @@ TEST_CASE("return after partial if validates") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(true, then{ return(2i32) }, else{ })
+  if(true, then(){ return(2i32) }, else(){ })
   return(3i32)
 }
 )";
@@ -2003,7 +2003,7 @@ TEST_CASE("array literal rejects block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  array<i32>{1i32}
+  array<i32>(1i32) { 2i32 }
   return(0i32)
 }
 )";
@@ -2016,7 +2016,7 @@ TEST_CASE("map literal rejects block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<i32, i32>{1i32, 2i32}
+  map<i32, i32>(1i32, 2i32) { 3i32 }
   return(0i32)
 }
 )";
@@ -2060,7 +2060,7 @@ Thing() {
 
 [effects(io_out)]
 main() {
-  print_line(block{
+  print_line(block(){
     [Thing] item(Thing())
     item
   })

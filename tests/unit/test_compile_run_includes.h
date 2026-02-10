@@ -239,7 +239,7 @@ TEST_CASE("compiles and runs block expression with multiline body") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{
+  return(block(){
     [i32] x(1i32)
     plus(x, 2i32)
   })
@@ -273,7 +273,7 @@ namespace i64 {
 
 [return<int>]
 main() {
-  return(convert<i32>(block{
+  return(convert<i32>(block(){
     [mut] value(plus(1i64, 2i64))
     value.inc()
   }))
@@ -301,7 +301,7 @@ TEST_CASE("compiles and runs block binding inference for mixed if numeric types"
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
-  print_line(block{
+  print_line(block(){
     [mut] value(if(false, 1i32, 5000000000i64))
     value
   })
