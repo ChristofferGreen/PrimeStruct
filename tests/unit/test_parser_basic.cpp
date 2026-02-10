@@ -213,6 +213,23 @@ main() {
   CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"raw_utf8");
 }
 
+TEST_CASE("single_type_to_return rewrites bare type transform") {
+  const std::string source = R"(
+[single_type_to_return i32 effects(io_out)]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 2);
+  CHECK(transforms[0].name == "return");
+  REQUIRE(transforms[0].templateArgs.size() == 1);
+  CHECK(transforms[0].templateArgs[0] == "i32");
+  CHECK(transforms[1].name == "effects");
+}
+
 TEST_CASE("parses method calls with template arguments") {
   const std::string source = R"(
 namespace i32 {

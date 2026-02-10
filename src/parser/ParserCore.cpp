@@ -8,6 +8,54 @@
 namespace primec {
 using namespace parser;
 
+namespace {
+
+bool isSingleTypeReturnName(const std::string &name) {
+  return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
+         name == "f64" || name == "bool" || name == "void" || name == "string";
+}
+
+bool isNonTypeTransformName(const std::string &name) {
+  return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
+         name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "struct" ||
+         name == "pod" || name == "handle" || name == "gpu_lane" || name == "public" || name == "private" ||
+         name == "package" || name == "static" || name == "single_type_to_return" || name == "stack" ||
+         name == "heap" || name == "buffer";
+}
+
+bool isSingleTypeReturnCandidate(const Transform &transform) {
+  if (!transform.arguments.empty()) {
+    return false;
+  }
+  if (isNonTypeTransformName(transform.name)) {
+    return false;
+  }
+  if (!transform.templateArgs.empty()) {
+    return true;
+  }
+  return isSingleTypeReturnName(transform.name);
+}
+
+std::string formatTemplateArgs(const std::vector<std::string> &args) {
+  std::string out;
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out += ", ";
+    }
+    out += args[i];
+  }
+  return out;
+}
+
+std::string formatTransformType(const Transform &transform) {
+  if (transform.templateArgs.empty()) {
+    return transform.name;
+  }
+  return transform.name + "<" + formatTemplateArgs(transform.templateArgs) + ">";
+}
+
+} // namespace
+
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
 bool Parser::parse(Program &program, std::string &error) {
@@ -74,6 +122,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     if (!parseTransformList(transforms)) {
       return false;
     }
+  }
+  if (!applySingleTypeToReturn(transforms)) {
+    return false;
   }
 
   Token name = consume(TokenKind::Identifier, "expected identifier");
@@ -185,6 +236,66 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   exec.hasBodyArguments = true;
   execs.push_back(std::move(exec));
+  return true;
+}
+
+bool Parser::applySingleTypeToReturn(std::vector<Transform> &transforms) {
+  size_t markerIndex = transforms.size();
+  for (size_t i = 0; i < transforms.size(); ++i) {
+    if (transforms[i].name != "single_type_to_return") {
+      continue;
+    }
+    if (markerIndex != transforms.size()) {
+      return fail("duplicate single_type_to_return transform");
+    }
+    if (!transforms[i].templateArgs.empty()) {
+      return fail("single_type_to_return does not accept template arguments");
+    }
+    if (!transforms[i].arguments.empty()) {
+      return fail("single_type_to_return does not accept arguments");
+    }
+    markerIndex = i;
+  }
+  if (markerIndex == transforms.size()) {
+    return true;
+  }
+  for (const auto &transform : transforms) {
+    if (transform.name == "return") {
+      return fail("single_type_to_return cannot be combined with return transform");
+    }
+  }
+  size_t typeIndex = transforms.size();
+  for (size_t i = 0; i < transforms.size(); ++i) {
+    if (i == markerIndex) {
+      continue;
+    }
+    if (!isSingleTypeReturnCandidate(transforms[i])) {
+      continue;
+    }
+    if (typeIndex != transforms.size()) {
+      return fail("single_type_to_return requires a single type transform");
+    }
+    typeIndex = i;
+  }
+  if (typeIndex == transforms.size()) {
+    return fail("single_type_to_return requires a type transform");
+  }
+  Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back(formatTransformType(transforms[typeIndex]));
+  std::vector<Transform> rewritten;
+  rewritten.reserve(transforms.size() - 1);
+  for (size_t i = 0; i < transforms.size(); ++i) {
+    if (i == markerIndex) {
+      continue;
+    }
+    if (i == typeIndex) {
+      rewritten.push_back(std::move(returnTransform));
+      continue;
+    }
+    rewritten.push_back(std::move(transforms[i]));
+  }
+  transforms = std::move(rewritten);
   return true;
 }
 

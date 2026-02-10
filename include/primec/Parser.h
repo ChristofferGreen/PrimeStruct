@@ -37,6 +37,7 @@ private:
   bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;
   bool parseDefinitionBody(Definition &def, bool allowNoReturn);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
+  bool applySingleTypeToReturn(std::vector<Transform> &transforms);
 
   std::string currentNamespacePrefix() const;
   std::string makeFullPath(const std::string &name, const std::string &prefix) const;

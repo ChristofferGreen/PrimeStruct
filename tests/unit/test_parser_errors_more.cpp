@@ -125,6 +125,36 @@ main() {
   CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
+TEST_CASE("single_type_to_return requires a type transform") {
+  const std::string source = R"(
+[single_type_to_return]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("single_type_to_return requires a type transform") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects multiple type transforms") {
+  const std::string source = R"(
+[single_type_to_return i32 i64]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("single_type_to_return requires a single type transform") != std::string::npos);
+}
+
 TEST_CASE("return value not allowed for void definitions") {
   const std::string source = R"(
 [return<void>]
