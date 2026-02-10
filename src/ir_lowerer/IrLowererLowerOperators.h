@@ -408,6 +408,74 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           return true;
         }
+        std::string lerpName;
+        if (getBuiltinLerpName(expr, lerpName)) {
+          if (expr.args.size() != 3) {
+            error = lerpName + " requires exactly three arguments";
+            return false;
+          }
+          bool sawUnsigned = false;
+          bool sawSigned = false;
+          for (const auto &arg : expr.args) {
+            LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
+            if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
+              sawUnsigned = true;
+            }
+            if (kind == LocalInfo::ValueKind::UInt64) {
+              sawUnsigned = true;
+            } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
+              sawSigned = true;
+            }
+          }
+          if (sawUnsigned && sawSigned) {
+            error = lerpName + " requires numeric arguments of the same type";
+            return false;
+          }
+          LocalInfo::ValueKind lerpKind =
+              combineNumericKinds(combineNumericKinds(inferExprKind(expr.args[0], localsIn),
+                                                      inferExprKind(expr.args[1], localsIn)),
+                                  inferExprKind(expr.args[2], localsIn));
+          if (lerpKind == LocalInfo::ValueKind::Unknown) {
+            error = lerpName + " requires numeric arguments of the same type";
+            return false;
+          }
+          IrOpcode addOp =
+              (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64)
+                  ? IrOpcode::AddI64
+                  : IrOpcode::AddI32;
+          IrOpcode subOp =
+              (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64)
+                  ? IrOpcode::SubI64
+                  : IrOpcode::SubI32;
+          IrOpcode mulOp =
+              (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64)
+                  ? IrOpcode::MulI64
+                  : IrOpcode::MulI32;
+          int32_t tempStart = allocTempLocal();
+          int32_t tempEnd = allocTempLocal();
+          int32_t tempT = allocTempLocal();
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempStart)});
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempEnd)});
+          if (!emitExpr(expr.args[2], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempT)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempEnd)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempStart)});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempT)});
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempStart)});
+          function.instructions.push_back({addOp, 0});
+          return true;
+        }
         std::string absSignName;
         if (getBuiltinAbsSignName(expr, absSignName)) {
           if (expr.args.size() != 1) {

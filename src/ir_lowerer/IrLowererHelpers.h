@@ -36,6 +36,7 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out);
 bool getBuiltinComparisonName(const Expr &expr, std::string &out);
 bool getBuiltinClampName(const Expr &expr);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out);
+bool getBuiltinLerpName(const Expr &expr, std::string &out);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr);

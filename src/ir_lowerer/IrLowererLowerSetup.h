@@ -774,6 +774,15 @@ bool IrLowerer::lower(const Program &program,
           auto right = inferExprKind(expr.args[1], localsIn);
           return combineNumericKinds(left, right);
         }
+        if (getBuiltinLerpName(expr, builtin)) {
+          if (expr.args.size() != 3) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          auto startKind = inferExprKind(expr.args[0], localsIn);
+          auto endKind = inferExprKind(expr.args[1], localsIn);
+          auto tKind = inferExprKind(expr.args[2], localsIn);
+          return combineNumericKinds(combineNumericKinds(startKind, endKind), tKind);
+        }
         if (getBuiltinAbsSignName(expr, builtin)) {
           if (expr.args.size() != 1) {
             return LocalInfo::ValueKind::Unknown;

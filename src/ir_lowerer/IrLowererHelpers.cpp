@@ -172,6 +172,27 @@ bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinLerpName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.rfind("math/", 0) == 0) {
+    name.erase(0, 5);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "lerp") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
