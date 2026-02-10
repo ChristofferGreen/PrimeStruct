@@ -505,6 +505,21 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named arguments rejected for math builtin") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(sin(angle = 0.5f))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("missing return fails in parser") {
   const std::string source = R"(
 [return<int>]

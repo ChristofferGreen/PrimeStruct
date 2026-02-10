@@ -128,10 +128,8 @@ bool isStructTransformName(const std::string &text) {
 
 bool isBuiltinName(const std::string &name) {
   std::string candidate = name;
-  bool isMathQualified = false;
   if (candidate.rfind("math/", 0) == 0) {
     candidate.erase(0, 5);
-    isMathQualified = true;
   } else if (candidate.find('/') != std::string::npos) {
     return false;
   }
@@ -151,7 +149,7 @@ bool isBuiltinName(const std::string &name) {
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
          candidate == "and" || candidate == "or" || candidate == "not" || candidate == "clamp" || candidate == "min" ||
          candidate == "max" || candidate == "abs" || candidate == "sign" || candidate == "saturate" ||
-         (isMathQualified && isMathBuiltin) || candidate == "if" || candidate == "then" || candidate == "else" ||
+         isMathBuiltin || candidate == "if" || candidate == "then" || candidate == "else" ||
          candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
          candidate == "map" || candidate == "count" || candidate == "at" || candidate == "at_unsafe" ||
          candidate == "convert" ||
