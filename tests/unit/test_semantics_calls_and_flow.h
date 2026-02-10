@@ -1076,6 +1076,23 @@ main() {
   CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
 }
 
+TEST_CASE("comparisons reject non-numeric operands") {
+  const std::string source = R"(
+thing() {
+  [i32] value(1i32)
+}
+
+[return<bool>]
+main() {
+  [thing] item(1i32)
+  return(equal(item, item))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require numeric, bool, or string operands") != std::string::npos);
+}
+
 TEST_CASE("comparisons allow bool with signed integers") {
   const std::string source = R"(
 [return<bool>]
