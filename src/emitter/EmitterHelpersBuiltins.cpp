@@ -224,6 +224,9 @@ bool isBuiltinClamp(const Expr &expr) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  if (name.rfind("math/", 0) == 0) {
+    name.erase(0, 5);
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }

@@ -99,6 +99,21 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs math-qualified clamp in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(/math/clamp(9i32, 2i32, 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_math_clamp_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_clamp_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs rounding builtins in C++ emitter") {
   const std::string source = R"(
 import /math
