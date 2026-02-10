@@ -276,6 +276,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
       return true;
     }
+    if (!hasMathImport_ && expr.name.find('/') == std::string::npos &&
+        isBuiltinMathConstant(expr.name, true)) {
+      error_ = "math constant requires import /math: " + expr.name;
+      return false;
+    }
     if (isBuiltinMathConstant(expr.name, hasMathImport_)) {
       return true;
     }

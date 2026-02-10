@@ -398,6 +398,18 @@ main() {
   CHECK(error.find("math builtin requires import /math: clamp") != std::string::npos);
 }
 
+TEST_CASE("math constant requires import") {
+  const std::string source = R"(
+[return<f64>]
+main() {
+  return(pi)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("math constant requires import /math: pi") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
