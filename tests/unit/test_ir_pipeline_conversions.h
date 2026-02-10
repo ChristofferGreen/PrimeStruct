@@ -160,6 +160,24 @@ main() {
   CHECK(error.find("native backend does not support string comparisons") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer rejects string-keyed map literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(map<string, i32>("a"raw_utf8, 1i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.find("native backend only supports numeric/bool map literals") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer rejects float bindings") {
   const std::string source = R"(
 [return<int>]

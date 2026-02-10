@@ -1516,6 +1516,47 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native string-keyed map literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<string, i32>{"a"raw_utf8=1i32}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal_string_key.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_key_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_key_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend only supports numeric/bool map literals\n");
+}
+
+TEST_CASE("rejects unsupported effects in native backend") {
+  const std::string source = R"(
+[return<int> effects(render_graph)]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_unsupported_effect.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_unsupported_effect_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_unsupported_effect_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend does not support effect: render_graph on /main\n");
+}
+
 TEST_CASE("compiles and runs namespace entry") {
   const std::string source = R"(
 namespace demo {
