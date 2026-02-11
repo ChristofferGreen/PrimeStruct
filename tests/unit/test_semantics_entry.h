@@ -790,6 +790,30 @@ main() {
   CHECK(error.find("binding visibility transforms are mutually exclusive") != std::string::npos);
 }
 
+TEST_CASE("visibility tags reject on definitions") {
+  const std::string source = R"(
+[public return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
+}
+
+TEST_CASE("static tag rejects on definitions") {
+  const std::string source = R"(
+[static return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math

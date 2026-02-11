@@ -29,6 +29,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : def.transforms) {
+      if (isBindingQualifierName(transform.name)) {
+        error_ = "binding visibility/static transforms are only valid on bindings: " + def.fullPath;
+        return false;
+      }
       if (transform.name == "return") {
         if (!transform.arguments.empty()) {
           error_ = "return transform does not accept arguments on " + def.fullPath;
