@@ -143,3 +143,49 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_CASE("import ignores nested definitions") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  first() {
+    return(1i32)
+  }
+  namespace nested {
+    [return<int>]
+    second() {
+      return(2i32)
+    }
+  }
+}
+[return<int>]
+main() {
+  return(first())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import rejects nested definitions in root") {
+  const std::string source = R"(
+import /util
+namespace util {
+  namespace nested {
+    [return<int>]
+    second() {
+      return(2i32)
+    }
+  }
+}
+[return<int>]
+main() {
+  return(second())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: second") != std::string::npos);
+}
