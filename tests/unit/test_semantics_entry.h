@@ -398,6 +398,19 @@ main() {
   CHECK(error.find("math builtin requires import /math: clamp") != std::string::npos);
 }
 
+TEST_CASE("math builtin resolves with import") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(clamp(2i32, 1i32, 5i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("math-qualified builtin works without import") {
   const std::string source = R"(
 [return<int>]
