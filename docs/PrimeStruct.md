@@ -197,6 +197,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
 - **`public`, `private`, `package`:** field visibility tags; mutually exclusive.
 - **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
+- **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
 - **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
 
 ### Core library surface (draft)
