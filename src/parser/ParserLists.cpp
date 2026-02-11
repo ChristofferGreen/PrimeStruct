@@ -433,16 +433,7 @@ bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
 }
 
 bool Parser::validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames) {
-  bool sawNamed = false;
-  for (const auto &argName : argNames) {
-    if (argName.has_value()) {
-      sawNamed = true;
-      continue;
-    }
-    if (sawNamed) {
-      return fail("positional argument cannot follow named arguments");
-    }
-  }
+  (void)argNames;
   return true;
 }
 

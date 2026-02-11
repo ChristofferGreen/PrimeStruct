@@ -956,7 +956,7 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("execution positional argument after named fails in parser") {
+TEST_CASE("execution positional argument after named parses") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -969,8 +969,8 @@ execute_task(a = 1i32, 2i32) { }
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("execution named arguments cannot target builtins") {
@@ -990,7 +990,7 @@ execute_task(items = array<i32>(first = 1i32)) { }
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("execution positional after named with collections fails in parser") {
+TEST_CASE("execution positional after named with collections parses") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1003,11 +1003,11 @@ execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("positional argument after named fails in parser") {
+TEST_CASE("positional argument after named parses") {
   const std::string source = R"(
 [return<int>]
 foo([i32] a, [i32] b) {
@@ -1023,8 +1023,8 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("transform argument list cannot be empty") {

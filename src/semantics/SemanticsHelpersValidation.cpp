@@ -122,21 +122,14 @@ bool validateNamedArguments(const std::vector<Expr> &args,
     error = "argument name count mismatch for " + context;
     return false;
   }
-  bool sawNamed = false;
   std::unordered_set<std::string> used;
   for (size_t i = 0; i < args.size(); ++i) {
     if (i < argNames.size() && argNames[i].has_value()) {
-      sawNamed = true;
       const std::string &name = *argNames[i];
       if (!used.insert(name).second) {
         error = "duplicate named argument: " + name;
         return false;
       }
-      continue;
-    }
-    if (sawNamed) {
-      error = "positional argument cannot follow named arguments";
-      return false;
     }
   }
   return true;
@@ -518,35 +511,38 @@ bool validateNamedArgumentsAgainstParams(const std::vector<ParameterInfo> &param
   if (argNames.empty()) {
     return true;
   }
-  size_t positionalCount = 0;
-  while (positionalCount < argNames.size() && !argNames[positionalCount].has_value()) {
-    ++positionalCount;
-  }
-  std::unordered_set<std::string> bound;
-  for (size_t i = 0; i < positionalCount && i < params.size(); ++i) {
-    bound.insert(params[i].name);
-  }
-  for (size_t i = positionalCount; i < argNames.size(); ++i) {
-    if (!argNames[i].has_value()) {
+  std::vector<bool> bound(params.size(), false);
+  size_t positionalIndex = 0;
+  for (const auto &argName : argNames) {
+    if (argName.has_value()) {
+      const std::string &name = *argName;
+      size_t index = params.size();
+      for (size_t p = 0; p < params.size(); ++p) {
+        if (params[p].name == name) {
+          index = p;
+          break;
+        }
+      }
+      if (index >= params.size()) {
+        error = "unknown named argument: " + name;
+        return false;
+      }
+      if (bound[index]) {
+        error = "named argument duplicates parameter: " + name;
+        return false;
+      }
+      bound[index] = true;
       continue;
     }
-    const std::string &name = *argNames[i];
-    bool found = false;
-    for (const auto &param : params) {
-      if (param.name == name) {
-        found = true;
-        break;
-      }
+    while (positionalIndex < params.size() && bound[positionalIndex]) {
+      ++positionalIndex;
     }
-    if (!found) {
-      error = "unknown named argument: " + name;
+    if (positionalIndex >= params.size()) {
+      error = "argument count mismatch";
       return false;
     }
-    if (bound.count(name) > 0) {
-      error = "named argument duplicates parameter: " + name;
-      return false;
-    }
-    bound.insert(name);
+    bound[positionalIndex] = true;
+    ++positionalIndex;
   }
   return true;
 }

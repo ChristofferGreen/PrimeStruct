@@ -554,15 +554,18 @@ TEST_CASE("call argument name count mismatch fails") {
   CHECK(error.find("argument name count mismatch") != std::string::npos);
 }
 
-TEST_CASE("positional argument after named fails") {
+TEST_CASE("positional arguments may follow named arguments") {
   primec::Program program;
-  primec::Expr call = makeCall("callee", {makeLiteral(1), makeLiteral(2)});
+  program.definitions.push_back(
+      makeDefinition("/callee", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(1)})},
+                     {makeParameter("a"), makeParameter("b")}));
+  primec::Expr call = makeCall("/callee", {makeLiteral(1), makeLiteral(2)});
   call.argNames = {std::string("a"), std::nullopt};
   program.definitions.push_back(makeDefinition(
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {call})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("assign requires exactly two arguments") {
@@ -627,7 +630,7 @@ TEST_CASE("if statement allows empty branch blocks") {
   CHECK(error.empty());
 }
 
-TEST_CASE("execution positional argument after named fails") {
+TEST_CASE("execution positional argument after named is allowed") {
   primec::Program program;
   program.definitions.push_back(
       makeDefinition("/main", {makeTransform("return", std::string("int"))},
@@ -643,8 +646,8 @@ TEST_CASE("execution positional argument after named fails") {
   program.executions.push_back(exec);
 
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("positional argument cannot follow named arguments") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("execution named arguments reorder") {
