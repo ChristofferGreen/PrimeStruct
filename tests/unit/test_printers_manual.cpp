@@ -90,7 +90,7 @@ TEST_CASE("ast printer includes call transforms and bodies") {
       "ast {\n"
       "  [return<int>] /main() {\n"
       "    return 7\n"
-      "    [trace<i32>(fast), tag] /ns/return<f64, i32>(lhs = first, \"hi\"utf8, rhs = 2) { 1, inner(3.5f64) }\n"
+      "    [trace<i32>(fast), tag] /ns/return<f64, i32>([lhs] first, \"hi\"utf8, [rhs] 2) { 1, inner(3.5f64) }\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -162,7 +162,7 @@ TEST_CASE("ast printer covers executions with templates and bodies") {
   const std::string dump = printer.print(program);
   const std::string expected =
       "ast {\n"
-      "  [effects<io>] /run<i32>(count = 1, 2) { step<f32>(3) }\n"
+      "  [effects<io>] /run<i32>([count] 1, 2) { step<f32>(3) }\n"
       "  /ping(\"ok\"utf8)\n"
       "}\n";
   CHECK(dump == expected);

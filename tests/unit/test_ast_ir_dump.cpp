@@ -328,7 +328,7 @@ TEST_CASE("ast dump prints named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(make_color(hue = 1i32, value = 2i32))
+  return(make_color([hue] 1i32, [value] 2i32))
 }
 )";
   const auto program = parseProgram(source);
@@ -337,7 +337,7 @@ main() {
   const std::string expected =
       "ast {\n"
       "  [return<int>] /main() {\n"
-      "    return make_color(hue = 1, value = 2)\n"
+      "    return make_color([hue] 1, [value] 2)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -347,7 +347,7 @@ TEST_CASE("ir dump prints named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(make_color(hue = 1i32, value = 2i32))
+  return(make_color([hue] 1i32, [value] 2i32))
 }
 )";
   const auto program = parseProgram(source);
@@ -356,7 +356,7 @@ main() {
   const std::string expected =
       "module {\n"
       "  def /main(): i32 {\n"
-      "    return make_color(hue = 1, value = 2)\n"
+      "    return make_color([hue] 1, [value] 2)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -543,7 +543,7 @@ sum3([i32] a, [i32] b, [i32] c) {
 
 [return<int>]
 main() {
-  return(sum3(1i32, c = 3i32, b = 2i32))
+  return(sum3(1i32, [c] 3i32, [b] 2i32))
 }
 )";
   const auto program = parseProgram(source);
@@ -555,7 +555,7 @@ main() {
       "    return plus(plus(a, b), c)\n"
       "  }\n"
       "  def /main(): i32 {\n"
-      "    return sum3(1, c = 3, b = 2)\n"
+      "    return sum3(1, [c] 3, [b] 2)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -570,7 +570,7 @@ make_color([i32] hue, [i32] value) {
 
 [return<int>]
 main() {
-  map<i32, i32>{1i32=make_color(hue = 2i32, value = 3i32)}
+  map<i32, i32>{1i32=make_color([hue] 2i32, [value] 3i32)}
   return(1i32)
 }
 )";
@@ -583,7 +583,7 @@ main() {
       "    return plus(hue, value)\n"
       "  }\n"
       "  def /main(): i32 {\n"
-      "    call map(1, make_color(hue = 2, value = 3))\n"
+      "    call map(1, make_color([hue] 2, [value] 3))\n"
       "    return 1\n"
       "  }\n"
       "}\n";
@@ -641,7 +641,7 @@ main() {
   return(1i32)
 }
 
-execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) { }
+execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32}) { }
 )";
   const auto program = parseProgramWithFilters(source);
   primec::AstPrinter printer;
@@ -651,7 +651,7 @@ execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) {
       "  [return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
-      "  /execute_task(items = array<i32>(1, 2), pairs = map<i32, i32>(1, 2)) { }\n"
+      "  /execute_task([items] array<i32>(1, 2), [pairs] map<i32, i32>(1, 2)) { }\n"
       "}\n";
   CHECK(dump == expected);
 }
@@ -663,7 +663,7 @@ main() {
   return(1i32)
 }
 
-execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) { }
+execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32}) { }
 )";
   const auto program = parseProgramWithFilters(source);
   primec::IrPrinter printer;
@@ -673,7 +673,7 @@ execute_task(items = array<i32>{1i32, 2i32}, pairs = map<i32, i32>{1i32=2i32}) {
       "  def /main(): i32 {\n"
       "    return 1\n"
       "  }\n"
-      "  exec /execute_task(items = array(1, 2), pairs = map(1, 2)) { }\n"
+      "  exec /execute_task([items] array(1, 2), [pairs] map(1, 2)) { }\n"
       "}\n";
   CHECK(dump == expected);
 }
@@ -685,7 +685,7 @@ main() {
   return(1i32)
 }
 
-execute_repeat(count = 2i32) { main(), main() }
+execute_repeat([count] 2i32) { main(), main() }
 )";
   const auto program = parseProgram(source);
   primec::IrPrinter printer;
@@ -695,7 +695,7 @@ execute_repeat(count = 2i32) { main(), main() }
       "  def /main(): i32 {\n"
       "    return 1\n"
       "  }\n"
-      "  exec /execute_repeat(count = 2) { main(), main() }\n"
+      "  exec /execute_repeat([count] 2) { main(), main() }\n"
       "}\n";
   CHECK(dump == expected);
 }
@@ -707,7 +707,7 @@ main() {
   return(1i32)
 }
 
-execute_repeat(count = 2i32) { main(), main() }
+execute_repeat([count] 2i32) { main(), main() }
 )";
   const auto program = parseProgram(source);
   primec::AstPrinter printer;
@@ -717,7 +717,7 @@ execute_repeat(count = 2i32) { main(), main() }
       "  [return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
-      "  /execute_repeat(count = 2) { main(), main() }\n"
+      "  /execute_repeat([count] 2) { main(), main() }\n"
       "}\n";
   CHECK(dump == expected);
 }

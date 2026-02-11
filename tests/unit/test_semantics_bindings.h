@@ -710,7 +710,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing(count = 3i32, value = 4i32)
+  thing([count] 3i32, [value] 4i32)
   return(1i32)
 }
 )";
@@ -747,7 +747,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing(missing = 2i32)
+  thing([missing] 2i32)
   return(1i32)
 }
 )";

@@ -49,7 +49,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing(count = 3i32)
+  thing([count] 3i32)
   return(1i32)
 }
 )";
@@ -302,7 +302,7 @@ sum3([i32] a, [i32] b{2i32}, [i32] c{3i32}) {
 
 [return<int>]
 main() {
-  return(sum3(1i32, c = 10i32))
+  return(sum3(1i32, [c] 10i32))
 }
 )";
   primec::Program program;

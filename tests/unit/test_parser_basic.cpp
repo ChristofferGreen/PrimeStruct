@@ -504,7 +504,7 @@ TEST_CASE("parses named call arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(make_color(hue = 1i32, value = 2i32))
+  return(make_color([hue] 1i32, [value] 2i32))
 }
 )";
   const auto program = parseProgram(source);

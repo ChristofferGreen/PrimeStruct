@@ -62,8 +62,8 @@ main() {
 }
 
 execute_task(
-  items = array<i32>(1i32, 2i32),
-  pairs = map<i32, i32>(1i32, 2i32)
+  [items] array<i32>(1i32, 2i32),
+  [pairs] map<i32, i32>(1i32, 2i32)
 ) { }
 )";
   const auto program = parseProgram(source);

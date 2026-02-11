@@ -112,7 +112,7 @@ main() {
   return(1i32)
 }
 
-execute_task(count = 2i32) { }
+execute_task([count] 2i32) { }
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.executions.size() == 1);
@@ -161,7 +161,7 @@ main() {
   return(1i32)
 }
 
-execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32)) { }
+execute_task([items] array<i32>(1i32, 2i32), [pairs] map<i32, i32>(1i32, 2i32)) { }
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.executions.size() == 1);

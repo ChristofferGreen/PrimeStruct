@@ -899,7 +899,7 @@ add([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(add(b = 2i32, a = 3i32))
+  return(add([b] 2i32, [a] 3i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_named_args.prime", source);
@@ -934,7 +934,7 @@ sum3([i32] a, [i32] b, [i32] c) {
 
 [return<int>]
 main() {
-  return(sum3(1i32, c = 3i32, b = 2i32))
+  return(sum3(1i32, [c] 3i32, [b] 2i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_named_mixed.prime", source);
@@ -954,7 +954,7 @@ sum3([i32] a, [i32] b, [i32] c) {
 
 [return<int>]
 main() {
-  return(sum3(c = 3i32, 1i32, b = 2i32))
+  return(sum3([c] 3i32, 1i32, [b] 2i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_named_interleaved.prime", source);
@@ -974,7 +974,7 @@ pack([i32] a, [i32] b, [i32] c) {
 
 [return<int>]
 main() {
-  return(pack(c = 3i32, a = 1i32, b = 2i32))
+  return(pack([c] 3i32, [a] 1i32, [b] 2i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_named_reorder.prime", source);
@@ -994,7 +994,7 @@ make_color([i32] hue, [i32] value) {
 
 [return<int>]
 main() {
-  map<i32, i32>{1i32=make_color(hue = 2i32, value = 3i32)}
+  map<i32, i32>{1i32=make_color([hue] 2i32, [value] 3i32)}
   return(1i32)
 }
 )";

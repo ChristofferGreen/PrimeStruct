@@ -308,21 +308,7 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       argName = name.text;
     } else if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() &&
                tokens_[pos_ + 1].kind == TokenKind::Equal) {
-      Token name = consume(TokenKind::Identifier, "expected argument name");
-      if (name.kind == TokenKind::End) {
-        return false;
-      }
-      if (name.text.find('/') != std::string::npos) {
-        return fail("named argument must be a simple identifier");
-      }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
-      }
-      if (!expect(TokenKind::Equal, "expected '=' after argument name")) {
-        return false;
-      }
-      argName = name.text;
+      return fail("named arguments must use [name] syntax");
     }
     Expr arg;
     if (!parseExpr(arg, namespacePrefix)) {

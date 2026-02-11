@@ -669,7 +669,7 @@ execute_task([i32] items, [i32] pairs) {
   return(1i32)
 }
 
-execute_task(items = array<i32>(1i32, 2i32), pairs = map<i32, i32>(1i32, 2i32)) { }
+execute_task([items] array<i32>(1i32, 2i32), [pairs] map<i32, i32>(1i32, 2i32)) { }
 )";
   const std::string srcPath = writeTemp("compile_exec_collections.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_collections_exe").string();

@@ -166,7 +166,7 @@ TEST_CASE("if rejects named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(cond = true, then = 1i32, else = 2i32))
+  return(if([cond] true, [then] 1i32, [else] 2i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -265,7 +265,7 @@ foo([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(foo(a = 1i32, a = 2i32))
+  return(foo([a] 1i32, [a] 2i32))
 }
 )";
   std::string error;
@@ -381,7 +381,7 @@ foo([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(foo(a = 1i32, b = 2i32))
+  return(foo([a] 1i32, [b] 2i32))
 }
 )";
   std::string error;
@@ -398,7 +398,7 @@ foo([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(foo(b = 2i32, a = 1i32))
+  return(foo([b] 2i32, [a] 1i32))
 }
 )";
   std::string error;
@@ -421,7 +421,7 @@ Foo() {
 [return<int>]
 main() {
   [Foo] item{1i32}
-  return(item.plus(rhs = 2i32))
+  return(item.plus([rhs] 2i32))
 }
 )";
   std::string error;
@@ -433,7 +433,7 @@ TEST_CASE("named arguments reject builtin method calls") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(array<i32>(1i32, 2i32).count(value = 0i32))
+  return(array<i32>(1i32, 2i32).count([value] 0i32))
 }
 )";
   std::string error;
@@ -534,7 +534,7 @@ TEST_CASE("count rejects vector named arguments") {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count(value = 0i32))
+  return(values.count([value] 0i32))
 }
 )";
   std::string error;
@@ -1530,7 +1530,7 @@ foo([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(foo(c = 1i32, b = 2i32))
+  return(foo([c] 1i32, [b] 2i32))
 }
 )";
   std::string error;
@@ -1547,7 +1547,7 @@ foo([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(foo(1i32, a = 2i32))
+  return(foo(1i32, [a] 2i32))
 }
 )";
   std::string error;
@@ -1567,7 +1567,7 @@ job([i32] a, [i32] b) {
   return(a)
 }
 
-job(a = 1i32, b = 2i32)
+job([a] 1i32, [b] 2i32)
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
@@ -1586,7 +1586,7 @@ job([array<i32>] values) {
   return(values.count())
 }
 
-job(array<i32>(first = 1i32))
+job(array<i32>([first] 1i32))
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -1600,7 +1600,7 @@ TEST_CASE("named arguments not allowed on builtin calls") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(plus(left = 1i32, right = 2i32))
+  return(plus([left] 1i32, [right] 2i32))
 }
 )";
   primec::Lexer lexer(source);

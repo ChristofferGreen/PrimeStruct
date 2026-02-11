@@ -263,7 +263,7 @@ add_one([i32] value) {
 }
 
 [return<int>]
-add([i32] left, [i32] right{add_one(value = 1i32)}) {
+add([i32] left, [i32] right{add_one([value] 1i32)}) {
   return(plus(left, right))
 }
 )";

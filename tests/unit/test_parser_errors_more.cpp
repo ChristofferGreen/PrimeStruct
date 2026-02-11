@@ -633,7 +633,7 @@ TEST_CASE("named arguments rejected for print builtin") {
   const std::string source = R"(
 [return<void> effects(io_out)]
 main() {
-  print_line(message = "hello"utf8)
+  print_line([message] "hello"utf8)
 }
 )";
   primec::Lexer lexer(source);
@@ -644,12 +644,32 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named arguments require bracket syntax") {
+  const std::string source = R"(
+[return<int>]
+foo([i32] a) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(a = 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments must use [name] syntax") != std::string::npos);
+}
+
 TEST_CASE("named arguments rejected for math builtin") {
   const std::string source = R"(
 import /math
 [return<int>]
 main() {
-  return(sin(angle = 0.5f))
+  return(sin([angle] 0.5f))
 }
 )";
   primec::Lexer lexer(source);
@@ -664,7 +684,7 @@ TEST_CASE("named arguments rejected for math builtin after import") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(sin(angle = 0.5f))
+  return(sin([angle] 0.5f))
 }
 import /math
 )";
@@ -681,7 +701,7 @@ TEST_CASE("named arguments rejected for vector helper") {
 [return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
-  clear(values = values)
+  clear([values] values)
   return(0i32)
 }
 )";
@@ -961,7 +981,7 @@ TEST_CASE("named args for builtin fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(plus(left = 1i32, right = 2i32))
+  return(plus([left] 1i32, [right] 2i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -976,7 +996,7 @@ TEST_CASE("named args for slash builtin fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(/plus(left = 1i32, right = 2i32))
+  return(/plus([left] 1i32, [right] 2i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -991,7 +1011,7 @@ TEST_CASE("named args for collection builtin fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(array<i32>(first = 1i32, second = 2i32))
+  return(array<i32>([first] 1i32, [second] 2i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -1007,7 +1027,7 @@ TEST_CASE("named args for pointer helpers fail in parser") {
 [return<int>]
 main() {
   [i32] value{1i32}
-  return(dereference(ptr = location(value)))
+  return(dereference([ptr] location(value)))
 }
 )";
   primec::Lexer lexer(source);
@@ -1022,7 +1042,7 @@ TEST_CASE("named args for count fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(count(values = array<i32>(1i32, 2i32)))
+  return(count([values] array<i32>(1i32, 2i32)))
 }
 )";
   primec::Lexer lexer(source);
@@ -1037,9 +1057,9 @@ TEST_CASE("named args for pathspace builtins fail in parser") {
   const std::string source = R"(
 [return<void> effects(pathspace_notify, pathspace_insert, pathspace_take)]
 main() {
-  notify(path = "/events/test"utf8, value = 1i32)
-  insert(path = "/events/test"utf8, value = 1i32)
-  take(path = "/events/test"utf8)
+  notify([path] "/events/test"utf8, [value] 1i32)
+  insert([path] "/events/test"utf8, [value] 1i32)
+  take([path] "/events/test"utf8)
 }
 )";
   primec::Lexer lexer(source);
@@ -1054,7 +1074,7 @@ TEST_CASE("named args reject slash identifiers") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(add(/foo = 1i32, 2i32))
+  return(add([/foo] 1i32, 2i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -1069,7 +1089,7 @@ TEST_CASE("named args for array access fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(at(items = array<i32>(1i32, 2i32), index = 1i32))
+  return(at([items] array<i32>(1i32, 2i32), [index] 1i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -1084,7 +1104,7 @@ TEST_CASE("named args for unsafe array access fail in parser") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(at_unsafe(items = array<i32>(1i32, 2i32), index = 1i32))
+  return(at_unsafe([items] array<i32>(1i32, 2i32), [index] 1i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -1102,7 +1122,7 @@ main() {
   return(1i32)
 }
 
-execute_task(a = 1i32, 2i32) { }
+execute_task([a] 1i32, 2i32) { }
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -1119,7 +1139,7 @@ main() {
   return(1i32)
 }
 
-execute_task(items = array<i32>(first = 1i32)) { }
+execute_task([items] array<i32>([first] 1i32)) { }
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -1136,7 +1156,7 @@ main() {
   return(1i32)
 }
 
-execute_task(items = array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
+execute_task([items] array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -1155,7 +1175,7 @@ foo([i32] a, [i32] b) {
 
 [return<int>]
 main() {
-  return(foo(a = 1i32, 2i32))
+  return(foo([a] 1i32, 2i32))
 }
 )";
   primec::Lexer lexer(source);
@@ -1510,7 +1530,7 @@ TEST_CASE("reserved keyword cannot name argument") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(foo(return = 1i32))
+  return(foo([return] 1i32))
 }
 )";
   primec::Lexer lexer(source);
