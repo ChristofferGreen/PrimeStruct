@@ -814,6 +814,30 @@ main() {
   CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
 }
 
+TEST_CASE("copy tag rejects on definitions") {
+  const std::string source = R"(
+[copy return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("copy transform is only supported on bindings and parameters") != std::string::npos);
+}
+
+TEST_CASE("restrict tag rejects on definitions") {
+  const std::string source = R"(
+[restrict<i32> return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("restrict transform is only supported on bindings and parameters") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math

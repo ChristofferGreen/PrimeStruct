@@ -149,6 +149,14 @@ bool SemanticsValidator::validateExecutions() {
         error_ = "mut transform is not allowed on executions: " + exec.fullPath;
         return false;
       }
+      if (transform.name == "copy") {
+        error_ = "copy transform is not allowed on executions: " + exec.fullPath;
+        return false;
+      }
+      if (transform.name == "restrict") {
+        error_ = "restrict transform is not allowed on executions: " + exec.fullPath;
+        return false;
+      }
       if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
         error_ = "placement transforms are not supported: " + exec.fullPath;
         return false;

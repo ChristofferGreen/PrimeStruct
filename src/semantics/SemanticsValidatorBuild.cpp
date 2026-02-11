@@ -33,6 +33,14 @@ bool SemanticsValidator::buildDefinitionMaps() {
         error_ = "binding visibility/static transforms are only valid on bindings: " + def.fullPath;
         return false;
       }
+      if (transform.name == "copy") {
+        error_ = "copy transform is only supported on bindings and parameters: " + def.fullPath;
+        return false;
+      }
+      if (transform.name == "restrict") {
+        error_ = "restrict transform is only supported on bindings and parameters: " + def.fullPath;
+        return false;
+      }
       if (transform.name == "return") {
         if (!transform.arguments.empty()) {
           error_ = "return transform does not accept arguments on " + def.fullPath;

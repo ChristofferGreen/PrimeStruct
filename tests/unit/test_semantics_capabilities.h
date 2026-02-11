@@ -858,6 +858,46 @@ task(1i32)
   CHECK(error.find("mut transform is not allowed on executions") != std::string::npos);
 }
 
+TEST_CASE("copy transforms are rejected on executions") {
+  const std::string source = R"(
+[return<int>]
+task([i32] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[copy]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("copy transform is not allowed on executions") != std::string::npos);
+}
+
+TEST_CASE("restrict transforms are rejected on executions") {
+  const std::string source = R"(
+[return<int>]
+task([i32] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[restrict<i32>]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("restrict transform is not allowed on executions") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {
