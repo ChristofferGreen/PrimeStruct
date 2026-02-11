@@ -383,7 +383,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
       }
       if (match(TokenKind::LBrace)) {
-        if (!sawParen) {
+        if (!sawParen && call.name != "block") {
           return fail("call body requires parameter list");
         }
         hasCallSyntax = true;

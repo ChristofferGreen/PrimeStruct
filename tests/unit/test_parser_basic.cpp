@@ -761,6 +761,24 @@ main() {
   CHECK(expr.args[2].bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses block expression without parens") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{ 1i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "block");
+  CHECK(expr.args.empty());
+  REQUIRE(expr.bodyArguments.size() == 1);
+  CHECK(expr.bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses if sugar with block statements in return argument") {
   const std::string source = R"(
 [return<int>]
