@@ -362,7 +362,15 @@ bool IrLowerer::lower(const Program &program,
       return expr.name;
     }
     if (!expr.namespacePrefix.empty()) {
-      return expr.namespacePrefix + "/" + expr.name;
+      std::string scoped = expr.namespacePrefix + "/" + expr.name;
+      if (defMap.count(scoped) > 0) {
+        return scoped;
+      }
+      auto importIt = importAliases.find(expr.name);
+      if (importIt != importAliases.end()) {
+        return importIt->second;
+      }
+      return scoped;
     }
     auto importIt = importAliases.find(expr.name);
     if (importIt != importAliases.end()) {

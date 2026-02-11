@@ -1816,6 +1816,31 @@ namespace demo {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native import alias in namespace") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  helper() {
+    return(7i32)
+  }
+}
+namespace demo {
+  [return<int>]
+  main() {
+    return(helper())
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_import_alias_namespace.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_namespace").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /demo/main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs include expansion") {
   const std::string libPath = writeTemp("compile_lib.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "include<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
