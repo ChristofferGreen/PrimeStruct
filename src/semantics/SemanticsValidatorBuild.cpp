@@ -145,15 +145,26 @@ bool SemanticsValidator::buildDefinitionMaps() {
         if (stmt.isBinding) {
           bool fieldHasHandle = false;
           bool fieldHasGpuLane = false;
+          bool fieldHasPod = false;
           for (const auto &transform : stmt.transforms) {
             if (transform.name == "handle") {
               fieldHasHandle = true;
+            } else if (transform.name == "pod") {
+              fieldHasPod = true;
             } else if (transform.name == "gpu_lane") {
               fieldHasGpuLane = true;
             }
           }
           if (hasPod && (fieldHasHandle || fieldHasGpuLane)) {
             error_ = "pod definitions cannot contain handle or gpu_lane fields: " + def.fullPath;
+            return false;
+          }
+          if (fieldHasPod && fieldHasHandle) {
+            error_ = "fields cannot be tagged as pod and handle: " + def.fullPath;
+            return false;
+          }
+          if (fieldHasPod && fieldHasGpuLane) {
+            error_ = "fields cannot be tagged as pod and gpu_lane: " + def.fullPath;
             return false;
           }
           if (fieldHasHandle && fieldHasGpuLane) {

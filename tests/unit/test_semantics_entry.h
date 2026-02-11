@@ -691,6 +691,40 @@ main() {
   CHECK(error.find("fields cannot be tagged as handle and gpu_lane") != std::string::npos);
 }
 
+TEST_CASE("fields reject pod and handle together") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [pod handle i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("fields cannot be tagged as pod and handle") != std::string::npos);
+}
+
+TEST_CASE("fields reject pod and gpu_lane together") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [pod gpu_lane i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("fields cannot be tagged as pod and gpu_lane") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
