@@ -221,7 +221,17 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error.
 - **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native when both key and value types are numeric/bool; string-keyed maps remain C++-emitter-only for now. Vector growth operations still require heap allocation and are not supported in VM/native yet.
-- **Documentation TODO:** expand this surface into a versioned standard library reference before PrimeStruct moves onto an active milestone.
+
+### Standard Library Reference (draft, v0)
+- **Status:** this reference is a snapshot of the current builtin surface. It will be versioned once the standard library is split into packages.
+- **Versioning (planned):**
+  - Each package declares a semantic version (e.g., `1.2.0`).
+  - `include<..., version="1.2.0">` selects a specific package revision.
+  - The compiler will expose `--stdlib-version` to pin the default package set.
+- **Namespaces:**
+  - `/math/*` is imported via `import /math`.
+  - Core builtins (`assign`, `count`, `print*`, `convert`, etc.) live in the root namespace.
+- **Conformance note:** the VM/native subset may reject functions that the C++ emitter supports (e.g., float-heavy math); the reference will mark such cases explicitly.
 
 ## Runtime Stack Model (draft)
 - **Frames:** each execution pushes a frame recording the instruction pointer, constants, locals, captures, and effect mask. Frames are immutable from the caller’s perspective; `assign` creates new bindings.
