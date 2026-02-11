@@ -1566,6 +1566,28 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs native map method call") {
+  const std::string source = R"(
+[return<int>]
+/map/size([map<i32, i32>] items) {
+  return(count(items))
+}
+
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(values.size())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_method_call.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_method_call_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs native typed map binding") {
   const std::string source = R"(
 [return<int>]
