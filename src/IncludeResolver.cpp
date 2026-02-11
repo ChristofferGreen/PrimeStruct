@@ -21,8 +21,8 @@ bool isIncludeBoundaryChar(char c) {
 }
 
 bool isReservedKeyword(const std::string &text) {
-  return text == "mut" || text == "return" || text == "include" || text == "namespace" || text == "true" ||
-         text == "false";
+  return text == "mut" || text == "return" || text == "include" || text == "import" || text == "namespace" ||
+         text == "true" || text == "false";
 }
 
 bool isAsciiAlpha(char c) {

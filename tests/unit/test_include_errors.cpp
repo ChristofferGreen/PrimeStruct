@@ -123,6 +123,15 @@ TEST_CASE("unquoted include path with reserved keyword fails") {
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
+TEST_CASE("unquoted include path with import keyword fails") {
+  const std::string srcPath = writeTemp("main_include_import_keyword.prime", "include</import/io>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("reserved keyword") != std::string::npos);
+}
+
 TEST_CASE("invalid include version fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bad_version";
   std::filesystem::remove_all(dir);
