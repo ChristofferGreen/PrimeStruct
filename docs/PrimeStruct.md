@@ -249,6 +249,8 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
   - **PathSpace helpers:** `notify`, `insert`, `take`.
+  - **Operators (desugared forms):** `plus`, `minus`, `multiply`, `divide`, `negate`.
+  - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
 
 ## Runtime Stack Model (draft)
 - **Frames:** each execution pushes a frame recording the instruction pointer, constants, locals, captures, and effect mask. Frames are immutable from the caller’s perspective; `assign` creates new bindings.
