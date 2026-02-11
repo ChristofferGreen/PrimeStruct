@@ -111,14 +111,6 @@ bool validateTransformName(const std::string &text, std::string &error) {
   if (text == "return" || text == "mut") {
     return true;
   }
-  if (text.empty()) {
-    error = "invalid transform identifier";
-    return false;
-  }
-  if (text[0] == '/' || text.find('/') != std::string::npos) {
-    error = "transform identifiers cannot be slash paths";
-    return false;
-  }
   return validateIdentifierText(text, error);
 }
 

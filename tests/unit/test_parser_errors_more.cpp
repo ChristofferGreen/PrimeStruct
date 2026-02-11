@@ -297,7 +297,7 @@ main() {
   CHECK(error.find("unterminated block comment") != std::string::npos);
 }
 
-TEST_CASE("slash path transform identifier rejected") {
+TEST_CASE("slash path transform identifier accepted") {
   const std::string source = R"(
 [/demo]
 main() {
@@ -308,8 +308,11 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("transform identifiers cannot be slash paths") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  CHECK(program.definitions[0].transforms[0].name == "/demo");
 }
 
 TEST_CASE("non-ascii transform argument rejected") {
