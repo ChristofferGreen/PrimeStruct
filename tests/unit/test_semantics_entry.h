@@ -422,6 +422,25 @@ main() {
   CHECK(error.find("unknown call target: /math/plus") != std::string::npos);
 }
 
+TEST_CASE("import aliases namespace definitions") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  add_one([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(add_one(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
