@@ -106,6 +106,22 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32, "b"utf8, 2i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("compile_map_string_keys_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_map_string_keys_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs lerp in C++ emitter") {
   const std::string source = R"(
 import /math
