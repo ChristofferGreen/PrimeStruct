@@ -606,6 +606,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pod and handle tags conflict on definitions") {
+  const std::string source = R"(
+[pod handle]
+Thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pod definitions cannot be tagged as handle or gpu_lane") != std::string::npos);
+}
+
+TEST_CASE("pod definitions reject handle fields") {
+  const std::string source = R"(
+[pod]
+Thing() {
+  [handle i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pod definitions cannot contain handle or gpu_lane fields") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
