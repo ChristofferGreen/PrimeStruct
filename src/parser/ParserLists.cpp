@@ -229,6 +229,9 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
     return true;
   }
   while (true) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     Expr param;
     if (!parseParameterBinding(param, namespacePrefix)) {
       return false;
@@ -257,6 +260,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   }
   ArgumentLabelGuard labelGuard(*this);
   while (true) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     std::optional<std::string> argName;
     if (match(TokenKind::LBracket) && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
         tokens_[pos_ + 2].kind == TokenKind::RBracket) {

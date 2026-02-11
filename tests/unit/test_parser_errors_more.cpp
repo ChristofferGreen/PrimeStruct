@@ -231,6 +231,37 @@ namespace demo {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("semicolon rejected in parameter list") {
+  const std::string source = R"(
+[return<int>]
+main([i32] a; [i32] b) {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
+TEST_CASE("semicolon rejected in call arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  foo(1i32; 2i32)
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("trailing comma in transform list is rejected") {
   const std::string source = R"(
 [return<int>,]
