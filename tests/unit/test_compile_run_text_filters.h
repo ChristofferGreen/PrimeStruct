@@ -39,6 +39,19 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs implicit i32 via transform list in primevm") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(10)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_i32_vm.prime", source);
+
+  const std::string runVmCmd = "./primevm " + srcPath + " --entry /main --transform-list=default,implicit-i32";
+  CHECK(runCommand(runVmCmd) == 10);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
