@@ -357,11 +357,7 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
     if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
-      if (match(TokenKind::RBrace)) {
-        return fail("trailing comma not allowed in binding initializer");
-      }
-      continue;
+      return fail("binding initializer arguments must be whitespace-separated");
     }
     if (match(TokenKind::RBrace)) {
       break;

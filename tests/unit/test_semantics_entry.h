@@ -190,7 +190,7 @@ main() {
 }
 
 [return<int>]
-add([i32] left, [i32] right{1i32, 2i32}) {
+add([i32] left, [i32] right{1i32 2i32}) {
   return(plus(left, right))
 }
 )";
