@@ -636,6 +636,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         error_ = "push requires exactly two arguments";
         return false;
       }
+      if (activeEffects_.count("heap_alloc") == 0) {
+        error_ = "push requires heap_alloc effect";
+        return false;
+      }
       const BindingInfo *binding = nullptr;
       if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
         return false;
@@ -652,6 +656,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (vectorHelper == "reserve") {
       if (stmt.args.size() != 2) {
         error_ = "reserve requires exactly two arguments";
+        return false;
+      }
+      if (activeEffects_.count("heap_alloc") == 0) {
+        error_ = "reserve requires heap_alloc effect";
         return false;
       }
       const BindingInfo *binding = nullptr;

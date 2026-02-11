@@ -634,7 +634,7 @@ main() {
 
 TEST_CASE("push requires mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   push(values, 2i32)
@@ -646,9 +646,23 @@ main() {
   CHECK(error.find("push requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("push validates on mutable vector binding") {
+TEST_CASE("push requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("push validates on mutable vector binding") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values, 2i32)
@@ -690,7 +704,7 @@ main() {
 
 TEST_CASE("reserve requires mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   reserve(values, 8i32)
@@ -702,9 +716,23 @@ main() {
   CHECK(error.find("reserve requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("reserve requires integer capacity") {
+TEST_CASE("reserve requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 8i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reserve requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("reserve requires integer capacity") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   reserve(values, "hi"utf8)
@@ -746,7 +774,7 @@ main() {
 
 TEST_CASE("reserve validates on mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   reserve(values, 8i32)

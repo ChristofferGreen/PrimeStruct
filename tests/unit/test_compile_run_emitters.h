@@ -85,7 +85,7 @@ main() {
 
 TEST_CASE("compiles and runs vector helpers in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
   push(values, 4i32)
