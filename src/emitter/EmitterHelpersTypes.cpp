@@ -129,7 +129,7 @@ bool isBindingQualifierName(const std::string &name) {
 
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
-         isBindingQualifierName(name);
+         name == "pod" || name == "handle" || name == "gpu_lane" || isBindingQualifierName(name);
 }
 
 bool hasExplicitBindingTypeTransform(const Expr &expr) {

@@ -725,6 +725,19 @@ main() {
   CHECK(error.find("fields cannot be tagged as pod and gpu_lane") != std::string::npos);
 }
 
+TEST_CASE("handle tag does not replace binding type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [handle i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math

@@ -15,7 +15,7 @@ bool isBindingQualifierName(const std::string &name) {
 
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
-         isBindingQualifierName(name);
+         name == "pod" || name == "handle" || name == "gpu_lane" || isBindingQualifierName(name);
 }
 
 bool hasExplicitBindingTypeTransform(const Expr &expr) {
@@ -646,6 +646,28 @@ bool parseBindingInfo(const Expr &expr,
     if (transform.name == "copy") {
       if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      continue;
+    }
+    if (transform.name == "pod" || transform.name == "gpu_lane") {
+      if (!transform.templateArgs.empty()) {
+        error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      continue;
+    }
+    if (transform.name == "handle") {
+      if (transform.templateArgs.size() > 1) {
+        error = "handle accepts at most one template argument";
         return false;
       }
       if (!transform.arguments.empty()) {
