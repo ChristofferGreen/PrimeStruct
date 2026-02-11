@@ -1822,13 +1822,14 @@ TEST_CASE("compiles and runs unquoted include expansion") {
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_unquoted";
   std::filesystem::create_directories(includeRoot);
   {
-    std::ofstream libFile(includeRoot / "lib.prime");
+    std::filesystem::create_directories(includeRoot / "lib");
+    std::ofstream libFile(includeRoot / "lib" / "lib.prime");
     CHECK(libFile.good());
     libFile << "[return<int>]\nhelper(){ return(5i32) }\n";
     CHECK(libFile.good());
   }
 
-  const std::string source = "include</lib.prime>\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string source = "include</lib>\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_unquoted_include.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_unquoted_inc_exe").string();
 
@@ -1844,22 +1845,22 @@ TEST_CASE("compiles and runs versioned include expansion") {
   std::filesystem::remove_all(includeRoot);
   std::filesystem::create_directories(includeRoot);
   {
-    std::filesystem::create_directories((includeRoot / "1.2.0"));
-    std::ofstream oldLib(includeRoot / "1.2.0" / "lib.prime");
+    std::filesystem::create_directories((includeRoot / "1.2.0" / "lib"));
+    std::ofstream oldLib(includeRoot / "1.2.0" / "lib" / "lib.prime");
     CHECK(oldLib.good());
     oldLib << "[return<int>]\nhelper(){ return(5i32) }\n";
     CHECK(oldLib.good());
   }
   {
-    std::filesystem::create_directories((includeRoot / "1.2.3"));
-    std::ofstream newLib(includeRoot / "1.2.3" / "lib.prime");
+    std::filesystem::create_directories((includeRoot / "1.2.3" / "lib"));
+    std::ofstream newLib(includeRoot / "1.2.3" / "lib" / "lib.prime");
     CHECK(newLib.good());
     newLib << "[return<int>]\nhelper(){ return(7i32) }\n";
     CHECK(newLib.good());
   }
 
   const std::string source =
-      "include</lib.prime, version=\"1.2\">\n"
+      "include</lib, version=\"1.2\">\n"
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include.prime", source);

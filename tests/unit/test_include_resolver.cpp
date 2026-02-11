@@ -91,8 +91,8 @@ TEST_CASE("expands include with bare slash path") {
   std::filesystem::create_directories(baseDir);
   std::filesystem::create_directories(includeRoot);
 
-  writeFile(includeRoot / "lib.prime", "// INCLUDE_BARE_PATH\n");
-  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib.prime>\n");
+  writeFile(includeRoot / "lib" / "lib.prime", "// INCLUDE_BARE_PATH\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib>\n");
 
   std::string source;
   std::string error;

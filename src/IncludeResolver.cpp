@@ -42,7 +42,7 @@ bool isIdentifierSegmentChar(char c) {
 }
 
 bool isIncludeSegmentChar(char c) {
-  return isIdentifierSegmentChar(c) || c == '.';
+  return isIdentifierSegmentChar(c);
 }
 
 bool validateSlashPath(const std::string &text, std::string &error) {

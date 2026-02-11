@@ -114,6 +114,15 @@ TEST_CASE("unquoted include path with invalid segment fails") {
   CHECK(error.find("invalid slash path identifier") != std::string::npos);
 }
 
+TEST_CASE("unquoted include path with dot fails") {
+  const std::string srcPath = writeTemp("main_include_dot_segment.prime", "include</lib.prime>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
+}
+
 TEST_CASE("unquoted include path with reserved keyword fails") {
   const std::string srcPath = writeTemp("main_include_reserved_segment.prime", "include</return/io>\n");
   std::string source;
