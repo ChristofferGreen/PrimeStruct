@@ -581,10 +581,15 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               return false;
             }
             versionTag = trim(versionValue);
-            if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
-                payload[pos] != ',') {
-              error = "unexpected characters after include version";
-              return false;
+            if (pos < payload.size()) {
+              if (payload[pos] == ';') {
+                error = "semicolon is not allowed in include<...>";
+                return false;
+              }
+              if (!std::isspace(static_cast<unsigned char>(payload[pos])) && payload[pos] != ',') {
+                error = "unexpected characters after include version";
+                return false;
+              }
             }
           } else if (payload[pos] == '"' || payload[pos] == '\'') {
             std::string path;

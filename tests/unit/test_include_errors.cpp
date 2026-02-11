@@ -86,6 +86,16 @@ TEST_CASE("include entry with semicolon fails") {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("include version with semicolon fails") {
+  const std::string srcPath =
+      writeTemp("main_include_semicolon_version.prime", "include<\"/lib.prime\", version=\"1.2\";>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("unquoted non-slash include path fails") {
   const std::string srcPath = writeTemp("main_include_bare_relative.prime", "include<lib.prime>\n");
   std::string source;
