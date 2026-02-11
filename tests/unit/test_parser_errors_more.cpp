@@ -603,6 +603,22 @@ main() {
   CHECK(error.find("import path must be a slash path") != std::string::npos);
 }
 
+TEST_CASE("import path rejects invalid slash identifier") {
+  const std::string source = R"(
+import /util//extra
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
+}
+
 TEST_CASE("import path rejects trailing slash") {
   const std::string source = R"(
 import /util/
