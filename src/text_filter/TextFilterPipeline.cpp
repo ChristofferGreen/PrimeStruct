@@ -110,6 +110,28 @@ bool TextFilterPipeline::apply(const std::string &input,
             scan = end;
             continue;
           }
+          if (c == '/' && scan + 1 < inner.size()) {
+            if (inner[scan + 1] == '/') {
+              size_t end = inner.find('\n', scan + 2);
+              if (end == std::string::npos) {
+                end = inner.size();
+              }
+              rewritten.append(inner.substr(scan, end - scan));
+              scan = end;
+              continue;
+            }
+            if (inner[scan + 1] == '*') {
+              size_t end = inner.find("*/", scan + 2);
+              if (end == std::string::npos) {
+                error = "unterminated block comment";
+                return false;
+              }
+              end += 2;
+              rewritten.append(inner.substr(scan, end - scan));
+              scan = end;
+              continue;
+            }
+          }
           if (c == '(') {
             ++parenDepth;
             rewritten.push_back(c);
