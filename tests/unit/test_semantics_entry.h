@@ -764,6 +764,32 @@ main() {
   CHECK(error.find("binding transforms do not take template arguments") != std::string::npos);
 }
 
+TEST_CASE("duplicate static tags reject on bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [static static i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate static transform on binding") != std::string::npos);
+}
+
+TEST_CASE("duplicate visibility tags reject on bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [public private i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility transforms are mutually exclusive") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
