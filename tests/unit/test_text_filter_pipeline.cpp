@@ -46,6 +46,24 @@ TEST_CASE("pipeline preserves line comments") {
   CHECK(output.find("plus(a, b)") == std::string::npos);
 }
 
+TEST_CASE("filters ignore line comments") {
+  const std::string source =
+      "main(){\n"
+      "  value(1i32)// a+b and array<i32>{1i32,2i32} should stay\n"
+      "  return(1i32)\n"
+      "}\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections", "implicit-utf8", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("// a+b and array<i32>{1i32,2i32} should stay") != std::string::npos);
+  CHECK(output.find("plus(a, b)") == std::string::npos);
+  CHECK(output.find("array<i32>(1i32,2i32)") == std::string::npos);
+}
+
 TEST_CASE("pipeline preserves block comments") {
   const std::string source = "main(){ /* a*b should stay */ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
@@ -55,6 +73,24 @@ TEST_CASE("pipeline preserves block comments") {
   CHECK(error.empty());
   CHECK(output.find("/* a*b should stay */") != std::string::npos);
   CHECK(output.find("multiply(a, b)") == std::string::npos);
+}
+
+TEST_CASE("filters ignore block comments") {
+  const std::string source =
+      "main(){\n"
+      "  /* a*b and \"raw\" should stay */\n"
+      "  return(1i32)\n"
+      "}\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators", "collections", "implicit-utf8", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("/* a*b and \"raw\" should stay */") != std::string::npos);
+  CHECK(output.find("multiply(a, b)") == std::string::npos);
+  CHECK(output.find("\"raw\"utf8") == std::string::npos);
 }
 
 TEST_CASE("rewrites divide operator without spaces") {
