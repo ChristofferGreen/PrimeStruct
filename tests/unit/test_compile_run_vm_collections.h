@@ -194,6 +194,31 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with vector count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(count(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_count_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
+TEST_CASE("runs vm with vector literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(vector<i32>(1i32, 2i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_literal_count_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("runs vm with map literal") {
   const std::string source = R"(
 [return<int>]

@@ -1589,6 +1589,22 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native vector literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(vector<i32>(1i32, 2i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_literal_count_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_literal_count_helper_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("compiles and runs native map literals") {
   const std::string source = R"(
 [return<int>]
