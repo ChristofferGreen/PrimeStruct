@@ -737,6 +737,29 @@ main() {
   CHECK(readFile(errPath) == "oops7\n");
 }
 
+TEST_CASE("default effects token enables io output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line("default effects"utf8)
+  print_line_error("err"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_print_default_effects.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_print_default_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_print_default_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_print_default_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --default-effects=default";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "default effects\n");
+  CHECK(readFile(errPath) == "err\n");
+}
+
 TEST_CASE("compiles and runs native string binding print") {
   const std::string source = R"(
 [return<int> effects(io_out)]

@@ -26,7 +26,7 @@ std::vector<std::string> defaultTextFilters() {
 }
 
 std::vector<std::string> defaultEffectsList() {
-  return {};
+  return {"io_out", "io_err"};
 }
 
 std::string trimWhitespace(const std::string &text) {
