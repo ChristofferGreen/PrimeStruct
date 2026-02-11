@@ -25,6 +25,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return false;
   }
   while (!match(TokenKind::RBracket)) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -106,11 +109,17 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
     return fail("expected template identifier");
   }
   while (!match(TokenKind::RAngle)) {
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     std::string typeName;
     if (!parseTypeName(typeName)) {
       return false;
     }
     out.push_back(typeName);
+    if (match(TokenKind::Semicolon)) {
+      return fail("semicolon is not allowed");
+    }
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::RAngle)) {
