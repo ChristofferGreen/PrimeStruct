@@ -190,6 +190,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("duplicate imports are ignored") {
+  const std::string source = R"(
+import /util, /util
+import /util
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import ignores nested definitions") {
   const std::string source = R"(
 import /util
