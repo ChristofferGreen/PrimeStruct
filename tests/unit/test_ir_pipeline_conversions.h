@@ -963,6 +963,31 @@ main() {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir lowerer supports vector count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  return(count(values))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
 TEST_CASE("ir lowerer supports array literal count helper") {
   const std::string source = R"(
 [return<int>]
@@ -985,6 +1010,30 @@ main() {
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 3);
+}
+
+TEST_CASE("ir lowerer supports vector literal count helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(count(vector<i32>(1i32, 2i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
 }
 
 TEST_CASE("ir lowerer forwards count to method calls") {

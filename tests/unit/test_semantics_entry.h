@@ -441,6 +441,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import aliases namespace types and methods") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [struct]
+  Thing() {
+    [i32] value{1i32}
+  }
+
+  [return<int>]
+  /util/Thing/get([Thing] self) {
+    return(7i32)
+  }
+}
+[return<int>]
+main() {
+  [Thing] item{1i32}
+  return(item.get())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
