@@ -260,6 +260,31 @@ main() {
   CHECK(result == 8);
 }
 
+TEST_CASE("ir lowerer allows local binding named pi") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] pi{4i32}
+  return(pi)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 4);
+}
+
 TEST_CASE("ir lowerer resolves imported definition calls") {
   const std::string source = R"(
 import /util

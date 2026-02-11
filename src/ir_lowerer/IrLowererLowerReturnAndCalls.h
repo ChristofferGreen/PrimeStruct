@@ -614,11 +614,6 @@
         return true;
       }
       case Expr::Kind::Name: {
-        std::string mathConst;
-        if (getMathConstantName(expr.name, mathConst)) {
-          error = "native backend does not support math constant: " + mathConst;
-          return false;
-        }
         auto it = localsIn.find(expr.name);
         if (it != localsIn.end()) {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
@@ -629,6 +624,11 @@
         }
         if (hasEntryArgs && expr.name == entryArgsName) {
           error = "native backend only supports count() on entry arguments";
+          return false;
+        }
+        std::string mathConst;
+        if (getMathConstantName(expr.name, mathConst)) {
+          error = "native backend does not support math constant: " + mathConst;
           return false;
         }
         error = "native backend does not know identifier: " + expr.name;
