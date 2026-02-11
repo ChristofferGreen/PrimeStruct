@@ -124,3 +124,22 @@ run(1i32)
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_CASE("import accepts multiple paths in one statement") {
+  const std::string source = R"(
+import /util, /math
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(min(inc(1i32), 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}

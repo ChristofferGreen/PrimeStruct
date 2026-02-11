@@ -552,6 +552,24 @@ main() {
   CHECK(error.find("missing return statement in definition body") != std::string::npos);
 }
 
+TEST_CASE("import inside namespace fails") {
+  const std::string source = R"(
+namespace demo {
+  import /util
+  [return<int>]
+  main() {
+    return(1i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("import statements must appear at the top level") != std::string::npos);
+}
+
 TEST_CASE("invalid slash path identifier fails") {
   const std::string source = R"(
 [return<int>]
