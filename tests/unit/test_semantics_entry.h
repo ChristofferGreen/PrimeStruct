@@ -422,6 +422,19 @@ main() {
   CHECK(error.find("math constant requires import /math: pi") != std::string::npos);
 }
 
+TEST_CASE("math constants resolve with import") {
+  const std::string source = R"(
+import /math
+[return<f64>]
+main() {
+  return(plus(plus(pi, tau), e))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("math-qualified constant works without import") {
   const std::string source = R"(
 [return<f64>]
