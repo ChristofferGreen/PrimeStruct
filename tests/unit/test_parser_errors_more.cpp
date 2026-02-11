@@ -323,6 +323,22 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("semicolon rejected in nested template list") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  foo<map<i32; i64>>()
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("non-ascii transform identifier rejected") {
   const std::string source = std::string(R"(
 [tr)") + "\xC3\xA9" + R"(]

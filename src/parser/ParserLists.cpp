@@ -165,6 +165,9 @@ bool Parser::parseTypeName(std::string &out) {
     }
     bool first = true;
     while (!match(TokenKind::RAngle)) {
+      if (match(TokenKind::Semicolon)) {
+        return fail("semicolon is not allowed");
+      }
       std::string nested;
       if (!parseTypeName(nested)) {
         return false;
@@ -180,6 +183,9 @@ bool Parser::parseTypeName(std::string &out) {
           return fail("trailing comma not allowed in template argument list");
         }
         continue;
+      }
+      if (match(TokenKind::Semicolon)) {
+        return fail("semicolon is not allowed");
       }
       if (match(TokenKind::RAngle)) {
         break;
