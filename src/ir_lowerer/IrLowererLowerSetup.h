@@ -87,7 +87,7 @@ bool IrLowerer::lower(const Program &program,
   struct LocalInfo {
     int32_t index = 0;
     bool isMutable = false;
-    enum class Kind { Value, Pointer, Reference, Array, Map } kind = Kind::Value;
+    enum class Kind { Value, Pointer, Reference, Array, Vector, Map } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
     ValueKind mapKeyKind = ValueKind::Unknown;
     ValueKind mapValueKind = ValueKind::Unknown;
@@ -275,7 +275,9 @@ bool IrLowerer::lower(const Program &program,
     }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      return it != localsIn.end() && (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Map);
+      return it != localsIn.end() &&
+             (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+              it->second.kind == LocalInfo::Kind::Map);
     }
     if (target.kind == Expr::Kind::Call) {
       std::string collection;
@@ -445,8 +447,11 @@ bool IrLowerer::lower(const Program &program,
       if (transform.name == "Pointer") {
         return LocalInfo::Kind::Pointer;
       }
-      if (transform.name == "array" || transform.name == "vector") {
+      if (transform.name == "array") {
         return LocalInfo::Kind::Array;
+      }
+      if (transform.name == "vector") {
+        return LocalInfo::Kind::Vector;
       }
       if (transform.name == "map") {
         return LocalInfo::Kind::Map;
@@ -613,6 +618,8 @@ bool IrLowerer::lower(const Program &program,
       }
       if (it->second.kind == LocalInfo::Kind::Array) {
         typeName = "array";
+      } else if (it->second.kind == LocalInfo::Kind::Vector) {
+        typeName = "vector";
       } else if (it->second.kind == LocalInfo::Kind::Map) {
         typeName = "map";
       } else if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
@@ -624,8 +631,10 @@ bool IrLowerer::lower(const Program &program,
     } else if (receiver.kind == Expr::Kind::Call) {
       std::string collection;
       if (getBuiltinCollectionName(receiver, collection)) {
-        if ((collection == "array" || collection == "vector") && receiver.templateArgs.size() == 1) {
+        if (collection == "array" && receiver.templateArgs.size() == 1) {
           typeName = "array";
+        } else if (collection == "vector" && receiver.templateArgs.size() == 1) {
+          typeName = "vector";
         } else if (collection == "map" && receiver.templateArgs.size() == 2) {
           typeName = "map";
         }
@@ -803,7 +812,8 @@ bool IrLowerer::lower(const Program &program,
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
           if (target.kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+            if (it != localsIn.end() &&
+                (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
               elemKind = it->second.valueKind;
             }
           } else if (target.kind == Expr::Kind::Call) {

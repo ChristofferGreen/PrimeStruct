@@ -221,8 +221,10 @@
         } else if (init.kind == Expr::Kind::Call) {
           std::string collection;
           if (getBuiltinCollectionName(init, collection)) {
-            if (collection == "array" || collection == "vector") {
+            if (collection == "array") {
               kind = LocalInfo::Kind::Array;
+            } else if (collection == "vector") {
+              kind = LocalInfo::Kind::Vector;
             } else if (collection == "map") {
               kind = LocalInfo::Kind::Map;
             }
@@ -262,10 +264,11 @@
         if (valueKind == LocalInfo::ValueKind::Unknown) {
           valueKind = LocalInfo::ValueKind::Int32;
         }
-      } else if (kind == LocalInfo::Kind::Array) {
+      } else if (kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector) {
         if (init.kind == Expr::Kind::Name) {
           auto it = localsIn.find(init.name);
-          if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+          if (it != localsIn.end() &&
+              (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
             valueKind = it->second.valueKind;
           }
         } else if (init.kind == Expr::Kind::Call) {

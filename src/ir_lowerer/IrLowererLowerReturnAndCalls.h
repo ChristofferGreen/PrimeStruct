@@ -942,7 +942,8 @@
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
           if (target.kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+            if (it != localsIn.end() &&
+                (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
               elemKind = it->second.valueKind;
             }
           } else if (target.kind == Expr::Kind::Call) {

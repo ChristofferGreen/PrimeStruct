@@ -1096,6 +1096,36 @@ main() {
   CHECK(result == 5);
 }
 
+TEST_CASE("ir lowerer supports vector method calls") {
+  const std::string source = R"(
+[return<int>]
+/vector/first([vector<i32>] items) {
+  return(items[0i32])
+}
+
+[return<int>]
+main() {
+  [vector<i32>] items{vector<i32>(5i32, 9i32)}
+  return(items.first())
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 5);
+}
+
 TEST_CASE("ir lowerer supports map method calls") {
   const std::string source = R"(
 [return<int>]
