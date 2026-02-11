@@ -35,6 +35,13 @@ TEST_CASE("lexes raw string literal suffixes") {
   CHECK(tokens[0].text == "\"hello world\"raw_utf8");
 }
 
+TEST_CASE("lexes single-quoted string literals") {
+  const auto tokens = lex("'hello world'utf8");
+  REQUIRE(tokens.size() >= 1);
+  CHECK(tokens[0].kind == primec::TokenKind::String);
+  CHECK(tokens[0].text == "'hello world'utf8");
+}
+
 TEST_CASE("lexes string literals with escapes") {
   const auto tokens = lex("\"hello\\nworld\"");
   REQUIRE(tokens.size() >= 1);
