@@ -635,6 +635,21 @@ TEST_CASE("invalid slash path identifier fails") {
   CHECK(error.find("invalid slash path identifier") != std::string::npos);
 }
 
+TEST_CASE("slash path rejects reserved keyword segment") {
+  const std::string source = R"(
+[return<int>]
+/demo/return/widget() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier: return") != std::string::npos);
+}
+
 TEST_CASE("slash path requires leading slash") {
   const std::string source = R"(
 [return<int>]
