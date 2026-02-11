@@ -400,6 +400,15 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
   if (typeName.empty()) {
     return fail("binding initializer requires explicit type");
   }
+  if (hasNamed) {
+    std::string normalized = typeName;
+    if (!normalized.empty() && normalized[0] == '/') {
+      normalized.erase(0, 1);
+    }
+    if (isBuiltinName(normalized, hasMathImport_)) {
+      return fail("named arguments not supported for builtin calls");
+    }
+  }
 
   Expr constructorCall;
   constructorCall.kind = Expr::Kind::Call;

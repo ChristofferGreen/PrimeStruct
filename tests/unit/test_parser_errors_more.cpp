@@ -1150,6 +1150,22 @@ main() {
   CHECK(error.find("binding initializer requires explicit type") != std::string::npos);
 }
 
+TEST_CASE("binding initializer rejects named args for builtins") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{[first] 1i32}
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("parameter default rejects paren initializer") {
   const std::string source = R"(
 [return<int>]
