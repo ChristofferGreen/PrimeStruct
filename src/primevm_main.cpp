@@ -151,6 +151,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.textFilters = parseTextFilters(argv[++i]);
     } else if (arg.rfind("--text-filters=", 0) == 0) {
       out.textFilters = parseTextFilters(arg.substr(std::string("--text-filters=").size()));
+    } else if (arg == "--transform-list" && i + 1 < argc) {
+      out.textFilters = parseTextFilters(argv[++i]);
+    } else if (arg.rfind("--transform-list=", 0) == 0) {
+      out.textFilters = parseTextFilters(arg.substr(std::string("--transform-list=").size()));
     } else if (arg == "--no-transforms") {
       out.textFilters.clear();
     } else if (arg == "--default-effects" && i + 1 < argc) {
@@ -179,7 +183,8 @@ int main(int argc, char **argv) {
   primec::Options options;
   if (!parseArgs(argc, argv, options)) {
     std::cerr << "Usage: primevm <input.prime> [--entry /path] [--include-path <dir>] [--text-filters <list>] "
-                 "[--no-transforms] [--default-effects <list>] [--dump-stage pre_ast|ast|ir] "
+                 "[--transform-list <list>] [--no-transforms] [--default-effects <list>] "
+                 "[--dump-stage pre_ast|ast|ir] "
                  "[-- <program args...>]\n";
     return 2;
   }

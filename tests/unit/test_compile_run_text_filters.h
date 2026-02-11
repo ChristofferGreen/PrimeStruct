@@ -23,6 +23,22 @@ main() {
   CHECK(runCommand(nativePath) == 8);
 }
 
+TEST_CASE("compiles and runs implicit i32 via transform list") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(9)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_i32.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_transform_list_i32_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --transform-list=default,implicit-i32";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
