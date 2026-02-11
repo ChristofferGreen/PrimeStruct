@@ -288,6 +288,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector literal validates") {
+  const std::string source = R"(
+[return<int>]
+use([vector<i32>] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(vector<i32>(1i32, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector literal validates bool elements") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  vector<bool>(true, false)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("named arguments match parameters") {
   const std::string source = R"(
 [return<int>]
@@ -1422,6 +1452,19 @@ TEST_CASE("array literal rejects software numeric type") {
 [return<int>]
 main() {
   array<decimal>(1.0f)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
+TEST_CASE("vector literal rejects software numeric type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  vector<decimal>(1.0f)
   return(1i32)
 }
 )";
