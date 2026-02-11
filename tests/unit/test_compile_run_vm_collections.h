@@ -221,6 +221,39 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with math abs/sign/min/max") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  [i32] a{abs(-5i32)}
+  [i32] b{sign(-5i32)}
+  [i32] c{min(7i32, 2i32)}
+  [i32] d{max(7i32, 2i32)}
+  return(plus(plus(a, b), plus(c, d)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_basic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 13);
+}
+
+TEST_CASE("runs vm with math saturate/lerp") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  [i32] a{saturate(-2i32)}
+  [i32] b{saturate(2i32)}
+  [i32] c{lerp(0i32, 10i32, 1i32)}
+  return(plus(plus(a, b), c))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_saturate_lerp.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

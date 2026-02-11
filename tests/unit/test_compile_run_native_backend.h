@@ -1115,6 +1115,46 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs native math abs/sign/min/max") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  [i32] a{abs(-5i32)}
+  [i32] b{sign(-5i32)}
+  [i32] c{min(7i32, 2i32)}
+  [i32] d{max(7i32, 2i32)}
+  return(plus(plus(a, b), plus(c, d)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_basic.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_math_basic_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 13);
+}
+
+TEST_CASE("compiles and runs native math saturate/lerp") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  [i32] a{saturate(-2i32)}
+  [i32] b{saturate(2i32)}
+  [i32] c{lerp(0i32, 10i32, 1i32)}
+  return(plus(plus(a, b), c))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_saturate_lerp.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_saturate_lerp_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("compiles and runs native i64 arithmetic") {
   const std::string source = R"(
 [return<bool>]
