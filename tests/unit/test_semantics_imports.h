@@ -126,6 +126,31 @@ main() {
   CHECK(error.find("import creates name conflict: dup") != std::string::npos);
 }
 
+TEST_CASE("import conflicts between namespaces") {
+  const std::string source = R"(
+import /util, /tools
+namespace util {
+  [return<int>]
+  dup() {
+    return(1i32)
+  }
+}
+namespace tools {
+  [return<int>]
+  dup() {
+    return(2i32)
+  }
+}
+[return<int>]
+main() {
+  return(dup())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: dup") != std::string::npos);
+}
+
 TEST_CASE("import resolves execution targets") {
   const std::string source = R"(
 import /util
