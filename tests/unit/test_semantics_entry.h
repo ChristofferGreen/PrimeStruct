@@ -738,6 +738,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("handle tag accepts template arg without changing type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [handle<PathNode> i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pod tag rejects template args on bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [pod<i32> i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding transforms do not take template arguments") != std::string::npos);
+}
+
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
 import /math
