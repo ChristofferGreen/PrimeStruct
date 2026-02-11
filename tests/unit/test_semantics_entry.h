@@ -859,6 +859,25 @@ task()
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
+TEST_CASE("execution accepts bracket-labeled arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+execute_repeat([i32] count) {
+  return(count)
+}
+
+execute_repeat([count] 2i32)
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("execution body arguments must be calls") {
   const std::string source = R"(
 [return<int>]

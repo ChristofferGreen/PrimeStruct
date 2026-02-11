@@ -55,6 +55,55 @@ std::string formatTransformType(const Transform &transform) {
   return transform.name + "<" + formatTemplateArgs(transform.templateArgs) + ">";
 }
 
+bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
+  if (index >= tokens.size() || tokens[index].kind != TokenKind::LBracket) {
+    return false;
+  }
+  auto skipComments = [&](size_t &pos) {
+    while (pos < tokens.size() && tokens[pos].kind == TokenKind::Comment) {
+      ++pos;
+    }
+  };
+  size_t scan = index + 1;
+  skipComments(scan);
+  if (scan >= tokens.size() || tokens[scan].kind != TokenKind::Identifier) {
+    return true;
+  }
+  ++scan;
+  skipComments(scan);
+  if (scan >= tokens.size() || tokens[scan].kind != TokenKind::RBracket) {
+    return true;
+  }
+  ++scan;
+  skipComments(scan);
+  if (scan >= tokens.size()) {
+    return true;
+  }
+  const TokenKind nextKind = tokens[scan].kind;
+  if (nextKind == TokenKind::Number || nextKind == TokenKind::String) {
+    return false;
+  }
+  if (nextKind == TokenKind::Identifier) {
+    if (tokens[scan].text == "true" || tokens[scan].text == "false") {
+      return false;
+    }
+    size_t follow = scan + 1;
+    skipComments(follow);
+    if (follow < tokens.size()) {
+      const TokenKind followKind = tokens[follow].kind;
+      if (followKind == TokenKind::LParen || followKind == TokenKind::Dot ||
+          followKind == TokenKind::LBracket || followKind == TokenKind::LAngle) {
+        return false;
+      }
+      if (followKind == TokenKind::LBrace) {
+        return true;
+      }
+    }
+    return true;
+  }
+  return true;
+}
+
 } // namespace
 
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
@@ -399,8 +448,10 @@ bool Parser::definitionHasReturnBeforeClose() const {
 bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   size_t index = pos_;
   int depth = 1;
+  int braceDepth = 0;
   bool identifiersOnly = true;
   bool sawBindingSyntax = false;
+  TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
     if (kind == TokenKind::Comment) {
@@ -415,11 +466,22 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
         break;
       }
     } else if (depth == 1) {
-      if (kind == TokenKind::LBracket) {
-        sawBindingSyntax = true;
-        identifiersOnly = false;
-      } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
-        identifiersOnly = false;
+      if (kind == TokenKind::LBrace) {
+        ++braceDepth;
+      } else if (kind == TokenKind::RBrace && braceDepth > 0) {
+        --braceDepth;
+      }
+      if (braceDepth == 0) {
+        if (kind == TokenKind::LBracket) {
+          identifiersOnly = false;
+          const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
+          if (atArgStart && isBindingParamBracket(tokens_, index)) {
+            sawBindingSyntax = true;
+          }
+        } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+          identifiersOnly = false;
+        }
+        prevAtDepth1 = kind;
       }
     }
     ++index;
@@ -442,8 +504,10 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
 bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const {
   size_t index = pos_;
   int depth = 1;
+  int braceDepth = 0;
   bool identifiersOnly = true;
   bool sawBindingSyntax = false;
+  TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
     if (kind == TokenKind::Comment) {
@@ -458,11 +522,22 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
         break;
       }
     } else if (depth == 1) {
-      if (kind == TokenKind::LBracket) {
-        sawBindingSyntax = true;
-        identifiersOnly = false;
-      } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
-        identifiersOnly = false;
+      if (kind == TokenKind::LBrace) {
+        ++braceDepth;
+      } else if (kind == TokenKind::RBrace && braceDepth > 0) {
+        --braceDepth;
+      }
+      if (braceDepth == 0) {
+        if (kind == TokenKind::LBracket) {
+          identifiersOnly = false;
+          const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
+          if (atArgStart && isBindingParamBracket(tokens_, index)) {
+            sawBindingSyntax = true;
+          }
+        } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
+          identifiersOnly = false;
+        }
+        prevAtDepth1 = kind;
       }
     }
     ++index;

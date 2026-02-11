@@ -122,6 +122,23 @@ execute_task(count = 2i32) { }
   CHECK(*program.executions[0].argumentNames[0] == "count");
 }
 
+TEST_CASE("parses execution bracket-labeled arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task([count] 2i32) { }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].arguments.size() == 1);
+  REQUIRE(program.executions[0].argumentNames.size() == 1);
+  CHECK(program.executions[0].argumentNames[0].has_value());
+  CHECK(*program.executions[0].argumentNames[0] == "count");
+}
+
 TEST_CASE("parses execution with collection call arguments") {
   const std::string source = R"(
 [return<int>]
