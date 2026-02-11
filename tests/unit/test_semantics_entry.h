@@ -35,6 +35,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("entry definition accepts array<string> parameter") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] argv) {
+  return(argv.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("entry definition rejects default args parameter") {
   const std::string source = R"(
 [return<int>]
