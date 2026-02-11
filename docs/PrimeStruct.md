@@ -189,8 +189,10 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
 - **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
-- **Capability helpers:** `capabilities(...)` reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
-- **`struct`, `pod`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
+- **`capabilities(...)`:** reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
+- **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
+- **`public`, `private`, `package`:** field visibility tags; mutually exclusive.
+- **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
 - **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
 
 ### Core library surface (draft)
