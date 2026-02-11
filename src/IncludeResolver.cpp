@@ -556,6 +556,10 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           if (pos >= payload.size()) {
             break;
           }
+          if (payload[pos] == ';') {
+            error = "semicolon is not allowed in include<...>";
+            return false;
+          }
           size_t entryPos = pos;
           if (tryConsumeIncludeKeyword(payload, entryPos, "version")) {
             pos = entryPos;
@@ -590,6 +594,10 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               return false;
             }
             paths.push_back(trim(path));
+            if (pos < payload.size() && payload[pos] == ';') {
+              error = "semicolon is not allowed in include<...>";
+              return false;
+            }
             if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
                 payload[pos] != ',') {
               error = "include path cannot have suffix";
@@ -614,6 +622,10 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           skipWhitespace();
           if (pos >= payload.size()) {
             break;
+          }
+          if (payload[pos] == ';') {
+            error = "semicolon is not allowed in include<...>";
+            return false;
           }
           if (payload[pos] != ',') {
             error = "expected ',' between include entries";

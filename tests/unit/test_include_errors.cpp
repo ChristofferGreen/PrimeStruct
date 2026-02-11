@@ -76,6 +76,16 @@ TEST_CASE("include entry missing comma fails") {
   CHECK(error.find("expected ',' between include entries") != std::string::npos);
 }
 
+TEST_CASE("include entry with semicolon fails") {
+  const std::string srcPath =
+      writeTemp("main_include_semicolon.prime", "include<\"/lib_a.prime\"; \"/lib_b.prime\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("unquoted non-slash include path fails") {
   const std::string srcPath = writeTemp("main_include_bare_relative.prime", "include<lib.prime>\n");
   std::string source;
