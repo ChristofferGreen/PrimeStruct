@@ -603,6 +603,22 @@ main() {
   CHECK(error.find("import path must be a slash path") != std::string::npos);
 }
 
+TEST_CASE("import trailing comma fails") {
+  const std::string source = R"(
+import /util,
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected import path") != std::string::npos);
+}
+
 TEST_CASE("namespace name must be a simple identifier") {
   const std::string source = R"(
 namespace demo/util {
