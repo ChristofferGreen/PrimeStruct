@@ -780,6 +780,23 @@ main() {
   CHECK(readFile(errPath) == "vm err\n");
 }
 
+TEST_CASE("default effects none requires explicit effects") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line("no effects"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_print_no_effects.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_print_no_effects_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main --default-effects=none 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("print_line requires io_out effect") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs native string binding print") {
   const std::string source = R"(
 [return<int> effects(io_out)]
