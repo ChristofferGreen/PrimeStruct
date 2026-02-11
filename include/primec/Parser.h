@@ -13,6 +13,7 @@ public:
   explicit Parser(std::vector<Token> tokens);
 
   bool parse(Program &program, std::string &error);
+  void setSingleTypeToReturn(bool enabled) { forceSingleTypeToReturn_ = enabled; }
 
 private:
   bool parseImport(Program &program);
@@ -89,6 +90,7 @@ private:
   bool allowArgumentLabels_ = false;
   bool allowBareBindings_ = false;
   bool hasMathImport_ = false;
+  bool forceSingleTypeToReturn_ = false;
 };
 
 } // namespace primec

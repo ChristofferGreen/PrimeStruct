@@ -353,12 +353,16 @@ bool Parser::applySingleTypeToReturn(std::vector<Transform> &transforms) {
     }
     markerIndex = i;
   }
-  if (markerIndex == transforms.size()) {
+  const bool hasExplicitMarker = markerIndex != transforms.size();
+  if (!hasExplicitMarker && !forceSingleTypeToReturn_) {
     return true;
   }
   for (const auto &transform : transforms) {
     if (transform.name == "return") {
-      return fail("single_type_to_return cannot be combined with return transform");
+      if (hasExplicitMarker) {
+        return fail("single_type_to_return cannot be combined with return transform");
+      }
+      return true;
     }
   }
   size_t typeIndex = transforms.size();
@@ -370,16 +374,26 @@ bool Parser::applySingleTypeToReturn(std::vector<Transform> &transforms) {
       continue;
     }
     if (typeIndex != transforms.size()) {
-      return fail("single_type_to_return requires a single type transform");
+      if (hasExplicitMarker) {
+        return fail("single_type_to_return requires a single type transform");
+      }
+      return true;
     }
     typeIndex = i;
   }
   if (typeIndex == transforms.size()) {
-    return fail("single_type_to_return requires a type transform");
+    if (hasExplicitMarker) {
+      return fail("single_type_to_return requires a type transform");
+    }
+    return true;
   }
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back(formatTransformType(transforms[typeIndex]));
+  if (!hasExplicitMarker) {
+    transforms[typeIndex] = std::move(returnTransform);
+    return true;
+  }
   std::vector<Transform> rewritten;
   rewritten.reserve(transforms.size() - 1);
   for (size_t i = 0; i < transforms.size(); ++i) {

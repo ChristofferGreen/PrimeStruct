@@ -69,6 +69,45 @@ main() {
   CHECK(runCommand(runVmCmd) == 10);
 }
 
+TEST_CASE("transform list enables single_type_to_return") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(5i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_single_type_to_return_ast.prime", source);
+  const std::string astPath =
+      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_ast.txt").string();
+
+  const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) +
+                              " --dump-stage ast --transform-list=default,single_type_to_return > " +
+                              quoteShellArg(astPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(astPath);
+  CHECK(ast.find("[return<i32>]") != std::string::npos);
+}
+
+TEST_CASE("no transforms disables single_type_to_return") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(6i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_single_type_to_return_disabled_ast.prime", source);
+  const std::string astPath =
+      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_disabled_ast.txt").string();
+
+  const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) +
+                              " --dump-stage ast --no-transforms --transform-list=default,single_type_to_return > " +
+                              quoteShellArg(astPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(astPath);
+  CHECK(ast.find("[i32]") != std::string::npos);
+  CHECK(ast.find("[return<i32>]") == std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]

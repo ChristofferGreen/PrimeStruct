@@ -83,6 +83,20 @@ std::vector<std::string> parseTextFilters(const std::string &text) {
   return filters;
 }
 
+bool extractSingleTypeToReturn(std::vector<std::string> &filters) {
+  bool enabled = false;
+  auto it = filters.begin();
+  while (it != filters.end()) {
+    if (*it == "single_type_to_return") {
+      enabled = true;
+      it = filters.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  return enabled;
+}
+
 std::vector<std::string> parseDefaultEffects(const std::string &text) {
   std::vector<std::string> effects;
   size_t start = 0;
@@ -172,8 +186,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.inputPath = arg;
     }
   }
+  out.singleTypeToReturn = extractSingleTypeToReturn(out.textFilters);
   if (noTransforms) {
     out.textFilters.clear();
+    out.singleTypeToReturn = false;
   }
   if (out.entryPath.empty()) {
     out.entryPath = "/main";
@@ -218,6 +234,7 @@ int main(int argc, char **argv) {
 
   primec::Lexer lexer(filteredSource);
   primec::Parser parser(lexer.tokenize());
+  parser.setSingleTypeToReturn(options.singleTypeToReturn);
   primec::Program program;
   if (!parser.parse(program, error)) {
     std::cerr << "Parse error: " << error << "\n";
