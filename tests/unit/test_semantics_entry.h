@@ -700,6 +700,54 @@ main() {
   }
 }
 
+TEST_CASE("boolean operators accept integer operands") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(and(0i32, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("boolean operators accept unsigned operands") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(or(0u64, 1u64))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("not accepts integer operand") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(not(0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("boolean operators reject float operands") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(and(1.0f, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
+}
+
 TEST_CASE("convert requires template argument") {
   const std::string source = R"(
 [return<int>]
