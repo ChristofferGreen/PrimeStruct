@@ -644,7 +644,8 @@
       return true;
     }
     if (stmt.kind == Expr::Kind::Call) {
-      if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn)) {
+      if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn) && !isStringCountCall(stmt, localsIn) &&
+          !isVectorCapacityCall(stmt, localsIn)) {
         const Definition *callee = resolveMethodCallDefinition(stmt, localsIn);
         if (!callee) {
           return false;

@@ -294,6 +294,24 @@ bool IrLowerer::lower(const Program &program,
     }
     return false;
   };
+  auto isVectorCapacityCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
+    if (!isSimpleCallName(expr, "capacity") || expr.args.size() != 1) {
+      return false;
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
+    }
+    if (target.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (!getBuiltinCollectionName(target, collection)) {
+        return false;
+      }
+      return collection == "vector" && target.templateArgs.size() == 1;
+    }
+    return false;
+  };
 
   auto resolveStringTableTarget = [&](const Expr &expr,
                                       const LocalMap &localsIn,
@@ -612,6 +630,9 @@ bool IrLowerer::lower(const Program &program,
     if (isArrayCountCall(callExpr, localsIn)) {
       return nullptr;
     }
+    if (isVectorCapacityCall(callExpr, localsIn)) {
+      return nullptr;
+    }
     const Expr &receiver = callExpr.args.front();
     if (isEntryArgsName(receiver, localsIn)) {
       error = "unknown method target for " + callExpr.name;
@@ -780,6 +801,9 @@ bool IrLowerer::lower(const Program &program,
           return LocalInfo::ValueKind::Int32;
         }
         if (isStringCountCall(expr, localsIn)) {
+          return LocalInfo::ValueKind::Int32;
+        }
+        if (isVectorCapacityCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;
         }
         std::string accessName;

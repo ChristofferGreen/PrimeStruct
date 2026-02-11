@@ -648,7 +648,8 @@
             return emitInlineDefinitionCall(methodExpr, *callee, localsIn, true);
           }
         }
-        if (expr.isMethodCall && !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
+        if (expr.isMethodCall && !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn) &&
+            !isVectorCapacityCall(expr, localsIn)) {
           const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
           if (!callee) {
             return false;
@@ -700,6 +701,13 @@
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
         }
+        if (isVectorCapacityCall(expr, localsIn)) {
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
+        }
         if (isStringCountCall(expr, localsIn)) {
           if (expr.args.size() != 1) {
             error = "count requires exactly one argument";
@@ -722,10 +730,12 @@
           error = "count requires array, vector, map, or string target";
           return false;
         }
-        std::string vectorHelper;
         if (isSimpleCallName(expr, "capacity")) {
-          vectorHelper = "capacity";
-        } else if (isSimpleCallName(expr, "push")) {
+          error = "capacity requires vector target";
+          return false;
+        }
+        std::string vectorHelper;
+        if (isSimpleCallName(expr, "push")) {
           vectorHelper = "push";
         } else if (isSimpleCallName(expr, "pop")) {
           vectorHelper = "pop";

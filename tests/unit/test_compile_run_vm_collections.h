@@ -207,6 +207,20 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with vector capacity helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  [i32] a{capacity(values)}
+  return(plus(a, values.capacity()))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_capacity_helper.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
