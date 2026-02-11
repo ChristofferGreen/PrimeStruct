@@ -1950,4 +1950,37 @@ TEST_CASE("compiles and runs versioned include expansion") {
   CHECK(runCommand(nativePath) == 7);
 }
 
+TEST_CASE("compiles and runs versioned include with version first") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_first";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories((includeRoot / "1.2.0" / "lib"));
+    std::ofstream oldLib(includeRoot / "1.2.0" / "lib" / "lib.prime");
+    CHECK(oldLib.good());
+    oldLib << "[return<int>]\nhelper(){ return(4i32) }\n";
+    CHECK(oldLib.good());
+  }
+  {
+    std::filesystem::create_directories((includeRoot / "1.2.5" / "lib"));
+    std::ofstream newLib(includeRoot / "1.2.5" / "lib" / "lib.prime");
+    CHECK(newLib.good());
+    newLib << "[return<int>]\nhelper(){ return(9i32) }\n";
+    CHECK(newLib.good());
+  }
+
+  const std::string source =
+      "include<version=\"1.2\", \"/lib\">\n"
+      "[return<int>]\n"
+      "main(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_versioned_include_first.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_versioned_inc_first_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                 " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 #endif
