@@ -954,6 +954,25 @@ execute_repeat(3i32) { if(true) { main() } else { main() } }
   CHECK(error.empty());
 }
 
+TEST_CASE("execution body accepts multiple calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+execute_repeat(2i32) { main(), main() }
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("execution rejects alignment transforms") {
   const std::string source = R"(
 [return<int>]
