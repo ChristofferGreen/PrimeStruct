@@ -760,6 +760,26 @@ main() {
   CHECK(readFile(errPath) == "err\n");
 }
 
+TEST_CASE("default effects token enables vm output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line("vm default effects"utf8)
+  print_line_error("vm err"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_vm_print_default_effects.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_print_default_out.txt").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_print_default_err.txt").string();
+
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default > " + outPath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "vm default effects\n");
+  CHECK(readFile(errPath) == "vm err\n");
+}
+
 TEST_CASE("compiles and runs native string binding print") {
   const std::string source = R"(
 [return<int> effects(io_out)]
