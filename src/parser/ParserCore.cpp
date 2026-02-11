@@ -110,6 +110,30 @@ Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
 bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
+  for (size_t scan = 0; scan < tokens_.size(); ++scan) {
+    if (tokens_[scan].kind != TokenKind::KeywordImport) {
+      continue;
+    }
+    ++scan;
+    while (scan < tokens_.size()) {
+      if (tokens_[scan].kind == TokenKind::Comment) {
+        ++scan;
+        continue;
+      }
+      if (tokens_[scan].kind == TokenKind::Identifier) {
+        if (tokens_[scan].text == "/math") {
+          hasMathImport_ = true;
+        }
+        ++scan;
+        continue;
+      }
+      if (tokens_[scan].kind == TokenKind::Comma) {
+        ++scan;
+        continue;
+      }
+      break;
+    }
+  }
   while (!match(TokenKind::End)) {
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
