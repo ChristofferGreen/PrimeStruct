@@ -1366,6 +1366,23 @@ main() {
   CHECK(error.find("array literal requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("vector literal missing template arg fails") {
+  const std::string source = R"(
+[return<int>]
+use([vector<i32>] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(vector(1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires exactly one template argument") != std::string::npos);
+}
+
 TEST_CASE("array literal type mismatch fails") {
   const std::string source = R"(
 [return<int>]
@@ -1381,6 +1398,23 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("array literal requires element type i32") != std::string::npos);
+}
+
+TEST_CASE("vector literal type mismatch fails") {
+  const std::string source = R"(
+[return<int>]
+use([vector<i32>] x) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(vector<i32>(1i32, "hi"utf8)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires element type i32") != std::string::npos);
 }
 
 TEST_CASE("array literal rejects software numeric type") {
