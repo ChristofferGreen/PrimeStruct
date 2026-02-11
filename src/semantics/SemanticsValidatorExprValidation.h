@@ -148,6 +148,11 @@
       isBuiltinOut = false;
       std::string elemType;
       if (methodName == "count") {
+        if (resolveVectorTarget(receiver, elemType)) {
+          resolvedOut = "/vector/count";
+          isBuiltinOut = true;
+          return true;
+        }
         if (resolveArrayTarget(receiver, elemType)) {
           resolvedOut = "/array/count";
           isBuiltinOut = true;
@@ -318,7 +323,8 @@
           return false;
         }
       }
-      if (resolvedMethod && (resolved == "/array/count" || resolved == "/string/count" || resolved == "/map/count")) {
+      if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" || resolved == "/string/count" ||
+                             resolved == "/map/count")) {
         if (!expr.templateArgs.empty()) {
           error_ = "count does not accept template arguments";
           return false;

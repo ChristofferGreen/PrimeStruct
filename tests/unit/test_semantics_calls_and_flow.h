@@ -407,6 +407,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count helper validates on vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count builtin validates on method calls") {
   const std::string source = R"(
 [return<int>]
@@ -417,6 +430,32 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("count method validates on vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("count rejects vector named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.count(value = 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("count method validates on array binding") {

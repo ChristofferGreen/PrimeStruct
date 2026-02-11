@@ -410,7 +410,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (resolveArrayTarget(expr.args.front(), elemType) || resolveStringTarget(expr.args.front()) ||
+      if (resolveVectorTarget(expr.args.front(), elemType) || resolveArrayTarget(expr.args.front(), elemType) ||
+          resolveStringTarget(expr.args.front()) ||
           resolveMapTarget(expr.args.front(), keyType, valueType)) {
         return ReturnKind::Int;
       }
@@ -443,7 +444,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       std::string elemType;
       std::string keyType;
       std::string valueType;
-      if (!resolveArrayTarget(expr.args.front(), elemType) && !resolveStringTarget(expr.args.front()) &&
+      if (!resolveVectorTarget(expr.args.front(), elemType) && !resolveArrayTarget(expr.args.front(), elemType) &&
+          !resolveStringTarget(expr.args.front()) &&
           !resolveMapTarget(expr.args.front(), keyType, valueType)) {
         std::string methodResolved;
         if (resolveMethodCallPath(methodResolved)) {
