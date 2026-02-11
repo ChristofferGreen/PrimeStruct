@@ -540,6 +540,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("capacity method validates on vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.capacity())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("capacity rejects non-vector target") {
   const std::string source = R"(
 [return<int>]
@@ -566,6 +579,104 @@ main() {
   CHECK(error.find("push requires mutable vector binding") != std::string::npos);
 }
 
+TEST_CASE("push validates on mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reserve requires integer capacity") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, "hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+}
+
+TEST_CASE("reserve validates on mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 8i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pop requires mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  pop(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pop requires mutable vector binding") != std::string::npos);
+}
+
+TEST_CASE("pop validates on mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("clear requires mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  clear(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clear requires mutable vector binding") != std::string::npos);
+}
+
+TEST_CASE("clear validates on mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("remove_at requires integer index") {
   const std::string source = R"(
 [return<int>]
@@ -578,6 +689,34 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("remove_at requires integer index") != std::string::npos);
+}
+
+TEST_CASE("remove_swap requires integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  remove_swap(values, "hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+}
+
+TEST_CASE("remove_swap validates on mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("count helper validates on string binding") {
