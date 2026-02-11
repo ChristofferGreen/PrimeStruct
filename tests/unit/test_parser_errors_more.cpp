@@ -277,6 +277,21 @@ main() {
   CHECK(error.find("trailing comma not allowed in transform list") != std::string::npos);
 }
 
+TEST_CASE("empty transform list is rejected") {
+  const std::string source = R"(
+[]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform list cannot be empty") != std::string::npos);
+}
+
 TEST_CASE("semicolon rejected in transform list") {
   const std::string source = R"(
 [return<int>; effects(io_out)]

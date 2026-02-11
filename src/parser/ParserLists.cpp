@@ -24,6 +24,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
   if (!expect(TokenKind::LBracket, "expected '['")) {
     return false;
   }
+  if (match(TokenKind::RBracket)) {
+    return fail("transform list cannot be empty");
+  }
   while (!match(TokenKind::RBracket)) {
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
