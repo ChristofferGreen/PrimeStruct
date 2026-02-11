@@ -176,7 +176,11 @@ example, `helper()` or `1i32` can appear as standalone statements).
   ```
 - **IR layout manifest:** `[struct]` extends the IR descriptor with `layout.total_size_bytes`, `layout.alignment_bytes`, and ordered `layout.fields`. Each field record stores `{ name, type, offset_bytes, size_bytes, padding_kind, category }`. Placement transforms consume this manifest verbatim, ensuring C++, VM, and GPU backends share one source of truth.
 - **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for borrow/resource rules. Handles remain opaque tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
-- **Documentation TODO:** finalise how manifest categories map to PathSpace storage classes and ensure validation emits consistent diagnostics when tags conflict (`[pod]` + `[handle]`, etc.).
+- **Category mapping (draft):**
+  - `pod`: stored inline; treated as trivially-copyable for layout and borrow checks.
+  - `handle`: stored as an opaque reference token; lifetime is managed by the owning subsystem.
+  - `gpu_lane`: stored as a GPU-only handle; CPU access requires explicit staging transforms.
+  - Conflicts are rejected (`pod` with `handle` or `gpu_lane`, and `handle` with `gpu_lane`).
 
 ### Built-in transforms (draft)
 - **Purpose:** built-in transforms are metafunctions that stamp semantic flags on the AST; later passes (borrow checker, backend filters) consume those flags. They do not emit code directly.
