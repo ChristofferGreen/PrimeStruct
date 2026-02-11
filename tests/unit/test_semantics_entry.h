@@ -398,6 +398,18 @@ main() {
   CHECK(error.find("math builtin requires import /math: clamp") != std::string::npos);
 }
 
+TEST_CASE("math-qualified builtin works without import") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(/math/clamp(2i32, 1i32, 5i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("math constant requires import") {
   const std::string source = R"(
 [return<f64>]
@@ -408,6 +420,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("math constant requires import /math: pi") != std::string::npos);
+}
+
+TEST_CASE("math-qualified constant works without import") {
+  const std::string source = R"(
+[return<f64>]
+main() {
+  return(/math/pi)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("math-qualified non-math builtin fails") {
