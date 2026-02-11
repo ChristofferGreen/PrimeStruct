@@ -74,13 +74,14 @@ bool TextFilterPipeline::apply(const std::string &input,
         size_t scan = 0;
         bool entryHasPairEquals = false;
         bool sawValueBoundary = false;
+        bool pendingPairSeparator = false;
         int parenDepth = 0;
         int braceDepth = 0;
         int bracketDepth = 0;
         while (scan < inner.size()) {
           char c = inner[scan];
           if (std::isspace(static_cast<unsigned char>(c))) {
-            if (entryHasPairEquals && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+            if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
               size_t prevIndex = scan;
               while (prevIndex > 0 && std::isspace(static_cast<unsigned char>(inner[prevIndex - 1]))) {
                 --prevIndex;
@@ -92,7 +93,21 @@ bool TextFilterPipeline::apply(const std::string &input,
               }
               if (nextIndex < inner.size()) {
                 if (isLeftOperandEndChar(prev) && isRightOperandStartChar(inner, nextIndex)) {
-                  sawValueBoundary = true;
+                  if (entryHasPairEquals) {
+                    sawValueBoundary = true;
+                  } else if (pendingPairSeparator) {
+                    rewritten.append(", ");
+                    pendingPairSeparator = false;
+                    scan = nextIndex;
+                    continue;
+                  } else if (inner[nextIndex] == '/' && nextIndex + 1 < inner.size() &&
+                             (inner[nextIndex + 1] == '/' || inner[nextIndex + 1] == '*')) {
+                    pendingPairSeparator = true;
+                  } else {
+                    rewritten.append(", ");
+                    scan = nextIndex;
+                    continue;
+                  }
                 }
               }
             }
@@ -177,6 +192,7 @@ bool TextFilterPipeline::apply(const std::string &input,
           if (c == ',' && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
             entryHasPairEquals = false;
             sawValueBoundary = false;
+            pendingPairSeparator = false;
             rewritten.push_back(c);
             ++scan;
             continue;
@@ -216,6 +232,7 @@ bool TextFilterPipeline::apply(const std::string &input,
             rewritten.append(", ");
             entryHasPairEquals = true;
             sawValueBoundary = false;
+            pendingPairSeparator = false;
             ++scan;
             continue;
           }
