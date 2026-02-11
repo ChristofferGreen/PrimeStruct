@@ -127,6 +127,24 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with vector method call") {
+  const std::string source = R"(
+[return<int>]
+/vector/first([vector<i32>] items) {
+  return(items[0i32])
+}
+
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
+  return(values.first())
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_method_call.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("runs vm with array literal unsafe access") {
   const std::string source = R"(
 [return<int>]

@@ -1495,6 +1495,28 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native vector method call") {
+  const std::string source = R"(
+[return<int>]
+/vector/first([vector<i32>] items) {
+  return(items[0i32])
+}
+
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
+  return(values.first())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_method_call.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_method_call_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_CASE("compiles and runs native vector literal unsafe access") {
   const std::string source = R"(
 [return<int>]
