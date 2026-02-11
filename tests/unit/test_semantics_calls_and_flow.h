@@ -1574,6 +1574,28 @@ job(a = 1i32, b = 2i32)
   CHECK(error.empty());
 }
 
+TEST_CASE("execution arguments reject named builtins") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([array<i32>] values) {
+  return(values.count())
+}
+
+job(array<i32>(first = 1i32))
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("named arguments not allowed on builtin calls") {
   const std::string source = R"(
 [return<int>]
