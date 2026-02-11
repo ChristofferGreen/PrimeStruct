@@ -210,6 +210,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import works after definitions") {
+  const std::string source = R"(
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(2i32))
+}
+import /util
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import ignores nested definitions") {
   const std::string source = R"(
 import /util
