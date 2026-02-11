@@ -321,6 +321,36 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm vector access checks bounds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32)}
+  return(plus(100i32, values[9i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_bounds.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_bounds_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("vm vector access rejects negative index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32)}
+  return(plus(100i32, values[-1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_negative.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_negative_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_CASE("vm array unsafe access reads element") {
   const std::string source = R"(
 [return<int> effects(io_out)]

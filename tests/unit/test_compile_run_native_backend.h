@@ -1479,6 +1479,45 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs native vector access checks bounds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32)}
+  return(plus(100i32, values[9i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_bounds.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_vector_bounds_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_vector_bounds_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
+TEST_CASE("compiles and runs native vector access rejects negative index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32)}
+  return(plus(100i32, values[-1i32]))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_negative.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_vector_negative_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_negative_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_CASE("compiles and runs native vector literal count method") {
   const std::string source = R"(
 [return<int>]
