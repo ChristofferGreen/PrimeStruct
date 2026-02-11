@@ -607,6 +607,20 @@ main() {
   CHECK(error.find("push does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("push rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push requires exactly two arguments") != std::string::npos);
+}
+
 TEST_CASE("reserve requires mutable vector binding") {
   const std::string source = R"(
 [return<int>]
@@ -633,6 +647,34 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+}
+
+TEST_CASE("reserve rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve<i32>(values, 8i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reserve does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("reserve rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reserve requires exactly two arguments") != std::string::npos);
 }
 
 TEST_CASE("reserve validates on mutable vector binding") {
@@ -691,6 +733,34 @@ main() {
   CHECK(error.find("pop does not accept block arguments") != std::string::npos);
 }
 
+TEST_CASE("pop rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop<i32>(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pop does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("pop rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pop requires exactly one argument") != std::string::npos);
+}
+
 TEST_CASE("clear requires mutable vector binding") {
   const std::string source = R"(
 [return<int>]
@@ -717,6 +787,34 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("clear rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear<i32>(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clear does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("clear rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  clear(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clear requires exactly one argument") != std::string::npos);
 }
 
 TEST_CASE("remove_at requires mutable vector binding") {
@@ -747,6 +845,34 @@ main() {
   CHECK(error.find("remove_at requires integer index") != std::string::npos);
 }
 
+TEST_CASE("remove_at rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  remove_at<i32>(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_at does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("remove_at rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  remove_at(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_at requires exactly two arguments") != std::string::npos);
+}
+
 TEST_CASE("remove_swap requires integer index") {
   const std::string source = R"(
 [return<int>]
@@ -773,6 +899,34 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
+}
+
+TEST_CASE("remove_swap rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap<i32>(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_swap does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("remove_swap rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_swap requires exactly two arguments") != std::string::npos);
 }
 
 TEST_CASE("remove_swap validates on mutable vector binding") {
