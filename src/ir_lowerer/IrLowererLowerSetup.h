@@ -17,8 +17,8 @@ bool IrLowerer::lower(const Program &program,
   }
 
   auto isSupportedEffect = [](const std::string &name) {
-    return name == "io_out" || name == "io_err" || name == "pathspace_notify" || name == "pathspace_insert" ||
-           name == "pathspace_take";
+    return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
+           name == "pathspace_insert" || name == "pathspace_take";
   };
   for (const auto &def : program.definitions) {
     for (const auto &transform : def.transforms) {

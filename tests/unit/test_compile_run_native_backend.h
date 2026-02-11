@@ -1465,7 +1465,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector literals") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
   return(values[1i32])
@@ -1481,7 +1481,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector access checks bounds") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32)}
   return(plus(100i32, values[9i32]))
@@ -1500,7 +1500,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector access rejects negative index") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32)}
   return(plus(100i32, values[-1i32]))
@@ -1520,7 +1520,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector literal count method") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(vector<i32>(1i32, 2i32, 3i32).count())
 }
@@ -1541,7 +1541,7 @@ TEST_CASE("compiles and runs native vector method call") {
   return(items[0i32])
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
   return(values.first())
@@ -1558,7 +1558,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector literal unsafe access") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(at_unsafe(vector<i32>(4i32, 7i32, 9i32), 1i32))
 }
@@ -1574,7 +1574,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector count helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
   return(count(values))
@@ -1591,7 +1591,7 @@ main() {
 
 TEST_CASE("compiles and runs native vector literal count helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(count(vector<i32>(1i32, 2i32, 3i32)))
 }

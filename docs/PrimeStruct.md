@@ -286,7 +286,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8 1i32}`), and nested forms inside braces are rewritten as usual.
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
-  - `vector<T>` is a resizable, owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Vector operations that grow capacity require `effects(heap_alloc)` (or the active default effects set). Backends that do not support heap allocation reject vector operations.
+  - `vector<T>` is a resizable, owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Vector operations that grow capacity require `effects(heap_alloc)` (or the active default effects set); literals with one or more elements are treated as growth operations. Backends that do not support heap allocation reject vector operations.
   - Vector helpers: `count(value)` / `value.count()`, `at(value, index)`, `at_unsafe(value, index)`, `push(value, item)`, `pop(value)`, `reserve(value, capacity)`, `capacity(value)`, `clear(value)`, `remove_at(value, index)`, `remove_swap(value, index)`.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals compile through the C++ emitter only, using `std::string_view` keys.

@@ -379,7 +379,7 @@ main() {
 
 TEST_CASE("ir lowerer rejects string vector literals") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(count(vector<string>("a"raw_utf8)))
 }
@@ -760,7 +760,7 @@ main() {
 
 TEST_CASE("ir lowerer supports numeric vector literals") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
   return(plus(values.count(), values[1i32]))
@@ -965,7 +965,7 @@ main() {
 
 TEST_CASE("ir lowerer supports vector count helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
   return(count(values))
@@ -1014,7 +1014,7 @@ main() {
 
 TEST_CASE("ir lowerer supports vector literal count helper") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(count(vector<i32>(1i32, 2i32)))
 }
@@ -1103,7 +1103,7 @@ TEST_CASE("ir lowerer supports vector method calls") {
   return(items[0i32])
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] items{vector<i32>(5i32, 9i32)}
   return(items.first())

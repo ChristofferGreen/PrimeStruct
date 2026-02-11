@@ -802,6 +802,12 @@
           error_ = builtinName + " literal does not accept block arguments";
           return false;
         }
+        if (builtinName == "vector" && !expr.args.empty()) {
+          if (activeEffects_.count("heap_alloc") == 0) {
+            error_ = "vector literal requires heap_alloc effect";
+            return false;
+          }
+        }
         if (builtinName == "array" || builtinName == "vector") {
           if (expr.templateArgs.size() != 1) {
             error_ = builtinName + " literal requires exactly one template argument";

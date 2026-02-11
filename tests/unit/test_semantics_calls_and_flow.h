@@ -310,7 +310,7 @@ use([vector<i32>] x) {
   return(1i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(use(vector<i32>(1i32, 2i32)))
 }
@@ -322,10 +322,36 @@ main() {
 
 TEST_CASE("vector literal validates bool elements") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   vector<bool>(true, false)
   return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector literal requires heap_alloc effect") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  vector<i32>(1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("vector literal allows heap_alloc effect") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  vector<i32>(1i32)
+  return(0i32)
 }
 )";
   std::string error;
@@ -454,7 +480,7 @@ main() {
 
 TEST_CASE("count helper validates on vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(count(values))
@@ -479,7 +505,7 @@ main() {
 
 TEST_CASE("count method validates on vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(values.count())
@@ -492,7 +518,7 @@ main() {
 
 TEST_CASE("count rejects vector named arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(values.count(value = 0i32))
@@ -544,7 +570,7 @@ main() {
 
 TEST_CASE("capacity builtin validates on vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(capacity(values))
@@ -557,7 +583,7 @@ main() {
 
 TEST_CASE("capacity rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(capacity<i32>(values))
@@ -570,7 +596,7 @@ main() {
 
 TEST_CASE("capacity rejects block arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(capacity(values) { 1i32 })
@@ -583,7 +609,7 @@ main() {
 
 TEST_CASE("capacity rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(capacity(values, 1i32))
@@ -596,7 +622,7 @@ main() {
 
 TEST_CASE("capacity method validates on vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(values.capacity())
@@ -609,7 +635,7 @@ main() {
 
 TEST_CASE("capacity method rejects extra arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   return(values.capacity(1i32))
@@ -650,7 +676,7 @@ TEST_CASE("push requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
+  [vector<i32> mut] values{vector<i32>()}
   push(values, 2i32)
   return(0i32)
 }
@@ -676,7 +702,7 @@ main() {
 
 TEST_CASE("push rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push<i32>(values, 2i32)
@@ -690,7 +716,7 @@ main() {
 
 TEST_CASE("push rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   push(values)
@@ -720,7 +746,7 @@ TEST_CASE("reserve requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
+  [vector<i32> mut] values{vector<i32>()}
   reserve(values, 8i32)
   return(0i32)
 }
@@ -746,7 +772,7 @@ main() {
 
 TEST_CASE("reserve rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   reserve<i32>(values, 8i32)
@@ -760,7 +786,7 @@ main() {
 
 TEST_CASE("reserve rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   reserve(values)
@@ -788,7 +814,7 @@ main() {
 
 TEST_CASE("pop requires mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   pop(values)
@@ -802,7 +828,7 @@ main() {
 
 TEST_CASE("pop validates on mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   pop(values)
@@ -816,7 +842,7 @@ main() {
 
 TEST_CASE("pop rejects block arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   pop(values) { 1i32 }
@@ -830,7 +856,7 @@ main() {
 
 TEST_CASE("pop rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   pop<i32>(values)
@@ -844,7 +870,7 @@ main() {
 
 TEST_CASE("pop rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   pop(values, 1i32)
@@ -858,7 +884,7 @@ main() {
 
 TEST_CASE("clear requires mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   clear(values)
@@ -872,7 +898,7 @@ main() {
 
 TEST_CASE("clear validates on mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   clear(values)
@@ -886,7 +912,7 @@ main() {
 
 TEST_CASE("clear rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   clear<i32>(values)
@@ -900,7 +926,7 @@ main() {
 
 TEST_CASE("clear rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   clear(values, 1i32)
@@ -914,7 +940,7 @@ main() {
 
 TEST_CASE("remove_at requires mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   remove_at(values, 0i32)
@@ -928,7 +954,7 @@ main() {
 
 TEST_CASE("remove_at requires integer index") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   remove_at(values, "hi"utf8)
@@ -942,7 +968,7 @@ main() {
 
 TEST_CASE("remove_at rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   remove_at<i32>(values, 0i32)
@@ -956,7 +982,7 @@ main() {
 
 TEST_CASE("remove_at rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   remove_at(values)
@@ -970,7 +996,7 @@ main() {
 
 TEST_CASE("remove_swap requires integer index") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   remove_swap(values, "hi"utf8)
@@ -984,7 +1010,7 @@ main() {
 
 TEST_CASE("remove_swap requires mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
   remove_swap(values, 1i32)
@@ -998,7 +1024,7 @@ main() {
 
 TEST_CASE("remove_swap rejects template arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   remove_swap<i32>(values, 1i32)
@@ -1012,7 +1038,7 @@ main() {
 
 TEST_CASE("remove_swap rejects wrong argument count") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   remove_swap(values)
@@ -1026,7 +1052,7 @@ main() {
 
 TEST_CASE("remove_swap validates on mutable vector binding") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   remove_swap(values, 1i32)
@@ -1171,7 +1197,7 @@ TEST_CASE("vector method calls resolve to definitions") {
   return(count(items))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<i32>] items{vector<i32>(1i32, 2i32)}
   return(items.size())
@@ -1879,7 +1905,7 @@ use([vector<i32>] x) {
   return(1i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(use(vector(1i32)))
 }
@@ -1913,7 +1939,7 @@ use([vector<i32>] x) {
   return(1i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(use(vector<i32>(1i32, "hi"utf8)))
 }
@@ -1938,7 +1964,7 @@ main() {
 
 TEST_CASE("vector literal rejects software numeric type") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   vector<decimal>(1.0f)
   return(1i32)
@@ -2733,7 +2759,7 @@ main() {
 
 TEST_CASE("vector literal rejects block arguments") {
   const std::string source = R"(
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   vector<i32>(1i32, 2i32) { 3i32 }
   return(0i32)
