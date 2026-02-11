@@ -97,6 +97,14 @@ bool SemanticsValidator::validateDefinitions() {
     for (const auto &param : defParams) {
       locals.emplace(param.name, param.binding);
     }
+    for (const auto &param : defParams) {
+      if (param.defaultExpr == nullptr) {
+        continue;
+      }
+      if (!validateExpr(defParams, locals, *param.defaultExpr)) {
+        return false;
+      }
+    }
     ReturnKind kind = ReturnKind::Unknown;
     auto kindIt = returnKinds_.find(def.fullPath);
     if (kindIt != returnKinds_.end()) {

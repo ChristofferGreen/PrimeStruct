@@ -108,6 +108,57 @@ add([i32] left, [i32] right{10i32}) {
   CHECK(error.empty());
 }
 
+TEST_CASE("parameter default vector literal requires heap_alloc effect") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [vector<i32>] right{vector<i32>(1i32)}) {
+  return(left)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("parameter default vector literal allows heap_alloc effect") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[effects(heap_alloc), return<int>]
+add([i32] left, [vector<i32>] right{vector<i32>(1i32)}) {
+  return(left)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("parameter default empty vector literal is allowed") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [vector<i32>] right{vector<i32>()}) {
+  return(left)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("if statement sugar allows empty else block in statement position") {
   const std::string source = R"(
 [return<int>]
