@@ -593,6 +593,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("push rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push<i32>(values, 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("reserve requires mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  reserve(values, 8i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reserve requires mutable vector binding") != std::string::npos);
+}
+
 TEST_CASE("reserve requires integer capacity") {
   const std::string source = R"(
 [return<int>]
@@ -649,6 +677,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pop rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  pop(values) { 1i32 }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pop does not accept block arguments") != std::string::npos);
+}
+
 TEST_CASE("clear requires mutable vector binding") {
   const std::string source = R"(
 [return<int>]
@@ -677,6 +719,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("remove_at requires mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  remove_at(values, 0i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_at requires mutable vector binding") != std::string::npos);
+}
+
 TEST_CASE("remove_at requires integer index") {
   const std::string source = R"(
 [return<int>]
@@ -703,6 +759,20 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+}
+
+TEST_CASE("remove_swap requires mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  remove_swap(values, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("remove_swap validates on mutable vector binding") {
