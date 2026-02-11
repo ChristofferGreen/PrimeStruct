@@ -292,6 +292,21 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("semicolon rejected in transform arguments") {
+  const std::string source = R"(
+[effects(io_out; io_err) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("semicolon rejected in template list") {
   const std::string source = R"(
 [return<int>]

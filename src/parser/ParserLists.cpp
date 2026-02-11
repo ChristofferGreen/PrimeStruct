@@ -49,6 +49,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return fail("transform argument list cannot be empty");
       }
       while (true) {
+        if (match(TokenKind::Semicolon)) {
+          return fail("semicolon is not allowed");
+        }
         if (match(TokenKind::Identifier)) {
           Token arg = consume(TokenKind::Identifier, "expected transform argument");
           if (arg.kind == TokenKind::End) {
@@ -78,6 +81,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           transform.arguments.push_back(std::move(normalized));
         } else {
           return fail("expected transform argument");
+        }
+        if (match(TokenKind::Semicolon)) {
+          return fail("semicolon is not allowed");
         }
         if (match(TokenKind::Comma)) {
           expect(TokenKind::Comma, "expected ','");
