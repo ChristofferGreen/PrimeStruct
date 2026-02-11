@@ -1039,6 +1039,22 @@ main() {
   CHECK(error.find("binding initializers must use braces") != std::string::npos);
 }
 
+TEST_CASE("binding initializer requires explicit type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] value{1i32 2i32}
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("binding initializer requires explicit type") != std::string::npos);
+}
+
 TEST_CASE("parameter default rejects paren initializer") {
   const std::string source = R"(
 [return<int>]
