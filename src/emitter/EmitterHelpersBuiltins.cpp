@@ -369,6 +369,18 @@ bool isArrayValue(const Expr &target, const std::unordered_map<std::string, Bind
   return false;
 }
 
+bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localTypes.find(target.name);
+    return it != localTypes.end() && it->second.typeName == "vector";
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    return getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1;
+  }
+  return false;
+}
+
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
@@ -431,6 +443,13 @@ bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, B
     return false;
   }
   return isStringValue(call.args.front(), localTypes);
+}
+
+bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
+  if (!isSimpleCallName(call, "capacity") || call.args.size() != 1) {
+    return false;
+  }
+  return isVectorValue(call.args.front(), localTypes);
 }
 
 bool resolveMethodCallPath(const Expr &call,
@@ -537,6 +556,31 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
     return false;
   }
   return name == "assign";
+}
+
+bool getVectorMutatorName(const Expr &expr,
+                          const std::unordered_map<std::string, std::string> &nameMap,
+                          std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string full = resolveExprPath(expr);
+  if (nameMap.count(full) > 0) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "push" || name == "pop" || name == "reserve" || name == "clear" || name == "remove_at" ||
+      name == "remove_swap") {
+    out = name;
+    return true;
+  }
+  return false;
 }
 
 std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<Expr> &params) {

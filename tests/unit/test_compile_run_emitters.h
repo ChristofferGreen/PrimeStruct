@@ -83,6 +83,29 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs vector helpers in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  push(values, 4i32)
+  remove_at(values, 1i32)
+  remove_swap(values, 1i32)
+  pop(values)
+  reserve(values, 8i32)
+  capacity(values)
+  clear(values)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_vector_helpers_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_vector_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs lerp in C++ emitter") {
   const std::string source = R"(
 import /math

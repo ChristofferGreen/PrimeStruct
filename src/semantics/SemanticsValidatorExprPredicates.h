@@ -590,6 +590,44 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "repeat is only supported as a statement";
       return false;
     }
+    auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
+      if (candidate.kind != Expr::Kind::Call) {
+        return false;
+      }
+      if (isSimpleCallName(candidate, "push")) {
+        nameOut = "push";
+        return true;
+      }
+      if (isSimpleCallName(candidate, "pop")) {
+        nameOut = "pop";
+        return true;
+      }
+      if (isSimpleCallName(candidate, "reserve")) {
+        nameOut = "reserve";
+        return true;
+      }
+      if (isSimpleCallName(candidate, "clear")) {
+        nameOut = "clear";
+        return true;
+      }
+      if (isSimpleCallName(candidate, "remove_at")) {
+        nameOut = "remove_at";
+        return true;
+      }
+      if (isSimpleCallName(candidate, "remove_swap")) {
+        nameOut = "remove_swap";
+        return true;
+      }
+      return false;
+    };
+    std::string vectorHelper;
+    if (getVectorStatementHelperName(expr, vectorHelper)) {
+      const std::string resolved = resolveCalleePath(expr);
+      if (defMap_.find(resolved) == defMap_.end()) {
+        error_ = vectorHelper + " is only supported as a statement";
+        return false;
+      }
+    }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       error_ = "block arguments are only supported on statement calls";
       return false;
@@ -623,6 +661,34 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         std::string collection;
         if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
             target.templateArgs.size() == 1) {
+          elemType = target.templateArgs.front();
+          return true;
+        }
+      }
+      return false;
+    };
+    auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName != "vector" || paramBinding->typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          if (it->second.typeName != "vector" || it->second.typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = it->second.typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
           return true;
         }

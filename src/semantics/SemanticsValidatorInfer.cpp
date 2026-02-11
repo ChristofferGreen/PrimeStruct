@@ -219,6 +219,34 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto resolveVectorTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName != "vector" || paramBinding->typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          if (it->second.typeName != "vector" || it->second.typeTemplateArg.empty()) {
+            return false;
+          }
+          elemType = it->second.typeTemplateArg;
+          return true;
+        }
+        return false;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(target, collection) && collection == "vector" && target.templateArgs.size() == 1) {
+          elemType = target.templateArgs.front();
+          return true;
+        }
+      }
+      return false;
+    };
     auto resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
         return true;
@@ -387,6 +415,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Int;
       }
     }
+    if (expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1) {
+      std::string elemType;
+      if (resolveVectorTarget(expr.args.front(), elemType)) {
+        return ReturnKind::Int;
+      }
+    }
     if (expr.isMethodCall) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
@@ -427,6 +461,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return ReturnKind::Unknown;
       }
       return ReturnKind::Int;
+    }
+    if (!expr.isMethodCall && expr.name == "capacity" && expr.args.size() == 1 &&
+        defMap_.find(resolved) == defMap_.end()) {
+      std::string elemType;
+      if (resolveVectorTarget(expr.args.front(), elemType)) {
+        return ReturnKind::Int;
+      }
     }
     std::string builtinName;
     if (getBuiltinArrayAccessName(expr, builtinName) && expr.args.size() == 2) {

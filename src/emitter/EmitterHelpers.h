@@ -58,17 +58,22 @@ bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 std::string resolveExprPath(const Expr &expr);
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
+bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
+bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes);
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
                            const std::unordered_map<std::string, std::string> &importAliases,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
                            std::string &resolvedOut);
 bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
+bool getVectorMutatorName(const Expr &expr,
+                          const std::unordered_map<std::string, std::string> &nameMap,
+                          std::string &out);
 std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<Expr> &params);
 bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
 bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);

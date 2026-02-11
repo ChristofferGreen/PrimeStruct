@@ -667,6 +667,49 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "static inline const T &ps_array_at_unsafe(const std::vector<T> &value, Index index) {\n";
   out << "  return value[static_cast<size_t>(index)];\n";
   out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline int ps_vector_capacity(const std::vector<T> &value) {\n";
+  out << "  return static_cast<int>(value.capacity());\n";
+  out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_vector_reserve(std::vector<T> &value, Index capacity) {\n";
+  out << "  int64_t cap = static_cast<int64_t>(capacity);\n";
+  out << "  if (cap < 0) {\n";
+  out << "    std::fprintf(stderr, \"vector reserve expects non-negative capacity\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  value.reserve(static_cast<size_t>(cap));\n";
+  out << "}\n";
+  out << "template <typename T>\n";
+  out << "static inline void ps_vector_pop(std::vector<T> &value) {\n";
+  out << "  if (value.empty()) {\n";
+  out << "    std::fprintf(stderr, \"vector pop on empty\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  value.pop_back();\n";
+  out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_vector_remove_at(std::vector<T> &value, Index index) {\n";
+  out << "  int64_t i = static_cast<int64_t>(index);\n";
+  out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
+  out << "    std::fprintf(stderr, \"vector index out of bounds\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  value.erase(value.begin() + static_cast<size_t>(i));\n";
+  out << "}\n";
+  out << "template <typename T, typename Index>\n";
+  out << "static inline void ps_vector_remove_swap(std::vector<T> &value, Index index) {\n";
+  out << "  int64_t i = static_cast<int64_t>(index);\n";
+  out << "  if (i < 0 || static_cast<size_t>(i) >= value.size()) {\n";
+  out << "    std::fprintf(stderr, \"vector index out of bounds\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  size_t idx = static_cast<size_t>(i);\n";
+  out << "  if (idx + 1 < value.size()) {\n";
+  out << "    value[idx] = std::move(value.back());\n";
+  out << "  }\n";
+  out << "  value.pop_back();\n";
+  out << "}\n";
   out << "static inline int ps_string_count(std::string_view value) {\n";
   out << "  return static_cast<int>(value.size());\n";
   out << "}\n";
@@ -921,6 +964,53 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ");\n";
         }
         return;
+      }
+      if (stmt.kind == Expr::Kind::Call) {
+        std::string vectorHelper;
+        if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
+          if (vectorHelper == "push") {
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ".push_back("
+                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ");\n";
+            return;
+          }
+          if (vectorHelper == "pop") {
+            out << pad << "ps_vector_pop("
+                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ");\n";
+            return;
+          }
+          if (vectorHelper == "reserve") {
+            out << pad << "ps_vector_reserve("
+                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ", "
+                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ");\n";
+            return;
+          }
+          if (vectorHelper == "clear") {
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ".clear();\n";
+            return;
+          }
+          if (vectorHelper == "remove_at") {
+            out << pad << "ps_vector_remove_at("
+                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ", "
+                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ");\n";
+            return;
+          }
+          if (vectorHelper == "remove_swap") {
+            out << pad << "ps_vector_remove_swap("
+                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ", "
+                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << ");\n";
+            return;
+          }
+        }
       }
       out << pad << emitExpr(stmt, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
     };

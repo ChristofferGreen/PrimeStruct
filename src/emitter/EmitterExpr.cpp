@@ -326,6 +326,13 @@ std::string Emitter::emitExpr(const Expr &expr,
           << ")";
       return out.str();
     }
+    if (isVectorCapacityCall(expr, localTypes)) {
+      std::ostringstream out;
+      out << "ps_vector_capacity("
+          << emitExpr(expr.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare)
+          << ")";
+      return out.str();
+    }
     if (expr.name == "at" && expr.args.size() == 2) {
       std::ostringstream out;
       const Expr &target = expr.args[0];

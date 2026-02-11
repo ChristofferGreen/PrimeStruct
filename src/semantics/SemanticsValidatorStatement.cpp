@@ -147,6 +147,123 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return false;
   };
+  auto isIntegerOrBoolExpr = [&](const Expr &arg) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
+      return true;
+    }
+    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+                 paramKind == ReturnKind::Bool;
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+                 localKind == ReturnKind::Bool;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
+  auto resolveVectorBinding = [&](const Expr &target, const BindingInfo *&bindingOut) -> bool {
+    bindingOut = nullptr;
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+      bindingOut = paramBinding;
+      return true;
+    }
+    auto it = locals.find(target.name);
+    if (it != locals.end()) {
+      bindingOut = &it->second;
+      return true;
+    }
+    return false;
+  };
+  auto validateVectorElementType = [&](const Expr &arg, const std::string &typeName) -> bool {
+    if (typeName.empty()) {
+      error_ = "push requires vector element type";
+      return false;
+    }
+    const std::string normalizedType = normalizeBindingTypeName(typeName);
+    if (normalizedType == "string") {
+      if (!isStringExpr(arg, params, locals)) {
+        error_ = "push requires element type " + typeName;
+        return false;
+      }
+      return true;
+    }
+    ReturnKind expectedKind = returnKindForTypeName(normalizedType);
+    if (expectedKind == ReturnKind::Unknown) {
+      return true;
+    }
+    if (isStringExpr(arg, params, locals)) {
+      error_ = "push requires element type " + typeName;
+      return false;
+    }
+    ReturnKind argKind = inferExprReturnKind(arg, params, locals);
+    if (argKind != ReturnKind::Unknown && argKind != expectedKind) {
+      error_ = "push requires element type " + typeName;
+      return false;
+    }
+    return true;
+  };
+  auto validateVectorHelperTarget = [&](const Expr &target, const char *helperName, const BindingInfo *&bindingOut) -> bool {
+    if (!resolveVectorBinding(target, bindingOut) || bindingOut == nullptr || bindingOut->typeName != "vector") {
+      error_ = std::string(helperName) + " requires vector binding";
+      return false;
+    }
+    if (!bindingOut->isMutable) {
+      error_ = std::string(helperName) + " requires mutable vector binding";
+      return false;
+    }
+    return true;
+  };
+  auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isSimpleCallName(candidate, "push")) {
+      nameOut = "push";
+      return true;
+    }
+    if (isSimpleCallName(candidate, "pop")) {
+      nameOut = "pop";
+      return true;
+    }
+    if (isSimpleCallName(candidate, "reserve")) {
+      nameOut = "reserve";
+      return true;
+    }
+    if (isSimpleCallName(candidate, "clear")) {
+      nameOut = "clear";
+      return true;
+    }
+    if (isSimpleCallName(candidate, "remove_at")) {
+      nameOut = "remove_at";
+      return true;
+    }
+    if (isSimpleCallName(candidate, "remove_swap")) {
+      nameOut = "remove_swap";
+      return true;
+    }
+    return false;
+  };
 
   if (stmt.isBinding) {
     if (!allowBindings) {
@@ -499,6 +616,91 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     return true;
+  }
+  std::string vectorHelper;
+  if (getVectorStatementHelperName(stmt, vectorHelper)) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = vectorHelper + " does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = vectorHelper + " does not accept block arguments";
+      return false;
+    }
+    if (vectorHelper == "push") {
+      if (stmt.args.size() != 2) {
+        error_ = "push requires exactly two arguments";
+        return false;
+      }
+      const BindingInfo *binding = nullptr;
+      if (!validateVectorHelperTarget(stmt.args.front(), "push", binding)) {
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front()) ||
+          !validateExpr(params, locals, stmt.args[1])) {
+        return false;
+      }
+      if (!validateVectorElementType(stmt.args[1], binding->typeTemplateArg)) {
+        return false;
+      }
+      return true;
+    }
+    if (vectorHelper == "reserve") {
+      if (stmt.args.size() != 2) {
+        error_ = "reserve requires exactly two arguments";
+        return false;
+      }
+      const BindingInfo *binding = nullptr;
+      if (!validateVectorHelperTarget(stmt.args.front(), "reserve", binding)) {
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front()) ||
+          !validateExpr(params, locals, stmt.args[1])) {
+        return false;
+      }
+      if (!isIntegerOrBoolExpr(stmt.args[1])) {
+        error_ = "reserve requires integer capacity";
+        return false;
+      }
+      return true;
+    }
+    if (vectorHelper == "remove_at" || vectorHelper == "remove_swap") {
+      if (stmt.args.size() != 2) {
+        error_ = vectorHelper + " requires exactly two arguments";
+        return false;
+      }
+      const BindingInfo *binding = nullptr;
+      if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front()) ||
+          !validateExpr(params, locals, stmt.args[1])) {
+        return false;
+      }
+      if (!isIntegerOrBoolExpr(stmt.args[1])) {
+        error_ = vectorHelper + " requires integer index";
+        return false;
+      }
+      return true;
+    }
+    if (vectorHelper == "pop" || vectorHelper == "clear") {
+      if (stmt.args.size() != 1) {
+        error_ = vectorHelper + " requires exactly one argument";
+        return false;
+      }
+      const BindingInfo *binding = nullptr;
+      if (!validateVectorHelperTarget(stmt.args.front(), vectorHelper.c_str(), binding)) {
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front())) {
+        return false;
+      }
+      return true;
+    }
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     std::string collectionName;

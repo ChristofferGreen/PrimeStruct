@@ -164,6 +164,13 @@
           return true;
         }
       }
+      if (methodName == "capacity") {
+        if (resolveVectorTarget(receiver, elemType)) {
+          resolvedOut = "/vector/capacity";
+          isBuiltinOut = true;
+          return true;
+        }
+      }
       std::string typeName;
       std::string typeTemplateArg;
       if (receiver.kind == Expr::Kind::Name) {
@@ -300,7 +307,10 @@
             getBuiltinMathName(expr, builtinName, hasMathImport_) ||
             getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
             getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
-            isAssignCall(expr) || isIfCall(expr) || isRepeatCall(expr) || expr.name == "count") {
+            isAssignCall(expr) || isIfCall(expr) || isRepeatCall(expr) || expr.name == "count" ||
+            expr.name == "capacity" || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
+            isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
+            isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap")) {
           isBuiltin = true;
         }
         if (isBuiltin) {
@@ -337,6 +347,52 @@
         }
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin count";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/vector/capacity") {
+        if (!expr.templateArgs.empty()) {
+          error_ = "capacity does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "capacity does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "argument count mismatch for builtin capacity";
+          return false;
+        }
+        std::string elemType;
+        if (!resolveVectorTarget(expr.args.front(), elemType)) {
+          error_ = "capacity requires vector target";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        return true;
+      }
+      if (!resolvedMethod && expr.name == "capacity" && it == defMap_.end()) {
+        if (!expr.templateArgs.empty()) {
+          error_ = "capacity does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "capacity does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "argument count mismatch for builtin capacity";
+          return false;
+        }
+        std::string elemType;
+        if (!resolveVectorTarget(expr.args.front(), elemType)) {
+          error_ = "capacity requires vector target";
           return false;
         }
         if (!validateExpr(params, locals, expr.args.front())) {

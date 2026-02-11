@@ -156,8 +156,9 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          (isMathBuiltin && (allowMathBare || isMathQualified)) ||
          candidate == "if" || candidate == "then" || candidate == "else" ||
          candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
-         candidate == "map" || candidate == "count" || candidate == "at" || candidate == "at_unsafe" ||
-         candidate == "convert" ||
+         candidate == "map" || candidate == "count" || candidate == "capacity" || candidate == "push" ||
+         candidate == "pop" || candidate == "reserve" || candidate == "clear" || candidate == "remove_at" ||
+         candidate == "remove_swap" || candidate == "at" || candidate == "at_unsafe" || candidate == "convert" ||
          candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||
          candidate == "print_line" || candidate == "print_error" || candidate == "print_line_error" ||
          candidate == "notify" || candidate == "insert" || candidate == "take";

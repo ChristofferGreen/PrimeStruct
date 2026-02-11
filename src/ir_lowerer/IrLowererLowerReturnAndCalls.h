@@ -722,6 +722,26 @@
           error = "count requires array, vector, map, or string target";
           return false;
         }
+        std::string vectorHelper;
+        if (isSimpleCallName(expr, "capacity")) {
+          vectorHelper = "capacity";
+        } else if (isSimpleCallName(expr, "push")) {
+          vectorHelper = "push";
+        } else if (isSimpleCallName(expr, "pop")) {
+          vectorHelper = "pop";
+        } else if (isSimpleCallName(expr, "reserve")) {
+          vectorHelper = "reserve";
+        } else if (isSimpleCallName(expr, "clear")) {
+          vectorHelper = "clear";
+        } else if (isSimpleCallName(expr, "remove_at")) {
+          vectorHelper = "remove_at";
+        } else if (isSimpleCallName(expr, "remove_swap")) {
+          vectorHelper = "remove_swap";
+        }
+        if (!vectorHelper.empty()) {
+          error = "native backend does not support vector helper: " + vectorHelper;
+          return false;
+        }
         PrintBuiltin printBuiltin;
         if (getPrintBuiltin(expr, printBuiltin)) {
           error = printBuiltin.name + " is only supported as a statement in the native backend";

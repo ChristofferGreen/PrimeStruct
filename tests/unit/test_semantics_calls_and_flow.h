@@ -458,6 +458,59 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("capacity builtin validates on vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("capacity rejects non-vector target") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(capacity(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
+}
+
+TEST_CASE("push requires mutable vector binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push requires mutable vector binding") != std::string::npos);
+}
+
+TEST_CASE("remove_at requires integer index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  remove_at(values, "hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("remove_at requires integer index") != std::string::npos);
+}
+
 TEST_CASE("count helper validates on string binding") {
   const std::string source = R"(
 [return<int>]
