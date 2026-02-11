@@ -237,6 +237,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     }
   }
 
+  if (match(TokenKind::LBrace)) {
+    return fail("expected '(' after identifier; bindings are only allowed inside definition bodies or parameter lists");
+  }
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }

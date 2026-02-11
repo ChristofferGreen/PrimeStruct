@@ -201,6 +201,18 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("top-level bindings are rejected") {
+  const std::string source = R"(
+[i32] value{1i32}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("bindings are only allowed inside definition bodies or parameter lists") != std::string::npos);
+}
+
 TEST_CASE("semicolon rejected in namespace") {
   const std::string source = R"(
 namespace demo {
