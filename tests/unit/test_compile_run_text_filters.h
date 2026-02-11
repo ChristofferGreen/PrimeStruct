@@ -23,6 +23,23 @@ main() {
   CHECK(runCommand(nativePath) == 8);
 }
 
+TEST_CASE("no transforms overrides text filters") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(11)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_override.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_override_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath +
+      " --entry /main --no-transforms --text-filters=default,implicit-i32";
+  CHECK(runCommand(compileCmd) != 0);
+}
+
 TEST_CASE("compiles and runs implicit i32 via transform list") {
   const std::string source = R"(
 [return<int>]

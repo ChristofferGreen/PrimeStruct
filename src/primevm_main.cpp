@@ -120,6 +120,7 @@ std::vector<std::string> parseDefaultEffects(const std::string &text) {
 }
 
 bool parseArgs(int argc, char **argv, primec::Options &out) {
+  bool noTransforms = false;
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "--") {
@@ -157,6 +158,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.textFilters = parseTextFilters(arg.substr(std::string("--transform-list=").size()));
     } else if (arg == "--no-transforms") {
       out.textFilters.clear();
+      noTransforms = true;
     } else if (arg == "--default-effects" && i + 1 < argc) {
       out.defaultEffects = parseDefaultEffects(argv[++i]);
     } else if (arg.rfind("--default-effects=", 0) == 0) {
@@ -169,6 +171,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       }
       out.inputPath = arg;
     }
+  }
+  if (noTransforms) {
+    out.textFilters.clear();
   }
   if (out.entryPath.empty()) {
     out.entryPath = "/main";

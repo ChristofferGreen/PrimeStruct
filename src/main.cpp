@@ -164,6 +164,7 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
   return true;
 }
 bool parseArgs(int argc, char **argv, primec::Options &out) {
+  bool noTransforms = false;
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "--") {
@@ -202,6 +203,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.textFilters = parseTextFilters(arg.substr(std::string("--transform-list=").size()));
     } else if (arg == "--no-transforms") {
       out.textFilters.clear();
+      noTransforms = true;
     } else if (arg == "--out-dir" && i + 1 < argc) {
       out.outDir = argv[++i];
     } else if (arg.rfind("--out-dir=", 0) == 0) {
@@ -218,6 +220,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       }
       out.inputPath = arg;
     }
+  }
+  if (noTransforms) {
+    out.textFilters.clear();
   }
   if (out.entryPath.empty()) {
     out.entryPath = "/main";
