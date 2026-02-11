@@ -359,6 +359,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector literal allows empty without heap_alloc") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  vector<i32>()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("named arguments match parameters") {
   const std::string source = R"(
 [return<int>]
@@ -2920,6 +2933,19 @@ main() {
 )";
   std::string error;
   CHECK(validateProgramWithDefaults(source, "/main", {"io_err"}, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("default effects allow vector literal") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  vector<i32>(1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgramWithDefaults(source, "/main", {"heap_alloc"}, error));
   CHECK(error.empty());
 }
 
