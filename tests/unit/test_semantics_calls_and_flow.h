@@ -540,6 +540,45 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("capacity rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity<i32>(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("capacity does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("capacity rejects block arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity(values) { 1i32 })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+}
+
+TEST_CASE("capacity rejects wrong argument count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
+}
+
 TEST_CASE("capacity method validates on vector binding") {
   const std::string source = R"(
 [return<int>]
@@ -551,6 +590,19 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("capacity method rejects extra arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.capacity(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity rejects non-vector target") {
