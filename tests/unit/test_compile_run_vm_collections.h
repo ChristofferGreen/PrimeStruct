@@ -85,6 +85,24 @@ main() {
   CHECK(readFile(outPath) == "3\n7\n9\n");
 }
 
+TEST_CASE("runs vm with numeric vector literals") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 7i32, 9i32)}
+  print_line(values.count())
+  print_line(values[1i64])
+  print_line(values[2u64])
+  return(values[0i32])
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_literals.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_literals_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath) == "3\n7\n9\n");
+}
+
 TEST_CASE("runs vm with array literal count method") {
   const std::string source = R"(
 [return<int>]
@@ -97,6 +115,18 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with vector literal count method") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(vector<i32>(1i32, 2i32, 3i32).count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_literal_count.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("runs vm with array literal unsafe access") {
   const std::string source = R"(
 [return<int>]
@@ -105,6 +135,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_array_literal_unsafe.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
+TEST_CASE("runs vm with vector literal unsafe access") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at_unsafe(vector<i32>(4i32, 7i32, 9i32), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_literal_unsafe.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 7);
 }
