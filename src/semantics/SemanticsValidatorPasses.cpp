@@ -149,6 +149,10 @@ bool SemanticsValidator::validateExecutions() {
         error_ = "mut transform is not allowed on executions: " + exec.fullPath;
         return false;
       }
+      if (isBindingQualifierName(transform.name)) {
+        error_ = "binding visibility/static transforms are only valid on bindings: " + exec.fullPath;
+        return false;
+      }
       if (transform.name == "copy") {
         error_ = "copy transform is not allowed on executions: " + exec.fullPath;
         return false;

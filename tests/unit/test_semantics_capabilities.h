@@ -898,6 +898,46 @@ task(1i32)
   CHECK(error.find("restrict transform is not allowed on executions") != std::string::npos);
 }
 
+TEST_CASE("visibility transforms are rejected on executions") {
+  const std::string source = R"(
+[return<int>]
+task([i32] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[public]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
+}
+
+TEST_CASE("static transforms are rejected on executions") {
+  const std::string source = R"(
+[return<int>]
+task([i32] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[static]
+task(1i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
+}
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {
