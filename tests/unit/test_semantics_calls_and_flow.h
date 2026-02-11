@@ -1121,6 +1121,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector method calls resolve to definitions") {
+  const std::string source = R"(
+[return<int>]
+/vector/size([vector<i32>] items) {
+  return(count(items))
+}
+
+[return<int>]
+main() {
+  [vector<i32>] items{vector<i32>(1i32, 2i32)}
+  return(items.size())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("method calls reject pointer receivers") {
   const std::string source = R"(
 [return<int>]
