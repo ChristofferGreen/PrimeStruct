@@ -41,8 +41,11 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
   }
   expect(TokenKind::LParen, "expected '(' after if");
   Expr condition;
-  if (!parseExpr(condition, namespacePrefix)) {
-    return false;
+  {
+    BareBindingGuard bindingGuard(*this, false);
+    if (!parseExpr(condition, namespacePrefix)) {
+      return false;
+    }
   }
   if (match(TokenKind::Comma)) {
     pos_ = savedPos;
@@ -126,8 +129,11 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
     return fail("return value not allowed for void definition");
   }
   Expr arg;
-  if (!parseExpr(arg, namespacePrefix)) {
-    return false;
+  {
+    BareBindingGuard bindingGuard(*this, false);
+    if (!parseExpr(arg, namespacePrefix)) {
+      return false;
+    }
   }
   returnCall.args.push_back(std::move(arg));
   returnCall.argNames.push_back(std::nullopt);
@@ -383,13 +389,35 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
       }
       if (match(TokenKind::LBrace)) {
-        if (!sawParen && call.name != "block") {
-          return fail("call body requires parameter list");
-        }
-        hasCallSyntax = true;
-        call.hasBodyArguments = true;
-        if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
-          return false;
+        if (!sawParen) {
+          if (call.name == "block") {
+            hasCallSyntax = true;
+            call.hasBodyArguments = true;
+            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+              return false;
+            }
+          } else if (allowBareBindings_) {
+            if (!call.templateArgs.empty()) {
+              return fail("template arguments require a call");
+            }
+            call.isBinding = true;
+            if (!parseBindingInitializerList(call.args, call.argNames, namespacePrefix)) {
+              return false;
+            }
+            if (!finalizeBindingInitializer(call)) {
+              return false;
+            }
+            out = std::move(call);
+            return true;
+          } else {
+            return fail("call body requires parameter list");
+          }
+        } else {
+          hasCallSyntax = true;
+          call.hasBodyArguments = true;
+          if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            return false;
+          }
         }
       }
       if (hasCallSyntax) {

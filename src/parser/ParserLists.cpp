@@ -441,6 +441,7 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   if (!expect(TokenKind::LBrace, "expected '{'")) {
     return false;
   }
+  BareBindingGuard bindingGuard(*this, true);
   if (match(TokenKind::RBrace)) {
     expect(TokenKind::RBrace, "expected '}'");
     return true;

@@ -161,6 +161,23 @@ main() {
   CHECK(stmt.transforms[0].name == "i32");
 }
 
+TEST_CASE("parses bare binding statements") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{7i32}
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.isBinding);
+  CHECK(stmt.name == "value");
+  CHECK(stmt.transforms.empty());
+}
+
 TEST_CASE("parses binding type transforms with multiple template args") {
   const std::string source = R"(
 [return<int>]

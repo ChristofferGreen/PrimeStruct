@@ -56,6 +56,20 @@ private:
     bool previous_;
   };
 
+  struct BareBindingGuard {
+    explicit BareBindingGuard(Parser &parser, bool enabled)
+        : parser_(parser), previous_(parser_.allowBareBindings_) {
+      parser_.allowBareBindings_ = enabled;
+    }
+    ~BareBindingGuard() { parser_.allowBareBindings_ = previous_; }
+    BareBindingGuard(const BareBindingGuard &) = delete;
+    BareBindingGuard &operator=(const BareBindingGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
   std::string currentNamespacePrefix() const;
   std::string makeFullPath(const std::string &name, const std::string &prefix) const;
 
@@ -73,6 +87,7 @@ private:
   bool returnsVoidContext_ = false;
   bool allowImplicitVoidReturn_ = false;
   bool allowArgumentLabels_ = false;
+  bool allowBareBindings_ = false;
   bool hasMathImport_ = false;
 };
 

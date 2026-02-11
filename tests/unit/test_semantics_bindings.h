@@ -24,6 +24,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("local binding infers type without transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]

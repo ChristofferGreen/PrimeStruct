@@ -683,8 +683,11 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
     }
 
     Expr statementExpr;
-    if (!parseExpr(statementExpr, def.namespacePrefix)) {
-      return false;
+    {
+      BareBindingGuard bindingGuard(*this, true);
+      if (!parseExpr(statementExpr, def.namespacePrefix)) {
+        return false;
+      }
     }
     def.statements.push_back(std::move(statementExpr));
   }
