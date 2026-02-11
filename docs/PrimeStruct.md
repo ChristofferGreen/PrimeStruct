@@ -237,6 +237,18 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - `/math/*` is imported via `import /math`.
   - Core builtins (`assign`, `count`, `print*`, `convert`, etc.) live in the root namespace.
 - **Conformance note:** the VM/native subset may reject functions that the C++ emitter supports (e.g., float-heavy math); the reference will mark such cases explicitly.
+- **Core builtins (root namespace):**
+  - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
+  - **`convert<T>(value)`**: explicit conversion for `int/i32/i64/u64/bool` in VM/native; floats are C++-only today.
+  - **`if(cond, then, else)`**: canonical conditional form after desugaring.
+  - **`repeat(count) { ... }`** (statement): loop helper with integer/bool count.
+  - **`return(value)`**: explicit return helper.
+  - **`count(value)` / `value.count()`**: collection length.
+  - **`at(value, index)` / `at_unsafe(value, index)`**: bounds-checked and unchecked indexing.
+  - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
+  - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
+  - **Pointer helpers:** `location`, `dereference`.
+  - **PathSpace helpers:** `notify`, `insert`, `take`.
 
 ## Runtime Stack Model (draft)
 - **Frames:** each execution pushes a frame recording the instruction pointer, constants, locals, captures, and effect mask. Frames are immutable from the caller’s perspective; `assign` creates new bindings.
