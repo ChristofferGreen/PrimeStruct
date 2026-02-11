@@ -180,7 +180,34 @@ main() {
 }
 
 [return<int>]
+helper() {
+  return(1i32)
+}
+
+[return<int>]
 add([i32] left, [i32] right{plus(left, 1i32)}) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
+}
+
+TEST_CASE("parameter default expression rejects user-defined calls") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right{helper()}) {
   return(plus(left, right))
 }
 )";

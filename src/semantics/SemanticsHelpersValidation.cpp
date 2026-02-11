@@ -158,6 +158,15 @@ bool isDefaultExprAllowed(const Expr &expr) {
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return false;
     }
+    std::string builtinName;
+    if (!(getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
+          getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
+          getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
+          getBuiltinMathName(expr, builtinName, true) || getBuiltinConvertName(expr, builtinName) ||
+          getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
+          isIfCall(expr))) {
+      return false;
+    }
     for (const auto &arg : expr.args) {
       if (!isDefaultExprAllowed(arg)) {
         return false;
