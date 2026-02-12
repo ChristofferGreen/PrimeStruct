@@ -787,6 +787,16 @@ TEST_CASE("does not rewrite spaced multiply") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not rewrite spaced less_than") {
+  const std::string source = "main(){ return(a < b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("does not rewrite negative numeric literal") {
   const std::string source = "main(){ return(-1i32) }\n";
   primec::TextFilterPipeline pipeline;
