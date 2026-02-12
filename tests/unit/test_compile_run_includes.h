@@ -388,6 +388,48 @@ TEST_CASE("compiles and runs exact versioned archive include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs newest archive include expansion") {
+  if (!hasZipTools()) {
+    return;
+  }
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_archive_compile_latest";
+  const std::filesystem::path archiveSource = includeRoot / "archive_src";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(archiveSource);
+
+  std::filesystem::create_directories(archiveSource / "1.2.0" / "std" / "io");
+  {
+    std::ofstream libFile(archiveSource / "1.2.0" / "std" / "io" / "lib.prime");
+    CHECK(libFile.good());
+    libFile << "[return<int>]\nhelper(){ return(5i32) }\n";
+    CHECK(libFile.good());
+  }
+  std::filesystem::create_directories(archiveSource / "1.2.8" / "std" / "io");
+  {
+    std::ofstream libFile(archiveSource / "1.2.8" / "std" / "io" / "lib.prime");
+    CHECK(libFile.good());
+    libFile << "[return<int>]\nhelper(){ return(9i32) }\n";
+    CHECK(libFile.good());
+  }
+
+  const std::filesystem::path archivePath = includeRoot / "std_io.zip";
+  CHECK(createZip(archivePath, archiveSource));
+
+  const std::string source =
+      "include</std/io, version=\"1.2\">\n"
+      "[return<int>]\n"
+      "main(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_archive_include_latest.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_archive_inc_latest_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                 " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("compiles and runs include inside namespace") {
   const std::string libPath =
       writeTemp("compile_namespace_lib.prime", "[return<int>]\nhelper(){ return(9i32) }\n");
