@@ -202,6 +202,22 @@ TEST_CASE("missing include version directory fails") {
   CHECK(error.find("include version not found") != std::string::npos);
 }
 
+TEST_CASE("missing include minor version fails") {
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_minor";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  writeFile(dir / "1.1.9" / "lib.prime", "// LIB\n");
+  writeFile(dir / "1.3.0" / "lib.prime", "// LIB\n");
+  const std::string srcPath =
+      writeFile(dir / "main_missing_version_minor.prime",
+                "include<\"/lib.prime\", version=\"1.2\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include version not found") != std::string::npos);
+}
+
 TEST_CASE("missing include major version fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_major";
   std::filesystem::remove_all(dir);
