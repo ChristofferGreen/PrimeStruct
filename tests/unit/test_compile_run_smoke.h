@@ -16,6 +16,29 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
+TEST_CASE("defaults to native output with stem name") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(5i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_output.prime", source);
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_default_out";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::string compileCmd =
+      "./primec " + quoteShellArg(srcPath) + " --out-dir " + quoteShellArg(outDir.string()) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+
+  const std::filesystem::path outputPath = outDir / std::filesystem::path(srcPath).stem();
+  CHECK(std::filesystem::exists(outputPath));
+  CHECK(runCommand(quoteShellArg(outputPath.string())) == 5);
+}
+
 TEST_CASE("primevm forwards entry args") {
   const std::string source = R"(
 [return<int> effects(io_out)]
