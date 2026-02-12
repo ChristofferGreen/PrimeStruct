@@ -797,6 +797,26 @@ TEST_CASE("does not rewrite spaced less_than") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not rewrite spaced comparisons and boolean ops") {
+  const std::string source =
+      "main(){\n"
+      "  return(a > b)\n"
+      "  return(a <= b)\n"
+      "  return(a >= b)\n"
+      "  return(a == b)\n"
+      "  return(a != b)\n"
+      "  return(a && b)\n"
+      "  return(a || b)\n"
+      "  return(a = b)\n"
+      "}\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("does not rewrite negative numeric literal") {
   const std::string source = "main(){ return(-1i32) }\n";
   primec::TextFilterPipeline pipeline;
