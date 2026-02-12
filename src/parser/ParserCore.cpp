@@ -382,7 +382,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.arguments = std::move(arguments);
   exec.argumentNames = std::move(argumentNames);
   {
-    BraceListGuard braceGuard(*this, false, false);
+    BraceListGuard braceGuard(*this, true, true);
     if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
       return false;
     }

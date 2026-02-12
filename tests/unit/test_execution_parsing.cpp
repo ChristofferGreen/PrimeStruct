@@ -14,15 +14,6 @@ primec::Program parseProgram(const std::string &source) {
   return program;
 }
 
-std::string parseProgramError(const std::string &source) {
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(!error.empty());
-  return error;
-}
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.parser.executions");
@@ -73,7 +64,7 @@ execute_repeat(3i32) { main() main() }
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
-TEST_CASE("rejects execution body with non-call form") {
+TEST_CASE("parses execution body with non-call form") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -82,8 +73,10 @@ main() {
 
 execute_repeat(1i32) { 1i32 }
 )";
-  const auto error = parseProgramError(source);
-  CHECK(error.find("execution body arguments must be calls") != std::string::npos);
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
 TEST_CASE("parses execution body with mixed separators") {
@@ -127,7 +120,7 @@ execute_repeat(1i32) {
   CHECK(stmt.args[2].bodyArguments[0].name == "main");
 }
 
-TEST_CASE("rejects execution body with bindings") {
+TEST_CASE("parses execution body with bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -136,11 +129,14 @@ main() {
 
 execute_repeat(1i32) { [i32] value{1i32} main() }
 )";
-  const auto error = parseProgramError(source);
-  CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 2);
+  CHECK(program.executions[0].bodyArguments[0].isBinding);
+  CHECK(program.executions[0].bodyArguments[1].name == "main");
 }
 
-TEST_CASE("rejects execution body with return") {
+TEST_CASE("parses execution body with return") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -149,8 +145,11 @@ main() {
 
 execute_repeat(1i32) { return(1i32) }
 )";
-  const auto error = parseProgramError(source);
-  CHECK(error.find("return not allowed in execution body") != std::string::npos);
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments[0].kind == primec::Expr::Kind::Call);
+  CHECK(program.executions[0].bodyArguments[0].name == "return");
 }
 
 TEST_CASE("parses execution transforms") {

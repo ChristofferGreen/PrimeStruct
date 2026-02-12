@@ -2294,7 +2294,8 @@ execute_repeat([i32] x) {
 
 execute_repeat(1i32) { return(2i32) }
 )";
-  const auto error = parseProgramError(source);
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return not allowed in execution body") != std::string::npos);
 }
 

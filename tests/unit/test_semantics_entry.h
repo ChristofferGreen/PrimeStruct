@@ -1325,7 +1325,8 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { 1i32 }
 )";
-  const auto error = parseProgramError(source);
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("execution body arguments must be calls") != std::string::npos);
 }
 
@@ -1343,7 +1344,8 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { [i32] value{1i32} }
 )";
-  const auto error = parseProgramError(source);
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
 }
 
@@ -1361,8 +1363,9 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { if(true, then(){ [i32] value{2i32} }, else(){ }) }
 )";
-  const auto error = parseProgramError(source);
-  CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
 }
 
 TEST_CASE("execution body rejects nested non-call expressions") {
@@ -1379,7 +1382,8 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { if(true, then(){ 1i32 }, else(){ main() }) }
 )";
-  const auto error = parseProgramError(source);
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("execution body arguments must be calls") != std::string::npos);
 }
 
