@@ -220,16 +220,16 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     if (isWildcard) {
       const std::string scopedPrefix = prefix + "/";
-      bool sawAnyDefinition = false;
+      bool sawImmediateDefinition = false;
       for (const auto &def : program_.definitions) {
         if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
           continue;
         }
-        sawAnyDefinition = true;
         const std::string remainder = def.fullPath.substr(scopedPrefix.size());
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
+        sawImmediateDefinition = true;
         if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
           error_ = "import creates name conflict: " + remainder;
           return false;
@@ -245,7 +245,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
           return false;
         }
       }
-      if (!sawAnyDefinition && prefix != "/math") {
+      if (!sawImmediateDefinition && prefix != "/math") {
         error_ = "unknown import path: " + importPath;
         return false;
       }

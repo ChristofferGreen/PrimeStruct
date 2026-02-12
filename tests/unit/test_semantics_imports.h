@@ -65,6 +65,10 @@ TEST_CASE("import does not alias nested definitions") {
   const std::string source = R"(
 import /util
 namespace util {
+  [return<int>]
+  immediate() {
+    return(0i32)
+  }
   namespace nested {
     [return<int>]
     inner() {
@@ -86,6 +90,10 @@ TEST_CASE("import does not alias namespace blocks") {
   const std::string source = R"(
 import /util
 namespace util {
+  [return<int>]
+  immediate() {
+    return(0i32)
+  }
   namespace nested {
     [return<int>]
     inner() {
@@ -101,6 +109,27 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: nested") != std::string::npos);
+}
+
+TEST_CASE("import rejects namespace-only path") {
+  const std::string source = R"(
+import /util
+namespace util {
+  namespace nested {
+    [return<int>]
+    inner() {
+      return(1i32)
+    }
+  }
+}
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown import path: /util") != std::string::npos);
 }
 
 TEST_CASE("import accepts whitespace-separated paths") {
@@ -316,6 +345,10 @@ TEST_CASE("import rejects nested definitions in root") {
   const std::string source = R"(
 import /util
 namespace util {
+  [return<int>]
+  immediate() {
+    return(0i32)
+  }
   namespace nested {
     [return<int>]
     second() {
