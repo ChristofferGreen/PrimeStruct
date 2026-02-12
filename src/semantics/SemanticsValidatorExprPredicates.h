@@ -251,6 +251,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return sawUnsigned && sawSigned;
   };
+  auto isStructConstructor = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding) {
+      return false;
+    }
+    const std::string resolved = resolveCalleePath(candidate);
+    return structNames_.count(resolved) > 0;
+  };
 
   if (expr.kind == Expr::Kind::Literal) {
     return true;
@@ -424,6 +431,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
                 return false;
               }
+              ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
+              if (initKind == ReturnKind::Void && !isStructConstructor(bodyExpr.args.front())) {
+                error_ = "binding initializer requires a value";
+                return false;
+              }
               if (!hasExplicitBindingTypeTransform(bodyExpr)) {
                 (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info);
               }
@@ -539,6 +551,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
+            return false;
+          }
+          ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+          if (initKind == ReturnKind::Void && !isStructConstructor(bodyExpr.args.front())) {
+            error_ = "binding initializer requires a value";
             return false;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr)) {

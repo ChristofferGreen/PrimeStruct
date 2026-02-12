@@ -290,6 +290,18 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (!validateExpr(params, locals, stmt.args.front())) {
       return false;
     }
+    auto isStructConstructor = [&](const Expr &expr) -> bool {
+      if (expr.kind != Expr::Kind::Call || expr.isBinding) {
+        return false;
+      }
+      const std::string resolved = resolveCalleePath(expr);
+      return structNames_.count(resolved) > 0;
+    };
+    ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, locals);
+    if (initKind == ReturnKind::Void && !isStructConstructor(stmt.args.front())) {
+      error_ = "binding initializer requires a value";
+      return false;
+    }
     if (!hasExplicitBindingTypeTransform(stmt)) {
       (void)inferBindingTypeFromInitializer(stmt.args.front(), params, locals, info);
     }

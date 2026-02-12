@@ -37,6 +37,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding initializer rejects void call") {
+  const std::string source = R"(
+[return<void>]
+noop() {
+  return()
+}
+
+[return<int>]
+main() {
+  [i32] value{noop()}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer requires a value") != std::string::npos);
+}
+
 TEST_CASE("binding infers type from user call") {
   const std::string source = R"(
 namespace i64 {
