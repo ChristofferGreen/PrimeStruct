@@ -478,6 +478,22 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("rejects vm unsupported math builtin") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(convert<int>(sin(1.0f)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_sin_unsupported.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_math_sin_unsupported_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support math builtin: sin\n");
+}
+
 TEST_CASE("runs vm with convert bool from integers") {
   const std::string source = R"(
 [return<int>]

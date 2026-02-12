@@ -1341,6 +1341,24 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("rejects native unsupported math builtin") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(convert<int>(sin(1.0f)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_sin_unsupported.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_sin_unsupported_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) == "Native lowering error: native backend does not support math builtin: sin\n");
+}
+
 TEST_CASE("compiles and runs native i64 arithmetic") {
   const std::string source = R"(
 [return<bool>]
