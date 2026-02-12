@@ -112,6 +112,9 @@ to the root namespace (e.g., `import /math/*` allows `sin(...)` as shorthand for
 `import /foo/bar` aliases a single definition or builtin by its final segment. Imports must appear at the
 top level (not inside `namespace` blocks).
 
+`import /foo` is shorthand for `import /foo/*` (except `/math`, which is unsupported without a wildcard or
+explicit name).
+
 Import paths must resolve to a definition or builtin; unknown import paths are errors.
 
 `import /math` (without a wildcard or explicit name) is not supported; use `import /math/*` or

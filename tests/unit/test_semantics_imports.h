@@ -103,6 +103,25 @@ main() {
   CHECK(error.find("unknown call target: nested") != std::string::npos);
 }
 
+TEST_CASE("import accepts whitespace-separated paths") {
+  const std::string source = R"(
+import /util /math/*
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(min(inc(2i32), 4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import rejects unknown wildcard path") {
   const std::string source = R"(
 import /missing/*
