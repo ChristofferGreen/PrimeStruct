@@ -61,6 +61,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import aliases a single definition") {
+  const std::string source = R"(
+import /util/inc
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import does not alias nested definitions") {
   const std::string source = R"(
 import /util
