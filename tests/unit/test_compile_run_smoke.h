@@ -276,6 +276,48 @@ import /util
   CHECK(runCommand(nativePath) == 5);
 }
 
+TEST_CASE("rejects import alias for nested definitions") {
+  const std::string source = R"(
+import /pkg
+namespace pkg {
+  namespace util {
+    [return<int>]
+    inc([i32] value) {
+      return(plus(value, 1i32))
+    }
+  }
+}
+namespace pkg {
+  [return<int>]
+  add_one([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(add_one(inc(2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_import_immediate_children.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_import_immediate_children_err.txt").string();
+
+  const std::string compileCppCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCppCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: inc") != std::string::npos);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(runVmCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: inc") != std::string::npos);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + quoteShellArg(srcPath) + " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileNativeCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: inc") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs pathspace builtins as no-ops") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify, pathspace_insert, pathspace_take)]
