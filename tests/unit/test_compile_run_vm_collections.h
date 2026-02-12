@@ -288,6 +288,23 @@ main() {
   CHECK(runCommand(runCmd) == 13);
 }
 
+TEST_CASE("runs vm with qualified math names") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] a{/math/abs(-5i32)}
+  [i32] b{/math/sign(-5i32)}
+  [i32] c{/math/min(7i32, 2i32)}
+  [i32] d{/math/max(7i32, 2i32)}
+  [i32] e{convert<int>(/math/pi)}
+  return(plus(plus(plus(a, b), plus(c, d)), e))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_qualified.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 16);
+}
+
 TEST_CASE("runs vm with math saturate/lerp") {
   const std::string source = R"(
 import /math
