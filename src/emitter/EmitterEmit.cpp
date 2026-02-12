@@ -890,11 +890,19 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << "{\n";
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
         std::string countExpr = "\"\"";
+        ReturnKind countKind = ReturnKind::Unknown;
         if (!stmt.args.empty()) {
           countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+          std::unordered_map<std::string, ReturnKind> locals;
+          locals.reserve(localTypes.size());
+          for (const auto &entry : localTypes) {
+            locals.emplace(entry.first, returnKindForTypeName(entry.second.typeName));
+          }
+          countKind = inferExprReturnKind(stmt.args.front(), params, locals);
         }
         out << innerPad << "auto " << endVar << " = " << countExpr << ";\n";
-        out << innerPad << "for (decltype(" << endVar << ") " << indexVar << " = 0; " << indexVar << " < " << endVar
+        const std::string indexType = (countKind == ReturnKind::Bool) ? "int" : ("decltype(" + endVar + ")");
+        out << innerPad << "for (" << indexType << " " << indexVar << " = 0; " << indexVar << " < " << endVar
             << "; ++" << indexVar << ") {\n";
         auto blockTypes = localTypes;
         for (const auto &bodyStmt : stmt.bodyArguments) {
