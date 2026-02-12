@@ -63,6 +63,21 @@ execute_repeat(3i32) { main() main() }
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
+TEST_CASE("parses execution body with mixed separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(3i32) { main(), main() main() }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments.size() == 3);
+}
+
 TEST_CASE("parses execution with if statement sugar") {
   const std::string source = R"(
 [return<int>]
