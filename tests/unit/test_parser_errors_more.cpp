@@ -79,6 +79,17 @@ main() {
   CHECK(error.find("invalid character") != std::string::npos);
 }
 
+TEST_CASE("non-ascii whitespace rejected") {
+  const std::string source =
+      std::string("[return<int>]\nmain()") + "\xC2\xA0" + "{\n  return(1i32)\n}\n";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid character") != std::string::npos);
+}
+
 TEST_CASE("reserved keyword rejected in type identifier") {
   const std::string source = R"(
 [return<int>]

@@ -47,12 +47,26 @@ static bool isAsciiDigit(char c) {
   return c >= '0' && c <= '9';
 }
 
+static bool isAsciiWhitespace(char c) {
+  switch (c) {
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+    case '\f':
+    case '\v':
+      return true;
+    default:
+      return false;
+  }
+}
+
 static bool isStringSuffixStart(char c) {
-  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+  return isAsciiAlpha(c) || c == '_';
 }
 
 static bool isStringSuffixBody(char c) {
-  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+  return isAsciiAlpha(c) || isAsciiDigit(c) || c == '_';
 }
 
 bool Lexer::isIdentifierStart(char c) const {
@@ -64,7 +78,7 @@ bool Lexer::isIdentifierBody(char c) const {
 }
 
 void Lexer::skipWhitespace() {
-  while (pos_ < source_.size() && std::isspace(static_cast<unsigned char>(source_[pos_]))) {
+  while (pos_ < source_.size() && isAsciiWhitespace(source_[pos_])) {
     advance();
   }
 }
