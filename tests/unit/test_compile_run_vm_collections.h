@@ -377,6 +377,19 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with bool map access helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<bool, i32>] values{map<bool, i32>{true=1i32, false=2i32}}
+  return(plus(at(values, true), at_unsafe(values, false)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_bool_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("vm map at rejects missing key") {
   const std::string source = R"(
 [return<int>]

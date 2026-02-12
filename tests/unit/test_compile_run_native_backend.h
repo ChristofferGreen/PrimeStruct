@@ -1848,6 +1848,22 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs native bool map access helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<bool, i32>] values{map<bool, i32>{true=1i32, false=2i32}}
+  return(plus(at(values, true), at_unsafe(values, false)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_bool_access.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_bool_access_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("compiles and runs native map at missing key") {
   const std::string source = R"(
 [return<int>]
