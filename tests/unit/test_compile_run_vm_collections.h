@@ -117,6 +117,22 @@ main() {
   CHECK(readFile(outPath) == "capabilities\n");
 }
 
+TEST_CASE("default effects none requires explicit effects in vm") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line("no effects"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_print_no_effects.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_print_no_effects_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --default-effects=none 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("print_line requires io_out effect") != std::string::npos);
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
