@@ -34,6 +34,22 @@ main() {
   CHECK(readFile(outPath) == "line\\\\nnext\n");
 }
 
+TEST_CASE("runs vm with raw single-quoted string literal output") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line('line\\nnext'raw_utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_raw_string_literal_single.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_raw_string_single_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "line\\\\nnext\n");
+}
+
 TEST_CASE("runs vm with literal method call") {
   const std::string source = R"(
 namespace i32 {
