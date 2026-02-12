@@ -874,6 +874,23 @@ main() {
   CHECK(expr.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses block expression with mixed separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{ 1i32, 2i32 3i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "block");
+  CHECK(expr.args.empty());
+  REQUIRE(expr.bodyArguments.size() == 3);
+}
+
 TEST_CASE("parses if sugar with block statements in return argument") {
   const std::string source = R"(
 [return<int>]
