@@ -1091,6 +1091,28 @@ main() {
   CHECK(std::filesystem::exists(outputPath));
 }
 
+TEST_CASE("defaults to psir extension for emit=ir") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(3i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_ir.prime", source);
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_ir_default_out";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::string compileCmd =
+      "./primec --emit=ir " + srcPath + " --out-dir " + outDir.string() + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  std::filesystem::path outputPath = outDir / std::filesystem::path(srcPath).stem();
+  outputPath.replace_extension(".psir");
+  CHECK(std::filesystem::exists(outputPath));
+}
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]
