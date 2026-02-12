@@ -103,6 +103,17 @@ TEST_CASE("rewrites divide operator without spaces") {
   CHECK(output.find("divide(a, b)") != std::string::npos);
 }
 
+TEST_CASE("does not rewrite slash paths") {
+  const std::string source = "main(){ return(/math/sin(0.0f)) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("/math/sin(0.0f)") != std::string::npos);
+  CHECK(output.find("divide(/math") == std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator without spaces") {
   const std::string source = "main(){ return(a+b) }\n";
   primec::TextFilterPipeline pipeline;

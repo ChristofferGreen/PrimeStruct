@@ -321,6 +321,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     }
     std::string left = output.substr(start, end - start);
     left = stripOuterParens(left);
+    if (op == '/' && !left.empty() && left[0] == '/') {
+      return false;
+    }
     left = normalizeUnaryOperand(left);
     if (options.hasFilter("implicit-i32")) {
       left = maybeAppendI32(left);
