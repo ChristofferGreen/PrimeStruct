@@ -262,6 +262,21 @@ main() {
   CHECK(program.definitions[0].transforms[0].templateArgs[1] == "f32");
 }
 
+TEST_CASE("parses nested template lists without commas") {
+  const std::string source = R"(
+[custom<map<i32 i64>>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  CHECK(program.definitions[0].transforms[0].name == "custom");
+  REQUIRE(program.definitions[0].transforms[0].templateArgs.size() == 1);
+  CHECK(program.definitions[0].transforms[0].templateArgs[0] == "map<i32, i64>");
+}
+
 TEST_CASE("parses parameter list without commas") {
   const std::string source = R"(
 [return<int>]
