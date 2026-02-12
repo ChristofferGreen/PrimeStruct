@@ -927,6 +927,21 @@ main() {
   CHECK(error.find("invalid slash path identifier: /util/") != std::string::npos);
 }
 
+TEST_CASE("non-ascii identifiers are rejected") {
+  const std::string source =
+      "[return<int>]\n"
+      "main() {\n"
+      "  [i32] \xC3\xA5{1i32}\n"
+      "  return(\xC3\xA5)\n"
+      "}\n";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid character") != std::string::npos);
+}
+
 TEST_CASE("import trailing comma fails") {
   const std::string source = R"(
 import /util,
