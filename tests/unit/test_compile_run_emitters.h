@@ -224,6 +224,21 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs math-qualified trig in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(/math/sin(0.0f)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_math_trig_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_math_trig_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("compiles and runs math-qualified min/max in C++ emitter") {
   const std::string source = R"(
 [return<int>]
