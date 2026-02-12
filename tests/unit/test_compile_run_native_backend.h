@@ -819,6 +819,27 @@ main() {
   CHECK(readFile(errPath).find("print_line requires io_out effect") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs native implicit utf8 strings") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("implicit")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_implicit_utf8.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_implicit_utf8_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_implicit_utf8_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "implicit\n");
+}
+
 TEST_CASE("compiles and runs native string binding print") {
   const std::string source = R"(
 [return<int> effects(io_out)]
