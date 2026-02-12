@@ -739,6 +739,21 @@ main() {
   CHECK(program.definitions[0].returnExpr->floatWidth == 32);
 }
 
+TEST_CASE("parses float literals with uppercase exponent") {
+  const std::string source = R"(
+[return<f64>]
+main() {
+  return(1E+3f64)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1E+3");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 64);
+}
+
 TEST_CASE("parses double literals") {
   const std::string source = R"(
 [return<f64>]
