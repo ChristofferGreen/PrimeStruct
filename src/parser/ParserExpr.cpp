@@ -166,6 +166,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
     }
+    if (match(TokenKind::KeywordImport)) {
+      return fail("import statements must appear at the top level");
+    }
     if (match(TokenKind::LBracket)) {
       std::vector<Transform> transforms;
       if (!parseTransformList(transforms)) {
