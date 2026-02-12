@@ -954,6 +954,23 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
 }
 
+TEST_CASE("no transforms rejects implicit utf8") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("implicit")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_implicit_utf8.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_implicit_utf8_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=cpp --no-transforms " + srcPath + " -o /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
+}
+
 TEST_CASE("writes outputs under out dir") {
   const std::string source = R"(
 [return<int>]
