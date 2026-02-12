@@ -1125,6 +1125,21 @@ main() {
   CHECK(error.find("integer literal requires i32/i64/u64 suffix") != std::string::npos);
 }
 
+TEST_CASE("negative unsigned literal is rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(-1u64)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid integer literal") != std::string::npos);
+}
+
 TEST_CASE("named args for builtin fail in parser") {
   const std::string source = R"(
 [return<int>]
