@@ -37,6 +37,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding infers type from user call") {
+  const std::string source = R"(
+namespace i64 {
+  [return<i64>]
+  inc([i64] self) {
+    return(plus(self, 1i64))
+  }
+}
+
+[return<i64>]
+make() {
+  return(3i64)
+}
+
+[return<i64>]
+main() {
+  value{make()}
+  return(value.inc())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("local binding type must be supported") {
   const std::string source = R"(
 [return<int>]

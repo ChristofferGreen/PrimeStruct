@@ -498,4 +498,25 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
   }
 }
 
+bool SemanticsValidator::inferBindingTypeFromInitializer(
+    const Expr &initializer,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    BindingInfo &bindingOut) {
+  if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasMathImport_)) {
+    return true;
+  }
+  ReturnKind kind = inferExprReturnKind(initializer, params, locals);
+  if (kind == ReturnKind::Unknown || kind == ReturnKind::Void) {
+    return false;
+  }
+  std::string inferred = typeNameForReturnKind(kind);
+  if (inferred.empty()) {
+    return false;
+  }
+  bindingOut.typeName = inferred;
+  bindingOut.typeTemplateArg.clear();
+  return true;
+}
+
 } // namespace primec::semantics

@@ -123,8 +123,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
               return false;
             }
             if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-              (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding,
-                                                       hasMathImport_);
+              (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, localsOut, binding);
             }
             localsOut.emplace(bodyExpr.name, std::move(binding));
             continue;
@@ -167,8 +166,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
               return ReturnKind::Unknown;
             }
             if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
-              (void)tryInferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info,
-                                                       hasMathImport_);
+              (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
             }
             if (restrictType.has_value()) {
               const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -622,7 +620,7 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
         return false;
       }
       if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
-        (void)tryInferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info, hasMathImport_);
+        (void)inferBindingTypeFromInitializer(stmt.args.front(), defParams, activeLocals, info);
       }
       if (restrictType.has_value()) {
         const bool hasTemplate = !info.typeTemplateArg.empty();

@@ -291,7 +291,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return false;
     }
     if (!hasExplicitBindingTypeTransform(stmt)) {
-      (void)tryInferBindingTypeFromInitializer(stmt.args.front(), params, locals, info, hasMathImport_);
+      (void)inferBindingTypeFromInitializer(stmt.args.front(), params, locals, info);
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();

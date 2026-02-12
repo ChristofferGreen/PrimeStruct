@@ -30,6 +30,10 @@ private:
   bool isParam(const std::vector<ParameterInfo> &params, const std::string &name) const;
   const BindingInfo *findParamBinding(const std::vector<ParameterInfo> &params, const std::string &name) const;
   std::string typeNameForReturnKind(ReturnKind kind) const;
+  bool inferBindingTypeFromInitializer(const Expr &initializer,
+                                       const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       BindingInfo &bindingOut);
 
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
