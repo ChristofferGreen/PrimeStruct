@@ -67,6 +67,23 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
+TEST_CASE("no transforms rejects infix operators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32 + 2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_infix.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_infix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
 TEST_CASE("text filters none disables implicit utf8") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -84,6 +101,23 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
         std::string::npos);
+}
+
+TEST_CASE("text filters none rejects infix operators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32 + 2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_filters_none_infix.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_filters_none_infix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
 TEST_CASE("text filters none still accepts canonical syntax") {
