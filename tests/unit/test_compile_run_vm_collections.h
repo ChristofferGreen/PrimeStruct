@@ -214,6 +214,22 @@ main() {
   CHECK(readFile(outPath) == "line\nnext\n");
 }
 
+TEST_CASE("runs vm with escaped utf8 single-quoted strings") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line('line\nnext'utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_utf8_escaped_single.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_utf8_escaped_single_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "line\nnext\n");
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
