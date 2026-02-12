@@ -258,6 +258,48 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const std::string resolved = resolveCalleePath(candidate);
     return structNames_.count(resolved) > 0;
   };
+  auto getEnvelopeValueExpr = [&](const Expr &candidate) -> const Expr * {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return nullptr;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+      return nullptr;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return nullptr;
+    }
+    const std::string resolved = resolveCalleePath(candidate);
+    if (defMap_.find(resolved) != defMap_.end()) {
+      return nullptr;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &bodyExpr : candidate.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        continue;
+      }
+      valueExpr = &bodyExpr;
+    }
+    return valueExpr;
+  };
+  std::function<bool(const Expr &)> isStructConstructorValueExpr;
+  isStructConstructorValueExpr = [&](const Expr &candidate) -> bool {
+    if (isStructConstructor(candidate)) {
+      return true;
+    }
+    if (isIfCall(candidate) && candidate.args.size() == 3) {
+      const Expr &thenArg = candidate.args[1];
+      const Expr &elseArg = candidate.args[2];
+      const Expr *thenValue = getEnvelopeValueExpr(thenArg);
+      const Expr *elseValue = getEnvelopeValueExpr(elseArg);
+      const Expr &thenExpr = thenValue ? *thenValue : thenArg;
+      const Expr &elseExpr = elseValue ? *elseValue : elseArg;
+      return isStructConstructorValueExpr(thenExpr) && isStructConstructorValueExpr(elseExpr);
+    }
+    if (const Expr *valueExpr = getEnvelopeValueExpr(candidate)) {
+      return isStructConstructorValueExpr(*valueExpr);
+    }
+    return false;
+  };
 
   if (expr.kind == Expr::Kind::Literal) {
     return true;
@@ -432,7 +474,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 return false;
               }
               ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
-              if (initKind == ReturnKind::Void && !isStructConstructor(bodyExpr.args.front())) {
+              if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
                 error_ = "binding initializer requires a value";
                 return false;
               }
@@ -474,8 +516,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           kindOut = inferExprReturnKind(*valueExpr, params, branchLocals);
           stringOut = isStringValue(*valueExpr, branchLocals);
           if (kindOut == ReturnKind::Void) {
-            error_ = "if branches must produce a value";
-            return false;
+            if (isStructConstructorValueExpr(*valueExpr)) {
+              kindOut = ReturnKind::Unknown;
+            } else {
+              error_ = "if branches must produce a value";
+              return false;
+            }
           }
           return true;
         }
@@ -486,8 +532,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         kindOut = inferExprReturnKind(branch, params, locals);
         stringOut = isStringValue(branch, locals);
         if (kindOut == ReturnKind::Void) {
-          error_ = "if branches must produce a value";
-          return false;
+          if (isStructConstructorValueExpr(branch)) {
+            kindOut = ReturnKind::Unknown;
+          } else {
+            error_ = "if branches must produce a value";
+            return false;
+          }
         }
         return true;
       };
@@ -554,7 +604,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
-          if (initKind == ReturnKind::Void && !isStructConstructor(bodyExpr.args.front())) {
+          if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
             error_ = "binding initializer requires a value";
             return false;
           }
@@ -590,8 +640,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (isLast) {
           ReturnKind kind = inferExprReturnKind(bodyExpr, params, blockLocals);
           if (kind == ReturnKind::Void) {
-            error_ = "block expression requires a value";
-            return false;
+            if (!isStructConstructorValueExpr(bodyExpr)) {
+              error_ = "block expression requires a value";
+              return false;
+            }
           }
         }
       }

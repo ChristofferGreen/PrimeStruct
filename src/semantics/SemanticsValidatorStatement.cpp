@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include <functional>
+
 namespace primec::semantics {
 
 bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &params,
@@ -297,8 +299,50 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       const std::string resolved = resolveCalleePath(expr);
       return structNames_.count(resolved) > 0;
     };
+    auto getEnvelopeValueExpr = [&](const Expr &candidate) -> const Expr * {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return nullptr;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        return nullptr;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return nullptr;
+      }
+      const std::string resolved = resolveCalleePath(candidate);
+      if (defMap_.find(resolved) != defMap_.end()) {
+        return nullptr;
+      }
+      const Expr *valueExpr = nullptr;
+      for (const auto &bodyExpr : candidate.bodyArguments) {
+        if (bodyExpr.isBinding) {
+          continue;
+        }
+        valueExpr = &bodyExpr;
+      }
+      return valueExpr;
+    };
+    std::function<bool(const Expr &)> isStructConstructorValueExpr;
+    isStructConstructorValueExpr = [&](const Expr &candidate) -> bool {
+      if (isStructConstructor(candidate)) {
+        return true;
+      }
+      if (isIfCall(candidate) && candidate.args.size() == 3) {
+        const Expr &thenArg = candidate.args[1];
+        const Expr &elseArg = candidate.args[2];
+        const Expr *thenValue = getEnvelopeValueExpr(thenArg);
+        const Expr *elseValue = getEnvelopeValueExpr(elseArg);
+        const Expr &thenExpr = thenValue ? *thenValue : thenArg;
+        const Expr &elseExpr = elseValue ? *elseValue : elseArg;
+        return isStructConstructorValueExpr(thenExpr) && isStructConstructorValueExpr(elseExpr);
+      }
+      if (const Expr *valueExpr = getEnvelopeValueExpr(candidate)) {
+        return isStructConstructorValueExpr(*valueExpr);
+      }
+      return false;
+    };
     ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, locals);
-    if (initKind == ReturnKind::Void && !isStructConstructor(stmt.args.front())) {
+    if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(stmt.args.front())) {
       error_ = "binding initializer requires a value";
       return false;
     }

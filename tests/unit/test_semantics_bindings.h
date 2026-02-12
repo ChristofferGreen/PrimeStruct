@@ -781,6 +781,42 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("binding initializer allows struct constructor block") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [thing] item{block(){ thing() }}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding initializer allows struct constructor if") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [thing] item{if(true, then(){ thing() }, else(){ thing() })}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct constructor rejects unknown named arguments") {
   const std::string source = R"(
 [struct]
