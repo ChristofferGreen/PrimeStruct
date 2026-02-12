@@ -254,6 +254,19 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with math constant conversions") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_constants_convert.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

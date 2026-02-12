@@ -686,6 +686,42 @@
                     "convert<bool>";
             return false;
           }
+          auto tryEmitMathConstantConvert = [&](const Expr &arg) -> bool {
+            if (arg.kind != Expr::Kind::Name) {
+              return false;
+            }
+            std::string mathConst;
+            if (!getMathConstantName(arg.name, mathConst)) {
+              return false;
+            }
+            double value = 0.0;
+            if (mathConst == "pi") {
+              value = 3.14159265358979323846;
+            } else if (mathConst == "tau") {
+              value = 6.28318530717958647692;
+            } else if (mathConst == "e") {
+              value = 2.71828182845904523536;
+            }
+            if (typeName == "bool") {
+              function.instructions.push_back({IrOpcode::PushI32, value != 0.0 ? 1u : 0u});
+              return true;
+            }
+            if (typeName == "int" || typeName == "i32") {
+              function.instructions.push_back(
+                  {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
+              return true;
+            }
+            if (typeName == "i64") {
+              function.instructions.push_back(
+                  {IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(value))});
+              return true;
+            }
+            function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+            return true;
+          };
+          if (tryEmitMathConstantConvert(expr.args.front())) {
+            return true;
+          }
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }

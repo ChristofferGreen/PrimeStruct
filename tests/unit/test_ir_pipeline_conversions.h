@@ -335,7 +335,7 @@ main() {
   CHECK(error.find("native backend does not support math builtin: sin") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects math constants") {
+TEST_CASE("ir lowerer supports math constant conversions") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -349,8 +349,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support math constant: pi") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowerer supports math-qualified abs/sign/saturate") {

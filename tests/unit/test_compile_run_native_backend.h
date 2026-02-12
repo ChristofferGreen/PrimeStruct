@@ -1155,6 +1155,23 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native math constant conversions") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_constants_convert.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_constants_convert_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("compiles and runs native i64 arithmetic") {
   const std::string source = R"(
 [return<bool>]
