@@ -63,6 +63,22 @@ execute_repeat(3i32) { main() main() }
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
+TEST_CASE("parses execution body with non-call form") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(1i32) { 1i32 }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses execution body with mixed separators") {
   const std::string source = R"(
 [return<int>]
