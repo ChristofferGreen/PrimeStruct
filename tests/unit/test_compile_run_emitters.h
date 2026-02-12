@@ -118,6 +118,26 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs argv helpers in C++ emitter") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  print_line(args[1i32])
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_argv.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_emit_argv_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_argv_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+
+  const std::string runCmd = exePath + " alpha beta > " + outPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("compiles and runs array index sugar with u64") {
   const std::string source = R"(
 [return<int>]
