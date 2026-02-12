@@ -105,6 +105,27 @@ main() {
   CHECK(error.find("unknown call target: inner") != std::string::npos);
 }
 
+TEST_CASE("import aliases explicit nested definition path") {
+  const std::string source = R"(
+import /util/nested/inner
+namespace util {
+  namespace nested {
+    [return<int>]
+    inner() {
+      return(1i32)
+    }
+  }
+}
+[return<int>]
+main() {
+  return(inner())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import does not alias namespace blocks") {
   const std::string source = R"(
 import /util
