@@ -40,6 +40,25 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
 }
 
+TEST_CASE("text filters none disables implicit utf8") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("no suffix")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_filters_none_utf8.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_filters_none_utf8_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit i32 via transform list") {
   const std::string source = R"(
 [return<int>]
