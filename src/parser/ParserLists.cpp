@@ -60,6 +60,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           if (arg.kind == TokenKind::End) {
             return false;
           }
+          if (!arg.text.empty() && arg.text[0] == '/') {
+            return fail("transform arguments do not accept slash paths");
+          }
           std::string argError;
           if (!validateIdentifierText(arg.text, argError)) {
             return fail(argError);

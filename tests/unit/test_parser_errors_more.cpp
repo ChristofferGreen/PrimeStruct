@@ -1395,6 +1395,22 @@ main() {
   CHECK(error.find("expected transform argument") != std::string::npos);
 }
 
+TEST_CASE("transform arguments reject slash paths") {
+  const std::string source = R"(
+[effects(/io_out)]
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform arguments do not accept slash paths") != std::string::npos);
+}
+
 TEST_CASE("transform template argument required") {
   const std::string source = R"(
 [return<>]
