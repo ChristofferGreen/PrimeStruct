@@ -1591,6 +1591,25 @@ job([a] 1i32, [b] 2i32)
   CHECK(error.empty());
 }
 
+TEST_CASE("execution named arguments allow positional fill after labels") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+job([b] 2i32, 1i32)
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("execution arguments reject named builtins") {
   const std::string source = R"(
 [return<int>]
