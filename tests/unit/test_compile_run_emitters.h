@@ -442,6 +442,28 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs import aliases in C++ emitter") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_import_alias_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs math constants in C++ emitter") {
   const std::string source = R"(
 import /math
