@@ -16,6 +16,24 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
+TEST_CASE("default entry path is main") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(4i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_entry.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_default_entry_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+
+  const std::string runVmCmd = "./primevm " + srcPath;
+  CHECK(runCommand(runVmCmd) == 4);
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]
