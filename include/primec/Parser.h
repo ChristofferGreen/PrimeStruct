@@ -71,6 +71,27 @@ private:
     bool previous_;
   };
 
+  struct BraceListGuard {
+    BraceListGuard(Parser &parser, bool allowBindings, bool allowReturn)
+        : parser_(parser),
+          prevAllowBindings_(parser_.allowBraceBindings_),
+          prevAllowReturn_(parser_.allowBraceReturn_) {
+      parser_.allowBraceBindings_ = allowBindings;
+      parser_.allowBraceReturn_ = allowReturn;
+    }
+    ~BraceListGuard() {
+      parser_.allowBraceBindings_ = prevAllowBindings_;
+      parser_.allowBraceReturn_ = prevAllowReturn_;
+    }
+    BraceListGuard(const BraceListGuard &) = delete;
+    BraceListGuard &operator=(const BraceListGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool prevAllowBindings_;
+    bool prevAllowReturn_;
+  };
+
   std::string currentNamespacePrefix() const;
   std::string makeFullPath(const std::string &name, const std::string &prefix) const;
 
@@ -89,6 +110,8 @@ private:
   bool allowImplicitVoidReturn_ = false;
   bool allowArgumentLabels_ = false;
   bool allowBareBindings_ = false;
+  bool allowBraceBindings_ = true;
+  bool allowBraceReturn_ = true;
   bool hasMathImport_ = false;
   bool forceSingleTypeToReturn_ = false;
 };

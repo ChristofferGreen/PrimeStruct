@@ -475,7 +475,7 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   if (!expect(TokenKind::LBrace, "expected '{'")) {
     return false;
   }
-  BareBindingGuard bindingGuard(*this, true);
+  BareBindingGuard bindingGuard(*this, allowBraceBindings_);
   if (match(TokenKind::RBrace)) {
     expect(TokenKind::RBrace, "expected '}'");
     return true;
@@ -483,6 +483,9 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   while (true) {
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
+    }
+    if (!allowBraceBindings_ && match(TokenKind::LBracket)) {
+      return fail("execution body arguments cannot be bindings");
     }
     Expr arg;
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
@@ -503,12 +506,23 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
       }
     }
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "return") {
+      if (!allowBraceReturn_) {
+        return fail("return not allowed in execution body");
+      }
       if (!parseReturnStatement(arg, namespacePrefix)) {
         return false;
       }
     } else {
       if (!parseExpr(arg, namespacePrefix)) {
         return false;
+      }
+    }
+    if (!allowBraceBindings_) {
+      if (arg.kind != Expr::Kind::Call) {
+        return fail("execution body arguments must be calls");
+      }
+      if (arg.isBinding) {
+        return fail("execution body arguments cannot be bindings");
       }
     }
     out.push_back(std::move(arg));

@@ -1289,9 +1289,8 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { if(true, then(){ [i32] value{2i32} }, else(){ }) }
 )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
+  const auto error = parseProgramError(source);
+  CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
 }
 
 TEST_CASE("execution body rejects nested non-call expressions") {
@@ -1308,8 +1307,7 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { if(true, then(){ 1i32 }, else(){ main() }) }
 )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  const auto error = parseProgramError(source);
   CHECK(error.find("execution body arguments must be calls") != std::string::npos);
 }
 

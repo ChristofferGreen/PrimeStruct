@@ -352,18 +352,10 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.templateArgs = std::move(templateArgs);
   exec.arguments = std::move(arguments);
   exec.argumentNames = std::move(argumentNames);
-  if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
-    return false;
-  }
-  for (const auto &arg : exec.bodyArguments) {
-    if (arg.kind != Expr::Kind::Call) {
-      return fail("execution body arguments must be calls");
-    }
-    if (arg.isBinding) {
-      return fail("execution body arguments cannot be bindings");
-    }
-    if (arg.name == "return") {
-      return fail("return not allowed in execution body");
+  {
+    BraceListGuard braceGuard(*this, false, false);
+    if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
+      return false;
     }
   }
   exec.hasBodyArguments = true;
