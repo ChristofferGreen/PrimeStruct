@@ -139,6 +139,23 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
+TEST_CASE("transform list none rejects infix operators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32 + 2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_none_infix.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_none_infix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=none 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
 TEST_CASE("text filters none rejects infix operators") {
   const std::string source = R"(
 [return<int>]
