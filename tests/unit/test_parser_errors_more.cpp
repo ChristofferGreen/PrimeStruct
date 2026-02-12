@@ -185,6 +185,36 @@ main() {
   CHECK(error.find("single_type_to_return cannot be combined with return transform") != std::string::npos);
 }
 
+TEST_CASE("single_type_to_return rejects template args") {
+  const std::string source = R"(
+[single_type_to_return<i32> i32]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("single_type_to_return does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects arguments") {
+  const std::string source = R"(
+[single_type_to_return(1) i32]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("single_type_to_return does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("return value not allowed for void definitions") {
   const std::string source = R"(
 [return<void>]
