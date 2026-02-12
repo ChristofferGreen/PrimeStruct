@@ -891,6 +891,25 @@ main() {
   REQUIRE(expr.bodyArguments.size() == 3);
 }
 
+TEST_CASE("parses return inside block expression list") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{ return(1i32) 2i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "block");
+  REQUIRE(expr.bodyArguments.size() == 2);
+  CHECK(expr.bodyArguments[0].kind == primec::Expr::Kind::Call);
+  CHECK(expr.bodyArguments[0].name == "return");
+  CHECK(expr.bodyArguments[1].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses if sugar with block statements in return argument") {
   const std::string source = R"(
 [return<int>]
