@@ -318,6 +318,38 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: inc") != std::string::npos);
 }
 
+TEST_CASE("compiles and runs fully-qualified nested call") {
+  const std::string source = R"(
+namespace pkg {
+  namespace util {
+    [return<int>]
+    inc([i32] value) {
+      return(plus(value, 1i32))
+    }
+  }
+}
+[return<int>]
+main() {
+  return(/pkg/util/inc(3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_fully_qualified_nested.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_fully_qualified_nested_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_fully_qualified_nested_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 4);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 4);
+}
+
 TEST_CASE("compiles and runs pathspace builtins as no-ops") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify, pathspace_insert, pathspace_take)]
