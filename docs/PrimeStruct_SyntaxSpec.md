@@ -27,7 +27,8 @@ spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i
 The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text filters,
 the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
 filters are configured via `--text-filters=<list>` (the default list is `operators`, `collections`,
-`implicit-utf8`), and `--no-transforms` disables all text filters.
+`implicit-utf8`); `--transform-list` is accepted as a synonym, and `--no-transforms` disables all
+text filters.
 
 ## 2. Lexical Structure
 
