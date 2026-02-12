@@ -91,6 +91,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("namespace blocks may be reopened") {
+  const std::string source = R"(
+namespace demo {
+  [return<int>]
+  first() {
+    return(2i32)
+  }
+}
+
+namespace demo {
+  [return<int>]
+  second() {
+    return(3i32)
+  }
+}
+
+[return<int>]
+main() {
+  return(plus(/demo/first(), /demo/second()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("parameter default literal is allowed") {
   const std::string source = R"(
 [return<int>]
