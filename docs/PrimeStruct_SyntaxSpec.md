@@ -96,7 +96,8 @@ Whitespace is allowed between `include` and `<` and around `=` in the `version` 
 and version strings may use either single-quoted or double-quoted string literals.
 
 Include paths may also be written as unquoted slash paths (e.g. `include</std/io>`), which are treated
-as logical include paths resolved via the configured include roots.
+as logical include paths resolved via the configured include roots. Paths (or any parent folders)
+prefixed with `_` are private and rejected by the include resolver.
 
 ### 3.2 Imports
 
