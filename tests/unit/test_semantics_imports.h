@@ -151,6 +151,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import accepts wildcard math and util paths") {
+  const std::string source = R"(
+import /math/* /util/*
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<f64>]
+main() {
+  [i32] value{inc(1i32)}
+  return(sin(0.0f64))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import accepts multiple explicit math paths") {
+  const std::string source = R"(
+import /math/sin /math/pi
+[return<f64>]
+main() {
+  return(plus(pi, sin(0.0f64)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import rejects unknown wildcard path") {
   const std::string source = R"(
 import /missing/*
