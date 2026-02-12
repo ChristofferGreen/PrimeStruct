@@ -261,6 +261,25 @@ main() {
   CHECK(ir.find("return plus(1, 2)") != std::string::npos);
 }
 
+TEST_CASE("dump ast ignores semantic errors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(nope(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_nope.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_dump_ast_nope.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  CHECK(ast.find("/main()") != std::string::npos);
+  CHECK(ast.find("nope(1)") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
