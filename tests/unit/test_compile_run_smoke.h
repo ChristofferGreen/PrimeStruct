@@ -974,6 +974,22 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha");
 }
 
+TEST_CASE("runs vm with argv line error output u64 index") {
+  const std::string source = R"(
+[return<int> effects(io_err)]
+main([array<string>] args) {
+  print_line_error(args[1u64])
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_argv_line_error_u64.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_argv_line_error_u64_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main -- alpha beta 2> " + errPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(errPath) == "alpha\n");
+}
+
 TEST_CASE("runs vm with argv unsafe error output") {
   const std::string source = R"(
 [return<int> effects(io_err)]
