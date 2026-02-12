@@ -96,6 +96,16 @@ TEST_CASE("include version with semicolon fails") {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("duplicate include version attribute fails") {
+  const std::string srcPath =
+      writeTemp("main_include_duplicate_version.prime", "include<\"/lib.prime\", version=\"1.2\", version=\"1.3\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("duplicate version attribute in include<...>") != std::string::npos);
+}
+
 TEST_CASE("unquoted non-slash include path fails") {
   const std::string srcPath = writeTemp("main_include_bare_relative.prime", "include<lib.prime>\n");
   std::string source;
