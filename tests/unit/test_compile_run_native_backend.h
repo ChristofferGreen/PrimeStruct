@@ -564,6 +564,40 @@ main([array<string>] args) {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("native argv string binding count fails") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  [string] value{args[0i32]}
+  return(count(value))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_binding_count.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_binding_count_err.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend only supports count() on string literals or string bindings\n");
+}
+
+TEST_CASE("native argv string binding index fails") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  [string] value{args[0i32]}
+  return(value[0i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_argv_binding_index.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_argv_binding_index_err.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend only supports indexing into string literals or string bindings\n");
+}
+
 TEST_CASE("compiles and runs native argv call argument unsafe skips bounds") {
   const std::string source = R"(
 [return<void> effects(io_out)]
