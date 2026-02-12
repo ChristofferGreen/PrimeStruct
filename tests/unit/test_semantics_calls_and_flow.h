@@ -406,6 +406,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("named arguments allow positional fill after labels") {
+  const std::string source = R"(
+[return<int>]
+foo([i32] a, [i32] b, [i32] c) {
+  return(plus(plus(a, b), c))
+}
+
+[return<int>]
+main() {
+  return(foo([b] 2i32, 1i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("named arguments on method calls allow builtin names") {
   const std::string source = R"(
 [struct]
