@@ -382,6 +382,21 @@ main() {
   CHECK(error.find("semicolon") != std::string::npos);
 }
 
+TEST_CASE("transform argument trailing comma rejected") {
+  const std::string source = R"(
+[effects(io_out, ) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("trailing comma not allowed in transform argument list") != std::string::npos);
+}
+
 TEST_CASE("semicolon rejected in template list") {
   const std::string source = R"(
 [return<int>]

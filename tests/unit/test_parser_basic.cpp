@@ -538,6 +538,26 @@ main() {
   CHECK(transforms[2].templateArgs[0] == "int");
 }
 
+TEST_CASE("parses transform arguments without commas") {
+  const std::string source = R"(
+[effects(global_write io_out) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 2);
+  CHECK(transforms[0].name == "effects");
+  REQUIRE(transforms[0].arguments.size() == 2);
+  CHECK(transforms[0].arguments[0] == "global_write");
+  CHECK(transforms[0].arguments[1] == "io_out");
+  CHECK(transforms[1].name == "return");
+  REQUIRE(transforms[1].templateArgs.size() == 1);
+  CHECK(transforms[1].templateArgs[0] == "int");
+}
+
 TEST_CASE("parses transform list without commas") {
   const std::string source = R"(
 [effects(global_write, io_out) align_bytes(16) return<int>]

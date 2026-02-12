@@ -90,6 +90,15 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         }
         if (match(TokenKind::Comma)) {
           expect(TokenKind::Comma, "expected ','");
+          if (match(TokenKind::RParen)) {
+            return fail("trailing comma not allowed in transform argument list");
+          }
+          continue;
+        }
+        if (match(TokenKind::RParen)) {
+          break;
+        }
+        if (match(TokenKind::Identifier) || match(TokenKind::Number) || match(TokenKind::String)) {
           continue;
         }
         break;
