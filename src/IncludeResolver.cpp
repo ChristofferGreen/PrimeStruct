@@ -543,7 +543,11 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           return false;
         }
         std::string payload = source.substr(payloadStart, end - payloadStart);
-        std::vector<std::string> paths;
+        struct IncludeEntry {
+          std::string path;
+          bool isLogical = false;
+        };
+        std::vector<IncludeEntry> paths;
         std::optional<std::string> versionTag;
         size_t pos = 0;
         auto skipWhitespace = [&]() {
@@ -598,7 +602,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               error = parseError;
               return false;
             }
-            paths.push_back(trim(path));
+            paths.push_back({trim(path), false});
             if (pos < payload.size() && payload[pos] == ';') {
               error = "semicolon is not allowed in include<...>";
               return false;
@@ -622,7 +626,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             if (!validateSlashPath(path, error)) {
               return false;
             }
-            paths.push_back(path);
+            paths.push_back({path, true});
           }
           skipWhitespace();
           if (pos >= payload.size()) {
@@ -653,25 +657,42 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           requestedVersion = std::move(parsed);
         }
 
-        auto resolveIncludePath = [&](const std::string &path,
+        auto resolveIncludePath = [&](const IncludeEntry &entry,
                                       std::filesystem::path &resolved,
                                       std::optional<std::string> &resolvedVersion) -> bool {
+          const std::string &path = entry.path;
+          const bool isLogical = entry.isLogical;
           std::filesystem::path requested(path);
           resolvedVersion.reset();
           bool isAbsolute = requested.is_absolute();
           std::filesystem::path logicalPath = isAbsolute ? requested.relative_path() : requested;
           if (requestedVersion) {
             std::vector<std::filesystem::path> roots;
-            if (isAbsolute) {
-              roots = includeRoots;
-            } else {
-              roots.push_back(std::filesystem::path(baseDir));
-              for (const auto &root : includeRoots) {
-                roots.push_back(root);
+            if (!isLogical) {
+              if (isAbsolute) {
+                roots = includeRoots;
+              } else {
+                roots.push_back(std::filesystem::path(baseDir));
+                for (const auto &root : includeRoots) {
+                  roots.push_back(root);
+                }
               }
-            }
-            if (roots.empty()) {
-              roots.push_back(std::filesystem::path(baseDir));
+              if (roots.empty()) {
+                roots.push_back(std::filesystem::path(baseDir));
+              }
+            } else {
+              roots = includeRoots;
+              if (roots.empty()) {
+                std::ostringstream requestedText;
+                for (size_t i = 0; i < requestedVersion->size(); ++i) {
+                  if (i > 0) {
+                    requestedText << ".";
+                  }
+                  requestedText << (*requestedVersion)[i];
+                }
+                error = "include version not found: " + requestedText.str();
+                return false;
+              }
             }
             std::string versionError;
             bool foundVersion = false;
@@ -727,6 +748,21 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             return true;
           }
 
+          if (isLogical) {
+            for (const auto &root : includeRoots) {
+              std::filesystem::path candidate = root / logicalPath;
+              if (std::filesystem::exists(candidate)) {
+                if (isPrivatePath(candidate)) {
+                  error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                  return false;
+                }
+                resolved = std::filesystem::absolute(candidate);
+                return true;
+              }
+            }
+            error = "failed to read include: " + path;
+            return false;
+          }
           if (!isAbsolute) {
             std::filesystem::path candidate = std::filesystem::path(baseDir) / requested;
             if (std::filesystem::exists(candidate)) {
