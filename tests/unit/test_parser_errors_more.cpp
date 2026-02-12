@@ -1155,6 +1155,21 @@ main() {
   CHECK(error.find("invalid integer literal") != std::string::npos);
 }
 
+TEST_CASE("invalid float literal is rejected") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(1e-f32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid float literal") != std::string::npos);
+}
+
 TEST_CASE("named args for builtin fail in parser") {
   const std::string source = R"(
 [return<int>]

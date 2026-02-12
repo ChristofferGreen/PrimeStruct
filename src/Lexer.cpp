@@ -144,13 +144,10 @@ Token Lexer::readNumber() {
       if (scan < source_.size() && (source_[scan] == '+' || source_[scan] == '-')) {
         ++scan;
       }
-      size_t digitsStart = scan;
       while (scan < source_.size() && std::isdigit(static_cast<unsigned char>(source_[scan]))) {
         ++scan;
       }
-      if (scan > digitsStart) {
-        pos_ = scan;
-      }
+      pos_ = scan;
     }
   }
   if (!isHex) {
