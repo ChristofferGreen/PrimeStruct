@@ -248,6 +248,20 @@ TEST_CASE("missing include major version fails") {
   CHECK(error.find("include version not found") != std::string::npos);
 }
 
+TEST_CASE("missing include major version with single quotes fails") {
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_missing_version_major_single";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  const std::string srcPath =
+      writeFile(dir / "main_missing_version_major_single.prime",
+                "include<'/lib.prime', version='1'>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include version not found") != std::string::npos);
+}
+
 TEST_CASE("include version mismatch fails") {
   auto rootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_a";
   auto rootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_b";
