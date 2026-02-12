@@ -120,6 +120,9 @@ bool isStructTransformName(const std::string &text) {
 
 bool isBuiltinName(const std::string &name, bool allowMathBare) {
   std::string candidate = name;
+  if (!candidate.empty() && candidate[0] == '/') {
+    candidate.erase(0, 1);
+  }
   bool isMathQualified = false;
   if (candidate.rfind("math/", 0) == 0) {
     candidate.erase(0, 5);
