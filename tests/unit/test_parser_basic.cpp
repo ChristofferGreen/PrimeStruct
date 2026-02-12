@@ -911,6 +911,24 @@ main() {
   CHECK(expr.args[1].bodyArguments[1].kind == primec::Expr::Kind::Call);
 }
 
+TEST_CASE("parses if sugar inside block with mixed separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{ if(true) { 1i32 } else { 2i32 }, 3i32 4i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "block");
+  REQUIRE(expr.bodyArguments.size() == 3);
+  CHECK(expr.bodyArguments[0].kind == primec::Expr::Kind::Call);
+  CHECK(expr.bodyArguments[0].name == "if");
+ }
+
 TEST_CASE("ignores line comments") {
   const std::string source = R"(
 // header
