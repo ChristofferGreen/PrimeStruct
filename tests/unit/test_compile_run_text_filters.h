@@ -280,6 +280,23 @@ main() {
   CHECK(ast.find("nope(1)") != std::string::npos);
 }
 
+TEST_CASE("dump stage rejects unknown value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_stage_unknown.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_dump_stage_unknown_err.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage bananas 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(dumpCmd) == 2);
+  CHECK(readFile(errPath).find("Unsupported dump stage: bananas") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
