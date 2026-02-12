@@ -1380,6 +1380,21 @@ main() {
   CHECK(error.find("expected transform argument") != std::string::npos);
 }
 
+TEST_CASE("transform arguments reject nested envelopes") {
+  const std::string source = R"(
+[tag([i32] value)]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected transform argument") != std::string::npos);
+}
+
 TEST_CASE("transform template argument required") {
   const std::string source = R"(
 [return<>]
