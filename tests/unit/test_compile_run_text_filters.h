@@ -215,6 +215,32 @@ main() {
   CHECK(ast.find("[return<i32>]") == std::string::npos);
 }
 
+TEST_CASE("dump pre_ast shows includes and text filters") {
+  const std::string libPath =
+      writeTemp("compile_dump_pre_ast_lib.prime", "// PRE_AST_LIB\n[return<int>]\nhelper(){ return(1i32) }\n");
+  const std::string source =
+      "include<\"" + libPath + "\">\n"
+      "[return<int> effects(io_out)]\n"
+      "main(){\n"
+      "  print_line(\"hello\")\n"
+      "  return(1i32+2i32)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_dump_pre_ast.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_dump_pre_ast.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string preAst = readFile(outPath);
+  CHECK(preAst.find("PRE_AST_LIB") != std::string::npos);
+  CHECK(preAst.find("\"hello\"utf8") != std::string::npos);
+  const size_t plusPos = preAst.find("plus(");
+  CHECK(plusPos != std::string::npos);
+  CHECK(preAst.find("1i32", plusPos) != std::string::npos);
+  CHECK(preAst.find("2i32", plusPos) != std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
