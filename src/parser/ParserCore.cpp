@@ -355,6 +355,17 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
     return false;
   }
+  for (const auto &arg : exec.bodyArguments) {
+    if (arg.kind != Expr::Kind::Call) {
+      return fail("execution body arguments must be calls");
+    }
+    if (arg.isBinding) {
+      return fail("execution body arguments cannot be bindings");
+    }
+    if (arg.name == "return") {
+      return fail("return not allowed in execution body");
+    }
+  }
   exec.hasBodyArguments = true;
   execs.push_back(std::move(exec));
   return true;

@@ -1253,8 +1253,7 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { 1i32 }
 )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  const auto error = parseProgramError(source);
   CHECK(error.find("execution body arguments must be calls") != std::string::npos);
 }
 
@@ -1272,8 +1271,7 @@ execute_repeat([i32] x) {
 
 execute_repeat(3i32) { [i32] value{1i32} }
 )";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  const auto error = parseProgramError(source);
   CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
 }
 
