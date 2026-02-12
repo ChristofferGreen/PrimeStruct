@@ -310,6 +310,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import accepts comma-separated wildcards") {
+  const std::string source = R"(
+import /math/*, /util/*
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<f32>]
+main() {
+  return(sin(convert<f32>(inc(1i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("duplicate imports are ignored") {
   const std::string source = R"(
 import /util, /util
