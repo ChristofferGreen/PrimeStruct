@@ -820,6 +820,23 @@ main() {
   CHECK(stmt.args[0].stringValue == "\"hello\"raw_utf8");
 }
 
+TEST_CASE("parses ascii string literal arguments") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  log("hello"ascii)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  REQUIRE(stmt.args.size() == 1);
+  CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
+  CHECK(stmt.args[0].stringValue == "\"hello\"raw_ascii");
+}
+
 TEST_CASE("parses raw string literal arguments") {
   const std::string source =
       "[return<void>]\n"
