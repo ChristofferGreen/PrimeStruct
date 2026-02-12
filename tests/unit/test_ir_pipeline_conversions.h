@@ -237,7 +237,7 @@ main() {
 
 TEST_CASE("ir lowerer supports math lerp with import") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(lerp(2i32, 5i32, 2i32))
@@ -318,7 +318,7 @@ main() {
 
 TEST_CASE("ir lowerer rejects unsupported math builtin") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(convert<int>(sin(0.5f)))

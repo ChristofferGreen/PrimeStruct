@@ -1217,7 +1217,7 @@ main() {
 
 TEST_CASE("builtin clamp calls validate") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(2i32, 1i32, 5i32))
@@ -1230,7 +1230,7 @@ main() {
 
 TEST_CASE("builtin clamp rejects mixed signed/unsigned operands") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(2i64, 1u64, 5u64))
@@ -1339,7 +1339,7 @@ main() {
 
 TEST_CASE("builtin clamp arity mismatch fails") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(1i32, 2i32))

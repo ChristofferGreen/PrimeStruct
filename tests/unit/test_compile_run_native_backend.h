@@ -1267,7 +1267,7 @@ main() {
 
 TEST_CASE("compiles and runs native clamp") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(9i32, 2i32, 6i32))
@@ -1283,7 +1283,7 @@ main() {
 
 TEST_CASE("compiles and runs native clamp i64") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<bool>]
 main() {
   return(equal(clamp(9i64, 2i64, 6i64), 6i64))
@@ -1299,7 +1299,7 @@ main() {
 
 TEST_CASE("compiles and runs native math abs/sign/min/max") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   [i32] a{abs(-5i32)}
@@ -1340,7 +1340,7 @@ main() {
 
 TEST_CASE("compiles and runs native math saturate/lerp") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   [i32] a{saturate(-2i32)}
@@ -1360,7 +1360,7 @@ main() {
 
 TEST_CASE("compiles and runs native math constant conversions") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
@@ -1377,7 +1377,7 @@ main() {
 
 TEST_CASE("rejects native unsupported math builtin") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(convert<int>(sin(1.0f)))
@@ -2322,7 +2322,7 @@ main() {
 
 TEST_CASE("compiles and runs native with multiple imports") {
   const std::string source = R"(
-import /util, /math
+import /util, /math/*
 namespace util {
   [return<int>]
   add([i32] a, [i32] b) {

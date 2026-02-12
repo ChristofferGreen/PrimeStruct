@@ -19,6 +19,7 @@ enum class TokenKind {
   Comma,
   Dot,
   Equal,
+  Star,
   Semicolon,
   Comment,
   KeywordNamespace,

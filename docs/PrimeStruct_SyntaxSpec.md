@@ -102,13 +102,18 @@ prefixed with `_` are private and rejected by the include resolver.
 ### 3.2 Imports
 
 ```
-import /math
-import /ui, /util
+import /math/*
+import /math/sin /math/pi
+import /ui/*, /util/*
 ```
 
-Imports are compile-time namespace aliases. Each imported path contributes its immediate children to the
-root namespace, so `import /math` allows `sin(...)` as shorthand for `/math/sin(...)`. Imports must
-appear at the top level (not inside `namespace` blocks).
+Imports are compile-time namespace aliases. `import /foo/*` contributes the immediate children of `/foo`
+to the root namespace (e.g., `import /math/*` allows `sin(...)` as shorthand for `/math/sin(...)`), while
+`import /foo/bar` aliases a single definition or builtin by its final segment. Imports must appear at the
+top level (not inside `namespace` blocks).
+
+`import /math` (without a wildcard or explicit name) is not supported; use `import /math/*` or
+`import /math/<name>` instead.
 
 Imports are resolved after includes expand, and the same syntax is accepted by `primec` and `primevm`.
 
@@ -138,7 +143,8 @@ include_string = quoted_string ;
 include_path   = quoted_string | slash_path ;
 
 import_decl    = "import" import_list ;
-import_list    = slash_path { "," slash_path } ;
+import_list    = import_path { [ "," ] import_path } ;
+import_path    = slash_path [ "/*" ] ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 

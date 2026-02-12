@@ -113,13 +113,13 @@ module {
   - Execution bodies are parsed as brace-delimited argument lists (e.g., `execute_repeat(2i32) { main(), main() }`).
 - **Return annotation:** definitions declare return types via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Executions return values explicitly (`return(value)`); the desugared form is always canonical. An optional `single_type_to_return` transform may rewrite a single bare type in the transform list into `return<type>` (e.g., `[int] main()` → `[return<int>] main()`), but it only runs when explicitly enabled via `--transform-list` or a per-definition transform.
 - **Effects:** functions are pure by default. Authors opt into side effects with attributes such as `[effects(global_write, io_out)]`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies a default effect set for definitions/executions that omit `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
-- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. Include paths are parsed before text filters, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private. `import /foo` is a lightweight alias that brings the immediate children of `/foo` into the root namespace; it does not inline source (use `include` for that). Imports are resolved after includes and can be listed as `import /math, /util`.
+- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. Include paths are parsed before text filters, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private. `import /foo/*` is a lightweight alias that brings the immediate children of `/foo` into the root namespace, while `import /foo/bar` aliases a single definition (or builtin) by its final segment; imports do not inline source (use `include` for that). `import /math/*` brings all math builtins into the root namespace, or import a subset via `import /math/sin /math/pi`; `import /math` without a wildcard or explicit name is not supported. Imports are resolved after includes and can be listed as `import /math/*, /util/*` or whitespace-separated paths.
 - **Transform-driven control flow:** control structures desugar into prefix calls (`if(condition, trueBranch, falseBranch)`). A surface form like `if(condition) { … } else { … }` is accepted and rewritten into the canonical call form by wrapping the two blocks as envelopes. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
 ### Example function syntax
 ```
-import /math
+import /math/*
 namespace demo {
   [return<void> effects(io_out)]
   hello_values() {
@@ -156,7 +156,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[float mut] exposure{1.0f}`). Default initializers are mandatory to keep frames fully initialized.
 - **Lifecycle helpers (Create/Destroy):** Within a struct-tagged definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. `this` is implicitly available inside helpers. Add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable); omit it for pure helpers. Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
   ```
-  import /math
+  import /math/*
   namespace demo {
     [struct pod]
     color_grade() {
@@ -201,7 +201,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
 
 ### Core library surface (draft)
-- **Standard math (draft):** the core math set lives under `/math/*` (e.g., `/math/sin`, `/math/pi`). `import /math` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported type/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.
+- **Standard math (draft):** the core math set lives under `/math/*` (e.g., `/math/sin`, `/math/pi`). `import /math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported type/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.
   - **Constants:** `/math/pi`, `/math/tau`, `/math/e`.
   - **Basic:** `/math/abs`, `/math/sign`, `/math/min`, `/math/max`, `/math/clamp`, `/math/lerp`, `/math/saturate`.
   - **Rounding:** `/math/floor`, `/math/ceil`, `/math/round`, `/math/trunc`, `/math/fract`.
@@ -234,7 +234,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - `include<..., version="1.2.0">` selects a specific package revision.
   - The compiler will expose `--stdlib-version` to pin the default package set.
 - **Namespaces:**
-  - `/math/*` is imported via `import /math`.
+  - `/math/*` is imported via `import /math/*` (or explicit names like `import /math/sin /math/pi`).
   - Core builtins (`assign`, `count`, `print*`, `convert`, etc.) live in the root namespace.
 - **Conformance note:** the VM/native subset may reject functions that the C++ emitter supports (e.g., float-heavy math); the reference will mark such cases explicitly.
 - **Core builtins (root namespace):**
@@ -276,7 +276,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
 - **Example:**
   ```
-  import /math
+  import /math/*
   namespace demo {
     [struct]
     brush_settings() {
@@ -417,7 +417,7 @@ main() {
 // Pull std::io at version 1.2.0
 include<"/std/io", version="1.2.0">
 
-import /math
+import /math/*
 
 [return<int> default_operators] add<int>(a, b) { return(plus(a, b)) }
 

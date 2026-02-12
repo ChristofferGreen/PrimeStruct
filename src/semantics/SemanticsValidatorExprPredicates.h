@@ -325,12 +325,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
       return true;
     }
-    if (!hasMathImport_ && expr.name.find('/') == std::string::npos &&
+    if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos &&
         isBuiltinMathConstant(expr.name, true)) {
-      error_ = "math constant requires import /math: " + expr.name;
+      error_ = "math constant requires import /math/* or /math/<name>: " + expr.name;
       return false;
     }
-    if (isBuiltinMathConstant(expr.name, hasMathImport_)) {
+    if (isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {
       return true;
     }
     error_ = "unknown identifier: " + expr.name;

@@ -41,26 +41,56 @@ bool IrLowerer::lower(const Program &program,
   }
 
   std::unordered_map<std::string, std::string> importAliases;
+  auto isWildcardImport = [](const std::string &path, std::string &prefixOut) -> bool {
+    if (path.size() >= 2 && path.compare(path.size() - 2, 2, "/*") == 0) {
+      prefixOut = path.substr(0, path.size() - 2);
+      return true;
+    }
+    if (path.find('/', 1) == std::string::npos) {
+      prefixOut = path;
+      return true;
+    }
+    return false;
+  };
   for (const auto &importPath : program.imports) {
     if (importPath.empty() || importPath[0] != '/') {
       continue;
     }
-    const std::string prefix = importPath + "/";
-    for (const auto &def : program.definitions) {
-      if (def.fullPath.rfind(prefix, 0) != 0) {
-        continue;
+    std::string prefix;
+    if (isWildcardImport(importPath, prefix)) {
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &def : program.definitions) {
+        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        importAliases.emplace(remainder, def.fullPath);
       }
-      const std::string remainder = def.fullPath.substr(prefix.size());
-      if (remainder.empty() || remainder.find('/') != std::string::npos) {
-        continue;
-      }
-      importAliases.emplace(remainder, def.fullPath);
+      continue;
     }
+    auto defIt = defMap.find(importPath);
+    if (defIt == defMap.end()) {
+      continue;
+    }
+    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+    if (remainder.empty()) {
+      continue;
+    }
+    importAliases.emplace(remainder, importPath);
   }
 
   bool hasMathImport = false;
+  auto isMathImport = [](const std::string &path) -> bool {
+    if (path == "/math/*") {
+      return true;
+    }
+    return path.rfind("/math/", 0) == 0 && path.size() > 6;
+  };
   for (const auto &importPath : program.imports) {
-    if (importPath == "/math") {
+    if (isMathImport(importPath)) {
       hasMathImport = true;
       break;
     }

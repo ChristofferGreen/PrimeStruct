@@ -34,6 +34,8 @@ private:
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        BindingInfo &bindingOut);
+  bool allowMathBareName(const std::string &name) const;
+  bool hasAnyMathImport() const;
 
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
@@ -70,7 +72,8 @@ private:
   std::unordered_set<std::string> activeEffects_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_map<std::string, std::string> importAliases_;
-  bool hasMathImport_ = false;
+  bool mathImportAll_ = false;
+  std::unordered_set<std::string> mathImports_;
 };
 
 } // namespace primec::semantics

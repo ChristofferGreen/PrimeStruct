@@ -102,6 +102,8 @@ Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
 bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
+  mathImportAll_ = false;
+  mathImports_.clear();
   for (size_t scan = 0; scan < tokens_.size(); ++scan) {
     if (tokens_[scan].kind != TokenKind::KeywordImport) {
       continue;
@@ -113,8 +115,20 @@ bool Parser::parse(Program &program, std::string &error) {
         continue;
       }
       if (tokens_[scan].kind == TokenKind::Identifier) {
-        if (tokens_[scan].text == "/math") {
-          hasMathImport_ = true;
+        std::string path = tokens_[scan].text;
+        if (!path.empty() && path.back() == '/' && scan + 1 < tokens_.size() &&
+            tokens_[scan + 1].kind == TokenKind::Star) {
+          path.pop_back();
+          path += "/*";
+          ++scan;
+        }
+        if (path == "/math/*") {
+          mathImportAll_ = true;
+        } else if (path.rfind("/math/", 0) == 0 && path.size() > 6) {
+          std::string name = path.substr(6);
+          if (name.find('/') == std::string::npos && name != "*") {
+            mathImports_.insert(std::move(name));
+          }
         }
         ++scan;
         continue;
@@ -153,24 +167,42 @@ bool Parser::parseImport(Program &program) {
   if (!expect(TokenKind::KeywordImport, "expected 'import'")) {
     return false;
   }
-  bool expectMore = true;
-  while (expectMore) {
+  while (true) {
     Token path = consume(TokenKind::Identifier, "expected import path");
     if (path.kind == TokenKind::End) {
       return false;
     }
-    std::string nameError;
-    if (!validateIdentifierText(path.text, nameError)) {
-      return fail(nameError);
-    }
     if (path.text.empty() || path.text[0] != '/') {
       return fail("import path must be a slash path");
     }
-    if (std::find(program.imports.begin(), program.imports.end(), path.text) == program.imports.end()) {
-      program.imports.push_back(path.text);
+    std::string pathText = path.text;
+    if (!pathText.empty() && pathText.back() == '/' && match(TokenKind::Star)) {
+      expect(TokenKind::Star, "expected '*'");
+      pathText.pop_back();
+      std::string nameError;
+      if (!validateIdentifierText(pathText, nameError)) {
+        return fail(nameError);
+      }
+      pathText += "/*";
+    } else {
+      std::string nameError;
+      if (!validateIdentifierText(pathText, nameError)) {
+        return fail(nameError);
+      }
     }
-    if (path.text == "/math") {
-      hasMathImport_ = true;
+    if (pathText == "/math") {
+      return fail("import /math is no longer supported; use import /math/*");
+    }
+    if (std::find(program.imports.begin(), program.imports.end(), pathText) == program.imports.end()) {
+      program.imports.push_back(pathText);
+    }
+    if (pathText == "/math/*") {
+      mathImportAll_ = true;
+    } else if (pathText.rfind("/math/", 0) == 0 && pathText.size() > 6) {
+      std::string name = pathText.substr(6);
+      if (name.find('/') == std::string::npos && name != "*") {
+        mathImports_.insert(std::move(name));
+      }
     }
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
@@ -179,7 +211,12 @@ bool Parser::parseImport(Program &program) {
       }
       continue;
     }
-    expectMore = false;
+    skipComments();
+    if (tokens_[pos_].kind == TokenKind::Identifier && !tokens_[pos_].text.empty() &&
+        tokens_[pos_].text[0] == '/') {
+      continue;
+    }
+    break;
   }
   return true;
 }
@@ -753,6 +790,21 @@ std::string Parser::makeFullPath(const std::string &name, const std::string &pre
     return "/" + name;
   }
   return prefix + "/" + name;
+}
+
+bool Parser::allowMathBareName(const std::string &name) const {
+  if (name.empty() || name.find('/') != std::string::npos) {
+    return false;
+  }
+  return mathImportAll_ || mathImports_.count(name) > 0;
+}
+
+bool Parser::isBuiltinNameForArguments(const std::string &name) const {
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  return isBuiltinName(normalized, allowMathBareName(normalized));
 }
 
 void Parser::skipComments() {

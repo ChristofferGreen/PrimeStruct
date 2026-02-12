@@ -209,29 +209,63 @@ bool SemanticsValidator::buildDefinitionMaps() {
       error_ = "import path must be a slash path";
       return false;
     }
-    const std::string prefix = importPath + "/";
-    for (const auto &def : program_.definitions) {
-      if (def.fullPath.rfind(prefix, 0) != 0) {
-        continue;
+    bool isWildcard = false;
+    std::string prefix;
+    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+      isWildcard = true;
+      prefix = importPath.substr(0, importPath.size() - 2);
+    } else if (importPath.find('/', 1) == std::string::npos) {
+      isWildcard = true;
+      prefix = importPath;
+    }
+    if (isWildcard) {
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &def : program_.definitions) {
+        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
+          error_ = "import creates name conflict: " + remainder;
+          return false;
+        }
+        const std::string rootPath = "/" + remainder;
+        if (defMap_.count(rootPath) > 0) {
+          error_ = "import creates name conflict: " + remainder;
+          return false;
+        }
+        auto [it, inserted] = importAliases_.emplace(remainder, def.fullPath);
+        if (!inserted && it->second != def.fullPath) {
+          error_ = "import creates name conflict: " + remainder;
+          return false;
+        }
       }
-      const std::string remainder = def.fullPath.substr(prefix.size());
-      if (remainder.empty() || remainder.find('/') != std::string::npos) {
-        continue;
-      }
-      if (hasMathImport_ && isMathBuiltinName(remainder)) {
-        error_ = "import creates name conflict: " + remainder;
-        return false;
-      }
-      const std::string rootPath = "/" + remainder;
-      if (defMap_.count(rootPath) > 0) {
-        error_ = "import creates name conflict: " + remainder;
-        return false;
-      }
-      auto [it, inserted] = importAliases_.emplace(remainder, def.fullPath);
-      if (!inserted && it->second != def.fullPath) {
-        error_ = "import creates name conflict: " + remainder;
-        return false;
-      }
+      continue;
+    }
+    auto defIt = defMap_.find(importPath);
+    if (defIt == defMap_.end()) {
+      continue;
+    }
+    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+    if (remainder.empty()) {
+      continue;
+    }
+    if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
+      error_ = "import creates name conflict: " + remainder;
+      return false;
+    }
+    const std::string rootPath = "/" + remainder;
+    if (defMap_.count(rootPath) > 0) {
+      error_ = "import creates name conflict: " + remainder;
+      return false;
+    }
+    auto [it, inserted] = importAliases_.emplace(remainder, importPath);
+    if (!inserted && it->second != importPath) {
+      error_ = "import creates name conflict: " + remainder;
+      return false;
     }
   }
 
@@ -373,7 +407,7 @@ bool SemanticsValidator::buildParameters() {
         return false;
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
-        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasMathImport_);
+        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
       }
       ParameterInfo info;
       info.name = param.name;
@@ -513,7 +547,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
-  if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasMathImport_)) {
+  if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
     return true;
   }
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);

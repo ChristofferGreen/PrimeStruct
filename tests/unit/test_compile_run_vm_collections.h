@@ -119,7 +119,7 @@ main() {
 
 TEST_CASE("runs vm with multiple imports") {
   const std::string source = R"(
-import /util, /math
+import /util, /math/*
 namespace util {
   [return<int>]
   add([i32] a, [i32] b) {
@@ -417,7 +417,7 @@ main() {
 
 TEST_CASE("runs vm with math abs/sign/min/max") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   [i32] a{abs(-5i32)}
@@ -451,7 +451,7 @@ main() {
 
 TEST_CASE("runs vm with math saturate/lerp") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   [i32] a{saturate(-2i32)}
@@ -467,7 +467,7 @@ main() {
 
 TEST_CASE("runs vm with math constant conversions") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
@@ -480,7 +480,7 @@ main() {
 
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(convert<int>(sin(1.0f)))

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "primec/Ast.h"
@@ -43,6 +44,8 @@ private:
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
   bool applySingleTypeToReturn(std::vector<Transform> &transforms);
   bool finalizeBindingInitializer(Expr &binding);
+  bool allowMathBareName(const std::string &name) const;
+  bool isBuiltinNameForArguments(const std::string &name) const;
 
   struct ArgumentLabelGuard {
     explicit ArgumentLabelGuard(Parser &parser) : parser_(parser), previous_(parser_.allowArgumentLabels_) {
@@ -112,7 +115,8 @@ private:
   bool allowBareBindings_ = false;
   bool allowBraceBindings_ = true;
   bool allowBraceReturn_ = true;
-  bool hasMathImport_ = false;
+  bool mathImportAll_ = false;
+  std::unordered_set<std::string> mathImports_;
   bool forceSingleTypeToReturn_ = false;
 };
 

@@ -66,7 +66,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return ReturnKind::Unknown;
   }
   if (expr.kind == Expr::Kind::Name) {
-    if (isBuiltinMathConstant(expr.name, hasMathImport_)) {
+    if (isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {
       return ReturnKind::Float64;
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
@@ -501,7 +501,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (getBuiltinComparisonName(expr, builtinName)) {
       return ReturnKind::Bool;
     }
-    if (getBuiltinMathName(expr, builtinName, hasMathImport_)) {
+    if (getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name))) {
       if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
         return ReturnKind::Bool;
       }
@@ -541,7 +541,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       ReturnKind right = inferExprReturnKind(expr.args[1], params, locals);
       return combineNumeric(left, right);
     }
-    if (getBuiltinClampName(expr, builtinName, hasMathImport_)) {
+    if (getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name))) {
       if (expr.args.size() != 3) {
         return ReturnKind::Unknown;
       }
@@ -550,7 +550,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
       return result;
     }
-    if (getBuiltinMinMaxName(expr, builtinName, hasMathImport_)) {
+    if (getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name))) {
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;
       }
@@ -558,7 +558,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
       return result;
     }
-    if (getBuiltinAbsSignName(expr, builtinName, hasMathImport_)) {
+    if (getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name))) {
       if (expr.args.size() != 1) {
         return ReturnKind::Unknown;
       }
@@ -568,7 +568,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return argKind;
     }
-    if (getBuiltinSaturateName(expr, builtinName, hasMathImport_)) {
+    if (getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name))) {
       if (expr.args.size() != 1) {
         return ReturnKind::Unknown;
       }

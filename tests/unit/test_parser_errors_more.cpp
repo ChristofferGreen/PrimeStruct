@@ -741,7 +741,7 @@ main() {
 
 TEST_CASE("named arguments rejected for math builtin") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(sin([angle] 0.5f))
@@ -776,7 +776,7 @@ TEST_CASE("named arguments rejected for math builtin after import") {
 main() {
   return(sin([angle] 0.5f))
 }
-import /math
+import /math/*
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -784,6 +784,22 @@ import /math
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("import /math rejected") {
+  const std::string source = R"(
+import /math
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("import /math is no longer supported") != std::string::npos);
 }
 
 TEST_CASE("named arguments rejected for vector helper") {

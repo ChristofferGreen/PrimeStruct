@@ -8,9 +8,15 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        const std::vector<std::string> &defaultEffects)
     : program_(program), entryPath_(entryPath), error_(error), defaultEffects_(defaultEffects) {
   for (const auto &importPath : program_.imports) {
-    if (importPath == "/math") {
-      hasMathImport_ = true;
-      break;
+    if (importPath == "/math/*") {
+      mathImportAll_ = true;
+      continue;
+    }
+    if (importPath.rfind("/math/", 0) == 0 && importPath.size() > 6) {
+      std::string name = importPath.substr(6);
+      if (name.find('/') == std::string::npos && name != "*") {
+        mathImports_.insert(std::move(name));
+      }
     }
   }
 }
@@ -29,6 +35,17 @@ bool SemanticsValidator::run() {
     return false;
   }
   return validateEntry();
+}
+
+bool SemanticsValidator::allowMathBareName(const std::string &name) const {
+  if (name.empty() || name.find('/') != std::string::npos) {
+    return false;
+  }
+  return mathImportAll_ || mathImports_.count(name) > 0;
+}
+
+bool SemanticsValidator::hasAnyMathImport() const {
+  return mathImportAll_ || !mathImports_.empty();
 }
 
 } // namespace primec::semantics

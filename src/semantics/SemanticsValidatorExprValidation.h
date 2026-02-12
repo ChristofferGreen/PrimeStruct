@@ -305,11 +305,11 @@
         std::string builtinName;
         bool isBuiltin = false;
         if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
-            getBuiltinClampName(expr, builtinName, hasMathImport_) ||
-            getBuiltinMinMaxName(expr, builtinName, hasMathImport_) ||
-            getBuiltinAbsSignName(expr, builtinName, hasMathImport_) ||
-            getBuiltinSaturateName(expr, builtinName, hasMathImport_) ||
-            getBuiltinMathName(expr, builtinName, hasMathImport_) ||
+            getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
+            getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name)) ||
+            getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name)) ||
+            getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name)) ||
+            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
             getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
             isAssignCall(expr) || isIfCall(expr) || isRepeatCall(expr) || expr.name == "count" ||
@@ -530,7 +530,7 @@
         }
         return true;
       }
-      if (getBuiltinClampName(expr, builtinName, hasMathImport_)) {
+      if (getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name))) {
         if (expr.args.size() != 3) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -556,7 +556,7 @@
         }
         return true;
       }
-      if (getBuiltinMinMaxName(expr, builtinName, hasMathImport_)) {
+      if (getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name))) {
         if (expr.args.size() != 2) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -582,7 +582,7 @@
         }
         return true;
       }
-      if (getBuiltinAbsSignName(expr, builtinName, hasMathImport_)) {
+      if (getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name))) {
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -596,7 +596,7 @@
         }
         return true;
       }
-      if (getBuiltinSaturateName(expr, builtinName, hasMathImport_)) {
+      if (getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name))) {
         if (expr.args.size() != 1) {
           error_ = "argument count mismatch for builtin " + builtinName;
           return false;
@@ -610,7 +610,7 @@
         }
         return true;
       }
-      if (getBuiltinMathName(expr, builtinName, hasMathImport_)) {
+      if (getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name))) {
         if (!expr.templateArgs.empty()) {
           error_ = builtinName + " does not accept template arguments";
           return false;
@@ -900,12 +900,12 @@
         }
         return true;
       }
-      if (!hasMathImport_ && expr.name.find('/') == std::string::npos) {
+      if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos) {
         std::string builtinName;
         if (getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
             getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
             getBuiltinMathName(expr, builtinName, true)) {
-          error_ = "math builtin requires import /math: " + expr.name;
+          error_ = "math builtin requires import /math/* or /math/<name>: " + expr.name;
           return false;
         }
       }

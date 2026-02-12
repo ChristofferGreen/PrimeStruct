@@ -511,12 +511,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math builtin requires import /math: clamp") != std::string::npos);
+  CHECK(error.find("math builtin requires import /math/* or /math/<name>: clamp") != std::string::npos);
 }
 
 TEST_CASE("math builtin resolves with import") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(2i32, 1i32, 5i32))
@@ -536,12 +536,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math builtin requires import /math: sin") != std::string::npos);
+  CHECK(error.find("math builtin requires import /math/* or /math/<name>: sin") != std::string::npos);
 }
 
 TEST_CASE("math trig builtin resolves with import") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<f32>]
 main() {
   return(sin(0.5f32))
@@ -550,6 +550,32 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("math trig builtin resolves with explicit import") {
+  const std::string source = R"(
+import /math/sin
+[return<f32>]
+main() {
+  return(sin(0.5f32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("math trig builtin rejects non-imported name") {
+  const std::string source = R"(
+import /math/sin
+[return<f32>]
+main() {
+  return(cos(0.5f32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("math builtin requires import /math/* or /math/<name>: cos") != std::string::npos);
 }
 
 TEST_CASE("math-qualified builtin works without import") {
@@ -573,15 +599,28 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math constant requires import /math: pi") != std::string::npos);
+  CHECK(error.find("math constant requires import /math/* or /math/<name>: pi") != std::string::npos);
 }
 
 TEST_CASE("math constants resolve with import") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<f64>]
 main() {
   return(plus(plus(pi, tau), e))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("math constant resolves with explicit import") {
+  const std::string source = R"(
+import /math/pi
+[return<f64>]
+main() {
+  return(pi)
 }
 )";
   std::string error;
@@ -615,7 +654,7 @@ main() {
 
 TEST_CASE("import rejects math builtin conflicts") {
   const std::string source = R"(
-import /math
+import /math/*
 import /util
 namespace util {
   [return<f32>]
@@ -911,7 +950,7 @@ main() {
 
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
-import /math
+import /math/*
 main() {
   return(clamp(2i32, 1i32, 5i32))
 }
@@ -923,7 +962,7 @@ main() {
 
 TEST_CASE("infers return type from builtin min") {
   const std::string source = R"(
-import /math
+import /math/*
 main() {
   return(min(2i32, 1i32))
 }
@@ -935,7 +974,7 @@ main() {
 
 TEST_CASE("infers return type from builtin abs") {
   const std::string source = R"(
-import /math
+import /math/*
 main() {
   return(abs(negate(2i32)))
 }
@@ -947,7 +986,7 @@ main() {
 
 TEST_CASE("infers return type from builtin saturate") {
   const std::string source = R"(
-import /math
+import /math/*
 main() {
   return(saturate(2i32))
 }
@@ -959,7 +998,7 @@ main() {
 
 TEST_CASE("clamp argument count fails") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(2i32, 1i32))
@@ -972,7 +1011,7 @@ main() {
 
 TEST_CASE("min argument count fails") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(min(2i32))
@@ -985,7 +1024,7 @@ main() {
 
 TEST_CASE("abs argument count fails") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(abs(2i32, 3i32))
@@ -998,7 +1037,7 @@ main() {
 
 TEST_CASE("saturate argument count fails") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(saturate(2i32, 3i32))
@@ -1011,7 +1050,7 @@ main() {
 
 TEST_CASE("clamp rejects mixed int/float operands") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(clamp(1i32, 0.5f, 2i32))
@@ -1024,7 +1063,7 @@ main() {
 
 TEST_CASE("min rejects mixed int/float operands") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(min(1i32, 0.5f))
@@ -1037,7 +1076,7 @@ main() {
 
 TEST_CASE("max rejects mixed signed/unsigned operands") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(max(2i64, 1u64))
@@ -1050,7 +1089,7 @@ main() {
 
 TEST_CASE("sign rejects non-numeric operand") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(sign(true))
@@ -1063,7 +1102,7 @@ main() {
 
 TEST_CASE("saturate rejects non-numeric operand") {
   const std::string source = R"(
-import /math
+import /math/*
 [return<int>]
 main() {
   return(saturate(true))

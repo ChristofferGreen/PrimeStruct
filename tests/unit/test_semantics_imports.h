@@ -173,7 +173,7 @@ run(1i32)
 
 TEST_CASE("import accepts multiple paths in one statement") {
   const std::string source = R"(
-import /util, /math
+import /util, /math/*
 namespace util {
   [return<int>]
   inc([i32] value) {
