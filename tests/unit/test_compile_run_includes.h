@@ -43,6 +43,51 @@ TEST_CASE("compiles and runs versioned include expansion with relative include e
   CHECK(runCommand(nativePath) == 7);
 }
 
+TEST_CASE("compiles and runs exact versioned include expansion") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_exact";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories(includeRoot / "1.2.0" / "std" / "io");
+    std::ofstream oldLib(includeRoot / "1.2.0" / "std" / "io" / "lib.prime");
+    CHECK(oldLib.good());
+    oldLib << "[return<int>]\nhelper(){ return(5i32) }\n";
+    CHECK(oldLib.good());
+  }
+  {
+    std::filesystem::create_directories(includeRoot / "1.2.4" / "std" / "io");
+    std::ofstream newLib(includeRoot / "1.2.4" / "std" / "io" / "lib.prime");
+    CHECK(newLib.good());
+    newLib << "[return<int>]\nhelper(){ return(7i32) }\n";
+    CHECK(newLib.good());
+  }
+
+  const std::string source =
+      "include<\"/std/io\", version=\"1.2.0\">\n"
+      "[return<int>]\n"
+      "main(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_versioned_include_exact.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_inc_exact_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_inc_exact_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                    " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(runVmCmd) == 5);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
+                                       " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 5);
+}
+
 TEST_CASE("compiles and runs versioned include expansion with quoted include entries") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_quoted";
