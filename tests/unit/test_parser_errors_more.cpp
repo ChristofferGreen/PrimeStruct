@@ -810,7 +810,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("import /math is no longer supported") != std::string::npos);
+  CHECK(error.find("import /math is not supported") != std::string::npos);
 }
 
 TEST_CASE("named arguments rejected for vector helper") {

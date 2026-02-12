@@ -191,7 +191,7 @@ bool Parser::parseImport(Program &program) {
       }
     }
     if (pathText == "/math") {
-      return fail("import /math is no longer supported; use import /math/*");
+      return fail("import /math is not supported; use import /math/* or /math/<name>");
     }
     if (std::find(program.imports.begin(), program.imports.end(), pathText) == program.imports.end()) {
       program.imports.push_back(pathText);
