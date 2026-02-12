@@ -104,6 +104,23 @@ execute_repeat(1i32) {
   CHECK(stmt.args[2].bodyArguments[0].name == "main");
 }
 
+TEST_CASE("parses execution body with bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(1i32) { [i32] value{1i32} main() }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 2);
+  CHECK(program.executions[0].bodyArguments[0].isBinding);
+  CHECK(program.executions[0].bodyArguments[0].name == "value");
+  CHECK(program.executions[0].bodyArguments[1].name == "main");
+}
+
 TEST_CASE("parses execution transforms") {
   const std::string source = R"(
 [return<int>]
