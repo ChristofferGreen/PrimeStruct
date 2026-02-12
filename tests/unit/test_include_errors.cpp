@@ -214,6 +214,20 @@ TEST_CASE("invalid include version fails") {
   CHECK(error.find("invalid include version") != std::string::npos);
 }
 
+TEST_CASE("empty include version fails") {
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_version";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  const std::string srcPath =
+      writeFile(dir / "main_empty_version.prime",
+                "include<\"/lib.prime\", version=\"\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include version cannot be empty") != std::string::npos);
+}
+
 TEST_CASE("invalid include version with single quotes fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bad_version_single";
   std::filesystem::remove_all(dir);
