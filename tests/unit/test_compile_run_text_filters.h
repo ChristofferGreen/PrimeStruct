@@ -241,6 +241,26 @@ TEST_CASE("dump pre_ast shows includes and text filters") {
   CHECK(preAst.find("2i32", plusPos) != std::string::npos);
 }
 
+TEST_CASE("dump ir prints canonical output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ir.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_dump_ir.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ir > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ir = readFile(outPath);
+  CHECK(ir.find("module {") != std::string::npos);
+  CHECK(ir.find("def /main(): i32") != std::string::npos);
+  CHECK(ir.find("return plus(1, 2)") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]
