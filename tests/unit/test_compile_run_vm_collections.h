@@ -167,6 +167,22 @@ main() {
   CHECK(readFile(outPath) == "implicit\n");
 }
 
+TEST_CASE("runs vm with implicit utf8 single-quoted strings") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line('implicit')
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_implicit_utf8_single.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_implicit_utf8_single_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "implicit\n");
+}
+
 TEST_CASE("runs vm with escaped utf8 strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
