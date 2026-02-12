@@ -230,6 +230,22 @@ main() {
   CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"raw_utf8");
 }
 
+TEST_CASE("parses transform list with comma separators") {
+  const std::string source = R"(
+[return<int>, effects(io_out)]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 2);
+  CHECK(program.definitions[0].transforms[0].name == "return");
+  CHECK(program.definitions[0].transforms[1].name == "effects");
+  REQUIRE(program.definitions[0].transforms[1].arguments.size() == 1);
+  CHECK(program.definitions[0].transforms[1].arguments[0] == "io_out");
+}
+
 TEST_CASE("single_type_to_return rewrites bare type transform") {
   const std::string source = R"(
 [single_type_to_return i32 effects(io_out)]
