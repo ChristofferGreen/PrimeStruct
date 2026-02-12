@@ -190,6 +190,45 @@ TEST_CASE("compiles and runs versioned include expansion with multiple include e
   CHECK(runCommand(nativePath) == 11);
 }
 
+TEST_CASE("rejects versioned include mismatch across roots") {
+  const std::filesystem::path includeRootA =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_version_mismatch_a";
+  const std::filesystem::path includeRootB =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_version_mismatch_b";
+  std::filesystem::remove_all(includeRootA);
+  std::filesystem::remove_all(includeRootB);
+  std::filesystem::create_directories(includeRootA);
+  std::filesystem::create_directories(includeRootB);
+  {
+    std::filesystem::create_directories(includeRootA / "1.2.1" / "std" / "io");
+    std::ofstream ioLib(includeRootA / "1.2.1" / "std" / "io" / "lib.prime");
+    CHECK(ioLib.good());
+    ioLib << "[return<int>]\nio_helper(){ return(6i32) }\n";
+    CHECK(ioLib.good());
+  }
+  {
+    std::filesystem::create_directories(includeRootB / "1.2.0" / "std" / "math");
+    std::ofstream mathLib(includeRootB / "1.2.0" / "std" / "math" / "lib.prime");
+    CHECK(mathLib.good());
+    mathLib << "[return<int>]\nmath_helper(){ return(3i32) }\n";
+    CHECK(mathLib.good());
+  }
+
+  const std::string source =
+      "include</std/io, /std/math, version=\"1.2\">\n"
+      "[return<int>]\n"
+      "main(){ return(0i32) }\n";
+  const std::string srcPath = writeTemp("compile_versioned_include_mismatch.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_include_mismatch_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath +
+                                 " -o /dev/null --entry /main --include-path " + includeRootA.string() +
+                                 " --include-path " + includeRootB.string() + " 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("include version mismatch") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs versioned include expansion with mixed quoted and relative entries") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_mixed";
