@@ -103,6 +103,19 @@ main() {
   CHECK(error.find("unknown call target: nested") != std::string::npos);
 }
 
+TEST_CASE("import rejects missing definition") {
+  const std::string source = R"(
+import /util/missing
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown import path: /util/missing") != std::string::npos);
+}
+
 TEST_CASE("import conflicts with existing root definitions") {
   const std::string source = R"(
 import /util

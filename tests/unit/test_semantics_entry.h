@@ -652,6 +652,19 @@ main() {
   CHECK(error.find("unknown call target: /math/plus") != std::string::npos);
 }
 
+TEST_CASE("import rejects unknown math builtin") {
+  const std::string source = R"(
+import /math/nope
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown import path: /math/nope") != std::string::npos);
+}
+
 TEST_CASE("import rejects math builtin conflicts") {
   const std::string source = R"(
 import /math/*

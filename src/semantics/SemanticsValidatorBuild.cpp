@@ -245,8 +245,19 @@ bool SemanticsValidator::buildDefinitionMaps() {
       }
       continue;
     }
+    bool isMathBuiltinImport = false;
+    if (importPath.rfind("/math/", 0) == 0 && importPath.size() > 6) {
+      std::string name = importPath.substr(6);
+      if (name.find('/') == std::string::npos && name != "*" && isMathBuiltinName(name)) {
+        isMathBuiltinImport = true;
+      }
+    }
     auto defIt = defMap_.find(importPath);
     if (defIt == defMap_.end()) {
+      if (!isMathBuiltinImport) {
+        error_ = "unknown import path: " + importPath;
+        return false;
+      }
       continue;
     }
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
