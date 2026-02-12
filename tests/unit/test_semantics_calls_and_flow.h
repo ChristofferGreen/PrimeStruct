@@ -244,6 +244,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("namespace blocks may be reopened") {
+  const std::string source = R"(
+namespace demo {
+  [return<int>]
+  foo() {
+    return(1i32)
+  }
+}
+
+namespace demo {
+  [return<int>]
+  bar() {
+    return(foo())
+  }
+}
+
+[return<int>]
+main() {
+  return(/demo/bar())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("string literal method count validates") {
   const std::string source = R"(
 [return<int>]
