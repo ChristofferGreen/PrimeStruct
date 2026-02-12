@@ -229,6 +229,33 @@ TEST_CASE("rejects versioned include mismatch across roots") {
   CHECK(readFile(errPath).find("include version mismatch") != std::string::npos);
 }
 
+TEST_CASE("rejects missing versioned include in compile") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_version_missing_compile";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories(includeRoot / "1.2.0" / "std" / "io");
+    std::ofstream libFile(includeRoot / "1.2.0" / "std" / "io" / "lib.prime");
+    CHECK(libFile.good());
+    libFile << "[return<int>]\nhelper(){ return(5i32) }\n";
+    CHECK(libFile.good());
+  }
+
+  const std::string source =
+      "include</std/io, version=\"2.0.0\">\n"
+      "[return<int>]\n"
+      "main(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_versioned_include_missing.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_include_missing_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --include-path " +
+                                 includeRoot.string() + " 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Include error: include version not found") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs versioned include expansion with mixed quoted and relative entries") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_mixed";
