@@ -1901,6 +1901,22 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native u64 map access helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<u64, i32>] values{map<u64, i32>{2u64=7i32, 11u64=5i32}}
+  return(plus(at(values, 2u64), at_unsafe(values, 11u64)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_u64_access.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_u64_access_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("compiles and runs native map at missing key") {
   const std::string source = R"(
 [return<int>]

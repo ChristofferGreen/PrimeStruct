@@ -420,6 +420,19 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with u64 map access helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<u64, i32>] values{map<u64, i32>{2u64=7i32, 11u64=5i32}}
+  return(plus(at(values, 2u64), at_unsafe(values, 11u64)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_u64_access.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
 TEST_CASE("vm map at rejects missing key") {
   const std::string source = R"(
 [return<int>]
