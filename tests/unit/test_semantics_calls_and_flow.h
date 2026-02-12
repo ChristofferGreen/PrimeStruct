@@ -484,6 +484,22 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("named arguments rejected for assign builtin") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  return(assign([target] value, [value] 2i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("count builtin validates on array literals") {
   const std::string source = R"(
 [return<int>]
