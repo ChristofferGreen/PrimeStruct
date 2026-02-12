@@ -235,6 +235,38 @@ TEST_CASE("compiles and runs archive include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs include with import aliases") {
+  const std::string libSource = R"(
+namespace lib {
+  [return<int>]
+  add([i32] a, [i32] b) {
+    return(plus(a, b))
+  }
+}
+)";
+  const std::string libPath = writeTemp("compile_lib_imports.prime", libSource);
+  const std::string source =
+      "include<\"" + libPath + "\">\n"
+      "import /lib\n"
+      "[return<int>]\n"
+      "main(){ return(add(4i32, 3i32)) }\n";
+  const std::string srcPath = writeTemp("compile_include_imports.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_imports_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_inc_imports_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 7);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 7);
+}
+
 TEST_CASE("compiles and runs block expression with multiline body") {
   const std::string source = R"(
 [return<int>]
