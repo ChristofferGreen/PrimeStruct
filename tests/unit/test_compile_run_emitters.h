@@ -30,6 +30,35 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("executions are ignored by C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void> effects(io_out)]
+log([i32] value) {
+  print_line("log"utf8)
+  return()
+}
+
+[effects(io_out)]
+log(1i32) {
+  print_line("exec"utf8)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exec_ignored.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_ignored_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_exec_ignored_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
+}
+
 TEST_CASE("compiles and runs array method calls in C++ emitter") {
   const std::string source = R"(
 [return<int>]
