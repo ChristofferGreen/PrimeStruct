@@ -40,6 +40,33 @@ main() {
   CHECK(runCommand(compileCmd) != 0);
 }
 
+TEST_CASE("no transforms accepts canonical syntax") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32, 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_canonical.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_canonical_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_canonical_native").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --no-transforms";
+  CHECK(runCommand(runVmCmd) == 3);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --no-transforms";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 3);
+}
+
 TEST_CASE("text filters none disables implicit utf8") {
   const std::string source = R"(
 [return<int> effects(io_out)]
