@@ -2163,6 +2163,29 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs native with multiple imports") {
+  const std::string source = R"(
+import /util, /math
+namespace util {
+  [return<int>]
+  add([i32] a, [i32] b) {
+    return(plus(a, b))
+  }
+}
+[return<int>]
+main() {
+  return(plus(add(2i32, 3i32), min(7i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_import_multiple.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_multiple_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
+}
+
 TEST_CASE("compiles and runs include expansion") {
   const std::string libPath = writeTemp("compile_lib.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string source = "include<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
