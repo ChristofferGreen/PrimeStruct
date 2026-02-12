@@ -235,6 +235,33 @@ TEST_CASE("compiles and runs archive include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs include inside namespace") {
+  const std::string libPath =
+      writeTemp("compile_namespace_lib.prime", "[return<int>]\nhelper(){ return(9i32) }\n");
+  const std::string source =
+      "namespace outer {\n"
+      "  include<\"" + libPath + "\">\n"
+      "}\n"
+      "[return<int>]\n"
+      "main(){ return(/outer/helper()) }\n";
+  const std::string srcPath = writeTemp("compile_namespace_include.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_namespace_inc_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_namespace_inc_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 9);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 9);
+}
+
 TEST_CASE("compiles and runs include with import aliases") {
   const std::string libSource = R"(
 namespace lib {
