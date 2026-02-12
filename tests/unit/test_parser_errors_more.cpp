@@ -155,6 +155,36 @@ main() {
   CHECK(error.find("single_type_to_return requires a single type transform") != std::string::npos);
 }
 
+TEST_CASE("single_type_to_return rejects duplicate markers") {
+  const std::string source = R"(
+[single_type_to_return single_type_to_return i32]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("duplicate single_type_to_return transform") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects return transform combo") {
+  const std::string source = R"(
+[single_type_to_return return<i32>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("single_type_to_return cannot be combined with return transform") != std::string::npos);
+}
+
 TEST_CASE("return value not allowed for void definitions") {
   const std::string source = R"(
 [return<void>]
