@@ -11,11 +11,6 @@ using namespace parser;
 
 namespace {
 
-bool isSingleTypeReturnName(const std::string &name) {
-  return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
-         name == "f64" || name == "bool" || name == "void" || name == "string";
-}
-
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "struct" ||
@@ -31,10 +26,7 @@ bool isSingleTypeReturnCandidate(const Transform &transform) {
   if (isNonTypeTransformName(transform.name)) {
     return false;
   }
-  if (!transform.templateArgs.empty()) {
-    return true;
-  }
-  return isSingleTypeReturnName(transform.name);
+  return true;
 }
 
 std::string formatTemplateArgs(const std::vector<std::string> &args) {
