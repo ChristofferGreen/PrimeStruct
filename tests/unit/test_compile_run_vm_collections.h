@@ -221,6 +221,22 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("rejects vm vector helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push(values, 3i32)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_push_unsupported.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_push_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support vector helper: push\n");
+}
+
 TEST_CASE("runs vm with math abs/sign/min/max") {
   const std::string source = R"(
 import /math

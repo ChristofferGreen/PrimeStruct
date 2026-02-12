@@ -1724,6 +1724,28 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("rejects native vector helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  push(values, 3i32)
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_push_unsupported.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_unsupported_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend does not support vector helper: push\n");
+}
+
 TEST_CASE("compiles and runs native vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
