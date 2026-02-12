@@ -122,6 +122,23 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("transform list default disables implicit i32") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(12)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_default_no_i32.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_default_no_i32_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=default 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
 TEST_CASE("text filters none rejects infix operators") {
   const std::string source = R"(
 [return<int>]
