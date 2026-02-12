@@ -380,6 +380,35 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm float literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(convert<int>(1.5f))
+}
+)";
+  const std::string srcPath = writeTemp("vm_float_literal.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_float_literal_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support float literals\n");
+}
+
+TEST_CASE("rejects vm float bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [float] value{1.5f}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_float_binding.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_float_binding_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support float types\n");
+}
+
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
