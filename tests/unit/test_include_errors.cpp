@@ -214,6 +214,20 @@ TEST_CASE("invalid include version fails") {
   CHECK(error.find("invalid include version") != std::string::npos);
 }
 
+TEST_CASE("include version with too many parts fails") {
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_too_many_parts";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  const std::string srcPath =
+      writeFile(dir / "main_version_too_many_parts.prime",
+                "include<\"/lib.prime\", version=\"1.2.3.4\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include version must have 1 to 3 numeric parts") != std::string::npos);
+}
+
 TEST_CASE("empty include version fails") {
   auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_version";
   std::filesystem::remove_all(dir);
