@@ -101,6 +101,22 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
+TEST_CASE("runs vm with capabilities and default effects") {
+  const std::string source = R"(
+[return<int> capabilities(io_out)]
+main() {
+  print_line("capabilities"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_capabilities_default_effects.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_capabilities_out.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "capabilities\n");
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]

@@ -780,6 +780,28 @@ main() {
   CHECK(readFile(errPath) == "vm err\n");
 }
 
+TEST_CASE("default effects allow capabilities in native") {
+  const std::string source = R"(
+[return<int> capabilities(io_out)]
+main() {
+  print_line("capabilities"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_capabilities_default_effects.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_capabilities_default_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_capabilities_default_out.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --default-effects=default";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "capabilities\n");
+}
+
 TEST_CASE("default effects none requires explicit effects") {
   const std::string source = R"(
 [return<int>]
