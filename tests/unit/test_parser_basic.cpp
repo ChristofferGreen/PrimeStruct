@@ -246,6 +246,53 @@ main() {
   CHECK(program.definitions[0].transforms[1].arguments[0] == "io_out");
 }
 
+TEST_CASE("parses template lists without commas") {
+  const std::string source = R"(
+[custom<i32 f32>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  CHECK(program.definitions[0].transforms[0].name == "custom");
+  REQUIRE(program.definitions[0].transforms[0].templateArgs.size() == 2);
+  CHECK(program.definitions[0].transforms[0].templateArgs[0] == "i32");
+  CHECK(program.definitions[0].transforms[0].templateArgs[1] == "f32");
+}
+
+TEST_CASE("parses parameter list without commas") {
+  const std::string source = R"(
+[return<int>]
+main([i32] a [i32] b) {
+  return(plus(a, b))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].parameters.size() == 2);
+  CHECK(program.definitions[0].parameters[0].name == "a");
+  CHECK(program.definitions[0].parameters[1].name == "b");
+}
+
+TEST_CASE("parses call arguments without commas") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &call = *program.definitions[0].returnExpr;
+  REQUIRE(call.kind == primec::Expr::Kind::Call);
+  REQUIRE(call.args.size() == 2);
+  CHECK(call.args[0].kind == primec::Expr::Kind::Literal);
+  CHECK(call.args[1].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("single_type_to_return rewrites bare type transform") {
   const std::string source = R"(
 [single_type_to_return i32 effects(io_out)]
