@@ -1816,6 +1816,58 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs native map at helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(at(values, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_at.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_at_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
+TEST_CASE("compiles and runs native map at_unsafe helper") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(at_unsafe(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_at_unsafe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_at_unsafe_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
+TEST_CASE("compiles and runs native map at missing key") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(at(values, 9i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_at_missing.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_at_missing_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_at_missing_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "map key not found\n");
+}
+
 TEST_CASE("compiles and runs native typed map binding") {
   const std::string source = R"(
 [return<int>]
