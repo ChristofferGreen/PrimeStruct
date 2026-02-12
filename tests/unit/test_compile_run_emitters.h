@@ -59,6 +59,28 @@ log(1i32) {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("compiles and runs import alias in C++ emitter") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  helper() {
+    return(7i32)
+  }
+}
+[return<int>]
+main() {
+  return(helper())
+}
+)";
+  const std::string srcPath = writeTemp("compile_import_alias_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_import_alias_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs array method calls in C++ emitter") {
   const std::string source = R"(
 [return<int>]
