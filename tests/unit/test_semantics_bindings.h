@@ -1347,6 +1347,18 @@ main() {
   CHECK(error.find("block expression does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("block expression requires body arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block requires block arguments") != std::string::npos);
+}
+
 TEST_CASE("block statement rejects arguments") {
   const std::string source = R"(
 [return<int>]
