@@ -1780,6 +1780,25 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native collection bracket literals") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>[1i32, 2i32]}
+  [vector<i32>] list{vector<i32>[3i32, 4i32]}
+  [map<i32, i32>] table{map<i32, i32>[5i32=6i32]}
+  return(plus(plus(values.count(), list.count()), count(table)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_collection_brackets.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_collection_brackets_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs native map literals") {
   const std::string source = R"(
 [return<int>]

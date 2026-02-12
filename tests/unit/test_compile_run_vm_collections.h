@@ -103,6 +103,21 @@ main() {
   CHECK(readFile(outPath) == "3\n7\n9\n");
 }
 
+TEST_CASE("runs vm with collection bracket literals") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [array<i32>] values{array<i32>[1i32, 2i32]}
+  [vector<i32>] list{vector<i32>[3i32, 4i32]}
+  [map<i32, i32>] table{map<i32, i32>[5i32=6i32]}
+  return(plus(plus(values.count(), list.count()), count(table)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_collection_brackets.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("runs vm with array literal count method") {
   const std::string source = R"(
 [return<int>]
