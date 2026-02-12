@@ -198,6 +198,12 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
 
   importAliases_.clear();
+  auto isMathBuiltinName = [&](const std::string &name) -> bool {
+    Expr probe;
+    probe.name = name;
+    std::string builtinName;
+    return getBuiltinMathName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
+  };
   for (const auto &importPath : program_.imports) {
     if (importPath.empty() || importPath[0] != '/') {
       error_ = "import path must be a slash path";
@@ -211,6 +217,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
       const std::string remainder = def.fullPath.substr(prefix.size());
       if (remainder.empty() || remainder.find('/') != std::string::npos) {
         continue;
+      }
+      if (hasMathImport_ && isMathBuiltinName(remainder)) {
+        error_ = "import creates name conflict: " + remainder;
+        return false;
       }
       const std::string rootPath = "/" + remainder;
       if (defMap_.count(rootPath) > 0) {

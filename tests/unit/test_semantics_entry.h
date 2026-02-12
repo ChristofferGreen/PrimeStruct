@@ -613,6 +613,26 @@ main() {
   CHECK(error.find("unknown call target: /math/plus") != std::string::npos);
 }
 
+TEST_CASE("import rejects math builtin conflicts") {
+  const std::string source = R"(
+import /math
+import /util
+namespace util {
+  [return<f32>]
+  sin([f32] value) {
+    return(value)
+  }
+}
+[return<f32>]
+main() {
+  return(sin(0.5f32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: sin") != std::string::npos);
+}
+
 TEST_CASE("import aliases namespace definitions") {
   const std::string source = R"(
 import /util
