@@ -115,6 +115,16 @@ TEST_CASE("include version with trailing junk fails") {
   CHECK(error.find("unexpected characters after include version") != std::string::npos);
 }
 
+TEST_CASE("include version with trailing junk and single quotes fails") {
+  const std::string srcPath =
+      writeTemp("main_include_version_trailing_single.prime", "include<'/lib.prime', version='1.2'x>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("unexpected characters after include version") != std::string::npos);
+}
+
 TEST_CASE("duplicate include version attribute fails") {
   const std::string srcPath =
       writeTemp("main_include_duplicate_version.prime", "include<\"/lib.prime\", version=\"1.2\", version=\"1.3\">\n");
