@@ -66,6 +66,15 @@ TEST_CASE("include path suffix fails") {
   CHECK(error.find("suffix") != std::string::npos);
 }
 
+TEST_CASE("include path suffix with single quotes fails") {
+  const std::string srcPath = writeTemp("main_include_suffix_single.prime", "include<'/lib.prime'utf8>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("suffix") != std::string::npos);
+}
+
 TEST_CASE("include entry missing comma fails") {
   const std::string srcPath =
       writeTemp("main_include_missing_comma.prime", "include<\"/lib_a.prime\" \"/lib_b.prime\">\n");
