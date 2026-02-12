@@ -283,6 +283,21 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with convert bool from integers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(
+    convert<int>(convert<bool>(0i32)),
+    plus(convert<int>(convert<bool>(-1i32)), convert<int>(convert<bool>(5u64)))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("vm_convert_bool.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with vector literal count helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

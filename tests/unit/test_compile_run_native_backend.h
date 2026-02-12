@@ -1358,6 +1358,24 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs native convert bool from integers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(
+    convert<int>(convert<bool>(0i32)),
+    plus(convert<int>(convert<bool>(-1i32)), convert<int>(convert<bool>(5u64)))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_convert_bool_ints.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_convert_bool_ints_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs native convert i64") {
   const std::string source = R"(
 [return<bool>]
