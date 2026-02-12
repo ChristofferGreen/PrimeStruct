@@ -24,6 +24,11 @@ and IR lowering.
 Transform template lists accept one or more type expressions, so generic binding types can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
 
+The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text filters,
+the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
+filters are configured via `--text-filters=<list>` (the default list is `operators`, `collections`,
+`implicit-utf8`), and `--no-transforms` disables all text filters.
+
 ## 2. Lexical Structure
 
 ### 2.1 Identifiers
