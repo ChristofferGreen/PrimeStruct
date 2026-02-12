@@ -67,6 +67,25 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
+TEST_CASE("runs vm with import alias") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_import_alias.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
+}
+
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
 [return<int> effects(io_out)]
