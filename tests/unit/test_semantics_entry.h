@@ -527,6 +527,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("math trig builtin requires import") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(sin(0.5f32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("math builtin requires import /math: sin") != std::string::npos);
+}
+
+TEST_CASE("math trig builtin resolves with import") {
+  const std::string source = R"(
+import /math
+[return<f32>]
+main() {
+  return(sin(0.5f32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("math-qualified builtin works without import") {
   const std::string source = R"(
 [return<int>]
