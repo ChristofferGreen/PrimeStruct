@@ -110,6 +110,8 @@ Imports are compile-time namespace aliases. Each imported path contributes its i
 root namespace, so `import /math` allows `sin(...)` as shorthand for `/math/sin(...)`. Imports must
 appear at the top level (not inside `namespace` blocks).
 
+Imports are resolved after includes expand, and the same syntax is accepted by `primec` and `primevm`.
+
 ### 3.3 Namespace Blocks
 
 ```
