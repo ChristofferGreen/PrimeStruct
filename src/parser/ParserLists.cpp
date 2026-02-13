@@ -43,10 +43,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
   if (match(TokenKind::RBracket)) {
     return fail("transform list cannot be empty");
   }
-  while (!match(TokenKind::RBracket)) {
-    if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
-    }
+  auto parseTransformItem = [&](Transform &transform) -> bool {
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -55,7 +52,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (!validateTransformName(name.text, nameError)) {
       return fail(nameError);
     }
-    Transform transform;
     transform.name = name.text;
     if (match(TokenKind::LAngle)) {
       if (!parseTemplateList(transform.templateArgs)) {
@@ -68,9 +64,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return fail("transform argument list cannot be empty");
       }
       while (true) {
-        if (match(TokenKind::Semicolon)) {
-          return fail("semicolon is not allowed");
-        }
         if (match(TokenKind::Identifier)) {
           Token arg = consume(TokenKind::Identifier, "expected transform argument");
           if (arg.kind == TokenKind::End) {
@@ -101,15 +94,99 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         } else {
           return fail("expected transform argument");
         }
-        if (match(TokenKind::Semicolon)) {
-          return fail("semicolon is not allowed");
+        if (match(TokenKind::RParen)) {
+          break;
         }
-        if (match(TokenKind::Comma)) {
-          expect(TokenKind::Comma, "expected ','");
-          if (match(TokenKind::RParen)) {
-            return fail("trailing comma not allowed in transform argument list");
-          }
+        if (match(TokenKind::Identifier) || match(TokenKind::Number) || match(TokenKind::String)) {
           continue;
+        }
+        break;
+      }
+      if (!expect(TokenKind::RParen, "expected ')'")) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto parseTransformGroup = [&](const std::string &groupName) -> bool {
+    if (!expect(TokenKind::LParen, "expected '('")) {
+      return false;
+    }
+    if (match(TokenKind::RParen)) {
+      return fail("transform " + groupName + " group cannot be empty");
+    }
+    while (!match(TokenKind::RParen)) {
+      Transform nested;
+      if (!parseTransformItem(nested)) {
+        return false;
+      }
+      out.push_back(std::move(nested));
+      if (match(TokenKind::RParen)) {
+        break;
+      }
+    }
+    if (!expect(TokenKind::RParen, "expected ')'")) {
+      return false;
+    }
+    return true;
+  };
+  while (!match(TokenKind::RBracket)) {
+    Token name = consume(TokenKind::Identifier, "expected transform identifier");
+    if (name.kind == TokenKind::End) {
+      return false;
+    }
+    std::string nameError;
+    if (!validateTransformName(name.text, nameError)) {
+      return fail(nameError);
+    }
+    if ((name.text == "text" || name.text == "semantic") && match(TokenKind::LParen)) {
+      if (!parseTransformGroup(name.text)) {
+        return false;
+      }
+      continue;
+    }
+    Transform transform;
+    transform.name = name.text;
+    if (match(TokenKind::LAngle)) {
+      if (!parseTemplateList(transform.templateArgs)) {
+        return false;
+      }
+    }
+    if (match(TokenKind::LParen)) {
+      expect(TokenKind::LParen, "expected '('");
+      if (match(TokenKind::RParen)) {
+        return fail("transform argument list cannot be empty");
+      }
+      while (true) {
+        if (match(TokenKind::Identifier)) {
+          Token arg = consume(TokenKind::Identifier, "expected transform argument");
+          if (arg.kind == TokenKind::End) {
+            return false;
+          }
+          std::string argError;
+          if (!validateIdentifierText(arg.text, argError)) {
+            return fail(argError);
+          }
+          transform.arguments.push_back(arg.text);
+        } else if (match(TokenKind::Number)) {
+          Token arg = consume(TokenKind::Number, "expected transform argument");
+          if (arg.kind == TokenKind::End) {
+            return false;
+          }
+          transform.arguments.push_back(arg.text);
+        } else if (match(TokenKind::String)) {
+          Token arg = consume(TokenKind::String, "expected transform argument");
+          if (arg.kind == TokenKind::End) {
+            return false;
+          }
+          std::string normalized;
+          std::string parseError;
+          if (!normalizeStringLiteralToken(arg.text, normalized, parseError)) {
+            return fail(parseError);
+          }
+          transform.arguments.push_back(std::move(normalized));
+        } else {
+          return fail("expected transform argument");
         }
         if (match(TokenKind::RParen)) {
           break;
@@ -124,12 +201,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       }
     }
     out.push_back(std::move(transform));
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
-      if (match(TokenKind::RBracket)) {
-        return fail("trailing comma not allowed in transform list");
-      }
-    }
   }
   expect(TokenKind::RBracket, "expected ']'" );
   return true;

@@ -119,6 +119,22 @@ main() {
   CHECK(program.definitions[0].transforms[1].name == "effects");
 }
 
+TEST_CASE("parses transform groups") {
+  const std::string source = R"(
+[text(operators, collections) semantic(return<int>, effects(io_out))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 4);
+  CHECK(program.definitions[0].transforms[0].name == "operators");
+  CHECK(program.definitions[0].transforms[1].name == "collections");
+  CHECK(program.definitions[0].transforms[2].name == "return");
+  CHECK(program.definitions[0].transforms[3].name == "effects");
+}
+
 TEST_CASE("parses single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
