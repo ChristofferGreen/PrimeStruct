@@ -9,7 +9,7 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully typed.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
-Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text filters are configured via `--text-filters=<list>`; the default list enables `operators`, `collections`, and `implicit-utf8` (auto-appends `utf8` to bare string literals). Add `implicit-i32` to auto-append `i32` suffixes. Use `--no-transforms` to disable all text filters and require canonical syntax.
+Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text filters are configured via `--text-filters=<list>`; the default list enables `collections`, `operators`, and `implicit-utf8` (auto-appends `utf8` to bare string literals). Add `implicit-i32` to auto-append `i32` suffixes. Use `--no-transforms` to disable all text filters and require canonical syntax.
 
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct, and list anything explicitly deferred to later phases.

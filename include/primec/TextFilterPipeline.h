@@ -6,7 +6,7 @@
 namespace primec {
 
 struct TextFilterOptions {
-  std::vector<std::string> enabledFilters = {"operators", "collections", "implicit-utf8"};
+  std::vector<std::string> enabledFilters = {"collections", "operators", "implicit-utf8"};
 
   bool hasFilter(const std::string &name) const {
     for (const auto &filter : enabledFilters) {

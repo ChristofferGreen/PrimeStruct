@@ -54,7 +54,7 @@ TEST_CASE("filters ignore line comments") {
       "}\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections", "implicit-utf8", "implicit-i32"};
+  options.enabledFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -83,7 +83,7 @@ TEST_CASE("filters ignore block comments") {
       "}\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections", "implicit-utf8", "implicit-i32"};
+  options.enabledFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -257,6 +257,26 @@ TEST_CASE("map literal rewrite ignores block comments") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output.find("/* map-comment a=b */") != std::string::npos);
+}
+
+TEST_CASE("filter order affects map literal rewrites") {
+  const std::string source = "main(){ return(map<i32,i32>{1i32=2i32}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+
+  primec::TextFilterOptions operatorsFirst;
+  operatorsFirst.enabledFilters = {"operators", "collections"};
+  CHECK(pipeline.apply(source, output, error, operatorsFirst));
+  CHECK(error.empty());
+  CHECK(output.find("map<i32,i32>(assign(1i32, 2i32))") != std::string::npos);
+
+  primec::TextFilterOptions collectionsFirst;
+  collectionsFirst.enabledFilters = {"collections", "operators"};
+  std::string output2;
+  CHECK(pipeline.apply(source, output2, error, collectionsFirst));
+  CHECK(error.empty());
+  CHECK(output2.find("map<i32,i32>(1i32, 2i32)") != std::string::npos);
 }
 
 TEST_CASE("rewrites map literal equals pairs without commas") {
@@ -446,7 +466,7 @@ TEST_CASE("implicit utf8 can be disabled") {
   const std::string source = "main(){ return(\"a\") }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections"};
+  options.enabledFilters = {"collections", "operators"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -972,7 +992,7 @@ TEST_CASE("does not add suffix to i64 or u64 literals with implicit filter") {
   const std::string source = "main(){ return(9i64); return(10u64) }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  options.enabledFilters = {"collections", "operators", "implicit-i32"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -984,7 +1004,7 @@ TEST_CASE("implicit i32 filter skips float with trailing dot") {
   const std::string source = "main(){ return(1.) }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  options.enabledFilters = {"collections", "operators", "implicit-i32"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -996,7 +1016,7 @@ TEST_CASE("implicit i32 filter skips float with suffix after dot") {
   const std::string source = "main(){ return(1.f32) }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  options.enabledFilters = {"collections", "operators", "implicit-i32"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -1008,7 +1028,7 @@ TEST_CASE("implicit i32 filter skips float with exponent after dot") {
   const std::string source = "main(){ return(1.e2) }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections", "implicit-i32"};
+  options.enabledFilters = {"collections", "operators", "implicit-i32"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));
@@ -1198,7 +1218,7 @@ TEST_CASE("does not add suffix without implicit filter") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
-  options.enabledFilters = {"operators", "collections"};
+  options.enabledFilters = {"collections", "operators"};
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error, options));

@@ -22,7 +22,7 @@
 
 namespace {
 std::vector<std::string> defaultTextFilters() {
-  return {"operators", "collections", "implicit-utf8"};
+  return {"collections", "operators", "implicit-utf8"};
 }
 
 std::vector<std::string> defaultEffectsList() {

@@ -3,14 +3,16 @@
 #include "TextFilterHelpers.h"
 
 #include <cctype>
+#include <unordered_set>
 
 namespace primec {
 using namespace text_filter;
 
-bool TextFilterPipeline::apply(const std::string &input,
-                               std::string &output,
-                               std::string &error,
-                               const TextFilterOptions &options) const {
+namespace {
+bool applyPass(const std::string &input,
+               std::string &output,
+               std::string &error,
+               const primec::TextFilterOptions &options) {
   output.clear();
   output.reserve(input.size());
   error.clear();
@@ -243,7 +245,7 @@ bool TextFilterPipeline::apply(const std::string &input,
       }
       std::string filteredInner;
       std::string innerError;
-      if (!apply(inner, filteredInner, innerError, options)) {
+      if (!applyPass(inner, filteredInner, innerError, options)) {
         error = innerError;
         return false;
       }
@@ -538,6 +540,9 @@ bool TextFilterPipeline::apply(const std::string &input,
     if (rewriteCollectionLiteral(i)) {
       continue;
     }
+    if (!error.empty()) {
+      return false;
+    }
 
     if (input[i] == '/' && (i == 0 || isSeparator(input[i - 1]))) {
       size_t start = i;
@@ -710,5 +715,33 @@ bool TextFilterPipeline::apply(const std::string &input,
   return true;
 }
 
+} // namespace
+
+bool TextFilterPipeline::apply(const std::string &input,
+                               std::string &output,
+                               std::string &error,
+                               const TextFilterOptions &options) const {
+  output = input;
+  error.clear();
+  if (options.enabledFilters.empty()) {
+    return true;
+  }
+  std::unordered_set<std::string> seen;
+  std::string current = input;
+  std::string next;
+  for (const auto &filter : options.enabledFilters) {
+    if (!seen.insert(filter).second) {
+      continue;
+    }
+    TextFilterOptions passOptions;
+    passOptions.enabledFilters = {filter};
+    if (!applyPass(current, next, error, passOptions) || !error.empty()) {
+      return false;
+    }
+    current.swap(next);
+  }
+  output.swap(current);
+  return true;
+}
 
 } // namespace primec
