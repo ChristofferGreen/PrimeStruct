@@ -94,6 +94,24 @@ execute_repeat(3i32) { main(), main() main() }
   CHECK(program.executions[0].bodyArguments.size() == 3);
 }
 
+TEST_CASE("parses execution with identifier argument and body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_task(worker) { main() }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].arguments.size() == 1);
+  CHECK(program.executions[0].arguments[0].kind == primec::Expr::Kind::Name);
+  CHECK(program.executions[0].arguments[0].name == "worker");
+  REQUIRE(program.executions[0].bodyArguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments[0].name == "main");
+}
+
 TEST_CASE("parses execution with if statement sugar") {
   const std::string source = R"(
 [return<int>]

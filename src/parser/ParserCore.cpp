@@ -527,6 +527,7 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   int braceDepth = 0;
   bool identifiersOnly = true;
   bool sawBindingSyntax = false;
+  bool sawIdentifier = false;
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
@@ -554,6 +555,8 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
           if (atArgStart && isBindingParamBracket(tokens_, index)) {
             sawBindingSyntax = true;
           }
+        } else if (kind == TokenKind::Identifier) {
+          sawIdentifier = true;
         } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
           identifiersOnly = false;
         }
@@ -571,6 +574,9 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   if (!identifiersOnly && !sawBindingSyntax) {
     return false;
   }
+  if (!sawBindingSyntax && sawIdentifier) {
+    return false;
+  }
   if (index + 1 >= tokens_.size()) {
     return false;
   }
@@ -583,6 +589,7 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   int braceDepth = 0;
   bool identifiersOnly = true;
   bool sawBindingSyntax = false;
+  bool sawIdentifier = false;
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
@@ -610,6 +617,8 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
           if (atArgStart && isBindingParamBracket(tokens_, index)) {
             sawBindingSyntax = true;
           }
+        } else if (kind == TokenKind::Identifier) {
+          sawIdentifier = true;
         } else if (kind != TokenKind::Identifier && kind != TokenKind::Comma) {
           identifiersOnly = false;
         }
@@ -622,6 +631,9 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
     *paramsAreIdentifiers = identifiersOnly;
   }
   if (depth != 0 || (!identifiersOnly && !sawBindingSyntax)) {
+    return false;
+  }
+  if (!sawBindingSyntax && sawIdentifier) {
     return false;
   }
   if (index + 1 >= tokens_.size()) {
