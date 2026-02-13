@@ -206,6 +206,7 @@ example, `helper()` or `1i32` can appear as standalone statements).
   - **Basic:** `/math/abs`, `/math/sign`, `/math/min`, `/math/max`, `/math/clamp`, `/math/lerp`, `/math/saturate`.
   - **Rounding:** `/math/floor`, `/math/ceil`, `/math/round`, `/math/trunc`, `/math/fract`.
   - **Power/log:** `/math/sqrt`, `/math/cbrt`, `/math/pow`, `/math/exp`, `/math/exp2`, `/math/log`, `/math/log2`, `/math/log10`.
+  - **Integer pow:** for integer operands, `pow` requires a non-negative exponent; negative exponents abort in VM/native (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
   - **Trig:** `/math/sin`, `/math/cos`, `/math/tan`, `/math/asin`, `/math/acos`, `/math/atan`, `/math/atan2`, `/math/radians`, `/math/degrees`.
   - **Hyperbolic:** `/math/sinh`, `/math/cosh`, `/math/tanh`, `/math/asinh`, `/math/acosh`, `/math/atanh`.
   - **Float utils:** `/math/fma`, `/math/hypot`, `/math/copysign`.

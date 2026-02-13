@@ -364,6 +364,27 @@ main() {
   CHECK(runCommand(exePath) == 29);
 }
 
+TEST_CASE("compiles and runs integer pow negative exponent in C++ emitter") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(pow(2i32, -1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_int_pow_negative_exe.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_int_pow_negative_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_int_pow_negative_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
+}
+
 TEST_CASE("compiles and runs trig builtins in C++ emitter") {
   const std::string source = R"(
 import /math/*

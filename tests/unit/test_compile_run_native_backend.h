@@ -1392,6 +1392,27 @@ main() {
   CHECK(runCommand(exePath) == 64);
 }
 
+TEST_CASE("compiles and runs native math pow rejects negative exponent") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(pow(2i32, -1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_pow_negative.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_pow_negative_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_pow_negative_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "pow exponent must be non-negative\n");
+}
+
 TEST_CASE("compiles and runs native math constant conversions") {
   const std::string source = R"(
 import /math/*

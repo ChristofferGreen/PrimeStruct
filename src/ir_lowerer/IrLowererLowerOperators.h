@@ -537,6 +537,18 @@
           }
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempExp)});
 
+          if (powKind == LocalInfo::ValueKind::Int32 || powKind == LocalInfo::ValueKind::Int64) {
+            IrOpcode cmpLtOp = (powKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtI32;
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempExp)});
+            function.instructions.push_back({pushOp, 0});
+            function.instructions.push_back({cmpLtOp, 0});
+            const size_t jumpNonNegative = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitPowNegativeExponent();
+            const size_t nonNegativeIndex = function.instructions.size();
+            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+          }
+
           function.instructions.push_back({pushOp, 1});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
 
