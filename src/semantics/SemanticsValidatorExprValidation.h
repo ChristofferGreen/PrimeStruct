@@ -491,6 +491,10 @@
               return false;
             }
           }
+          if (hasMixedSignedness(expr.args, true)) {
+            error_ = "boolean operators do not support mixed signed/unsigned operands";
+            return false;
+          }
         } else {
           bool sawString = false;
           bool sawNonString = false;

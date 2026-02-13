@@ -1276,6 +1276,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("boolean operators reject mixed signedness") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(and(true, 1u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("boolean operators do not support mixed signed/unsigned operands") != std::string::npos);
+}
+
 TEST_CASE("not accepts integer operand") {
   const std::string source = R"(
 [return<bool>]
