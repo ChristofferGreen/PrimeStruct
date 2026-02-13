@@ -264,6 +264,76 @@ main() {
   CHECK(result == 4);
 }
 
+TEST_CASE("ir lowers increment in return expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  return(increment(value))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  const auto &inst = module.functions[0].instructions;
+  REQUIRE(inst.size() == 8);
+  CHECK(inst[0].op == primec::IrOpcode::PushI32);
+  CHECK(inst[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(inst[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(inst[3].op == primec::IrOpcode::PushI32);
+  CHECK(inst[4].op == primec::IrOpcode::AddI32);
+  CHECK(inst[5].op == primec::IrOpcode::Dup);
+  CHECK(inst[6].op == primec::IrOpcode::StoreLocal);
+  CHECK(inst[7].op == primec::IrOpcode::ReturnI32);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
+}
+
+TEST_CASE("ir lowers decrement in return expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{3i32}
+  return(decrement(value))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  const auto &inst = module.functions[0].instructions;
+  REQUIRE(inst.size() == 8);
+  CHECK(inst[0].op == primec::IrOpcode::PushI32);
+  CHECK(inst[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(inst[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(inst[3].op == primec::IrOpcode::PushI32);
+  CHECK(inst[4].op == primec::IrOpcode::SubI32);
+  CHECK(inst[5].op == primec::IrOpcode::Dup);
+  CHECK(inst[6].op == primec::IrOpcode::StoreLocal);
+  CHECK(inst[7].op == primec::IrOpcode::ReturnI32);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 2);
+}
+
 TEST_CASE("ir lowers definition call by inlining") {
   const std::string source = R"(
 [return<int>]

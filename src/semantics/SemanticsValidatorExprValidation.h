@@ -305,6 +305,7 @@
         std::string builtinName;
         bool isBuiltin = false;
         if (getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
+            getBuiltinMutationName(expr, builtinName) ||
             getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name)) ||
@@ -915,6 +916,46 @@
           return false;
         }
         if (!validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        return true;
+      }
+      std::string mutateName;
+      if (getBuiltinMutationName(expr, mutateName)) {
+        if (expr.args.size() != 1) {
+          error_ = mutateName + " requires exactly one argument";
+          return false;
+        }
+        const Expr &target = expr.args.front();
+        if (target.kind == Expr::Kind::Name) {
+          if (!isMutableBinding(params, locals, target.name)) {
+            error_ = mutateName + " target must be a mutable binding: " + target.name;
+            return false;
+          }
+        } else if (target.kind == Expr::Kind::Call) {
+          std::string pointerName;
+          if (!getBuiltinPointerName(target, pointerName) || pointerName != "dereference" || target.args.size() != 1) {
+            error_ = mutateName + " target must be a mutable binding";
+            return false;
+          }
+          const Expr &pointerExpr = target.args.front();
+          if (pointerExpr.kind != Expr::Kind::Name || !isMutableBinding(params, locals, pointerExpr.name)) {
+            error_ = mutateName + " target must be a mutable binding";
+            return false;
+          }
+          if (!isPointerLikeExpr(pointerExpr, params, locals)) {
+            error_ = mutateName + " target must be a mutable pointer binding";
+            return false;
+          }
+          if (!validateExpr(params, locals, pointerExpr)) {
+            return false;
+          }
+        } else {
+          error_ = mutateName + " target must be a mutable binding";
+          return false;
+        }
+        if (!isNumericExpr(target)) {
+          error_ = mutateName + " requires numeric operand";
           return false;
         }
         return true;

@@ -27,6 +27,34 @@ main() {
   CHECK(runCommand(nativePath) == 8);
 }
 
+TEST_CASE("compiles and runs increment/decrement sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  ++value
+  value--
+  return(value++)
+}
+)";
+  const std::string srcPath = writeTemp("compile_inc_dec_sugar.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_dec_sugar_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_inc_dec_sugar_native").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default";
+  CHECK(runCommand(runVmCmd) == 2);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-transforms=default";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 2);
+}
+
 TEST_CASE("no transforms overrides text filters") {
   const std::string source = R"(
 [return<int>]
@@ -81,6 +109,24 @@ main() {
   const std::string srcPath = writeTemp("compile_no_transforms_infix.prime", source);
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_no_transforms_infix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
+TEST_CASE("no transforms rejects increment sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  return(value++)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_inc_sugar.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_inc_sugar_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;

@@ -974,6 +974,113 @@
           error = "native backend does not support " + builtin + " literals";
           return false;
         }
+        if (isSimpleCallName(expr, "increment") || isSimpleCallName(expr, "decrement")) {
+          const bool isIncrement = isSimpleCallName(expr, "increment");
+          const char *mutateName = isIncrement ? "increment" : "decrement";
+          if (expr.args.size() != 1) {
+            error = std::string(mutateName) + " requires exactly one argument";
+            return false;
+          }
+          const Expr &target = expr.args.front();
+          auto emitDelta = [&](LocalInfo::ValueKind kind) -> bool {
+            if (kind == LocalInfo::ValueKind::Int32) {
+              function.instructions.push_back({IrOpcode::PushI32, 1});
+              function.instructions.push_back({isIncrement ? IrOpcode::AddI32 : IrOpcode::SubI32, 0});
+              return true;
+            }
+            if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64) {
+              function.instructions.push_back({IrOpcode::PushI64, 1});
+              function.instructions.push_back({isIncrement ? IrOpcode::AddI64 : IrOpcode::SubI64, 0});
+              return true;
+            }
+            error = std::string(mutateName) + " requires numeric operand";
+            return false;
+          };
+          if (target.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(target.name);
+            if (it == localsIn.end()) {
+              error = std::string(mutateName) + " target must be a known binding: " + target.name;
+              return false;
+            }
+            if (!it->second.isMutable) {
+              error = std::string(mutateName) + " target must be mutable: " + target.name;
+              return false;
+            }
+            if (it->second.kind == LocalInfo::Kind::Reference) {
+              const int32_t ptrLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              if (!emitDelta(it->second.valueKind)) {
+                return false;
+              }
+              const int32_t valueLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+              function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+              return true;
+            }
+            if (it->second.kind != LocalInfo::Kind::Value) {
+              error = std::string(mutateName) + " target must be a mutable binding";
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+            if (!emitDelta(it->second.valueKind)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::Dup, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(it->second.index)});
+            return true;
+          }
+          if (target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference")) {
+            if (target.args.size() != 1) {
+              error = "dereference requires exactly one argument";
+              return false;
+            }
+            LocalInfo::ValueKind valueKind = inferExprKind(target, localsIn);
+            if (valueKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Bool ||
+                valueKind == LocalInfo::ValueKind::String) {
+              error = std::string(mutateName) + " requires numeric operand";
+              return false;
+            }
+            const Expr &pointerExpr = target.args.front();
+            const int32_t ptrLocal = allocTempLocal();
+            if (pointerExpr.kind == Expr::Kind::Name) {
+              auto it = localsIn.find(pointerExpr.name);
+              if (it == localsIn.end() || !it->second.isMutable) {
+                error = std::string(mutateName) + " target must be a mutable binding";
+                return false;
+              }
+              if (it->second.kind != LocalInfo::Kind::Pointer && it->second.kind != LocalInfo::Kind::Reference) {
+                error = std::string(mutateName) + " target must be a mutable pointer binding";
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+            } else {
+              if (!emitExpr(pointerExpr, localsIn)) {
+                return false;
+              }
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            if (!emitDelta(valueKind)) {
+              return false;
+            }
+            const int32_t valueLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            return true;
+          }
+          error = std::string(mutateName) + " target must be a mutable binding";
+          return false;
+        }
         if (isSimpleCallName(expr, "assign")) {
           if (expr.args.size() != 2) {
             error = "assign requires exactly two arguments";

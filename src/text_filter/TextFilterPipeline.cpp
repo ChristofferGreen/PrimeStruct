@@ -671,12 +671,12 @@ bool applyPass(const std::string &input,
       if (input[i] == '/' && rewriteBinary(i, '/', "divide")) {
         continue;
       }
-      if (rewriteBinaryPair(i, '=', '=', "equal")) {
-        continue;
-      }
-      if (rewriteBinaryPair(i, '!', '=', "not_equal")) {
-        continue;
-      }
+    if (rewriteBinaryPair(i, '=', '=', "equal")) {
+      continue;
+    }
+    if (rewriteBinaryPair(i, '!', '=', "not_equal")) {
+      continue;
+    }
       if (rewriteBinaryPair(i, '>', '=', "greater_equal")) {
         continue;
       }
@@ -689,15 +689,21 @@ bool applyPass(const std::string &input,
       if (rewriteBinaryPair(i, '|', '|', "or")) {
         continue;
       }
-      if (rewriteBinary(i, '=', "assign")) {
-        continue;
-      }
-      if (rewriteUnaryAddressOf(input, output, i, options)) {
-        continue;
-      }
-      if (rewriteUnaryDeref(input, output, i, options)) {
-        continue;
-      }
+    if (rewriteBinary(i, '=', "assign")) {
+      continue;
+    }
+    if (rewriteUnaryIncrement(input, output, i, options)) {
+      continue;
+    }
+    if (rewriteUnaryDecrement(input, output, i, options)) {
+      continue;
+    }
+    if (rewriteUnaryAddressOf(input, output, i, options)) {
+      continue;
+    }
+    if (rewriteUnaryDeref(input, output, i, options)) {
+      continue;
+    }
       if (rewriteUnaryNot(input, output, i, options)) {
         continue;
       }

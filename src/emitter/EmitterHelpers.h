@@ -42,6 +42,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
 
 bool getBuiltinOperator(const Expr &expr, char &out);
 bool getBuiltinComparison(const Expr &expr, const char *&out);
+bool getBuiltinMutationName(const Expr &expr, std::string &out);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out);
 bool isPathSpaceBuiltinName(const Expr &expr);

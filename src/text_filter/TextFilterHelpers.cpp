@@ -586,6 +586,93 @@ bool rewriteUnaryDeref(const std::string &input, std::string &output, size_t &in
   return true;
 }
 
+namespace {
+bool rewriteUnaryMutation(const std::string &input,
+                          std::string &output,
+                          size_t &index,
+                          const TextFilterOptions &options,
+                          char op,
+                          const char *name) {
+  if (input[index] != op || index + 1 >= input.size() || input[index + 1] != op) {
+    return false;
+  }
+  const size_t rightStart = index + 2;
+  if (isUnaryPrefixPosition(input, index)) {
+    if (rightStart >= input.size()) {
+      return false;
+    }
+    if (input[rightStart] == '(') {
+      output.append(name);
+      index += 1;
+      return true;
+    }
+    if (!isRightOperandStartChar(input, rightStart)) {
+      return false;
+    }
+    size_t rightEnd = findRightTokenEnd(input, rightStart);
+    if (rightEnd == rightStart) {
+      return false;
+    }
+    std::string right = input.substr(rightStart, rightEnd - rightStart);
+    right = stripOuterParens(right);
+    right = normalizeUnaryOperand(right);
+    if (options.hasFilter("implicit-i32")) {
+      right = maybeAppendI32(right);
+    }
+    if (options.hasFilter("implicit-utf8")) {
+      right = maybeAppendUtf8(right);
+    }
+    output.append(name);
+    output.append("(");
+    output.append(right);
+    output.append(")");
+    index = rightEnd - 1;
+    return true;
+  }
+  if (index == 0 || !isLeftOperandEndChar(input[index - 1])) {
+    return false;
+  }
+  if (rightStart < input.size() && isRightOperandStartChar(input, rightStart)) {
+    return false;
+  }
+  size_t end = output.size();
+  size_t start = findLeftTokenStart(output, end);
+  if (start == end) {
+    return false;
+  }
+  std::string left = output.substr(start, end - start);
+  left = stripOuterParens(left);
+  left = normalizeUnaryOperand(left);
+  if (options.hasFilter("implicit-i32")) {
+    left = maybeAppendI32(left);
+  }
+  if (options.hasFilter("implicit-utf8")) {
+    left = maybeAppendUtf8(left);
+  }
+  output.erase(start);
+  output.append(name);
+  output.append("(");
+  output.append(left);
+  output.append(")");
+  index += 1;
+  return true;
+}
+} // namespace
+
+bool rewriteUnaryIncrement(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options) {
+  return rewriteUnaryMutation(input, output, index, options, '+', "increment");
+}
+
+bool rewriteUnaryDecrement(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options) {
+  return rewriteUnaryMutation(input, output, index, options, '-', "decrement");
+}
+
 bool rewriteUnaryMinus(const std::string &input,
                        std::string &output,
                        size_t &index,

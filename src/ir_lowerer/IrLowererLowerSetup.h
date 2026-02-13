@@ -970,6 +970,12 @@ bool IrLowerer::lower(const Program &program,
           const std::string &typeName = expr.templateArgs.front();
           return valueKindFromTypeName(typeName);
         }
+        if (isSimpleCallName(expr, "increment") || isSimpleCallName(expr, "decrement")) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
         if (isSimpleCallName(expr, "assign")) {
           if (expr.args.size() != 2) {
             return LocalInfo::ValueKind::Unknown;

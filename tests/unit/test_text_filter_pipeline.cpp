@@ -726,6 +726,46 @@ TEST_CASE("rewrites unary minus before name") {
   CHECK(output.find("negate(value)") != std::string::npos);
 }
 
+TEST_CASE("rewrites prefix increment operator") {
+  const std::string source = "main(){ return(++value) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("increment(value)") != std::string::npos);
+}
+
+TEST_CASE("rewrites postfix increment operator") {
+  const std::string source = "main(){ return(value++) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("increment(value)") != std::string::npos);
+}
+
+TEST_CASE("rewrites prefix decrement operator") {
+  const std::string source = "main(){ return(--value) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("decrement(value)") != std::string::npos);
+}
+
+TEST_CASE("rewrites postfix decrement operator") {
+  const std::string source = "main(){ return(value--) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("decrement(value)") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus with templated call on left") {
   const std::string source = "main(){ return(convert<i32>(1i64)+2i32) }\n";
   primec::TextFilterPipeline pipeline;

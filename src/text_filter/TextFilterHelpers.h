@@ -42,6 +42,14 @@ bool rewriteUnaryDeref(const std::string &input,
                        std::string &output,
                        size_t &index,
                        const TextFilterOptions &options);
+bool rewriteUnaryIncrement(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options);
+bool rewriteUnaryDecrement(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options);
 bool rewriteUnaryMinus(const std::string &input,
                        std::string &output,
                        size_t &index,

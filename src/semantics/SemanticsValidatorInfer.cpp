@@ -589,6 +589,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return returnKindForTypeName(expr.templateArgs.front());
     }
+    if (getBuiltinMutationName(expr, builtinName)) {
+      if (expr.args.size() != 1) {
+        return ReturnKind::Unknown;
+      }
+      return inferExprReturnKind(expr.args.front(), params, locals);
+    }
     if (isAssignCall(expr)) {
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;

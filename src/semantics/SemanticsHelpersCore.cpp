@@ -291,6 +291,24 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getBuiltinMutationName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "increment" || name == "decrement") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool isRootBuiltinName(const std::string &name) {
   if (name.empty()) {
     return false;
@@ -306,6 +324,9 @@ bool isRootBuiltinName(const std::string &name) {
   probe.name = normalized;
   std::string builtinName;
   if (getBuiltinOperatorName(probe, builtinName) || getBuiltinComparisonName(probe, builtinName)) {
+    return true;
+  }
+  if (normalized == "increment" || normalized == "decrement") {
     return true;
   }
   return normalized == "assign" || normalized == "if" || normalized == "then" || normalized == "else" ||

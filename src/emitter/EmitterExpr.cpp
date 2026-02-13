@@ -403,6 +403,14 @@ std::string Emitter::emitExpr(const Expr &expr,
           << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
       return out.str();
     }
+    std::string mutateName;
+    if (getBuiltinMutationName(expr, mutateName) && expr.args.size() == 1) {
+      std::ostringstream out;
+      const char *op = mutateName == "increment" ? "++" : "--";
+      out << "(" << op
+          << emitExpr(expr.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, allowMathBare) << ")";
+      return out.str();
+    }
     const char *cmp = nullptr;
     if (getBuiltinComparison(expr, cmp)) {
       std::ostringstream out;

@@ -430,6 +430,12 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         ReturnKind kind = returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
         return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
       }
+      if (getBuiltinMutationName(expr, builtinName)) {
+        if (expr.args.size() != 1) {
+          return ReturnKind::Unknown;
+        }
+        return inferPrimitiveReturnKind(expr.args.front());
+      }
       if (isAssignCall(expr)) {
         if (expr.args.size() != 2) {
           return ReturnKind::Unknown;

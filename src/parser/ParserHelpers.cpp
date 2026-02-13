@@ -150,6 +150,7 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
          candidate == "and" || candidate == "or" || candidate == "not" ||
          (isMathBuiltin && (allowMathBare || isMathQualified)) ||
+         candidate == "increment" || candidate == "decrement" ||
          candidate == "if" || candidate == "then" || candidate == "else" ||
          candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
          candidate == "map" || candidate == "count" || candidate == "capacity" || candidate == "push" ||

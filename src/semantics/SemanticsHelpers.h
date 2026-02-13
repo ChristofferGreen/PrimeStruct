@@ -65,6 +65,7 @@ ReturnKind getReturnKind(const Definition &def, std::string &error);
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out);
 bool getBuiltinComparisonName(const Expr &expr, std::string &out);
+bool getBuiltinMutationName(const Expr &expr, std::string &out);
 bool isRootBuiltinName(const std::string &name);
 bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare);

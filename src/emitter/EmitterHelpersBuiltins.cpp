@@ -88,6 +88,24 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
   return false;
 }
 
+bool getBuiltinMutationName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "increment" || name == "decrement") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;

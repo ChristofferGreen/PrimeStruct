@@ -82,7 +82,7 @@
           return true;
         }
         error =
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign calls in expressions";
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions";
         return false;
       }
       default:
