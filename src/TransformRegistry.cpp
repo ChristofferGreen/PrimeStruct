@@ -3,7 +3,8 @@
 #include <array>
 
 namespace {
-constexpr std::array<std::string_view, 4> kTextTransforms = {
+constexpr std::array<std::string_view, 5> kTextTransforms = {
+    "append_operators",
     "collections",
     "operators",
     "implicit-utf8",

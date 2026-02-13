@@ -10,6 +10,13 @@ namespace primec {
 using namespace text_filter;
 
 namespace {
+size_t findNextTransformListStart(const std::string &input, size_t start);
+size_t findMatchingCloseWithComments(const std::string &input,
+                                     size_t openIndex,
+                                     char openChar,
+                                     char closeChar);
+bool appendOperatorsTransform(const std::string &input, std::string &output, std::string &error);
+
 bool applyPass(const std::string &input,
                std::string &output,
                std::string &error,
@@ -17,6 +24,9 @@ bool applyPass(const std::string &input,
   output.clear();
   output.reserve(input.size());
   error.clear();
+  if (options.hasFilter("append_operators")) {
+    return appendOperatorsTransform(input, output, error);
+  }
   const bool enableCollections = options.hasFilter("collections");
   const bool enableOperators = options.hasFilter("operators");
   const bool enableImplicitUtf8 = options.hasFilter("implicit-utf8");
@@ -1016,6 +1026,46 @@ size_t findNextTransformListStart(const std::string &input, size_t start) {
   return std::string::npos;
 }
 
+bool appendOperatorsTransform(const std::string &input, std::string &output, std::string &error) {
+  output = input;
+  size_t listStart = findNextTransformListStart(output, 0);
+  if (listStart == std::string::npos) {
+    return true;
+  }
+  size_t listEnd = findMatchingCloseWithComments(output, listStart, '[', ']');
+  if (listEnd == std::string::npos) {
+    error = "unterminated transform list";
+    return false;
+  }
+  auto isIdentifierChar = [](char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '/';
+  };
+  const std::string needle = "operators";
+  for (size_t pos = listStart + 1; pos + needle.size() <= listEnd; ++pos) {
+    if (output.compare(pos, needle.size(), needle) != 0) {
+      continue;
+    }
+    char prev = (pos > listStart + 1) ? output[pos - 1] : '\0';
+    char next = (pos + needle.size() < listEnd) ? output[pos + needle.size()] : '\0';
+    if (!isIdentifierChar(prev) && !isIdentifierChar(next)) {
+      return true;
+    }
+  }
+  bool hasContent = false;
+  for (size_t pos = listStart + 1; pos < listEnd; ++pos) {
+    if (!std::isspace(static_cast<unsigned char>(output[pos]))) {
+      hasContent = true;
+      break;
+    }
+  }
+  std::string insertText = "operators";
+  if (hasContent) {
+    insertText = " " + insertText;
+  }
+  output.insert(listEnd, insertText);
+  return true;
+}
+
 struct NamespaceBlock {
   std::string name;
   size_t end = std::string::npos;
@@ -1185,30 +1235,51 @@ const std::vector<std::string> *selectRuleTransforms(const std::vector<TextTrans
   return match;
 }
 
-bool applyFiltersToChunk(const std::string &input,
-                         std::string &output,
-                         std::string &error,
-                         const std::vector<std::string> &filters) {
-  if (filters.empty()) {
+bool containsFilterName(const std::vector<std::string> &filters, const std::string &name) {
+  for (const auto &filter : filters) {
+    if (filter == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool filtersEqual(const std::vector<std::string> &left, const std::vector<std::string> &right) {
+  if (left.size() != right.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < left.size(); ++i) {
+    if (left[i] != right[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool scanLeadingTransformList(const std::string &input, std::vector<std::string> &out) {
+  size_t listStart = findNextTransformListStart(input, 0);
+  if (listStart == std::string::npos) {
+    return false;
+  }
+  TransformListScan listScan;
+  if (!scanTransformList(input, listStart, listScan)) {
+    return false;
+  }
+  out = listScan.textTransforms;
+  return true;
+}
+
+bool applyFilterToChunk(const std::string &input,
+                        std::string &output,
+                        std::string &error,
+                        const std::string *filter) {
+  if (filter == nullptr || filter->empty()) {
     output = input;
     return true;
   }
-  std::unordered_set<std::string> seen;
-  std::string current = input;
-  std::string next;
-  for (const auto &filter : filters) {
-    if (!seen.insert(filter).second) {
-      continue;
-    }
-    TextFilterOptions passOptions;
-    passOptions.enabledFilters = {filter};
-    if (!applyPass(current, next, error, passOptions) || !error.empty()) {
-      return false;
-    }
-    current.swap(next);
-  }
-  output.swap(current);
-  return true;
+  TextFilterOptions passOptions;
+  passOptions.enabledFilters = {*filter};
+  return applyPass(input, output, error, passOptions);
 }
 
 bool applyPerEnvelope(const std::string &input,
@@ -1217,12 +1288,23 @@ bool applyPerEnvelope(const std::string &input,
                       const std::vector<std::string> &filters,
                       const std::vector<TextTransformRule> &rules,
                       bool suppressLeadingOverride,
-                      const std::string &baseNamespacePrefix) {
+                      const std::string &baseNamespacePrefix);
+
+bool applyPerEnvelopeFilterPass(const std::string &input,
+                                std::string &output,
+                                std::string &error,
+                                const std::string &filter,
+                                const std::vector<std::string> &activeFilters,
+                                const std::vector<TextTransformRule> &rules,
+                                bool suppressLeadingOverride,
+                                const std::string &baseNamespacePrefix,
+                                bool allowExplicitRecursion) {
   output.clear();
   size_t pos = 0;
   size_t scanPos = 0;
   bool suppress = suppressLeadingOverride;
   std::vector<NamespaceBlock> namespaceStack;
+  const bool filterActive = containsFilterName(activeFilters, filter);
   while (scanPos < input.size()) {
     size_t listStart = findNextTransformListStart(input, scanPos);
     if (listStart == std::string::npos) {
@@ -1248,12 +1330,12 @@ bool applyPerEnvelope(const std::string &input,
     }
     std::string chunk = input.substr(pos, listStart - pos);
     std::string filteredChunk;
-    if (!applyFiltersToChunk(chunk, filteredChunk, error, filters)) {
+    if (!applyFilterToChunk(chunk, filteredChunk, error, filterActive ? &filter : nullptr)) {
       return false;
     }
     output.append(filteredChunk);
     std::string envelope = input.substr(listStart, envelopeEnd - listStart + 1);
-    const std::vector<std::string> *autoFilters = &filters;
+    const std::vector<std::string> *autoFilters = &activeFilters;
     if (!rules.empty()) {
       std::string fullPath = makeFullPath(envelopeName, namespacePrefix);
       if (const auto *ruleFilters = selectRuleTransforms(rules, fullPath)) {
@@ -1262,21 +1344,96 @@ bool applyPerEnvelope(const std::string &input,
     }
     const std::vector<std::string> &envelopeFilters =
         listScan.textTransforms.empty() ? *autoFilters : listScan.textTransforms;
+    const bool inheritsFilters = filtersEqual(envelopeFilters, activeFilters);
     std::string filteredEnvelope;
-    if (!applyPerEnvelope(envelope, filteredEnvelope, error, envelopeFilters, rules, true, namespacePrefix)) {
-      return false;
+    if (inheritsFilters) {
+      if (!applyPerEnvelopeFilterPass(envelope,
+                                      filteredEnvelope,
+                                      error,
+                                      filter,
+                                      envelopeFilters,
+                                      rules,
+                                      true,
+                                      namespacePrefix,
+                                      allowExplicitRecursion)) {
+        return false;
+      }
+      output.append(filteredEnvelope);
+    } else if (allowExplicitRecursion) {
+      if (!applyPerEnvelope(envelope, filteredEnvelope, error, envelopeFilters, rules, true, namespacePrefix)) {
+        return false;
+      }
+      output.append(filteredEnvelope);
+    } else {
+      output.append(envelope);
     }
-    output.append(filteredEnvelope);
     pos = envelopeEnd + 1;
     scanPos = pos;
     suppress = false;
   }
   std::string tail = input.substr(pos);
   std::string filteredTail;
-  if (!applyFiltersToChunk(tail, filteredTail, error, filters)) {
+  if (!applyFilterToChunk(tail, filteredTail, error, filterActive ? &filter : nullptr)) {
     return false;
   }
   output.append(filteredTail);
+  return true;
+}
+
+bool applyPerEnvelope(const std::string &input,
+                      std::string &output,
+                      std::string &error,
+                      const std::vector<std::string> &filters,
+                      const std::vector<TextTransformRule> &rules,
+                      bool suppressLeadingOverride,
+                      const std::string &baseNamespacePrefix) {
+  std::vector<std::string> activeFilters = filters;
+  if (activeFilters.empty()) {
+    return applyPerEnvelopeFilterPass(input,
+                                      output,
+                                      error,
+                                      std::string(),
+                                      activeFilters,
+                                      rules,
+                                      suppressLeadingOverride,
+                                      baseNamespacePrefix,
+                                      true);
+  }
+  std::unordered_set<std::string> applied;
+  std::string current = input;
+  bool allowExplicitRecursion = true;
+  for (size_t i = 0; i < activeFilters.size(); ++i) {
+    const std::string &filter = activeFilters[i];
+    if (!applied.insert(filter).second) {
+      continue;
+    }
+    std::string next;
+    if (!applyPerEnvelopeFilterPass(current,
+                                    next,
+                                    error,
+                                    filter,
+                                    activeFilters,
+                                    rules,
+                                    suppressLeadingOverride,
+                                    baseNamespacePrefix,
+                                    allowExplicitRecursion)) {
+      return false;
+    }
+    current.swap(next);
+    allowExplicitRecursion = false;
+    std::vector<std::string> listTransforms;
+    if (scanLeadingTransformList(current, listTransforms)) {
+      for (const auto &name : listTransforms) {
+        if (applied.find(name) != applied.end()) {
+          continue;
+        }
+        if (!containsFilterName(activeFilters, name)) {
+          activeFilters.push_back(name);
+        }
+      }
+    }
+  }
+  output = current;
   return true;
 }
 
