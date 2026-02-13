@@ -139,6 +139,30 @@ size_t skipBlockComment(const std::string &text, size_t start) {
   return end + 2;
 }
 
+size_t skipWhitespaceAndComments(const std::string &text, size_t start) {
+  size_t pos = start;
+  while (pos < text.size()) {
+    bool advanced = false;
+    while (pos < text.size() && std::isspace(static_cast<unsigned char>(text[pos]))) {
+      ++pos;
+      advanced = true;
+    }
+    if (pos + 1 < text.size() && text[pos] == '/') {
+      if (text[pos + 1] == '/') {
+        pos = skipLineComment(text, pos);
+        advanced = true;
+      } else if (text[pos + 1] == '*') {
+        pos = skipBlockComment(text, pos);
+        advanced = true;
+      }
+    }
+    if (!advanced) {
+      break;
+    }
+  }
+  return pos;
+}
+
 bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payloadStart, size_t &payloadEnd) {
   if (pos + 7 > source.size()) {
     return false;
@@ -153,9 +177,7 @@ bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payload
   if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
     return false;
   }
-  while (scan < source.size() && std::isspace(static_cast<unsigned char>(source[scan]))) {
-    ++scan;
-  }
+  scan = skipWhitespaceAndComments(source, scan);
   if (scan >= source.size() || source[scan] != '<') {
     return false;
   }
@@ -551,9 +573,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
         std::optional<std::string> versionTag;
         size_t pos = 0;
         auto skipWhitespace = [&]() {
-          while (pos < payload.size() && std::isspace(static_cast<unsigned char>(payload[pos]))) {
-            ++pos;
-          }
+          pos = skipWhitespaceAndComments(payload, pos);
         };
         while (true) {
           skipWhitespace();
