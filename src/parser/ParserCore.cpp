@@ -652,8 +652,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       }
 
       const bool bindingTransforms = isBindingTransformList(statementTransforms);
-      if (allowSurfaceSyntax_ && !bindingTransforms &&
-          (name.text == "loop" || name.text == "while" || name.text == "for")) {
+      if (allowSurfaceSyntax_ && (name.text == "loop" || name.text == "while" || name.text == "for")) {
         Expr loopExpr;
         bool parsedLoop = false;
         if (!tryParseLoopFormAfterName(loopExpr, def.namespacePrefix, name.text, statementTransforms, parsedLoop)) {
@@ -678,9 +677,6 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         }
       }
       if (match(TokenKind::LParen)) {
-        if (bindingTransforms) {
-          return fail("binding initializers must use braces");
-        }
         BareBindingGuard bindingGuard(*this, true);
         expect(TokenKind::LParen, "expected '(' after identifier");
         hasCallSyntax = true;

@@ -1179,7 +1179,7 @@ main() {
   CHECK(error.find("binding requires initializer") != std::string::npos);
 }
 
-TEST_CASE("binding rejects paren initializer") {
+TEST_CASE("binding-like transforms allow paren call") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1191,8 +1191,15 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("binding initializers must use braces") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  const auto &statements = program.definitions[0].statements;
+  REQUIRE(statements.size() == 2);
+  const auto &call = statements[0];
+  REQUIRE(call.kind == primec::Expr::Kind::Call);
+  REQUIRE(call.transforms.size() == 1);
+  CHECK(call.transforms[0].name == "i32");
 }
 
 TEST_CASE("binding initializer requires explicit type") {

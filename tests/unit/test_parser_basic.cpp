@@ -157,6 +157,34 @@ main() {
   CHECK(stmt.transforms[0].name == "effects");
 }
 
+TEST_CASE("parses binding-like transforms on calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [operators, collections] log(1i32)
+  return(sum([operators, collections] add(1i32) 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &statements = program.definitions[0].statements;
+  REQUIRE(statements.size() == 2);
+  const auto &logCall = statements[0];
+  REQUIRE(logCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(logCall.transforms.size() == 2);
+  CHECK(logCall.transforms[0].name == "operators");
+  const auto &returnCall = statements[1];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &sumCall = returnCall.args[0];
+  REQUIRE(sumCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(sumCall.args.size() == 2);
+  const auto &nestedCall = sumCall.args[0];
+  REQUIRE(nestedCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(nestedCall.transforms.size() == 2);
+  CHECK(nestedCall.transforms[0].name == "operators");
+}
+
 TEST_CASE("parses semicolon-separated transforms and lists") {
   const std::string source = R"(
 [effects(io_out; io_err); return<int>]

@@ -305,7 +305,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           return fail(nameError);
         }
       }
-      if (allowSurfaceSyntax_ && !bindingTransforms && isLoopFormKeyword(name.text)) {
+      if (allowSurfaceSyntax_ && isLoopFormKeyword(name.text)) {
         bool parsedLoop = false;
         if (!tryParseLoopFormAfterName(out, namespacePrefix, name.text, transforms, parsedLoop)) {
           return false;
@@ -327,9 +327,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.templateArgs = std::move(templateArgs);
       call.transforms = std::move(transforms);
       if (match(TokenKind::LParen)) {
-        if (bindingTransforms) {
-          return fail("binding initializers must use braces");
-        }
         expect(TokenKind::LParen, "expected '(' after identifier");
         if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
           return false;
