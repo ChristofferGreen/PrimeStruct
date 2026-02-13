@@ -1636,6 +1636,46 @@ execute_repeat(2i32) { main() }
   CHECK(error.find("invalid capability") != std::string::npos);
 }
 
+TEST_CASE("execution rejects duplicate effects capability") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[effects(io_out, io_out)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects capability") != std::string::npos);
+}
+
+TEST_CASE("execution rejects duplicate capability") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[capabilities(io_out, io_out)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capability") != std::string::npos);
+}
+
 TEST_CASE("execution rejects effects template arguments") {
   const std::string source = R"(
 [return<int>]
