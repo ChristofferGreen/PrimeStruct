@@ -188,7 +188,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown import path: /util") != std::string::npos);
+  CHECK(error.find("unknown import path: /util/*") != std::string::npos);
 }
 
 TEST_CASE("import accepts whitespace-separated paths") {
@@ -279,7 +279,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown import path: /missing") != std::string::npos);
+  CHECK(error.find("unknown import path: /missing/*") != std::string::npos);
 }
 
 TEST_CASE("import rejects missing definition") {
