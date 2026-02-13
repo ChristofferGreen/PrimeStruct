@@ -40,10 +40,21 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
     return true;
   }
   expect(TokenKind::LParen, "expected '(' after if");
-  if (match(TokenKind::LBracket) && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
-      tokens_[pos_ + 2].kind == TokenKind::RBracket) {
-    pos_ = savedPos;
-    return true;
+  if (match(TokenKind::LBracket)) {
+    size_t scan = pos_ + 1;
+    while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+      ++scan;
+    }
+    if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Identifier) {
+      ++scan;
+      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+        ++scan;
+      }
+      if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::RBracket) {
+        pos_ = savedPos;
+        return true;
+      }
+    }
   }
   Expr condition;
   {

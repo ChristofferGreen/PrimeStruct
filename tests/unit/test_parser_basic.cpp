@@ -177,6 +177,24 @@ main(/* params */ [i32] value{1i32} /* end params */) {
   CHECK(program.definitions[0].returnExpr->templateArgs.size() == 2);
 }
 
+TEST_CASE("parses if call labels with comments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if([/*label*/ cond] true))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "if");
+  REQUIRE(expr.argNames.size() == 1);
+  REQUIRE(expr.argNames[0].has_value());
+  CHECK(*expr.argNames[0] == "cond");
+}
+
 TEST_CASE("parses comment between signature and body") {
   const std::string source = R"(
 [return<int>]
