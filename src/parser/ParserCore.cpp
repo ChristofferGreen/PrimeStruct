@@ -168,6 +168,7 @@ bool Parser::parseImport(Program &program) {
     return false;
   }
   while (true) {
+    skipComments();
     Token path = consume(TokenKind::Identifier, "expected import path");
     if (path.kind == TokenKind::End) {
       return false;
@@ -207,6 +208,7 @@ bool Parser::parseImport(Program &program) {
         mathImports_.insert(std::move(name));
       }
     }
+    skipComments();
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::End)) {

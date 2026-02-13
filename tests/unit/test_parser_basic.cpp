@@ -85,6 +85,25 @@ execute_repeat(3i32) { main() }
   CHECK(program.executions[0].bodyArguments.size() == 1);
 }
 
+TEST_CASE("parses import paths with comments") {
+  const std::string source = R"(
+import /util /* inline comment */ , /* gap */ /math/*
+import /math/sin // trailing comment
+import /math/pi /* block comment */
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.imports.size() == 4);
+  CHECK(program.imports[0] == "/util/*");
+  CHECK(program.imports[1] == "/math/*");
+  CHECK(program.imports[2] == "/math/sin");
+  CHECK(program.imports[3] == "/math/pi");
+}
+
 TEST_CASE("parses arguments without commas") {
   const std::string source = R"(
 [return<int>]
