@@ -1656,6 +1656,26 @@ execute_repeat(2i32) { main() }
   CHECK(error.find("capability requires matching effect on /execute_repeat") != std::string::npos);
 }
 
+TEST_CASE("execution accepts effects and capabilities") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[effects(io_out) capabilities(io_out)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("execution rejects struct transform") {
   const std::string source = R"(
 [return<int>]
