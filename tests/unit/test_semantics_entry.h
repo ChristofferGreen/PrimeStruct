@@ -1476,6 +1476,46 @@ execute_repeat(2i32) { }
   CHECK(error.empty());
 }
 
+TEST_CASE("execution rejects copy transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[copy]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("copy transform is not allowed on executions") != std::string::npos);
+}
+
+TEST_CASE("execution rejects mut transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[mut]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform is not allowed on executions") != std::string::npos);
+}
+
 TEST_CASE("execution rejects alignment transforms") {
   const std::string source = R"(
 [return<int>]
