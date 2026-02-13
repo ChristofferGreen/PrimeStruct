@@ -1211,6 +1211,29 @@ TEST_CASE("fails on unterminated collection literal") {
   CHECK(error.find("unterminated collection literal") != std::string::npos);
 }
 
+TEST_CASE("fails on unterminated block comment in map literal") {
+  const std::string source = "map<i32,i32>{1i32=2i32 /* comment }";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK_FALSE(pipeline.apply(source, output, error));
+  CHECK(error.find("unterminated block comment") != std::string::npos);
+}
+
+TEST_CASE("map literal whitespace pairs handle line comments") {
+  const std::string source =
+      "main(){ return(map<i32,i32>{1i32 2i32 // pair comment\n"
+      " 3i32 4i32}) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("// pair comment") != std::string::npos);
+  CHECK(output.find("map<i32,i32>(1i32, 2i32") != std::string::npos);
+  CHECK(output.find(", 3i32, 4i32") != std::string::npos);
+}
+
 TEST_CASE("fails on unterminated template list in collection literal") {
   const std::string source = "array<i32{1i32}";
   primec::TextFilterPipeline pipeline;

@@ -68,6 +68,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_ir_pipeline.cpp
     tests/unit/test_template_parsing.cpp
     tests/unit/test_compile_run.cpp
+    tests/unit/test_text_filter_helpers.cpp
     tests/unit/test_text_filter_pipeline.cpp
     tests/unit/test_printers_manual.cpp
     tests/unit/test_semantics_manual.cpp
@@ -130,6 +131,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.text_filters.pipeline.implicit_utf8
     primestruct.text_filters.pipeline.implicit_i32
     primestruct.text_filters.pipeline.collections
+    primestruct.text_filters.helpers
   )
 
   foreach(suite IN LISTS PrimeStructTestSuites)
