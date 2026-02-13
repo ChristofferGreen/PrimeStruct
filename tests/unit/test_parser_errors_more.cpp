@@ -644,6 +644,22 @@ main() {
   CHECK(error.find("binding initializer arguments must be whitespace-separated") != std::string::npos);
 }
 
+TEST_CASE("binding initializer semicolons are rejected") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32; 2i32}
+  return(value)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("semicolon") != std::string::npos);
+}
+
 TEST_CASE("trailing comma in argument list is rejected") {
   const std::string source = R"(
 [return<int>]
