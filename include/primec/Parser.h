@@ -72,6 +72,12 @@ private:
     bool previous_;
   };
 
+  bool tryParseLoopFormAfterName(Expr &out,
+                                 const std::string &namespacePrefix,
+                                 const std::string &keyword,
+                                 const std::vector<Transform> &transforms,
+                                 bool &parsed);
+
   struct BraceListGuard {
     BraceListGuard(Parser &parser, bool allowBindings, bool allowReturn)
         : parser_(parser),

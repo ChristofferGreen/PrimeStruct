@@ -33,6 +33,10 @@ bool isIgnorableToken(TokenKind kind) {
   return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
 }
 
+bool isControlKeyword(const std::string &name) {
+  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for";
+}
+
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
   while (index < tokens.size() && isIgnorableToken(tokens[index].kind)) {
     ++index;
@@ -745,7 +749,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       }
       std::string nameError;
       if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
+        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+          return fail(nameError);
+        }
       }
       if (name.text == "if") {
         return fail("if statement cannot have transforms");
@@ -754,12 +760,24 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         return fail("return statement cannot have transforms");
       }
 
+      const bool bindingTransforms = isBindingTransformList(statementTransforms);
+      if (!bindingTransforms && (name.text == "loop" || name.text == "while" || name.text == "for")) {
+        Expr loopExpr;
+        bool parsedLoop = false;
+        if (!tryParseLoopFormAfterName(loopExpr, def.namespacePrefix, name.text, statementTransforms, parsedLoop)) {
+          return false;
+        }
+        if (parsedLoop) {
+          def.statements.push_back(std::move(loopExpr));
+          continue;
+        }
+      }
+
       Expr callExpr;
       callExpr.kind = Expr::Kind::Call;
       callExpr.name = name.text;
       callExpr.namespacePrefix = def.namespacePrefix;
       callExpr.transforms = std::move(statementTransforms);
-      const bool bindingTransforms = isBindingTransformList(callExpr.transforms);
       bool hasCallSyntax = false;
       bool sawParen = false;
       if (match(TokenKind::LAngle)) {

@@ -153,6 +153,125 @@ main() {
   CHECK(stmt.transforms[0].name == "effects");
 }
 
+TEST_CASE("parses semicolon-separated transforms and lists") {
+  const std::string source = R"(
+[effects(io_out; io_err); return<int>]
+sum([i32] a; [i32] b) {
+  return(plus(a b))
+}
+
+[return<int>]
+main() {
+  return(sum(1i32; 2i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  const auto &sum = program.definitions[0];
+  REQUIRE(sum.transforms.size() == 2);
+  CHECK(sum.transforms[0].name == "effects");
+  REQUIRE(sum.transforms[0].arguments.size() == 2);
+  CHECK(sum.transforms[0].arguments[0] == "io_out");
+  CHECK(sum.transforms[0].arguments[1] == "io_err");
+  CHECK(sum.parameters.size() == 2);
+  const auto &returnCall = program.definitions[1].statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  CHECK(returnCall.name == "return");
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &call = returnCall.args[0];
+  REQUIRE(call.kind == primec::Expr::Kind::Call);
+  REQUIRE(call.args.size() == 2);
+}
+
+TEST_CASE("parses loop form") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop(3i32) {
+    plus(1i32 2i32)
+  }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &loopCall = program.definitions[0].statements[0];
+  REQUIRE(loopCall.kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.name == "loop");
+  REQUIRE(loopCall.args.size() == 2);
+  REQUIRE(loopCall.args[1].kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.args[1].name == "do");
+  CHECK(loopCall.args[1].hasBodyArguments);
+  REQUIRE(loopCall.args[1].bodyArguments.size() == 1);
+}
+
+TEST_CASE("parses while form") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  while(less_than(1i32 2i32)) {
+    plus(1i32 2i32)
+  }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &loopCall = program.definitions[0].statements[0];
+  REQUIRE(loopCall.kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.name == "while");
+  REQUIRE(loopCall.args.size() == 2);
+  REQUIRE(loopCall.args[1].kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.args[1].name == "do");
+}
+
+TEST_CASE("parses for form") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for([i32] i{0i32} less_than(i 3i32) increment(i)) {
+    plus(i 1i32)
+  }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &loopCall = program.definitions[0].statements[0];
+  REQUIRE(loopCall.kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.name == "for");
+  REQUIRE(loopCall.args.size() == 4);
+  CHECK(loopCall.args[0].isBinding);
+  REQUIRE(loopCall.args[3].kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.args[3].name == "do");
+}
+
+TEST_CASE("parses transform-prefixed loop form") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [effects(io_out)] loop(1i32) {
+    print_line("hi"utf8)
+  }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &loopCall = program.definitions[0].statements[0];
+  REQUIRE(loopCall.kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.name == "loop");
+  REQUIRE(loopCall.transforms.size() == 1);
+  CHECK(loopCall.transforms[0].name == "effects");
+  REQUIRE(loopCall.args.size() == 2);
+  REQUIRE(loopCall.args[1].kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.args[1].name == "do");
+}
+
 TEST_CASE("parses single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]

@@ -31,6 +31,10 @@ bool isIgnorableToken(TokenKind kind) {
 bool isControlKeyword(const std::string &name) {
   return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for";
 }
+
+bool isLoopFormKeyword(const std::string &name) {
+  return name == "loop" || name == "while" || name == "for";
+}
 } // namespace
 
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
@@ -81,16 +85,22 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
     return true;
   }
   std::vector<Expr> thenBody;
-  if (!parseBraceExprList(thenBody, namespacePrefix)) {
-    return false;
+  {
+    BraceListGuard braceGuard(*this, true, true);
+    if (!parseBraceExprList(thenBody, namespacePrefix)) {
+      return false;
+    }
   }
   if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
     return fail("if statement requires else block");
   }
   consume(TokenKind::Identifier, "expected 'else'");
   std::vector<Expr> elseBody;
-  if (!parseBraceExprList(elseBody, namespacePrefix)) {
-    return false;
+  {
+    BraceListGuard braceGuard(*this, true, true);
+    if (!parseBraceExprList(elseBody, namespacePrefix)) {
+      return false;
+    }
   }
   Expr thenCall;
   thenCall.kind = Expr::Kind::Call;
@@ -115,6 +125,76 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
   ifCall.args.push_back(std::move(elseCall));
   ifCall.argNames.push_back(std::nullopt);
   out = std::move(ifCall);
+  parsed = true;
+  return true;
+}
+
+bool Parser::tryParseLoopFormAfterName(Expr &out,
+                                       const std::string &namespacePrefix,
+                                       const std::string &keyword,
+                                       const std::vector<Transform> &transforms,
+                                       bool &parsed) {
+  parsed = false;
+  const size_t savedPos = pos_;
+  if (!match(TokenKind::LParen)) {
+    return true;
+  }
+  expect(TokenKind::LParen, "expected '(' after " + keyword);
+  std::vector<Expr> slots;
+  if (keyword == "for") {
+    BareBindingGuard bindingGuard(*this, true);
+    for (int i = 0; i < 3; ++i) {
+      Expr slot;
+      if (!parseExpr(slot, namespacePrefix)) {
+        return false;
+      }
+      slots.push_back(std::move(slot));
+    }
+  } else {
+    Expr slot;
+    {
+      BareBindingGuard bindingGuard(*this, false);
+      if (!parseExpr(slot, namespacePrefix)) {
+        return false;
+      }
+    }
+    slots.push_back(std::move(slot));
+  }
+  if (!match(TokenKind::RParen)) {
+    pos_ = savedPos;
+    return true;
+  }
+  expect(TokenKind::RParen, "expected ')' after " + keyword);
+  if (!match(TokenKind::LBrace)) {
+    pos_ = savedPos;
+    return true;
+  }
+  std::vector<Expr> body;
+  {
+    BraceListGuard braceGuard(*this, true, true);
+    if (!parseBraceExprList(body, namespacePrefix)) {
+      return false;
+    }
+  }
+  Expr bodyCall;
+  bodyCall.kind = Expr::Kind::Call;
+  bodyCall.name = "do";
+  bodyCall.namespacePrefix = namespacePrefix;
+  bodyCall.hasBodyArguments = true;
+  bodyCall.bodyArguments = std::move(body);
+
+  Expr loopCall;
+  loopCall.kind = Expr::Kind::Call;
+  loopCall.name = keyword;
+  loopCall.namespacePrefix = namespacePrefix;
+  loopCall.transforms = transforms;
+  for (auto &slot : slots) {
+    loopCall.args.push_back(std::move(slot));
+    loopCall.argNames.push_back(std::nullopt);
+  }
+  loopCall.args.push_back(std::move(bodyCall));
+  loopCall.argNames.push_back(std::nullopt);
+  out = std::move(loopCall);
   parsed = true;
   return true;
 }
@@ -217,7 +297,18 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       std::string nameError;
       if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
+        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+          return fail(nameError);
+        }
+      }
+      if (!bindingTransforms && isLoopFormKeyword(name.text)) {
+        bool parsedLoop = false;
+        if (!tryParseLoopFormAfterName(out, namespacePrefix, name.text, transforms, parsedLoop)) {
+          return false;
+        }
+        if (parsedLoop) {
+          return true;
+        }
       }
       std::vector<std::string> templateArgs;
       if (match(TokenKind::LAngle)) {
@@ -439,6 +530,16 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!validateIdentifierText(name.text, nameError)) {
         if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
           return fail(nameError);
+        }
+      }
+      if (isLoopFormKeyword(name.text)) {
+        bool parsedLoop = false;
+        const std::vector<Transform> noTransforms;
+        if (!tryParseLoopFormAfterName(out, namespacePrefix, name.text, noTransforms, parsedLoop)) {
+          return false;
+        }
+        if (parsedLoop) {
+          return true;
         }
       }
       std::vector<std::string> templateArgs;
