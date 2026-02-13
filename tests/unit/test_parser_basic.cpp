@@ -104,6 +104,38 @@ main() {
   CHECK(program.imports[3] == "/math/pi");
 }
 
+TEST_CASE("parses comma-separated transform lists") {
+  const std::string source = R"(
+[return<int>, effects(io_out)]
+main() {
+  print_line("hi"utf8)
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 2);
+  CHECK(program.definitions[0].transforms[0].name == "return");
+  CHECK(program.definitions[0].transforms[1].name == "effects");
+}
+
+TEST_CASE("parses single-quoted strings") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line('hi'utf8)
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &stmt = program.definitions[0].statements[0];
+  REQUIRE(stmt.kind == primec::Expr::Kind::Call);
+  REQUIRE(stmt.args.size() == 1);
+  CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
+}
+
 TEST_CASE("parses arguments without commas") {
   const std::string source = R"(
 [return<int>]
