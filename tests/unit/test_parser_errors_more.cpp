@@ -1549,6 +1549,21 @@ add([i32] left(1i32), [i32] right) {
   CHECK(error.find("parameter defaults must use braces") != std::string::npos);
 }
 
+TEST_CASE("parameter default rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+add([i32] left{[value] 1i32}, [i32] right) {
+  return(plus(left, right))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("parameter defaults do not accept named arguments") != std::string::npos);
+}
+
 TEST_CASE("call body requires parameter list") {
   const std::string source = R"(
 [return<int>]
