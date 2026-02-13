@@ -215,6 +215,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
 
   importAliases_.clear();
   for (const auto &importPath : program_.imports) {
+    if (importPath == "/math") {
+      error_ = "import /math is not supported; use import /math/* or /math/<name>";
+      return false;
+    }
     if (importPath.empty() || importPath[0] != '/') {
       error_ = "import path must be a slash path";
       return false;

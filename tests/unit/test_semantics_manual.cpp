@@ -119,6 +119,17 @@ TEST_CASE("return transform rejects multiple template arguments") {
   CHECK(error.find("return transform requires a type") != std::string::npos);
 }
 
+TEST_CASE("import math root is rejected") {
+  primec::Program program;
+  program.imports.push_back("/math");
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))},
+                     {makeCall("/return", {makeLiteral(1)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("import /math is not supported") != std::string::npos);
+}
+
 TEST_CASE("return transform rejects arguments") {
   primec::Program program;
   primec::Transform transform = makeTransform("return", std::string("int"));
