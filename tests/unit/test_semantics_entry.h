@@ -1596,6 +1596,46 @@ execute_repeat(2i32) { main() }
   CHECK(error.find("duplicate capabilities transform on /execute_repeat") != std::string::npos);
 }
 
+TEST_CASE("execution rejects invalid effects capability") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[effects("io"utf8)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid effects capability") != std::string::npos);
+}
+
+TEST_CASE("execution rejects invalid capability name") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[capabilities("io"utf8)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid capability") != std::string::npos);
+}
+
 TEST_CASE("execution rejects struct transform") {
   const std::string source = R"(
 [return<int>]
