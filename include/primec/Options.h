@@ -16,6 +16,7 @@ struct Options {
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8"};
   std::vector<TextTransformRule> textTransformRules;
   std::vector<std::string> semanticTransforms;
+  bool requireCanonicalSyntax = false;
   std::vector<std::string> defaultEffects;
   std::vector<std::string> programArgs;
   std::vector<std::string> includePaths;

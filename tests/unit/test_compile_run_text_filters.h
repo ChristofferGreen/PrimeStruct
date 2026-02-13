@@ -88,6 +88,42 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
+TEST_CASE("no transforms rejects if sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(true) { return(1i32) } else { return(2i32) }
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_if_sugar.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_if_sugar_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
+}
+
+TEST_CASE("no transforms rejects indexing sugar") {
+  const std::string source = R"(
+[return<int>]
+main([array<i32>] values) {
+  return(values[0i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_index_sugar.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_index_sugar_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("indexing sugar") != std::string::npos);
+}
+
 TEST_CASE("text filters none disables implicit utf8") {
   const std::string source = R"(
 [return<int> effects(io_out)]
@@ -274,14 +310,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_single_type_to_return_disabled.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_disabled_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_disabled_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
-                                 quoteShellArg(exePath) +
-                                 " --entry /main --no-transforms --transform-list=default,single_type_to_return";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null" +
+                                 " --entry /main --no-transforms --transform-list=default,single_type_to_return 2> " +
+                                 quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("explicit return transform") != std::string::npos);
 }
 
 TEST_CASE("per-envelope text transforms enable collections") {

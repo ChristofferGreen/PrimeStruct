@@ -405,6 +405,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.semanticTransforms.clear();
     }
   }
+  out.requireCanonicalSyntax = noTransforms;
   if (out.entryPath.empty()) {
     out.entryPath = "/main";
   } else if (out.entryPath[0] != '/') {
@@ -453,7 +454,7 @@ int main(int argc, char **argv) {
   }
 
   primec::Lexer lexer(filteredSource);
-  primec::Parser parser(lexer.tokenize());
+  primec::Parser parser(lexer.tokenize(), !options.requireCanonicalSyntax);
   primec::Program program;
   if (!parser.parse(program, error)) {
     std::cerr << "Parse error: " << error << "\n";

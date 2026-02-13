@@ -77,7 +77,8 @@ bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
 
 } // namespace
 
-Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
+Parser::Parser(std::vector<Token> tokens, bool allowSurfaceSyntax)
+    : tokens_(std::move(tokens)), allowSurfaceSyntax_(allowSurfaceSyntax) {}
 
 bool Parser::parse(Program &program, std::string &error) {
   error_ = &error;
@@ -296,6 +297,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
   } else {
     isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+  }
+  if (!allowSurfaceSyntax_ && isDefinition && !hasReturnTransform && !hasStructTransform) {
+    return fail("definition requires explicit return transform in canonical mode");
   }
   if (isDefinition && !hasReturnTransform && !hasStructTransform) {
     // Definitions without return transforms are allowed as long as they are unambiguous.
@@ -614,7 +618,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       def.statements.push_back(std::move(returnCall));
       continue;
     }
-    if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
+    if (allowSurfaceSyntax_ && match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       if (hasStatementTransforms) {
         return fail("if statement cannot have transforms");
       }
@@ -648,7 +652,8 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       }
 
       const bool bindingTransforms = isBindingTransformList(statementTransforms);
-      if (!bindingTransforms && (name.text == "loop" || name.text == "while" || name.text == "for")) {
+      if (allowSurfaceSyntax_ && !bindingTransforms &&
+          (name.text == "loop" || name.text == "while" || name.text == "for")) {
         Expr loopExpr;
         bool parsedLoop = false;
         if (!tryParseLoopFormAfterName(loopExpr, def.namespacePrefix, name.text, statementTransforms, parsedLoop)) {
@@ -725,6 +730,10 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
             continue;
           }
         } else {
+          if (!allowSurfaceSyntax_ &&
+              (callExpr.name == "if" || callExpr.name == "loop" || callExpr.name == "while" || callExpr.name == "for")) {
+            return fail("control-flow body sugar requires canonical call form");
+          }
           hasCallSyntax = true;
           callExpr.hasBodyArguments = true;
           if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {

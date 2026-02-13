@@ -11,7 +11,7 @@ namespace primec {
 
 class Parser {
 public:
-  explicit Parser(std::vector<Token> tokens);
+  explicit Parser(std::vector<Token> tokens, bool allowSurfaceSyntax = true);
 
   bool parse(Program &program, std::string &error);
 
@@ -119,6 +119,7 @@ private:
   bool allowBraceReturn_ = true;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
+  bool allowSurfaceSyntax_ = true;
 };
 
 } // namespace primec

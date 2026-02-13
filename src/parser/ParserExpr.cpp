@@ -35,6 +35,10 @@ bool isControlKeyword(const std::string &name) {
 bool isLoopFormKeyword(const std::string &name) {
   return name == "loop" || name == "while" || name == "for";
 }
+
+bool isSurfaceControlFlowBody(const std::string &name) {
+  return name == "if" || isLoopFormKeyword(name);
+}
 } // namespace
 
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
@@ -273,7 +277,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     return true;
   };
   auto parsePrimary = [&](Expr &out) -> bool {
-    if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
+    if (allowSurfaceSyntax_ && match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsed = false;
       if (!tryParseIfStatementSugar(out, namespacePrefix, parsed)) {
         return false;
@@ -301,7 +305,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           return fail(nameError);
         }
       }
-      if (!bindingTransforms && isLoopFormKeyword(name.text)) {
+      if (allowSurfaceSyntax_ && !bindingTransforms && isLoopFormKeyword(name.text)) {
         bool parsedLoop = false;
         if (!tryParseLoopFormAfterName(out, namespacePrefix, name.text, transforms, parsedLoop)) {
           return false;
@@ -337,6 +341,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           return false;
         }
         if (match(TokenKind::LBrace)) {
+          if (!allowSurfaceSyntax_ && isSurfaceControlFlowBody(call.name)) {
+            return fail("control-flow body sugar requires canonical call form");
+          }
           call.hasBodyArguments = true;
           if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
             return false;
@@ -532,7 +539,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           return fail(nameError);
         }
       }
-      if (isLoopFormKeyword(name.text)) {
+      if (allowSurfaceSyntax_ && isLoopFormKeyword(name.text)) {
         bool parsedLoop = false;
         const std::vector<Transform> noTransforms;
         if (!tryParseLoopFormAfterName(out, namespacePrefix, name.text, noTransforms, parsedLoop)) {
@@ -594,6 +601,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
             return fail("call body requires parameter list");
           }
         } else {
+          if (!allowSurfaceSyntax_ && isSurfaceControlFlowBody(call.name)) {
+            return fail("control-flow body sugar requires canonical call form");
+          }
           hasCallSyntax = true;
           call.hasBodyArguments = true;
           if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
@@ -684,6 +694,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
             break;
           }
         }
+      }
+      if (!allowSurfaceSyntax_) {
+        return fail("indexing sugar requires canonical at(value, index)");
       }
       expect(TokenKind::LBracket, "expected '[' after expression");
       Expr indexExpr;
