@@ -662,6 +662,22 @@ main() {
   CHECK(error.find("binding initializer arguments must be whitespace-separated") != std::string::npos);
 }
 
+TEST_CASE("binding initializer rejects named arguments with equals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{a /* label */ = 1i32}
+  return(value)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments must use [name] syntax") != std::string::npos);
+}
+
 TEST_CASE("binding initializer semicolons are rejected") {
   const std::string source = R"(
 [return<int>]
@@ -806,6 +822,26 @@ foo([i32] a) {
 [return<int>]
 main() {
   return(foo(a = 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("named arguments must use [name] syntax") != std::string::npos);
+}
+
+TEST_CASE("named arguments reject comment-separated equals") {
+  const std::string source = R"(
+[return<int>]
+foo([i32] a) {
+  return(a)
+}
+
+[return<int>]
+main() {
+  return(foo(a /* label */ = 1i32))
 }
 )";
   primec::Lexer lexer(source);

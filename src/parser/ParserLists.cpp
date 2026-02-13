@@ -346,6 +346,14 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     } else if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() &&
                tokens_[pos_ + 1].kind == TokenKind::Equal) {
       return fail("named arguments must use [name] syntax");
+    } else if (match(TokenKind::Identifier)) {
+      size_t scan = pos_ + 1;
+      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+        ++scan;
+      }
+      if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Equal) {
+        return fail("named arguments must use [name] syntax");
+      }
     }
     Expr arg;
     if (!parseExpr(arg, namespacePrefix)) {
@@ -417,6 +425,15 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
         }
       } else {
         pos_ = savedPos;
+      }
+    }
+    if (match(TokenKind::Identifier)) {
+      size_t scan = pos_ + 1;
+      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+        ++scan;
+      }
+      if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Equal) {
+        return fail("named arguments must use [name] syntax");
       }
     }
     Expr arg;
