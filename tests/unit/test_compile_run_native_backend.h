@@ -1392,6 +1392,23 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native explicit math imports") {
+  const std::string source = R"(
+import /math/min /math/pi
+[return<int>]
+main() {
+  return(plus(convert<int>(pi), min(7i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_explicit_imports.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_explicit_imports_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("rejects native unsupported math builtin") {
   const std::string source = R"(
 import /math/*

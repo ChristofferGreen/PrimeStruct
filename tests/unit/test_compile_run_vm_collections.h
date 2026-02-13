@@ -137,6 +137,25 @@ main() {
   CHECK(runCommand(runCmd) == 8);
 }
 
+TEST_CASE("runs vm with whitespace-separated imports") {
+  const std::string source = R"(
+import /util /math/*
+namespace util {
+  [return<int>]
+  add([i32] a, [i32] b) {
+    return(plus(a, b))
+  }
+}
+[return<int>]
+main() {
+  return(plus(add(2i32, 3i32), min(7i32, 3i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_import_whitespace.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 8);
+}
+
 TEST_CASE("runs vm with capabilities and default effects") {
   const std::string source = R"(
 [return<int> capabilities(io_out)]
