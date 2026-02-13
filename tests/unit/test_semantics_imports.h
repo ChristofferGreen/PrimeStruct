@@ -19,6 +19,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import resolves definitions declared before import") {
+  const std::string source = R"(
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+import /util
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import resolves struct types and constructors") {
   const std::string source = R"(
 import /util
