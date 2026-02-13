@@ -49,6 +49,8 @@ an auto-deducing shorthand that routes each transform name to its declared phase
 ambiguous names are errors. `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms`
 disable transforms.
 
+Use `--emit=ir` to write serialized PSIR bytecode to the output path after semantic validation.
+
 ## 2. Lexical Structure
 
 ### 2.1 Identifiers

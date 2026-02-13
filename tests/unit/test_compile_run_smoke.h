@@ -58,6 +58,39 @@ main() {
   CHECK(runCommand(quoteShellArg(outputPath.string())) == 5);
 }
 
+TEST_CASE("emits PSIR bytecode with --emit=ir") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(3i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_ir.prime", source);
+  const std::string irPath = (std::filesystem::temp_directory_path() / "primec_emit_ir.psir").string();
+
+  const std::string compileCmd =
+      "./primec --emit=ir " + quoteShellArg(srcPath) + " -o " + quoteShellArg(irPath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(irPath));
+
+  std::ifstream file(irPath, std::ios::binary);
+  REQUIRE(file.good());
+  file.seekg(0, std::ios::end);
+  std::streamsize size = file.tellg();
+  file.seekg(0, std::ios::beg);
+  std::vector<uint8_t> data;
+  if (size > 0) {
+    data.resize(static_cast<size_t>(size));
+    file.read(reinterpret_cast<char *>(data.data()), size);
+  }
+  CHECK(!data.empty());
+
+  primec::IrModule module;
+  std::string error;
+  CHECK(primec::deserializeIr(data, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("primevm forwards entry args") {
   const std::string source = R"(
 [return<int> effects(io_out)]
