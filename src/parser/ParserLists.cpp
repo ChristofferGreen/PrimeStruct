@@ -10,15 +10,6 @@ namespace primec {
 using namespace parser;
 
 namespace {
-bool isBindingQualifierName(const std::string &name) {
-  return name == "public" || name == "private" || name == "package" || name == "static";
-}
-
-bool isBindingAuxTransformName(const std::string &name) {
-  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
-         name == "pod" || name == "handle" || name == "gpu_lane" || isBindingQualifierName(name);
-}
-
 bool isArgumentLabelValueStart(TokenKind kind) {
   switch (kind) {
     case TokenKind::Identifier:

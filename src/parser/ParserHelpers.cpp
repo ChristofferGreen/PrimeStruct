@@ -210,4 +210,41 @@ bool isValidFloatLiteral(const std::string &text) {
   return i == text.size();
 }
 
+bool isBindingAuxTransformName(const std::string &name) {
+  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" ||
+         name == "align_kbytes" || name == "pod" || name == "handle" || name == "gpu_lane" ||
+         name == "public" || name == "private" || name == "package" || name == "static";
+}
+
+bool hasExplicitBindingTypeTransform(const std::vector<Transform> &transforms) {
+  for (const auto &transform : transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool isBindingTransformList(const std::vector<Transform> &transforms) {
+  if (transforms.empty()) {
+    return false;
+  }
+  if (hasExplicitBindingTypeTransform(transforms)) {
+    return true;
+  }
+  for (const auto &transform : transforms) {
+    if (isBindingAuxTransformName(transform.name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace primec::parser

@@ -759,27 +759,85 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
       callExpr.name = name.text;
       callExpr.namespacePrefix = def.namespacePrefix;
       callExpr.transforms = std::move(statementTransforms);
-      callExpr.isBinding = !callExpr.transforms.empty();
+      const bool bindingTransforms = isBindingTransformList(callExpr.transforms);
+      bool hasCallSyntax = false;
+      bool sawParen = false;
       if (match(TokenKind::LAngle)) {
         if (!parseTemplateList(callExpr.templateArgs)) {
           return false;
         }
       }
       if (match(TokenKind::LParen)) {
-        return fail("binding initializers must use braces");
+        if (bindingTransforms) {
+          return fail("binding initializers must use braces");
+        }
+        BareBindingGuard bindingGuard(*this, true);
+        expect(TokenKind::LParen, "expected '(' after identifier");
+        hasCallSyntax = true;
+        sawParen = true;
+        if (!parseCallArgumentList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
+          return false;
+        }
+        if (!validateNamedArgumentOrdering(callExpr.argNames)) {
+          return false;
+        }
+        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+          return false;
+        }
       }
       if (match(TokenKind::LBrace)) {
-        if (!parseBindingInitializerList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
-          return false;
+        if (!sawParen) {
+          if (!bindingTransforms) {
+            if (callExpr.name == "block") {
+              hasCallSyntax = true;
+              callExpr.hasBodyArguments = true;
+              if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+                return false;
+              }
+              def.statements.push_back(std::move(callExpr));
+              continue;
+            }
+            return fail("call body requires parameter list");
+          }
+          if (callExpr.name == "block") {
+            hasCallSyntax = true;
+            callExpr.hasBodyArguments = true;
+            if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+              return false;
+            }
+          } else {
+            if (!callExpr.templateArgs.empty()) {
+              return fail("template arguments require a call");
+            }
+            callExpr.isBinding = true;
+            if (!parseBindingInitializerList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
+              return false;
+            }
+            if (!finalizeBindingInitializer(callExpr)) {
+              return false;
+            }
+            def.statements.push_back(std::move(callExpr));
+            continue;
+          }
+        } else {
+          hasCallSyntax = true;
+          callExpr.hasBodyArguments = true;
+          if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+            return false;
+          }
         }
-        if (!finalizeBindingInitializer(callExpr)) {
-          return false;
-        }
-      } else {
+      }
+      if (hasCallSyntax) {
+        def.statements.push_back(std::move(callExpr));
+        continue;
+      }
+      if (!callExpr.templateArgs.empty()) {
+        return fail("template arguments require a call");
+      }
+      if (bindingTransforms) {
         return fail("binding requires initializer");
       }
-      def.statements.push_back(std::move(callExpr));
-      continue;
+      return fail("transform-prefixed execution requires arguments");
     }
 
     Expr statementExpr;

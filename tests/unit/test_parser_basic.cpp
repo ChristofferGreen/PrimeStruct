@@ -135,6 +135,24 @@ main() {
   CHECK(program.definitions[0].transforms[3].name == "effects");
 }
 
+TEST_CASE("parses transform-prefixed execution") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [effects(io_out)] print_line("hi"utf8)
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &stmt = program.definitions[0].statements[0];
+  REQUIRE(stmt.kind == primec::Expr::Kind::Call);
+  CHECK(stmt.name == "print_line");
+  REQUIRE(stmt.transforms.size() == 1);
+  CHECK(stmt.transforms[0].name == "effects");
+}
+
 TEST_CASE("parses single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]

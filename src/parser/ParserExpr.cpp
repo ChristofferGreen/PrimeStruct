@@ -210,14 +210,15 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!parseTransformList(transforms)) {
         return false;
       }
-    Token name = consume(TokenKind::Identifier, "expected identifier");
-    if (name.kind == TokenKind::End) {
-      return false;
-    }
-    std::string nameError;
-    if (!validateIdentifierText(name.text, nameError)) {
-      return fail(nameError);
-    }
+      const bool bindingTransforms = isBindingTransformList(transforms);
+      Token name = consume(TokenKind::Identifier, "expected identifier");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
+      }
       std::vector<std::string> templateArgs;
       if (match(TokenKind::LAngle)) {
         if (!parseTemplateList(templateArgs)) {
@@ -230,22 +231,58 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.namespacePrefix = namespacePrefix;
       call.templateArgs = std::move(templateArgs);
       call.transforms = std::move(transforms);
-      call.isBinding = true;
       if (match(TokenKind::LParen)) {
-        return fail("binding initializers must use braces");
+        if (bindingTransforms) {
+          return fail("binding initializers must use braces");
+        }
+        expect(TokenKind::LParen, "expected '(' after identifier");
+        if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
+          return false;
+        }
+        if (!validateNamedArgumentOrdering(call.argNames)) {
+          return false;
+        }
+        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+          return false;
+        }
+        if (match(TokenKind::LBrace)) {
+          call.hasBodyArguments = true;
+          if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            return false;
+          }
+        }
+        out = std::move(call);
+        return true;
       }
       if (match(TokenKind::LBrace)) {
+        if (!bindingTransforms) {
+          if (call.name == "block") {
+            call.hasBodyArguments = true;
+            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+              return false;
+            }
+            out = std::move(call);
+            return true;
+          }
+          return fail("call body requires parameter list");
+        }
+        if (!call.templateArgs.empty()) {
+          return fail("template arguments require a call");
+        }
+        call.isBinding = true;
         if (!parseBindingInitializerList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }
         if (!finalizeBindingInitializer(call)) {
           return false;
         }
-      } else {
+        out = std::move(call);
+        return true;
+      }
+      if (bindingTransforms) {
         return fail("binding requires initializer");
       }
-      out = std::move(call);
-      return true;
+      return fail("transform-prefixed execution requires arguments");
     }
     if (match(TokenKind::Number)) {
       Token number = consume(TokenKind::Number, "expected number");
