@@ -5,8 +5,16 @@
 
 namespace primec {
 
+struct TextTransformRule {
+  std::string path;
+  bool wildcard = false;
+  bool recursive = false;
+  std::vector<std::string> transforms;
+};
+
 struct TextFilterOptions {
   std::vector<std::string> enabledFilters = {"collections", "operators", "implicit-utf8"};
+  std::vector<TextTransformRule> rules;
 
   bool hasFilter(const std::string &name) const {
     for (const auto &filter : enabledFilters) {

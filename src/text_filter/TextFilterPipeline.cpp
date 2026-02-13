@@ -933,13 +933,14 @@ bool scanTransformList(const std::string &input, size_t start, TransformListScan
   return true;
 }
 
-bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envelopeEnd) {
+bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envelopeEnd, std::string &nameOut) {
   size_t pos = start;
   skipWhitespaceAndComments(input, pos);
   std::string name;
   if (!parseIdentifier(input, pos, name)) {
     return false;
   }
+  nameOut = name;
   skipWhitespaceAndComments(input, pos);
   if (pos < input.size() && input[pos] == '<') {
     size_t close = findMatchingCloseWithComments(input, pos, '<', '>');
@@ -1015,6 +1016,175 @@ size_t findNextTransformListStart(const std::string &input, size_t start) {
   return std::string::npos;
 }
 
+struct NamespaceBlock {
+  std::string name;
+  size_t end = std::string::npos;
+};
+
+bool isNamespaceKeywordAt(const std::string &input, size_t pos) {
+  constexpr const char *kNamespace = "namespace";
+  constexpr size_t kNamespaceLen = 9;
+  if (pos + kNamespaceLen > input.size()) {
+    return false;
+  }
+  if (input.compare(pos, kNamespaceLen, kNamespace) != 0) {
+    return false;
+  }
+  if (pos > 0 && isIdentifierBody(input[pos - 1])) {
+    return false;
+  }
+  size_t after = pos + kNamespaceLen;
+  if (after < input.size() && isIdentifierBody(input[after])) {
+    return false;
+  }
+  return true;
+}
+
+bool parseNamespaceBlock(const std::string &input, size_t start, size_t &afterPos, NamespaceBlock &block) {
+  if (!isNamespaceKeywordAt(input, start)) {
+    return false;
+  }
+  size_t pos = start + 9;
+  skipWhitespaceAndComments(input, pos);
+  std::string name;
+  if (!parseIdentifier(input, pos, name)) {
+    return false;
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  skipWhitespaceAndComments(input, pos);
+  if (pos >= input.size() || input[pos] != '{') {
+    return false;
+  }
+  size_t close = findMatchingCloseWithComments(input, pos, '{', '}');
+  if (close == std::string::npos) {
+    return false;
+  }
+  block.name = name;
+  block.end = close;
+  afterPos = pos + 1;
+  return true;
+}
+
+void advanceNamespaceScan(const std::string &input,
+                          size_t &scanPos,
+                          size_t targetPos,
+                          std::vector<NamespaceBlock> &stack) {
+  while (scanPos < targetPos) {
+    char c = input[scanPos];
+    if (c == '"' || c == '\'') {
+      size_t end = skipQuotedForward(input, scanPos);
+      if (end == std::string::npos) {
+        scanPos = targetPos;
+        break;
+      }
+      scanPos = end;
+      continue;
+    }
+    if (c == 'R' && scanPos + 2 < input.size() && input[scanPos + 1] == '"' && input[scanPos + 2] == '(') {
+      size_t end = input.find(")\"", scanPos + 3);
+      if (end == std::string::npos) {
+        scanPos = targetPos;
+        break;
+      }
+      scanPos = end + 2;
+      continue;
+    }
+    if (c == '/' && scanPos + 1 < input.size()) {
+      if (input[scanPos + 1] == '/') {
+        scanPos += 2;
+        while (scanPos < targetPos && input[scanPos] != '\n') {
+          ++scanPos;
+        }
+        continue;
+      }
+      if (input[scanPos + 1] == '*') {
+        size_t end = input.find("*/", scanPos + 2);
+        if (end == std::string::npos) {
+          scanPos = targetPos;
+          break;
+        }
+        scanPos = end + 2;
+        continue;
+      }
+    }
+    NamespaceBlock block;
+    size_t afterPos = scanPos;
+    if (parseNamespaceBlock(input, scanPos, afterPos, block)) {
+      stack.push_back(std::move(block));
+      scanPos = afterPos;
+      continue;
+    }
+    ++scanPos;
+  }
+  while (!stack.empty() && stack.back().end < targetPos) {
+    stack.pop_back();
+  }
+}
+
+std::string buildNamespacePrefix(const std::string &basePrefix, const std::vector<NamespaceBlock> &stack) {
+  std::string prefix = basePrefix;
+  for (const auto &entry : stack) {
+    if (prefix.empty()) {
+      prefix = "/" + entry.name;
+    } else {
+      prefix.append("/");
+      prefix.append(entry.name);
+    }
+  }
+  return prefix;
+}
+
+std::string makeFullPath(const std::string &name, const std::string &prefix) {
+  if (!name.empty() && name[0] == '/') {
+    return name;
+  }
+  if (prefix.empty()) {
+    return "/" + name;
+  }
+  return prefix + "/" + name;
+}
+
+bool ruleMatchesPath(const TextTransformRule &rule, const std::string &path) {
+  if (rule.wildcard) {
+    if (rule.path.empty()) {
+      if (path.empty() || path[0] != '/') {
+        return false;
+      }
+      if (rule.recursive) {
+        return true;
+      }
+      return path.find('/', 1) == std::string::npos;
+    }
+    if (path.size() <= rule.path.size()) {
+      return false;
+    }
+    if (path.compare(0, rule.path.size(), rule.path) != 0) {
+      return false;
+    }
+    if (path[rule.path.size()] != '/') {
+      return false;
+    }
+    if (rule.recursive) {
+      return true;
+    }
+    return path.find('/', rule.path.size() + 1) == std::string::npos;
+  }
+  return path == rule.path;
+}
+
+const std::vector<std::string> *selectRuleTransforms(const std::vector<TextTransformRule> &rules,
+                                                     const std::string &path) {
+  const std::vector<std::string> *match = nullptr;
+  for (const auto &rule : rules) {
+    if (ruleMatchesPath(rule, path)) {
+      match = &rule.transforms;
+    }
+  }
+  return match;
+}
+
 bool applyFiltersToChunk(const std::string &input,
                          std::string &output,
                          std::string &error,
@@ -1045,16 +1215,21 @@ bool applyPerEnvelope(const std::string &input,
                       std::string &output,
                       std::string &error,
                       const std::vector<std::string> &filters,
-                      bool suppressLeadingOverride) {
+                      const std::vector<TextTransformRule> &rules,
+                      bool suppressLeadingOverride,
+                      const std::string &baseNamespacePrefix) {
   output.clear();
   size_t pos = 0;
   size_t scanPos = 0;
   bool suppress = suppressLeadingOverride;
+  std::vector<NamespaceBlock> namespaceStack;
   while (scanPos < input.size()) {
     size_t listStart = findNextTransformListStart(input, scanPos);
     if (listStart == std::string::npos) {
       break;
     }
+    advanceNamespaceScan(input, scanPos, listStart, namespaceStack);
+    std::string namespacePrefix = buildNamespacePrefix(baseNamespacePrefix, namespaceStack);
     TransformListScan listScan;
     if (!scanTransformList(input, listStart, listScan)) {
       break;
@@ -1065,7 +1240,8 @@ bool applyPerEnvelope(const std::string &input,
       continue;
     }
     size_t envelopeEnd = std::string::npos;
-    if (!scanEnvelopeAfterList(input, listScan.end + 1, envelopeEnd)) {
+    std::string envelopeName;
+    if (!scanEnvelopeAfterList(input, listScan.end + 1, envelopeEnd, envelopeName)) {
       scanPos = listScan.end + 1;
       suppress = false;
       continue;
@@ -1077,10 +1253,17 @@ bool applyPerEnvelope(const std::string &input,
     }
     output.append(filteredChunk);
     std::string envelope = input.substr(listStart, envelopeEnd - listStart + 1);
+    const std::vector<std::string> *autoFilters = &filters;
+    if (!rules.empty()) {
+      std::string fullPath = makeFullPath(envelopeName, namespacePrefix);
+      if (const auto *ruleFilters = selectRuleTransforms(rules, fullPath)) {
+        autoFilters = ruleFilters;
+      }
+    }
     const std::vector<std::string> &envelopeFilters =
-        listScan.textTransforms.empty() ? filters : listScan.textTransforms;
+        listScan.textTransforms.empty() ? *autoFilters : listScan.textTransforms;
     std::string filteredEnvelope;
-    if (!applyPerEnvelope(envelope, filteredEnvelope, error, envelopeFilters, true)) {
+    if (!applyPerEnvelope(envelope, filteredEnvelope, error, envelopeFilters, rules, true, namespacePrefix)) {
       return false;
     }
     output.append(filteredEnvelope);
@@ -1105,10 +1288,10 @@ bool TextFilterPipeline::apply(const std::string &input,
                                const TextFilterOptions &options) const {
   output = input;
   error.clear();
-  if (options.enabledFilters.empty()) {
+  if (options.enabledFilters.empty() && options.rules.empty()) {
     return true;
   }
-  return applyPerEnvelope(input, output, error, options.enabledFilters, false);
+  return applyPerEnvelope(input, output, error, options.enabledFilters, options.rules, false, "");
 }
 
 } // namespace primec

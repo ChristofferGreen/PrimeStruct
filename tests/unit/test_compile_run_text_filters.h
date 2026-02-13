@@ -318,6 +318,65 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
+TEST_CASE("text transform rules apply to namespace paths") {
+  const std::string source = R"(
+namespace math {
+  [return<int>]
+  add() {
+    return(1i32+2i32)
+  }
+}
+
+[return<int>]
+main() {
+  return(/math/add())
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_namespace.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_namespace_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=/math/*=operators";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules recurse when requested") {
+  const std::string source = R"(
+namespace math {
+  namespace ops {
+    [return<int>]
+    add() {
+      return(1i32+2i32)
+    }
+  }
+}
+
+[return<int>]
+main() {
+  return(/math/ops/add())
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_recurse.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_recurse_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_recurse_err.txt").string();
+
+  const std::string noRecurseCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/math/*=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(noRecurseCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+
+  const std::string recurseCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=/math/*:recurse=operators";
+  CHECK(runCommand(recurseCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("dump pre_ast shows includes and text filters") {
   const std::string libPath =
       writeTemp("compile_dump_pre_ast_lib.prime", "// PRE_AST_LIB\n[return<int>]\nhelper(){ return(1i32) }\n");

@@ -160,6 +160,94 @@ bool parseTransformListAuto(const std::string &text,
   return true;
 }
 
+bool parseTransformRule(const std::string &text,
+                        const std::vector<std::string> &defaults,
+                        primec::TextTransformRule &rule,
+                        std::string &error) {
+  size_t sep = text.find('=');
+  if (sep == std::string::npos) {
+    error = "transform rule must include '=': " + text;
+    return false;
+  }
+  std::string pathSpec = trimWhitespace(text.substr(0, sep));
+  std::string listSpec = trimWhitespace(text.substr(sep + 1));
+  if (pathSpec.empty()) {
+    error = "transform rule path cannot be empty";
+    return false;
+  }
+  if (listSpec.empty()) {
+    error = "transform rule list cannot be empty";
+    return false;
+  }
+  constexpr std::string_view recurseSuffix = ":recurse";
+  constexpr std::string_view recursiveSuffix = ":recursive";
+  bool recursive = false;
+  if (pathSpec.size() >= recurseSuffix.size() &&
+      pathSpec.compare(pathSpec.size() - recurseSuffix.size(), recurseSuffix.size(), recurseSuffix) == 0) {
+    recursive = true;
+    pathSpec = trimWhitespace(pathSpec.substr(0, pathSpec.size() - recurseSuffix.size()));
+  } else if (pathSpec.size() >= recursiveSuffix.size() &&
+             pathSpec.compare(pathSpec.size() - recursiveSuffix.size(), recursiveSuffix.size(), recursiveSuffix) == 0) {
+    recursive = true;
+    pathSpec = trimWhitespace(pathSpec.substr(0, pathSpec.size() - recursiveSuffix.size()));
+  }
+  bool wildcard = false;
+  if (pathSpec.size() >= 2 && pathSpec.compare(pathSpec.size() - 2, 2, "/*") == 0) {
+    wildcard = true;
+    pathSpec = trimWhitespace(pathSpec.substr(0, pathSpec.size() - 2));
+  }
+  if (!pathSpec.empty() && pathSpec[0] != '/') {
+    error = "transform rule path must start with '/': " + pathSpec;
+    return false;
+  }
+  if (pathSpec.find('*') != std::string::npos) {
+    error = "transform rule '*' is only allowed as trailing '/*'";
+    return false;
+  }
+  if (recursive && !wildcard) {
+    error = "transform rule recursion requires a '/*' suffix";
+    return false;
+  }
+  rule.path = pathSpec;
+  rule.wildcard = wildcard;
+  rule.recursive = recursive;
+  if (!parseTransformListForPhase(listSpec, defaults, true, rule.transforms, error)) {
+    return false;
+  }
+  return true;
+}
+
+bool parseTransformRules(const std::string &text,
+                         const std::vector<std::string> &defaults,
+                         std::vector<primec::TextTransformRule> &out,
+                         std::string &error) {
+  out.clear();
+  size_t start = 0;
+  while (start <= text.size()) {
+    size_t end = text.find(';', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    std::string token = trimWhitespace(text.substr(start, end - start));
+    if (!token.empty()) {
+      if (token == "none") {
+        out.clear();
+      } else {
+        primec::TextTransformRule rule;
+        if (!parseTransformRule(token, defaults, rule, error)) {
+          return false;
+        }
+        out.push_back(std::move(rule));
+      }
+    }
+    if (end == text.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return true;
+}
+
 std::vector<std::string> parseDefaultEffects(const std::string &text) {
   std::vector<std::string> effects;
   size_t start = 0;
@@ -251,6 +339,17 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
                                       error)) {
         return false;
       }
+    } else if (arg == "--text-transform-rules" && i + 1 < argc) {
+      if (!parseTransformRules(argv[++i], defaultTextFilters(), out.textTransformRules, error)) {
+        return false;
+      }
+    } else if (arg.rfind("--text-transform-rules=", 0) == 0) {
+      if (!parseTransformRules(arg.substr(std::string("--text-transform-rules=").size()),
+                               defaultTextFilters(),
+                               out.textTransformRules,
+                               error)) {
+        return false;
+      }
     } else if (arg == "--semantic-transforms" && i + 1 < argc) {
       if (!parseTransformListForPhase(argv[++i], defaultSemanticTransforms(), false, out.semanticTransforms, error)) {
         return false;
@@ -295,10 +394,12 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
   }
   if (noTransforms) {
     out.textFilters.clear();
+    out.textTransformRules.clear();
     out.semanticTransforms.clear();
   } else {
     if (noTextTransforms) {
       out.textFilters.clear();
+      out.textTransformRules.clear();
     }
     if (noSemanticTransforms) {
       out.semanticTransforms.clear();
@@ -321,8 +422,8 @@ int main(int argc, char **argv) {
       std::cerr << "Argument error: " << argError << "\n";
     }
     std::cerr << "Usage: primevm <input.prime> [--entry /path] [--include-path <dir>] [--text-filters <list>] "
-                 "[--text-transforms <list>] [--semantic-transforms <list>] [--transform-list <list>] "
-                 "[--no-text-transforms] [--no-semantic-transforms] [--no-transforms] "
+                 "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transforms <list>] "
+                 "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] [--no-transforms] "
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] "
                  "[-- <program args...>]\n";
     return 2;
@@ -339,6 +440,7 @@ int main(int argc, char **argv) {
   primec::TextFilterPipeline textPipeline;
   primec::TextFilterOptions textOptions;
   textOptions.enabledFilters = options.textFilters;
+  textOptions.rules = options.textTransformRules;
   std::string filteredSource;
   if (!textPipeline.apply(source, filteredSource, error, textOptions)) {
     std::cerr << "Transform error: " << error << "\n";
