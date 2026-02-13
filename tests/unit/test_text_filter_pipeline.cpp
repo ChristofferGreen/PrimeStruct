@@ -1030,6 +1030,18 @@ TEST_CASE("rewrites plus with hex literals") {
   CHECK(output.find("plus(0x1i32, 0x2i32)") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus with comma-separated literal") {
+  const std::string source = "main(){ return(1,000+2) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"collections", "operators", "implicit-i32"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("plus(1,000i32, 2i32)") != std::string::npos);
+}
+
 TEST_CASE("does not change suffixed integer literals") {
   const std::string source = "main(){ return(42i32) }\n";
   primec::TextFilterPipeline pipeline;

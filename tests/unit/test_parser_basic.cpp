@@ -794,6 +794,20 @@ main() {
   CHECK(program.definitions[0].returnExpr->literalValue == 42);
 }
 
+TEST_CASE("parses integer literals with comma separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1,000i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(program.definitions[0].returnExpr->literalValue == 1000);
+}
+
 TEST_CASE("parses i64 and u64 integer literals") {
   const std::string source = R"(
 [return<int>]
@@ -836,6 +850,21 @@ main() {
   REQUIRE(program.definitions[0].returnExpr.has_value());
   CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
   CHECK(program.definitions[0].returnExpr->floatValue == "1.25");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses float literals with comma separators") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1,000.5f32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "1000.5");
   CHECK(program.definitions[0].returnExpr->floatWidth == 32);
 }
 

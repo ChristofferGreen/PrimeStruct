@@ -39,6 +39,32 @@ bool isHexDigitChar(char c) {
   return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+bool isNumericSeparator(const std::string &text, size_t index) {
+  if (index == 0 || index + 1 >= text.size()) {
+    return false;
+  }
+  if (text[index] != ',') {
+    return false;
+  }
+  if (!isDigitChar(text[index - 1]) || !isDigitChar(text[index + 1])) {
+    return false;
+  }
+  size_t scan = index;
+  while (scan > 0 && (isDigitChar(text[scan - 1]) || text[scan - 1] == ',')) {
+    --scan;
+  }
+  if (scan > 0) {
+    char prev = text[scan - 1];
+    if (isTokenChar(prev) || prev == '.' || prev == 'e' || prev == 'E') {
+      return false;
+    }
+    if ((prev == '+' || prev == '-') && scan >= 2 && (text[scan - 2] == 'e' || text[scan - 2] == 'E')) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool isUnaryPrefixPosition(const std::string &input, size_t index) {
   if (index == 0) {
     return true;
@@ -251,7 +277,7 @@ size_t findLeftTokenStart(const std::string &text, size_t end) {
   }
   while (start > 0) {
     char c = text[start - 1];
-    if (isOperatorTokenChar(c) || isExponentSign(text, start - 1)) {
+    if (isOperatorTokenChar(c) || isExponentSign(text, start - 1) || isNumericSeparator(text, start - 1)) {
       --start;
       continue;
     }
@@ -292,7 +318,7 @@ size_t findRightTokenEnd(const std::string &text, size_t start) {
   }
   size_t pos = start;
   while (pos < text.size()) {
-    if (isOperatorTokenChar(text[pos]) || isExponentSign(text, pos)) {
+    if (isOperatorTokenChar(text[pos]) || isExponentSign(text, pos) || isNumericSeparator(text, pos)) {
       ++pos;
       continue;
     }
@@ -435,7 +461,14 @@ std::string maybeAppendI32(const std::string &token) {
   }
   bool isDecimal = true;
   for (size_t i = start; i < token.size(); ++i) {
-    if (!isDigitChar(token[i])) {
+    char c = token[i];
+    if (isDigitChar(c)) {
+      continue;
+    }
+    if (c == ',' && i > start && i + 1 < token.size() && isDigitChar(token[i - 1]) && isDigitChar(token[i + 1])) {
+      continue;
+    }
+    if (!isDigitChar(c)) {
       isDecimal = false;
       break;
     }
@@ -445,7 +478,15 @@ std::string maybeAppendI32(const std::string &token) {
   }
   if (token.size() > start + 2 && token[start] == '0' && (token[start + 1] == 'x' || token[start + 1] == 'X')) {
     for (size_t i = start + 2; i < token.size(); ++i) {
-      if (!isHexDigitChar(token[i])) {
+      char c = token[i];
+      if (isHexDigitChar(c)) {
+        continue;
+      }
+      if (c == ',' && i > start + 2 && i + 1 < token.size() && isHexDigitChar(token[i - 1]) &&
+          isHexDigitChar(token[i + 1])) {
+        continue;
+      }
+      if (!isHexDigitChar(c)) {
         return token;
       }
     }

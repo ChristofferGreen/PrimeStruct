@@ -39,6 +39,20 @@ bool isLoopFormKeyword(const std::string &name) {
 bool isSurfaceControlFlowBody(const std::string &name) {
   return name == "if" || isLoopFormKeyword(name);
 }
+
+std::string stripNumericSeparators(const std::string &text) {
+  if (text.find(',') == std::string::npos) {
+    return text;
+  }
+  std::string cleaned;
+  cleaned.reserve(text.size());
+  for (char c : text) {
+    if (c != ',') {
+      cleaned.push_back(c);
+    }
+  }
+  return cleaned;
+}
 } // namespace
 
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
@@ -425,6 +439,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         if (!isFloat) {
           return fail("integer literal requires i32/i64/u64 suffix");
         }
+        text = stripNumericSeparators(text);
         if (!isValidFloatLiteral(text)) {
           return fail("invalid float literal");
         }
@@ -435,6 +450,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       out.kind = Expr::Kind::Literal;
       text = text.substr(0, text.size() - suffixLen);
+      text = stripNumericSeparators(text);
       if (text.empty()) {
         return fail("invalid integer literal");
       }

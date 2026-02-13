@@ -585,12 +585,32 @@ bool applyPass(const std::string &input,
           isHex = true;
           i += 2;
           digitsStart = i;
-          while (i < input.size() && isHexDigitChar(input[i])) {
-            ++i;
+          bool sawDigit = false;
+          while (i < input.size()) {
+            if (isHexDigitChar(input[i])) {
+              sawDigit = true;
+              ++i;
+              continue;
+            }
+            if (input[i] == ',' && sawDigit && i + 1 < input.size() && isHexDigitChar(input[i + 1])) {
+              ++i;
+              continue;
+            }
+            break;
           }
         } else {
-          while (i < input.size() && isDigitChar(input[i])) {
-            ++i;
+          bool sawDigit = false;
+          while (i < input.size()) {
+            if (isDigitChar(input[i])) {
+              sawDigit = true;
+              ++i;
+              continue;
+            }
+            if (input[i] == ',' && sawDigit && i + 1 < input.size() && isDigitChar(input[i + 1])) {
+              ++i;
+              continue;
+            }
+            break;
           }
         }
         size_t digitsEnd = i;

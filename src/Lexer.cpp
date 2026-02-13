@@ -125,12 +125,35 @@ Token Lexer::readNumber() {
     isHex = true;
     advance();
     advance();
-    while (pos_ < source_.size() && isHexDigitChar(source_[pos_])) {
-      advance();
+    bool sawDigit = false;
+    while (pos_ < source_.size()) {
+      char c = source_[pos_];
+      if (isHexDigitChar(c)) {
+        sawDigit = true;
+        advance();
+        continue;
+      }
+      if (c == ',' && sawDigit && pos_ + 1 < source_.size() && isHexDigitChar(source_[pos_ + 1])) {
+        advance();
+        continue;
+      }
+      break;
     }
   } else {
-    while (pos_ < source_.size() && std::isdigit(static_cast<unsigned char>(source_[pos_]))) {
-      advance();
+    bool sawDigit = false;
+    while (pos_ < source_.size()) {
+      char c = source_[pos_];
+      if (std::isdigit(static_cast<unsigned char>(c))) {
+        sawDigit = true;
+        advance();
+        continue;
+      }
+      if (c == ',' && sawDigit && pos_ + 1 < source_.size() &&
+          std::isdigit(static_cast<unsigned char>(source_[pos_ + 1]))) {
+        advance();
+        continue;
+      }
+      break;
     }
     if (pos_ < source_.size() && source_[pos_] == '.') {
       advance();
