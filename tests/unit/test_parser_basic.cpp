@@ -120,6 +120,21 @@ main() {
   CHECK(expr.args.size() == 2);
 }
 
+TEST_CASE("parses transform arguments with slash paths") {
+  const std::string source = R"(
+[custom(/util/io)]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  const auto &transform = program.definitions[0].transforms[0];
+  REQUIRE(transform.arguments.size() == 1);
+  CHECK(transform.arguments[0] == "/util/io");
+}
+
 TEST_CASE("parses parameters without commas") {
   const std::string source = R"(
 [return<int>]
