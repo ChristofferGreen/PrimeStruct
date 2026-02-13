@@ -136,6 +136,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression requires a value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{ })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block expression requires a value") != std::string::npos);
+}
+
+TEST_CASE("block expression must end with expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{
+    [i32] value{1i32}
+  })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block expression must end with an expression") != std::string::npos);
+}
+
 TEST_CASE("if missing else fails") {
   const std::string source = R"(
 [return<int>]
