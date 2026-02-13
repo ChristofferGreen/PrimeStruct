@@ -87,7 +87,7 @@ execute_repeat(3i32) { main() }
 
 TEST_CASE("parses import paths with comments") {
   const std::string source = R"(
-import /util /* inline comment */ , /* gap */ /math/*
+import /util /* inline comment */ , /* gap */ /math/ /* star gap */ *
 import /math/sin // trailing comment
 import /math/pi /* block comment */
 

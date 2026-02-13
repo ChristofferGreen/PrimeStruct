@@ -116,11 +116,15 @@ bool Parser::parse(Program &program, std::string &error) {
       }
       if (tokens_[scan].kind == TokenKind::Identifier) {
         std::string path = tokens_[scan].text;
-        if (!path.empty() && path.back() == '/' && scan + 1 < tokens_.size() &&
-            tokens_[scan + 1].kind == TokenKind::Star) {
+        size_t next = scan + 1;
+        while (next < tokens_.size() && tokens_[next].kind == TokenKind::Comment) {
+          ++next;
+        }
+        if (!path.empty() && path.back() == '/' && next < tokens_.size() &&
+            tokens_[next].kind == TokenKind::Star) {
           path.pop_back();
           path += "/*";
-          ++scan;
+          scan = next;
         }
         if (path == "/math/*") {
           mathImportAll_ = true;
@@ -177,6 +181,7 @@ bool Parser::parseImport(Program &program) {
       return fail("import path must be a slash path");
     }
     std::string pathText = path.text;
+    skipComments();
     if (!pathText.empty() && pathText.back() == '/' && match(TokenKind::Star)) {
       expect(TokenKind::Star, "expected '*'");
       pathText.pop_back();
