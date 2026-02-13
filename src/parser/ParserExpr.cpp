@@ -156,6 +156,27 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
 }
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
+  auto looksLikeArgumentLabel = [&](size_t start, size_t &afterLabel) -> bool {
+    if (start >= tokens_.size() || tokens_[start].kind != TokenKind::LBracket) {
+      return false;
+    }
+    size_t scan = start + 1;
+    while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+      ++scan;
+    }
+    if (scan >= tokens_.size() || tokens_[scan].kind != TokenKind::Identifier) {
+      return false;
+    }
+    ++scan;
+    while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+      ++scan;
+    }
+    if (scan >= tokens_.size() || tokens_[scan].kind != TokenKind::RBracket) {
+      return false;
+    }
+    afterLabel = scan + 1;
+    return true;
+  };
   auto parsePrimary = [&](Expr &out) -> bool {
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsed = false;
@@ -497,14 +518,16 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       continue;
     }
     if (match(TokenKind::LBracket)) {
-      if (allowArgumentLabels_ && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
-          tokens_[pos_ + 2].kind == TokenKind::RBracket) {
-        size_t nextIndex = pos_ + 3;
-        while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
-          ++nextIndex;
-        }
-        if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
-          break;
+      if (allowArgumentLabels_) {
+        size_t afterLabel = 0;
+        if (looksLikeArgumentLabel(pos_, afterLabel)) {
+          size_t nextIndex = afterLabel;
+          while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+            ++nextIndex;
+          }
+          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+            break;
+          }
         }
       }
       expect(TokenKind::LBracket, "expected '[' after expression");

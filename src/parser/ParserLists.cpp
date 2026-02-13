@@ -18,6 +18,18 @@ bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || isBindingQualifierName(name);
 }
+
+bool isArgumentLabelValueStart(TokenKind kind) {
+  switch (kind) {
+    case TokenKind::Identifier:
+    case TokenKind::Number:
+    case TokenKind::String:
+    case TokenKind::LBracket:
+      return true;
+    default:
+      return false;
+  }
+}
 } // namespace
 
 bool Parser::parseTransformList(std::vector<Transform> &out) {
@@ -297,24 +309,40 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       return fail("semicolon is not allowed");
     }
     std::optional<std::string> argName;
-    if (match(TokenKind::LBracket) && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
-        tokens_[pos_ + 2].kind == TokenKind::RBracket) {
+    if (match(TokenKind::LBracket)) {
+      size_t savedPos = pos_;
       expect(TokenKind::LBracket, "expected '['");
-      Token name = consume(TokenKind::Identifier, "expected argument label");
-      if (name.kind == TokenKind::End) {
-        return false;
+      skipComments();
+      if (match(TokenKind::Identifier)) {
+        Token name = consume(TokenKind::Identifier, "expected argument label");
+        if (name.kind == TokenKind::End) {
+          return false;
+        }
+        if (name.text.find('/') != std::string::npos) {
+          return fail("named argument must be a simple identifier");
+        }
+        std::string nameError;
+        if (!validateIdentifierText(name.text, nameError)) {
+          return fail(nameError);
+        }
+        skipComments();
+        if (match(TokenKind::RBracket)) {
+          expect(TokenKind::RBracket, "expected ']' after argument label");
+          size_t nextIndex = pos_;
+          while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+            ++nextIndex;
+          }
+          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+            argName = name.text;
+          } else {
+            pos_ = savedPos;
+          }
+        } else {
+          pos_ = savedPos;
+        }
+      } else {
+        pos_ = savedPos;
       }
-      if (name.text.find('/') != std::string::npos) {
-        return fail("named argument must be a simple identifier");
-      }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
-      }
-      if (!expect(TokenKind::RBracket, "expected ']' after argument label")) {
-        return false;
-      }
-      argName = name.text;
     } else if (match(TokenKind::Identifier) && pos_ + 1 < tokens_.size() &&
                tokens_[pos_ + 1].kind == TokenKind::Equal) {
       return fail("named arguments must use [name] syntax");
@@ -356,24 +384,40 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
       return fail("semicolon is not allowed");
     }
     std::optional<std::string> argName;
-    if (match(TokenKind::LBracket) && pos_ + 2 < tokens_.size() && tokens_[pos_ + 1].kind == TokenKind::Identifier &&
-        tokens_[pos_ + 2].kind == TokenKind::RBracket) {
+    if (match(TokenKind::LBracket)) {
+      size_t savedPos = pos_;
       expect(TokenKind::LBracket, "expected '['");
-      Token name = consume(TokenKind::Identifier, "expected argument label");
-      if (name.kind == TokenKind::End) {
-        return false;
+      skipComments();
+      if (match(TokenKind::Identifier)) {
+        Token name = consume(TokenKind::Identifier, "expected argument label");
+        if (name.kind == TokenKind::End) {
+          return false;
+        }
+        if (name.text.find('/') != std::string::npos) {
+          return fail("named argument must be a simple identifier");
+        }
+        std::string nameError;
+        if (!validateIdentifierText(name.text, nameError)) {
+          return fail(nameError);
+        }
+        skipComments();
+        if (match(TokenKind::RBracket)) {
+          expect(TokenKind::RBracket, "expected ']' after argument label");
+          size_t nextIndex = pos_;
+          while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+            ++nextIndex;
+          }
+          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+            argName = name.text;
+          } else {
+            pos_ = savedPos;
+          }
+        } else {
+          pos_ = savedPos;
+        }
+      } else {
+        pos_ = savedPos;
       }
-      if (name.text.find('/') != std::string::npos) {
-        return fail("named argument must be a simple identifier");
-      }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
-      }
-      if (!expect(TokenKind::RBracket, "expected ']' after argument label")) {
-        return false;
-      }
-      argName = name.text;
     }
     Expr arg;
     if (!parseExpr(arg, namespacePrefix)) {
