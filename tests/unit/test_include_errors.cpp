@@ -66,6 +66,17 @@ TEST_CASE("include path suffix fails") {
   CHECK(error.find("suffix") != std::string::npos);
 }
 
+TEST_CASE("include path suffix before version fails") {
+  const std::string srcPath =
+      writeTemp("main_include_suffix_before_version.prime",
+                "include<\"/lib.prime\"version=\"1.2\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include path cannot have suffix") != std::string::npos);
+}
+
 TEST_CASE("include path suffix with single quotes fails") {
   const std::string srcPath = writeTemp("main_include_suffix_single.prime", "include<'/lib.prime'utf8>\n");
   std::string source;
@@ -83,6 +94,36 @@ TEST_CASE("include version with trailing junk fails") {
   primec::IncludeResolver resolver;
   CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
   CHECK(error.find("unexpected characters after include version") != std::string::npos);
+}
+
+TEST_CASE("include version missing equals fails") {
+  const std::string srcPath =
+      writeTemp("main_include_version_missing_equals.prime", "include<\"/lib.prime\", version \"1.2\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("expected '=' after include version") != std::string::npos);
+}
+
+TEST_CASE("include version requires quoted string") {
+  const std::string srcPath =
+      writeTemp("main_include_version_unquoted.prime", "include<\"/lib.prime\", version=1.2>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("expected quoted string in include<...>") != std::string::npos);
+}
+
+TEST_CASE("unterminated include string literal fails") {
+  const std::string srcPath =
+      writeTemp("main_include_unterminated_string.prime", "include<\"/tmp/missing.prime>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("unterminated include string literal") != std::string::npos);
 }
 
 TEST_CASE("include version with trailing junk and single quotes fails") {
@@ -126,6 +167,24 @@ TEST_CASE("unquoted non-slash include path fails") {
 
 TEST_CASE("unquoted include path with invalid segment fails") {
   const std::string srcPath = writeTemp("main_include_bad_segment.prime", "include</std//io>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
+}
+
+TEST_CASE("unquoted include path with trailing slash fails") {
+  const std::string srcPath = writeTemp("main_include_trailing_slash.prime", "include</std/io/>\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("invalid slash path identifier") != std::string::npos);
+}
+
+TEST_CASE("unquoted include path with digit segment fails") {
+  const std::string srcPath = writeTemp("main_include_digit_segment.prime", "include</1std/io>\n");
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
@@ -290,6 +349,19 @@ TEST_CASE("missing include major version with single quotes fails") {
   CHECK(error.find("include version not found") != std::string::npos);
 }
 
+TEST_CASE("absolute versioned include without roots fails") {
+  auto dir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_no_root";
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  const std::string srcPath =
+      writeFile(dir / "main_abs_no_root.prime", "include<\"/tmp/lib.prime\", version=\"1.2\">\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include version not found") != std::string::npos);
+}
+
 TEST_CASE("include version mismatch fails") {
   auto rootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_a";
   auto rootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_root_b";
@@ -344,6 +416,57 @@ TEST_CASE("private include path fails from include root") {
   primec::IncludeResolver resolver;
   CHECK_FALSE(resolver.expandIncludes(srcPath, source, error, {root.string()}));
   CHECK(error.find("private folder") != std::string::npos);
+}
+
+TEST_CASE("include directory without prime files fails") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_base";
+  auto includeDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_empty_dir";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeDir);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeDir);
+  writeFile(includeDir / "readme.txt", "noop\n");
+
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"" + includeDir.string() + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include directory contains no .prime files") != std::string::npos);
+}
+
+TEST_CASE("logical include version requires include roots") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_logical_version_empty";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include</lib, version=\"1\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.find("include version not found") != std::string::npos);
+}
+
+TEST_CASE("versioned include fails when file missing") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_missing_file_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_missing_file_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot / "1.2.0");
+
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.find("failed to read include") != std::string::npos);
 }
 
 TEST_SUITE_END();
