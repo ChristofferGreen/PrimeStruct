@@ -240,6 +240,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
           continue;
         }
         sawImmediateDefinition = true;
+        if (isRootBuiltinName(remainder)) {
+          error_ = "import creates name conflict: " + remainder;
+          return false;
+        }
         if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
           error_ = "import creates name conflict: " + remainder;
           return false;
@@ -279,6 +283,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
     if (remainder.empty()) {
       continue;
+    }
+    if (isRootBuiltinName(remainder)) {
+      error_ = "import creates name conflict: " + remainder;
+      return false;
     }
     if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
       error_ = "import creates name conflict: " + remainder;

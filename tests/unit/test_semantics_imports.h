@@ -318,6 +318,44 @@ main() {
   CHECK(error.find("import creates name conflict: dup") != std::string::npos);
 }
 
+TEST_CASE("import conflicts with root builtin names") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [return<int>]
+  plus([i32] value) {
+    return(value)
+  }
+}
+[return<int>]
+main() {
+  return(plus(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: plus") != std::string::npos);
+}
+
+TEST_CASE("import rejects explicit root builtin alias") {
+  const std::string source = R"(
+import /util/assign
+namespace util {
+  [return<void>]
+  assign([i32] value) {
+    return()
+  }
+}
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: assign") != std::string::npos);
+}
+
 TEST_CASE("import conflicts between namespaces") {
   const std::string source = R"(
 import /util, /tools

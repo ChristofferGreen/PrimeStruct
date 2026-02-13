@@ -291,6 +291,34 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool isRootBuiltinName(const std::string &name) {
+  if (name.empty()) {
+    return false;
+  }
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  Expr probe;
+  probe.name = normalized;
+  std::string builtinName;
+  if (getBuiltinOperatorName(probe, builtinName) || getBuiltinComparisonName(probe, builtinName)) {
+    return true;
+  }
+  return normalized == "assign" || normalized == "if" || normalized == "then" || normalized == "else" ||
+         normalized == "repeat" || normalized == "return" || normalized == "array" || normalized == "vector" ||
+         normalized == "map" || normalized == "count" || normalized == "capacity" || normalized == "push" ||
+         normalized == "pop" || normalized == "reserve" || normalized == "clear" || normalized == "remove_at" ||
+         normalized == "remove_swap" || normalized == "at" || normalized == "at_unsafe" ||
+         normalized == "convert" || normalized == "location" || normalized == "dereference" ||
+         normalized == "block" || normalized == "print" || normalized == "print_line" ||
+         normalized == "print_error" || normalized == "print_line_error" || normalized == "notify" ||
+         normalized == "insert" || normalized == "take";
+}
+
 namespace {
 
 bool parseMathName(const std::string &name, std::string &out, bool allowBare);
