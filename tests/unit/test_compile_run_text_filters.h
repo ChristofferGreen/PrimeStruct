@@ -303,6 +303,23 @@ main() {
   CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
 }
 
+TEST_CASE("semantic transforms ignore text transforms") {
+  const std::string source = R"(
+[operators i32]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_single_type_to_return_text.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_single_type_to_return_text_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main --semantic-transforms=single_type_to_return 2> " +
+                                 quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
+}
+
 TEST_CASE("no transforms disables single_type_to_return") {
   const std::string source = R"(
 [i32]

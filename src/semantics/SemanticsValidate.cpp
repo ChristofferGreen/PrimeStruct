@@ -27,6 +27,66 @@ bool isSingleTypeReturnCandidate(const Transform &transform) {
   return true;
 }
 
+bool isTextOnlyTransform(const Transform &transform) {
+  if (transform.phase == TransformPhase::Text) {
+    return true;
+  }
+  if (transform.phase == TransformPhase::Semantic) {
+    return false;
+  }
+  const bool isText = primec::isTextTransformName(transform.name);
+  const bool isSemantic = primec::isSemanticTransformName(transform.name);
+  return isText && !isSemantic;
+}
+
+void stripTextTransforms(std::vector<Transform> &transforms) {
+  size_t out = 0;
+  for (size_t i = 0; i < transforms.size(); ++i) {
+    auto &transform = transforms[i];
+    if (isTextOnlyTransform(transform)) {
+      continue;
+    }
+    if (out != i) {
+      transforms[out] = std::move(transform);
+    }
+    ++out;
+  }
+  transforms.resize(out);
+}
+
+void stripTextTransforms(Expr &expr) {
+  stripTextTransforms(expr.transforms);
+  for (auto &arg : expr.args) {
+    stripTextTransforms(arg);
+  }
+  for (auto &arg : expr.bodyArguments) {
+    stripTextTransforms(arg);
+  }
+}
+
+void stripTextTransforms(Definition &def) {
+  stripTextTransforms(def.transforms);
+  for (auto &param : def.parameters) {
+    stripTextTransforms(param);
+  }
+  for (auto &stmt : def.statements) {
+    stripTextTransforms(stmt);
+  }
+  if (def.returnExpr.has_value()) {
+    stripTextTransforms(*def.returnExpr);
+  }
+}
+
+void stripTextTransforms(Execution &exec) {
+  stripTextTransforms(exec.transforms);
+  for (auto &arg : exec.arguments) {
+    stripTextTransforms(arg);
+  }
+  for (auto &arg : exec.bodyArguments) {
+    stripTextTransforms(arg);
+  }
+}
+
 std::string formatTemplateArgs(const std::vector<std::string> &args) {
   std::string out;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -219,9 +279,6 @@ bool applySemanticTransforms(Program &program,
         return false;
       }
     }
-    if (!applySingleTypeToReturn(def.transforms, forceSingleTypeToReturn, def.fullPath, error)) {
-      return false;
-    }
   }
 
   for (auto &exec : program.executions) {
@@ -237,6 +294,18 @@ bool applySemanticTransforms(Program &program,
       if (!validateExprTransforms(arg, exec.fullPath, error)) {
         return false;
       }
+    }
+  }
+
+  for (auto &def : program.definitions) {
+    stripTextTransforms(def);
+  }
+  for (auto &exec : program.executions) {
+    stripTextTransforms(exec);
+  }
+  for (auto &def : program.definitions) {
+    if (!applySingleTypeToReturn(def.transforms, forceSingleTypeToReturn, def.fullPath, error)) {
+      return false;
     }
   }
 
