@@ -29,6 +29,13 @@ bool isSingleTypeReturnCandidate(const Transform &transform) {
   return true;
 }
 
+size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
+  while (index < tokens.size() && tokens[index].kind == TokenKind::Comment) {
+    ++index;
+  }
+  return index;
+}
+
 std::string formatTemplateArgs(const std::vector<std::string> &args) {
   std::string out;
   for (size_t i = 0; i < args.size(); ++i) {
@@ -498,14 +505,13 @@ bool Parser::definitionHasReturnBeforeClose() const {
   if (depth != 0) {
     return false;
   }
-  if (index + 1 >= tokens_.size()) {
+  size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  if (braceIndex >= tokens_.size()) {
     return false;
   }
-  if (tokens_[index + 1].kind != TokenKind::LBrace) {
+  if (tokens_[braceIndex].kind != TokenKind::LBrace) {
     return false;
   }
-
-  size_t braceIndex = index + 1;
   int braceDepth = 0;
   while (braceIndex < tokens_.size()) {
     TokenKind kind = tokens_[braceIndex].kind;
@@ -584,10 +590,11 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   if (!sawBindingSyntax && sawIdentifier) {
     return false;
   }
-  if (index + 1 >= tokens_.size()) {
+  size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  if (braceIndex >= tokens_.size()) {
     return false;
   }
-  return tokens_[index + 1].kind == TokenKind::LBrace;
+  return tokens_[braceIndex].kind == TokenKind::LBrace;
 }
 
 bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const {
@@ -643,10 +650,11 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   if (!sawBindingSyntax && sawIdentifier) {
     return false;
   }
-  if (index + 1 >= tokens_.size()) {
+  size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  if (braceIndex >= tokens_.size()) {
     return false;
   }
-  return tokens_[index + 1].kind == TokenKind::LBrace;
+  return tokens_[braceIndex].kind == TokenKind::LBrace;
 }
 
 bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {

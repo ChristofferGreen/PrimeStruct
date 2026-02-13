@@ -177,6 +177,26 @@ main(/* params */ [i32] value{1i32} /* end params */) {
   CHECK(program.definitions[0].returnExpr->templateArgs.size() == 2);
 }
 
+TEST_CASE("parses comment between signature and body") {
+  const std::string source = R"(
+[return<int>]
+main() /* body gap */ {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  CHECK(program.definitions.size() == 1);
+}
+
+TEST_CASE("parses comment between exec args and body") {
+  const std::string source = R"(
+execute_repeat(2i32) /* exec gap */ { main() }
+)";
+  const auto program = parseProgram(source);
+  CHECK(program.executions.size() == 1);
+  CHECK(program.executions[0].hasBodyArguments);
+}
+
 TEST_CASE("parses local binding statements") {
   const std::string source = R"(
 [return<int>]
