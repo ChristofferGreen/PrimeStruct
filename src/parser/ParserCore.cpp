@@ -29,8 +29,12 @@ bool isSingleTypeReturnCandidate(const Transform &transform) {
   return true;
 }
 
+bool isIgnorableToken(TokenKind kind) {
+  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
+}
+
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
-  while (index < tokens.size() && tokens[index].kind == TokenKind::Comment) {
+  while (index < tokens.size() && isIgnorableToken(tokens[index].kind)) {
     ++index;
   }
   return index;
@@ -117,14 +121,14 @@ bool Parser::parse(Program &program, std::string &error) {
     }
     ++scan;
     while (scan < tokens_.size()) {
-      if (tokens_[scan].kind == TokenKind::Comment) {
+      if (isIgnorableToken(tokens_[scan].kind)) {
         ++scan;
         continue;
       }
       if (tokens_[scan].kind == TokenKind::Identifier) {
         std::string path = tokens_[scan].text;
         size_t next = scan + 1;
-        while (next < tokens_.size() && tokens_[next].kind == TokenKind::Comment) {
+        while (next < tokens_.size() && isIgnorableToken(tokens_[next].kind)) {
           ++next;
         }
         if (!path.empty() && path.back() == '/' && next < tokens_.size() &&
@@ -141,10 +145,6 @@ bool Parser::parse(Program &program, std::string &error) {
             mathImports_.insert(std::move(name));
           }
         }
-        ++scan;
-        continue;
-      }
-      if (tokens_[scan].kind == TokenKind::Comma) {
         ++scan;
         continue;
       }
@@ -488,7 +488,7 @@ bool Parser::definitionHasReturnBeforeClose() const {
   int depth = 1;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
-    if (kind == TokenKind::Comment) {
+    if (isIgnorableToken(kind)) {
       ++index;
       continue;
     }
@@ -515,7 +515,7 @@ bool Parser::definitionHasReturnBeforeClose() const {
   int braceDepth = 0;
   while (braceIndex < tokens_.size()) {
     TokenKind kind = tokens_[braceIndex].kind;
-    if (kind == TokenKind::Comment) {
+    if (isIgnorableToken(kind)) {
       ++braceIndex;
       continue;
     }
@@ -544,7 +544,7 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
-    if (kind == TokenKind::Comment) {
+    if (isIgnorableToken(kind)) {
       ++index;
       continue;
     }
@@ -607,7 +607,7 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
-    if (kind == TokenKind::Comment) {
+    if (isIgnorableToken(kind)) {
       ++index;
       continue;
     }
@@ -838,7 +838,7 @@ bool Parser::isBuiltinNameForArguments(const std::string &name) const {
 }
 
 void Parser::skipComments() {
-  while (tokens_[pos_].kind == TokenKind::Comment) {
+  while (isIgnorableToken(tokens_[pos_].kind)) {
     ++pos_;
   }
 }

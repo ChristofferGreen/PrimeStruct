@@ -30,6 +30,10 @@ bool isArgumentLabelValueStart(TokenKind kind) {
       return false;
   }
 }
+
+bool isIgnorableToken(TokenKind kind) {
+  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
+}
 } // namespace
 
 bool Parser::parseTransformList(std::vector<Transform> &out) {
@@ -329,7 +333,7 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
         if (match(TokenKind::RBracket)) {
           expect(TokenKind::RBracket, "expected ']' after argument label");
           size_t nextIndex = pos_;
-          while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+          while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
             ++nextIndex;
           }
           if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
@@ -348,7 +352,7 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       return fail("named arguments must use [name] syntax");
     } else if (match(TokenKind::Identifier)) {
       size_t scan = pos_ + 1;
-      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+      while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
         ++scan;
       }
       if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Equal) {
@@ -412,7 +416,7 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
         if (match(TokenKind::RBracket)) {
           expect(TokenKind::RBracket, "expected ']' after argument label");
           size_t nextIndex = pos_;
-          while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+          while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
             ++nextIndex;
           }
           if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
@@ -429,7 +433,7 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
     }
     if (match(TokenKind::Identifier)) {
       size_t scan = pos_ + 1;
-      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+      while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
         ++scan;
       }
       if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Equal) {

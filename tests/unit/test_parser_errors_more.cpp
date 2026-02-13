@@ -259,37 +259,6 @@ TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.punctuation");
 
-TEST_CASE("semicolon is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32);
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected at top level") {
-  const std::string source = R"(
-;
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
 TEST_CASE("top-level bindings are rejected") {
   const std::string source = R"(
 [i32] value{1i32}
@@ -300,86 +269,6 @@ TEST_CASE("top-level bindings are rejected") {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("bindings are only allowed inside definition bodies or parameter lists") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in namespace") {
-  const std::string source = R"(
-namespace demo {
-  ;
-  [return<int>]
-  main() {
-    return(1i32)
-  }
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in parameter list") {
-  const std::string source = R"(
-[return<int>]
-main([i32] a; [i32] b) {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in call arguments") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  foo(1i32; 2i32)
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in brace list") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  execute_repeat(2i32) { main(); main() }
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("trailing comma in transform list is rejected") {
-  const std::string source = R"(
-[return<int>,]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in transform list") != std::string::npos);
 }
 
 TEST_CASE("empty transform list is rejected") {
@@ -395,83 +284,6 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("transform list cannot be empty") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in transform list") {
-  const std::string source = R"(
-[return<int>; effects(io_out)]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in transform arguments") {
-  const std::string source = R"(
-[effects(io_out; io_err) return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("transform argument trailing comma rejected") {
-  const std::string source = R"(
-[effects(io_out, ) return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in transform argument list") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in template list") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  foo<i32; i64>()
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("semicolon rejected in nested template list") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  foo<map<i32; i64>>()
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
 }
 
 TEST_CASE("non-ascii transform identifier rejected") {
@@ -570,52 +382,6 @@ main() {
   CHECK(error.find("invalid character") != std::string::npos);
 }
 
-TEST_CASE("trailing comma in template argument list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(convert<i64,>(1i32))
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in template argument list") != std::string::npos);
-}
-
-TEST_CASE("trailing comma in nested type template list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<map<i32,>>] values{array<i32>(1i32)}
-  return(0i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in template argument list") != std::string::npos);
-}
-
-TEST_CASE("trailing comma in parameter list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main([i32] value{1i32},) {
-  return(0i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in parameter list") != std::string::npos);
-}
-
 TEST_CASE("parameter identifiers reject template arguments") {
   const std::string source = R"(
 [return<int>]
@@ -629,37 +395,6 @@ main([i32] value<i32>) {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("parameter identifiers do not accept template arguments") != std::string::npos);
-}
-
-TEST_CASE("parameter defaults reject trailing comma") {
-  const std::string source = R"(
-[return<int>]
-main([i32] value{1i32,}) {
-  return(value)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("binding initializer arguments must be whitespace-separated") != std::string::npos);
-}
-
-TEST_CASE("binding initializer commas are rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] value{1i32, 2i32}
-  return(value)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("binding initializer arguments must be whitespace-separated") != std::string::npos);
 }
 
 TEST_CASE("binding initializer rejects named arguments with equals") {
@@ -676,49 +411,6 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("named arguments must use [name] syntax") != std::string::npos);
-}
-
-TEST_CASE("binding initializer semicolons are rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] value{1i32; 2i32}
-  return(value)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("trailing comma in argument list is rejected") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(plus(1i32,))
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in argument list") != std::string::npos);
-}
-
-TEST_CASE("trailing comma in brace list is rejected") {
-  const std::string source = R"(
-execute_repeat(2i32) { main(), }
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("trailing comma not allowed in brace list") != std::string::npos);
 }
 
 TEST_SUITE_END();
@@ -1030,22 +722,6 @@ TEST_CASE("non-ascii identifiers are rejected") {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("invalid character") != std::string::npos);
-}
-
-TEST_CASE("import trailing comma fails") {
-  const std::string source = R"(
-import /util,
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected import path") != std::string::npos);
 }
 
 TEST_CASE("namespace name must be a simple identifier") {
@@ -1483,7 +1159,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected transform argument") != std::string::npos);
+  CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
 }
 
 TEST_CASE("transform arguments reject nested envelopes") {

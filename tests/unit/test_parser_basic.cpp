@@ -152,6 +152,27 @@ main() {
   CHECK(expr.args.size() == 2);
 }
 
+TEST_CASE("parses separators as whitespace") {
+  const std::string source = R"(
+import /util/*; /math/*,
+
+[return<int>; effects(io_out);]
+main([i32] a{1i32;}; [i32] b{2i32,};) {
+  [i32] total{plus(a; b,);}
+  return(convert<i64; i32;>(total);)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.imports.size() == 2);
+  CHECK(program.imports[0] == "/util/*");
+  CHECK(program.imports[1] == "/math/*");
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].transforms.size() == 2);
+  CHECK(program.definitions[0].parameters.size() == 2);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->args.size() == 1);
+}
+
 TEST_CASE("parses transform arguments with slash paths") {
   const std::string source = R"(
 [custom(/util/io)]

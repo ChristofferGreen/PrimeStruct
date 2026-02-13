@@ -25,7 +25,7 @@ TEST_CASE("expands multiple include paths") {
   const std::string libA = writeTemp("lib_multi_a.prime", "// LIB_A\n[return<int>]\nhelper_a(){ return(1i32) }\n");
   const std::string libB = writeTemp("lib_multi_b.prime", "// LIB_B\n[return<int>]\nhelper_b(){ return(2i32) }\n");
   const std::string srcPath = writeTemp("main_multi.prime",
-                                        "include<\"" + libA + "\", \"" + libB + "\">\n"
+                                        "include<\"" + libA + "\"; \"" + libB + "\",>\n"
                                         "[return<int>]\nmain(){ return(helper_a()) }\n");
 
   std::string source;

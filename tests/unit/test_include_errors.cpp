@@ -75,46 +75,6 @@ TEST_CASE("include path suffix with single quotes fails") {
   CHECK(error.find("suffix") != std::string::npos);
 }
 
-TEST_CASE("include entry missing comma fails") {
-  const std::string srcPath =
-      writeTemp("main_include_missing_comma.prime", "include<\"/lib_a.prime\" \"/lib_b.prime\">\n");
-  std::string source;
-  std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("expected ',' between include entries") != std::string::npos);
-}
-
-TEST_CASE("include entry with semicolon fails") {
-  const std::string srcPath =
-      writeTemp("main_include_semicolon.prime", "include<\"/lib_a.prime\"; \"/lib_b.prime\">\n");
-  std::string source;
-  std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("include version with semicolon fails") {
-  const std::string srcPath =
-      writeTemp("main_include_semicolon_version.prime", "include<\"/lib.prime\", version=\"1.2\";>\n");
-  std::string source;
-  std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
-TEST_CASE("include version with semicolon and single quotes fails") {
-  const std::string srcPath =
-      writeTemp("main_include_semicolon_version_single.prime", "include<'/lib.prime', version='1.2';>\n");
-  std::string source;
-  std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("semicolon") != std::string::npos);
-}
-
 TEST_CASE("include version with trailing junk fails") {
   const std::string srcPath =
       writeTemp("main_include_version_trailing.prime", "include<\"/lib.prime\", version=\"1.2\"x>\n");

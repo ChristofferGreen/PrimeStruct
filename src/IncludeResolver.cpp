@@ -580,9 +580,9 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           if (pos >= payload.size()) {
             break;
           }
-          if (payload[pos] == ';') {
-            error = "semicolon is not allowed in include<...>";
-            return false;
+          if (payload[pos] == ',' || payload[pos] == ';') {
+            ++pos;
+            continue;
           }
           size_t entryPos = pos;
           if (tryConsumeIncludeKeyword(payload, entryPos, "version")) {
@@ -606,11 +606,8 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             }
             versionTag = trim(versionValue);
             if (pos < payload.size()) {
-              if (payload[pos] == ';') {
-                error = "semicolon is not allowed in include<...>";
-                return false;
-              }
-              if (!std::isspace(static_cast<unsigned char>(payload[pos])) && payload[pos] != ',') {
+              if (!std::isspace(static_cast<unsigned char>(payload[pos])) && payload[pos] != ',' &&
+                  payload[pos] != ';') {
                 error = "unexpected characters after include version";
                 return false;
               }
@@ -623,12 +620,8 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               return false;
             }
             paths.push_back({trim(path), false});
-            if (pos < payload.size() && payload[pos] == ';') {
-              error = "semicolon is not allowed in include<...>";
-              return false;
-            }
             if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
-                payload[pos] != ',') {
+                payload[pos] != ',' && payload[pos] != ';') {
               error = "include path cannot have suffix";
               return false;
             }
@@ -649,18 +642,6 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             paths.push_back({path, true});
           }
           skipWhitespace();
-          if (pos >= payload.size()) {
-            break;
-          }
-          if (payload[pos] == ';') {
-            error = "semicolon is not allowed in include<...>";
-            return false;
-          }
-          if (payload[pos] != ',') {
-            error = "expected ',' between include entries";
-            return false;
-          }
-          ++pos;
         }
 
         if (paths.empty()) {

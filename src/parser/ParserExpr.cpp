@@ -23,6 +23,10 @@ bool isArgumentLabelValueStart(TokenKind kind) {
     return false;
   }
 }
+
+bool isIgnorableToken(TokenKind kind) {
+  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
+}
 } // namespace
 
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
@@ -42,12 +46,12 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
   expect(TokenKind::LParen, "expected '(' after if");
   if (match(TokenKind::LBracket)) {
     size_t scan = pos_ + 1;
-    while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+    while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
       ++scan;
     }
     if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Identifier) {
       ++scan;
-      while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+      while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
         ++scan;
       }
       if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::RBracket) {
@@ -62,10 +66,6 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
     if (!parseExpr(condition, namespacePrefix)) {
       return false;
     }
-  }
-  if (match(TokenKind::Comma)) {
-    pos_ = savedPos;
-    return true;
   }
   if (!match(TokenKind::RParen)) {
     pos_ = savedPos;
@@ -153,7 +153,7 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
   }
   returnCall.args.push_back(std::move(arg));
   returnCall.argNames.push_back(std::nullopt);
-  if (match(TokenKind::Comma)) {
+  if (!match(TokenKind::RParen)) {
     return fail("return requires exactly one argument");
   }
   if (!expect(TokenKind::RParen, "expected ')' after return argument")) {
@@ -172,14 +172,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       return false;
     }
     size_t scan = start + 1;
-    while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+    while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
       ++scan;
     }
     if (scan >= tokens_.size() || tokens_[scan].kind != TokenKind::Identifier) {
       return false;
     }
     ++scan;
-    while (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Comment) {
+    while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
       ++scan;
     }
     if (scan >= tokens_.size() || tokens_[scan].kind != TokenKind::RBracket) {
@@ -533,7 +533,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         size_t afterLabel = 0;
         if (looksLikeArgumentLabel(pos_, afterLabel)) {
           size_t nextIndex = afterLabel;
-          while (nextIndex < tokens_.size() && tokens_[nextIndex].kind == TokenKind::Comment) {
+          while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
             ++nextIndex;
           }
           if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
