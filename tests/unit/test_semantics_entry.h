@@ -1556,6 +1556,46 @@ execute_repeat(2i32) { main() }
   CHECK(error.find("placement transforms are not supported") != std::string::npos);
 }
 
+TEST_CASE("execution rejects struct transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[struct]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct transforms are not allowed on executions") != std::string::npos);
+}
+
+TEST_CASE("execution rejects visibility transform") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[public]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
+}
+
 TEST_CASE("execution rejects alignment transforms") {
   const std::string source = R"(
 [return<int>]
