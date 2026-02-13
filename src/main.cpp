@@ -10,6 +10,7 @@
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/TextFilterPipeline.h"
+#include "primec/TransformRegistry.h"
 #include "primec/Vm.h"
 
 #include <cctype>
@@ -23,6 +24,10 @@
 namespace {
 std::vector<std::string> defaultTextFilters() {
   return {"collections", "operators", "implicit-utf8"};
+}
+
+std::vector<std::string> defaultSemanticTransforms() {
+  return {};
 }
 
 std::vector<std::string> defaultEffectsList() {
@@ -52,17 +57,71 @@ void replaceAll(std::string &text, std::string_view from, std::string_view to) {
   }
 }
 
-std::vector<std::string> parseTextFilters(const std::string &text) {
-  std::vector<std::string> filters;
+void addUniqueTransform(std::vector<std::string> &list, const std::string &name) {
+  for (const auto &existing : list) {
+    if (existing == name) {
+      return;
+    }
+  }
+  list.push_back(name);
+}
+
+bool parseTransformListForPhase(const std::string &text,
+                                const std::vector<std::string> &defaults,
+                                bool expectText,
+                                std::vector<std::string> &out,
+                                std::string &error) {
+  out.clear();
   size_t start = 0;
-  auto addUnique = [&](const std::string &name) {
-    for (const auto &existing : filters) {
-      if (existing == name) {
-        return;
+  while (start <= text.size()) {
+    size_t end = text.find(',', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    std::string token = trimWhitespace(text.substr(start, end - start));
+    if (!token.empty()) {
+      if (token == "default") {
+        for (const auto &name : defaults) {
+          addUniqueTransform(out, name);
+        }
+      } else if (token == "none") {
+        out.clear();
+      } else {
+        const bool isText = primec::isTextTransformName(token);
+        const bool isSemantic = primec::isSemanticTransformName(token);
+        if (!isText && !isSemantic) {
+          error = "unknown transform: " + token;
+          return false;
+        }
+        if (expectText) {
+          if (!isText) {
+            error = "unsupported text transform: " + token;
+            return false;
+          }
+        } else {
+          if (!isSemantic) {
+            error = "unsupported semantic transform: " + token;
+            return false;
+          }
+        }
+        addUniqueTransform(out, token);
       }
     }
-    filters.push_back(name);
-  };
+    if (end == text.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return true;
+}
+
+bool parseTransformListAuto(const std::string &text,
+                            std::vector<std::string> &textOut,
+                            std::vector<std::string> &semanticOut,
+                            std::string &error) {
+  textOut.clear();
+  semanticOut.clear();
+  size_t start = 0;
   while (start <= text.size()) {
     size_t end = text.find(',', start);
     if (end == std::string::npos) {
@@ -72,12 +131,30 @@ std::vector<std::string> parseTextFilters(const std::string &text) {
     if (!token.empty()) {
       if (token == "default") {
         for (const auto &name : defaultTextFilters()) {
-          addUnique(name);
+          addUniqueTransform(textOut, name);
+        }
+        for (const auto &name : defaultSemanticTransforms()) {
+          addUniqueTransform(semanticOut, name);
         }
       } else if (token == "none") {
-        filters.clear();
+        textOut.clear();
+        semanticOut.clear();
       } else {
-        addUnique(token);
+        const bool isText = primec::isTextTransformName(token);
+        const bool isSemantic = primec::isSemanticTransformName(token);
+        if (!isText && !isSemantic) {
+          error = "unknown transform: " + token;
+          return false;
+        }
+        if (isText && isSemantic) {
+          error = "ambiguous transform name: " + token;
+          return false;
+        }
+        if (isText) {
+          addUniqueTransform(textOut, token);
+        } else {
+          addUniqueTransform(semanticOut, token);
+        }
       }
     }
     if (end == text.size()) {
@@ -85,21 +162,7 @@ std::vector<std::string> parseTextFilters(const std::string &text) {
     }
     start = end + 1;
   }
-  return filters;
-}
-
-bool extractSingleTypeToReturn(std::vector<std::string> &filters) {
-  bool enabled = false;
-  auto it = filters.begin();
-  while (it != filters.end()) {
-    if (*it == "single_type_to_return") {
-      enabled = true;
-      it = filters.erase(it);
-    } else {
-      ++it;
-    }
-  }
-  return enabled;
+  return true;
 }
 
 std::vector<std::string> parseDefaultEffects(const std::string &text) {
@@ -177,8 +240,10 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
   }
   return true;
 }
-bool parseArgs(int argc, char **argv, primec::Options &out) {
+bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) {
   bool noTransforms = false;
+  bool noTextTransforms = false;
+  bool noSemanticTransforms = false;
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "--") {
@@ -208,16 +273,58 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
     } else if (arg.rfind("-I", 0) == 0 && arg.size() > 2) {
       out.includePaths.push_back(arg.substr(2));
     } else if (arg == "--text-filters" && i + 1 < argc) {
-      out.textFilters = parseTextFilters(argv[++i]);
+      if (!parseTransformListForPhase(argv[++i], defaultTextFilters(), true, out.textFilters, error)) {
+        return false;
+      }
     } else if (arg.rfind("--text-filters=", 0) == 0) {
-      out.textFilters = parseTextFilters(arg.substr(std::string("--text-filters=").size()));
+      if (!parseTransformListForPhase(arg.substr(std::string("--text-filters=").size()),
+                                      defaultTextFilters(),
+                                      true,
+                                      out.textFilters,
+                                      error)) {
+        return false;
+      }
+    } else if (arg == "--text-transforms" && i + 1 < argc) {
+      if (!parseTransformListForPhase(argv[++i], defaultTextFilters(), true, out.textFilters, error)) {
+        return false;
+      }
+    } else if (arg.rfind("--text-transforms=", 0) == 0) {
+      if (!parseTransformListForPhase(arg.substr(std::string("--text-transforms=").size()),
+                                      defaultTextFilters(),
+                                      true,
+                                      out.textFilters,
+                                      error)) {
+        return false;
+      }
+    } else if (arg == "--semantic-transforms" && i + 1 < argc) {
+      if (!parseTransformListForPhase(argv[++i], defaultSemanticTransforms(), false, out.semanticTransforms, error)) {
+        return false;
+      }
+    } else if (arg.rfind("--semantic-transforms=", 0) == 0) {
+      if (!parseTransformListForPhase(arg.substr(std::string("--semantic-transforms=").size()),
+                                      defaultSemanticTransforms(),
+                                      false,
+                                      out.semanticTransforms,
+                                      error)) {
+        return false;
+      }
     } else if (arg == "--transform-list" && i + 1 < argc) {
-      out.textFilters = parseTextFilters(argv[++i]);
+      if (!parseTransformListAuto(argv[++i], out.textFilters, out.semanticTransforms, error)) {
+        return false;
+      }
     } else if (arg.rfind("--transform-list=", 0) == 0) {
-      out.textFilters = parseTextFilters(arg.substr(std::string("--transform-list=").size()));
+      if (!parseTransformListAuto(arg.substr(std::string("--transform-list=").size()),
+                                  out.textFilters,
+                                  out.semanticTransforms,
+                                  error)) {
+        return false;
+      }
     } else if (arg == "--no-transforms") {
-      out.textFilters.clear();
       noTransforms = true;
+    } else if (arg == "--no-text-transforms") {
+      noTextTransforms = true;
+    } else if (arg == "--no-semantic-transforms") {
+      noSemanticTransforms = true;
     } else if (arg == "--out-dir" && i + 1 < argc) {
       out.outDir = argv[++i];
     } else if (arg.rfind("--out-dir=", 0) == 0) {
@@ -235,10 +342,16 @@ bool parseArgs(int argc, char **argv, primec::Options &out) {
       out.inputPath = arg;
     }
   }
-  out.singleTypeToReturn = extractSingleTypeToReturn(out.textFilters);
   if (noTransforms) {
     out.textFilters.clear();
-    out.singleTypeToReturn = false;
+    out.semanticTransforms.clear();
+  } else {
+    if (noTextTransforms) {
+      out.textFilters.clear();
+    }
+    if (noSemanticTransforms) {
+      out.semanticTransforms.clear();
+    }
   }
   if (out.entryPath.empty()) {
     out.entryPath = "/main";
@@ -310,10 +423,15 @@ std::string quotePath(const std::filesystem::path &path) {
 
 int main(int argc, char **argv) {
   primec::Options options;
-  if (!parseArgs(argc, argv, options)) {
+  std::string argError;
+  if (!parseArgs(argc, argv, options, argError)) {
+    if (!argError.empty()) {
+      std::cerr << "Argument error: " << argError << "\n";
+    }
     std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm] <input.prime> [-o <output>] [--entry /path] "
-                 "[--include-path <dir>] [--text-filters <list>] [--transform-list <list>] [--no-transforms] "
-                 "[--out-dir <dir>] "
+                 "[--include-path <dir>] [--text-filters <list>] [--text-transforms <list>] "
+                 "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
+                 "[--no-semantic-transforms] [--no-transforms] [--out-dir <dir>] "
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] [-- <program args...>]\n";
     return 2;
   }
@@ -342,7 +460,6 @@ int main(int argc, char **argv) {
 
   primec::Lexer lexer(filteredSource);
   primec::Parser parser(lexer.tokenize());
-  parser.setSingleTypeToReturn(options.singleTypeToReturn);
   primec::Program program;
   if (!parser.parse(program, error)) {
     std::cerr << "Parse error: " << error << "\n";
@@ -367,7 +484,7 @@ int main(int argc, char **argv) {
   }
 
   primec::Semantics semantics;
-  if (!semantics.validate(program, options.entryPath, error, options.defaultEffects)) {
+  if (!semantics.validate(program, options.entryPath, error, options.defaultEffects, options.semanticTransforms)) {
     std::cerr << "Semantic error: " << error << "\n";
     return 2;
   }

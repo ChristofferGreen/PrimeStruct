@@ -9,10 +9,11 @@ namespace primec {
 
 class Semantics {
 public:
-  bool validate(const Program &program,
+  bool validate(Program &program,
                 const std::string &entryPath,
                 std::string &error,
-                const std::vector<std::string> &defaultEffects) const;
+                const std::vector<std::string> &defaultEffects,
+                const std::vector<std::string> &semanticTransforms = {}) const;
 };
 
 } // namespace primec

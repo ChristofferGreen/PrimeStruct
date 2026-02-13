@@ -130,9 +130,13 @@ main() {
   REQUIRE(program.definitions.size() == 1);
   REQUIRE(program.definitions[0].transforms.size() == 4);
   CHECK(program.definitions[0].transforms[0].name == "operators");
+  CHECK(program.definitions[0].transforms[0].phase == primec::TransformPhase::Text);
   CHECK(program.definitions[0].transforms[1].name == "collections");
+  CHECK(program.definitions[0].transforms[1].phase == primec::TransformPhase::Text);
   CHECK(program.definitions[0].transforms[2].name == "return");
+  CHECK(program.definitions[0].transforms[2].phase == primec::TransformPhase::Semantic);
   CHECK(program.definitions[0].transforms[3].name == "effects");
+  CHECK(program.definitions[0].transforms[3].phase == primec::TransformPhase::Semantic);
 }
 
 TEST_CASE("parses transform-prefixed execution") {
@@ -586,7 +590,7 @@ main() {
   CHECK(call.args[1].kind == primec::Expr::Kind::Literal);
 }
 
-TEST_CASE("single_type_to_return rewrites bare type transform") {
+TEST_CASE("single_type_to_return stays in transform list") {
   const std::string source = R"(
 [single_type_to_return i32 effects(io_out)]
 main() {
@@ -596,14 +600,13 @@ main() {
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 1);
   const auto &transforms = program.definitions[0].transforms;
-  REQUIRE(transforms.size() == 2);
-  CHECK(transforms[0].name == "return");
-  REQUIRE(transforms[0].templateArgs.size() == 1);
-  CHECK(transforms[0].templateArgs[0] == "i32");
-  CHECK(transforms[1].name == "effects");
+  REQUIRE(transforms.size() == 3);
+  CHECK(transforms[0].name == "single_type_to_return");
+  CHECK(transforms[1].name == "i32");
+  CHECK(transforms[2].name == "effects");
 }
 
-TEST_CASE("single_type_to_return rewrites custom type") {
+TEST_CASE("single_type_to_return preserves custom type transform") {
   const std::string source = R"(
 [single_type_to_return MyType]
 main() {
@@ -613,10 +616,9 @@ main() {
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 1);
   const auto &transforms = program.definitions[0].transforms;
-  REQUIRE(transforms.size() == 1);
-  CHECK(transforms[0].name == "return");
-  REQUIRE(transforms[0].templateArgs.size() == 1);
-  CHECK(transforms[0].templateArgs[0] == "MyType");
+  REQUIRE(transforms.size() == 2);
+  CHECK(transforms[0].name == "single_type_to_return");
+  CHECK(transforms[1].name == "MyType");
 }
 
 TEST_CASE("parses method calls with template arguments") {

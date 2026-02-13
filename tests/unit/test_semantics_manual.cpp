@@ -77,7 +77,7 @@ primec::Definition makeDefinition(const std::string &fullPath,
   return def;
 }
 
-bool validateProgram(const primec::Program &program, const std::string &entry, std::string &error) {
+bool validateProgram(primec::Program &program, const std::string &entry, std::string &error) {
   primec::Semantics semantics;
   return semantics.validate(program, entry, error, {});
 }

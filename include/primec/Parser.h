@@ -14,7 +14,6 @@ public:
   explicit Parser(std::vector<Token> tokens);
 
   bool parse(Program &program, std::string &error);
-  void setSingleTypeToReturn(bool enabled) { forceSingleTypeToReturn_ = enabled; }
 
 private:
   bool parseImport(Program &program);
@@ -40,7 +39,6 @@ private:
   bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;
   bool parseDefinitionBody(Definition &def, bool allowNoReturn);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
-  bool applySingleTypeToReturn(std::vector<Transform> &transforms);
   bool finalizeBindingInitializer(Expr &binding);
   bool allowMathBareName(const std::string &name) const;
   bool isBuiltinNameForArguments(const std::string &name) const;
@@ -121,7 +119,6 @@ private:
   bool allowBraceReturn_ = true;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
-  bool forceSingleTypeToReturn_ = false;
 };
 
 } // namespace primec

@@ -12,15 +12,17 @@ main() {
   const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_suffix_native").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-filters=default,implicit-i32";
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 8);
 
-  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-filters=default,implicit-i32";
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=default,implicit-i32";
   CHECK(runCommand(runVmCmd) == 8);
 
   const std::string compileNativeCmd =
-      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-filters=default,implicit-i32";
+      "./primec --emit=native " + srcPath + " -o " + nativePath +
+      " --entry /main --text-transforms=default,implicit-i32";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 8);
 }
@@ -235,39 +237,51 @@ TEST_CASE("transform list enables single_type_to_return") {
   const std::string source = R"(
 [i32]
 main() {
-  return(5i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_single_type_to_return_ast.prime", source);
-  const std::string astPath =
-      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_ast.txt").string();
+  const std::string srcPath = writeTemp("compile_single_type_to_return_missing_return.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_err.txt").string();
 
-  const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) +
-                              " --dump-stage ast --transform-list=default,single_type_to_return > " +
-                              quoteShellArg(astPath);
-  CHECK(runCommand(dumpCmd) == 0);
-  const std::string ast = readFile(astPath);
-  CHECK(ast.find("[return<i32>]") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main --transform-list=default,single_type_to_return 2> " +
+                                 quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
+}
+
+TEST_CASE("semantic transforms flag enables single_type_to_return") {
+  const std::string source = R"(
+[i32]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_single_type_to_return.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_single_type_to_return_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main --semantic-transforms=single_type_to_return 2> " +
+                                 quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
 }
 
 TEST_CASE("no transforms disables single_type_to_return") {
   const std::string source = R"(
 [i32]
 main() {
-  return(6i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_single_type_to_return_disabled_ast.prime", source);
-  const std::string astPath =
-      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_disabled_ast.txt").string();
+  const std::string srcPath = writeTemp("compile_single_type_to_return_disabled.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_single_type_to_return_disabled_exe").string();
 
-  const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) +
-                              " --dump-stage ast --no-transforms --transform-list=default,single_type_to_return > " +
-                              quoteShellArg(astPath);
-  CHECK(runCommand(dumpCmd) == 0);
-  const std::string ast = readFile(astPath);
-  CHECK(ast.find("[i32]") != std::string::npos);
-  CHECK(ast.find("[return<i32>]") == std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) +
+                                 " --entry /main --no-transforms --transform-list=default,single_type_to_return";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("dump pre_ast shows includes and text filters") {

@@ -11,24 +11,6 @@ using namespace parser;
 
 namespace {
 
-bool isNonTypeTransformName(const std::string &name) {
-  return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
-         name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "struct" ||
-         name == "pod" || name == "handle" || name == "gpu_lane" || name == "public" || name == "private" ||
-         name == "package" || name == "static" || name == "single_type_to_return" || name == "stack" ||
-         name == "heap" || name == "buffer";
-}
-
-bool isSingleTypeReturnCandidate(const Transform &transform) {
-  if (!transform.arguments.empty()) {
-    return false;
-  }
-  if (isNonTypeTransformName(transform.name)) {
-    return false;
-  }
-  return true;
-}
-
 bool isIgnorableToken(TokenKind kind) {
   return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
 }
@@ -42,24 +24,6 @@ size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
     ++index;
   }
   return index;
-}
-
-std::string formatTemplateArgs(const std::vector<std::string> &args) {
-  std::string out;
-  for (size_t i = 0; i < args.size(); ++i) {
-    if (i > 0) {
-      out += ", ";
-    }
-    out += args[i];
-  }
-  return out;
-}
-
-std::string formatTransformType(const Transform &transform) {
-  if (transform.templateArgs.empty()) {
-    return transform.name;
-  }
-  return transform.name + "<" + formatTemplateArgs(transform.templateArgs) + ">";
 }
 
 bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
@@ -291,9 +255,6 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
       return false;
     }
   }
-  if (!applySingleTypeToReturn(transforms)) {
-    return false;
-  }
 
   Token name = consume(TokenKind::Identifier, "expected identifier");
   if (name.kind == TokenKind::End) {
@@ -410,80 +371,6 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   exec.hasBodyArguments = true;
   execs.push_back(std::move(exec));
-  return true;
-}
-
-bool Parser::applySingleTypeToReturn(std::vector<Transform> &transforms) {
-  size_t markerIndex = transforms.size();
-  for (size_t i = 0; i < transforms.size(); ++i) {
-    if (transforms[i].name != "single_type_to_return") {
-      continue;
-    }
-    if (markerIndex != transforms.size()) {
-      return fail("duplicate single_type_to_return transform");
-    }
-    if (!transforms[i].templateArgs.empty()) {
-      return fail("single_type_to_return does not accept template arguments");
-    }
-    if (!transforms[i].arguments.empty()) {
-      return fail("single_type_to_return does not accept arguments");
-    }
-    markerIndex = i;
-  }
-  const bool hasExplicitMarker = markerIndex != transforms.size();
-  if (!hasExplicitMarker && !forceSingleTypeToReturn_) {
-    return true;
-  }
-  for (const auto &transform : transforms) {
-    if (transform.name == "return") {
-      if (hasExplicitMarker) {
-        return fail("single_type_to_return cannot be combined with return transform");
-      }
-      return true;
-    }
-  }
-  size_t typeIndex = transforms.size();
-  for (size_t i = 0; i < transforms.size(); ++i) {
-    if (i == markerIndex) {
-      continue;
-    }
-    if (!isSingleTypeReturnCandidate(transforms[i])) {
-      continue;
-    }
-    if (typeIndex != transforms.size()) {
-      if (hasExplicitMarker) {
-        return fail("single_type_to_return requires a single type transform");
-      }
-      return true;
-    }
-    typeIndex = i;
-  }
-  if (typeIndex == transforms.size()) {
-    if (hasExplicitMarker) {
-      return fail("single_type_to_return requires a type transform");
-    }
-    return true;
-  }
-  Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs.push_back(formatTransformType(transforms[typeIndex]));
-  if (!hasExplicitMarker) {
-    transforms[typeIndex] = std::move(returnTransform);
-    return true;
-  }
-  std::vector<Transform> rewritten;
-  rewritten.reserve(transforms.size() - 1);
-  for (size_t i = 0; i < transforms.size(); ++i) {
-    if (i == markerIndex) {
-      continue;
-    }
-    if (i == typeIndex) {
-      rewritten.push_back(std::move(returnTransform));
-      continue;
-    }
-    rewritten.push_back(std::move(transforms[i]));
-  }
-  transforms = std::move(rewritten);
   return true;
 }
 

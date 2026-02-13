@@ -34,7 +34,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
   if (match(TokenKind::RBracket)) {
     return fail("transform list cannot be empty");
   }
-  auto parseTransformItem = [&](Transform &transform) -> bool {
+  auto parseTransformItem = [&](TransformPhase phase, Transform &transform) -> bool {
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -44,6 +44,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       return fail(nameError);
     }
     transform.name = name.text;
+    transform.phase = phase;
     if (match(TokenKind::LAngle)) {
       if (!parseTemplateList(transform.templateArgs)) {
         return false;
@@ -108,7 +109,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     }
     while (!match(TokenKind::RParen)) {
       Transform nested;
-      if (!parseTransformItem(nested)) {
+      if (!parseTransformItem(groupName == "text" ? TransformPhase::Text : TransformPhase::Semantic, nested)) {
         return false;
       }
       out.push_back(std::move(nested));
@@ -138,6 +139,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     }
     Transform transform;
     transform.name = name.text;
+    transform.phase = TransformPhase::Auto;
     if (match(TokenKind::LAngle)) {
       if (!parseTemplateList(transform.templateArgs)) {
         return false;

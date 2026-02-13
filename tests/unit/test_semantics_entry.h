@@ -2008,6 +2008,89 @@ main() {
   CHECK(error.find("duplicate return transform") != std::string::npos);
 }
 
+TEST_CASE("single_type_to_return requires a type transform") {
+  const std::string source = R"(
+[single_type_to_return]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("single_type_to_return requires a type transform") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects multiple type transforms") {
+  const std::string source = R"(
+[single_type_to_return i32 i64]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("single_type_to_return requires a single type transform") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects duplicate markers") {
+  const std::string source = R"(
+[single_type_to_return single_type_to_return i32]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate single_type_to_return transform") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects return transform combo") {
+  const std::string source = R"(
+[single_type_to_return return<i32>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("single_type_to_return cannot be combined with return transform") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects template args") {
+  const std::string source = R"(
+[single_type_to_return<i32> i32]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("single_type_to_return does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return rejects arguments") {
+  const std::string source = R"(
+[single_type_to_return(1) i32]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("single_type_to_return does not accept arguments") != std::string::npos);
+}
+
+TEST_CASE("single_type_to_return enforces non-void return") {
+  const std::string source = R"(
+[single_type_to_return i32]
+main() {
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("missing return statement") != std::string::npos);
+}
+
 TEST_CASE("bool return type validates") {
   const std::string source = R"(
 [return<bool>]
