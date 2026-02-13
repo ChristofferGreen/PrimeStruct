@@ -452,23 +452,6 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
   return true;
 }
 
-bool Parser::validateNoBuiltinNamedArguments(const std::string &name,
-                                             const std::vector<std::optional<std::string>> &argNames) {
-  std::string normalized = name;
-  if (!normalized.empty() && normalized[0] == '/') {
-    normalized.erase(0, 1);
-  }
-  if (!isBuiltinNameForArguments(normalized)) {
-    return true;
-  }
-  for (const auto &argName : argNames) {
-    if (argName.has_value()) {
-      return fail("named arguments not supported for builtin calls");
-    }
-  }
-  return true;
-}
-
 bool Parser::validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames) {
   (void)argNames;
   return true;

@@ -386,9 +386,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }
-        if (!validateNoBuiltinNamedArguments(call.name, call.argNames)) {
-          return false;
-        }
         if (!validateNamedArgumentOrdering(call.argNames)) {
           return false;
         }

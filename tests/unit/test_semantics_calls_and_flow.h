@@ -231,11 +231,8 @@ main() {
   return(if([cond] true, [then] 1i32, [else] 2i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -554,12 +551,26 @@ main() {
   return(assign([target] value, [value] 2i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("named arguments allow user-defined builtin name") {
+  const std::string source = R"(
+[return<int>]
+plus([i32] left, [i32] right) {
+  return(left)
+}
+
+[return<int>]
+main() {
+  return(plus([right] 2i32, [left] 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("count builtin validates on array literals") {
@@ -1728,11 +1739,8 @@ job([array<i32>] values) {
 
 job(array<i32>([first] 1i32))
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1743,11 +1751,8 @@ main() {
   return(plus([left] 1i32, [right] 2i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 

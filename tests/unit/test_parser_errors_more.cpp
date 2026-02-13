@@ -1,7 +1,21 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
+#include "primec/Semantics.h"
 
 #include "third_party/doctest.h"
+
+namespace {
+bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  if (!parser.parse(program, error)) {
+    return false;
+  }
+  primec::Semantics semantics;
+  return semantics.validate(program, entry, error, {});
+}
+} // namespace
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.more");
 
@@ -769,11 +783,8 @@ main() {
   print_line([message] "hello"utf8)
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -805,11 +816,8 @@ main() {
   return(sin([angle] 0.5f))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -820,11 +828,8 @@ main() {
   return(/math/sin([angle] 0.5f))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -836,11 +841,8 @@ main() {
 }
 import /math/*
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -862,18 +864,15 @@ main() {
 
 TEST_CASE("named arguments rejected for vector helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32)}
   clear([values] values)
   return(0i32)
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1209,11 +1208,8 @@ main() {
   return(plus([left] 1i32, [right] 2i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1224,11 +1220,8 @@ main() {
   return(/plus([left] 1i32, [right] 2i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1239,11 +1232,8 @@ main() {
   return(array<i32>([first] 1i32, [second] 2i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1255,11 +1245,8 @@ main() {
   return(dereference([ptr] location(value)))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1270,11 +1257,8 @@ main() {
   return(count([values] array<i32>(1i32, 2i32)))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1287,11 +1271,8 @@ main() {
   take([path] "/events/test"utf8)
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1317,11 +1298,8 @@ main() {
   return(at([items] array<i32>(1i32, 2i32), [index] 1i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1332,11 +1310,8 @@ main() {
   return(at_unsafe([items] array<i32>(1i32, 2i32), [index] 1i32))
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
@@ -1364,13 +1339,15 @@ main() {
   return(1i32)
 }
 
+[return<void>]
+execute_task([array<i32>] items) {
+  return()
+}
+
 execute_task([items] array<i32>([first] 1i32)) { }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
