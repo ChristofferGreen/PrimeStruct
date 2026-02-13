@@ -309,11 +309,12 @@ bool isRootBuiltinName(const std::string &name) {
     return true;
   }
   return normalized == "assign" || normalized == "if" || normalized == "then" || normalized == "else" ||
-         normalized == "repeat" || normalized == "return" || normalized == "array" || normalized == "vector" ||
-         normalized == "map" || normalized == "count" || normalized == "capacity" || normalized == "push" ||
-         normalized == "pop" || normalized == "reserve" || normalized == "clear" || normalized == "remove_at" ||
-         normalized == "remove_swap" || normalized == "at" || normalized == "at_unsafe" ||
-         normalized == "convert" || normalized == "location" || normalized == "dereference" ||
+         normalized == "loop" || normalized == "while" || normalized == "for" || normalized == "repeat" ||
+         normalized == "return" || normalized == "array" || normalized == "vector" || normalized == "map" ||
+         normalized == "count" || normalized == "capacity" || normalized == "push" || normalized == "pop" ||
+         normalized == "reserve" || normalized == "clear" || normalized == "remove_at" || normalized == "remove_swap" ||
+         normalized == "at" || normalized == "at_unsafe" || normalized == "convert" ||
+         normalized == "location" || normalized == "dereference" ||
          normalized == "block" || normalized == "print" || normalized == "print_line" ||
          normalized == "print_error" || normalized == "print_line_error" || normalized == "notify" ||
          normalized == "insert" || normalized == "take";
@@ -565,6 +566,18 @@ bool isIfCall(const Expr &expr) {
 
 bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
+}
+
+bool isLoopCall(const Expr &expr) {
+  return isSimpleCallName(expr, "loop");
+}
+
+bool isWhileCall(const Expr &expr) {
+  return isSimpleCallName(expr, "while");
+}
+
+bool isForCall(const Expr &expr) {
+  return isSimpleCallName(expr, "for");
 }
 
 bool isRepeatCall(const Expr &expr) {

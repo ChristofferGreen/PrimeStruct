@@ -24,6 +24,18 @@ bool isIfCall(const Expr &expr) {
   return isSimpleCallName(expr, "if");
 }
 
+bool isLoopCall(const Expr &expr) {
+  return isSimpleCallName(expr, "loop");
+}
+
+bool isWhileCall(const Expr &expr) {
+  return isSimpleCallName(expr, "while");
+}
+
+bool isForCall(const Expr &expr) {
+  return isSimpleCallName(expr, "for");
+}
+
 bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
 }

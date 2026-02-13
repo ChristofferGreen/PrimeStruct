@@ -655,6 +655,18 @@ bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std:
   return isSimpleCallName(expr, "block");
 }
 
+bool isLoopCall(const Expr &expr) {
+  return isSimpleCallName(expr, "loop");
+}
+
+bool isWhileCall(const Expr &expr) {
+  return isSimpleCallName(expr, "while");
+}
+
+bool isForCall(const Expr &expr) {
+  return isSimpleCallName(expr, "for");
+}
+
 bool isRepeatCall(const Expr &expr) {
   return isSimpleCallName(expr, "repeat");
 }

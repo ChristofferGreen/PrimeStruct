@@ -77,6 +77,9 @@ bool getVectorMutatorName(const Expr &expr,
 std::vector<const Expr *> orderCallArguments(const Expr &expr, const std::vector<Expr> &params);
 bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
 bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
+bool isLoopCall(const Expr &expr);
+bool isWhileCall(const Expr &expr);
+bool isForCall(const Expr &expr);
 bool isRepeatCall(const Expr &expr);
 bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames);
 bool isReturnCall(const Expr &expr);

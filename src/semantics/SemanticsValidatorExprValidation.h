@@ -312,7 +312,8 @@
             getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
             getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
-            isAssignCall(expr) || isIfCall(expr) || isRepeatCall(expr) || expr.name == "count" ||
+            isAssignCall(expr) || isIfCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
+            isRepeatCall(expr) || expr.name == "count" ||
             expr.name == "capacity" || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
             isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
             isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap")) {

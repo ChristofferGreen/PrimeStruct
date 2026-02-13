@@ -11,6 +11,9 @@ namespace primec::ir_lowerer {
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isReturnCall(const Expr &expr);
 bool isIfCall(const Expr &expr);
+bool isLoopCall(const Expr &expr);
+bool isWhileCall(const Expr &expr);
+bool isForCall(const Expr &expr);
 bool isRepeatCall(const Expr &expr);
 bool isBlockCall(const Expr &expr);
 

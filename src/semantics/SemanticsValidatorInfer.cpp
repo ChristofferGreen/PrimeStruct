@@ -681,6 +681,43 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
       }
       return true;
     }
+    if (isLoopCall(stmt) && stmt.args.size() == 2) {
+      const Expr &body = stmt.args[1];
+      std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
+      for (const auto &bodyExpr : body.bodyArguments) {
+        if (!inferStatement(bodyExpr, blockLocals)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (isWhileCall(stmt) && stmt.args.size() == 2) {
+      const Expr &body = stmt.args[1];
+      std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
+      for (const auto &bodyExpr : body.bodyArguments) {
+        if (!inferStatement(bodyExpr, blockLocals)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (isForCall(stmt) && stmt.args.size() == 4) {
+      std::unordered_map<std::string, BindingInfo> loopLocals = activeLocals;
+      if (!inferStatement(stmt.args[0], loopLocals)) {
+        return false;
+      }
+      if (!inferStatement(stmt.args[2], loopLocals)) {
+        return false;
+      }
+      const Expr &body = stmt.args[3];
+      std::unordered_map<std::string, BindingInfo> blockLocals = loopLocals;
+      for (const auto &bodyExpr : body.bodyArguments) {
+        if (!inferStatement(bodyExpr, blockLocals)) {
+          return false;
+        }
+      }
+      return true;
+    }
     if (isRepeatCall(stmt)) {
       std::unordered_map<std::string, BindingInfo> blockLocals = activeLocals;
       for (const auto &bodyExpr : stmt.bodyArguments) {

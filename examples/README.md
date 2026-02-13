@@ -22,6 +22,7 @@ From `build-debug/`:
 - `examples/collections_brackets.prime`: bracket collection literals + indexing.
 - `examples/if_else.prime`: `if` in statement position.
 - `examples/if_expression.prime`: `if` in expression position (both branches yield values).
+- `examples/loop_while_for.prime`: `loop`, `while`, and `for` statement forms.
 - `examples/infer_method_call.prime`: omitted binding type inference feeding a method call.
 - `examples/namespace_call.prime`: namespace blocks + slash-path calls.
 - `examples/pointers_and_references.prime`: `Pointer<T>`, `Reference<T>`, `location`, `dereference`.

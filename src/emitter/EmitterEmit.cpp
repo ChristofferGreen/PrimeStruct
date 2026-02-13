@@ -945,6 +945,73 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << "}\n";
         return;
       }
+      auto isLoopBlockEnvelope = [&](const Expr &candidate) -> bool {
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+          return false;
+        }
+        if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+          return false;
+        }
+        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+          return false;
+        }
+        const std::string resolved = resolveExprPath(candidate);
+        return nameMap.count(resolved) == 0;
+      };
+      if (stmt.kind == Expr::Kind::Call && isLoopCall(stmt) && stmt.args.size() == 2) {
+        const int repeatIndex = repeatCounter++;
+        const std::string endVar = "ps_loop_end_" + std::to_string(repeatIndex);
+        const std::string indexVar = "ps_loop_i_" + std::to_string(repeatIndex);
+        out << pad << "{\n";
+        std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
+        std::string countExpr =
+            emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+        std::unordered_map<std::string, ReturnKind> locals;
+        locals.reserve(localTypes.size());
+        for (const auto &entry : localTypes) {
+          locals.emplace(entry.first, returnKindForTypeName(entry.second.typeName));
+        }
+        ReturnKind countKind = inferExprReturnKind(stmt.args[0], params, locals);
+        out << innerPad << "auto " << endVar << " = " << countExpr << ";\n";
+        const std::string indexType = (countKind == ReturnKind::Bool) ? "int" : ("decltype(" + endVar + ")");
+        out << innerPad << "for (" << indexType << " " << indexVar << " = 0; " << indexVar << " < " << endVar
+            << "; ++" << indexVar << ") {\n";
+        if (isLoopBlockEnvelope(stmt.args[1])) {
+          auto blockTypes = localTypes;
+          for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
+            emitStatement(bodyStmt, indent + 2, blockTypes);
+          }
+        }
+        out << innerPad << "}\n";
+        out << pad << "}\n";
+        return;
+      }
+      if (stmt.kind == Expr::Kind::Call && isWhileCall(stmt) && stmt.args.size() == 2 && isLoopBlockEnvelope(stmt.args[1])) {
+        out << pad << "while ("
+            << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
+        auto blockTypes = localTypes;
+        for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
+          emitStatement(bodyStmt, indent + 1, blockTypes);
+        }
+        out << pad << "}\n";
+        return;
+      }
+      if (stmt.kind == Expr::Kind::Call && isForCall(stmt) && stmt.args.size() == 4 && isLoopBlockEnvelope(stmt.args[3])) {
+        out << pad << "{\n";
+        auto loopTypes = localTypes;
+        emitStatement(stmt.args[0], indent + 1, loopTypes);
+        std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
+        out << innerPad << "while ("
+            << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, loopTypes, returnKinds, hasMathImport) << ") {\n";
+        auto blockTypes = loopTypes;
+        for (const auto &bodyStmt : stmt.args[3].bodyArguments) {
+          emitStatement(bodyStmt, indent + 2, blockTypes);
+        }
+        emitStatement(stmt.args[2], indent + 2, loopTypes);
+        out << innerPad << "}\n";
+        out << pad << "}\n";
+        return;
+      }
       if (stmt.kind == Expr::Kind::Call && isRepeatCall(stmt)) {
         const int repeatIndex = repeatCounter++;
         const std::string endVar = "ps_repeat_end_" + std::to_string(repeatIndex);

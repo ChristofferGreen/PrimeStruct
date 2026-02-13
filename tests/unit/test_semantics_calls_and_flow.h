@@ -40,6 +40,30 @@ main() {
   CHECK(error.find("repeat does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("loop while for validate") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  loop(2i32) {
+    assign(total, plus(total, 1i32))
+  }
+  while(less_than(i 3i32)) {
+    assign(total, plus(total, i))
+    assign(i, plus(i, 1i32))
+  }
+  for([i32 mut] j{0i32} less_than(j 2i32) assign(j, plus(j, 1i32))) {
+    assign(total, plus(total, j))
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reference participates in signedness checks") {
   const std::string source = R"(
 [return<int>]

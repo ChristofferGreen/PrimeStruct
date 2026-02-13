@@ -571,6 +571,159 @@
       function.instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);
       return true;
     }
+    auto isLoopBlockEnvelope = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      return resolveDefinitionCall(candidate) == nullptr;
+    };
+    if (isLoopCall(stmt)) {
+      if (stmt.args.size() != 2) {
+        error = "loop requires count and body";
+        return false;
+      }
+      const Expr &countExpr = stmt.args[0];
+      if (!emitExpr(countExpr, localsIn)) {
+        return false;
+      }
+      LocalInfo::ValueKind countKind = inferExprKind(countExpr, localsIn);
+      if (countKind != LocalInfo::ValueKind::Int32 && countKind != LocalInfo::ValueKind::Int64 &&
+          countKind != LocalInfo::ValueKind::UInt64) {
+        error = "loop count requires integer";
+        return false;
+      }
+
+      const int32_t counterLocal = allocTempLocal();
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
+
+      const size_t checkIndex = function.instructions.size();
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
+      if (countKind == LocalInfo::ValueKind::Int32) {
+        function.instructions.push_back({IrOpcode::PushI32, 0});
+        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+      } else if (countKind == LocalInfo::ValueKind::Int64) {
+        function.instructions.push_back({IrOpcode::PushI64, 0});
+        function.instructions.push_back({IrOpcode::CmpGtI64, 0});
+      } else {
+        function.instructions.push_back({IrOpcode::PushI64, 0});
+        function.instructions.push_back({IrOpcode::CmpNeI64, 0});
+      }
+
+      const size_t jumpEndIndex = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+      const Expr &body = stmt.args[1];
+      if (!isLoopBlockEnvelope(body)) {
+        error = "loop body requires a block envelope";
+        return false;
+      }
+      LocalMap bodyLocals = localsIn;
+      for (const auto &bodyStmt : body.bodyArguments) {
+        if (!emitStatement(bodyStmt, bodyLocals)) {
+          return false;
+        }
+      }
+
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
+      if (countKind == LocalInfo::ValueKind::Int32) {
+        function.instructions.push_back({IrOpcode::PushI32, 1});
+        function.instructions.push_back({IrOpcode::SubI32, 0});
+      } else {
+        function.instructions.push_back({IrOpcode::PushI64, 1});
+        function.instructions.push_back({IrOpcode::SubI64, 0});
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
+
+      const size_t endIndex = function.instructions.size();
+      function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+      return true;
+    }
+    if (isWhileCall(stmt)) {
+      if (stmt.args.size() != 2) {
+        error = "while requires condition and body";
+        return false;
+      }
+      const Expr &cond = stmt.args[0];
+      const Expr &body = stmt.args[1];
+      if (!isLoopBlockEnvelope(body)) {
+        error = "while body requires a block envelope";
+        return false;
+      }
+      const size_t checkIndex = function.instructions.size();
+      if (!emitExpr(cond, localsIn)) {
+        return false;
+      }
+      LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
+      if (condKind != LocalInfo::ValueKind::Bool) {
+        error = "while condition requires bool";
+        return false;
+      }
+      const size_t jumpEndIndex = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+      LocalMap bodyLocals = localsIn;
+      for (const auto &bodyStmt : body.bodyArguments) {
+        if (!emitStatement(bodyStmt, bodyLocals)) {
+          return false;
+        }
+      }
+
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
+      const size_t endIndex = function.instructions.size();
+      function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+      return true;
+    }
+    if (isForCall(stmt)) {
+      if (stmt.args.size() != 4) {
+        error = "for requires init, condition, step, and body";
+        return false;
+      }
+      LocalMap loopLocals = localsIn;
+      if (!emitStatement(stmt.args[0], loopLocals)) {
+        return false;
+      }
+      const Expr &cond = stmt.args[1];
+      const Expr &step = stmt.args[2];
+      const Expr &body = stmt.args[3];
+      if (!isLoopBlockEnvelope(body)) {
+        error = "for body requires a block envelope";
+        return false;
+      }
+
+      const size_t checkIndex = function.instructions.size();
+      if (!emitExpr(cond, loopLocals)) {
+        return false;
+      }
+      LocalInfo::ValueKind condKind = inferExprKind(cond, loopLocals);
+      if (condKind != LocalInfo::ValueKind::Bool) {
+        error = "for condition requires bool";
+        return false;
+      }
+      const size_t jumpEndIndex = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+      LocalMap bodyLocals = loopLocals;
+      for (const auto &bodyStmt : body.bodyArguments) {
+        if (!emitStatement(bodyStmt, bodyLocals)) {
+          return false;
+        }
+      }
+      if (!emitStatement(step, loopLocals)) {
+        return false;
+      }
+
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
+      const size_t endIndex = function.instructions.size();
+      function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+      return true;
+    }
     if (isRepeatCall(stmt)) {
       if (stmt.args.size() != 1) {
         error = "repeat requires exactly one argument";

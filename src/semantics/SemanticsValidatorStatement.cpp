@@ -478,6 +478,130 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return true;
   }
+  auto isLoopBlockEnvelope = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+      return false;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return false;
+    }
+    const std::string resolved = resolveCalleePath(candidate);
+    return defMap_.find(resolved) == defMap_.end();
+  };
+  auto validateLoopBody = [&](const Expr &body, const std::unordered_map<std::string, BindingInfo> &baseLocals) -> bool {
+    if (!isLoopBlockEnvelope(body)) {
+      error_ = "loop body requires a block envelope";
+      return false;
+    }
+    std::unordered_map<std::string, BindingInfo> blockLocals = baseLocals;
+    for (const auto &bodyExpr : body.bodyArguments) {
+      if (!validateStatement(params,
+                             blockLocals,
+                             bodyExpr,
+                             returnKind,
+                             allowReturn,
+                             allowBindings,
+                             sawReturn,
+                             namespacePrefix)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (isLoopCall(stmt)) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "loop does not accept trailing block arguments";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = "loop does not accept template arguments";
+      return false;
+    }
+    if (stmt.args.size() != 2) {
+      error_ = "loop requires count and body";
+      return false;
+    }
+    const Expr &count = stmt.args[0];
+    if (!validateExpr(params, locals, count)) {
+      return false;
+    }
+    ReturnKind countKind = inferExprReturnKind(count, params, locals);
+    if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64) {
+      error_ = "loop count requires integer";
+      return false;
+    }
+    return validateLoopBody(stmt.args[1], locals);
+  }
+  if (isWhileCall(stmt)) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "while does not accept trailing block arguments";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = "while does not accept template arguments";
+      return false;
+    }
+    if (stmt.args.size() != 2) {
+      error_ = "while requires condition and body";
+      return false;
+    }
+    const Expr &cond = stmt.args[0];
+    if (!validateExpr(params, locals, cond)) {
+      return false;
+    }
+    ReturnKind condKind = inferExprReturnKind(cond, params, locals);
+    if (condKind != ReturnKind::Bool) {
+      error_ = "while condition requires bool";
+      return false;
+    }
+    return validateLoopBody(stmt.args[1], locals);
+  }
+  if (isForCall(stmt)) {
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "for does not accept trailing block arguments";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = "for does not accept template arguments";
+      return false;
+    }
+    if (stmt.args.size() != 4) {
+      error_ = "for requires init, condition, step, and body";
+      return false;
+    }
+    std::unordered_map<std::string, BindingInfo> loopLocals = locals;
+    if (!validateStatement(params, loopLocals, stmt.args[0], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
+      return false;
+    }
+    const Expr &cond = stmt.args[1];
+    if (!validateExpr(params, loopLocals, cond)) {
+      return false;
+    }
+    ReturnKind condKind = inferExprReturnKind(cond, params, loopLocals);
+    if (condKind != ReturnKind::Bool) {
+      error_ = "for condition requires bool";
+      return false;
+    }
+    if (!validateStatement(params, loopLocals, stmt.args[2], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
+      return false;
+    }
+    return validateLoopBody(stmt.args[3], loopLocals);
+  }
   if (isRepeatCall(stmt)) {
     if (!stmt.hasBodyArguments) {
       error_ = "repeat requires block arguments";

@@ -653,6 +653,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "block requires block arguments";
       return false;
     }
+    if (isLoopCall(expr)) {
+      error_ = "loop is only supported as a statement";
+      return false;
+    }
+    if (isWhileCall(expr)) {
+      error_ = "while is only supported as a statement";
+      return false;
+    }
+    if (isForCall(expr)) {
+      error_ = "for is only supported as a statement";
+      return false;
+    }
     if (isRepeatCall(expr)) {
       error_ = "repeat is only supported as a statement";
       return false;
