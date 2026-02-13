@@ -21,6 +21,13 @@ TEST_CASE("lexes namespace keyword and identifiers") {
   CHECK(tokens[3].kind == primec::TokenKind::RBrace);
 }
 
+TEST_CASE("lexes import keyword") {
+  const auto tokens = lex("import std");
+  REQUIRE(tokens.size() >= 2);
+  CHECK(tokens[0].kind == primec::TokenKind::KeywordImport);
+  CHECK(tokens[1].kind == primec::TokenKind::Identifier);
+}
+
 TEST_CASE("lexes slash paths as identifiers") {
   const auto tokens = lex("/foo/bar");
   REQUIRE(tokens.size() >= 1);
@@ -35,6 +42,13 @@ TEST_CASE("lexes raw string literal suffixes") {
   CHECK(tokens[0].text == "\"hello world\"raw_utf8");
 }
 
+TEST_CASE("lexes string literal with underscore suffix") {
+  const auto tokens = lex("\"hello\"_custom");
+  REQUIRE(tokens.size() >= 1);
+  CHECK(tokens[0].kind == primec::TokenKind::String);
+  CHECK(tokens[0].text == "\"hello\"_custom");
+}
+
 TEST_CASE("lexes single-quoted string literals") {
   const auto tokens = lex("'hello world'utf8");
   REQUIRE(tokens.size() >= 1);
@@ -47,6 +61,13 @@ TEST_CASE("lexes string literals with escapes") {
   REQUIRE(tokens.size() >= 1);
   CHECK(tokens[0].kind == primec::TokenKind::String);
   CHECK(tokens[0].text == "\"hello\\nworld\"");
+}
+
+TEST_CASE("lexes unterminated string literal as invalid token") {
+  const auto tokens = lex("\"hello");
+  REQUIRE(tokens.size() >= 1);
+  CHECK(tokens[0].kind == primec::TokenKind::Invalid);
+  CHECK(tokens[0].text.find("unterminated string literal") != std::string::npos);
 }
 
 TEST_CASE("lexes numeric literals with suffixes and exponents") {
@@ -64,10 +85,71 @@ TEST_CASE("lexes numeric literals with suffixes and exponents") {
   CHECK(tokens[9].text == "1e+3f");
 }
 
+TEST_CASE("lexes numbers with trailing dot and empty hex") {
+  const auto tokens = lex("1. 0x");
+  REQUIRE(tokens.size() >= 2);
+  CHECK(tokens[0].kind == primec::TokenKind::Number);
+  CHECK(tokens[0].text == "1.");
+  CHECK(tokens[1].kind == primec::TokenKind::Number);
+  CHECK(tokens[1].text == "0x");
+}
+
+TEST_CASE("skips comments and tracks lines") {
+  const auto tokens = lex("alpha // comment\nbeta");
+  REQUIRE(tokens.size() >= 2);
+  CHECK(tokens[0].kind == primec::TokenKind::Identifier);
+  CHECK(tokens[0].text == "alpha");
+  CHECK(tokens[0].line == 1);
+  CHECK(tokens[1].kind == primec::TokenKind::Identifier);
+  CHECK(tokens[1].text == "beta");
+  CHECK(tokens[1].line == 2);
+  CHECK(tokens[1].column == 1);
+}
+
+TEST_CASE("skips block comments") {
+  const auto tokens = lex("alpha /* comment */ beta");
+  REQUIRE(tokens.size() >= 2);
+  CHECK(tokens[0].text == "alpha");
+  CHECK(tokens[1].text == "beta");
+  CHECK(tokens[1].line == 1);
+}
+
+TEST_CASE("skips block comments with newline") {
+  const auto tokens = lex("alpha /* comment\nline */ beta");
+  REQUIRE(tokens.size() >= 2);
+  CHECK(tokens[1].text == "beta");
+  CHECK(tokens[1].line == 2);
+}
+
+TEST_CASE("lexes punctuation tokens") {
+  const auto tokens = lex("[](){}<>,.=*;");
+  REQUIRE(tokens.size() >= 13);
+  CHECK(tokens[0].kind == primec::TokenKind::LBracket);
+  CHECK(tokens[1].kind == primec::TokenKind::RBracket);
+  CHECK(tokens[2].kind == primec::TokenKind::LParen);
+  CHECK(tokens[3].kind == primec::TokenKind::RParen);
+  CHECK(tokens[4].kind == primec::TokenKind::LBrace);
+  CHECK(tokens[5].kind == primec::TokenKind::RBrace);
+  CHECK(tokens[6].kind == primec::TokenKind::LAngle);
+  CHECK(tokens[7].kind == primec::TokenKind::RAngle);
+  CHECK(tokens[8].kind == primec::TokenKind::Comma);
+  CHECK(tokens[9].kind == primec::TokenKind::Dot);
+  CHECK(tokens[10].kind == primec::TokenKind::Equal);
+  CHECK(tokens[11].kind == primec::TokenKind::Star);
+  CHECK(tokens[12].kind == primec::TokenKind::Semicolon);
+}
+
 TEST_CASE("lexes unknown punctuation as end token") {
   const auto tokens = lex("@");
   REQUIRE(tokens.size() >= 1);
   CHECK(tokens[0].kind == primec::TokenKind::Invalid);
+}
+
+TEST_CASE("lexes minus as invalid punctuation") {
+  const auto tokens = lex("-");
+  REQUIRE(tokens.size() >= 1);
+  CHECK(tokens[0].kind == primec::TokenKind::Invalid);
+  CHECK(tokens[0].text == "-");
 }
 
 TEST_CASE("lexes unterminated block comment as invalid token") {
