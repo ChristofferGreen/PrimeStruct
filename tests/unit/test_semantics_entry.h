@@ -1,3 +1,4 @@
+TEST_SUITE_BEGIN("primestruct.semantics.entry");
 
 TEST_CASE("missing entry definition fails") {
   const std::string source = R"(
@@ -59,6 +60,11 @@ main([array<string>] args{array<string>("hi"utf8)}) {
   CHECK(error.find("entry parameter does not allow a default value") != std::string::npos);
 }
 
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.resolution");
+
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]
@@ -116,6 +122,10 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.parameters");
 
 TEST_CASE("parameter default literal is allowed") {
   const std::string source = R"(
@@ -332,6 +342,10 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.return_inference");
+
 TEST_CASE("infers return type without transform") {
   const std::string source = R"(
 main() {
@@ -412,6 +426,10 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.operators");
 
 TEST_CASE("arithmetic rejects bool operands") {
   const std::string source = R"(
@@ -501,6 +519,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("mixed int/float") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.math_imports");
 
 TEST_CASE("math builtin requires import") {
   const std::string source = R"(
@@ -810,6 +832,10 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.tags");
+
 TEST_CASE("pod and handle tags conflict on definitions") {
   const std::string source = R"(
 [pod handle]
@@ -1041,6 +1067,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("restrict transform is only supported on bindings and parameters") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.builtins_numeric");
 
 TEST_CASE("infers return type from builtin clamp") {
   const std::string source = R"(
@@ -1334,6 +1364,10 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.executions");
 
 TEST_CASE("argument count mismatch fails") {
   const std::string source = R"(
@@ -1934,6 +1968,10 @@ execute_repeat(3i32) { main() }
   CHECK(error.find("alignment transforms are not supported on executions") != std::string::npos);
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.transforms");
+
 TEST_CASE("unsupported return type fails") {
   const std::string source = R"(
 [return<u32>]
@@ -2161,3 +2199,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("duplicate capabilities transform") != std::string::npos);
 }
+
+TEST_SUITE_END();

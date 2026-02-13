@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
+
 TEST_CASE("compiles and runs implicit i32 suffix") {
   const std::string source = R"(
 [return<int>]
@@ -1168,6 +1170,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+
 TEST_CASE("compiles and runs convert builtin") {
   const std::string source = R"(
 [return<int>]
@@ -1303,3 +1306,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
 }
+
+TEST_SUITE_END();

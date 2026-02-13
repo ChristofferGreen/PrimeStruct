@@ -31,8 +31,6 @@ bool validateProgramWithDefaults(const std::string &source,
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.semantics");
-
 #include "test_semantics_entry.h"
 #include "test_semantics_capabilities.h"
 #include "test_semantics_bindings.h"

@@ -72,8 +72,6 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.compile.run");
-
 #include "test_compile_run_smoke.h"
 #include "test_compile_run_vm_collections.h"
 #include "test_compile_run_emitters.h"

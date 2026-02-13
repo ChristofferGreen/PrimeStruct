@@ -1,4 +1,5 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 TEST_CASE("compiles and runs native executable") {
   const std::string source = R"(
 [return<int>]
@@ -176,6 +177,10 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.argv");
 
 TEST_CASE("compiles and runs native argv count") {
   const std::string source = R"(
@@ -625,6 +630,10 @@ main([array<string>] args) {
   CHECK(readFile(errPath).empty());
   CHECK(readFile(outPath).empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.control");
 
 TEST_CASE("compiles and runs native void executable") {
   const std::string source = R"(
@@ -1078,6 +1087,10 @@ main() {
   CHECK(readFile(errPath) == "string index out of bounds\n");
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.pointers");
+
 TEST_CASE("compiles and runs native hello world example") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::string srcPath = (repoRoot / "examples" / "hello_world.prime").string();
@@ -1264,6 +1277,10 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.math_numeric");
 
 TEST_CASE("compiles and runs native clamp") {
   const std::string source = R"(
@@ -1670,6 +1687,10 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 2);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
 TEST_CASE("compiles and runs native array literals") {
   const std::string source = R"(
@@ -2234,6 +2255,10 @@ main() {
         "Native lowering error: native backend only supports numeric/bool map literals\n");
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.imports");
+
 TEST_CASE("rejects unsupported effects in native backend") {
   const std::string source = R"(
 [return<int> effects(render_graph)]
@@ -2485,4 +2510,5 @@ TEST_CASE("compiles and runs versioned include with version first") {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_SUITE_END();
 #endif

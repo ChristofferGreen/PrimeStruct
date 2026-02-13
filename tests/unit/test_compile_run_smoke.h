@@ -1,3 +1,4 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
 TEST_CASE("compiles and runs simple main") {
   const std::string source = R"(
@@ -1156,6 +1157,7 @@ main([array<string>] args) {
   CHECK(readFile(errPath) == "alpha\n");
 }
 
+
 TEST_CASE("runs vm with argv error output without newline") {
   const std::string source = R"(
 [return<int> effects(io_err)]
@@ -1235,3 +1237,5 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(errPath) == "alpha\n");
 }
+
+TEST_SUITE_END();

@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.includes");
+
 TEST_CASE("compiles and runs versioned include expansion with relative include entry") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_relative";
@@ -833,6 +835,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+
 TEST_CASE("rejects negate on u64") {
   const std::string source = R"(
 [return<u64>]
@@ -1379,3 +1382,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 1);
 }
+
+TEST_SUITE_END();

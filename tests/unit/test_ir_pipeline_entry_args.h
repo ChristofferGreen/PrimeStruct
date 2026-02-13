@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.entry_args");
+
 TEST_CASE("ir lowerer supports entry args print u64 index") {
   const std::string source = R"(
 [return<int> effects(io_out)]

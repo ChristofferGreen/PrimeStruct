@@ -33,7 +33,7 @@ primec::Program parseProgramWithFilters(const std::string &source) {
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.dumps");
+TEST_SUITE_BEGIN("primestruct.dumps.ast_ir");
 
 TEST_CASE("ast dump matches expected format") {
   const std::string source = R"(

@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
+
 TEST_CASE("compiles and runs chained method calls in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
@@ -564,3 +566,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
 }
+
+TEST_SUITE_END();

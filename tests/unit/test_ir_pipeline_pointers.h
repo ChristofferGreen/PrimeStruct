@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.pointers");
+
 TEST_CASE("ir lowers location of reference binding") {
   const std::string source = R"(
 [return<int>]
@@ -719,6 +721,7 @@ main() {
   CHECK(result == 0);
 }
 
+
 TEST_CASE("ir lowers saturate i32") {
   const std::string source = R"(
 import /math/*
@@ -981,3 +984,5 @@ main() {
   CHECK(error.empty());
   CHECK(result == 0);
 }
+
+TEST_SUITE_END();

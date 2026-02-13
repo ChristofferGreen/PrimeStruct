@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
+
 TEST_CASE("ir lowers convert<bool> from u64") {
   const std::string source = R"(
 [return<bool>]
@@ -1313,6 +1315,7 @@ main([array<string>] args) {
   CHECK(sawPrintArgvUnsafe);
 }
 
+
 TEST_CASE("ir lowerer supports entry args print_error unsafe") {
   const std::string source = R"(
 [return<int> effects(io_err)]
@@ -1343,3 +1346,5 @@ main([array<string>] args) {
   }
   CHECK(sawPrintArgvUnsafe);
 }
+
+TEST_SUITE_END();

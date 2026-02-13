@@ -1,3 +1,4 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
 
 TEST_CASE("runs vm with method call result") {
   const std::string source = R"(
@@ -229,6 +230,10 @@ main() {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "line\nnext\n");
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
 TEST_CASE("runs vm with numeric array literals") {
   const std::string source = R"(
@@ -1545,3 +1550,5 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
 }
+
+TEST_SUITE_END();

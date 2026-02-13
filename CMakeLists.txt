@@ -78,23 +78,58 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_compile_options(PrimeStruct_tests PRIVATE -Wall -Wextra -Wpedantic)
 
   set(PrimeStructTestSuites
-    primestruct.dumps
+    primestruct.dumps.ast_ir
     primestruct.dumps.namespace
     primestruct.parser.executions
     primestruct.parser.execution.whitespace
     primestruct.includes.errors
     primestruct.includes.multiple
-    primestruct.includes
-    primestruct.ir.pipeline
+    primestruct.includes.resolver
+    primestruct.ir.pipeline.serialization
+    primestruct.ir.pipeline.pointers
+    primestruct.ir.pipeline.conversions
+    primestruct.ir.pipeline.entry_args
     primestruct.lexer
     primestruct.parser.basic
     primestruct.parser.errors
-    primestruct.parser.errors.more
+    primestruct.parser.errors.identifiers
+    primestruct.parser.errors.punctuation
+    primestruct.parser.errors.literals
+    primestruct.parser.errors.named_args
+    primestruct.parser.errors.transforms
     primestruct.printers.manual
-    primestruct.semantics
+    primestruct.semantics.entry
+    primestruct.semantics.resolution
+    primestruct.semantics.parameters
+    primestruct.semantics.return_inference
+    primestruct.semantics.operators
+    primestruct.semantics.math_imports
+    primestruct.semantics.tags
+    primestruct.semantics.builtins_numeric
+    primestruct.semantics.executions
+    primestruct.semantics.transforms
+    primestruct.semantics.effects
+    primestruct.semantics.struct_transforms
+    primestruct.semantics.builtin_calls
+    primestruct.semantics.bindings.core
+    primestruct.semantics.bindings.pointers
+    primestruct.semantics.bindings.assignments
+    primestruct.semantics.bindings.control_flow
+    primestruct.semantics.calls_flow.control
+    primestruct.semantics.calls_flow.collections
+    primestruct.semantics.calls_flow.access
+    primestruct.semantics.calls_flow.named_args
+    primestruct.semantics.calls_flow.numeric_builtins
+    primestruct.semantics.calls_flow.comparisons_literals
+    primestruct.semantics.calls_flow.effects
+    primestruct.semantics.imports
     primestruct.semantics.manual
     primestruct.parser.templates
-    primestruct.text_filters
+    primestruct.text_filters.pipeline.basics
+    primestruct.text_filters.pipeline.rewrites
+    primestruct.text_filters.pipeline.implicit_utf8
+    primestruct.text_filters.pipeline.implicit_i32
+    primestruct.text_filters.pipeline.collections
   )
 
   foreach(suite IN LISTS PrimeStructTestSuites)
@@ -105,28 +140,27 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
 
-  set(PrimeStructCompileRunSuite "primestruct.compile.run")
-  set(PrimeStructCompileRunRanges
-    "1,35"
-    "36,70"
-    "71,105"
-    "106,140"
-    "141,175"
-    "176,210"
-    "211,9999"
+  set(PrimeStructCompileRunSuites
+    primestruct.compile.run.smoke
+    primestruct.compile.run.vm.core
+    primestruct.compile.run.vm.collections
+    primestruct.compile.run.emitters.cpp
+    primestruct.compile.run.native_backend.core
+    primestruct.compile.run.native_backend.argv
+    primestruct.compile.run.native_backend.control
+    primestruct.compile.run.native_backend.pointers
+    primestruct.compile.run.native_backend.math_numeric
+    primestruct.compile.run.native_backend.collections
+    primestruct.compile.run.native_backend.imports
+    primestruct.compile.run.includes
+    primestruct.compile.run.text_filters
+    primestruct.compile.run.bindings
+    primestruct.compile.run.examples
   )
-  foreach(range IN LISTS PrimeStructCompileRunRanges)
-    string(REPLACE "," ";" rangeParts "${range}")
-    list(GET rangeParts 0 rangeFirst)
-    list(GET rangeParts 1 rangeLast)
-    set(testName "PrimeStruct_compile_run_${rangeFirst}_${rangeLast}")
-    add_test(NAME "${testName}"
-      COMMAND $<TARGET_FILE:PrimeStruct_tests>
-        "--test-suite=${PrimeStructCompileRunSuite}"
-        "--order-by=name"
-        "--first=${rangeFirst}"
-        "--last=${rangeLast}"
-    )
+  foreach(suite IN LISTS PrimeStructCompileRunSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_tests> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800)
   endforeach()
 endif()

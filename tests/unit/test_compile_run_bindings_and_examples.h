@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.compile.run.bindings");
+
 TEST_CASE("compiles and runs void main") {
   const std::string source = R"(
 [return<void>]
@@ -118,6 +120,10 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
 TEST_CASE("compiles examples to IR") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples";

@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.control");
+
 TEST_CASE("repeat rejects missing count") {
   const std::string source = R"(
 [return<int>]
@@ -572,6 +574,10 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("count builtin validates on array literals") {
   const std::string source = R"(
@@ -1209,6 +1215,10 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.access");
+
 TEST_CASE("count helper validates on string binding") {
   const std::string source = R"(
 [return<int>]
@@ -1653,6 +1663,10 @@ main() {
   CHECK(error.find("at_unsafe requires array, vector, map, or string target") != std::string::npos);
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.named_args");
+
 TEST_CASE("unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
@@ -1755,6 +1769,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.numeric_builtins");
 
 TEST_CASE("convert builtin validates") {
   const std::string source = R"(
@@ -1941,6 +1959,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("clamp requires numeric operands") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.comparisons_literals");
 
 TEST_CASE("string comparisons validate") {
   const std::string source = R"(
@@ -2352,6 +2374,10 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.effects");
 
 TEST_CASE("boolean literal validates") {
   const std::string source = R"(

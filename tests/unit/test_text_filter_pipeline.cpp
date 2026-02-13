@@ -2,7 +2,7 @@
 
 #include "third_party/doctest.h"
 
-TEST_SUITE_BEGIN("primestruct.text_filters");
+TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.basics");
 
 TEST_CASE("pipeline passes through text") {
   const std::string source = "include</std>\n[return<int>]\nmain(){ return(1i32) }\n";
@@ -92,6 +92,10 @@ TEST_CASE("filters ignore block comments") {
   CHECK(output.find("multiply(a, b)") == std::string::npos);
   CHECK(output.find("\"raw\"utf8") == std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.rewrites");
 
 TEST_CASE("rewrites divide operator without spaces") {
   const std::string source = "main(){ return(a/b) }\n";
@@ -431,6 +435,10 @@ TEST_CASE("rewrites plus operator with string literals") {
   CHECK(error.empty());
   CHECK(output.find("plus(\"a\"utf8, \"b\"utf8)") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.implicit_utf8");
 
 TEST_CASE("implicit utf8 appends to single-quoted strings") {
   const std::string source = "main(){ return('a') }\n";
@@ -920,6 +928,10 @@ TEST_CASE("does not rewrite operators around block comments") {
   CHECK(output == source);
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.implicit_i32");
+
 TEST_CASE("adds i32 suffix to bare integer literal") {
   const std::string source = "main(){ return(42) }\n";
   primec::TextFilterPipeline pipeline;
@@ -1115,6 +1127,10 @@ TEST_CASE("does not rewrite collection literal name prefixes") {
   CHECK(error.empty());
   CHECK(output == source);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.collections");
 
 TEST_CASE("rewrites array literal braces") {
   const std::string source = "main(){ array<i32>{1i32, 2i32} }\n";

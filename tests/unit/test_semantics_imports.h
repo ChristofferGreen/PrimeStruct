@@ -1,5 +1,7 @@
 #pragma once
 
+TEST_SUITE_BEGIN("primestruct.semantics.imports");
+
 TEST_CASE("import brings immediate children into root") {
   const std::string source = R"(
 import /util
@@ -18,6 +20,7 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
 
 TEST_CASE("import resolves definitions declared before import") {
   const std::string source = R"(
@@ -527,3 +530,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: second") != std::string::npos);
 }
+
+TEST_SUITE_END();

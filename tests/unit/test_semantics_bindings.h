@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.bindings.core");
+
 TEST_CASE("local binding requires initializer") {
   const std::string source = R"(
 [return<int>]
@@ -23,6 +25,7 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
 
 TEST_CASE("local binding infers type without transforms") {
   const std::string source = R"(
@@ -517,6 +520,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("binding visibility transforms are mutually exclusive") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.bindings.pointers");
 
 TEST_CASE("pointer helpers validate") {
   const std::string source = R"(
@@ -1015,6 +1022,10 @@ main() {
   CHECK(error.find("pointer arithmetic requires integer offset") != std::string::npos);
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.bindings.assignments");
+
 TEST_CASE("collections validate") {
   const std::string source = R"(
 [return<int>]
@@ -1238,6 +1249,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("Reference bindings require location") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.bindings.control_flow");
 
 TEST_CASE("if validates block arguments") {
   const std::string source = R"(
@@ -1509,3 +1524,5 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("repeat count requires integer or bool") != std::string::npos);
 }
+
+TEST_SUITE_END();

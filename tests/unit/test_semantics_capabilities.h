@@ -1,3 +1,5 @@
+TEST_SUITE_BEGIN("primestruct.semantics.effects");
+
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
 [return<int>]
@@ -17,6 +19,7 @@ task(1i32)
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
 
 TEST_CASE("execution capabilities transform validates") {
   const std::string source = R"(
@@ -245,6 +248,10 @@ main() {
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("duplicate capability") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.struct_transforms");
 
 TEST_CASE("align_bytes validates integer argument") {
   const std::string source = R"(
@@ -938,6 +945,10 @@ task(1i32)
   CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.semantics.builtin_calls");
+
 TEST_CASE("builtin arithmetic calls validate") {
   const std::string source = R"(
 namespace demo {
@@ -1373,3 +1384,5 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();

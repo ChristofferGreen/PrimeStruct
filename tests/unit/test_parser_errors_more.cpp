@@ -17,7 +17,7 @@ bool validateProgram(const std::string &source, const std::string &entry, std::s
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.parser.errors.more");
+TEST_SUITE_BEGIN("primestruct.parser.errors.identifiers");
 
 TEST_CASE("multiple return statements parse") {
   const std::string source = R"(
@@ -254,6 +254,10 @@ main() {
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("return value not allowed for void definition") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.parser.errors.punctuation");
 
 TEST_CASE("semicolon is rejected") {
   const std::string source = R"(
@@ -700,6 +704,10 @@ execute_repeat(2i32) { main(), }
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("trailing comma not allowed in brace list") != std::string::npos);
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.parser.errors.literals");
 
 TEST_CASE("string literal requires suffix") {
   const std::string source = R"(
@@ -1201,6 +1209,10 @@ main() {
   CHECK(error.find("invalid float literal") != std::string::npos);
 }
 
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.parser.errors.named_args");
+
 TEST_CASE("named args for builtin fail in parser") {
   const std::string source = R"(
 [return<int>]
@@ -1387,6 +1399,10 @@ main() {
   CHECK(parser.parse(program, error));
   CHECK(error.empty());
 }
+
+TEST_SUITE_END();
+
+TEST_SUITE_BEGIN("primestruct.parser.errors.transforms");
 
 TEST_CASE("transform argument list cannot be empty") {
   const std::string source = R"(

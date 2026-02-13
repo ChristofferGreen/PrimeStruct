@@ -1,3 +1,4 @@
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
 
 TEST_CASE("ir serialize roundtrip and vm execution") {
   const std::string source = R"(
@@ -733,6 +734,7 @@ main() {
   CHECK(result == 9);
 }
 
+
 TEST_CASE("ir lowers repeat to jumps") {
   const std::string source = R"(
 [return<int>]
@@ -885,3 +887,5 @@ main() {
   CHECK(error.empty());
   CHECK(result == 9);
 }
+
+TEST_SUITE_END();

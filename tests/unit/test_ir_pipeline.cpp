@@ -24,8 +24,6 @@ bool parseAndValidate(const std::string &source,
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.ir.pipeline");
-
 #include "test_ir_pipeline_serialization.h"
 #include "test_ir_pipeline_pointers.h"
 #include "test_ir_pipeline_conversions.h"
