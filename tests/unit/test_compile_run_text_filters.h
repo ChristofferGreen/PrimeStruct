@@ -284,6 +284,40 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("per-envelope text transforms enable collections") {
+  const std::string source = R"(
+[collections return<int>]
+main() {
+  [array<i32>] values{array<i32>{1i32, 2i32}}
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_per_env_collections.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_per_env_collections_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main --text-transforms=operators";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("per-envelope text transforms override operators") {
+  const std::string source = R"(
+[collections return<int>]
+main() {
+  return(1i32 + 2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_per_env_override.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_per_env_override_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
 TEST_CASE("dump pre_ast shows includes and text filters") {
   const std::string libPath =
       writeTemp("compile_dump_pre_ast_lib.prime", "// PRE_AST_LIB\n[return<int>]\nhelper(){ return(1i32) }\n");

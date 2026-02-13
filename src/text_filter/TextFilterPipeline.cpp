@@ -1,6 +1,7 @@
 #include "primec/TextFilterPipeline.h"
 
 #include "TextFilterHelpers.h"
+#include "primec/TransformRegistry.h"
 
 #include <cctype>
 #include <unordered_set>
@@ -715,21 +716,317 @@ bool applyPass(const std::string &input,
   return true;
 }
 
-} // namespace
+enum class ListPhase { Auto, Text, Semantic };
 
-bool TextFilterPipeline::apply(const std::string &input,
-                               std::string &output,
-                               std::string &error,
-                               const TextFilterOptions &options) const {
-  output = input;
-  error.clear();
-  if (options.enabledFilters.empty()) {
+bool isIdentifierStart(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '/';
+}
+
+bool isIdentifierBody(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '/';
+}
+
+bool isTransformListBoundary(const std::string &input, size_t index) {
+  if (index == 0) {
+    return true;
+  }
+  char prev = input[index - 1];
+  if (std::isspace(static_cast<unsigned char>(prev))) {
+    return true;
+  }
+  switch (prev) {
+  case '(':
+  case '{':
+  case ';':
+  case ',':
+    return true;
+  default:
+    return false;
+  }
+}
+
+void skipWhitespaceAndComments(const std::string &input, size_t &pos) {
+  while (pos < input.size()) {
+    char c = input[pos];
+    if (std::isspace(static_cast<unsigned char>(c))) {
+      ++pos;
+      continue;
+    }
+    if (c == '/' && pos + 1 < input.size()) {
+      if (input[pos + 1] == '/') {
+        pos += 2;
+        while (pos < input.size() && input[pos] != '\n') {
+          ++pos;
+        }
+        continue;
+      }
+      if (input[pos + 1] == '*') {
+        size_t end = input.find("*/", pos + 2);
+        if (end == std::string::npos) {
+          pos = input.size();
+          return;
+        }
+        pos = end + 2;
+        continue;
+      }
+    }
+    return;
+  }
+}
+
+size_t findMatchingCloseWithComments(const std::string &input,
+                                     size_t openIndex,
+                                     char openChar,
+                                     char closeChar) {
+  int depth = 1;
+  size_t pos = openIndex + 1;
+  while (pos < input.size()) {
+    char c = input[pos];
+    if (c == '"' || c == '\'') {
+      size_t end = skipQuotedForward(input, pos);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end;
+      continue;
+    }
+    if (c == 'R' && pos + 2 < input.size() && input[pos + 1] == '"' && input[pos + 2] == '(') {
+      size_t end = input.find(")\"", pos + 3);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end + 2;
+      continue;
+    }
+    if (c == '/' && pos + 1 < input.size()) {
+      if (input[pos + 1] == '/') {
+        pos += 2;
+        while (pos < input.size() && input[pos] != '\n') {
+          ++pos;
+        }
+        continue;
+      }
+      if (input[pos + 1] == '*') {
+        size_t end = input.find("*/", pos + 2);
+        if (end == std::string::npos) {
+          return std::string::npos;
+        }
+        pos = end + 2;
+        continue;
+      }
+    }
+    if (c == openChar) {
+      ++depth;
+      ++pos;
+      continue;
+    }
+    if (c == closeChar) {
+      --depth;
+      if (depth == 0) {
+        return pos;
+      }
+      ++pos;
+      continue;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
+bool parseIdentifier(const std::string &input, size_t &pos, std::string &out) {
+  if (pos >= input.size() || !isIdentifierStart(input[pos])) {
+    return false;
+  }
+  size_t start = pos;
+  ++pos;
+  while (pos < input.size() && isIdentifierBody(input[pos])) {
+    ++pos;
+  }
+  out = input.substr(start, pos - start);
+  return true;
+}
+
+void appendTextTransform(const std::string &name, ListPhase phase, std::vector<std::string> &out) {
+  if (phase == ListPhase::Semantic) {
+    return;
+  }
+  if (phase == ListPhase::Text) {
+    if (primec::isTextTransformName(name)) {
+      out.push_back(name);
+    }
+    return;
+  }
+  if (primec::isTextTransformName(name) && !primec::isSemanticTransformName(name)) {
+    out.push_back(name);
+  }
+}
+
+void scanTransformEntries(const std::string &input,
+                          size_t &pos,
+                          size_t end,
+                          ListPhase phase,
+                          std::vector<std::string> &textTransforms) {
+  while (pos < end) {
+    skipWhitespaceAndComments(input, pos);
+    while (pos < end && (input[pos] == ',' || input[pos] == ';')) {
+      ++pos;
+      skipWhitespaceAndComments(input, pos);
+    }
+    if (pos >= end) {
+      return;
+    }
+    if (!isIdentifierStart(input[pos])) {
+      ++pos;
+      continue;
+    }
+    std::string name;
+    if (!parseIdentifier(input, pos, name)) {
+      ++pos;
+      continue;
+    }
+    size_t scan = pos;
+    skipWhitespaceAndComments(input, scan);
+    if ((name == "text" || name == "semantic") && scan < end && input[scan] == '(') {
+      size_t groupClose = findMatchingCloseWithComments(input, scan, '(', ')');
+      if (groupClose != std::string::npos && groupClose <= end) {
+        size_t groupPos = scan + 1;
+        scanTransformEntries(input, groupPos, groupClose, name == "text" ? ListPhase::Text : ListPhase::Semantic,
+                             textTransforms);
+        pos = groupClose + 1;
+        continue;
+      }
+    }
+    appendTextTransform(name, phase, textTransforms);
+    scan = pos;
+    skipWhitespaceAndComments(input, scan);
+    if (scan < end && input[scan] == '<') {
+      size_t close = findMatchingCloseWithComments(input, scan, '<', '>');
+      if (close != std::string::npos && close <= end) {
+        scan = close + 1;
+      }
+    }
+    pos = scan;
+    skipWhitespaceAndComments(input, pos);
+    if (pos < end && input[pos] == '(') {
+      size_t close = findMatchingCloseWithComments(input, pos, '(', ')');
+      if (close != std::string::npos && close <= end) {
+        pos = close + 1;
+      }
+    }
+  }
+}
+
+struct TransformListScan {
+  size_t end = std::string::npos;
+  std::vector<std::string> textTransforms;
+};
+
+bool scanTransformList(const std::string &input, size_t start, TransformListScan &out) {
+  size_t close = findMatchingCloseWithComments(input, start, '[', ']');
+  if (close == std::string::npos) {
+    return false;
+  }
+  out.end = close;
+  out.textTransforms.clear();
+  size_t pos = start + 1;
+  scanTransformEntries(input, pos, close, ListPhase::Auto, out.textTransforms);
+  return true;
+}
+
+bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envelopeEnd) {
+  size_t pos = start;
+  skipWhitespaceAndComments(input, pos);
+  std::string name;
+  if (!parseIdentifier(input, pos, name)) {
+    return false;
+  }
+  skipWhitespaceAndComments(input, pos);
+  if (pos < input.size() && input[pos] == '<') {
+    size_t close = findMatchingCloseWithComments(input, pos, '<', '>');
+    if (close == std::string::npos) {
+      return false;
+    }
+    pos = close + 1;
+    skipWhitespaceAndComments(input, pos);
+  }
+  if (pos >= input.size() || input[pos] != '(') {
+    return false;
+  }
+  size_t closeParen = findMatchingCloseWithComments(input, pos, '(', ')');
+  if (closeParen == std::string::npos) {
+    return false;
+  }
+  size_t afterParams = closeParen + 1;
+  skipWhitespaceAndComments(input, afterParams);
+  if (afterParams < input.size() && input[afterParams] == '{') {
+    size_t closeBrace = findMatchingCloseWithComments(input, afterParams, '{', '}');
+    if (closeBrace == std::string::npos) {
+      return false;
+    }
+    envelopeEnd = closeBrace;
+    return true;
+  }
+  envelopeEnd = closeParen;
+  return true;
+}
+
+size_t findNextTransformListStart(const std::string &input, size_t start) {
+  size_t pos = start;
+  while (pos < input.size()) {
+    char c = input[pos];
+    if (c == '"' || c == '\'') {
+      size_t end = skipQuotedForward(input, pos);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end;
+      continue;
+    }
+    if (c == 'R' && pos + 2 < input.size() && input[pos + 1] == '"' && input[pos + 2] == '(') {
+      size_t end = input.find(")\"", pos + 3);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end + 2;
+      continue;
+    }
+    if (c == '/' && pos + 1 < input.size()) {
+      if (input[pos + 1] == '/') {
+        pos += 2;
+        while (pos < input.size() && input[pos] != '\n') {
+          ++pos;
+        }
+        continue;
+      }
+      if (input[pos + 1] == '*') {
+        size_t end = input.find("*/", pos + 2);
+        if (end == std::string::npos) {
+          return std::string::npos;
+        }
+        pos = end + 2;
+        continue;
+      }
+    }
+    if (c == '[' && isTransformListBoundary(input, pos)) {
+      return pos;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
+bool applyFiltersToChunk(const std::string &input,
+                         std::string &output,
+                         std::string &error,
+                         const std::vector<std::string> &filters) {
+  if (filters.empty()) {
+    output = input;
     return true;
   }
   std::unordered_set<std::string> seen;
   std::string current = input;
   std::string next;
-  for (const auto &filter : options.enabledFilters) {
+  for (const auto &filter : filters) {
     if (!seen.insert(filter).second) {
       continue;
     }
@@ -742,6 +1039,76 @@ bool TextFilterPipeline::apply(const std::string &input,
   }
   output.swap(current);
   return true;
+}
+
+bool applyPerEnvelope(const std::string &input,
+                      std::string &output,
+                      std::string &error,
+                      const std::vector<std::string> &filters,
+                      bool suppressLeadingOverride) {
+  output.clear();
+  size_t pos = 0;
+  size_t scanPos = 0;
+  bool suppress = suppressLeadingOverride;
+  while (scanPos < input.size()) {
+    size_t listStart = findNextTransformListStart(input, scanPos);
+    if (listStart == std::string::npos) {
+      break;
+    }
+    TransformListScan listScan;
+    if (!scanTransformList(input, listStart, listScan)) {
+      break;
+    }
+    if (suppress && listStart == 0) {
+      scanPos = listScan.end + 1;
+      suppress = false;
+      continue;
+    }
+    size_t envelopeEnd = std::string::npos;
+    if (!scanEnvelopeAfterList(input, listScan.end + 1, envelopeEnd)) {
+      scanPos = listScan.end + 1;
+      suppress = false;
+      continue;
+    }
+    std::string chunk = input.substr(pos, listStart - pos);
+    std::string filteredChunk;
+    if (!applyFiltersToChunk(chunk, filteredChunk, error, filters)) {
+      return false;
+    }
+    output.append(filteredChunk);
+    std::string envelope = input.substr(listStart, envelopeEnd - listStart + 1);
+    const std::vector<std::string> &envelopeFilters =
+        listScan.textTransforms.empty() ? filters : listScan.textTransforms;
+    std::string filteredEnvelope;
+    if (!applyPerEnvelope(envelope, filteredEnvelope, error, envelopeFilters, true)) {
+      return false;
+    }
+    output.append(filteredEnvelope);
+    pos = envelopeEnd + 1;
+    scanPos = pos;
+    suppress = false;
+  }
+  std::string tail = input.substr(pos);
+  std::string filteredTail;
+  if (!applyFiltersToChunk(tail, filteredTail, error, filters)) {
+    return false;
+  }
+  output.append(filteredTail);
+  return true;
+}
+
+} // namespace
+
+bool TextFilterPipeline::apply(const std::string &input,
+                               std::string &output,
+                               std::string &error,
+                               const TextFilterOptions &options) const {
+  output = input;
+  error.clear();
+  if (options.enabledFilters.empty()) {
+    return true;
+  }
+  return applyPerEnvelope(input, output, error, options.enabledFilters, false);
 }
 
 } // namespace primec
