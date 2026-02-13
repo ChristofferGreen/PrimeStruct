@@ -15,6 +15,13 @@ primec::Program parseProgram(const std::string &source) {
   return program;
 }
 
+bool parseProgramWithError(const std::string &source, std::string &error) {
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  return parser.parse(program, error);
+}
+
 bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
   auto program = parseProgram(source);
   primec::Semantics semantics;
