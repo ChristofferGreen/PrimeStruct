@@ -631,6 +631,10 @@ bool parseBindingInfo(const Expr &expr,
       error = "binding does not accept return transform";
       return false;
     }
+    if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
+      error = "placement transforms are not supported on bindings";
+      return false;
+    }
     if (transform.name == "mut") {
       if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";

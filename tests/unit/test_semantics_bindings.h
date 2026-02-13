@@ -258,6 +258,31 @@ main() {
   CHECK(error.find("binding transforms do not take arguments") != std::string::npos);
 }
 
+TEST_CASE("binding rejects placement transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [stack i32] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("placement transforms are not supported on bindings") != std::string::npos);
+}
+
+TEST_CASE("parameter rejects placement transforms") {
+  const std::string source = R"(
+[return<int>]
+main([stack i32] value) {
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("placement transforms are not supported on bindings") != std::string::npos);
+}
+
 TEST_CASE("binding rejects duplicate static transform") {
   const std::string source = R"(
 [return<int>]
