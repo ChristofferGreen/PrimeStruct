@@ -224,6 +224,19 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("import accepts explicit math min and max") {
+  const std::string source = R"(
+import /math/min /math/max
+[return<i32>]
+main() {
+  return(max(min(1i32, 4i32), 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import rejects unknown wildcard path") {
   const std::string source = R"(
 import /missing/*

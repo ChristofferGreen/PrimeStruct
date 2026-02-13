@@ -17,7 +17,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
     Expr probe;
     probe.name = name;
     std::string builtinName;
-    return getBuiltinMathName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
+    return getBuiltinMathName(probe, builtinName, true) || getBuiltinClampName(probe, builtinName, true) ||
+           getBuiltinMinMaxName(probe, builtinName, true) || getBuiltinAbsSignName(probe, builtinName, true) ||
+           getBuiltinSaturateName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
   };
 
   for (const auto &effect : defaultEffects_) {
