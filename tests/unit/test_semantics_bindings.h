@@ -1333,6 +1333,25 @@ main() {
   CHECK(error.find("block expression must end with an expression") != std::string::npos);
 }
 
+TEST_CASE("block expression rejects void tail") {
+  const std::string source = R"(
+[return<void>]
+log() {
+  return()
+}
+
+[return<int>]
+main() {
+  return(block(){
+    log()
+  })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block expression requires a value") != std::string::npos);
+}
+
 TEST_CASE("block expression rejects arguments") {
   const std::string source = R"(
 [return<int>]
