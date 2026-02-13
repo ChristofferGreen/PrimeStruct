@@ -758,6 +758,18 @@ TEST_CASE("does not rewrite template list syntax") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not rewrite nested template lists") {
+  const std::string source = "main(){ return(convert<map<i32, array<i32>>>(1i32)) }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"operators"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("does not rewrite spaced slash") {
   const std::string source = "main(){ return(a / b) }\n";
   primec::TextFilterPipeline pipeline;

@@ -333,51 +333,91 @@ std::string normalizeUnaryOperand(const std::string &operand) {
   return operand;
 }
 
-bool looksLikeTemplateList(const std::string &input, size_t index) {
+namespace {
+bool findTemplateListClose(const std::string &input, size_t index, size_t &closeOut) {
   if (index >= input.size() || input[index] != '<') {
     return false;
   }
+  auto isTemplateTokenChar = [](char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '/';
+  };
   size_t pos = index + 1;
+  int depth = 0;
   bool sawToken = false;
+  bool expectToken = true;
   while (pos < input.size()) {
     char c = input[pos];
-    if (c == '>') {
-      return sawToken;
-    }
-    if (isOperatorTokenChar(c)) {
-      sawToken = true;
+    if (std::isspace(static_cast<unsigned char>(c))) {
       ++pos;
       continue;
     }
-    if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
+    if (c == ',') {
+      expectToken = true;
       ++pos;
+      continue;
+    }
+    if (c == '<') {
+      if (expectToken) {
+        return false;
+      }
+      ++depth;
+      expectToken = true;
+      ++pos;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+        expectToken = false;
+        ++pos;
+        continue;
+      }
+      if (sawToken && !expectToken) {
+        closeOut = pos;
+        return true;
+      }
+      return false;
+    }
+    if (isTemplateTokenChar(c)) {
+      sawToken = true;
+      expectToken = false;
+      while (pos < input.size() && isTemplateTokenChar(input[pos])) {
+        ++pos;
+      }
       continue;
     }
     return false;
   }
   return false;
 }
+} // namespace
+
+bool looksLikeTemplateList(const std::string &input, size_t index) {
+  size_t close = 0;
+  return findTemplateListClose(input, index, close);
+}
 
 bool looksLikeTemplateListClose(const std::string &input, size_t index) {
   if (index >= input.size() || input[index] != '>') {
     return false;
   }
+  int depth = 0;
   size_t pos = index;
-  bool sawToken = false;
   while (pos > 0) {
     --pos;
     char c = input[pos];
+    if (c == '>') {
+      ++depth;
+      continue;
+    }
     if (c == '<') {
-      return sawToken;
-    }
-    if (isOperatorTokenChar(c)) {
-      sawToken = true;
+      if (depth == 0) {
+        size_t close = 0;
+        return findTemplateListClose(input, pos, close) && close == index;
+      }
+      --depth;
       continue;
     }
-    if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
-      continue;
-    }
-    return false;
   }
   return false;
 }
