@@ -27,6 +27,10 @@ bool isArgumentLabelValueStart(TokenKind kind) {
 bool isIgnorableToken(TokenKind kind) {
   return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
 }
+
+bool isControlKeyword(const std::string &name) {
+  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for";
+}
 } // namespace
 
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
@@ -206,14 +210,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!parseTransformList(transforms)) {
         return false;
       }
-      Token name = consume(TokenKind::Identifier, "expected identifier");
-      if (name.kind == TokenKind::End) {
-        return false;
-      }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
-      }
+    Token name = consume(TokenKind::Identifier, "expected identifier");
+    if (name.kind == TokenKind::End) {
+      return false;
+    }
+    std::string nameError;
+    if (!validateIdentifierText(name.text, nameError)) {
+      return fail(nameError);
+    }
       std::vector<std::string> templateArgs;
       if (match(TokenKind::LAngle)) {
         if (!parseTemplateList(templateArgs)) {
@@ -396,7 +400,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       std::string nameError;
       if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
+        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+          return fail(nameError);
+        }
       }
       std::vector<std::string> templateArgs;
       if (match(TokenKind::LAngle)) {

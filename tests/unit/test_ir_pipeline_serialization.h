@@ -357,13 +357,13 @@ main() {
 TEST_CASE("native backend rejects recursive definition calls") {
   const std::string source = R"(
 [return<int>]
-loop([i32] x) {
-  return(loop(x))
+recur([i32] x) {
+  return(recur(x))
 }
 
 [return<int>]
 main() {
-  return(loop(1i32))
+  return(recur(1i32))
 }
 )";
   primec::Program program;

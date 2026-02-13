@@ -230,7 +230,7 @@ TEST_CASE("if rejects named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if([cond] true, [then] 1i32, [else] 2i32))
+  return(if([cond] true, [then] 1i32, [alt] 2i32))
 }
 )";
   std::string error;

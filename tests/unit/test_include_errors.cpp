@@ -143,7 +143,7 @@ TEST_CASE("unquoted include path with dot fails") {
 }
 
 TEST_CASE("unquoted include path with reserved keyword fails") {
-  const std::string srcPath = writeTemp("main_include_reserved_segment.prime", "include</return/io>\n");
+  const std::string srcPath = writeTemp("main_include_reserved_segment.prime", "include</if/io>\n");
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;

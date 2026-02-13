@@ -9,7 +9,8 @@ namespace {
 
 bool isReservedKeyword(const std::string &text) {
   return text == "mut" || text == "return" || text == "include" || text == "import" || text == "namespace" ||
-         text == "true" || text == "false";
+         text == "true" || text == "false" || text == "if" || text == "else" || text == "loop" || text == "while" ||
+         text == "for";
 }
 
 bool isAsciiAlpha(char c) {

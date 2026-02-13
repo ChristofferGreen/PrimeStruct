@@ -50,6 +50,21 @@ return() {
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
+TEST_CASE("control keyword cannot name definition") {
+  const std::string source = R"(
+[return<int>]
+if() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword") != std::string::npos);
+}
+
 TEST_CASE("reserved keyword cannot name parameter") {
   const std::string source = R"(
 [return<int>]
@@ -109,6 +124,22 @@ TEST_CASE("reserved keyword rejected in type identifier") {
 [return<int>]
 main() {
   [array<return>] values{array<i32>(1i32)}
+  return(0i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword") != std::string::npos);
+}
+
+TEST_CASE("control keyword rejected in type identifier") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<for>] values{array<i32>(1i32)}
   return(0i32)
 }
 )";
@@ -769,6 +800,21 @@ TEST_CASE("slash path rejects reserved keyword segment") {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("reserved keyword cannot be used as identifier: return") != std::string::npos);
+}
+
+TEST_CASE("slash path rejects control keyword segment") {
+  const std::string source = R"(
+[return<int>]
+/demo/if/widget() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier: if") != std::string::npos);
 }
 
 TEST_CASE("slash path requires leading slash") {
@@ -1486,6 +1532,23 @@ namespace return {
   CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
 }
 
+TEST_CASE("namespace identifier cannot be control keyword") {
+  const std::string source = R"(
+namespace else {
+  [return<int>]
+  main() {
+    return(1i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
+}
+
 TEST_CASE("unexpected end of file inside namespace block") {
   const std::string source = R"(
 namespace demo {
@@ -1507,6 +1570,21 @@ TEST_CASE("reserved keyword cannot name argument") {
 [return<int>]
 main() {
   return(foo([return] 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
+}
+
+TEST_CASE("control keyword cannot name argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo([while] 1i32))
 }
 )";
   primec::Lexer lexer(source);
