@@ -11,6 +11,39 @@ PrimeScript is PrimeStruct running in VM mode.
 
 ------------------------------------------------------------------------
 
+## Quick Start (Examples)
+
+Hello, world:
+
+    [return<int> effects(io_out)]
+    main() {
+      print_line("Hello, world!"utf8)
+      return(0i32)
+    }
+
+Looping with a readable `for` header (semicolons are optional separators):
+
+    [operators effects(io_out)]
+    main() {
+      for([int mut] i{0i32}; i < 3; ++i) {
+        print_line("tick"utf8)
+      }
+      return(0i32)
+    }
+
+Conditionals use explicit `else` and desugar to labeled envelopes:
+
+    [operators return<int>]
+    clamp_to_zero([int] value) {
+      if (value < 0i32) {
+        return(0i32)
+      } else {
+        return(value)
+      }
+    }
+
+------------------------------------------------------------------------
+
 ## Goals
 
 PrimeStruct is designed to:
@@ -19,7 +52,7 @@ PrimeStruct is designed to:
 - Treat all constructs uniformly as structure, not special cases
 - Support multiple execution modes (native, GPU, VM) from a single core
 - Remain deterministic and analyzable for tooling and testing
-- Stay approachable from C with explicit types and minimal magic
+- Stay approachable from C with explicit envelope annotations and minimal magic
 
 ------------------------------------------------------------------------
 
@@ -27,14 +60,15 @@ PrimeStruct is designed to:
 
 ### Envelope
 
-Everything in PrimeStruct uses one structural envelope ("Envelope"):
+Everything in PrimeStruct maps to one canonical envelope ("Envelope") in the AST:
 
     [transforms] name<templates>(parameters) { body }
 
 - `[...]` lists transforms (attributes) applied in order.
 - `<...>` is an optional template list.
 - `(...)` contains parameters or arguments.
-- `{...}` contains a definition body or execution body arguments.
+- `{...}` contains a definition body or a binding initializer block (which yields a value).
+- Executions are call-style envelopes with an implicit empty body in the AST.
 
 This uniform representation simplifies parsing, transformation, and lowering.
 
@@ -45,6 +79,29 @@ This uniform representation simplifies parsing, transformation, and lowering.
 All PrimeStruct programs lower to a single canonical IR before code generation.
 Backends never see surface syntax or syntactic sugar, ensuring consistent
 semantics and deterministic behavior across targets.
+
+------------------------------------------------------------------------
+
+## Getting Started
+
+### Build
+
+    ./scripts/compile.sh
+
+Release build:
+
+    ./scripts/compile.sh --release
+
+### Run
+
+Compile to a native executable:
+
+    primec --emit=native examples/hello_world.prime -o hello
+    ./hello
+
+Run via the VM:
+
+    primevm examples/hello_world.prime --entry /main
 
 ------------------------------------------------------------------------
 
@@ -60,14 +117,16 @@ A definition introduces a named body with explicit return/effects transforms:
       return(0i32)
     }
 
+Surface syntax may omit the return transform and rely on inference; canonical/bottom-level form always includes
+`return<T>` and explicit literal suffixes. Example surface: `main() { return(0) }` → canonical:
+`[return<int>] main() { return(0i32) }`.
+
 ### Executions
 
-Executions are call-style constructs (top-level scheduling nodes). They may
-include brace bodies that list calls:
+Executions are call-style envelopes with
+mandatory parentheses and no body:
 
-    execute_repeat(count = 2i32) { main() main() }
-
-Execution bodies may only contain calls (no bindings, no `return`).
+    execute_task([count] 2i32)
 
 ### Bindings (Stack Values)
 
@@ -91,8 +150,8 @@ Only mutable bindings can be assigned to.
 
 ## Control Flow
 
-PrimeStruct desugars control flow into canonical calls. The surface `if` form
-requires an `else` block:
+PrimeStruct desugars control flow into canonical calls with labeled block
+literals. The surface `if` form requires an `else` block:
 
     if(less_than(value, min)) {
       return(min)
@@ -104,33 +163,34 @@ Canonical form:
 
     if(
       less_than(value, min),
-      return(min),
-      return(value)
+      then() { return(min) },
+      else() { return(value) }
     )
 
-`if` takes three **envelopes**:
-
-1) The condition: must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean.
-2) The true branch: must be a function or a value; the function return or the value is returned by the `if` if the condition is `true`.
-3) The false branch: must be a function or a value; the function return or the value is returned by the `if` if the condition is `false`.
-
-Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
+`if` takes a boolean condition and two definition envelopes. Evaluation is lazy: the
+condition is evaluated first, then exactly one of the two bodies runs.
 
 Operators are also rewritten into prefix calls (`a + b` -> `plus(a, b)`).
+
+Brace constructors are allowed in value positions and use the last value
+of the block (or an explicit `return`):
+
+    bool{35}        // true
+    float{ return(1.0f32) }
 
 ------------------------------------------------------------------------
 
 ## Strings
 
-- Surface strings accept `"..."utf8`, `"..."ascii`, or raw forms
-  `"..."raw_utf8` / `"..."raw_ascii` (no escape processing in raw bodies).
+- Double-quoted strings process escapes (`"..."utf8` / `"..."ascii`).
+- Single-quoted strings are raw (`'...'utf8` / `'...'ascii`).
 - `implicit-utf8` (enabled by default) appends `utf8` when omitted.
-- Canonical/bottom-level form always uses `raw_utf8` / `raw_ascii` after
-  escape decoding.
+- Canonical form uses double-quoted strings with normalized escapes and an
+  explicit `utf8`/`ascii` suffix.
 
 Example:
 
-    [string] path{"C:\\temp"raw_ascii}
+    [string] path{'C:\temp'ascii}
 
 ------------------------------------------------------------------------
 
@@ -139,13 +199,13 @@ Example:
 Collections desugar into helper calls:
 
     array<i32>{1i32, 2i32, 3i32}
-    map<i32, i32>{1i32=10i32, 2i32=20i32}
+    map<i32, i32>{1i32 10i32 2i32 20i32}
 
 ------------------------------------------------------------------------
 
 ## Includes and Namespaces
 
-Includes splice text inline before text filters:
+Includes splice text inline before text transforms:
 
     include<"/std/io", version="1.2.0">
 
@@ -179,11 +239,41 @@ definition must take a single `array<string>` parameter.
 
 ------------------------------------------------------------------------
 
+## Docs
+
+- Language design overview: `docs/PrimeStruct.md`
+- Syntax spec: `docs/PrimeStruct_SyntaxSpec.md`
+
+------------------------------------------------------------------------
+
+## Examples
+
+See `examples/` for runnable samples. Highlights:
+
+- `examples/hello_world.prime` – minimal entry definition
+- `examples/if_else.prime` – `if` in statement position
+- `examples/collections.prime` – array/vector/map literals
+
+------------------------------------------------------------------------
+
+## Contributing
+
+See `AGENTS.md` for naming rules, build/test workflow, and contribution
+guidelines.
+
+------------------------------------------------------------------------
+
 ## Status
 
 PrimeStruct is experimental and under active design. Syntax, IR, and
 execution semantics are still evolving, and backward compatibility is
 not yet guaranteed.
+
+------------------------------------------------------------------------
+
+## License
+
+Licensed under the terms in `LICENSE`.
 
 ------------------------------------------------------------------------
 

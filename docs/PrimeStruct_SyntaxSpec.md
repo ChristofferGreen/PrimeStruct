@@ -2,11 +2,11 @@
 
 This document defines the surface syntax and immediate semantics of PrimeStruct source files. It complements
 `docs/PrimeStruct.md` by focusing on grammar, parsing rules, and the canonical core produced after text
-filters and desugaring.
+transforms and desugaring.
 
 ## 1. Overview
 
-PrimeStruct uses a single syntactic form called an **Envelope** for definitions, executions, and bindings:
+PrimeStruct uses a single canonical form called an **Envelope** for definitions and executions in the AST:
 
 ```
 [transform-list] name<template-list>(param-list) { body-list }
@@ -15,20 +15,39 @@ PrimeStruct uses a single syntactic form called an **Envelope** for definitions,
 - `[...]` is a list of transforms (attributes) applied to a node.
 - `<...>` is an optional template argument list.
 - `(...)` contains parameters or arguments.
-- `{...}` contains a definition body or execution body arguments.
+- `{...}` contains a definition body (bindings use `{...}` for initializers).
+
+Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an implicit empty body:
+
+```
+foo()
+foo(arg1, arg2)
+```
+
+Transforms operate in two phases:
+- **Text transforms:** token-level rewrites that run before AST construction. They apply to the entire envelope (transform list, templates, parameters, and body) for the definition/execution they are attached to.
+- **Semantic transforms:** AST-level annotations/validation that run after parsing.
+Use `text(...)` and `semantic(...)` inside the transform list to force phase placement. Unqualified transforms are
+auto-deduced by name; ambiguous names are errors. Text transforms may append additional text transforms to the same
+node, which run after the current transform.
 
 The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
 indexing `value[index]`), then rewrites them into a small canonical core before semantic analysis
 and IR lowering.
+Canonical/bottom-level syntax requires explicit return transforms and literal suffixes; surface syntax may omit
+them and rely on inference/transforms to insert the canonical forms. When `--no-transforms` is active, source is
+expected to already be in canonical form.
 
-Transform template lists accept one or more type expressions, so generic binding types can be
+Transform template lists accept one or more envelope entries, so generic binding envelopes can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
 
-The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text filters,
+The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text transforms,
 the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
-filters are configured via `--text-filters=<list>` (the default list is `collections`, `operators`,
-`implicit-utf8`); `--transform-list` is accepted as a synonym, and `--no-transforms` disables all
-text filters.
+transforms are configured via `--text-transforms=<list>` (the default list is `operators`, `collections`,
+`implicit-utf8`), semantic transforms via `--semantic-transforms=<list>`, and `--transform-list=<list>` is
+an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic);
+ambiguous names are errors. `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms`
+disable transforms.
 
 ## 2. Lexical Structure
 
@@ -37,43 +56,49 @@ text filters.
 - Base identifier: `[A-Za-z_][A-Za-z0-9_]*`
 - Slash path: `/segment/segment/...` where each segment is a base identifier.
 - Identifiers are ASCII only; non-ASCII characters are rejected by the parser.
-- Reserved keywords: `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`.
+- Reserved keywords: `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, `for`.
 - Reserved keywords may not appear as identifier segments in slash paths.
 
 ### 2.2 Whitespace and Comments
 
 - Whitespace separates tokens but is otherwise insignificant.
 - Statements are separated by whitespace/newlines; there is no line-based parsing.
-- Semicolons are rejected by the parser.
+- Commas and semicolons are treated as whitespace separators and are ignored by the parser outside numeric literals.
 - Line comments (`// ...`) and block comments (`/* ... */`) are supported and ignored by the lexer (treated as whitespace).
-- Text filters also treat comments as opaque spans; operator/collection rewrites never run inside comments.
+- Text transforms also treat comments as opaque spans; operator/collection rewrites never run inside comments.
 
 ### 2.3 Literals
 
 - Integer literals:
   - Optional leading `-` is part of the literal token (e.g. `-1i32`).
   - Decimal and hex forms are accepted (`0x` / `0X` prefix for hex).
-  - `i32`, `i64`, `u64` suffixes required (unless the `implicit-i32` text filter is enabled).
+  - `i32`, `i64`, `u64` suffixes required (unless the `implicit-i32` text transform is enabled).
+  - Commas may appear between digits in the integer part as digit separators and are ignored for value.
   - Examples: `0i32`, `42i64`, `7u64`, `-1i32`, `0xFFu64`.
 - Float literals:
   - Optional leading `-` is part of the literal token.
   - Decimal forms with optional exponent `e`/`E` are accepted.
-  - `f32`, `f64`, or `f` suffixes are accepted by the lexer; canonical form uses `f32`/`f64`.
-  - Examples: `0.5f`, `1.0f32`, `2.0f64`, `1e-3f64`.
+  - Commas may appear between digits in the integer part as digit separators; commas are not allowed in the fractional or exponent parts.
+  - `f32` or `f64` suffixes are accepted; when omitted, the literal defaults to `f32`. Canonical form uses `f32`/`f64`.
+  - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`.
+
+Type aliases:
+- `int` and `float` are target-chosen aliases (at least `i32`/`f32`, potentially `i64`/`f64` on some platforms/backends). Prefer explicit widths for deterministic cross-target behavior.
 - Bool literals: `true`, `false`.
 - String literals:
-  - Double-quoted or single-quoted surface forms: `"hello"utf8`, `'hi'utf8`.
-  - Raw surface form: `"raw text"raw_utf8` / `"raw text"raw_ascii` (no escape processing inside the raw body).
-  - Surface form accepts `utf8`/`ascii` suffixes; the `implicit-utf8` filter appends `utf8` to bare strings.
-  - **Canonical/bottom-level form uses only `raw_utf8` and `raw_ascii`.** After parsing and escape decoding,
-    string literals are normalized to `raw_*` with decoded contents.
-  - `ascii`/`raw_ascii` reject non-ASCII bytes.
-  - Escape sequences in non-raw strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
+  - Double-quoted strings process escapes: `"hello"utf8`.
+  - Single-quoted strings are raw (no escape processing): `'hi'utf8`.
+  - Surface form accepts `utf8`/`ascii` suffixes; the `implicit-utf8` text transform appends `utf8` to bare strings.
+  - **Canonical/bottom-level form uses double-quoted strings with escapes normalized and an explicit `utf8`/`ascii` suffix.**
+  - `ascii` rejects non-ASCII bytes.
+  - Escape sequences in double-quoted strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
   - Any other escape sequence is rejected.
+  - Single-quoted strings cannot contain a single quote; use a double-quoted string with `\\'` when needed.
 
 ### 2.4 Punctuation Tokens
 
-The lexer emits punctuation tokens for: `[](){}<>,.=;` and `.`. Semicolons are currently rejected by the parser.
+The lexer emits punctuation tokens for: `[](){}<>,.=;` and `.`. Commas and semicolons are treated as whitespace
+separators by the parser outside numeric literals.
 
 ## 3. File Structure
 
@@ -89,7 +114,7 @@ file = { include | import | namespace | definition | execution }
 include<"/path", version="1.2.0">
 ```
 
-Includes expand inline before text filters run. Include paths are raw quoted strings without suffixes
+Includes expand inline before text transforms run. Include paths are raw quoted strings without suffixes
 and are parsed before the string-literal rules in this spec; treat them as literal paths. Multiple
 paths may be listed in a single include. Version selection follows the rules in `docs/PrimeStruct.md`.
 Whitespace is allowed between `include` and `<` and around `=` in the `version` attribute. Include paths
@@ -134,7 +159,7 @@ Namespaces prefix enclosed definitions/executions with `/foo`. Namespace blocks 
 
 ## 4. Grammar (EBNF-style)
 
-This grammar describes surface syntax before text-filter rewriting.
+This grammar describes surface syntax before text-transform rewriting.
 
 ```
 file           = { top_item } ;
@@ -142,110 +167,161 @@ file           = { top_item } ;
 top_item       = include_decl | import_decl | namespace_decl | definition | execution ;
 
 include_decl   = "include" "<" include_list ">" ;
-include_list   = include_entry { "," include_entry } ;
+include_list   = include_entry { [ "," | ";" ] include_entry } ;
 include_entry  = include_path | "version" "=" include_string ;
 include_string = quoted_string ;
 include_path   = quoted_string | slash_path ;
 
 import_decl    = "import" import_list ;
-import_list    = import_path { [ "," ] import_path } ;
+import_list    = import_path { [ "," | ";" ] import_path } ;
 import_path    = slash_path [ "/*" ] ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 
 definition     = envelope body_block ;
-execution      = envelope exec_body_opt ;
+execution      = transforms_opt call ;
 
 envelope       = transforms_opt name template_opt params ;
 
-transforms_opt = [ "[" transform_list "]" ] ;
-transform_list = transform { transform } ;
-transform      = identifier template_opt args_opt ;
-// Commas between transforms are allowed but not required.
-// Transform template args accept one or more type expressions.
-// Transform argument lists accept identifier, number, or string tokens (no nested envelopes).
+transforms_opt            = [ "[" transform_list "]" ] ;
+transform_list            = transform_entry { transform_entry } ;
+transform_entry           = transform_item | text_group | semantic_group ;
+text_group                = "text" "(" text_transform_list ")" ;
+semantic_group            = "semantic" "(" semantic_transform_list ")" ;
+text_transform_list       = text_transform_item { [ "," | ";" ] text_transform_item } ;
+semantic_transform_list   = semantic_transform_item { [ "," | ";" ] semantic_transform_item } ;
+transform_item            = identifier template_opt args_opt ;
+text_transform_item       = identifier template_opt text_args_opt ;
+semantic_transform_item   = identifier template_opt args_opt ;
+text_args_opt             = [ "(" text_arg_list_opt ")" ] ;
+text_arg_list_opt         = [ text_arg { [ "," | ";" ] text_arg } ] ;
+text_arg                  = identifier | literal ;
+// Commas and semicolons between transforms are allowed but not required.
+// Commas and semicolons in template/parameter/argument lists are optional separators with no semantic meaning.
+// Transform template args accept one or more envelope entries.
+// Text transform argument lists accept only identifiers or literals (no nested envelopes).
+// Semantic transform argument lists accept full forms.
+// The special transform groups `text(...)` and `semantic(...)` accept a list of transforms instead.
 
 template_opt   = [ "<" template_list ">" ] ;
-template_list  = type_expr { [ "," ] type_expr } ;
-type_expr      = identifier [ "<" type_expr { "," type_expr } ">" ] ;
+template_list  = envelope_ref { [ "," | ";" ] envelope_ref } ;
+// Commas and semicolons inside template lists are optional separators with no semantic meaning.
+envelope_ref   = identifier [ "<" envelope_ref { [ "," | ";" ] envelope_ref } ">" ] ;
 
 params         = "(" param_list_opt ")" ;
-param_list_opt = [ param { [ "," ] param } ] ;
+param_list_opt = [ param { [ "," | ";" ] param } ] ;
 param          = binding ;
 
 body_block     = "{" stmt_list_opt "}" ;
-exec_body_opt  = [ "{" exec_body_list_opt "}" ] ;
-exec_body_list_opt = [ form { [ "," ] form } ] ;
-body_args_opt  = [ "{" exec_body_list_opt "}" ] ;
 
 stmt_list_opt  = [ stmt { stmt } ] ;
 stmt           = binding | form ;
 
-binding        = transforms_opt name template_opt args_opt ;
+binding        = transforms_opt name template_opt binding_init_opt ;
 
+binding_init_opt = [ value_block ] ;
+
+args           = "(" arg_list_opt ")" ;
 args_opt       = [ "(" arg_list_opt ")" ] ;
-arg_list_opt   = [ arg { [ "," ] arg } ] ;
+arg_list_opt   = [ arg { [ "," | ";" ] arg } ] ;
 arg            = labeled_arg | form ;
 labeled_arg    = "[" identifier "]" form ;
 
 form           = literal
                | name
                | call
-               | index_expr
-               | block_if_expr ;
+               | execution
+               | brace_ctor
+               | index_form
+               | definition
+               | if_form
+               | loop_form
+               | while_form
+               | for_form ;
 
-call           = name template_opt args_opt body_args_opt ;
+call           = name template_opt args ;
 name           = identifier | slash_path ;
 
-index_expr     = form "[" form "]" ;
+brace_ctor     = name template_opt value_block ;
 
-block_if_expr  = "if" "(" form ")" block_if_body "else" block_if_body ;
+index_form     = form "[" form "]" ;
+
+if_form        = "if" "(" form ")" block_if_body "else" block_if_body ;
 block_if_body  = "{" stmt_list_opt "}" ;
+
+loop_form      = transforms_opt "loop" "(" form ")" block_if_body ;
+while_form     = transforms_opt "while" "(" form ")" block_if_body ;
+for_slot       = binding | form ;
+for_form       = transforms_opt "for" "(" for_slot for_slot for_slot ")" block_if_body ;
+
+value_block     = "{" stmt_list_opt "}" ;
 
 literal        = int_lit | float_lit | bool_lit | string_lit ;
 ```
 
 Notes:
 - `binding` reuses the Envelope; it becomes a local declaration.
-- `execution` is syntactically the same as `definition` but has no body block or has an execution body list.
+- `execution` is a call-style form (optionally prefixed by transforms) with mandatory parentheses and no body. Definitions require a body block.
+  - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an implicit empty body.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
-- Transform lists may include optional commas between transforms; trailing commas are not allowed.
-- Template, parameter, and argument lists allow optional commas between items; trailing commas are not allowed.
-- Execution/body brace lists accept comma-separated or whitespace-separated forms; trailing commas are not allowed.
-- Calls may include brace body arguments (e.g. `execute_task(...) { work() work() }` or `block{ ... }`).
+- `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
+- Commas and semicolons are treated as whitespace separators in transform lists and item lists; trailing separators are allowed.
+- Example mixed separators:
+  - `array<i32; i64  u64>`
+  - `call(a, b; c  d)`
+  - `[text(operators; collections, implicit-utf8)]`
+- `loop`, `while`, and `for` are special forms that accept a body block; they are not generic call bodies.
+- Canonical control-flow calls use definition envelopes as arguments (e.g., `if(cond, then() { ... }, else() { ... })`).
+  Envelope names in this position are for readability only; any name is accepted and ignored by the compiler.
+- `loop`, `while`, and `for` may be prefixed by transforms; `[shared_scope]` marks the loop body scope as shared across iterations.
+- Text transforms accept only identifier/literal arguments; semantic transforms may accept full forms. If a text transform is given a non-simple argument, it is a diagnostic.
+- `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In statement position, `name{...}` is parsed as a binding.
 - `quoted_string` in include declarations is a raw quoted string without suffixes.
 
 ## 5. Desugaring and Canonical Core
 
 The compiler rewrites surface forms into canonical call syntax. The core uses prefix calls:
 
-- Operator and control-flow sugar are applied by text filters and parser sugar before semantic analysis.
-  The exact whitespace sensitivity of text filters is defined by the active filter set (see design doc).
+- Operator and control-flow sugar are applied by text transforms and parser sugar before semantic analysis.
+  The exact whitespace sensitivity of text transforms is defined by the active transform set (see design doc).
 
 - `return(value)` / `return()` are the only return forms; parentheses are always required.
-- Control flow: `if(condition, trueBranch, falseBranch)` in canonical call form.
+- Control flow: `if(condition, then() { ... }, else() { ... })` in canonical call form.
   - Signature: `if(Envelope, Envelope, Envelope)`
   - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
-  - 2) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `true`
-  - 3) must be a function or a value, the function return or the value is returned by the `if` if the first arg is `false`
+  - 2) must be a definition envelope; its body yields the `if` result when the condition is `true`
+  - 3) must be a definition envelope; its body yields the `if` result when the condition is `false`
   - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted in any form position
-    (including statement lists and call arguments); it is rewritten into canonical `if(...)` by wrapping the two blocks
-    as envelopes.
-  - Evaluation is lazy: the condition is evaluated first, then exactly one of the two branch envelopes is evaluated.
-- `block{ ... }` is a builtin block form.
-  - As a statement, it introduces a local scope.
-  - As an expression, it evaluates each form in order and yields the last form’s value; the block must end with a
-    non-binding expression.
-  - A block body is required; `block()` is invalid.
+    (including statement lists and call arguments); it is rewritten into canonical `if(...)` by wrapping the two bodies
+    as definition envelopes (`then() { ... }` / `else() { ... }`).
+  - Evaluation is lazy: the condition is evaluated first, then exactly one of the two definition bodies is evaluated.
+- Loops:
+  - `loop(count) { ... }` rewrites to `loop(count, do() { ... })`.
+  - `while(cond) { ... }` rewrites to `while(cond, do() { ... })`.
+  - `for(init cond step) { ... }` rewrites to `for(init, cond, step, do() { ... })`; commas/semicolons are optional separators.
+  - Envelope names are ignored (`do() { ... }` and `body() { ... }` are equivalent in the loop body position).
+  - Bindings are allowed in any `for` slot; `cond` must evaluate to `bool`.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
   - `a * b` -> `multiply(a, b)`
   - `a / b` -> `divide(a, b)`
-  - `a == b` -> `equal(a, b)` etc.
+  - `a = b` -> `assign(a, b)`
+  - `++a` / `a++` -> `increment(a)`
+  - `--a` / `a--` -> `decrement(a)`
+  - `a == b` -> `equal(a, b)`
+  - `a != b` -> `not_equal(a, b)`
+  - `a > b` -> `greater_than(a, b)`
+  - `a < b` -> `less_than(a, b)`
+  - `a >= b` -> `greater_equal(a, b)`
+  - `a <= b` -> `less_equal(a, b)`
+  - `a && b` -> `and(a, b)`
+  - `a || b` -> `or(a, b)`
+  - `!a` -> `not(a)`
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
-    `/type/method(value, args...)`. Parentheses are required after the method name.
+    `/<envelope>/method(value, args...)`, where `<envelope>` is the envelope name associated with `value`.
+    Parentheses are required after the method name.
   - Method calls may include template arguments: `value.method<T>(args...)`.
 - Indexing:
   - `value[index]` -> `at(value, index)`
@@ -264,19 +340,17 @@ main() {
 ```
 
 - Definitions may have a body block with statements.
-- Transform list on the definition declares return type and effects.
+- Transform list on the definition declares return envelope and effects.
 
 ### 6.2 Executions
 
 ```
-execute_task([count] 2i32) { main() main() }
+execute_task([count] 2i32)
 ```
 
-- Executions are call-style constructs that may include a body list of calls.
-- Execution bodies may only contain calls (no bindings, no `return`).
+- Executions are call-style constructs with mandatory parentheses and no body.
+- Executions may be prefixed with a transform list (e.g., `[effects(io_out)] log()`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
-- Execution body brace lists accept comma-separated or whitespace-separated calls.
-  - The parser accepts any form in brace lists, but semantic validation rejects non-call entries in executions.
 
 ## 7. Parameters, Arguments, and Bindings
 
@@ -288,12 +362,13 @@ execute_task([count] 2i32) { main() main() }
 ```
 
 - A binding is a stack value execution.
-- Binding initializers supply constructor arguments. The forms inside `{ ... }` are evaluated left-to-right and
-  desugar to a type constructor call: `[T] name{a b [param] c}` -> `[T] name{T(a, b, [param] c)}`.
-  Binding initializers do not form a multi-statement block; use helper calls for multi-step setup. Commas are not
-  separators in binding initializers.
-- If the binding omits an explicit type, the compiler first tries to infer the type from the
-  initializer expression; if inference fails, the type defaults to `int`.
+- Binding initializers are value blocks. The block is evaluated left-to-right; its resulting value (last item
+  or `return(value)`) becomes the initializer value. Use explicit constructor calls when you need to pass multiple
+  arguments (e.g., `[T] name{ T(arg1, arg2) }`). Commas and semicolons are treated as whitespace separators.
+  A brace constructor form (`Type{...}`) is allowed in value positions (e.g., `bool{35}` in arguments
+  or returns) and passes the block’s resulting value to the constructor.
+- If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
+  initializer form; if inference fails, the envelope defaults to `int`.
 - `mut` marks the binding as writable; otherwise immutable.
 
 ### 7.2 Parameters
@@ -368,6 +443,8 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 - Effects are declared via `[effects(...)]` on definitions or executions.
 - Defaults can be supplied by `primec --default-effects`.
 - Backends reject unsupported effects.
+  - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
+  - The entry definition starts with a default effect set (by default includes `io_out`), which can be overridden via `--default-effects`.
 
 ## 10. Return Semantics
 
@@ -386,7 +463,7 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 
 ## 12. Backend Notes (Syntax-Relevant)
 
-- VM/native backends accept a restricted subset of types/operations (see design doc).
+- VM/native backends accept a restricted subset of envelopes/operations (see design doc).
 - Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
 - The C++ emitter supports broader operations and full string handling.
 
@@ -396,8 +473,11 @@ Map IR lowering is currently limited in VM/native backends (currently numeric/bo
 - Duplicate labeled arguments are rejected.
 - Unknown labeled arguments are rejected.
 - Labeled arguments are rejected for builtin calls.
-- `return` in execution bodies is rejected.
-- Semicolons are rejected.
+- `return` is valid inside definition bodies and value blocks. In a value block, `return(value)` returns from the block and yields its value.
 - Transform argument lists may not be empty.
 - `if` statement sugar requires an `else` block.
-- `if(condition, thenBlock, elseBlock)` requires both branches to produce a value when used in expression position.
+- `if(condition, then() { ... }, else() { ... })` requires both branches to produce a value when used in value position.
+- `if` / `while` / `for` conditions must evaluate to `bool` (or a function returning `bool`).
+- `loop` counts must be integer envelopes; negative counts are errors.
+- `loop` / `while` / `for` require a body envelope (e.g., `do() { ... }`).
+- `and` / `or` / `not` accept only `bool` operands; use `bool{value}` or `convert<bool>(value)` to coerce integers.
