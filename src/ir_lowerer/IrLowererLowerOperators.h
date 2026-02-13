@@ -476,6 +476,94 @@
           function.instructions.push_back({addOp, 0});
           return true;
         }
+        std::string powName;
+        if (getBuiltinPowName(expr, powName, hasMathImport)) {
+          if (expr.args.size() != 2) {
+            error = powName + " requires exactly two arguments";
+            return false;
+          }
+          bool sawUnsigned = false;
+          bool sawSigned = false;
+          for (const auto &arg : expr.args) {
+            LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
+            if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
+              sawUnsigned = true;
+            }
+            if (kind == LocalInfo::ValueKind::UInt64) {
+              sawUnsigned = true;
+            } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
+              sawSigned = true;
+            }
+          }
+          if (sawUnsigned && sawSigned) {
+            error = powName + " requires numeric arguments of the same type";
+            return false;
+          }
+          LocalInfo::ValueKind powKind =
+              combineNumericKinds(inferExprKind(expr.args[0], localsIn), inferExprKind(expr.args[1], localsIn));
+          if (powKind == LocalInfo::ValueKind::Unknown || powKind == LocalInfo::ValueKind::Bool ||
+              powKind == LocalInfo::ValueKind::String) {
+            error = powName + " requires numeric arguments of the same type";
+            return false;
+          }
+
+          IrOpcode mulOp =
+              (powKind == LocalInfo::ValueKind::Int64 || powKind == LocalInfo::ValueKind::UInt64)
+                  ? IrOpcode::MulI64
+                  : IrOpcode::MulI32;
+          IrOpcode subOp =
+              (powKind == LocalInfo::ValueKind::Int64 || powKind == LocalInfo::ValueKind::UInt64)
+                  ? IrOpcode::SubI64
+                  : IrOpcode::SubI32;
+          IrOpcode cmpGtOp = IrOpcode::CmpGtI32;
+          if (powKind == LocalInfo::ValueKind::UInt64) {
+            cmpGtOp = IrOpcode::CmpGtU64;
+          } else if (powKind == LocalInfo::ValueKind::Int64) {
+            cmpGtOp = IrOpcode::CmpGtI64;
+          } else {
+            cmpGtOp = IrOpcode::CmpGtI32;
+          }
+          IrOpcode pushOp = (powKind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
+
+          int32_t tempBase = allocTempLocal();
+          int32_t tempExp = allocTempLocal();
+          int32_t tempOut = allocTempLocal();
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempBase)});
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempExp)});
+
+          function.instructions.push_back({pushOp, 1});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+
+          const size_t loopStart = function.instructions.size();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempExp)});
+          function.instructions.push_back({pushOp, 0});
+          function.instructions.push_back({cmpGtOp, 0});
+          const size_t jumpToEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempBase)});
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempExp)});
+          function.instructions.push_back({pushOp, 1});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempExp)});
+
+          function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+
+          const size_t endIndex = function.instructions.size();
+          function.instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          return true;
+        }
         std::string absSignName;
         if (getBuiltinAbsSignName(expr, absSignName, hasMathImport)) {
           if (expr.args.size() != 1) {

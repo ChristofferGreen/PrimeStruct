@@ -1921,6 +1921,19 @@ main() {
   CHECK(error.find("saturate requires numeric operand") != std::string::npos);
 }
 
+TEST_CASE("pow accepts integer operands") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(pow(2i32, 3i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("min rejects non-numeric operand") {
   const std::string source = R"(
 import /math/*

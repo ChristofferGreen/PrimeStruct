@@ -511,6 +511,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         result = combineNumeric(result, inferExprReturnKind(expr.args[2], params, locals));
         return result;
       }
+      if (builtinName == "pow" && expr.args.size() == 2) {
+        ReturnKind result = inferExprReturnKind(expr.args[0], params, locals);
+        result = combineNumeric(result, inferExprReturnKind(expr.args[1], params, locals));
+        return result;
+      }
       if (expr.args.empty()) {
         return ReturnKind::Unknown;
       }

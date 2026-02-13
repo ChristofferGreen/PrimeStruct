@@ -683,7 +683,7 @@
         std::string mathName;
         if (getMathBuiltinName(expr, mathName)) {
           if (mathName == "abs" || mathName == "sign" || mathName == "min" || mathName == "max" ||
-              mathName == "clamp" || mathName == "saturate" || mathName == "lerp") {
+              mathName == "clamp" || mathName == "saturate" || mathName == "lerp" || mathName == "pow") {
             // Supported in native/VM lowering.
           } else {
             error = "native backend does not support math builtin: " + mathName;

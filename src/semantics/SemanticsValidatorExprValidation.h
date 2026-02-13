@@ -658,6 +658,21 @@
             error_ = builtinName + " does not support mixed int/float operands";
             return false;
           }
+        } else if (builtinName == "pow") {
+          for (const auto &arg : expr.args) {
+            if (!isNumericExpr(arg)) {
+              error_ = builtinName + " requires numeric operands";
+              return false;
+            }
+          }
+          if (hasMixedSignedness(expr.args, false)) {
+            error_ = builtinName + " does not support mixed signed/unsigned operands";
+            return false;
+          }
+          if (hasMixedNumericCategory(expr.args)) {
+            error_ = builtinName + " does not support mixed int/float operands";
+            return false;
+          }
         } else if (builtinName == "is_nan" || builtinName == "is_inf" || builtinName == "is_finite") {
           if (!validateFloatArgs(1)) {
             return false;
@@ -666,8 +681,7 @@
           if (!validateFloatArgs(3)) {
             return false;
           }
-        } else if (builtinName == "pow" || builtinName == "atan2" || builtinName == "hypot" ||
-                   builtinName == "copysign") {
+        } else if (builtinName == "atan2" || builtinName == "hypot" || builtinName == "copysign") {
           if (!validateFloatArgs(2)) {
             return false;
           }

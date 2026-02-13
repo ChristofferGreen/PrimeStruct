@@ -489,6 +489,19 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with math pow") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(pow(2i32, 6i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_pow.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 64);
+}
+
 TEST_CASE("runs vm with math constant conversions") {
   const std::string source = R"(
 import /math/*

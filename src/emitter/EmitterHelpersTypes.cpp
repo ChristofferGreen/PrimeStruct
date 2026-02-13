@@ -480,6 +480,11 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
       result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds, allowMathBare));
       return result;
     }
+    if (mathName == "pow" && expr.args.size() == 2) {
+      ReturnKind result = inferPrimitiveReturnKind(expr.args[0], localTypes, returnKinds, allowMathBare);
+      result = combineNumericKinds(result, inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare));
+      return result;
+    }
     if (expr.args.empty()) {
       return ReturnKind::Unknown;
     }
