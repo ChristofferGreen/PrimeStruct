@@ -1556,6 +1556,46 @@ execute_repeat(2i32) { main() }
   CHECK(error.find("placement transforms are not supported") != std::string::npos);
 }
 
+TEST_CASE("execution rejects duplicate effects transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[effects(io_out) effects(asset_read)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate effects transform on /execute_repeat") != std::string::npos);
+}
+
+TEST_CASE("execution rejects duplicate capabilities transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<void>]
+execute_repeat([i32] x) {
+  return()
+}
+
+[capabilities(io_out) capabilities(asset_read)]
+execute_repeat(2i32) { main() }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate capabilities transform on /execute_repeat") != std::string::npos);
+}
+
 TEST_CASE("execution rejects struct transform") {
   const std::string source = R"(
 [return<int>]
