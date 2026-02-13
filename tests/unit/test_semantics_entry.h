@@ -641,6 +641,40 @@ main() {
   CHECK(error.find("math constant requires import /math/* or /math/<name>: tau") != std::string::npos);
 }
 
+TEST_CASE("math import rejects root definition conflicts") {
+  const std::string source = R"(
+import /math/*
+[return<f32>]
+sin([f32] value) {
+  return(value)
+}
+[return<f32>]
+main() {
+  return(sin(0.5f32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: sin") != std::string::npos);
+}
+
+TEST_CASE("explicit math import rejects root definition conflicts") {
+  const std::string source = R"(
+import /math/pi
+[return<f64>]
+pi() {
+  return(3.14f64)
+}
+[return<f64>]
+main() {
+  return(pi())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: pi") != std::string::npos);
+}
+
 TEST_CASE("math-qualified constant works without import") {
   const std::string source = R"(
 [return<f64>]

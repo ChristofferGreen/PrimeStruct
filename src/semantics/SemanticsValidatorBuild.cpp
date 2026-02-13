@@ -13,6 +13,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
   structNames_.clear();
   paramsByDef_.clear();
 
+  auto isMathBuiltinName = [&](const std::string &name) -> bool {
+    Expr probe;
+    probe.name = name;
+    std::string builtinName;
+    return getBuiltinMathName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
+  };
+
   for (const auto &effect : defaultEffects_) {
     if (!isEffectName(effect)) {
       error_ = "invalid default effect: " + effect;
@@ -25,6 +32,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (defMap_.count(def.fullPath) > 0) {
       error_ = "duplicate definition: " + def.fullPath;
       return false;
+    }
+    if (def.fullPath.find('/', 1) == std::string::npos) {
+      const std::string rootName = def.fullPath.substr(1);
+      if ((mathImportAll_ || mathImports_.count(rootName) > 0) && isMathBuiltinName(rootName)) {
+        error_ = "import creates name conflict: " + rootName;
+        return false;
+      }
     }
     bool sawEffects = false;
     bool sawCapabilities = false;
@@ -198,12 +212,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
 
   importAliases_.clear();
-  auto isMathBuiltinName = [&](const std::string &name) -> bool {
-    Expr probe;
-    probe.name = name;
-    std::string builtinName;
-    return getBuiltinMathName(probe, builtinName, true) || isBuiltinMathConstant(name, true);
-  };
   for (const auto &importPath : program_.imports) {
     if (importPath.empty() || importPath[0] != '/') {
       error_ = "import path must be a slash path";
