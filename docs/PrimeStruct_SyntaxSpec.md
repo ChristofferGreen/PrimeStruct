@@ -82,7 +82,8 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
   - Decimal forms with optional exponent `e`/`E` are accepted.
   - Commas may appear between digits in the integer part as digit separators; commas are not allowed in the fractional or exponent parts.
   - `f32` or `f64` suffixes are accepted; when omitted, the literal defaults to `f32`. Canonical form uses `f32`/`f64`.
-  - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`.
+  - Single-letter `f` suffix is accepted and treated as `f32`.
+  - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`, `1f`, `1.5f`.
 
 Type aliases:
 - `int` and `float` are target-chosen aliases (at least `i32`/`f32`, potentially `i64`/`f64` on some platforms/backends). Prefer explicit widths for deterministic cross-target behavior.

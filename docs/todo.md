@@ -54,7 +54,7 @@ Legend:
 - ○ Document `block{ ... }` calls and the general `{}` body-argument form after `()` (parser accepts call bodies; spec currently limits bodies to special forms).
 - ○ Document map literal `key=value` syntax supported by the `collections` text filter.
 - ✓ Document unary `&` / `*` operator sugar (`location` / `dereference`) in the `operators` text transform or remove the feature.
-- ○ Document single-letter float suffix `f` (treated as `f32`) or reject it in the lexer/parser.
+- ✓ Document single-letter float suffix `f` (treated as `f32`) or reject it in the lexer/parser.
 - ○ Fix string literal rules: single-quoted strings are not raw in code (rawness is controlled by `raw_utf8`/`raw_ascii` suffix only).
 - ○ Document canonical string normalization: parser emits `raw_utf8` / `raw_ascii` with unescaped content, not the escaped `"..."utf8/ascii` form described in the spec.
 - ✓ Document vector helper calls (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) as statement-only or allow them in expression contexts.

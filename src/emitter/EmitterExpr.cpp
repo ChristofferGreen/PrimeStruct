@@ -67,7 +67,12 @@ std::string Emitter::emitExpr(const Expr &expr,
     if (expr.floatWidth == 64) {
       return expr.floatValue;
     }
-    return expr.floatValue + "f";
+    std::string literal = expr.floatValue;
+    if (literal.find('.') == std::string::npos && literal.find('e') == std::string::npos &&
+        literal.find('E') == std::string::npos) {
+      literal += ".0";
+    }
+    return literal + "f";
   }
   if (expr.kind == Expr::Kind::StringLiteral) {
     return "std::string_view(" + stripStringLiteralSuffix(expr.stringValue) + ")";
