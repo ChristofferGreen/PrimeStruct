@@ -115,6 +115,76 @@ main() {
   CHECK(decodedIt->fields.size() == 2u);
 }
 
+TEST_CASE("ir emits struct field visibility and static metadata") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [public i32] size{1i32}
+  [private static i32] counter{2i32}
+  [package i32] weight{3i32}
+}
+
+[return<void>]
+main() {
+  Widget()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  auto layoutIt = std::find_if(module.structLayouts.begin(),
+                               module.structLayouts.end(),
+                               [](const primec::IrStructLayout &layout) { return layout.name == "/Widget"; });
+  REQUIRE(layoutIt != module.structLayouts.end());
+  CHECK(layoutIt->totalSizeBytes == 8u);
+  REQUIRE(layoutIt->fields.size() == 3u);
+  auto fieldByName = [&](const std::string &name) -> const primec::IrStructField * {
+    auto it = std::find_if(layoutIt->fields.begin(),
+                           layoutIt->fields.end(),
+                           [&](const primec::IrStructField &field) { return field.name == name; });
+    if (it == layoutIt->fields.end()) {
+      return nullptr;
+    }
+    return &(*it);
+  };
+  const primec::IrStructField *sizeField = fieldByName("size");
+  const primec::IrStructField *counterField = fieldByName("counter");
+  const primec::IrStructField *weightField = fieldByName("weight");
+  REQUIRE(sizeField != nullptr);
+  REQUIRE(counterField != nullptr);
+  REQUIRE(weightField != nullptr);
+  CHECK(sizeField->visibility == primec::IrStructVisibility::Public);
+  CHECK(sizeField->isStatic == false);
+  CHECK(counterField->visibility == primec::IrStructVisibility::Private);
+  CHECK(counterField->isStatic == true);
+  CHECK(weightField->visibility == primec::IrStructVisibility::Package);
+  CHECK(weightField->isStatic == false);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  auto decodedIt = std::find_if(decoded.structLayouts.begin(),
+                                decoded.structLayouts.end(),
+                                [](const primec::IrStructLayout &layout) { return layout.name == "/Widget"; });
+  REQUIRE(decodedIt != decoded.structLayouts.end());
+  REQUIRE(decodedIt->fields.size() == 3u);
+  auto decodedCounter = std::find_if(decodedIt->fields.begin(),
+                                     decodedIt->fields.end(),
+                                     [](const primec::IrStructField &field) { return field.name == "counter"; });
+  REQUIRE(decodedCounter != decodedIt->fields.end());
+  CHECK(decodedCounter->visibility == primec::IrStructVisibility::Private);
+  CHECK(decodedCounter->isStatic == true);
+}
+
 TEST_CASE("ir serialize roundtrip with implicit void return") {
   const std::string source = R"(
 [return<void>]

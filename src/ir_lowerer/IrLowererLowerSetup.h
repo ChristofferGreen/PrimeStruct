@@ -274,6 +274,27 @@ bool IrLowerer::lower(const Program &program,
     }
     return IrStructFieldCategory::Default;
   };
+  auto fieldVisibility = [&](const Expr &expr) -> IrStructVisibility {
+    IrStructVisibility visibility = IrStructVisibility::Private;
+    for (const auto &transform : expr.transforms) {
+      if (transform.name == "public") {
+        visibility = IrStructVisibility::Public;
+      } else if (transform.name == "package") {
+        visibility = IrStructVisibility::Package;
+      } else if (transform.name == "private") {
+        visibility = IrStructVisibility::Private;
+      }
+    }
+    return visibility;
+  };
+  auto isStaticField = [&](const Expr &expr) {
+    for (const auto &transform : expr.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
+  };
   struct TypeLayout {
     uint32_t sizeBytes = 0;
     uint32_t alignmentBytes = 1;
@@ -302,6 +323,7 @@ bool IrLowerer::lower(const Program &program,
       return false;
     }
     uint32_t offset = 0;
+    uint32_t staticOffset = 0;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
         continue;
@@ -325,18 +347,24 @@ bool IrLowerer::lower(const Program &program,
       }
       uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, typeLayout.alignmentBytes)
                                           : typeLayout.alignmentBytes;
-      uint32_t alignedOffset = alignTo(offset, fieldAlign);
+      const bool fieldIsStatic = isStaticField(stmt);
+      uint32_t &activeOffset = fieldIsStatic ? staticOffset : offset;
+      uint32_t alignedOffset = alignTo(activeOffset, fieldAlign);
       IrStructField field;
       field.name = stmt.name;
       field.envelope = formatEnvelope(binding);
       field.offsetBytes = alignedOffset;
       field.sizeBytes = typeLayout.sizeBytes;
       field.alignmentBytes = fieldAlign;
-      field.paddingKind = (alignedOffset != offset) ? IrStructPaddingKind::Align : IrStructPaddingKind::None;
+      field.paddingKind = (alignedOffset != activeOffset) ? IrStructPaddingKind::Align : IrStructPaddingKind::None;
       field.category = fieldCategory(stmt);
+      field.visibility = fieldVisibility(stmt);
+      field.isStatic = fieldIsStatic;
       layout.fields.push_back(std::move(field));
-      offset = alignedOffset + typeLayout.sizeBytes;
-      structAlign = std::max(structAlign, fieldAlign);
+      activeOffset = alignedOffset + typeLayout.sizeBytes;
+      if (!fieldIsStatic) {
+        structAlign = std::max(structAlign, fieldAlign);
+      }
     }
     if (hasStructAlign && explicitStructAlign < structAlign) {
       error = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +

@@ -163,10 +163,20 @@ std::string Emitter::emitExpr(const Expr &expr,
         }
         blockTypes[stmt.name] = binding;
         bool needsConst = !binding.isMutable;
+        const bool useRef =
+            !binding.isMutable && !binding.isCopy && !stmt.args.empty() && isReferenceCandidate(binding);
         if (hasExplicitBindingTypeTransform(stmt)) {
           std::string type = bindingTypeToCpp(binding, stmt.namespacePrefix, importAliases, structTypeMap);
           bool isReference = binding.typeName == "Reference";
-          out << (needsConst ? "const " : "") << type << " " << stmt.name;
+          if (useRef) {
+            if (type.rfind("const ", 0) != 0) {
+              out << "const " << type << " & " << stmt.name;
+            } else {
+              out << type << " & " << stmt.name;
+            }
+          } else {
+            out << (needsConst ? "const " : "") << type << " " << stmt.name;
+          }
           if (!stmt.args.empty()) {
             if (isReference) {
               out << " = *(" << emitExpr(stmt.args.front(),
@@ -191,7 +201,11 @@ std::string Emitter::emitExpr(const Expr &expr,
           }
           out << "; ";
         } else {
-          out << (needsConst ? "const " : "") << "auto " << stmt.name;
+          if (useRef) {
+            out << "const auto & " << stmt.name;
+          } else {
+            out << (needsConst ? "const " : "") << "auto " << stmt.name;
+          }
           if (!stmt.args.empty()) {
             out << " = " << emitExpr(stmt.args.front(),
                                     nameMap,
@@ -276,10 +290,20 @@ std::string Emitter::emitExpr(const Expr &expr,
           }
           branchTypes[stmt.name] = binding;
           bool needsConst = !binding.isMutable;
+          const bool useRef =
+              !binding.isMutable && !binding.isCopy && !stmt.args.empty() && isReferenceCandidate(binding);
           if (hasExplicitBindingTypeTransform(stmt)) {
             std::string type = bindingTypeToCpp(binding, stmt.namespacePrefix, importAliases, structTypeMap);
             bool isReference = binding.typeName == "Reference";
-            out << (needsConst ? "const " : "") << type << " " << stmt.name;
+            if (useRef) {
+              if (type.rfind("const ", 0) != 0) {
+                out << "const " << type << " & " << stmt.name;
+              } else {
+                out << type << " & " << stmt.name;
+              }
+            } else {
+              out << (needsConst ? "const " : "") << type << " " << stmt.name;
+            }
             if (!stmt.args.empty()) {
             if (isReference) {
               out << " = *(" << emitExpr(stmt.args.front(),
@@ -304,7 +328,11 @@ std::string Emitter::emitExpr(const Expr &expr,
           }
           out << "; ";
         } else {
-          out << (needsConst ? "const " : "") << "auto " << stmt.name;
+          if (useRef) {
+            out << "const auto & " << stmt.name;
+          } else {
+            out << (needsConst ? "const " : "") << "auto " << stmt.name;
+          }
           if (!stmt.args.empty()) {
             out << " = " << emitExpr(stmt.args.front(),
                                     nameMap,

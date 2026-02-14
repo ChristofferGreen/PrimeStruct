@@ -95,6 +95,51 @@ main() {
   CHECK(readFile(outPath) == "1\n2\n");
 }
 
+TEST_CASE("C++ emitter renders static fields and visibility") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [public i32] size{1i32}
+  [private static i32] counter{2i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_struct_static.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_struct_static.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("struct ps_Widget") != std::string::npos);
+  CHECK(output.find("static inline int counter") != std::string::npos);
+}
+
+TEST_CASE("C++ emitter uses copy to force by-value params") {
+  const std::string source = R"(
+[return<int>]
+sum([vector<i32>] values, [copy vector<i32>] copy_values) {
+  return(0i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(sum(vector<i32>(1i32), vector<i32>(2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_copy_params.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_copy_params.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("static int ps_sum(const std::vector<int> & values, const std::vector<int> copy_values)") !=
+        std::string::npos);
+}
+
 TEST_CASE("compiles and runs import alias in C++ emitter") {
   const std::string source = R"(
 import /util

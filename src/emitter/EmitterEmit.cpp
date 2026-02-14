@@ -19,6 +19,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, std::vector<Expr>> paramMap;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> importAliases;
   bool hasMathImport = false;
   auto isMathImport = [](const std::string &path) -> bool {
     if (path == "/math/*") {
@@ -185,11 +186,43 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     return std::string("int");
   };
+  auto appendParam = [&](std::ostringstream &out,
+                         const Expr &param,
+                         const std::string &typeNamespace) {
+    BindingInfo paramInfo = getBindingInfo(param);
+    std::string paramType =
+        bindingTypeToCpp(paramInfo, typeNamespace, importAliases, structTypeMap);
+    const bool refCandidate = isReferenceCandidate(paramInfo);
+    const bool passByRef = refCandidate && !paramInfo.isCopy;
+    if (passByRef) {
+      if (!paramInfo.isMutable && paramType.rfind("const ", 0) != 0) {
+        out << "const ";
+      }
+      out << paramType << " & " << param.name;
+      return;
+    }
+    bool needsConst = !paramInfo.isMutable;
+    if (needsConst && paramType.rfind("const ", 0) == 0) {
+      needsConst = false;
+    }
+    out << (needsConst ? "const " : "") << paramType << " " << param.name;
+  };
 
   for (const auto &def : program.definitions) {
     if (isStructDefinition(def)) {
       nameMap[def.fullPath] = toCppName(def.fullPath) + "_ctor";
-      paramMap[def.fullPath] = def.statements;
+      std::vector<Expr> instanceFields;
+      instanceFields.reserve(def.statements.size());
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          continue;
+        }
+        if (getBindingInfo(stmt).isStatic) {
+          continue;
+        }
+        instanceFields.push_back(stmt);
+      }
+      paramMap[def.fullPath] = std::move(instanceFields);
     } else {
       nameMap[def.fullPath] = toCppName(def.fullPath);
       std::string parentPath;
@@ -209,7 +242,6 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     returnKinds[def.fullPath] = getReturnKind(def);
   }
 
-  std::unordered_map<std::string, std::string> importAliases;
   auto isWildcardImport = [](const std::string &path, std::string &prefixOut) -> bool {
     if (path.size() >= 2 && path.compare(path.size() - 2, 2, "/*") == 0) {
       prefixOut = path.substr(0, path.size() - 2);
@@ -991,14 +1023,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (i > 0) {
         out << ", ";
       }
-      BindingInfo paramInfo = getBindingInfo(params[i]);
-      std::string paramType =
-          bindingTypeToCpp(paramInfo, def.namespacePrefix, importAliases, structTypeMap);
-      bool needsConst = !paramInfo.isMutable;
-      if (needsConst && paramType.rfind("const ", 0) == 0) {
-        needsConst = false;
-      }
-      out << (needsConst ? "const " : "") << paramType << " " << params[i].name;
+      appendParam(out, params[i], def.namespacePrefix);
     }
     out << ");\n";
   }
@@ -1008,6 +1033,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     const std::string &structType = structTypeMap.at(def.fullPath);
     out << "struct " << structType << " {\n";
+    std::unordered_map<std::string, BindingInfo> emptyLocals;
     for (const auto &field : def.statements) {
       if (!field.isBinding) {
         continue;
@@ -1015,7 +1041,23 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       BindingInfo binding = getBindingInfo(field);
       std::string fieldType =
           bindingTypeToCpp(binding, def.namespacePrefix, importAliases, structTypeMap);
-      out << "  " << fieldType << " " << field.name << ";\n";
+      if (binding.isStatic) {
+        out << "  static inline " << fieldType << " " << field.name;
+        if (!field.args.empty()) {
+          out << " = "
+              << emitExpr(field.args.front(),
+                          nameMap,
+                          paramMap,
+                          structTypeMap,
+                          importAliases,
+                          emptyLocals,
+                          returnKinds,
+                          hasMathImport);
+        }
+        out << ";\n";
+      } else {
+        out << "  " << fieldType << " " << field.name << ";\n";
+      }
     }
     const Definition *destroyHelper = pickDestroyHelper(def.fullPath);
     if (destroyHelper) {
@@ -1031,14 +1073,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (i > 0) {
         out << ", ";
       }
-      BindingInfo paramInfo = getBindingInfo(fields[i]);
-      std::string paramType =
-          bindingTypeToCpp(paramInfo, def.namespacePrefix, importAliases, structTypeMap);
-      bool needsConst = !paramInfo.isMutable;
-      if (needsConst && paramType.rfind("const ", 0) == 0) {
-        needsConst = false;
-      }
-      out << (needsConst ? "const " : "") << paramType << " " << fields[i].name;
+      appendParam(out, fields[i], def.namespacePrefix);
     }
     out << ") {\n";
     out << "  " << structType << " __instance{";
@@ -1069,14 +1104,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (i > 0) {
         out << ", ";
       }
-      BindingInfo paramInfo = getBindingInfo(params[i]);
-      std::string paramType =
-          bindingTypeToCpp(paramInfo, def.namespacePrefix, importAliases, structTypeMap);
-      bool needsConst = !paramInfo.isMutable;
-      if (needsConst && paramType.rfind("const ", 0) == 0) {
-        needsConst = false;
-      }
-      out << (needsConst ? "const " : "") << paramType << " " << params[i].name;
+      appendParam(out, params[i], def.namespacePrefix);
     }
     out << ") {\n";
     std::function<void(const Expr &, int, std::unordered_map<std::string, BindingInfo> &)> emitStatement;
@@ -1123,11 +1151,21 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string type = bindingTypeToCpp(binding, typeNamespace, importAliases, structTypeMap);
         bool isReference = binding.typeName == "Reference";
         localTypes[stmt.name] = binding;
-        bool needsConst = !binding.isMutable;
-        if (needsConst && type.rfind("const ", 0) == 0) {
-          needsConst = false;
+        const bool useRef =
+            !binding.isMutable && !binding.isCopy && isReferenceCandidate(binding) && !stmt.args.empty();
+        if (useRef) {
+          if (type.rfind("const ", 0) != 0) {
+            out << pad << "const " << type << " & " << stmt.name;
+          } else {
+            out << pad << type << " & " << stmt.name;
+          }
+        } else {
+          bool needsConst = !binding.isMutable;
+          if (needsConst && type.rfind("const ", 0) == 0) {
+            needsConst = false;
+          }
+          out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
         }
-        out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           if (isReference) {
             out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ")";

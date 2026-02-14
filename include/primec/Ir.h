@@ -70,6 +70,12 @@ enum class IrStructPaddingKind : uint8_t {
   Align,
 };
 
+enum class IrStructVisibility : uint8_t {
+  Private = 0,
+  Package,
+  Public,
+};
+
 struct IrStructField {
   std::string name;
   std::string envelope;
@@ -78,6 +84,8 @@ struct IrStructField {
   uint32_t alignmentBytes = 1;
   IrStructPaddingKind paddingKind = IrStructPaddingKind::None;
   IrStructFieldCategory category = IrStructFieldCategory::Default;
+  IrStructVisibility visibility = IrStructVisibility::Private;
+  bool isStatic = false;
 };
 
 struct IrStructLayout {

@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 11;
+constexpr uint32_t IrVersion = 12;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -116,6 +116,8 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
       appendU32(out, field.alignmentBytes);
       appendU32(out, static_cast<uint32_t>(field.paddingKind));
       appendU32(out, static_cast<uint32_t>(field.category));
+      appendU32(out, static_cast<uint32_t>(field.visibility));
+      appendU32(out, static_cast<uint32_t>(field.isStatic ? 1u : 0u));
     }
   }
   for (const auto &fn : module.functions) {
@@ -235,9 +237,12 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       uint32_t alignmentBytes = 0;
       uint32_t paddingKind = 0;
       uint32_t category = 0;
+      uint32_t visibility = 0;
+      uint32_t isStatic = 0;
       if (!readU32(data, offset, offsetBytes) || !readU32(data, offset, sizeBytes) ||
           !readU32(data, offset, alignmentBytes) || !readU32(data, offset, paddingKind) ||
-          !readU32(data, offset, category)) {
+          !readU32(data, offset, category) || !readU32(data, offset, visibility) ||
+          !readU32(data, offset, isStatic)) {
         error = "truncated IR struct field data";
         return false;
       }
@@ -249,6 +254,8 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       field.alignmentBytes = alignmentBytes;
       field.paddingKind = static_cast<IrStructPaddingKind>(paddingKind);
       field.category = static_cast<IrStructFieldCategory>(category);
+      field.visibility = static_cast<IrStructVisibility>(visibility);
+      field.isStatic = (isStatic != 0u);
       layout.fields.push_back(std::move(field));
     }
     out.structLayouts.push_back(std::move(layout));

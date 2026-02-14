@@ -5,6 +5,7 @@
 namespace primec::emitter {
 
 using BindingInfo = Emitter::BindingInfo;
+using BindingVisibility = Emitter::BindingVisibility;
 using ReturnKind = Emitter::ReturnKind;
 
 std::string joinTemplateArgs(const std::vector<std::string> &args) {
@@ -155,6 +156,26 @@ BindingInfo getBindingInfo(const Expr &expr) {
       info.isMutable = true;
       continue;
     }
+    if (transform.name == "copy" && transform.templateArgs.empty() && transform.arguments.empty()) {
+      info.isCopy = true;
+      continue;
+    }
+    if (transform.name == "static" && transform.templateArgs.empty() && transform.arguments.empty()) {
+      info.isStatic = true;
+      continue;
+    }
+    if (transform.name == "public" && transform.templateArgs.empty() && transform.arguments.empty()) {
+      info.visibility = BindingVisibility::Public;
+      continue;
+    }
+    if (transform.name == "package" && transform.templateArgs.empty() && transform.arguments.empty()) {
+      info.visibility = BindingVisibility::Package;
+      continue;
+    }
+    if (transform.name == "private" && transform.templateArgs.empty() && transform.arguments.empty()) {
+      info.visibility = BindingVisibility::Private;
+      continue;
+    }
     if (transform.name == "copy" || transform.name == "restrict" || transform.name == "align_bytes" ||
         transform.name == "align_kbytes") {
       continue;
@@ -207,6 +228,22 @@ BindingInfo getBindingInfo(const Expr &expr) {
     }
   }
   return info;
+}
+
+bool isReferenceCandidate(const BindingInfo &info) {
+  if (info.typeName == "Reference" || info.typeName == "Pointer") {
+    return false;
+  }
+  if (info.typeName == "array" || info.typeName == "vector" || info.typeName == "map") {
+    return true;
+  }
+  if (info.typeName == "string") {
+    return false;
+  }
+  if (isPrimitiveBindingTypeName(info.typeName)) {
+    return false;
+  }
+  return true;
 }
 
 std::string bindingTypeToCpp(const BindingInfo &info);

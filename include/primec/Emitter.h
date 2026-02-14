@@ -10,10 +10,14 @@ namespace primec {
 
 class Emitter {
 public:
+  enum class BindingVisibility { Private, Package, Public };
   struct BindingInfo {
     std::string typeName;
     std::string typeTemplateArg;
     bool isMutable = false;
+    bool isCopy = false;
+    bool isStatic = false;
+    BindingVisibility visibility = BindingVisibility::Private;
   };
   enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
   std::string emitCpp(const Program &program, const std::string &entryPath) const;
