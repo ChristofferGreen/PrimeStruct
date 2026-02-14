@@ -81,6 +81,38 @@ main() {
   CHECK(runCommand(nativePath) == 5);
 }
 
+TEST_CASE("semicolons act as separators") {
+  const std::string source = R"(
+;
+[return<int>]
+add([i32] a; [i32] b) {
+  return(plus(a, b));
+}
+;
+[return<int>]
+main() {
+  [i32] value{
+    add(1i32; 2i32);
+  };
+  return(value);
+}
+)";
+  const std::string srcPath = writeTemp("compile_semicolon_separators.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_semicolon_sep_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_semicolon_sep_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 3);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 3);
+}
+
 TEST_CASE("rejects non-argv entry parameter in exe") {
   const std::string source = R"(
 [return<int>]

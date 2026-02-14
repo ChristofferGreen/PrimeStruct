@@ -126,7 +126,8 @@ bool Parser::parse(Program &program, std::string &error) {
   }
   while (!match(TokenKind::End)) {
     if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
+      expect(TokenKind::Semicolon, "expected ';'");
+      continue;
     }
     if (match(TokenKind::KeywordImport)) {
       if (!parseImport(program)) {
@@ -235,7 +236,8 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
       return fail("unexpected end of file inside namespace block");
     }
     if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
+      expect(TokenKind::Semicolon, "expected ';'");
+      continue;
     }
     if (match(TokenKind::KeywordImport)) {
       return fail("import statements must appear at the top level");
@@ -694,7 +696,8 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       return fail("unexpected end of file inside definition body");
     }
     if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
+      expect(TokenKind::Semicolon, "expected ';'");
+      continue;
     }
     if (match(TokenKind::LBracket)) {
       Expr lambdaExpr;

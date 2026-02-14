@@ -445,15 +445,30 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
   }
   while (true) {
     if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
+      expect(TokenKind::Semicolon, "expected ';'");
+      if (match(TokenKind::RParen)) {
+        break;
+      }
+      continue;
     }
     Expr param;
     if (!parseParameterBinding(param, namespacePrefix)) {
       return false;
     }
     out.push_back(std::move(param));
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
+    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (match(TokenKind::Comma)) {
+        expect(TokenKind::Comma, "expected ','");
+      } else {
+        expect(TokenKind::Semicolon, "expected ';'");
+      }
+      while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+        if (match(TokenKind::Comma)) {
+          expect(TokenKind::Comma, "expected ','");
+        } else {
+          expect(TokenKind::Semicolon, "expected ';'");
+        }
+      }
       if (match(TokenKind::RParen)) {
         break;
       }
@@ -476,7 +491,11 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   ArgumentLabelGuard labelGuard(*this);
   while (true) {
     if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
+      expect(TokenKind::Semicolon, "expected ';'");
+      if (match(TokenKind::RParen)) {
+        break;
+      }
+      continue;
     }
     std::optional<std::string> argName;
     if (match(TokenKind::LBracket)) {
@@ -531,8 +550,19 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     }
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
+    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (match(TokenKind::Comma)) {
+        expect(TokenKind::Comma, "expected ','");
+      } else {
+        expect(TokenKind::Semicolon, "expected ';'");
+      }
+      while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+        if (match(TokenKind::Comma)) {
+          expect(TokenKind::Comma, "expected ','");
+        } else {
+          expect(TokenKind::Semicolon, "expected ';'");
+        }
+      }
       if (match(TokenKind::RParen)) {
         break;
       }
@@ -691,7 +721,11 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
   }
   while (true) {
     if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
+      expect(TokenKind::Semicolon, "expected ';'");
+      if (match(TokenKind::RBrace)) {
+        break;
+      }
+      continue;
     }
     if (!allowBraceBindings_ && match(TokenKind::LBracket)) {
       return fail("execution body arguments cannot be bindings");
@@ -735,8 +769,19 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
       }
     }
     out.push_back(std::move(arg));
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
+    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (match(TokenKind::Comma)) {
+        expect(TokenKind::Comma, "expected ','");
+      } else {
+        expect(TokenKind::Semicolon, "expected ';'");
+      }
+      while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+        if (match(TokenKind::Comma)) {
+          expect(TokenKind::Comma, "expected ','");
+        } else {
+          expect(TokenKind::Semicolon, "expected ';'");
+        }
+      }
       if (match(TokenKind::RBrace)) {
         break;
       }
