@@ -97,6 +97,7 @@ Type aliases:
   - Escape sequences in double-quoted strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
   - Any other escape sequence is rejected.
   - Single-quoted strings may contain escaped single quotes (`\\'`); use whichever quote form avoids escaping.
+  - VM/native backends only support `count`/`at`/`at_unsafe` on string literals or bindings initialized from literals; argv-derived strings are print-only.
 
 ### 2.4 Punctuation Tokens
 

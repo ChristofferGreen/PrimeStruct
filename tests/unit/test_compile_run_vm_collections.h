@@ -51,6 +51,18 @@ main() {
   CHECK(readFile(outPath) == "line\\\\nnext\n");
 }
 
+TEST_CASE("runs vm with string literal indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(at("hello"utf8, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_literal_index.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 101);
+}
+
 TEST_CASE("runs vm with literal method call") {
   const std::string source = R"(
 namespace i32 {

@@ -543,6 +543,23 @@ main([array<string>] args) {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("compiles and runs native string literal binding index") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] value{"hello"utf8}
+  return(at(value, 4i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_binding_index.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_string_binding_index_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 111);
+}
+
 TEST_CASE("compiles and runs native argv unsafe binding copy skips bounds") {
   const std::string source = R"(
 [return<int> effects(io_out)]

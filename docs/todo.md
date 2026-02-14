@@ -45,11 +45,11 @@ Legend:
 - ○ Add GLSL/SPIR-V backend (docs mention GPU lowering, but there is no backend in `src/`).
 - ◐ Expand VM/native float support (parser/semantics/C++ emitter accept floats; VM/native reject float literals/types).
 - ◐ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
-- ○ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).
+- ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).
 - ✓ Update PSIR version history in docs (serializer is at v10; docs list up to v9).
 
 **Docs Alignment**
-- ○ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
+- ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ○ Document the `repeat(count) { ... }` statement builtin (count accepts integers or bool; non-positive counts skip the body).
 - ○ Document `block{ ... }` calls and the general `{}` body-argument form after `()` (parser accepts call bodies; spec currently limits bodies to special forms).
 - ○ Document map literal `key=value` syntax supported by the `collections` text filter.
