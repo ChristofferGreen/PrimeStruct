@@ -84,6 +84,17 @@ main() {
     file.read(reinterpret_cast<char *>(data.data()), size);
   }
   CHECK(!data.empty());
+  REQUIRE(data.size() >= 8);
+  auto readU32 = [&](size_t offset) -> uint32_t {
+    return static_cast<uint32_t>(data[offset]) |
+           (static_cast<uint32_t>(data[offset + 1]) << 8) |
+           (static_cast<uint32_t>(data[offset + 2]) << 16) |
+           (static_cast<uint32_t>(data[offset + 3]) << 24);
+  };
+  const uint32_t magic = readU32(0);
+  const uint32_t version = readU32(4);
+  CHECK(magic == 0x50534952u);
+  CHECK(version == 10u);
 
   primec::IrModule module;
   std::string error;

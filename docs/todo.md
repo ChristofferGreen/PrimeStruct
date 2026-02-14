@@ -12,7 +12,7 @@ Legend:
 - ✓ Support text transforms appending additional text transforms to the same node (self-expansion in the transform pipeline).
 - ✓ Align CLI naming and behavior with docs: support `--text-transforms`, `--no-text-transforms`, and true auto-deduction in `--transform-list` (currently `--text-filters` only).
 - ✓ Apply `single_type_to_return` via semantic transforms or per-definition markers (it is currently toggled via the text filter list).
-- ○ Document `--emit=ir` (PSIR bytecode output) in the docs or remove it from the CLI.
+- ✓ Document `--emit=ir` (PSIR bytecode output) in the docs or remove it from the CLI.
 - ○ Enforce canonical-only parsing when `--no-transforms` is active (disable parser sugar like `if(...) {}` / `value[index]` and require explicit return transforms); currently still accepts surface forms.
 
 **Syntax & Surface Features**
@@ -45,7 +45,7 @@ Legend:
 - ◐ Expand VM/native float support (parser/semantics/C++ emitter accept floats; VM/native reject float literals/types).
 - ◐ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ○ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).
-- ○ Update PSIR version history in docs (serializer is at v10; docs list up to v9).
+- ✓ Update PSIR version history in docs (serializer is at v10; docs list up to v9).
 
 **Docs Alignment**
 - ○ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
