@@ -1549,6 +1549,25 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs native math fma/hypot") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{fma(2.0f32, 3.0f32, 4.0f32)}
+  [f32] b{hypot(1.0f32, 1.0f32)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_fma_hypot.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_fma_hypot_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi

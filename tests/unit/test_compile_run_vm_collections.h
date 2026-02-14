@@ -610,6 +610,21 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with math fma/hypot") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{fma(2.0f32, 3.0f32, 4.0f32)}
+  [f32] b{hypot(1.0f32, 1.0f32)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_fma_hypot.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 11);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*

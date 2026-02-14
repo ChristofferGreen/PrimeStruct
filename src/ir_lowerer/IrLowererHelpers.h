@@ -40,6 +40,8 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out);
 bool getBuiltinClampName(const Expr &expr, bool allowBare);
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare);

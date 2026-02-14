@@ -194,6 +194,26 @@ bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare) {
   return out == "lerp";
 }
 
+bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "fma";
+}
+
+bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "hypot";
+}
+
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
