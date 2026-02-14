@@ -33,6 +33,25 @@ struct ExprResult {
   GlslType type = GlslType::Unknown;
 };
 
+std::string normalizeName(const Expr &expr) {
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  return name;
+}
+
+bool isSimpleCallName(const Expr &expr, const char *name) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = normalizeName(expr);
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  return normalized == name;
+}
+
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "public" || name == "private" ||
@@ -255,7 +274,7 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     error = "glsl backend encountered unsupported expression";
     return {};
   }
-  const std::string &name = expr.name;
+  const std::string name = normalizeName(expr);
   if (name == "plus" || name == "minus" || name == "multiply" || name == "divide") {
     if (expr.args.size() != 2) {
       error = "glsl backend requires binary numeric operator arguments";
@@ -382,7 +401,25 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
   return {};
 }
 
-bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::string &error) {
+bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::string &error, const std::string &indent);
+
+bool emitBlock(const std::vector<Expr> &stmts,
+               EmitState &state,
+               std::string &out,
+               std::string &error,
+               const std::string &indent) {
+  auto savedLocals = state.locals;
+  for (const auto &stmt : stmts) {
+    if (!emitStatement(stmt, state, out, error, indent)) {
+      state.locals = savedLocals;
+      return false;
+    }
+  }
+  state.locals = savedLocals;
+  return true;
+}
+
+bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::string &error, const std::string &indent) {
   if (stmt.isBinding) {
     bool isMutable = false;
     bool isStatic = false;
@@ -422,7 +459,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
       return false;
     }
     state.locals[stmt.name] = {bindingType, isMutable};
-    out += "  ";
+    out += indent;
     if (!isMutable) {
       out += "const ";
     }
@@ -430,15 +467,15 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     return true;
   }
   if (stmt.kind == Expr::Kind::Call && !stmt.isBinding) {
-    if (stmt.name == "return") {
+    if (isSimpleCallName(stmt, "return")) {
       if (!stmt.args.empty()) {
         error = "glsl backend requires entry definition to return void";
         return false;
       }
-      out += "  return;\n";
+      out += indent + "return;\n";
       return true;
     }
-    if (stmt.name == "assign") {
+    if (isSimpleCallName(stmt, "assign")) {
       if (stmt.args.size() != 2) {
         error = "glsl backend requires assign(target, value)";
         return false;
@@ -462,10 +499,10 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       value = castExpr(value, it->second.type);
-      out += "  " + target.name + " = " + value.code + ";\n";
+      out += indent + target.name + " = " + value.code + ";\n";
       return true;
     }
-    if (stmt.name == "increment" || stmt.name == "decrement") {
+    if (isSimpleCallName(stmt, "increment") || isSimpleCallName(stmt, "decrement")) {
       if (stmt.args.size() != 1 || stmt.args.front().kind != Expr::Kind::Name) {
         error = "glsl backend requires increment/decrement target to be a local name";
         return false;
@@ -480,14 +517,55 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         error = "glsl backend requires increment/decrement target to be mutable";
         return false;
       }
-      out += "  " + targetName + (stmt.name == "increment" ? "++" : "--") + ";\n";
+      out += indent + targetName + (isSimpleCallName(stmt, "increment") ? "++" : "--") + ";\n";
+      return true;
+    }
+    if (isSimpleCallName(stmt, "if")) {
+      if (stmt.args.size() < 2 || stmt.args.size() > 3) {
+        error = "glsl backend requires if(cond, then() { ... }, else() { ... })";
+        return false;
+      }
+      ExprResult cond = emitExpr(stmt.args[0], state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      if (cond.type != GlslType::Bool) {
+        error = "glsl backend requires if condition to be bool";
+        return false;
+      }
+      const Expr &thenExpr = stmt.args[1];
+      if (!isSimpleCallName(thenExpr, "then") || !thenExpr.hasBodyArguments) {
+        error = "glsl backend requires then() { ... } block";
+        return false;
+      }
+      const Expr *elseExpr = nullptr;
+      if (stmt.args.size() == 3) {
+        elseExpr = &stmt.args[2];
+        if (!isSimpleCallName(*elseExpr, "else") || !elseExpr->hasBodyArguments) {
+          error = "glsl backend requires else() { ... } block";
+          return false;
+        }
+      }
+      out += indent + "if (" + cond.code + ") {\n";
+      if (!emitBlock(thenExpr.bodyArguments, state, out, error, indent + "  ")) {
+        return false;
+      }
+      out += indent + "}";
+      if (elseExpr) {
+        out += " else {\n";
+        if (!emitBlock(elseExpr->bodyArguments, state, out, error, indent + "  ")) {
+          return false;
+        }
+        out += indent + "}";
+      }
+      out += "\n";
       return true;
     }
     ExprResult exprResult = emitExpr(stmt, state, error);
     if (!error.empty()) {
       return false;
     }
-    out += "  " + exprResult.code + ";\n";
+    out += indent + exprResult.code + ";\n";
     return true;
   }
   error = "glsl backend encountered unsupported statement";
@@ -543,7 +621,7 @@ bool GlslEmitter::emitSource(const Program &program,
       }
       sawReturn = true;
     }
-    if (!emitStatement(stmt, state, body, error)) {
+    if (!emitStatement(stmt, state, body, error, "  ")) {
       return false;
     }
   }

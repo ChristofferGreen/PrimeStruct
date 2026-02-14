@@ -39,6 +39,26 @@ main() {
   CHECK(output.find("float result") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter writes if blocks") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  if(less_than(value, 2i32), then() { assign(value, 3i32) }, else() { assign(value, 4i32) })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_if.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_if.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("if (") != std::string::npos);
+  CHECK(output.find("value = 3") != std::string::npos);
+  CHECK(output.find("value = 4") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects non-void entry") {
   const std::string source = R"(
 [return<int>]
