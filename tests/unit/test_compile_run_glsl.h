@@ -34,6 +34,24 @@ main() {
   CHECK(std::filesystem::file_size(outPath) > 0);
 }
 
+TEST_CASE("spirv emit reports missing tool") {
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_spirv_missing_tool.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_missing_tool.spv").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_spirv_missing_tool_err.txt").string();
+
+  const std::string compileCmd =
+      "PATH= ./primec --emit=spirv " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
+      " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("glslangValidator or glslc not found") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes locals and arithmetic") {
   const std::string source = R"(
 [return<void>]
