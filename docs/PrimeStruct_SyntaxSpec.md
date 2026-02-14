@@ -457,7 +457,7 @@ Helpers:
 - `at(value, key)`
 - `at_unsafe(value, key)`
 
-Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they come from string literals or bindings.
+Map IR lowering is currently limited in VM/native backends: numeric/bool values only, with string keys allowed when they come from string literals or bindings backed by literals.
 
 ## 9. Effects
 

@@ -2668,6 +2668,27 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("rejects native map literal string key from argv binding") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  [string] key{args[0i32]}
+  map<string, i32>(key, 1i32)
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal_string_argv_key.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_argv_key_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_argv_key_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("map literal string keys") != std::string::npos);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.imports");

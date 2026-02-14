@@ -3019,7 +3019,7 @@
             LocalInfo::ValueKind valueKind = valueKindFromTypeName(expr.templateArgs[1]);
             if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown ||
                 valueKind == LocalInfo::ValueKind::String) {
-              error = "native backend only supports numeric/bool map literals";
+              error = "native backend only supports numeric/bool map values";
               return false;
             }
 
@@ -3042,7 +3042,8 @@
                 int32_t stringIndex = -1;
                 size_t length = 0;
                 if (!resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
-                  error = "native backend requires map literal string keys to be string literals or bindings";
+                  error =
+                      "native backend requires map literal string keys to be string literals or bindings backed by literals";
                   return false;
                 }
                 function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
