@@ -3,6 +3,7 @@
 #include "ParserHelpers.h"
 
 #include "primec/StringLiteral.h"
+#include "primec/TransformRegistry.h"
 
 #include <utility>
 
@@ -34,10 +35,205 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
   if (match(TokenKind::RBracket)) {
     return fail("transform list cannot be empty");
   }
+  auto isBoolLiteral = [](const std::string &text) {
+    return text == "true" || text == "false";
+  };
+  auto isWordToken = [](TokenKind kind) {
+    return kind == TokenKind::Identifier || kind == TokenKind::Number || kind == TokenKind::String ||
+           kind == TokenKind::KeywordImport || kind == TokenKind::KeywordNamespace;
+  };
+  auto formatTransformArgumentTokens = [&](size_t start, size_t end, std::string &out) -> bool {
+    out.clear();
+    bool hasToken = false;
+    TokenKind prevKind = TokenKind::End;
+    for (size_t i = start; i < end; ++i) {
+      const Token &token = tokens_[i];
+      if (token.kind == TokenKind::Comment) {
+        continue;
+      }
+      std::string text = token.text;
+      if (token.kind == TokenKind::String) {
+        std::string normalized;
+        std::string parseError;
+        if (!normalizeStringLiteralToken(token.text, normalized, parseError)) {
+          const size_t savedPos = pos_;
+          pos_ = i;
+          fail(parseError);
+          pos_ = savedPos;
+          return false;
+        }
+        text = std::move(normalized);
+      }
+      if (hasToken && isWordToken(prevKind) && isWordToken(token.kind)) {
+        out.push_back(' ');
+      }
+      out.append(text);
+      hasToken = true;
+      prevKind = token.kind;
+    }
+    return hasToken;
+  };
+  auto parseSimpleTransformArgument = [&](std::vector<std::string> &args) -> bool {
+    if (match(TokenKind::Identifier)) {
+      Token arg = consume(TokenKind::Identifier, "expected transform argument");
+      if (arg.kind == TokenKind::End) {
+        return false;
+      }
+      if (!isBoolLiteral(arg.text)) {
+        std::string argError;
+        if (!validateIdentifierText(arg.text, argError)) {
+          return fail(argError);
+        }
+      }
+      args.push_back(arg.text);
+      return true;
+    }
+    if (match(TokenKind::Number)) {
+      Token arg = consume(TokenKind::Number, "expected transform argument");
+      if (arg.kind == TokenKind::End) {
+        return false;
+      }
+      args.push_back(arg.text);
+      return true;
+    }
+    if (match(TokenKind::String)) {
+      Token arg = consume(TokenKind::String, "expected transform argument");
+      if (arg.kind == TokenKind::End) {
+        return false;
+      }
+      std::string normalized;
+      std::string parseError;
+      if (!normalizeStringLiteralToken(arg.text, normalized, parseError)) {
+        return fail(parseError);
+      }
+      args.push_back(std::move(normalized));
+      return true;
+    }
+    return fail("expected transform argument");
+  };
+  auto parseFullTransformArgument = [&](std::vector<std::string> &args) -> bool {
+    size_t start = pos_;
+    int parenDepth = 0;
+    int braceDepth = 0;
+    int bracketDepth = 0;
+    int angleDepth = 0;
+    bool sawToken = false;
+    while (pos_ < tokens_.size()) {
+      const Token &token = tokens_[pos_];
+      if (token.kind == TokenKind::Invalid) {
+        return fail(describeInvalidToken(token));
+      }
+      if (token.kind == TokenKind::Comment) {
+        ++pos_;
+        continue;
+      }
+      if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0 && angleDepth == 0) {
+        if (token.kind == TokenKind::RParen || token.kind == TokenKind::Comma || token.kind == TokenKind::Semicolon) {
+          break;
+        }
+      }
+      sawToken = true;
+      switch (token.kind) {
+        case TokenKind::LParen:
+          ++parenDepth;
+          break;
+        case TokenKind::RParen:
+          if (parenDepth > 0) {
+            --parenDepth;
+          }
+          break;
+        case TokenKind::LBrace:
+          ++braceDepth;
+          break;
+        case TokenKind::RBrace:
+          if (braceDepth > 0) {
+            --braceDepth;
+          }
+          break;
+        case TokenKind::LBracket:
+          ++bracketDepth;
+          break;
+        case TokenKind::RBracket:
+          if (bracketDepth > 0) {
+            --bracketDepth;
+          }
+          break;
+        case TokenKind::LAngle:
+          ++angleDepth;
+          break;
+        case TokenKind::RAngle:
+          if (angleDepth > 0) {
+            --angleDepth;
+          }
+          break;
+        default:
+          break;
+      }
+      ++pos_;
+    }
+    if (!sawToken) {
+      return fail("expected transform argument");
+    }
+    std::string argText;
+    if (!formatTransformArgumentTokens(start, pos_, argText)) {
+      return false;
+    }
+    if (argText.empty()) {
+      return fail("expected transform argument");
+    }
+    args.push_back(std::move(argText));
+    return true;
+  };
+  auto allowFullTransformArguments = [&](TransformPhase phase, const std::string &name) {
+    if (phase == TransformPhase::Text) {
+      return false;
+    }
+    if (phase == TransformPhase::Semantic) {
+      return true;
+    }
+    return primec::isSemanticTransformName(name);
+  };
+  auto parseTransformArguments = [&](Transform &transform, TransformPhase phase) -> bool {
+    if (!match(TokenKind::LParen)) {
+      return true;
+    }
+    const bool allowFullForms = allowFullTransformArguments(phase, transform.name);
+    expect(TokenKind::LParen, "expected '('");
+    if (match(TokenKind::RParen)) {
+      expect(TokenKind::RParen, "expected ')'");
+      return true;
+    }
+    while (true) {
+      if (allowFullForms) {
+        if (!parseFullTransformArgument(transform.arguments)) {
+          return false;
+        }
+      } else {
+        if (!parseSimpleTransformArgument(transform.arguments)) {
+          return false;
+        }
+      }
+      if (match(TokenKind::RParen)) {
+        break;
+      }
+      if (allowFullForms) {
+        if (match(TokenKind::Identifier) || match(TokenKind::Number) || match(TokenKind::String) ||
+            match(TokenKind::LBracket)) {
+          continue;
+        }
+      } else {
+        if (match(TokenKind::Identifier) || match(TokenKind::Number) || match(TokenKind::String)) {
+          continue;
+        }
+      }
+      break;
+    }
+    if (!expect(TokenKind::RParen, "expected ')'")) {
+      return false;
+    }
+    return true;
+  };
   auto parseTransformItem = [&](TransformPhase phase, Transform &transform) -> bool {
-    auto isBoolLiteral = [](const std::string &text) {
-      return text == "true" || text == "false";
-    };
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -53,56 +249,8 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return false;
       }
     }
-    if (match(TokenKind::LParen)) {
-      expect(TokenKind::LParen, "expected '('");
-      if (match(TokenKind::RParen)) {
-        expect(TokenKind::RParen, "expected ')'");
-        return true;
-      }
-      while (true) {
-        if (match(TokenKind::Identifier)) {
-          Token arg = consume(TokenKind::Identifier, "expected transform argument");
-          if (arg.kind == TokenKind::End) {
-            return false;
-          }
-          if (!isBoolLiteral(arg.text)) {
-            std::string argError;
-            if (!validateIdentifierText(arg.text, argError)) {
-              return fail(argError);
-            }
-          }
-          transform.arguments.push_back(arg.text);
-        } else if (match(TokenKind::Number)) {
-          Token arg = consume(TokenKind::Number, "expected transform argument");
-          if (arg.kind == TokenKind::End) {
-            return false;
-          }
-          transform.arguments.push_back(arg.text);
-        } else if (match(TokenKind::String)) {
-          Token arg = consume(TokenKind::String, "expected transform argument");
-          if (arg.kind == TokenKind::End) {
-            return false;
-          }
-          std::string normalized;
-          std::string parseError;
-          if (!normalizeStringLiteralToken(arg.text, normalized, parseError)) {
-            return fail(parseError);
-          }
-          transform.arguments.push_back(std::move(normalized));
-        } else {
-          return fail("expected transform argument");
-        }
-        if (match(TokenKind::RParen)) {
-          break;
-        }
-        if (match(TokenKind::Identifier) || match(TokenKind::Number) || match(TokenKind::String)) {
-          continue;
-        }
-        break;
-      }
-      if (!expect(TokenKind::RParen, "expected ')'")) {
-        return false;
-      }
+    if (!parseTransformArguments(transform, phase)) {
+      return false;
     }
     return true;
   };
@@ -129,9 +277,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return true;
   };
   while (!match(TokenKind::RBracket)) {
-    auto isBoolLiteral = [](const std::string &text) {
-      return text == "true" || text == "false";
-    };
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -154,56 +299,8 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
         return false;
       }
     }
-    if (match(TokenKind::LParen)) {
-      expect(TokenKind::LParen, "expected '('");
-      if (match(TokenKind::RParen)) {
-        expect(TokenKind::RParen, "expected ')'");
-      } else {
-      while (true) {
-        if (match(TokenKind::Identifier)) {
-          Token arg = consume(TokenKind::Identifier, "expected transform argument");
-          if (arg.kind == TokenKind::End) {
-            return false;
-          }
-          if (!isBoolLiteral(arg.text)) {
-            std::string argError;
-            if (!validateIdentifierText(arg.text, argError)) {
-              return fail(argError);
-            }
-          }
-          transform.arguments.push_back(arg.text);
-        } else if (match(TokenKind::Number)) {
-          Token arg = consume(TokenKind::Number, "expected transform argument");
-          if (arg.kind == TokenKind::End) {
-            return false;
-          }
-          transform.arguments.push_back(arg.text);
-        } else if (match(TokenKind::String)) {
-          Token arg = consume(TokenKind::String, "expected transform argument");
-          if (arg.kind == TokenKind::End) {
-            return false;
-          }
-          std::string normalized;
-          std::string parseError;
-          if (!normalizeStringLiteralToken(arg.text, normalized, parseError)) {
-            return fail(parseError);
-          }
-          transform.arguments.push_back(std::move(normalized));
-        } else {
-          return fail("expected transform argument");
-        }
-        if (match(TokenKind::RParen)) {
-          break;
-        }
-        if (match(TokenKind::Identifier) || match(TokenKind::Number) || match(TokenKind::String)) {
-          continue;
-        }
-        break;
-      }
-      if (!expect(TokenKind::RParen, "expected ')'")) {
-        return false;
-      }
-      }
+    if (!parseTransformArguments(transform, transform.phase)) {
+      return false;
     }
     out.push_back(std::move(transform));
   }

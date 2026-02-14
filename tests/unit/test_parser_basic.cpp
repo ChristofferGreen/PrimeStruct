@@ -450,6 +450,23 @@ main() {
   CHECK(transforms[3].arguments[1] == "io_err");
 }
 
+TEST_CASE("parses semantic transform full form arguments") {
+  const std::string source = R"(
+[semantic(tag(foo(1i32)))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  CHECK(transforms[0].name == "tag");
+  CHECK(transforms[0].phase == primec::TransformPhase::Semantic);
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "foo(1i32)");
+}
+
 TEST_CASE("parses transform-prefixed execution") {
   const std::string source = R"(
 [return<int> effects(io_out)]
