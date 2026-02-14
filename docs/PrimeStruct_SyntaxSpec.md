@@ -86,7 +86,7 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
   - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`, `1f`, `1.5f`.
 
 Type aliases:
-- `int` and `float` are target-chosen aliases (at least `i32`/`f32`, potentially `i64`/`f64` on some platforms/backends). Prefer explicit widths for deterministic cross-target behavior.
+- `int` and `float` are currently fixed to `i32` and `f32` in the compiler. Prefer explicit widths for deterministic behavior; future backends may widen these aliases.
 - Software numeric envelopes `integer`, `decimal`, and `complex` are reserved but not supported yet. Using them as binding/return types, template arguments, or `convert<T>` targets is a semantic error (`software numeric types are not supported yet`).
 - Bool literals: `true`, `false`.
 - String literals:

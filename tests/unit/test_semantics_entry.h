@@ -2139,6 +2139,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("int alias maps to i32") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i64)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
+}
+
+TEST_CASE("float alias maps to f32") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(1.0f64)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected f32") != std::string::npos);
+}
+
 TEST_CASE("return type mismatch fails") {
   const std::string source = R"(
 [return<int>]
