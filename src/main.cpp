@@ -16,6 +16,7 @@
 #include "primec/Vm.h"
 
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -375,7 +376,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       break;
     }
     if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" ||
-        arg == "--emit=vm" || arg == "--emit=glsl") {
+        arg == "--emit=vm" || arg == "--emit=glsl" || arg == "--emit=spirv") {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "-o" && i + 1 < argc) {
       out.outputPath = argv[++i];
@@ -533,6 +534,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.outputPath = stem + ".psir";
     } else if (out.emitKind == "glsl") {
       out.outputPath = stem + ".glsl";
+    } else if (out.emitKind == "spirv") {
+      out.outputPath = stem + ".spv";
     } else {
       out.outputPath = stem;
     }
@@ -562,6 +565,31 @@ bool runCommand(const std::string &command) {
   return std::system(command.c_str()) == 0;
 }
 
+std::string injectComputeLayout(const std::string &glslSource) {
+  const std::string layoutLine = "layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;\n";
+  size_t versionPos = glslSource.find("#version");
+  if (versionPos == std::string::npos) {
+    return "#version 450\n" + layoutLine + glslSource;
+  }
+  size_t lineEnd = glslSource.find('\n', versionPos);
+  if (lineEnd == std::string::npos) {
+    return glslSource + "\n" + layoutLine;
+  }
+  return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
+}
+
+bool findSpirvCompiler(std::string &toolName) {
+  if (runCommand("glslangValidator -v > /dev/null 2>&1")) {
+    toolName = "glslangValidator";
+    return true;
+  }
+  if (runCommand("glslc --version > /dev/null 2>&1")) {
+    toolName = "glslc";
+    return true;
+  }
+  return false;
+}
+
 std::string quotePath(const std::filesystem::path &path) {
   std::string text = path.string();
   std::string quoted = "\"";
@@ -584,7 +612,7 @@ int main(int argc, char **argv) {
     if (!argError.empty()) {
       std::cerr << "Argument error: " << argError << "\n";
     }
-    std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl] <input.prime> [-o <output>] [--entry /path] "
+    std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv] <input.prime> [-o <output>] [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] [--text-transforms <list>] "
                  "[--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                  "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
@@ -728,6 +756,44 @@ int main(int argc, char **argv) {
     }
     if (!writeFile(options.outputPath, glslSource)) {
       std::cerr << "Failed to write output: " << options.outputPath << "\n";
+      return 2;
+    }
+    return 0;
+  }
+
+  if (options.emitKind == "spirv") {
+    primec::GlslEmitter glslEmitter;
+    std::string glslSource;
+    if (!glslEmitter.emitSource(program, options.entryPath, glslSource, error)) {
+      std::cerr << "GLSL emit error: " << error << "\n";
+      return 2;
+    }
+    std::string spirvSource = injectComputeLayout(glslSource);
+    std::string toolName;
+    if (!findSpirvCompiler(toolName)) {
+      std::cerr << "SPIR-V emit error: glslangValidator or glslc not found\n";
+      return 2;
+    }
+
+    const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    std::filesystem::path tempPath =
+        std::filesystem::temp_directory_path() / ("primec_spirv_" + std::to_string(timestamp) + ".comp");
+    if (!writeFile(tempPath.string(), spirvSource)) {
+      std::cerr << "Failed to write output: " << tempPath.string() << "\n";
+      return 2;
+    }
+
+    std::string command;
+    if (toolName == "glslangValidator") {
+      command = "glslangValidator -V -S comp " + quotePath(tempPath) + " -o " + quotePath(options.outputPath);
+    } else {
+      command = "glslc -fshader-stage=compute " + quotePath(tempPath) + " -o " + quotePath(options.outputPath);
+    }
+    bool ok = runCommand(command);
+    std::error_code ec;
+    std::filesystem::remove(tempPath, ec);
+    if (!ok) {
+      std::cerr << "SPIR-V emit error: tool invocation failed\n";
       return 2;
     }
     return 0;

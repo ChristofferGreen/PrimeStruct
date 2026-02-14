@@ -16,6 +16,24 @@ main() {
   CHECK(output.find("void main()") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter writes spirv when tool available") {
+  if (!hasSpirvTools()) {
+    return;
+  }
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_spirv_minimal.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_spirv_minimal.spv").string();
+
+  const std::string compileCmd = "./primec --emit=spirv " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(std::filesystem::exists(outPath));
+  CHECK(std::filesystem::file_size(outPath) > 0);
+}
+
 TEST_CASE("glsl emitter writes locals and arithmetic") {
   const std::string source = R"(
 [return<void>]

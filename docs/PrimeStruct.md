@@ -61,6 +61,9 @@ module {
 - `primec --emit=ir input.prime -o module.psir`
   - Emits serialized PSIR bytecode after semantic validation (no execution).
   - Output is written as `.psir` and includes a PSIR header/version tag.
+- `primec --emit=spirv input.prime -o module.spv`
+  - Emits SPIR-V by first generating GLSL and invoking `glslangValidator` or `glslc` (compute stage).
+  - Requires `glslangValidator` or `glslc` on `PATH`.
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).

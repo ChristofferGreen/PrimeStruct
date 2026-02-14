@@ -65,6 +65,11 @@ bool hasZipTools() {
   return runCommand("zip -v > /dev/null 2>&1") == 0 && runCommand("unzip -v > /dev/null 2>&1") == 0;
 }
 
+bool hasSpirvTools() {
+  return runCommand("glslangValidator -v > /dev/null 2>&1") == 0 ||
+         runCommand("glslc --version > /dev/null 2>&1") == 0;
+}
+
 bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path &sourceDir) {
   const std::string command = "cd " + quoteShellArg(sourceDir.string()) + " && zip -q -r " +
                               quoteShellArg(zipPath.string()) + " .";
