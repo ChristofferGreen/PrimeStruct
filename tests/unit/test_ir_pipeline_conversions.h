@@ -408,12 +408,12 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects float pow in native backend") {
+TEST_CASE("ir lowerer supports float pow in native backend") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(pow(2.0f32, 3.0f32)))
+  return(convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32)))
 }
 )";
   primec::Program program;
@@ -423,8 +423,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("pow requires integer arguments in the native backend") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 8);
 }
 
 TEST_CASE("ir lowerer supports math constant conversions") {

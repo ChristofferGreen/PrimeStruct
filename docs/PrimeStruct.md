@@ -409,7 +409,7 @@ for(
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals compile through the C++ emitter only, using `std::string_view` keys.
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)` or `bool{value}`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `int/i32/i64/u64/bool/f32/f64` in the minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native.
-- **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/math/*` helpers; `pow` over float arguments still requires the C++ emitter (VM/native only accept integer bases/exponents).
+- **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/math/*` helpers.
 - **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
   - `convert<bool>` and `bool{...}` are valid for integer operands (including `u64`) and treat any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).

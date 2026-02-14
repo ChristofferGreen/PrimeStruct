@@ -1712,22 +1712,21 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("rejects native float pow in native backend") {
+TEST_CASE("compiles and runs native float pow") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(pow(2.0f32, 3.0f32)))
+  return(convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_math_pow_float.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_math_pow_float_err.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_pow_float_exe").string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Native lowering error: pow requires integer arguments in the native backend\n");
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
 }
 
 TEST_CASE("compiles and runs native i64 arithmetic") {

@@ -728,20 +728,17 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("rejects vm float pow in native backend") {
+TEST_CASE("runs vm with float pow") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(pow(2.0f32, 3.0f32)))
+  return(convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_math_pow_float_unsupported.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_pow_float_unsupported_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: pow requires integer arguments in the vm backend\n");
+  const std::string srcPath = writeTemp("vm_math_pow_float.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 8);
 }
 
 TEST_CASE("runs vm with convert bool from integers") {
