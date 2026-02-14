@@ -56,7 +56,8 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '('");
       if (match(TokenKind::RParen)) {
-        return fail("transform argument list cannot be empty");
+        expect(TokenKind::RParen, "expected ')'");
+        return true;
       }
       while (true) {
         if (match(TokenKind::Identifier)) {
@@ -156,8 +157,8 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (match(TokenKind::LParen)) {
       expect(TokenKind::LParen, "expected '('");
       if (match(TokenKind::RParen)) {
-        return fail("transform argument list cannot be empty");
-      }
+        expect(TokenKind::RParen, "expected ')'");
+      } else {
       while (true) {
         if (match(TokenKind::Identifier)) {
           Token arg = consume(TokenKind::Identifier, "expected transform argument");
@@ -201,6 +202,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       }
       if (!expect(TokenKind::RParen, "expected ')'")) {
         return false;
+      }
       }
     }
     out.push_back(std::move(transform));

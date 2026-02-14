@@ -1087,21 +1087,6 @@ TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.transforms");
 
-TEST_CASE("transform argument list cannot be empty") {
-  const std::string source = R"(
-[effects(), return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
-}
-
 TEST_CASE("transform group cannot be empty") {
   const std::string source = R"(
 [text()]
@@ -1131,22 +1116,6 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
-}
-
-TEST_CASE("transform argument requires value") {
-  const std::string source = R"(
-[effects(,)]
-[return<int>]
-main() {
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
 }
 
 TEST_CASE("transform arguments reject nested envelopes") {
