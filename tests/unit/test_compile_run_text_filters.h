@@ -152,6 +152,63 @@ main() {
   CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
 }
 
+TEST_CASE("no transforms rejects loop sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop(2i32) { }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_loop_sugar.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_loop_sugar_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
+}
+
+TEST_CASE("no transforms rejects while sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  while(true) { }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_while_sugar.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_while_sugar_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
+}
+
+TEST_CASE("no transforms rejects for sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for([i32 mut] i{0i32} less_than(i 2i32) increment(i)) { }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_for_sugar.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_for_sugar_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --no-transforms 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("control-flow body sugar") != std::string::npos);
+}
+
 TEST_CASE("no transforms rejects indexing sugar") {
   const std::string source = R"(
 [return<int>]
