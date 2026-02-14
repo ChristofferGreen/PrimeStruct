@@ -305,6 +305,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `for(init cond step) { ... }` rewrites to `for(init, cond, step, do() { ... })`; commas/semicolons are optional separators.
   - Envelope names are ignored (`do() { ... }` and `body() { ... }` are equivalent in the loop body position).
   - Bindings are allowed in any `for` slot; `cond` must evaluate to `bool`.
+- `repeat(count) { ... }` is a statement-only builtin; `count` accepts integer or `bool`, and non-positive counts skip the body.
 - Operators are rewritten into calls:
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
