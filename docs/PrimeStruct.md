@@ -68,7 +68,7 @@ module {
 
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
-- Emit high-performance C++ for engine integration, GLSL/SPIR-V for GPU shading, and bytecode for an embedded VM without diverging semantics.
+- Emit high-performance C++ for engine integration, GLSL for GPU shading (SPIR-V output remains future work), and bytecode for an embedded VM without diverging semantics.
 - Share a consistent standard library (math, texture IO, resource bindings, PathSpace helpers) across backends while preserving determinism for replay/testing.
 
 ## Proposed Architecture
@@ -87,7 +87,7 @@ module {
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
-  - **GLSL/SPIR-V emitter** – produces shader code; a Metal translation remains future work.
+  - **GLSL emitter** – produces shader code; SPIR-V and Metal output remain future work.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
 - **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). The VM/native subset now accepts a single `[array<string>]` entry parameter for command-line arguments; `args.count()` and `count(args)` are supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only), while the C++ emitter supports full array/string operations. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists so tooling can capture scheduling intent in snapshots.
