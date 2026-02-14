@@ -200,21 +200,57 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
 }
 
 bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+  auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+    if (matchRaw(TokenKind::Invalid)) {
+      fail(describeInvalidToken(tokens_[pos_]));
+      return {TokenKind::End, ""};
+    }
+    if (!matchRaw(kind)) {
+      fail(message);
+      return {TokenKind::End, ""};
+    }
+    return tokens_[pos_++];
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
+  auto skipSeparators = [&]() {
+    skipCommentsOnly();
+    while (tokens_[pos_].kind == TokenKind::Comma || tokens_[pos_].kind == TokenKind::Semicolon) {
+      ++pos_;
+      skipCommentsOnly();
+    }
+  };
+
   captures.clear();
-  if (!expect(TokenKind::LBracket, "expected '[' to start lambda capture list")) {
+  if (!expectRaw(TokenKind::LBracket, "expected '[' to start lambda capture list")) {
     return false;
   }
-  if (match(TokenKind::RBracket)) {
-    return expect(TokenKind::RBracket, "expected ']' to close lambda capture list");
+  skipSeparators();
+  if (matchRaw(TokenKind::RBracket)) {
+    return expectRaw(TokenKind::RBracket, "expected ']' to close lambda capture list");
   }
   while (true) {
-    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
-      return fail("expected lambda capture");
-    }
     std::string entry;
     while (true) {
-      if (match(TokenKind::Identifier)) {
-        Token name = consume(TokenKind::Identifier, "expected lambda capture");
+      if (matchRaw(TokenKind::Identifier)) {
+        Token name = consumeRaw(TokenKind::Identifier, "expected lambda capture");
         if (name.kind == TokenKind::End) {
           return false;
         }
@@ -224,8 +260,8 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
         entry += name.text;
         continue;
       }
-      if (match(TokenKind::Equal)) {
-        consume(TokenKind::Equal, "expected lambda capture");
+      if (matchRaw(TokenKind::Equal)) {
+        consumeRaw(TokenKind::Equal, "expected lambda capture");
         if (!entry.empty()) {
           entry.push_back(' ');
         }
@@ -238,26 +274,16 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
       return fail("expected lambda capture");
     }
     captures.push_back(std::move(entry));
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
-      if (match(TokenKind::RBracket)) {
-        break;
-      }
-      continue;
-    }
-    if (match(TokenKind::Semicolon)) {
-      expect(TokenKind::Semicolon, "expected ';'");
-      if (match(TokenKind::RBracket)) {
-        break;
-      }
-      continue;
-    }
-    if (match(TokenKind::RBracket)) {
+    skipSeparators();
+    if (matchRaw(TokenKind::RBracket)) {
       break;
+    }
+    if (matchRaw(TokenKind::Identifier) || matchRaw(TokenKind::Equal)) {
+      continue;
     }
     return fail("expected ',' or ']' after lambda capture");
   }
-  return expect(TokenKind::RBracket, "expected ']' to close lambda capture list");
+  return expectRaw(TokenKind::RBracket, "expected ']' to close lambda capture list");
 }
 
 bool Parser::parseTemplateList(std::vector<std::string> &out) {
