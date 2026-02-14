@@ -862,18 +862,8 @@
               error = "native backend requires typed map bindings for " + accessName;
               return false;
             }
-            if (mapKeyKind == LocalInfo::ValueKind::String || mapValueKind == LocalInfo::ValueKind::String) {
-              error = "native backend only supports at() on numeric/bool maps";
-              return false;
-            }
-
-            LocalInfo::ValueKind lookupKeyKind = inferExprKind(expr.args[1], localsIn);
-            if (lookupKeyKind == LocalInfo::ValueKind::Unknown || lookupKeyKind == LocalInfo::ValueKind::String) {
-              error = "native backend requires map lookup key to be numeric/bool";
-              return false;
-            }
-            if (lookupKeyKind != mapKeyKind) {
-              error = "native backend requires map lookup key type to match map key type";
+            if (mapValueKind == LocalInfo::ValueKind::String) {
+              error = "native backend only supports numeric/bool map values";
               return false;
             }
 
@@ -884,10 +874,30 @@
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
 
             const int32_t keyLocal = allocTempLocal();
-            if (!emitExpr(expr.args[1], localsIn)) {
-              return false;
+            if (mapKeyKind == LocalInfo::ValueKind::String) {
+              int32_t stringIndex = -1;
+              size_t length = 0;
+              if (!resolveStringTableTarget(expr.args[1], localsIn, stringIndex, length)) {
+                error = "native backend requires map lookup key to be string literal or binding";
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
+            } else {
+              LocalInfo::ValueKind lookupKeyKind = inferExprKind(expr.args[1], localsIn);
+              if (lookupKeyKind == LocalInfo::ValueKind::Unknown || lookupKeyKind == LocalInfo::ValueKind::String) {
+                error = "native backend requires map lookup key to be numeric/bool";
+                return false;
+              }
+              if (lookupKeyKind != mapKeyKind) {
+                error = "native backend requires map lookup key type to match map key type";
+                return false;
+              }
+              if (!emitExpr(expr.args[1], localsIn)) {
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
             }
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
 
             const int32_t countLocal = allocTempLocal();
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});

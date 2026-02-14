@@ -3011,8 +3011,8 @@
 
             LocalInfo::ValueKind keyKind = valueKindFromTypeName(expr.templateArgs[0]);
             LocalInfo::ValueKind valueKind = valueKindFromTypeName(expr.templateArgs[1]);
-            if (keyKind == LocalInfo::ValueKind::Unknown || keyKind == LocalInfo::ValueKind::String ||
-                valueKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::String) {
+            if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown ||
+                valueKind == LocalInfo::ValueKind::String) {
               error = "native backend only supports numeric/bool map literals";
               return false;
             }
@@ -3031,6 +3031,19 @@
 
             for (size_t i = 0; i < expr.args.size(); ++i) {
               const Expr &arg = expr.args[i];
+              const int32_t slot = baseLocal + 1 + static_cast<int32_t>(i);
+              if (i % 2 == 0 && keyKind == LocalInfo::ValueKind::String) {
+                int32_t stringIndex = -1;
+                size_t length = 0;
+                if (!resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+                  error = "native backend requires map literal string keys to be string literals or bindings";
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
+                continue;
+              }
+
               LocalInfo::ValueKind argKind = inferExprKind(arg, localsIn);
               if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
                 error = "native backend requires map literal arguments to be numeric/bool values";
@@ -3044,8 +3057,7 @@
               if (!emitExpr(arg, localsIn)) {
                 return false;
               }
-              function.instructions.push_back(
-                  {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(i))});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(slot)});
             }
 
             function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});

@@ -2556,25 +2556,23 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native string-keyed map literals") {
+TEST_CASE("compiles and runs native string-keyed map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<string, i32>{"a"raw_utf8=1i32}
-  return(1i32)
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [i32] a{at(values, "b"raw_utf8)}
+  [i32] b{at_unsafe(values, "a"raw_utf8)}
+  return(plus(plus(a, b), count(values)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal_string_key.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_key_exe").string();
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_key_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "Native lowering error: native backend only supports numeric/bool map literals\n");
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_SUITE_END();

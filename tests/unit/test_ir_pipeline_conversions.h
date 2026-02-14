@@ -228,11 +228,12 @@ main() {
   CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects string-keyed map literals") {
+TEST_CASE("ir lowerer supports string-keyed map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(count(map<string, i32>("a"raw_utf8, 1i32)))
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  return(plus(count(values), at(values, "b"raw_utf8)))
 }
 )";
   primec::Program program;
@@ -242,8 +243,14 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend only supports numeric/bool map literals") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 4);
 }
 
 TEST_CASE("ir lowerer supports math-qualified min/max") {

@@ -943,19 +943,19 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("vm lowering errors do not mention native backend") {
+TEST_CASE("runs vm with string-keyed map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<string, i32>{"a"utf8=1i32}
-  return(1i32)
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [i32] a{at(values, "b"raw_utf8)}
+  [i32] b{at_unsafe(values, "a"raw_utf8)}
+  return(plus(plus(a, b), count(values)))
 }
 )";
   const std::string srcPath = writeTemp("vm_map_literal_string_key.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_map_string_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend only supports numeric/bool map literals\n");
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 5);
 }
 
 TEST_CASE("vm array access checks bounds") {
