@@ -334,6 +334,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`
   - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
   - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` -> `map<i32, i32>(1i32, 2i32)`).
+- `/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
     `/<envelope>/method(value, args...)`, where `<envelope>` is the envelope name associated with `value`.

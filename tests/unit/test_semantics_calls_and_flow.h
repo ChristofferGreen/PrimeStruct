@@ -2010,6 +2010,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("rounding math builtins validate") {
+  const std::string source = R"(
+import /math/*
+[return<float>]
+main() {
+  return(floor(1.25f))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("float predicate math builtins validate") {
+  const std::string source = R"(
+import /math/*
+[return<bool>]
+main() {
+  return(is_finite(1.0f))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("min rejects non-numeric operand") {
   const std::string source = R"(
 import /math/*
