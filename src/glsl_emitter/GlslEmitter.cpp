@@ -26,6 +26,7 @@ struct EmitState {
   std::unordered_map<std::string, LocalInfo> locals;
   bool needsInt64Ext = false;
   bool needsFp64Ext = false;
+  uint32_t tempIndex = 0;
 };
 
 struct ExprResult {
@@ -133,12 +134,61 @@ bool isNumericType(GlslType type) {
          type == GlslType::Float || type == GlslType::Double;
 }
 
+bool isIntegerType(GlslType type) {
+  return type == GlslType::Int || type == GlslType::UInt || type == GlslType::Int64 || type == GlslType::UInt64;
+}
+
 bool isSignedInteger(GlslType type) {
   return type == GlslType::Int || type == GlslType::Int64;
 }
 
 bool isUnsignedInteger(GlslType type) {
   return type == GlslType::UInt || type == GlslType::UInt64;
+}
+
+void noteTypeExtensions(GlslType type, EmitState &state) {
+  if (type == GlslType::Int64 || type == GlslType::UInt64) {
+    state.needsInt64Ext = true;
+  }
+  if (type == GlslType::Double) {
+    state.needsFp64Ext = true;
+  }
+}
+
+std::string ensureFloatLiteral(const std::string &literal);
+
+std::string literalForType(GlslType type, int value) {
+  switch (type) {
+  case GlslType::Int:
+    return std::to_string(value);
+  case GlslType::UInt:
+    return std::to_string(value) + "u";
+  case GlslType::Int64:
+    return "int64_t(" + std::to_string(value) + ")";
+  case GlslType::UInt64:
+    return "uint64_t(" + std::to_string(value) + ")";
+  case GlslType::Float: {
+    std::string literal = std::to_string(value);
+    return ensureFloatLiteral(literal);
+  }
+  case GlslType::Double: {
+    std::string literal = std::to_string(value);
+    return "double(" + ensureFloatLiteral(literal) + ")";
+  }
+  case GlslType::Bool:
+  case GlslType::Unknown:
+    return std::to_string(value);
+  }
+  return std::to_string(value);
+}
+
+std::string allocTempName(EmitState &state, const std::string &prefix) {
+  for (;;) {
+    std::string candidate = prefix + std::to_string(state.tempIndex++);
+    if (state.locals.find(candidate) == state.locals.end()) {
+      return candidate;
+    }
+  }
 }
 
 GlslType combineNumericTypes(GlslType left, GlslType right, std::string &error) {
@@ -559,6 +609,157 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         out += indent + "}";
       }
       out += "\n";
+      return true;
+    }
+    if (isSimpleCallName(stmt, "loop")) {
+      if (stmt.args.size() != 2) {
+        error = "glsl backend requires loop(count, do() { ... })";
+        return false;
+      }
+      const Expr &countExpr = stmt.args[0];
+      const Expr &bodyExpr = stmt.args[1];
+      if (!isSimpleCallName(bodyExpr, "do") || !bodyExpr.hasBodyArguments) {
+        error = "glsl backend requires loop body in do() { ... }";
+        return false;
+      }
+      ExprResult count = emitExpr(countExpr, state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      if (!isIntegerType(count.type)) {
+        error = "glsl backend requires loop count to be integer";
+        return false;
+      }
+      noteTypeExtensions(count.type, state);
+      const std::string counterName = allocTempName(state, "_ps_loop_");
+      const std::string counterType = glslTypeName(count.type);
+      const std::string zeroLiteral = literalForType(count.type, 0);
+      const std::string oneLiteral = literalForType(count.type, 1);
+      const std::string cond =
+          isUnsignedInteger(count.type) ? (counterName + " != " + zeroLiteral)
+                                         : (counterName + " > " + zeroLiteral);
+
+      auto savedLocals = state.locals;
+      state.locals[counterName] = {count.type, true};
+      out += indent + "{\n";
+      out += indent + "  " + counterType + " " + counterName + " = " + count.code + ";\n";
+      out += indent + "  while (" + cond + ") {\n";
+      if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
+        state.locals = savedLocals;
+        return false;
+      }
+      out += indent + "    " + counterName + " = " + counterName + " - " + oneLiteral + ";\n";
+      out += indent + "  }\n";
+      out += indent + "}\n";
+      state.locals = savedLocals;
+      return true;
+    }
+    if (isSimpleCallName(stmt, "repeat")) {
+      if (stmt.args.size() != 1 || !stmt.hasBodyArguments) {
+        error = "glsl backend requires repeat(count) { ... }";
+        return false;
+      }
+      ExprResult count = emitExpr(stmt.args[0], state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      GlslType counterType = count.type;
+      if (counterType == GlslType::Bool) {
+        counterType = GlslType::Int;
+      }
+      if (!isIntegerType(counterType)) {
+        error = "glsl backend requires repeat count to be integer or bool";
+        return false;
+      }
+      noteTypeExtensions(counterType, state);
+      ExprResult countCast = castExpr(count, counterType);
+      const std::string counterName = allocTempName(state, "_ps_repeat_");
+      const std::string counterTypeName = glslTypeName(counterType);
+      const std::string zeroLiteral = literalForType(counterType, 0);
+      const std::string oneLiteral = literalForType(counterType, 1);
+      const std::string cond =
+          isUnsignedInteger(counterType) ? (counterName + " != " + zeroLiteral)
+                                          : (counterName + " > " + zeroLiteral);
+
+      auto savedLocals = state.locals;
+      state.locals[counterName] = {counterType, true};
+      out += indent + "{\n";
+      out += indent + "  " + counterTypeName + " " + counterName + " = " + countCast.code + ";\n";
+      out += indent + "  while (" + cond + ") {\n";
+      if (!emitBlock(stmt.bodyArguments, state, out, error, indent + "    ")) {
+        state.locals = savedLocals;
+        return false;
+      }
+      out += indent + "    " + counterName + " = " + counterName + " - " + oneLiteral + ";\n";
+      out += indent + "  }\n";
+      out += indent + "}\n";
+      state.locals = savedLocals;
+      return true;
+    }
+    if (isSimpleCallName(stmt, "while")) {
+      if (stmt.args.size() != 2) {
+        error = "glsl backend requires while(cond, do() { ... })";
+        return false;
+      }
+      ExprResult cond = emitExpr(stmt.args[0], state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      if (cond.type != GlslType::Bool) {
+        error = "glsl backend requires while condition to be bool";
+        return false;
+      }
+      const Expr &bodyExpr = stmt.args[1];
+      if (!isSimpleCallName(bodyExpr, "do") || !bodyExpr.hasBodyArguments) {
+        error = "glsl backend requires while body in do() { ... }";
+        return false;
+      }
+      out += indent + "while (" + cond.code + ") {\n";
+      if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "  ")) {
+        return false;
+      }
+      out += indent + "}\n";
+      return true;
+    }
+    if (isSimpleCallName(stmt, "for")) {
+      if (stmt.args.size() != 4) {
+        error = "glsl backend requires for(init, cond, step, do() { ... })";
+        return false;
+      }
+      auto savedLocals = state.locals;
+      out += indent + "{\n";
+      if (!emitStatement(stmt.args[0], state, out, error, indent + "  ")) {
+        state.locals = savedLocals;
+        return false;
+      }
+      ExprResult cond = emitExpr(stmt.args[1], state, error);
+      if (!error.empty()) {
+        state.locals = savedLocals;
+        return false;
+      }
+      if (cond.type != GlslType::Bool) {
+        error = "glsl backend requires for condition to be bool";
+        state.locals = savedLocals;
+        return false;
+      }
+      const Expr &bodyExpr = stmt.args[3];
+      if (!isSimpleCallName(bodyExpr, "do") || !bodyExpr.hasBodyArguments) {
+        error = "glsl backend requires for body in do() { ... }";
+        state.locals = savedLocals;
+        return false;
+      }
+      out += indent + "  while (" + cond.code + ") {\n";
+      if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
+        state.locals = savedLocals;
+        return false;
+      }
+      if (!emitStatement(stmt.args[2], state, out, error, indent + "    ")) {
+        state.locals = savedLocals;
+        return false;
+      }
+      out += indent + "  }\n";
+      out += indent + "}\n";
+      state.locals = savedLocals;
       return true;
     }
     ExprResult exprResult = emitExpr(stmt, state, error);

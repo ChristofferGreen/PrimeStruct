@@ -59,6 +59,28 @@ main() {
   CHECK(output.find("value = 4") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter writes loops") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{0i32}
+  loop(2i32, do() { assign(value, plus(value, 1i32)) })
+  while(less_than(value, 3i32), do() { assign(value, plus(value, 1i32)) })
+  repeat(2i32) { assign(value, plus(value, 1i32)) }
+  for([i32 mut] i{0i32}, less_than(i, 2i32), increment(i), do() { assign(value, plus(value, i)) })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_loops.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_loops.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("while (") != std::string::npos);
+  CHECK(output.find("value = (value + 1)") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects non-void entry") {
   const std::string source = R"(
 [return<int>]
