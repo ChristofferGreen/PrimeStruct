@@ -208,7 +208,7 @@ bool readBareIncludePath(const std::string &payload, size_t &pos, std::string &o
   size_t start = pos;
   while (pos < payload.size()) {
     char c = payload[pos];
-    if (std::isspace(static_cast<unsigned char>(c)) || c == ',') {
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
       break;
     }
     ++pos;

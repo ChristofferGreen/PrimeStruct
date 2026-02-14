@@ -16,10 +16,10 @@ Legend:
 - ○ Enforce canonical-only parsing when `--no-transforms` is active (disable parser sugar like `if(...) {}` / `value[index]` and require explicit return transforms); currently still accepts surface forms.
 
 **Syntax & Surface Features**
- - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, include/import lists); currently hard errors.
+- ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, include/import lists); currently hard errors.
 - ✓ Treat commas as optional separators everywhere the SyntaxSpec treats them as whitespace (statement lists and binding initializers, not just argument/template lists).
 - ✓ Allow trailing separators (comma/semicolon) in lists where the SyntaxSpec permits them; parser rejects trailing commas and semicolons entirely.
-- ○ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
+- ✓ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
 - ○ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/include resolver currently allow them).
 - ○ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ○ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).

@@ -37,6 +37,21 @@ TEST_CASE("expands multiple include paths") {
   CHECK(source.find("LIB_B") != std::string::npos);
 }
 
+TEST_CASE("expands whitespace-separated include paths") {
+  const std::string libA = writeTemp("lib_ws_a.prime", "// LIB_WS_A\n[return<int>]\nhelper_a(){ return(1i32) }\n");
+  const std::string libB = writeTemp("lib_ws_b.prime", "// LIB_WS_B\n[return<int>]\nhelper_b(){ return(2i32) }\n");
+  const std::string srcPath =
+      writeTemp("main_ws.prime", "include<\"" + libA + "\" \"" + libB + "\">\n[return<int>]\nmain(){ return(helper_a()) }\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find("LIB_WS_A") != std::string::npos);
+  CHECK(source.find("LIB_WS_B") != std::string::npos);
+}
+
 TEST_CASE("ignores nested duplicate includes") {
   const std::string marker = "LIB_D_MARKER";
   const std::string libD = writeTemp("lib_nested_d.prime",
