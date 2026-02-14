@@ -44,6 +44,8 @@ bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinCopysignName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare);

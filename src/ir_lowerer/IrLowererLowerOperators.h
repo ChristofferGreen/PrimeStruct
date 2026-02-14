@@ -816,6 +816,309 @@
               {argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::MulF64 : IrOpcode::MulF32, 0});
           return true;
         }
+        std::string trigName;
+        if (getBuiltinTrigName(expr, trigName, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            error = trigName + " requires exactly one argument";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+          if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
+            error = trigName + " requires float argument";
+            return false;
+          }
+          IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
+          IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
+          IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
+          IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
+
+          auto pushFloatConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+
+          auto emitMulLocal = [&](int32_t leftLocal, int32_t rightLocal, int32_t outLocal) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightLocal)});
+            function.instructions.push_back({mulOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+          };
+          auto emitSquare = [&](int32_t valueLocal, int32_t outLocal) {
+            emitMulLocal(valueLocal, valueLocal, outLocal);
+          };
+
+          int32_t tempX = allocTempLocal();
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+
+          int32_t tempX2 = allocTempLocal();
+          emitSquare(tempX, tempX2);
+
+          if (trigName == "sin") {
+            int32_t tempX3 = allocTempLocal();
+            int32_t tempX5 = allocTempLocal();
+            int32_t tempX7 = allocTempLocal();
+            emitMulLocal(tempX2, tempX, tempX3);
+            emitMulLocal(tempX3, tempX2, tempX5);
+            emitMulLocal(tempX5, tempX2, tempX7);
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
+            pushFloatConst(6.0);
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({subOp, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
+            pushFloatConst(120.0);
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({addOp, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
+            pushFloatConst(5040.0);
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({subOp, 0});
+            return true;
+          }
+
+          if (trigName == "cos") {
+            int32_t tempX4 = allocTempLocal();
+            int32_t tempX6 = allocTempLocal();
+            emitMulLocal(tempX2, tempX2, tempX4);
+            emitMulLocal(tempX4, tempX2, tempX6);
+
+            pushFloatConst(1.0);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX2)});
+            pushFloatConst(2.0);
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({subOp, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX4)});
+            pushFloatConst(24.0);
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({addOp, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX6)});
+            pushFloatConst(720.0);
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({subOp, 0});
+            return true;
+          }
+
+          // tan(x) ≈ sin(x) / cos(x)
+          int32_t tempX3 = allocTempLocal();
+          int32_t tempX5 = allocTempLocal();
+          int32_t tempX7 = allocTempLocal();
+          int32_t tempX4 = allocTempLocal();
+          int32_t tempX6 = allocTempLocal();
+          int32_t tempSin = allocTempLocal();
+          int32_t tempCos = allocTempLocal();
+
+          emitMulLocal(tempX2, tempX, tempX3);
+          emitMulLocal(tempX3, tempX2, tempX5);
+          emitMulLocal(tempX5, tempX2, tempX7);
+          emitMulLocal(tempX2, tempX2, tempX4);
+          emitMulLocal(tempX4, tempX2, tempX6);
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
+          pushFloatConst(6.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
+          pushFloatConst(120.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
+          pushFloatConst(5040.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSin)});
+
+          pushFloatConst(1.0);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX2)});
+          pushFloatConst(2.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX4)});
+          pushFloatConst(24.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX6)});
+          pushFloatConst(720.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCos)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSin)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempCos)});
+          function.instructions.push_back({divOp, 0});
+          return true;
+        }
+        std::string trig2Name;
+        if (getBuiltinTrig2Name(expr, trig2Name, hasMathImport)) {
+          if (expr.args.size() != 2) {
+            error = trig2Name + " requires exactly two arguments";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args[0], localsIn);
+          LocalInfo::ValueKind argKind2 = inferExprKind(expr.args[1], localsIn);
+          if ((argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) ||
+              argKind != argKind2) {
+            error = trig2Name + " requires float arguments of the same type";
+            return false;
+          }
+
+          IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
+          IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
+          IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
+          IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
+          IrOpcode cmpEqOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpEqF64 : IrOpcode::CmpEqF32;
+          IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
+
+          auto pushFloatConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+
+          int32_t tempY = allocTempLocal();
+          int32_t tempX = allocTempLocal();
+          int32_t tempZ = allocTempLocal();
+          int32_t tempZ2 = allocTempLocal();
+          int32_t tempZ3 = allocTempLocal();
+          int32_t tempZ5 = allocTempLocal();
+          int32_t tempOut = allocTempLocal();
+
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempY)});
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+
+          // Handle x == 0 axis cases.
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(0.0);
+          function.instructions.push_back({cmpEqOp, 0});
+          size_t jumpIfNotZeroX = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
+          pushFloatConst(0.0);
+          function.instructions.push_back({cmpEqOp, 0});
+          size_t jumpIfNotZeroY = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          pushFloatConst(0.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpAxisEndZero = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          size_t nonZeroYIndex = function.instructions.size();
+          function.instructions[jumpIfNotZeroY].imm = static_cast<int32_t>(nonZeroYIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
+          pushFloatConst(0.0);
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t jumpIfPosY = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          pushFloatConst(-1.5707963267948966);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpAxisEndNeg = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          size_t posYIndex = function.instructions.size();
+          function.instructions[jumpIfPosY].imm = static_cast<int32_t>(posYIndex);
+          pushFloatConst(1.5707963267948966);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpAxisEndPos = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          size_t notZeroXIndex = function.instructions.size();
+          function.instructions[jumpIfNotZeroX].imm = static_cast<int32_t>(notZeroXIndex);
+
+          // atan2(y, x) ≈ atan(y/x) with quadrant adjustment.
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempZ)});
+
+          auto emitMulLocal = [&](int32_t leftLocal, int32_t rightLocal, int32_t outLocal) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightLocal)});
+            function.instructions.push_back({mulOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+          };
+
+          emitMulLocal(tempZ, tempZ, tempZ2);
+          emitMulLocal(tempZ2, tempZ, tempZ3);
+          emitMulLocal(tempZ3, tempZ2, tempZ5);
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempZ)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempZ3)});
+          pushFloatConst(3.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempZ5)});
+          pushFloatConst(5.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(0.0);
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t jumpIfNotNegX = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
+          pushFloatConst(0.0);
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t jumpIfPosYAdj = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          pushFloatConst(-3.14159265358979323846);
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpAdjustEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          size_t posYAdjIndex = function.instructions.size();
+          function.instructions[jumpIfPosYAdj].imm = static_cast<int32_t>(posYAdjIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          pushFloatConst(3.14159265358979323846);
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t adjustEndIndex = function.instructions.size();
+          function.instructions[jumpAdjustEnd].imm = static_cast<int32_t>(adjustEndIndex);
+
+          size_t notNegXIndex = function.instructions.size();
+          function.instructions[jumpIfNotNegX].imm = static_cast<int32_t>(notNegXIndex);
+
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpAxisEndZero].imm = static_cast<int32_t>(endIndex);
+          function.instructions[jumpAxisEndNeg].imm = static_cast<int32_t>(endIndex);
+          function.instructions[jumpAxisEndPos].imm = static_cast<int32_t>(endIndex);
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          return true;
+        }
         std::string powName;
         if (getBuiltinPowName(expr, powName, hasMathImport)) {
           if (expr.args.size() != 2) {

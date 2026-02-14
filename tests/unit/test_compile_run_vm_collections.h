@@ -655,20 +655,38 @@ main() {
   CHECK(runCommand(runCmd) == 58);
 }
 
+TEST_CASE("runs vm with math trig helpers") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{sin(0.0f32)}
+  [f32] b{cos(0.0f32)}
+  [f32] c{tan(0.0f32)}
+  [f32] d{atan2(1.0f32, 0.0f32)}
+  [f32] sum{plus(plus(a, b), c)}
+  return(plus(convert<int>(sum), convert<int>(d)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_trig.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(sin(1.0f)))
+  return(convert<int>(asin(1.0f)))
 }
 )";
-  const std::string srcPath = writeTemp("vm_math_sin_unsupported.prime", source);
+  const std::string srcPath = writeTemp("vm_math_asin_unsupported.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_sin_unsupported_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_vm_math_asin_unsupported_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support math builtin: sin\n");
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support math builtin: asin\n");
 }
 
 TEST_CASE("runs vm with convert bool from integers") {

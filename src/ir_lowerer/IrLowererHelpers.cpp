@@ -234,6 +234,26 @@ bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare) {
   return out == "radians" || out == "degrees";
 }
 
+bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "sin" || out == "cos" || out == "tan";
+}
+
+bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "atan2";
+}
+
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;

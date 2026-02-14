@@ -688,6 +688,7 @@
           if (mathName == "abs" || mathName == "sign" || mathName == "min" || mathName == "max" ||
               mathName == "clamp" || mathName == "saturate" || mathName == "lerp" || mathName == "fma" ||
               mathName == "hypot" || mathName == "copysign" || mathName == "radians" || mathName == "degrees" ||
+              mathName == "sin" || mathName == "cos" || mathName == "tan" || mathName == "atan2" ||
               mathName == "pow" || mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite" ||
               mathName == "floor" || mathName == "ceil" || mathName == "round" || mathName == "trunc" ||
               mathName == "fract" || mathName == "sqrt" || mathName == "cbrt") {

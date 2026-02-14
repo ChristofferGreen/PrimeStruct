@@ -1606,6 +1606,28 @@ main() {
   CHECK(runCommand(exePath) == 58);
 }
 
+TEST_CASE("compiles and runs native math trig helpers") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{sin(0.0f32)}
+  [f32] b{cos(0.0f32)}
+  [f32] c{tan(0.0f32)}
+  [f32] d{atan2(1.0f32, 0.0f32)}
+  [f32] sum{plus(plus(a, b), c)}
+  return(plus(convert<int>(sum), convert<int>(d)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_trig.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_trig_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi
@@ -1628,17 +1650,17 @@ TEST_CASE("rejects native unsupported math builtin") {
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(sin(1.0f)))
+  return(convert<int>(asin(1.0f)))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_math_sin_unsupported.prime", source);
+  const std::string srcPath = writeTemp("compile_native_math_asin_unsupported.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_math_sin_unsupported_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_native_math_asin_unsupported_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Native lowering error: native backend does not support math builtin: sin\n");
+  CHECK(readFile(errPath) == "Native lowering error: native backend does not support math builtin: asin\n");
 }
 
 TEST_CASE("compiles and runs native i64 arithmetic") {
