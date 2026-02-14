@@ -567,6 +567,24 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("transform list auto-deduces append_operators") {
+  const std::string source = R"(
+[append_operators return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_append_operators_auto.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_append_operators_auto_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --transform-list=append_operators";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("text transform rules apply to namespace paths") {
   const std::string source = R"(
 namespace math {

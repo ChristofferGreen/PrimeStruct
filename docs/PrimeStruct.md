@@ -223,6 +223,7 @@ statements and envelopes—any envelope can stand alone as a statement, and unus
 - **Evaluation mode:** when the compiler sees `[transform ...]`, it routes through the metafunction's declared signature—pure token rewrites operate on the raw stream, while semantic transforms receive the AST node and in-place metadata writers.
 
 **Text transforms (token-level)**
+- **`append_operators`:** injects `operators` into the leading transform list when missing, enabling text-transform self-expansion without repeating `operators` everywhere.
 - **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
 - **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into constructor calls.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
@@ -244,7 +245,7 @@ statements and envelopes—any envelope can stand alone as a statement, and unus
 - **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
 - **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only.
-- **Documentation TODO:** ship a full catalog of built-in transforms once the borrow checker and effect model solidify; this list captures the current baseline only.
+The list above reflects the built-in transforms recognized by the compiler today; future additions will extend it here.
 
 ### Core library surface (draft)
 - **Standard math (draft):** the core math set lives under `/math/*` (e.g., `/math/sin`, `/math/pi`). `import /math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.
