@@ -53,6 +53,29 @@ bool isSimpleCallName(const Expr &expr, const char *name) {
   return normalized == name;
 }
 
+bool getMathBuiltinName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = normalizeName(expr);
+  if (normalized.rfind("math/", 0) == 0) {
+    out = normalized.substr(5);
+  } else {
+    if (normalized.find('/') != std::string::npos) {
+      return false;
+    }
+    out = normalized;
+  }
+  return out == "abs" || out == "sign" || out == "min" || out == "max" || out == "clamp" || out == "saturate" ||
+         out == "lerp" || out == "pow" || out == "floor" || out == "ceil" || out == "round" || out == "trunc" ||
+         out == "fract" || out == "sqrt" || out == "cbrt" || out == "exp" || out == "exp2" || out == "log" ||
+         out == "log2" || out == "log10" || out == "sin" || out == "cos" || out == "tan" || out == "asin" ||
+         out == "acos" || out == "atan" || out == "atan2" || out == "radians" || out == "degrees" ||
+         out == "sinh" || out == "cosh" || out == "tanh" || out == "asinh" || out == "acosh" || out == "atanh" ||
+         out == "fma" || out == "hypot" || out == "copysign" || out == "is_nan" || out == "is_inf" ||
+         out == "is_finite";
+}
+
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "public" || name == "private" ||
@@ -431,6 +454,346 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       return {};
     }
     return {"(!" + arg.code + ")", GlslType::Bool};
+  }
+  std::string mathName;
+  if (getMathBuiltinName(expr, mathName)) {
+    auto emitUnaryMath = [&](const char *func, bool requireFloat) -> ExprResult {
+      if (expr.args.size() != 1) {
+        error = mathName + " requires exactly one argument";
+        return {};
+      }
+      ExprResult arg = emitExpr(expr.args.front(), state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      if (requireFloat && arg.type != GlslType::Float && arg.type != GlslType::Double) {
+        error = mathName + " requires float argument";
+        return {};
+      }
+      if (mathName == "abs" && (arg.type == GlslType::UInt || arg.type == GlslType::UInt64)) {
+        return arg;
+      }
+      if (mathName == "sign" && (arg.type == GlslType::UInt || arg.type == GlslType::UInt64)) {
+        std::string zeroLiteral = literalForType(arg.type, 0);
+        std::string oneLiteral = literalForType(arg.type, 1);
+        return {"(" + arg.code + " == " + zeroLiteral + " ? " + zeroLiteral + " : " + oneLiteral + ")",
+                arg.type};
+      }
+      return {std::string(func) + "(" + arg.code + ")", arg.type};
+    };
+    auto emitBinaryMath = [&](const char *func, bool requireFloat) -> ExprResult {
+      if (expr.args.size() != 2) {
+        error = mathName + " requires exactly two arguments";
+        return {};
+      }
+      ExprResult left = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult right = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(left.type, right.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      if (requireFloat && common != GlslType::Float && common != GlslType::Double) {
+        error = mathName + " requires float arguments";
+        return {};
+      }
+      left = castExpr(left, common);
+      right = castExpr(right, common);
+      return {std::string(func) + "(" + left.code + ", " + right.code + ")", common};
+    };
+
+    if (mathName == "abs") {
+      return emitUnaryMath("abs", false);
+    }
+    if (mathName == "sign") {
+      return emitUnaryMath("sign", false);
+    }
+    if (mathName == "min") {
+      return emitBinaryMath("min", false);
+    }
+    if (mathName == "max") {
+      return emitBinaryMath("max", false);
+    }
+    if (mathName == "clamp") {
+      if (expr.args.size() != 3) {
+        error = "clamp requires exactly three arguments";
+        return {};
+      }
+      ExprResult value = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult minValue = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult maxValue = emitExpr(expr.args[2], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(value.type, minValue.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      common = combineNumericTypes(common, maxValue.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      value = castExpr(value, common);
+      minValue = castExpr(minValue, common);
+      maxValue = castExpr(maxValue, common);
+      return {"clamp(" + value.code + ", " + minValue.code + ", " + maxValue.code + ")", common};
+    }
+    if (mathName == "saturate") {
+      if (expr.args.size() != 1) {
+        error = "saturate requires exactly one argument";
+        return {};
+      }
+      ExprResult value = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      if (!isNumericType(value.type)) {
+        error = "saturate requires numeric argument";
+        return {};
+      }
+      std::string zeroLiteral = literalForType(value.type, 0);
+      std::string oneLiteral = literalForType(value.type, 1);
+      return {"clamp(" + value.code + ", " + zeroLiteral + ", " + oneLiteral + ")", value.type};
+    }
+    if (mathName == "lerp") {
+      if (expr.args.size() != 3) {
+        error = "lerp requires exactly three arguments";
+        return {};
+      }
+      ExprResult start = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult end = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult t = emitExpr(expr.args[2], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(start.type, end.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      common = combineNumericTypes(common, t.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      start = castExpr(start, common);
+      end = castExpr(end, common);
+      t = castExpr(t, common);
+      return {"(" + start.code + " + (" + end.code + " - " + start.code + ") * " + t.code + ")", common};
+    }
+    if (mathName == "pow") {
+      return emitBinaryMath("pow", true);
+    }
+    if (mathName == "floor") {
+      return emitUnaryMath("floor", true);
+    }
+    if (mathName == "ceil") {
+      return emitUnaryMath("ceil", true);
+    }
+    if (mathName == "round") {
+      return emitUnaryMath("round", true);
+    }
+    if (mathName == "trunc") {
+      return emitUnaryMath("trunc", true);
+    }
+    if (mathName == "fract") {
+      return emitUnaryMath("fract", true);
+    }
+    if (mathName == "sqrt") {
+      return emitUnaryMath("sqrt", true);
+    }
+    if (mathName == "cbrt") {
+      if (expr.args.size() != 1) {
+        error = "cbrt requires exactly one argument";
+        return {};
+      }
+      ExprResult arg = emitExpr(expr.args.front(), state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      if (arg.type != GlslType::Float && arg.type != GlslType::Double) {
+        error = "cbrt requires float argument";
+        return {};
+      }
+      std::string oneThird = glslTypeName(arg.type) + "(1.0/3.0)";
+      return {"pow(" + arg.code + ", " + oneThird + ")", arg.type};
+    }
+    if (mathName == "exp") {
+      return emitUnaryMath("exp", true);
+    }
+    if (mathName == "exp2") {
+      return emitUnaryMath("exp2", true);
+    }
+    if (mathName == "log") {
+      return emitUnaryMath("log", true);
+    }
+    if (mathName == "log2") {
+      return emitUnaryMath("log2", true);
+    }
+    if (mathName == "log10") {
+      if (expr.args.size() != 1) {
+        error = "log10 requires exactly one argument";
+        return {};
+      }
+      ExprResult arg = emitExpr(expr.args.front(), state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      if (arg.type != GlslType::Float && arg.type != GlslType::Double) {
+        error = "log10 requires float argument";
+        return {};
+      }
+      std::string tenLiteral = literalForType(arg.type, 10);
+      return {"(log(" + arg.code + ") / log(" + tenLiteral + "))", arg.type};
+    }
+    if (mathName == "sin" || mathName == "cos" || mathName == "tan" || mathName == "asin" || mathName == "acos" ||
+        mathName == "atan" || mathName == "radians" || mathName == "degrees" || mathName == "sinh" ||
+        mathName == "cosh" || mathName == "tanh" || mathName == "asinh" || mathName == "acosh" ||
+        mathName == "atanh") {
+      return emitUnaryMath(mathName.c_str(), true);
+    }
+    if (mathName == "atan2") {
+      if (expr.args.size() != 2) {
+        error = "atan2 requires exactly two arguments";
+        return {};
+      }
+      ExprResult y = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult x = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(y.type, x.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      if (common != GlslType::Float && common != GlslType::Double) {
+        error = "atan2 requires float arguments";
+        return {};
+      }
+      y = castExpr(y, common);
+      x = castExpr(x, common);
+      return {"atan(" + y.code + ", " + x.code + ")", common};
+    }
+    if (mathName == "fma") {
+      if (expr.args.size() != 3) {
+        error = "fma requires exactly three arguments";
+        return {};
+      }
+      ExprResult a = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult b = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult c = emitExpr(expr.args[2], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(a.type, b.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      common = combineNumericTypes(common, c.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      if (common != GlslType::Float && common != GlslType::Double) {
+        error = "fma requires float arguments";
+        return {};
+      }
+      a = castExpr(a, common);
+      b = castExpr(b, common);
+      c = castExpr(c, common);
+      return {"fma(" + a.code + ", " + b.code + ", " + c.code + ")", common};
+    }
+    if (mathName == "hypot") {
+      if (expr.args.size() != 2) {
+        error = "hypot requires exactly two arguments";
+        return {};
+      }
+      ExprResult a = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult b = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(a.type, b.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      if (common != GlslType::Float && common != GlslType::Double) {
+        error = "hypot requires float arguments";
+        return {};
+      }
+      a = castExpr(a, common);
+      b = castExpr(b, common);
+      return {"sqrt(" + a.code + " * " + a.code + " + " + b.code + " * " + b.code + ")", common};
+    }
+    if (mathName == "copysign") {
+      if (expr.args.size() != 2) {
+        error = "copysign requires exactly two arguments";
+        return {};
+      }
+      ExprResult mag = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult sign = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(mag.type, sign.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      if (common != GlslType::Float && common != GlslType::Double) {
+        error = "copysign requires float arguments";
+        return {};
+      }
+      mag = castExpr(mag, common);
+      sign = castExpr(sign, common);
+      return {"(abs(" + mag.code + ") * sign(" + sign.code + "))", common};
+    }
+    if (mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite") {
+      if (expr.args.size() != 1) {
+        error = mathName + " requires exactly one argument";
+        return {};
+      }
+      ExprResult arg = emitExpr(expr.args.front(), state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      if (arg.type != GlslType::Float && arg.type != GlslType::Double) {
+        error = mathName + " requires float argument";
+        return {};
+      }
+      std::string func = mathName == "is_nan" ? "isnan" : (mathName == "is_inf" ? "isinf" : "isfinite");
+      return {func + "(" + arg.code + ")", GlslType::Bool};
+    }
+    error = "glsl backend does not support math builtin: " + mathName;
+    return {};
   }
   if (name == "convert") {
     if (expr.templateArgs.size() != 1 || expr.args.size() != 1) {

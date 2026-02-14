@@ -81,6 +81,30 @@ main() {
   CHECK(output.find("value = (value + 1)") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter writes math builtins") {
+  const std::string source = R"(
+import /math/*
+[return<void>]
+main() {
+  [f32] value{floor(1.9f32)}
+  [f32] clamped{clamp(2.5f32, 0.0f32, 1.0f32)}
+  [f32] powed{pow(2.0f32, 3.0f32)}
+  [bool] flag{is_nan(divide(0.0f32, 0.0f32))}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_math.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_math.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("floor(") != std::string::npos);
+  CHECK(output.find("clamp(") != std::string::npos);
+  CHECK(output.find("pow(") != std::string::npos);
+  CHECK(output.find("isnan(") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects non-void entry") {
   const std::string source = R"(
 [return<int>]
