@@ -1332,6 +1332,12 @@ bool IrLowerer::lower(const Program &program,
           }
           return LocalInfo::ValueKind::Bool;
         }
+        if (getBuiltinRoundingName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
             return LocalInfo::ValueKind::Unknown;

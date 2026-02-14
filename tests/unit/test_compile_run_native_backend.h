@@ -1487,6 +1487,31 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs native math rounding") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{floor(1.9f32)}
+  [f32] b{ceil(1.1f32)}
+  [f32] c{round(2.5f32)}
+  [f32] d{trunc(-1.7f32)}
+  [f32] e{fract(2.25f32)}
+  return(plus(
+    plus(convert<int>(a), convert<int>(b)),
+    plus(convert<int>(c), plus(convert<int>(d), convert<int>(multiply(e, 4.0f32))))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_rounding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_rounding_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi

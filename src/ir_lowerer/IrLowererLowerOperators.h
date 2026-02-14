@@ -970,6 +970,150 @@
           function.instructions.push_back({IrOpcode::MulI32, 0});
           return true;
         }
+        std::string roundingName;
+        if (getBuiltinRoundingName(expr, roundingName, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            error = roundingName + " requires exactly one argument";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::Bool ||
+              argKind == LocalInfo::ValueKind::String) {
+            error = roundingName + " requires numeric argument";
+            return false;
+          }
+          int32_t tempValue = allocTempLocal();
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+
+          auto pushFloatConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+          auto emitFloatTrunc = [&](int32_t valueLocal, int32_t outLocal) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            if (argKind == LocalInfo::ValueKind::Float32) {
+              function.instructions.push_back({IrOpcode::ConvertF32ToI32, 0});
+              function.instructions.push_back({IrOpcode::ConvertI32ToF32, 0});
+            } else {
+              function.instructions.push_back({IrOpcode::ConvertF64ToI64, 0});
+              function.instructions.push_back({IrOpcode::ConvertI64ToF64, 0});
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+          };
+          auto emitFloorOrCeil = [&](int32_t valueLocal, int32_t outLocal, bool isCeil) {
+            emitFloatTrunc(valueLocal, outLocal);
+            IrOpcode cmpOp = isCeil ? (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::CmpLtF64
+                                                                               : IrOpcode::CmpLtF32)
+                                   : (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::CmpGtF64
+                                                                               : IrOpcode::CmpGtF32);
+            IrOpcode addSubOp = isCeil ? (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::AddF64
+                                                                                   : IrOpcode::AddF32)
+                                       : (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::SubF64
+                                                                                   : IrOpcode::SubF32);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({cmpOp, 0});
+            size_t useValue = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
+            pushFloatConst(1.0);
+            function.instructions.push_back({addSubOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+            size_t jumpEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            size_t useValueIndex = function.instructions.size();
+            function.instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
+            size_t endIndex = function.instructions.size();
+            function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+          };
+
+          if (argKind == LocalInfo::ValueKind::Int32 || argKind == LocalInfo::ValueKind::Int64 ||
+              argKind == LocalInfo::ValueKind::UInt64) {
+            if (roundingName == "fract") {
+              if (argKind == LocalInfo::ValueKind::Int32) {
+                function.instructions.push_back({IrOpcode::PushI32, 0});
+              } else {
+                function.instructions.push_back({IrOpcode::PushI64, 0});
+              }
+              return true;
+            }
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            return true;
+          }
+
+          const bool isF32 = (argKind == LocalInfo::ValueKind::Float32);
+          const IrOpcode addOp = isF32 ? IrOpcode::AddF32 : IrOpcode::AddF64;
+          const IrOpcode subOp = isF32 ? IrOpcode::SubF32 : IrOpcode::SubF64;
+          const IrOpcode cmpLtOp = isF32 ? IrOpcode::CmpLtF32 : IrOpcode::CmpLtF64;
+
+          if (roundingName == "trunc") {
+            int32_t tempOut = allocTempLocal();
+            emitFloatTrunc(tempValue, tempOut);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            return true;
+          }
+
+          int32_t tempOut = allocTempLocal();
+          if (roundingName == "floor") {
+            emitFloorOrCeil(tempValue, tempOut, false);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            return true;
+          }
+          if (roundingName == "ceil") {
+            emitFloorOrCeil(tempValue, tempOut, true);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            return true;
+          }
+          if (roundingName == "fract") {
+            emitFloorOrCeil(tempValue, tempOut, false);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            function.instructions.push_back({subOp, 0});
+            return true;
+          }
+          if (roundingName == "round") {
+            int32_t tempAdjusted = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            pushFloatConst(0.0);
+            function.instructions.push_back({cmpLtOp, 0});
+            size_t jumpNonNegative = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            pushFloatConst(0.5);
+            function.instructions.push_back({subOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAdjusted)});
+            emitFloorOrCeil(tempAdjusted, tempOut, true);
+            size_t jumpEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+
+            size_t nonNegativeIndex = function.instructions.size();
+            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            pushFloatConst(0.5);
+            function.instructions.push_back({addOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAdjusted)});
+            emitFloorOrCeil(tempAdjusted, tempOut, false);
+
+            size_t endIndex = function.instructions.size();
+            function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            return true;
+          }
+          error = roundingName + " requires numeric argument";
+          return false;
+        }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
             error = "convert requires exactly one template argument";

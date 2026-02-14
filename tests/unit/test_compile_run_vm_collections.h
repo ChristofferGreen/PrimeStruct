@@ -560,6 +560,27 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
+TEST_CASE("runs vm with math rounding") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{floor(1.9f32)}
+  [f32] b{ceil(1.1f32)}
+  [f32] c{round(2.5f32)}
+  [f32] d{trunc(-1.7f32)}
+  [f32] e{fract(2.25f32)}
+  return(plus(
+    plus(convert<int>(a), convert<int>(b)),
+    plus(convert<int>(c), plus(convert<int>(d), convert<int>(multiply(e, 4.0f32))))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_rounding.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*
