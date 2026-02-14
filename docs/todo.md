@@ -30,7 +30,7 @@ Legend:
 - ✓ Support brace constructor forms in value positions (`Type{ ... }` in arguments/returns); parser currently requires `()` or treats braces as bindings.
 
 **Types & Semantics**
-- ○ Implement software numeric envelopes (`integer`, `decimal`, `complex`) or document their explicit rejection in the syntax spec.
+- ✓ Implement software numeric envelopes (`integer`, `decimal`, `complex`) or document their explicit rejection in the syntax spec.
 - ○ Align `int`/`float` aliases with the spec’s target-chosen widths (code currently fixes them to `i32`/`f32`) or update the docs to match.
 - ○ Add template monomorphization for user-defined definitions (templates are parsed but only builtins/collections use them today).
 - ◐ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission are still missing; only validation exists).

@@ -87,6 +87,7 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 
 Type aliases:
 - `int` and `float` are target-chosen aliases (at least `i32`/`f32`, potentially `i64`/`f64` on some platforms/backends). Prefer explicit widths for deterministic cross-target behavior.
+- Software numeric envelopes `integer`, `decimal`, and `complex` are reserved but not supported yet. Using them as binding/return types, template arguments, or `convert<T>` targets is a semantic error (`software numeric types are not supported yet`).
 - Bool literals: `true`, `false`.
 - String literals:
   - Double-quoted and single-quoted strings both process escapes unless a raw suffix is used.
