@@ -820,22 +820,40 @@ TEST_CASE("default effects token enables io output") {
 [return<int>]
 main() {
   print_line("default effects"utf8)
-  print_line_error("err"utf8)
   return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_native_print_default_effects.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_print_default_exe").string();
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_print_default_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_print_default_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --default-effects=default";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
+  const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "default effects\n");
-  CHECK(readFile(errPath) == "err\n");
+}
+
+TEST_CASE("default effects token does not enable io_err output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line_error("err"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_default_effects_no_err.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_default_effects_no_err_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_default_effects_no_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --default-effects=default 2> " +
+      errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) == "Semantic error: print_line_error requires io_err effect\n");
 }
 
 TEST_CASE("default effects token enables vm output") {
@@ -843,19 +861,16 @@ TEST_CASE("default effects token enables vm output") {
 [return<int>]
 main() {
   print_line("vm default effects"utf8)
-  print_line_error("vm err"utf8)
   return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_vm_print_default_effects.prime", source);
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_print_default_out.txt").string();
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_print_default_err.txt").string();
 
   const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default > " + outPath + " 2> " + errPath;
+      "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "vm default effects\n");
-  CHECK(readFile(errPath) == "vm err\n");
 }
 
 TEST_CASE("default effects allow capabilities in native") {

@@ -27,7 +27,7 @@ std::vector<std::string> defaultSemanticTransforms() {
 }
 
 std::vector<std::string> defaultEffectsList() {
-  return {"io_out", "io_err"};
+  return {"io_out"};
 }
 
 std::string trimWhitespace(const std::string &text) {
