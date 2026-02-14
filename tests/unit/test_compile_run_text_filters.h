@@ -315,6 +315,24 @@ main() {
   CHECK(runCommand(runVmCmd) == 10);
 }
 
+TEST_CASE("text transforms accept whitespace separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1+2)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_transforms_whitespace.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_transforms_whitespace_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=" + quoteShellArg("operators implicit-i32");
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("transform list enables single_type_to_return") {
   const std::string source = R"(
 [i32]

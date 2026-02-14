@@ -68,13 +68,32 @@ bool parseTransformListForPhase(const std::string &text,
                                 std::vector<std::string> &out,
                                 std::string &error) {
   out.clear();
-  size_t start = 0;
-  while (start <= text.size()) {
-    size_t end = text.find(',', start);
-    if (end == std::string::npos) {
-      end = text.size();
+  size_t pos = 0;
+  auto nextToken = [&](std::string &token) -> bool {
+    while (pos < text.size()) {
+      char c = text[pos];
+      if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+        ++pos;
+        continue;
+      }
+      break;
     }
-    std::string token = trimWhitespace(text.substr(start, end - start));
+    if (pos >= text.size()) {
+      return false;
+    }
+    size_t start = pos;
+    while (pos < text.size()) {
+      char c = text[pos];
+      if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+        break;
+      }
+      ++pos;
+    }
+    token = text.substr(start, pos - start);
+    return true;
+  };
+  std::string token;
+  while (nextToken(token)) {
     if (!token.empty()) {
       if (token == "default") {
         for (const auto &name : defaults) {
@@ -103,10 +122,6 @@ bool parseTransformListForPhase(const std::string &text,
         addUniqueTransform(out, token);
       }
     }
-    if (end == text.size()) {
-      break;
-    }
-    start = end + 1;
   }
   return true;
 }
@@ -117,13 +132,32 @@ bool parseTransformListAuto(const std::string &text,
                             std::string &error) {
   textOut.clear();
   semanticOut.clear();
-  size_t start = 0;
-  while (start <= text.size()) {
-    size_t end = text.find(',', start);
-    if (end == std::string::npos) {
-      end = text.size();
+  size_t pos = 0;
+  auto nextToken = [&](std::string &token) -> bool {
+    while (pos < text.size()) {
+      char c = text[pos];
+      if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+        ++pos;
+        continue;
+      }
+      break;
     }
-    std::string token = trimWhitespace(text.substr(start, end - start));
+    if (pos >= text.size()) {
+      return false;
+    }
+    size_t start = pos;
+    while (pos < text.size()) {
+      char c = text[pos];
+      if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+        break;
+      }
+      ++pos;
+    }
+    token = text.substr(start, pos - start);
+    return true;
+  };
+  std::string token;
+  while (nextToken(token)) {
     if (!token.empty()) {
       if (token == "default") {
         for (const auto &name : defaultTextFilters()) {
@@ -153,10 +187,6 @@ bool parseTransformListAuto(const std::string &text,
         }
       }
     }
-    if (end == text.size()) {
-      break;
-    }
-    start = end + 1;
   }
   return true;
 }
