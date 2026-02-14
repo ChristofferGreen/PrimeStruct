@@ -82,6 +82,44 @@ bool isBindingAuxTransformName(const std::string &name) {
          name == "package" || name == "static";
 }
 
+bool rejectEffectTransforms(const std::vector<Transform> &transforms,
+                            const std::string &context,
+                            std::string &error) {
+  for (const auto &transform : transforms) {
+    if (transform.name != "effects" && transform.name != "capabilities") {
+      continue;
+    }
+    if (transform.arguments.empty()) {
+      continue;
+    }
+    const std::string &effectName = transform.arguments.front();
+    if (transform.name == "effects") {
+      error = "glsl backend does not support effect: " + effectName + " on " + context;
+    } else {
+      error = "glsl backend does not support capability: " + effectName + " on " + context;
+    }
+    return false;
+  }
+  return true;
+}
+
+bool rejectEffectTransforms(const Expr &expr, const std::string &context, std::string &error) {
+  if (!rejectEffectTransforms(expr.transforms, context, error)) {
+    return false;
+  }
+  for (const auto &arg : expr.args) {
+    if (!rejectEffectTransforms(arg, context, error)) {
+      return false;
+    }
+  }
+  for (const auto &bodyArg : expr.bodyArguments) {
+    if (!rejectEffectTransforms(bodyArg, context, error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool getExplicitBindingTypeName(const Expr &expr, std::string &outTypeName) {
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
@@ -1205,19 +1243,38 @@ bool GlslEmitter::emitSource(const Program &program,
     error = "glsl backend requires entry definition " + entryPath;
     return false;
   }
-  auto isSupportedEffect = [](const std::string &) {
-    return false;
-  };
   for (const auto &def : program.definitions) {
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "effects") {
-        continue;
+    if (!rejectEffectTransforms(def.transforms, def.fullPath, error)) {
+      return false;
+    }
+    for (const auto &param : def.parameters) {
+      if (!rejectEffectTransforms(param, def.fullPath, error)) {
+        return false;
       }
-      for (const auto &effect : transform.arguments) {
-        if (!isSupportedEffect(effect)) {
-          error = "glsl backend does not support effect: " + effect + " on " + def.fullPath;
-          return false;
-        }
+    }
+    for (const auto &stmt : def.statements) {
+      if (!rejectEffectTransforms(stmt, def.fullPath, error)) {
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      if (!rejectEffectTransforms(*def.returnExpr, def.fullPath, error)) {
+        return false;
+      }
+    }
+  }
+  for (const auto &exec : program.executions) {
+    if (!rejectEffectTransforms(exec.transforms, exec.fullPath, error)) {
+      return false;
+    }
+    for (const auto &arg : exec.arguments) {
+      if (!rejectEffectTransforms(arg, exec.fullPath, error)) {
+        return false;
+      }
+    }
+    for (const auto &bodyArg : exec.bodyArguments) {
+      if (!rejectEffectTransforms(bodyArg, exec.fullPath, error)) {
+        return false;
       }
     }
   }

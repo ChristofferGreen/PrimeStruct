@@ -197,6 +197,23 @@ main() {
   CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter rejects effects on executions") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [effects(io_out)] plus(1i32, 2i32)
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_exec_effects.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_exec_effects_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects non-void entry") {
   const std::string source = R"(
 [return<int>]
