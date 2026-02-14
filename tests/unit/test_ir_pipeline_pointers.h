@@ -17,7 +17,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   int addressCount = 0;
@@ -55,7 +55,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawAdd = false;
@@ -93,7 +93,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawAdd = false;
@@ -130,7 +130,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -156,7 +156,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -182,7 +182,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawSub = false;
@@ -219,7 +219,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawSub = false;
@@ -256,7 +256,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawSub = false;
@@ -293,7 +293,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -321,7 +321,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -349,7 +349,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -377,7 +377,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawPushI64 = false;
@@ -414,7 +414,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawPushI64 = false;
@@ -452,7 +452,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawStoreIndirect = false;
@@ -495,7 +495,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   int addressOfCount = 0;
@@ -528,7 +528,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawClampCompare = false;
@@ -562,7 +562,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawMinCompare = false;
@@ -596,7 +596,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawMaxCompare = false;
@@ -630,7 +630,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawMaxCompare = false;
@@ -664,7 +664,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawAbsCompare = false;
@@ -698,7 +698,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawSignCompare = false;
@@ -737,7 +737,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawSaturateCompare = false;
@@ -771,7 +771,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawSaturateCompare = false;
@@ -805,7 +805,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawClampCompare = false;
@@ -839,7 +839,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawClampCompare = false;
@@ -886,7 +886,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   primec::Vm vm;
@@ -910,7 +910,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 2);
@@ -938,7 +938,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
   REQUIRE(inst.size() == 2);
@@ -966,7 +966,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
 
   bool sawCompare = false;

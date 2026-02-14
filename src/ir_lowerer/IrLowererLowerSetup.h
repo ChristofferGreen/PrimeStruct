@@ -1,5 +1,6 @@
 bool IrLowerer::lower(const Program &program,
                       const std::string &entryPath,
+                      const std::vector<std::string> &defaultEffects,
                       IrModule &out,
                       std::string &error) const {
   out = IrModule{};
@@ -20,6 +21,26 @@ bool IrLowerer::lower(const Program &program,
     return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
            name == "pathspace_insert" || name == "pathspace_take";
   };
+  auto resolveActiveEffects = [&](const std::vector<Transform> &transforms) {
+    std::unordered_set<std::string> effects;
+    bool sawEffects = false;
+    for (const auto &transform : transforms) {
+      if (transform.name != "effects") {
+        continue;
+      }
+      sawEffects = true;
+      effects.clear();
+      for (const auto &effect : transform.arguments) {
+        effects.insert(effect);
+      }
+    }
+    if (!sawEffects) {
+      for (const auto &effect : defaultEffects) {
+        effects.insert(effect);
+      }
+    }
+    return effects;
+  };
   auto validateEffectsTransforms =
       [&](const std::vector<Transform> &transforms, const std::string &context) -> bool {
     for (const auto &transform : transforms) {
@@ -31,6 +52,16 @@ bool IrLowerer::lower(const Program &program,
           error = "native backend does not support effect: " + effect + " on " + context;
           return false;
         }
+      }
+    }
+    return true;
+  };
+  auto validateActiveEffects = [&](const std::vector<Transform> &transforms, const std::string &context) -> bool {
+    const auto effects = resolveActiveEffects(transforms);
+    for (const auto &effect : effects) {
+      if (!isSupportedEffect(effect)) {
+        error = "native backend does not support effect: " + effect + " on " + context;
+        return false;
       }
     }
     return true;
@@ -52,7 +83,7 @@ bool IrLowerer::lower(const Program &program,
     return true;
   };
   for (const auto &def : program.definitions) {
-    if (!validateEffectsTransforms(def.transforms, def.fullPath)) {
+    if (!validateActiveEffects(def.transforms, def.fullPath)) {
       return false;
     }
     for (const auto &param : def.parameters) {
@@ -72,7 +103,7 @@ bool IrLowerer::lower(const Program &program,
     }
   }
   for (const auto &exec : program.executions) {
-    if (!validateEffectsTransforms(exec.transforms, exec.fullPath)) {
+    if (!validateActiveEffects(exec.transforms, exec.fullPath)) {
       return false;
     }
     for (const auto &arg : exec.arguments) {

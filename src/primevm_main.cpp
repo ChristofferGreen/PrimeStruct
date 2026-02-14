@@ -540,7 +540,7 @@ int main(int argc, char **argv) {
 
   primec::IrLowerer lowerer;
   primec::IrModule ir;
-  if (!lowerer.lower(program, options.entryPath, ir, error)) {
+  if (!lowerer.lower(program, options.entryPath, options.defaultEffects, ir, error)) {
     std::string vmError = error;
     replaceAll(vmError, "native backend", "vm backend");
     std::cerr << "VM lowering error: " << vmError << "\n";

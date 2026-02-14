@@ -15,7 +15,7 @@ main([array<string>] args) {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgv = false;
@@ -43,7 +43,7 @@ main([array<string>] args) {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgvUnsafe = false;
@@ -71,7 +71,7 @@ main([array<string>] args) {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgvUnsafe = false;
@@ -100,7 +100,7 @@ main([array<string>] args) {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawPrintArgvUnsafe = false;
@@ -128,7 +128,7 @@ main([array<string>] args) {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
   bool sawUnsafe = false;
@@ -174,7 +174,7 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, "/main", module, error));
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
 

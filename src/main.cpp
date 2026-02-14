@@ -683,7 +683,7 @@ int main(int argc, char **argv) {
   if (options.emitKind == "vm") {
     primec::IrLowerer lowerer;
     primec::IrModule ir;
-    if (!lowerer.lower(program, options.entryPath, ir, error)) {
+    if (!lowerer.lower(program, options.entryPath, options.defaultEffects, ir, error)) {
       std::string vmError = error;
       replaceAll(vmError, "native backend", "vm backend");
       std::cerr << "VM lowering error: " << vmError << "\n";
@@ -716,7 +716,7 @@ int main(int argc, char **argv) {
   if (options.emitKind == "native") {
     primec::IrLowerer lowerer;
     primec::IrModule ir;
-    if (!lowerer.lower(program, options.entryPath, ir, error)) {
+    if (!lowerer.lower(program, options.entryPath, options.defaultEffects, ir, error)) {
       std::cerr << "Native lowering error: " << error << "\n";
       return 2;
     }
@@ -731,7 +731,7 @@ int main(int argc, char **argv) {
   if (options.emitKind == "ir") {
     primec::IrLowerer lowerer;
     primec::IrModule ir;
-    if (!lowerer.lower(program, options.entryPath, ir, error)) {
+    if (!lowerer.lower(program, options.entryPath, options.defaultEffects, ir, error)) {
       std::cerr << "IR lowering error: " << error << "\n";
       return 2;
     }
