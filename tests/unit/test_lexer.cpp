@@ -85,6 +85,17 @@ TEST_CASE("lexes numeric literals with suffixes and exponents") {
   CHECK(tokens[9].text == "1e+3f");
 }
 
+TEST_CASE("lexes numeric literals with comma separators") {
+  const auto tokens = lex("1,000i32 0xAB,CDi32 1,234.5f32");
+  REQUIRE(tokens.size() >= 3);
+  CHECK(tokens[0].kind == primec::TokenKind::Number);
+  CHECK(tokens[0].text == "1,000i32");
+  CHECK(tokens[1].kind == primec::TokenKind::Number);
+  CHECK(tokens[1].text == "0xAB,CDi32");
+  CHECK(tokens[2].kind == primec::TokenKind::Number);
+  CHECK(tokens[2].text == "1,234.5f32");
+}
+
 TEST_CASE("lexes numbers with trailing dot and empty hex") {
   const auto tokens = lex("1. 0x");
   REQUIRE(tokens.size() >= 2);
