@@ -15,6 +15,24 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("compiles and runs native float arithmetic") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f32] a{1.5f32}
+  [f32] b{2.0f32}
+  [f32] c{multiply(plus(a, b), 2.0f32)}
+  return(convert<int>(c))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_float.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_float_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("compiles and runs if expression in native backend") {
   const std::string source = R"(
 [return<int>]
@@ -1716,7 +1734,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects native float literals") {
+TEST_CASE("compiles and runs native float literals") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1727,22 +1745,25 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_float_literal_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects native float bindings") {
+TEST_CASE("compiles and runs native float bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
   [float] value{1.5f}
-  return(1i32)
+  [float] other{2.0f32}
+  return(convert<int>(plus(value, other)))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_float_binding.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_float_binding_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native non-literal string bindings") {

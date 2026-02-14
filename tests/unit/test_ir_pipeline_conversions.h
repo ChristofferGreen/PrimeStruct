@@ -108,11 +108,11 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer rejects unsupported convert") {
+TEST_CASE("ir lowers convert<f32> from i32") {
   const std::string source = R"(
-[return<float>]
+[return<bool>]
 main() {
-  return(convert<float>(1i32))
+  return(equal(convert<f32>(1i32), 1.0f32))
 }
 )";
   primec::Program program;
@@ -122,11 +122,29 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend only supports convert") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawConvert = false;
+  bool sawCompare = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::ConvertI32ToF32) {
+      sawConvert = true;
+    } else if (inst.op == primec::IrOpcode::CmpEqF32) {
+      sawCompare = true;
+    }
+  }
+  CHECK(sawConvert);
+  CHECK(sawCompare);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
 }
 
-TEST_CASE("ir lowerer rejects convert from float literal") {
+TEST_CASE("ir lowers convert<int> from float literal") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -140,8 +158,23 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support float literals") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawConvert = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::ConvertF32ToI32) {
+      sawConvert = true;
+      break;
+    }
+  }
+  CHECK(sawConvert);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
 }
 
 TEST_CASE("ir lowerer rejects string comparisons") {
@@ -428,12 +461,13 @@ main() {
   CHECK(error.find("native backend only supports numeric/bool vector literals") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects float bindings") {
+TEST_CASE("ir lowerer supports float bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [float] value{1.5f}
-  return(1i32)
+  [float] value{1.5f32}
+  [float] other{2.0f32}
+  return(convert<int>(plus(value, other)))
 }
 )";
   primec::Program program;
@@ -443,8 +477,26 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support float types") != std::string::npos);
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  bool sawAdd = false;
+  bool sawConvert = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::AddF32) {
+      sawAdd = true;
+    } else if (inst.op == primec::IrOpcode::ConvertF32ToI32) {
+      sawConvert = true;
+    }
+  }
+  CHECK(sawAdd);
+  CHECK(sawConvert);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowerer rejects string literal statements") {

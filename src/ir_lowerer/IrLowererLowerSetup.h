@@ -479,7 +479,7 @@ bool IrLowerer::lower(const Program &program,
     int32_t index = 0;
     bool isMutable = false;
     enum class Kind { Value, Pointer, Reference, Array, Vector, Map } kind = Kind::Value;
-    enum class ValueKind { Unknown, Int32, Int64, UInt64, Bool, String } valueKind = ValueKind::Unknown;
+    enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
     ValueKind mapKeyKind = ValueKind::Unknown;
     ValueKind mapValueKind = ValueKind::Unknown;
     enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
@@ -767,10 +767,6 @@ bool IrLowerer::lower(const Program &program,
     return false;
   };
 
-  auto isFloatTypeName = [](const std::string &name) -> bool {
-    return name == "float" || name == "f32" || name == "f64";
-  };
-
   auto isStringTypeName = [](const std::string &name) -> bool {
     return name == "string";
   };
@@ -856,6 +852,12 @@ bool IrLowerer::lower(const Program &program,
     if (name == "u64") {
       return LocalInfo::ValueKind::UInt64;
     }
+    if (name == "float" || name == "f32") {
+      return LocalInfo::ValueKind::Float32;
+    }
+    if (name == "f64") {
+      return LocalInfo::ValueKind::Float64;
+    }
     if (name == "bool") {
       return LocalInfo::ValueKind::Bool;
     }
@@ -884,22 +886,6 @@ bool IrLowerer::lower(const Program &program,
       }
     }
     return LocalInfo::Kind::Value;
-  };
-
-  auto isFloatBinding = [&](const Expr &expr) -> bool {
-    for (const auto &transform : expr.transforms) {
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (isFloatTypeName(transform.name)) {
-        return true;
-      }
-      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArgs.size() == 1 &&
-          isFloatTypeName(transform.templateArgs.front())) {
-        return true;
-      }
-    }
-    return false;
   };
 
   auto isStringBinding = [&](const Expr &expr) -> bool {
@@ -963,6 +949,16 @@ bool IrLowerer::lower(const Program &program,
     if (left == LocalInfo::ValueKind::Bool || right == LocalInfo::ValueKind::Bool) {
       return LocalInfo::ValueKind::Unknown;
     }
+    if (left == LocalInfo::ValueKind::Float32 || right == LocalInfo::ValueKind::Float32 ||
+        left == LocalInfo::ValueKind::Float64 || right == LocalInfo::ValueKind::Float64) {
+      if (left == LocalInfo::ValueKind::Float32 && right == LocalInfo::ValueKind::Float32) {
+        return LocalInfo::ValueKind::Float32;
+      }
+      if (left == LocalInfo::ValueKind::Float64 && right == LocalInfo::ValueKind::Float64) {
+        return LocalInfo::ValueKind::Float64;
+      }
+      return LocalInfo::ValueKind::Unknown;
+    }
     if (left == LocalInfo::ValueKind::UInt64 || right == LocalInfo::ValueKind::UInt64) {
       return (left == LocalInfo::ValueKind::UInt64 && right == LocalInfo::ValueKind::UInt64)
                  ? LocalInfo::ValueKind::UInt64
@@ -1010,6 +1006,10 @@ bool IrLowerer::lower(const Program &program,
         return "i64";
       case LocalInfo::ValueKind::UInt64:
         return "u64";
+      case LocalInfo::ValueKind::Float32:
+        return "f32";
+      case LocalInfo::ValueKind::Float64:
+        return "f64";
       case LocalInfo::ValueKind::Bool:
         return "bool";
       case LocalInfo::ValueKind::String:
@@ -1149,6 +1149,8 @@ bool IrLowerer::lower(const Program &program,
           return LocalInfo::ValueKind::Int64;
         }
         return LocalInfo::ValueKind::Int32;
+      case Expr::Kind::FloatLiteral:
+        return (expr.floatWidth == 64) ? LocalInfo::ValueKind::Float64 : LocalInfo::ValueKind::Float32;
       case Expr::Kind::BoolLiteral:
         return LocalInfo::ValueKind::Bool;
       case Expr::Kind::StringLiteral:

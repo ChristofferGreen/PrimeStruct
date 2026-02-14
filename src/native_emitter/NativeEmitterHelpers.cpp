@@ -126,6 +126,82 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintArgvUnsafe";
       case IrOpcode::LoadStringByte:
         return "LoadStringByte";
+      case IrOpcode::PushF32:
+        return "PushF32";
+      case IrOpcode::PushF64:
+        return "PushF64";
+      case IrOpcode::AddF32:
+        return "AddF32";
+      case IrOpcode::SubF32:
+        return "SubF32";
+      case IrOpcode::MulF32:
+        return "MulF32";
+      case IrOpcode::DivF32:
+        return "DivF32";
+      case IrOpcode::NegF32:
+        return "NegF32";
+      case IrOpcode::AddF64:
+        return "AddF64";
+      case IrOpcode::SubF64:
+        return "SubF64";
+      case IrOpcode::MulF64:
+        return "MulF64";
+      case IrOpcode::DivF64:
+        return "DivF64";
+      case IrOpcode::NegF64:
+        return "NegF64";
+      case IrOpcode::CmpEqF32:
+        return "CmpEqF32";
+      case IrOpcode::CmpNeF32:
+        return "CmpNeF32";
+      case IrOpcode::CmpLtF32:
+        return "CmpLtF32";
+      case IrOpcode::CmpLeF32:
+        return "CmpLeF32";
+      case IrOpcode::CmpGtF32:
+        return "CmpGtF32";
+      case IrOpcode::CmpGeF32:
+        return "CmpGeF32";
+      case IrOpcode::CmpEqF64:
+        return "CmpEqF64";
+      case IrOpcode::CmpNeF64:
+        return "CmpNeF64";
+      case IrOpcode::CmpLtF64:
+        return "CmpLtF64";
+      case IrOpcode::CmpLeF64:
+        return "CmpLeF64";
+      case IrOpcode::CmpGtF64:
+        return "CmpGtF64";
+      case IrOpcode::CmpGeF64:
+        return "CmpGeF64";
+      case IrOpcode::ConvertI32ToF32:
+        return "ConvertI32ToF32";
+      case IrOpcode::ConvertI32ToF64:
+        return "ConvertI32ToF64";
+      case IrOpcode::ConvertI64ToF32:
+        return "ConvertI64ToF32";
+      case IrOpcode::ConvertI64ToF64:
+        return "ConvertI64ToF64";
+      case IrOpcode::ConvertU64ToF32:
+        return "ConvertU64ToF32";
+      case IrOpcode::ConvertU64ToF64:
+        return "ConvertU64ToF64";
+      case IrOpcode::ConvertF32ToI32:
+        return "ConvertF32ToI32";
+      case IrOpcode::ConvertF32ToI64:
+        return "ConvertF32ToI64";
+      case IrOpcode::ConvertF32ToU64:
+        return "ConvertF32ToU64";
+      case IrOpcode::ConvertF64ToI32:
+        return "ConvertF64ToI32";
+      case IrOpcode::ConvertF64ToI64:
+        return "ConvertF64ToI64";
+      case IrOpcode::ConvertF64ToU64:
+        return "ConvertF64ToU64";
+      case IrOpcode::ConvertF32ToF64:
+        return "ConvertF32ToF64";
+      case IrOpcode::ConvertF64ToF32:
+        return "ConvertF64ToF32";
       default:
         return "Unknown";
     }
@@ -134,6 +210,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
     switch (op) {
       case IrOpcode::PushI32:
       case IrOpcode::PushI64:
+      case IrOpcode::PushF32:
+      case IrOpcode::PushF64:
       case IrOpcode::PushArgc:
       case IrOpcode::LoadLocal:
       case IrOpcode::AddressOfLocal:
@@ -156,6 +234,14 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::MulI64:
       case IrOpcode::DivI64:
       case IrOpcode::DivU64:
+      case IrOpcode::AddF32:
+      case IrOpcode::SubF32:
+      case IrOpcode::MulF32:
+      case IrOpcode::DivF32:
+      case IrOpcode::AddF64:
+      case IrOpcode::SubF64:
+      case IrOpcode::MulF64:
+      case IrOpcode::DivF64:
       case IrOpcode::CmpEqI32:
       case IrOpcode::CmpNeI32:
       case IrOpcode::CmpLtI32:
@@ -172,9 +258,37 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       case IrOpcode::CmpLeU64:
       case IrOpcode::CmpGtU64:
       case IrOpcode::CmpGeU64:
+      case IrOpcode::CmpEqF32:
+      case IrOpcode::CmpNeF32:
+      case IrOpcode::CmpLtF32:
+      case IrOpcode::CmpLeF32:
+      case IrOpcode::CmpGtF32:
+      case IrOpcode::CmpGeF32:
+      case IrOpcode::CmpEqF64:
+      case IrOpcode::CmpNeF64:
+      case IrOpcode::CmpLtF64:
+      case IrOpcode::CmpLeF64:
+      case IrOpcode::CmpGtF64:
+      case IrOpcode::CmpGeF64:
         return -1;
       case IrOpcode::NegI32:
       case IrOpcode::NegI64:
+      case IrOpcode::NegF32:
+      case IrOpcode::NegF64:
+      case IrOpcode::ConvertI32ToF32:
+      case IrOpcode::ConvertI32ToF64:
+      case IrOpcode::ConvertI64ToF32:
+      case IrOpcode::ConvertI64ToF64:
+      case IrOpcode::ConvertU64ToF32:
+      case IrOpcode::ConvertU64ToF64:
+      case IrOpcode::ConvertF32ToI32:
+      case IrOpcode::ConvertF32ToI64:
+      case IrOpcode::ConvertF32ToU64:
+      case IrOpcode::ConvertF64ToI32:
+      case IrOpcode::ConvertF64ToI64:
+      case IrOpcode::ConvertF64ToU64:
+      case IrOpcode::ConvertF32ToF64:
+      case IrOpcode::ConvertF64ToF32:
         return 0;
       case IrOpcode::JumpIfZero:
         return -1;

@@ -192,7 +192,7 @@
       function.instructions.push_back({IrOpcode::PrintI32, flags});
       return true;
     }
-    error = builtin.name + " requires a numeric/bool or string literal/binding argument";
+    error = builtin.name + " requires an integer/bool or string literal/binding argument";
     return false;
   };
 
@@ -204,10 +204,6 @@
       }
       if (localsIn.count(stmt.name) > 0) {
         error = "binding redefines existing name: " + stmt.name;
-        return false;
-      }
-      if (isFloatBinding(stmt)) {
-        error = "native backend does not support float types";
         return false;
       }
       const Expr &init = stmt.args.front();
@@ -473,7 +469,8 @@
         }
         LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
         if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
-            returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
+            returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool ||
+            returnKind == LocalInfo::ValueKind::Float32 || returnKind == LocalInfo::ValueKind::Float64) {
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
           size_t jumpIndex = function.instructions.size();
           function.instructions.push_back({IrOpcode::Jump, 0});
@@ -510,7 +507,7 @@
       } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
         function.instructions.push_back({IrOpcode::ReturnI32, 0});
       } else {
-        error = "native backend only supports returning numeric or bool values";
+        error = "native backend only supports returning integer or bool values";
         return false;
       }
       sawReturn = true;

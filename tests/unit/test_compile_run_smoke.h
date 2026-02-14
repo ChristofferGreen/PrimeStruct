@@ -17,6 +17,22 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
+TEST_CASE("compiles and runs float arithmetic in VM") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f32] a{1.5f32}
+  [f32] b{2.0f32}
+  [f32] c{multiply(plus(a, b), 2.0f32)}
+  return(convert<int>(c))
+}
+)";
+  const std::string srcPath = writeTemp("compile_float_vm.prime", source);
+
+  const std::string runVmCmd = "./primevm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 7);
+}
+
 TEST_CASE("default entry path is main") {
   const std::string source = R"(
 [return<int>]
@@ -94,7 +110,7 @@ main() {
   const uint32_t magic = readU32(0);
   const uint32_t version = readU32(4);
   CHECK(magic == 0x50534952u);
-  CHECK(version == 12u);
+  CHECK(version == 13u);
 
   primec::IrModule module;
   std::string error;

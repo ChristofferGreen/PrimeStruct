@@ -64,6 +64,16 @@ class Arm64Emitter {
     emitPushReg(0);
   }
 
+  void emitPushF32(uint32_t bits) {
+    emitMovImm64(0, bits);
+    emitPushReg(0);
+  }
+
+  void emitPushF64(uint64_t bits) {
+    emitMovImm64(0, bits);
+    emitPushReg(0);
+  }
+
   void emitLoadLocal(uint32_t index) {
     emit(encodeLdrRegBase(0, 27, localOffset(index)));
     emitPushReg(0);
@@ -138,6 +148,46 @@ class Arm64Emitter {
     emitPushReg(0);
   }
 
+  void emitAddF32() {
+    emitFloatBinaryOp(false, kFaddD0D0D1, kFaddS0S0S1);
+  }
+
+  void emitSubF32() {
+    emitFloatBinaryOp(false, kFsubD0D0D1, kFsubS0S0S1);
+  }
+
+  void emitMulF32() {
+    emitFloatBinaryOp(false, kFmulD0D0D1, kFmulS0S0S1);
+  }
+
+  void emitDivF32() {
+    emitFloatBinaryOp(false, kFdivD0D0D1, kFdivS0S0S1);
+  }
+
+  void emitNegF32() {
+    emitFloatUnaryOp(false, kFnegD0, kFnegS0);
+  }
+
+  void emitAddF64() {
+    emitFloatBinaryOp(true, kFaddD0D0D1, kFaddS0S0S1);
+  }
+
+  void emitSubF64() {
+    emitFloatBinaryOp(true, kFsubD0D0D1, kFsubS0S0S1);
+  }
+
+  void emitMulF64() {
+    emitFloatBinaryOp(true, kFmulD0D0D1, kFmulS0S0S1);
+  }
+
+  void emitDivF64() {
+    emitFloatBinaryOp(true, kFdivD0D0D1, kFdivS0S0S1);
+  }
+
+  void emitNegF64() {
+    emitFloatUnaryOp(true, kFnegD0, kFnegS0);
+  }
+
   void emitCmpEq() {
     emitCompareAndPush(CondCode::Eq);
   }
@@ -176,6 +226,110 @@ class Arm64Emitter {
 
   void emitCmpGeU() {
     emitCompareAndPush(CondCode::Hs);
+  }
+
+  void emitCmpEqF32() {
+    emitCompareAndPushFloat(false, CondCode::Eq);
+  }
+
+  void emitCmpNeF32() {
+    emitCompareAndPushFloat(false, CondCode::Ne);
+  }
+
+  void emitCmpLtF32() {
+    emitCompareAndPushFloat(false, CondCode::Lt);
+  }
+
+  void emitCmpLeF32() {
+    emitCompareAndPushFloat(false, CondCode::Le);
+  }
+
+  void emitCmpGtF32() {
+    emitCompareAndPushFloat(false, CondCode::Gt);
+  }
+
+  void emitCmpGeF32() {
+    emitCompareAndPushFloat(false, CondCode::Ge);
+  }
+
+  void emitCmpEqF64() {
+    emitCompareAndPushFloat(true, CondCode::Eq);
+  }
+
+  void emitCmpNeF64() {
+    emitCompareAndPushFloat(true, CondCode::Ne);
+  }
+
+  void emitCmpLtF64() {
+    emitCompareAndPushFloat(true, CondCode::Lt);
+  }
+
+  void emitCmpLeF64() {
+    emitCompareAndPushFloat(true, CondCode::Le);
+  }
+
+  void emitCmpGtF64() {
+    emitCompareAndPushFloat(true, CondCode::Gt);
+  }
+
+  void emitCmpGeF64() {
+    emitCompareAndPushFloat(true, CondCode::Ge);
+  }
+
+  void emitConvertI32ToF32() {
+    emitConvertIntToFloat(false, false);
+  }
+
+  void emitConvertI32ToF64() {
+    emitConvertIntToFloat(true, false);
+  }
+
+  void emitConvertI64ToF32() {
+    emitConvertIntToFloat(false, false);
+  }
+
+  void emitConvertI64ToF64() {
+    emitConvertIntToFloat(true, false);
+  }
+
+  void emitConvertU64ToF32() {
+    emitConvertIntToFloat(false, true);
+  }
+
+  void emitConvertU64ToF64() {
+    emitConvertIntToFloat(true, true);
+  }
+
+  void emitConvertF32ToI32() {
+    emitConvertFloatToInt(false, false);
+  }
+
+  void emitConvertF32ToI64() {
+    emitConvertFloatToInt(false, false);
+  }
+
+  void emitConvertF32ToU64() {
+    emitConvertFloatToInt(false, true);
+  }
+
+  void emitConvertF64ToI32() {
+    emitConvertFloatToInt(true, false);
+  }
+
+  void emitConvertF64ToI64() {
+    emitConvertFloatToInt(true, false);
+  }
+
+  void emitConvertF64ToU64() {
+    emitConvertFloatToInt(true, true);
+  }
+
+  void emitConvertF32ToF64() {
+    emitConvertFloatToFloat(false);
+  }
+
+  void emitConvertF64ToF32() {
+    emitConvertFloatToFloat(true);
   }
 
   size_t emitJumpPlaceholder() {
@@ -347,6 +501,97 @@ class Arm64Emitter {
     emitPopReg(0);
     emitPopReg(1);
     emit(opWord);
+    emitPushReg(0);
+  }
+
+  void emitFloatBinaryOp(bool isF64, uint32_t opD, uint32_t opS) {
+    emitPopReg(0);
+    emitPopReg(1);
+    if (isF64) {
+      emit(encodeFmovDX(0, 1));
+      emit(encodeFmovDX(1, 0));
+      emit(opD);
+      emit(encodeFmovXD(0, 0));
+    } else {
+      emit(encodeFmovSW(0, 1));
+      emit(encodeFmovSW(1, 0));
+      emit(opS);
+      emit(encodeFmovWS(0, 0));
+    }
+    emitPushReg(0);
+  }
+
+  void emitFloatUnaryOp(bool isF64, uint32_t opD, uint32_t opS) {
+    emitPopReg(0);
+    if (isF64) {
+      emit(encodeFmovDX(0, 0));
+      emit(opD);
+      emit(encodeFmovXD(0, 0));
+    } else {
+      emit(encodeFmovSW(0, 0));
+      emit(opS);
+      emit(encodeFmovWS(0, 0));
+    }
+    emitPushReg(0);
+  }
+
+  void emitCompareAndPushFloat(bool isF64, CondCode cond) {
+    emitPopReg(0);
+    emitPopReg(1);
+    if (isF64) {
+      emit(encodeFmovDX(0, 1));
+      emit(encodeFmovDX(1, 0));
+      emit(kFcmpD0D1);
+    } else {
+      emit(encodeFmovSW(0, 1));
+      emit(encodeFmovSW(1, 0));
+      emit(kFcmpS0S1);
+    }
+    emit(encodeBCond(6, static_cast<uint8_t>(cond)));
+    emitMovImm64(0, 0);
+    emit(encodeB(5));
+    emitMovImm64(0, 1);
+    emitPushReg(0);
+  }
+
+  void emitConvertIntToFloat(bool toF64, bool isUnsigned) {
+    emitPopReg(0);
+    if (isUnsigned) {
+      emit(toF64 ? kUcvtfD0X0 : kUcvtfS0X0);
+    } else {
+      emit(toF64 ? kScvtfD0X0 : kScvtfS0X0);
+    }
+    if (toF64) {
+      emit(encodeFmovXD(0, 0));
+    } else {
+      emit(encodeFmovWS(0, 0));
+    }
+    emitPushReg(0);
+  }
+
+  void emitConvertFloatToInt(bool fromF64, bool isUnsigned) {
+    emitPopReg(0);
+    if (fromF64) {
+      emit(encodeFmovDX(0, 0));
+    } else {
+      emit(encodeFmovSW(0, 0));
+      emit(kFcvtD0S0);
+    }
+    emit(isUnsigned ? kFcvtzuX0D0 : kFcvtzsX0D0);
+    emitPushReg(0);
+  }
+
+  void emitConvertFloatToFloat(bool fromF64) {
+    emitPopReg(0);
+    if (fromF64) {
+      emit(encodeFmovDX(0, 0));
+      emit(kFcvtS0D0);
+      emit(encodeFmovWS(0, 0));
+    } else {
+      emit(encodeFmovSW(0, 0));
+      emit(kFcvtD0S0);
+      emit(encodeFmovXD(0, 0));
+    }
     emitPushReg(0);
   }
 
@@ -525,6 +770,27 @@ class Arm64Emitter {
     emitWriteSyscall(fd, 2, 3);
   }
 
+  static constexpr uint32_t kFaddD0D0D1 = 0x1e612800;
+  static constexpr uint32_t kFsubD0D0D1 = 0x1e613800;
+  static constexpr uint32_t kFmulD0D0D1 = 0x1e610800;
+  static constexpr uint32_t kFdivD0D0D1 = 0x1e611800;
+  static constexpr uint32_t kFnegD0 = 0x1e614000;
+  static constexpr uint32_t kFcmpD0D1 = 0x1e612000;
+  static constexpr uint32_t kFaddS0S0S1 = 0x1e212800;
+  static constexpr uint32_t kFsubS0S0S1 = 0x1e213800;
+  static constexpr uint32_t kFmulS0S0S1 = 0x1e210800;
+  static constexpr uint32_t kFdivS0S0S1 = 0x1e211800;
+  static constexpr uint32_t kFnegS0 = 0x1e214000;
+  static constexpr uint32_t kFcmpS0S1 = 0x1e212000;
+  static constexpr uint32_t kScvtfD0X0 = 0x9e620000;
+  static constexpr uint32_t kScvtfS0X0 = 0x9e220000;
+  static constexpr uint32_t kUcvtfD0X0 = 0x9e630000;
+  static constexpr uint32_t kUcvtfS0X0 = 0x9e230000;
+  static constexpr uint32_t kFcvtzsX0D0 = 0x9e780000;
+  static constexpr uint32_t kFcvtzuX0D0 = 0x9e790000;
+  static constexpr uint32_t kFcvtD0S0 = 0x1e22c000;
+  static constexpr uint32_t kFcvtS0D0 = 0x1e624000;
+
   static uint32_t encodeAddSpImm(uint16_t imm) {
     return 0x910003FF | ((static_cast<uint32_t>(imm) & 0xFFFu) << 10);
   }
@@ -593,6 +859,22 @@ class Arm64Emitter {
     uint32_t shiftField = static_cast<uint32_t>((shift / 16) & 0x3u);
     return 0xF2800000 | (shiftField << 21) | (static_cast<uint32_t>(imm) << 5) |
            static_cast<uint32_t>(rd);
+  }
+
+  static uint32_t encodeFmovDX(uint8_t d, uint8_t x) {
+    return 0x9E670000 | (static_cast<uint32_t>(x & 0x1Fu) << 5) | static_cast<uint32_t>(d & 0x1Fu);
+  }
+
+  static uint32_t encodeFmovXD(uint8_t x, uint8_t d) {
+    return 0x9E660000 | (static_cast<uint32_t>(d & 0x1Fu) << 5) | static_cast<uint32_t>(x & 0x1Fu);
+  }
+
+  static uint32_t encodeFmovSW(uint8_t s, uint8_t w) {
+    return 0x1E270000 | (static_cast<uint32_t>(w & 0x1Fu) << 5) | static_cast<uint32_t>(s & 0x1Fu);
+  }
+
+  static uint32_t encodeFmovWS(uint8_t w, uint8_t s) {
+    return 0x1E260000 | (static_cast<uint32_t>(s & 0x1Fu) << 5) | static_cast<uint32_t>(w & 0x1Fu);
   }
 
   static uint32_t encodeAdr(uint8_t rd, int32_t imm21) {

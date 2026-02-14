@@ -110,6 +110,12 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::PushI64:
         emitter.emitPushI64(inst.imm);
         break;
+      case IrOpcode::PushF32:
+        emitter.emitPushF32(static_cast<uint32_t>(inst.imm));
+        break;
+      case IrOpcode::PushF64:
+        emitter.emitPushF64(inst.imm);
+        break;
       case IrOpcode::PushArgc:
         emitter.emitLoadLocal(argcLocalIndex);
         break;
@@ -167,6 +173,36 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::NegI64:
         emitter.emitNeg();
         break;
+      case IrOpcode::AddF32:
+        emitter.emitAddF32();
+        break;
+      case IrOpcode::SubF32:
+        emitter.emitSubF32();
+        break;
+      case IrOpcode::MulF32:
+        emitter.emitMulF32();
+        break;
+      case IrOpcode::DivF32:
+        emitter.emitDivF32();
+        break;
+      case IrOpcode::NegF32:
+        emitter.emitNegF32();
+        break;
+      case IrOpcode::AddF64:
+        emitter.emitAddF64();
+        break;
+      case IrOpcode::SubF64:
+        emitter.emitSubF64();
+        break;
+      case IrOpcode::MulF64:
+        emitter.emitMulF64();
+        break;
+      case IrOpcode::DivF64:
+        emitter.emitDivF64();
+        break;
+      case IrOpcode::NegF64:
+        emitter.emitNegF64();
+        break;
       case IrOpcode::CmpEqI32:
         emitter.emitCmpEq();
         break;
@@ -214,6 +250,84 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         break;
       case IrOpcode::CmpGeU64:
         emitter.emitCmpGeU();
+        break;
+      case IrOpcode::CmpEqF32:
+        emitter.emitCmpEqF32();
+        break;
+      case IrOpcode::CmpNeF32:
+        emitter.emitCmpNeF32();
+        break;
+      case IrOpcode::CmpLtF32:
+        emitter.emitCmpLtF32();
+        break;
+      case IrOpcode::CmpLeF32:
+        emitter.emitCmpLeF32();
+        break;
+      case IrOpcode::CmpGtF32:
+        emitter.emitCmpGtF32();
+        break;
+      case IrOpcode::CmpGeF32:
+        emitter.emitCmpGeF32();
+        break;
+      case IrOpcode::CmpEqF64:
+        emitter.emitCmpEqF64();
+        break;
+      case IrOpcode::CmpNeF64:
+        emitter.emitCmpNeF64();
+        break;
+      case IrOpcode::CmpLtF64:
+        emitter.emitCmpLtF64();
+        break;
+      case IrOpcode::CmpLeF64:
+        emitter.emitCmpLeF64();
+        break;
+      case IrOpcode::CmpGtF64:
+        emitter.emitCmpGtF64();
+        break;
+      case IrOpcode::CmpGeF64:
+        emitter.emitCmpGeF64();
+        break;
+      case IrOpcode::ConvertI32ToF32:
+        emitter.emitConvertI32ToF32();
+        break;
+      case IrOpcode::ConvertI32ToF64:
+        emitter.emitConvertI32ToF64();
+        break;
+      case IrOpcode::ConvertI64ToF32:
+        emitter.emitConvertI64ToF32();
+        break;
+      case IrOpcode::ConvertI64ToF64:
+        emitter.emitConvertI64ToF64();
+        break;
+      case IrOpcode::ConvertU64ToF32:
+        emitter.emitConvertU64ToF32();
+        break;
+      case IrOpcode::ConvertU64ToF64:
+        emitter.emitConvertU64ToF64();
+        break;
+      case IrOpcode::ConvertF32ToI32:
+        emitter.emitConvertF32ToI32();
+        break;
+      case IrOpcode::ConvertF32ToI64:
+        emitter.emitConvertF32ToI64();
+        break;
+      case IrOpcode::ConvertF32ToU64:
+        emitter.emitConvertF32ToU64();
+        break;
+      case IrOpcode::ConvertF64ToI32:
+        emitter.emitConvertF64ToI32();
+        break;
+      case IrOpcode::ConvertF64ToI64:
+        emitter.emitConvertF64ToI64();
+        break;
+      case IrOpcode::ConvertF64ToU64:
+        emitter.emitConvertF64ToU64();
+        break;
+      case IrOpcode::ConvertF32ToF64:
+        emitter.emitConvertF32ToF64();
+        break;
+      case IrOpcode::ConvertF64ToF32:
+        emitter.emitConvertF64ToF32();
         break;
       case IrOpcode::JumpIfZero: {
         BranchFixup fixup;

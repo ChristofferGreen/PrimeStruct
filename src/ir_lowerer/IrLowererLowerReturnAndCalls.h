@@ -42,11 +42,6 @@
       } else {
         LocalMap localsForInference;
         for (const auto &param : def.parameters) {
-          if (isFloatBinding(param)) {
-            error = "native backend does not support float types";
-            returnInferenceStack.erase(path);
-            return false;
-          }
           LocalInfo paramInfo;
           paramInfo.index = 0;
           paramInfo.isMutable = isBindingMutable(param);
@@ -82,10 +77,6 @@
         std::function<bool(const Expr &, LocalMap &)> inferStatement;
         inferStatement = [&](const Expr &stmt, LocalMap &activeLocals) -> bool {
           if (stmt.isBinding) {
-            if (isFloatBinding(stmt)) {
-              error = "native backend does not support float types";
-              return false;
-            }
             LocalInfo bindingInfo;
             bindingInfo.index = 0;
             bindingInfo.isMutable = isBindingMutable(stmt);
@@ -232,15 +223,46 @@
     return true;
   };
 
+  auto emitFloatLiteral = [&](const Expr &expr) -> bool {
+    char *end = nullptr;
+    const char *text = expr.floatValue.c_str();
+    double value = std::strtod(text, &end);
+    if (end == text || (end && *end != '\0')) {
+      error = "invalid float literal";
+      return false;
+    }
+    if (expr.floatWidth == 64) {
+      uint64_t bits = 0;
+      std::memcpy(&bits, &value, sizeof(bits));
+      function.instructions.push_back({IrOpcode::PushF64, bits});
+      return true;
+    }
+    float f32 = static_cast<float>(value);
+    uint32_t bits = 0;
+    std::memcpy(&bits, &f32, sizeof(bits));
+    function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+    return true;
+  };
+
   auto emitCompareToZero = [&](LocalInfo::ValueKind kind, bool equals) -> bool {
     if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64) {
       function.instructions.push_back({IrOpcode::PushI64, 0});
       function.instructions.push_back({equals ? IrOpcode::CmpEqI64 : IrOpcode::CmpNeI64, 0});
       return true;
     }
+    if (kind == LocalInfo::ValueKind::Float64) {
+      function.instructions.push_back({IrOpcode::PushF64, 0});
+      function.instructions.push_back({equals ? IrOpcode::CmpEqF64 : IrOpcode::CmpNeF64, 0});
+      return true;
+    }
     if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
       function.instructions.push_back({IrOpcode::PushI32, 0});
       function.instructions.push_back({equals ? IrOpcode::CmpEqI32 : IrOpcode::CmpNeI32, 0});
+      return true;
+    }
+    if (kind == LocalInfo::ValueKind::Float32) {
+      function.instructions.push_back({IrOpcode::PushF32, 0});
+      function.instructions.push_back({equals ? IrOpcode::CmpEqF32 : IrOpcode::CmpNeF32, 0});
       return true;
     }
     error = "boolean conversion requires numeric operand";
@@ -438,11 +460,6 @@
     LocalMap calleeLocals;
     for (size_t i = 0; i < callParams.size(); ++i) {
       const Expr &param = callParams[i];
-      if (isFloatBinding(param)) {
-        error = "native backend does not support float types";
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
       LocalInfo paramInfo;
       paramInfo.index = nextLocal++;
       paramInfo.isMutable = isBindingMutable(param);
@@ -519,10 +536,14 @@
     context.returnKind = returnInfo.kind;
     if (!context.returnsVoid) {
       context.returnLocal = allocTempLocal();
-      const IrOpcode zeroOp =
-          (context.returnKind == LocalInfo::ValueKind::Int64 || context.returnKind == LocalInfo::ValueKind::UInt64)
-              ? IrOpcode::PushI64
-              : IrOpcode::PushI32;
+      IrOpcode zeroOp = IrOpcode::PushI32;
+      if (context.returnKind == LocalInfo::ValueKind::Int64 || context.returnKind == LocalInfo::ValueKind::UInt64) {
+        zeroOp = IrOpcode::PushI64;
+      } else if (context.returnKind == LocalInfo::ValueKind::Float64) {
+        zeroOp = IrOpcode::PushF64;
+      } else if (context.returnKind == LocalInfo::ValueKind::Float32) {
+        zeroOp = IrOpcode::PushF32;
+      }
       function.instructions.push_back({zeroOp, 0});
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
     }
@@ -574,8 +595,7 @@
         return true;
       }
       case Expr::Kind::FloatLiteral:
-        error = "native backend does not support float literals";
-        return false;
+        return emitFloatLiteral(expr);
       case Expr::Kind::StringLiteral:
         error = "native backend does not support string literals";
         return false;
@@ -877,9 +897,14 @@
             function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal)});
-            IrOpcode cmpKeyOp = (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64)
-                                    ? IrOpcode::CmpEqI64
-                                    : IrOpcode::CmpEqI32;
+            IrOpcode cmpKeyOp = IrOpcode::CmpEqI32;
+            if (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64) {
+              cmpKeyOp = IrOpcode::CmpEqI64;
+            } else if (mapKeyKind == LocalInfo::ValueKind::Float64) {
+              cmpKeyOp = IrOpcode::CmpEqF64;
+            } else if (mapKeyKind == LocalInfo::ValueKind::Float32) {
+              cmpKeyOp = IrOpcode::CmpEqF32;
+            }
             function.instructions.push_back({cmpKeyOp, 0});
             size_t jumpNotMatch = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});

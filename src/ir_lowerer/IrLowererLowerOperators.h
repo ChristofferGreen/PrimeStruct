@@ -19,8 +19,15 @@
               error = "negate does not support unsigned operands";
               return false;
             }
-            function.instructions.push_back({kind == LocalInfo::ValueKind::Int64 ? IrOpcode::NegI64 : IrOpcode::NegI32,
-                                             0});
+            IrOpcode negOp = IrOpcode::NegI32;
+            if (kind == LocalInfo::ValueKind::Int64) {
+              negOp = IrOpcode::NegI64;
+            } else if (kind == LocalInfo::ValueKind::Float64) {
+              negOp = IrOpcode::NegF64;
+            } else if (kind == LocalInfo::ValueKind::Float32) {
+              negOp = IrOpcode::NegF32;
+            }
+            function.instructions.push_back({negOp, 0});
             return true;
           }
           if (expr.args.size() != 2) {
@@ -84,6 +91,10 @@
           if (builtin == "plus") {
             if (leftPointer || rightPointer) {
               op = IrOpcode::AddI64;
+            } else if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::AddF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::AddF32;
             } else if (numericKind == LocalInfo::ValueKind::Int64 ||
                        numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::AddI64;
@@ -93,6 +104,10 @@
           } else if (builtin == "minus") {
             if (leftPointer || rightPointer) {
               op = IrOpcode::SubI64;
+            } else if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::SubF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::SubF32;
             } else if (numericKind == LocalInfo::ValueKind::Int64 ||
                        numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::SubI64;
@@ -100,12 +115,22 @@
               op = IrOpcode::SubI32;
             }
           } else if (builtin == "multiply") {
-            op = (numericKind == LocalInfo::ValueKind::Int64 || numericKind == LocalInfo::ValueKind::UInt64)
-                     ? IrOpcode::MulI64
-                     : IrOpcode::MulI32;
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::MulF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::MulF32;
+            } else {
+              op = (numericKind == LocalInfo::ValueKind::Int64 || numericKind == LocalInfo::ValueKind::UInt64)
+                       ? IrOpcode::MulI64
+                       : IrOpcode::MulI32;
+            }
           } else if (builtin == "divide") {
             if (numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::DivU64;
+            } else if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::DivF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::DivF32;
             } else if (numericKind == LocalInfo::ValueKind::Int64) {
               op = IrOpcode::DivI64;
             } else {
@@ -210,15 +235,31 @@
           }
           IrOpcode op = IrOpcode::CmpEqI32;
           if (builtin == "equal") {
-            op = (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::Int64)
-                     ? IrOpcode::CmpEqI64
-                     : IrOpcode::CmpEqI32;
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::CmpEqF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::CmpEqF32;
+            } else {
+              op = (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::Int64)
+                       ? IrOpcode::CmpEqI64
+                       : IrOpcode::CmpEqI32;
+            }
           } else if (builtin == "not_equal") {
-            op = (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::Int64)
-                     ? IrOpcode::CmpNeI64
-                     : IrOpcode::CmpNeI32;
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::CmpNeF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::CmpNeF32;
+            } else {
+              op = (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::Int64)
+                       ? IrOpcode::CmpNeI64
+                       : IrOpcode::CmpNeI32;
+            }
           } else if (builtin == "less_than") {
-            if (numericKind == LocalInfo::ValueKind::UInt64) {
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::CmpLtF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::CmpLtF32;
+            } else if (numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::CmpLtU64;
             } else if (numericKind == LocalInfo::ValueKind::Int64) {
               op = IrOpcode::CmpLtI64;
@@ -226,7 +267,11 @@
               op = IrOpcode::CmpLtI32;
             }
           } else if (builtin == "less_equal") {
-            if (numericKind == LocalInfo::ValueKind::UInt64) {
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::CmpLeF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::CmpLeF32;
+            } else if (numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::CmpLeU64;
             } else if (numericKind == LocalInfo::ValueKind::Int64) {
               op = IrOpcode::CmpLeI64;
@@ -234,7 +279,11 @@
               op = IrOpcode::CmpLeI32;
             }
           } else if (builtin == "greater_than") {
-            if (numericKind == LocalInfo::ValueKind::UInt64) {
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::CmpGtF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::CmpGtF32;
+            } else if (numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::CmpGtU64;
             } else if (numericKind == LocalInfo::ValueKind::Int64) {
               op = IrOpcode::CmpGtI64;
@@ -242,7 +291,11 @@
               op = IrOpcode::CmpGtI32;
             }
           } else if (builtin == "greater_equal") {
-            if (numericKind == LocalInfo::ValueKind::UInt64) {
+            if (numericKind == LocalInfo::ValueKind::Float64) {
+              op = IrOpcode::CmpGeF64;
+            } else if (numericKind == LocalInfo::ValueKind::Float32) {
+              op = IrOpcode::CmpGeF32;
+            } else if (numericKind == LocalInfo::ValueKind::UInt64) {
               op = IrOpcode::CmpGeU64;
             } else if (numericKind == LocalInfo::ValueKind::Int64) {
               op = IrOpcode::CmpGeI64;
@@ -291,6 +344,12 @@
           } else if (clampKind == LocalInfo::ValueKind::Int64) {
             cmpLt = IrOpcode::CmpLtI64;
             cmpGt = IrOpcode::CmpGtI64;
+          } else if (clampKind == LocalInfo::ValueKind::Float64) {
+            cmpLt = IrOpcode::CmpLtF64;
+            cmpGt = IrOpcode::CmpGtF64;
+          } else if (clampKind == LocalInfo::ValueKind::Float32) {
+            cmpLt = IrOpcode::CmpLtF32;
+            cmpGt = IrOpcode::CmpGtF32;
           }
           int32_t tempValue = allocTempLocal();
           int32_t tempMin = allocTempLocal();
@@ -377,6 +436,10 @@
             cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtU64 : IrOpcode::CmpLtU64;
           } else if (minMaxKind == LocalInfo::ValueKind::Int64) {
             cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtI64 : IrOpcode::CmpLtI64;
+          } else if (minMaxKind == LocalInfo::ValueKind::Float64) {
+            cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtF64 : IrOpcode::CmpLtF64;
+          } else if (minMaxKind == LocalInfo::ValueKind::Float32) {
+            cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtF32 : IrOpcode::CmpLtF32;
           }
           int32_t tempLeft = allocTempLocal();
           int32_t tempRight = allocTempLocal();
@@ -439,18 +502,22 @@
             error = lerpName + " requires numeric arguments of the same type";
             return false;
           }
-          IrOpcode addOp =
-              (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64)
-                  ? IrOpcode::AddI64
-                  : IrOpcode::AddI32;
-          IrOpcode subOp =
-              (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64)
-                  ? IrOpcode::SubI64
-                  : IrOpcode::SubI32;
-          IrOpcode mulOp =
-              (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64)
-                  ? IrOpcode::MulI64
-                  : IrOpcode::MulI32;
+          IrOpcode addOp = IrOpcode::AddI32;
+          IrOpcode subOp = IrOpcode::SubI32;
+          IrOpcode mulOp = IrOpcode::MulI32;
+          if (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64) {
+            addOp = IrOpcode::AddI64;
+            subOp = IrOpcode::SubI64;
+            mulOp = IrOpcode::MulI64;
+          } else if (lerpKind == LocalInfo::ValueKind::Float64) {
+            addOp = IrOpcode::AddF64;
+            subOp = IrOpcode::SubF64;
+            mulOp = IrOpcode::MulF64;
+          } else if (lerpKind == LocalInfo::ValueKind::Float32) {
+            addOp = IrOpcode::AddF32;
+            subOp = IrOpcode::SubF32;
+            mulOp = IrOpcode::MulF32;
+          }
           int32_t tempStart = allocTempLocal();
           int32_t tempEnd = allocTempLocal();
           int32_t tempT = allocTempLocal();
@@ -501,6 +568,10 @@
           }
           LocalInfo::ValueKind powKind =
               combineNumericKinds(inferExprKind(expr.args[0], localsIn), inferExprKind(expr.args[1], localsIn));
+          if (powKind == LocalInfo::ValueKind::Float32 || powKind == LocalInfo::ValueKind::Float64) {
+            error = powName + " requires integer arguments in the native backend";
+            return false;
+          }
           if (powKind == LocalInfo::ValueKind::Unknown || powKind == LocalInfo::ValueKind::Bool ||
               powKind == LocalInfo::ValueKind::String) {
             error = powName + " requires numeric arguments of the same type";
@@ -595,11 +666,31 @@
           }
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
 
+          auto pushFloatConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
           auto pushZero = [&]() {
+            if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
+              pushFloatConst(0.0);
+              return;
+            }
             function.instructions.push_back(
                 {argKind == LocalInfo::ValueKind::Int32 ? IrOpcode::PushI32 : IrOpcode::PushI64, 0});
           };
-          auto pushOne = [&](int64_t value) {
+          auto pushOne = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
+              pushFloatConst(value);
+              return;
+            }
             if (argKind == LocalInfo::ValueKind::Int32) {
               function.instructions.push_back(
                   {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
@@ -616,8 +707,18 @@
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
               return true;
             }
-            IrOpcode cmpLt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtI32;
-            IrOpcode negOp = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::NegI64 : IrOpcode::NegI32;
+            IrOpcode cmpLt = IrOpcode::CmpLtI32;
+            IrOpcode negOp = IrOpcode::NegI32;
+            if (argKind == LocalInfo::ValueKind::Int64) {
+              cmpLt = IrOpcode::CmpLtI64;
+              negOp = IrOpcode::NegI64;
+            } else if (argKind == LocalInfo::ValueKind::Float64) {
+              cmpLt = IrOpcode::CmpLtF64;
+              negOp = IrOpcode::NegF64;
+            } else if (argKind == LocalInfo::ValueKind::Float32) {
+              cmpLt = IrOpcode::CmpLtF32;
+              negOp = IrOpcode::NegF32;
+            }
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
             pushZero();
             function.instructions.push_back({cmpLt, 0});
@@ -658,8 +759,18 @@
             return true;
           }
 
-          IrOpcode cmpLt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtI32;
-          IrOpcode cmpGt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpGtI64 : IrOpcode::CmpGtI32;
+          IrOpcode cmpLt = IrOpcode::CmpLtI32;
+          IrOpcode cmpGt = IrOpcode::CmpGtI32;
+          if (argKind == LocalInfo::ValueKind::Int64) {
+            cmpLt = IrOpcode::CmpLtI64;
+            cmpGt = IrOpcode::CmpGtI64;
+          } else if (argKind == LocalInfo::ValueKind::Float64) {
+            cmpLt = IrOpcode::CmpLtF64;
+            cmpGt = IrOpcode::CmpGtF64;
+          } else if (argKind == LocalInfo::ValueKind::Float32) {
+            cmpLt = IrOpcode::CmpLtF32;
+            cmpGt = IrOpcode::CmpGtF32;
+          }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
           pushZero();
           function.instructions.push_back({cmpLt, 0});
@@ -709,7 +820,23 @@
           }
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
 
-          auto pushConst = [&](int64_t value) {
+          auto pushFloatConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+          auto pushConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
+              pushFloatConst(value);
+              return;
+            }
             if (argKind == LocalInfo::ValueKind::Int32) {
               function.instructions.push_back(
                   {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
@@ -739,8 +866,18 @@
             return true;
           }
 
-          IrOpcode cmpLt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtI32;
-          IrOpcode cmpGt = (argKind == LocalInfo::ValueKind::Int64) ? IrOpcode::CmpGtI64 : IrOpcode::CmpGtI32;
+          IrOpcode cmpLt = IrOpcode::CmpLtI32;
+          IrOpcode cmpGt = IrOpcode::CmpGtI32;
+          if (argKind == LocalInfo::ValueKind::Int64) {
+            cmpLt = IrOpcode::CmpLtI64;
+            cmpGt = IrOpcode::CmpGtI64;
+          } else if (argKind == LocalInfo::ValueKind::Float64) {
+            cmpLt = IrOpcode::CmpLtF64;
+            cmpGt = IrOpcode::CmpGtF64;
+          } else if (argKind == LocalInfo::ValueKind::Float32) {
+            cmpLt = IrOpcode::CmpLtF32;
+            cmpGt = IrOpcode::CmpGtF32;
+          }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
           pushConst(0);
           function.instructions.push_back({cmpLt, 0});
@@ -781,9 +918,10 @@
             return false;
           }
           const std::string &typeName = expr.templateArgs.front();
-          if (typeName != "int" && typeName != "i32" && typeName != "i64" && typeName != "u64" && typeName != "bool") {
-            error = "native backend only supports convert<int>, convert<i32>, convert<i64>, convert<u64>, or "
-                    "convert<bool>";
+          LocalInfo::ValueKind targetKind = valueKindFromTypeName(typeName);
+          if (targetKind == LocalInfo::ValueKind::Unknown || targetKind == LocalInfo::ValueKind::String) {
+            error = "native backend only supports convert<int>, convert<i32>, convert<i64>, convert<u64>, "
+                    "convert<bool>, convert<f32>, or convert<f64>";
             return false;
           }
           auto tryEmitMathConstantConvert = [&](const Expr &arg) -> bool {
@@ -802,21 +940,34 @@
             } else if (mathConst == "e") {
               value = 2.71828182845904523536;
             }
-            if (typeName == "bool") {
+            if (targetKind == LocalInfo::ValueKind::Bool) {
               function.instructions.push_back({IrOpcode::PushI32, value != 0.0 ? 1u : 0u});
               return true;
             }
-            if (typeName == "int" || typeName == "i32") {
+            if (targetKind == LocalInfo::ValueKind::Int32) {
               function.instructions.push_back(
                   {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
               return true;
             }
-            if (typeName == "i64") {
+            if (targetKind == LocalInfo::ValueKind::Int64) {
               function.instructions.push_back(
                   {IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(value))});
               return true;
             }
-            function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+            if (targetKind == LocalInfo::ValueKind::UInt64) {
+              function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+              return true;
+            }
+            if (targetKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return true;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
             return true;
           };
           if (tryEmitMathConstantConvert(expr.args.front())) {
@@ -825,11 +976,79 @@
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
-          if (typeName == "bool") {
+          if (targetKind == LocalInfo::ValueKind::Bool) {
             LocalInfo::ValueKind kind = inferExprKind(expr.args.front(), localsIn);
             if (!emitCompareToZero(kind, false)) {
               return false;
             }
+            return true;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+          if (argKind == LocalInfo::ValueKind::Bool) {
+            argKind = LocalInfo::ValueKind::Int32;
+          }
+          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
+            error = "convert requires numeric argument";
+            return false;
+          }
+          if (argKind == targetKind) {
+            return true;
+          }
+          IrOpcode convertOp = IrOpcode::ConvertI32ToF32;
+          bool needsConvert = true;
+          if (targetKind == LocalInfo::ValueKind::Float32) {
+            if (argKind == LocalInfo::ValueKind::Int32) {
+              convertOp = IrOpcode::ConvertI32ToF32;
+            } else if (argKind == LocalInfo::ValueKind::Int64) {
+              convertOp = IrOpcode::ConvertI64ToF32;
+            } else if (argKind == LocalInfo::ValueKind::UInt64) {
+              convertOp = IrOpcode::ConvertU64ToF32;
+            } else if (argKind == LocalInfo::ValueKind::Float64) {
+              convertOp = IrOpcode::ConvertF64ToF32;
+            } else {
+              error = "convert requires numeric argument";
+              return false;
+            }
+          } else if (targetKind == LocalInfo::ValueKind::Float64) {
+            if (argKind == LocalInfo::ValueKind::Int32) {
+              convertOp = IrOpcode::ConvertI32ToF64;
+            } else if (argKind == LocalInfo::ValueKind::Int64) {
+              convertOp = IrOpcode::ConvertI64ToF64;
+            } else if (argKind == LocalInfo::ValueKind::UInt64) {
+              convertOp = IrOpcode::ConvertU64ToF64;
+            } else if (argKind == LocalInfo::ValueKind::Float32) {
+              convertOp = IrOpcode::ConvertF32ToF64;
+            } else {
+              error = "convert requires numeric argument";
+              return false;
+            }
+          } else if (targetKind == LocalInfo::ValueKind::Int32) {
+            if (argKind == LocalInfo::ValueKind::Float32) {
+              convertOp = IrOpcode::ConvertF32ToI32;
+            } else if (argKind == LocalInfo::ValueKind::Float64) {
+              convertOp = IrOpcode::ConvertF64ToI32;
+            } else {
+              needsConvert = false;
+            }
+          } else if (targetKind == LocalInfo::ValueKind::Int64) {
+            if (argKind == LocalInfo::ValueKind::Float32) {
+              convertOp = IrOpcode::ConvertF32ToI64;
+            } else if (argKind == LocalInfo::ValueKind::Float64) {
+              convertOp = IrOpcode::ConvertF64ToI64;
+            } else {
+              needsConvert = false;
+            }
+          } else if (targetKind == LocalInfo::ValueKind::UInt64) {
+            if (argKind == LocalInfo::ValueKind::Float32) {
+              convertOp = IrOpcode::ConvertF32ToU64;
+            } else if (argKind == LocalInfo::ValueKind::Float64) {
+              convertOp = IrOpcode::ConvertF64ToU64;
+            } else {
+              needsConvert = false;
+            }
+          }
+          if (needsConvert) {
+            function.instructions.push_back({convertOp, 0});
           }
           return true;
         }
@@ -991,6 +1210,22 @@
             if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64) {
               function.instructions.push_back({IrOpcode::PushI64, 1});
               function.instructions.push_back({isIncrement ? IrOpcode::AddI64 : IrOpcode::SubI64, 0});
+              return true;
+            }
+            if (kind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              double one = 1.0;
+              std::memcpy(&bits, &one, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              function.instructions.push_back({isIncrement ? IrOpcode::AddF64 : IrOpcode::SubF64, 0});
+              return true;
+            }
+            if (kind == LocalInfo::ValueKind::Float32) {
+              float one = 1.0f;
+              uint32_t bits = 0;
+              std::memcpy(&bits, &one, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+              function.instructions.push_back({isIncrement ? IrOpcode::AddF32 : IrOpcode::SubF32, 0});
               return true;
             }
             error = std::string(mutateName) + " requires numeric operand";

@@ -1,6 +1,7 @@
 #include "primec/Vm.h"
 
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -8,6 +9,31 @@
 namespace primec {
 
 namespace {
+float bitsToF32(uint64_t raw) {
+  uint32_t bits = static_cast<uint32_t>(raw);
+  float value = 0.0f;
+  std::memcpy(&value, &bits, sizeof(value));
+  return value;
+}
+
+uint64_t f32ToBits(float value) {
+  uint32_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  return static_cast<uint64_t>(bits);
+}
+
+double bitsToF64(uint64_t raw) {
+  double value = 0.0;
+  std::memcpy(&value, &raw, sizeof(value));
+  return value;
+}
+
+uint64_t f64ToBits(double value) {
+  uint64_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  return bits;
+}
+
 bool executeImpl(const IrModule &module,
                  uint64_t &result,
                  std::string &error,
@@ -38,6 +64,11 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       case IrOpcode::PushI64:
+        stack.push_back(inst.imm);
+        ip += 1;
+        break;
+      case IrOpcode::PushF32:
+      case IrOpcode::PushF64:
         stack.push_back(inst.imm);
         ip += 1;
         break;
@@ -229,6 +260,94 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::AddF32:
+      case IrOpcode::SubF32:
+      case IrOpcode::MulF32:
+      case IrOpcode::DivF32: {
+        if (stack.size() < 2) {
+          error = "IR stack underflow on float op";
+          return false;
+        }
+        float rhs = bitsToF32(stack.back());
+        stack.pop_back();
+        float lhs = bitsToF32(stack.back());
+        stack.pop_back();
+        float result = 0.0f;
+        switch (inst.op) {
+          case IrOpcode::AddF32:
+            result = lhs + rhs;
+            break;
+          case IrOpcode::SubF32:
+            result = lhs - rhs;
+            break;
+          case IrOpcode::MulF32:
+            result = lhs * rhs;
+            break;
+          case IrOpcode::DivF32:
+            result = lhs / rhs;
+            break;
+          default:
+            break;
+        }
+        stack.push_back(f32ToBits(result));
+        ip += 1;
+        break;
+      }
+      case IrOpcode::NegF32: {
+        if (stack.empty()) {
+          error = "IR stack underflow on negate";
+          return false;
+        }
+        float value = bitsToF32(stack.back());
+        stack.pop_back();
+        stack.push_back(f32ToBits(-value));
+        ip += 1;
+        break;
+      }
+      case IrOpcode::AddF64:
+      case IrOpcode::SubF64:
+      case IrOpcode::MulF64:
+      case IrOpcode::DivF64: {
+        if (stack.size() < 2) {
+          error = "IR stack underflow on float op";
+          return false;
+        }
+        double rhs = bitsToF64(stack.back());
+        stack.pop_back();
+        double lhs = bitsToF64(stack.back());
+        stack.pop_back();
+        double result = 0.0;
+        switch (inst.op) {
+          case IrOpcode::AddF64:
+            result = lhs + rhs;
+            break;
+          case IrOpcode::SubF64:
+            result = lhs - rhs;
+            break;
+          case IrOpcode::MulF64:
+            result = lhs * rhs;
+            break;
+          case IrOpcode::DivF64:
+            result = lhs / rhs;
+            break;
+          default:
+            break;
+        }
+        stack.push_back(f64ToBits(result));
+        ip += 1;
+        break;
+      }
+      case IrOpcode::NegF64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on negate";
+          return false;
+        }
+        double value = bitsToF64(stack.back());
+        stack.pop_back();
+        stack.push_back(f64ToBits(-value));
+        ip += 1;
+        break;
+      }
       case IrOpcode::CmpEqI32:
       case IrOpcode::CmpNeI32:
       case IrOpcode::CmpLtI32:
@@ -295,6 +414,198 @@ bool executeImpl(const IrModule &module,
             break;
         }
         stack.push_back(cmp ? 1 : 0);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::CmpEqF32:
+      case IrOpcode::CmpNeF32:
+      case IrOpcode::CmpLtF32:
+      case IrOpcode::CmpLeF32:
+      case IrOpcode::CmpGtF32:
+      case IrOpcode::CmpGeF32: {
+        if (stack.size() < 2) {
+          error = "IR stack underflow on compare";
+          return false;
+        }
+        float rhs = bitsToF32(stack.back());
+        stack.pop_back();
+        float lhs = bitsToF32(stack.back());
+        stack.pop_back();
+        bool cmp = false;
+        switch (inst.op) {
+          case IrOpcode::CmpEqF32:
+            cmp = (lhs == rhs);
+            break;
+          case IrOpcode::CmpNeF32:
+            cmp = (lhs != rhs);
+            break;
+          case IrOpcode::CmpLtF32:
+            cmp = (lhs < rhs);
+            break;
+          case IrOpcode::CmpLeF32:
+            cmp = (lhs <= rhs);
+            break;
+          case IrOpcode::CmpGtF32:
+            cmp = (lhs > rhs);
+            break;
+          case IrOpcode::CmpGeF32:
+            cmp = (lhs >= rhs);
+            break;
+          default:
+            break;
+        }
+        stack.push_back(cmp ? 1 : 0);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::CmpEqF64:
+      case IrOpcode::CmpNeF64:
+      case IrOpcode::CmpLtF64:
+      case IrOpcode::CmpLeF64:
+      case IrOpcode::CmpGtF64:
+      case IrOpcode::CmpGeF64: {
+        if (stack.size() < 2) {
+          error = "IR stack underflow on compare";
+          return false;
+        }
+        double rhs = bitsToF64(stack.back());
+        stack.pop_back();
+        double lhs = bitsToF64(stack.back());
+        stack.pop_back();
+        bool cmp = false;
+        switch (inst.op) {
+          case IrOpcode::CmpEqF64:
+            cmp = (lhs == rhs);
+            break;
+          case IrOpcode::CmpNeF64:
+            cmp = (lhs != rhs);
+            break;
+          case IrOpcode::CmpLtF64:
+            cmp = (lhs < rhs);
+            break;
+          case IrOpcode::CmpLeF64:
+            cmp = (lhs <= rhs);
+            break;
+          case IrOpcode::CmpGtF64:
+            cmp = (lhs > rhs);
+            break;
+          case IrOpcode::CmpGeF64:
+            cmp = (lhs >= rhs);
+            break;
+          default:
+            break;
+        }
+        stack.push_back(cmp ? 1 : 0);
+        ip += 1;
+        break;
+      }
+      case IrOpcode::ConvertI32ToF32:
+      case IrOpcode::ConvertI64ToF32:
+      case IrOpcode::ConvertU64ToF32: {
+        if (stack.empty()) {
+          error = "IR stack underflow on convert";
+          return false;
+        }
+        uint64_t raw = stack.back();
+        stack.pop_back();
+        float value = 0.0f;
+        if (inst.op == IrOpcode::ConvertU64ToF32) {
+          value = static_cast<float>(raw);
+        } else if (inst.op == IrOpcode::ConvertI64ToF32) {
+          value = static_cast<float>(static_cast<int64_t>(raw));
+        } else {
+          value = static_cast<float>(static_cast<int32_t>(raw));
+        }
+        stack.push_back(f32ToBits(value));
+        ip += 1;
+        break;
+      }
+      case IrOpcode::ConvertI32ToF64:
+      case IrOpcode::ConvertI64ToF64:
+      case IrOpcode::ConvertU64ToF64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on convert";
+          return false;
+        }
+        uint64_t raw = stack.back();
+        stack.pop_back();
+        double value = 0.0;
+        if (inst.op == IrOpcode::ConvertU64ToF64) {
+          value = static_cast<double>(raw);
+        } else if (inst.op == IrOpcode::ConvertI64ToF64) {
+          value = static_cast<double>(static_cast<int64_t>(raw));
+        } else {
+          value = static_cast<double>(static_cast<int32_t>(raw));
+        }
+        stack.push_back(f64ToBits(value));
+        ip += 1;
+        break;
+      }
+      case IrOpcode::ConvertF32ToI32:
+      case IrOpcode::ConvertF32ToI64:
+      case IrOpcode::ConvertF32ToU64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on convert";
+          return false;
+        }
+        float value = bitsToF32(stack.back());
+        stack.pop_back();
+        if (inst.op == IrOpcode::ConvertF32ToU64) {
+          uint64_t out = static_cast<uint64_t>(value);
+          stack.push_back(out);
+        } else if (inst.op == IrOpcode::ConvertF32ToI64) {
+          int64_t out = static_cast<int64_t>(value);
+          stack.push_back(static_cast<uint64_t>(out));
+        } else {
+          int32_t out = static_cast<int32_t>(value);
+          stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(out)));
+        }
+        ip += 1;
+        break;
+      }
+      case IrOpcode::ConvertF64ToI32:
+      case IrOpcode::ConvertF64ToI64:
+      case IrOpcode::ConvertF64ToU64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on convert";
+          return false;
+        }
+        double value = bitsToF64(stack.back());
+        stack.pop_back();
+        if (inst.op == IrOpcode::ConvertF64ToU64) {
+          uint64_t out = static_cast<uint64_t>(value);
+          stack.push_back(out);
+        } else if (inst.op == IrOpcode::ConvertF64ToI64) {
+          int64_t out = static_cast<int64_t>(value);
+          stack.push_back(static_cast<uint64_t>(out));
+        } else {
+          int32_t out = static_cast<int32_t>(value);
+          stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(out)));
+        }
+        ip += 1;
+        break;
+      }
+      case IrOpcode::ConvertF32ToF64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on convert";
+          return false;
+        }
+        float value = bitsToF32(stack.back());
+        stack.pop_back();
+        double out = static_cast<double>(value);
+        stack.push_back(f64ToBits(out));
+        ip += 1;
+        break;
+      }
+      case IrOpcode::ConvertF64ToF32: {
+        if (stack.empty()) {
+          error = "IR stack underflow on convert";
+          return false;
+        }
+        double value = bitsToF64(stack.back());
+        stack.pop_back();
+        float out = static_cast<float>(value);
+        stack.push_back(f32ToBits(out));
         ip += 1;
         break;
       }
