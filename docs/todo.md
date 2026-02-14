@@ -6,7 +6,7 @@ Legend:
 - ✓ Finished
 
 **Pipeline & CLI**
-- ○ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.
+- ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.
 - ○ Make per-envelope transform lists drive text/semantic transforms (today text filters are global and ignore `[operators]`, `[collections]`, etc).
 - ○ Add auto-injected transform rules and path filters (`/math/*`, recurse flags) described in docs; currently only a global text filter list exists.
 - ○ Support text transforms appending additional text transforms to the same node (self-expansion in the transform pipeline).

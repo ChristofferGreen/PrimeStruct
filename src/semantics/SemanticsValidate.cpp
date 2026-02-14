@@ -112,15 +112,15 @@ bool validateTransformPhaseList(const std::vector<Transform> &transforms,
     const bool isText = primec::isTextTransformName(transform.name);
     const bool isSemantic = primec::isSemanticTransformName(transform.name);
     if (transform.phase == TransformPhase::Text) {
-      if (!isText && isSemantic) {
-        error = "semantic transform cannot appear in text(...) group on " + context;
+      if (!isText) {
+        error = "text(...) group requires text transforms on " + context + ": " + transform.name;
         return false;
       }
       continue;
     }
     if (transform.phase == TransformPhase::Semantic) {
       if (!isSemantic && isText) {
-        error = "text transform cannot appear in semantic(...) group on " + context;
+        error = "text transform cannot appear in semantic(...) group on " + context + ": " + transform.name;
         return false;
       }
       continue;

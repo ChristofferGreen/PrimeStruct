@@ -2091,6 +2091,30 @@ main() {
   CHECK(error.find("missing return statement") != std::string::npos);
 }
 
+TEST_CASE("text group rejects non-text transform") {
+  const std::string source = R"(
+[text(return<int>)]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("text(...) group requires text transforms") != std::string::npos);
+}
+
+TEST_CASE("semantic group rejects text transform") {
+  const std::string source = R"(
+[semantic(operators) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("text transform cannot appear in semantic(...) group") != std::string::npos);
+}
+
 TEST_CASE("bool return type validates") {
   const std::string source = R"(
 [return<bool>]
