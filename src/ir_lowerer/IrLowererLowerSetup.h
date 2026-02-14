@@ -1326,6 +1326,12 @@ bool IrLowerer::lower(const Program &program,
           }
           return inferExprKind(expr.args.front(), localsIn);
         }
+        if (getBuiltinMathPredicateName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return LocalInfo::ValueKind::Bool;
+        }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
             return LocalInfo::ValueKind::Unknown;

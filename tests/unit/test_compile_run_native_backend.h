@@ -1465,6 +1465,28 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native math predicates") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] nan{divide(0.0f32, 0.0f32)}
+  [f32] inf{divide(1.0f32, 0.0f32)}
+  return(plus(
+    plus(convert<int>(is_nan(nan)), convert<int>(is_inf(inf))),
+    convert<int>(is_finite(1.0f32))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_predicates.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_predicates_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi

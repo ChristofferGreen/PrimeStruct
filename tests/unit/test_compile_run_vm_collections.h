@@ -542,6 +542,24 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with math predicates") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] nan{divide(0.0f32, 0.0f32)}
+  [f32] inf{divide(1.0f32, 0.0f32)}
+  return(plus(
+    plus(convert<int>(is_nan(nan)), convert<int>(is_inf(inf))),
+    convert<int>(is_finite(1.0f32))
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_predicates.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*

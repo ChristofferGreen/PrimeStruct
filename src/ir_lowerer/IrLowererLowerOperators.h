@@ -908,6 +908,68 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           return true;
         }
+        std::string predicateName;
+        if (getBuiltinMathPredicateName(expr, predicateName, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            error = predicateName + " requires exactly one argument";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+          if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
+            error = predicateName + " requires float argument";
+            return false;
+          }
+          int32_t tempValue = allocTempLocal();
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+
+          auto pushFloatZero = [&]() {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              double value = 0.0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            uint32_t bits = 0;
+            float value = 0.0f;
+            std::memcpy(&bits, &value, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+
+          IrOpcode cmpEq = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpEqF64 : IrOpcode::CmpEqF32;
+          IrOpcode cmpNe = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpNeF64 : IrOpcode::CmpNeF32;
+          IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
+
+          if (predicateName == "is_nan") {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({cmpNe, 0});
+            return true;
+          }
+
+          if (predicateName == "is_finite") {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({subOp, 0});
+            pushFloatZero();
+            function.instructions.push_back({cmpEq, 0});
+            return true;
+          }
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          function.instructions.push_back({cmpEq, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+          function.instructions.push_back({subOp, 0});
+          pushFloatZero();
+          function.instructions.push_back({cmpNe, 0});
+          function.instructions.push_back({IrOpcode::MulI32, 0});
+          return true;
+        }
         if (getBuiltinConvertName(expr)) {
           if (expr.templateArgs.size() != 1) {
             error = "convert requires exactly one template argument";
