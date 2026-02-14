@@ -22,7 +22,7 @@ Legend:
 - ✓ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
 - ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/include resolver currently allow them).
 - ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
-- ○ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
+- ✓ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ○ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
 - ○ Support nested definitions/lambdas inside definition bodies (spec references nested definitions receiving their own transforms; parser only allows bindings/expressions).
 - ✓ Allow execution-style transforms inside bodies and argument lists (SyntaxSpec allows `[effects(io_out)] log()` anywhere a form is allowed; parser treats leading `[...]` as a binding and rejects `()`).
