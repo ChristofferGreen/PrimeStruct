@@ -2479,6 +2479,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("if blocks ignore colliding then definition") {
+  const std::string source = R"(
+[return<void>]
+then() {
+  return()
+}
+
+[return<int>]
+main() {
+  if(true) {
+    return(1i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("missing return on some control paths fails") {
   const std::string source = R"(
 [return<int>]

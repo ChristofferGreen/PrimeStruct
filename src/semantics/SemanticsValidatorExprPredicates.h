@@ -258,6 +258,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const std::string resolved = resolveCalleePath(candidate);
     return structNames_.count(resolved) > 0;
   };
+  auto isIfBranchEnvelopeName = [&](const Expr &candidate) -> bool {
+    return candidate.name == "then" || candidate.name == "else" || candidate.name == "/then" ||
+           candidate.name == "/else";
+  };
   auto getEnvelopeValueExpr = [&](const Expr &candidate) -> const Expr * {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return nullptr;
@@ -268,9 +272,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
       return nullptr;
     }
-    const std::string resolved = resolveCalleePath(candidate);
-    if (defMap_.find(resolved) != defMap_.end()) {
-      return nullptr;
+    if (!isIfBranchEnvelopeName(candidate)) {
+      const std::string resolved = resolveCalleePath(candidate);
+      if (defMap_.find(resolved) != defMap_.end()) {
+        return nullptr;
+      }
     }
     const Expr *valueExpr = nullptr;
     for (const auto &bodyExpr : candidate.bodyArguments) {

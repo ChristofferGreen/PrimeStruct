@@ -447,6 +447,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = "if condition requires bool";
       return false;
     }
+    auto isIfBranchEnvelopeName = [&](const Expr &candidate) -> bool {
+      return candidate.name == "then" || candidate.name == "else" || candidate.name == "/then" ||
+             candidate.name == "/else";
+    };
     auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
         return false;
@@ -456,6 +460,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
         return false;
+      }
+      if (isIfBranchEnvelopeName(candidate)) {
+        return true;
       }
       const std::string resolved = resolveCalleePath(candidate);
       return defMap_.find(resolved) == defMap_.end();
@@ -928,6 +935,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
 }
 
 bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
+  auto isIfBranchEnvelopeName = [&](const Expr &candidate) -> bool {
+    return candidate.name == "then" || candidate.name == "else" || candidate.name == "/then" ||
+           candidate.name == "/else";
+  };
   auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
@@ -937,6 +948,9 @@ bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
     }
     if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
       return false;
+    }
+    if (isIfBranchEnvelopeName(candidate)) {
+      return true;
     }
     const std::string resolved = resolveCalleePath(candidate);
     return defMap_.find(resolved) == defMap_.end();
