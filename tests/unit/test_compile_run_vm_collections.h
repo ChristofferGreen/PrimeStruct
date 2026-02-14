@@ -581,6 +581,21 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with math roots") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{sqrt(9.0f32)}
+  [f32] b{cbrt(27.0f32)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_roots.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*

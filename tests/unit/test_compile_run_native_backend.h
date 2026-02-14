@@ -1512,6 +1512,25 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs native math roots") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{sqrt(9.0f32)}
+  [f32] b{cbrt(27.0f32)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_roots.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_roots_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi

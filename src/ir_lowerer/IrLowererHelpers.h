@@ -45,6 +45,7 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinConvertName(const Expr &expr);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
