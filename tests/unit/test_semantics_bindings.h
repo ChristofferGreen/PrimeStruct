@@ -617,18 +617,23 @@ main() {
   CHECK(error.find("Pointer requires a template argument") != std::string::npos);
 }
 
-TEST_CASE("pointer bindings reject unsupported targets") {
+TEST_CASE("pointer bindings accept struct targets") {
   const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value{1i32}
+}
+
 [return<int>]
 main() {
-  [i32] value{1i32}
+  [Foo] value{Foo()}
   [Pointer<Foo>] ptr{location(value)}
   return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported pointer target type") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("reference bindings require template arguments") {
@@ -645,12 +650,45 @@ main() {
   CHECK(error.find("Reference requires a template argument") != std::string::npos);
 }
 
-TEST_CASE("reference bindings reject unsupported targets") {
+TEST_CASE("reference bindings accept struct targets") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [Foo] value{Foo()}
+  [Reference<Foo>] ref{location(value)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pointer bindings reject unknown targets") {
   const std::string source = R"(
 [return<int>]
 main() {
   [i32] value{1i32}
-  [Reference<Foo>] ref{location(value)}
+  [Pointer<Missing>] ptr{location(value)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported pointer target type") != std::string::npos);
+}
+
+TEST_CASE("reference bindings reject unknown targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  [Reference<Missing>] ref{location(value)}
   return(1i32)
 }
 )";

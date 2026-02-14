@@ -34,7 +34,7 @@ Legend:
 - ○ Add template monomorphization for user-defined definitions (templates are parsed but only builtins/collections use them today).
 - ◐ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission are still missing; only validation exists).
 - ○ Implement `copy`/`public`/`private`/`package`/`static` binding semantics and metadata (currently validated but unused).
-- ○ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
+- ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ○ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
 - ✓ Align default effects behavior: docs say entry defaults include `io_out`, but code applies no default effects unless `--default-effects` is provided.

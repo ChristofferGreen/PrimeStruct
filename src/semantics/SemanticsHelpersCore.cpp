@@ -897,12 +897,27 @@ bool parseBindingInfo(const Expr &expr,
       return false;
     }
   }
+  auto isStructTypeName = [&](const std::string &candidate) -> bool {
+    if (candidate.empty() || candidate.find('<') != std::string::npos) {
+      return false;
+    }
+    std::string resolved = resolveTypePath(candidate, namespacePrefix);
+    if (structTypes.count(resolved) > 0) {
+      return true;
+    }
+    auto importIt = importAliases.find(candidate);
+    if (importIt != importAliases.end()) {
+      return structTypes.count(importIt->second) > 0;
+    }
+    return false;
+  };
   if (typeHasTemplate && typeName == "Pointer") {
     if (info.typeTemplateArg.empty()) {
       error = "Pointer requires a template argument";
       return false;
     }
-    if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
+    std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);
+    if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
       error = "unsupported pointer target type: " + info.typeTemplateArg;
       return false;
     }
@@ -912,7 +927,8 @@ bool parseBindingInfo(const Expr &expr,
       error = "Reference requires a template argument";
       return false;
     }
-    if (!isPrimitiveBindingTypeName(info.typeTemplateArg)) {
+    std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);
+    if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
       error = "unsupported reference target type: " + info.typeTemplateArg;
       return false;
     }
