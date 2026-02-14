@@ -542,6 +542,20 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with math constants") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f64] sum{plus(pi, plus(tau, e))}
+  return(convert<int>(sum))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_constants_direct.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
 TEST_CASE("runs vm with math predicates") {
   const std::string source = R"(
 import /math/*

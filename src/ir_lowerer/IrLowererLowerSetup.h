@@ -1158,6 +1158,10 @@ bool IrLowerer::lower(const Program &program,
       case Expr::Kind::Name: {
         auto it = localsIn.find(expr.name);
         if (it == localsIn.end()) {
+          std::string mathConst;
+          if (getMathConstantName(expr.name, mathConst)) {
+            return LocalInfo::ValueKind::Float64;
+          }
           return LocalInfo::ValueKind::Unknown;
         }
         if (it->second.kind == LocalInfo::Kind::Value || it->second.kind == LocalInfo::Kind::Reference) {

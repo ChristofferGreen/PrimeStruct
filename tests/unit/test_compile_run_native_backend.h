@@ -1465,6 +1465,24 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
+TEST_CASE("compiles and runs native math constants") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f64] sum{plus(pi, plus(tau, e))}
+  return(convert<int>(sum))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_constants_direct.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_constants_direct_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
 TEST_CASE("compiles and runs native math predicates") {
   const std::string source = R"(
 import /math/*

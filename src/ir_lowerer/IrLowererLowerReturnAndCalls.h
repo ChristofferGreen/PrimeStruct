@@ -621,8 +621,18 @@
         }
         std::string mathConst;
         if (getMathConstantName(expr.name, mathConst)) {
-          error = "native backend does not support math constant: " + mathConst;
-          return false;
+          double value = 0.0;
+          if (mathConst == "pi") {
+            value = 3.14159265358979323846;
+          } else if (mathConst == "tau") {
+            value = 6.28318530717958647692;
+          } else if (mathConst == "e") {
+            value = 2.71828182845904523536;
+          }
+          uint64_t bits = 0;
+          std::memcpy(&bits, &value, sizeof(bits));
+          function.instructions.push_back({IrOpcode::PushF64, bits});
+          return true;
         }
         error = "native backend does not know identifier: " + expr.name;
         return false;
