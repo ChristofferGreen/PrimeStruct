@@ -1648,6 +1648,29 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs native math exp/log") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{exp(0.0f32)}
+  [f32] b{exp2(1.0f32)}
+  [f32] c{log(1.0f32)}
+  [f32] d{log2(2.0f32)}
+  [f32] e{log10(1.0f32)}
+  [f32] sum{plus(plus(a, b), plus(c, plus(d, e)))}
+  return(convert<int>(plus(sum, 0.5f32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_exp_log.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_exp_log_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi

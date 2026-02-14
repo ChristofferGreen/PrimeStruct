@@ -47,6 +47,8 @@ bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare);
+bool getBuiltinLogName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare);

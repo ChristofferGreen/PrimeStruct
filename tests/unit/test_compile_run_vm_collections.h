@@ -689,6 +689,25 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("runs vm with math exp/log") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{exp(0.0f32)}
+  [f32] b{exp2(1.0f32)}
+  [f32] c{log(1.0f32)}
+  [f32] d{log2(2.0f32)}
+  [f32] e{log10(1.0f32)}
+  [f32] sum{plus(plus(a, b), plus(c, plus(d, e)))}
+  return(convert<int>(plus(sum, 0.5f32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_exp_log.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*

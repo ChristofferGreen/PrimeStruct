@@ -264,6 +264,26 @@ bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare) {
   return out == "asin" || out == "acos" || out == "atan";
 }
 
+bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "exp" || out == "exp2";
+}
+
+bool getBuiltinLogName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "log" || out == "log2" || out == "log10";
+}
+
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
