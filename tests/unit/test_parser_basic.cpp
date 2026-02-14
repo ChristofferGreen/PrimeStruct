@@ -99,6 +99,31 @@ main() {
   CHECK(mainDef->statements[0].name == "return");
 }
 
+TEST_CASE("parses lambda expressions in bodies") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]([i32] value) { value })
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.name == "return");
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  CHECK(lambdaExpr.isLambda);
+  CHECK(lambdaExpr.lambdaCaptures.empty());
+  REQUIRE(lambdaExpr.args.size() == 1);
+  CHECK(lambdaExpr.args[0].isBinding);
+  CHECK(lambdaExpr.hasBodyArguments);
+  REQUIRE(lambdaExpr.bodyArguments.size() == 1);
+}
+
 TEST_CASE("parses brace constructor values") {
   const std::string source = R"(
 [return<int>]

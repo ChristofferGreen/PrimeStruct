@@ -35,6 +35,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("lambda requires body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]([i32] value))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("lambda requires a body") != std::string::npos);
+}
+
 TEST_CASE("reserved keyword cannot name definition") {
   const std::string source = R"(
 [return<int>]

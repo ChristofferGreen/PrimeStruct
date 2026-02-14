@@ -47,6 +47,10 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return ReturnKind::Unknown;
   };
 
+  if (expr.isLambda) {
+    return ReturnKind::Unknown;
+  }
+
   if (expr.kind == Expr::Kind::Literal) {
     if (expr.isUnsigned) {
       return ReturnKind::UInt64;

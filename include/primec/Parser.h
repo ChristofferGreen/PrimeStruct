@@ -35,6 +35,8 @@ private:
   bool normalizeValueBlock(std::vector<Expr> &body);
   bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
+  bool parseLambdaCaptureList(std::vector<std::string> &captures);
+  bool tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, bool &parsed);
   bool tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed);
   bool tryParseNestedDefinition(std::vector<Definition> &defs,
                                 const std::vector<Transform> &transforms,

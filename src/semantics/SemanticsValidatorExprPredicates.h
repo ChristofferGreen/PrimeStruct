@@ -1,6 +1,10 @@
 bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const std::unordered_map<std::string, BindingInfo> &locals,
                                       const Expr &expr) {
+  if (expr.isLambda) {
+    error_ = "lambda expressions are not supported yet";
+    return false;
+  }
   auto isMutableBinding = [&](const std::vector<ParameterInfo> &paramsIn,
                               const std::unordered_map<std::string, BindingInfo> &localsIn,
                               const std::string &name) -> bool {

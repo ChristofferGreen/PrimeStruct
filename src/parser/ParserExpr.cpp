@@ -217,6 +217,76 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
   return true;
 }
 
+bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, bool &parsed) {
+  parsed = false;
+  if (!match(TokenKind::LBracket)) {
+    return true;
+  }
+  const size_t savedPos = pos_;
+  size_t scan = pos_ + 1;
+  while (scan < tokens_.size() && tokens_[scan].kind != TokenKind::RBracket) {
+    ++scan;
+  }
+  if (scan >= tokens_.size() || tokens_[scan].kind != TokenKind::RBracket) {
+    pos_ = savedPos;
+    return true;
+  }
+  size_t after = scan + 1;
+  while (after < tokens_.size() && isIgnorableToken(tokens_[after].kind)) {
+    ++after;
+  }
+  if (after >= tokens_.size() ||
+      (tokens_[after].kind != TokenKind::LAngle && tokens_[after].kind != TokenKind::LParen)) {
+    pos_ = savedPos;
+    return true;
+  }
+
+  std::vector<std::string> captures;
+  if (!parseLambdaCaptureList(captures)) {
+    return false;
+  }
+  std::vector<std::string> templateArgs;
+  if (match(TokenKind::LAngle)) {
+    if (!parseTemplateList(templateArgs)) {
+      return false;
+    }
+  }
+  if (!expect(TokenKind::LParen, "expected '(' after lambda capture list")) {
+    return false;
+  }
+  std::vector<Expr> params;
+  if (!parseParameterList(params, namespacePrefix)) {
+    return false;
+  }
+  if (!expect(TokenKind::RParen, "expected ')' after lambda parameters")) {
+    return false;
+  }
+  if (!match(TokenKind::LBrace)) {
+    return fail("lambda requires a body");
+  }
+  std::vector<Expr> body;
+  {
+    BraceListGuard braceGuard(*this, true, true);
+    if (!parseBraceExprList(body, namespacePrefix)) {
+      return false;
+    }
+  }
+  Expr lambda;
+  lambda.kind = Expr::Kind::Call;
+  lambda.name = "lambda";
+  lambda.namespacePrefix = namespacePrefix;
+  lambda.templateArgs = std::move(templateArgs);
+  lambda.args = std::move(params);
+  lambda.argNames.resize(lambda.args.size());
+  lambda.hasBodyArguments = true;
+  lambda.bodyArguments = std::move(body);
+  lambda.lambdaCaptures = std::move(captures);
+  lambda.isLambda = true;
+  out = std::move(lambda);
+  parsed = true;
+  return true;
+}
+
 bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix) {
   Token name = consume(TokenKind::Identifier, "expected return statement");
   if (name.kind == TokenKind::End) {
@@ -314,6 +384,15 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return false;
       }
       if (parsed) {
+        return true;
+      }
+    }
+    if (match(TokenKind::LBracket)) {
+      bool parsedLambda = false;
+      if (!tryParseLambdaExpr(out, namespacePrefix, parsedLambda)) {
+        return false;
+      }
+      if (parsedLambda) {
         return true;
       }
     }

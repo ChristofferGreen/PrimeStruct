@@ -195,8 +195,69 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     }
     out.push_back(std::move(transform));
   }
-  expect(TokenKind::RBracket, "expected ']'" );
+  expect(TokenKind::RBracket, "expected ']'");
   return true;
+}
+
+bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
+  captures.clear();
+  if (!expect(TokenKind::LBracket, "expected '[' to start lambda capture list")) {
+    return false;
+  }
+  if (match(TokenKind::RBracket)) {
+    return expect(TokenKind::RBracket, "expected ']' to close lambda capture list");
+  }
+  while (true) {
+    if (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      return fail("expected lambda capture");
+    }
+    std::string entry;
+    while (true) {
+      if (match(TokenKind::Identifier)) {
+        Token name = consume(TokenKind::Identifier, "expected lambda capture");
+        if (name.kind == TokenKind::End) {
+          return false;
+        }
+        if (!entry.empty()) {
+          entry.push_back(' ');
+        }
+        entry += name.text;
+        continue;
+      }
+      if (match(TokenKind::Equal)) {
+        consume(TokenKind::Equal, "expected lambda capture");
+        if (!entry.empty()) {
+          entry.push_back(' ');
+        }
+        entry += "=";
+        continue;
+      }
+      break;
+    }
+    if (entry.empty()) {
+      return fail("expected lambda capture");
+    }
+    captures.push_back(std::move(entry));
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+      if (match(TokenKind::RBracket)) {
+        break;
+      }
+      continue;
+    }
+    if (match(TokenKind::Semicolon)) {
+      expect(TokenKind::Semicolon, "expected ';'");
+      if (match(TokenKind::RBracket)) {
+        break;
+      }
+      continue;
+    }
+    if (match(TokenKind::RBracket)) {
+      break;
+    }
+    return fail("expected ',' or ']' after lambda capture");
+  }
+  return expect(TokenKind::RBracket, "expected ']' to close lambda capture list");
 }
 
 bool Parser::parseTemplateList(std::vector<std::string> &out) {

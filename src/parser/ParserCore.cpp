@@ -696,6 +696,17 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
     if (match(TokenKind::Semicolon)) {
       return fail("semicolon is not allowed");
     }
+    if (match(TokenKind::LBracket)) {
+      Expr lambdaExpr;
+      bool parsedLambda = false;
+      if (!tryParseLambdaExpr(lambdaExpr, def.namespacePrefix, parsedLambda)) {
+        return false;
+      }
+      if (parsedLambda) {
+        def.statements.push_back(std::move(lambdaExpr));
+        continue;
+      }
+    }
     std::vector<Transform> statementTransforms;
     bool hasStatementTransforms = false;
     if (match(TokenKind::LBracket)) {
