@@ -200,6 +200,23 @@ main() {
   CHECK(readFile(errPath).find("print_line requires io_out effect") != std::string::npos);
 }
 
+TEST_CASE("default effects token does not enable io_err output in vm") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line_error("no stderr"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_default_effects_no_io_err.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_default_effects_no_io_err_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --default-effects=default 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("print_line_error requires io_err effect") != std::string::npos);
+}
+
 TEST_CASE("runs vm with implicit utf8 strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]

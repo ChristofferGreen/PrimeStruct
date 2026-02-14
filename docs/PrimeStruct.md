@@ -347,7 +347,7 @@ for(
 - **Transform boundaries:** rewrites annotate frame entry/exit so the VM, C++, and GLSL backends share a consistent calling convention.
 - **Resource handles:** PathSpace references/handles live inside frames as opaque values; lifetimes follow lexical scope.
 - **Tail execution (planned):** future optimisation collapses tail executions to reuse frames (VM optional, GPU required).
-- **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Standard library defaults to stdout/stderr effects.
+- **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Standard library defaults to stdout-only effects (stderr requires `io_err`).
 
 ### Execution Metadata (draft)
 - **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement.
