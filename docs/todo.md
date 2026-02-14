@@ -33,7 +33,7 @@ Legend:
 - ✓ Implement software numeric envelopes (`integer`, `decimal`, `complex`) or document their explicit rejection in the syntax spec.
 - ✓ Align `int`/`float` aliases with the spec’s target-chosen widths (code currently fixes them to `i32`/`f32`) or update the docs to match.
 - ✓ Add template monomorphization for user-defined definitions (templates are parsed but only builtins/collections use them today).
-- ◐ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission are still missing; only validation exists).
+- ✓ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission).
 - ○ Implement `copy`/`public`/`private`/`package`/`static` binding semantics and metadata (currently validated but unused).
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
@@ -46,7 +46,7 @@ Legend:
 - ◐ Expand VM/native float support (parser/semantics/C++ emitter accept floats; VM/native reject float literals/types).
 - ◐ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).
-- ✓ Update PSIR version history in docs (serializer is at v10; docs list up to v9).
+- ✓ Update PSIR version history in docs (serializer is at v11; docs list up to v11).
 
 **Docs Alignment**
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).

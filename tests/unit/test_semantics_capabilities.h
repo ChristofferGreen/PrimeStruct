@@ -349,6 +349,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct alignment rejects smaller field requirement") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [align_bytes(4) i64] value{1i64}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("alignment requirement on field /Thing/value") != std::string::npos);
+}
+
+TEST_CASE("struct alignment rejects smaller struct requirement") {
+  const std::string source = R"(
+[struct align_bytes(4)]
+Thing() {
+  [i64] value{1i64}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("alignment requirement on struct /Thing") != std::string::npos);
+}
+
 TEST_CASE("pod transform validates without args") {
   const std::string source = R"(
 [pod]

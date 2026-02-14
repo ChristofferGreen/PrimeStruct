@@ -1,6 +1,10 @@
 #include "SemanticsValidator.h"
 
+#include <algorithm>
 #include <array>
+#include <cctype>
+#include <functional>
+#include <limits>
 
 namespace primec::semantics {
 
@@ -326,6 +330,241 @@ bool SemanticsValidator::validateEntry() {
     }
     if (param.defaultExpr != nullptr) {
       error_ = "entry parameter does not allow a default value: " + entryPath_;
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SemanticsValidator::validateStructLayouts() {
+  struct LayoutInfo {
+    uint32_t sizeBytes = 0;
+    uint32_t alignmentBytes = 1;
+  };
+  auto isStructDefinition = [&](const Definition &def) {
+    bool hasStruct = false;
+    bool hasReturn = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return") {
+        hasReturn = true;
+      }
+      if (isStructTransformName(transform.name)) {
+        hasStruct = true;
+      }
+    }
+    if (hasStruct) {
+      return true;
+    }
+    if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto alignTo = [](uint32_t value, uint32_t alignment) -> uint32_t {
+    if (alignment == 0) {
+      return value;
+    }
+    uint32_t remainder = value % alignment;
+    if (remainder == 0) {
+      return value;
+    }
+    return value + (alignment - remainder);
+  };
+  auto extractAlignment = [&](const std::vector<Transform> &transforms,
+                              const std::string &context,
+                              uint32_t &alignmentOut,
+                              bool &hasAlignment) -> bool {
+    alignmentOut = 1;
+    hasAlignment = false;
+    for (const auto &transform : transforms) {
+      if (transform.name != "align_bytes" && transform.name != "align_kbytes") {
+        continue;
+      }
+      if (hasAlignment) {
+        error_ = "duplicate " + transform.name + " transform on " + context;
+        return false;
+      }
+      if (!validateAlignTransform(transform, context, error_)) {
+        return false;
+      }
+      auto parsePositiveInt = [](const std::string &text, int &valueOut) -> bool {
+        std::string digits = text;
+        if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
+          digits.resize(digits.size() - 3);
+        }
+        if (digits.empty()) {
+          return false;
+        }
+        int parsed = 0;
+        for (char c : digits) {
+          if (!std::isdigit(static_cast<unsigned char>(c))) {
+            return false;
+          }
+          int digit = c - '0';
+          if (parsed > (std::numeric_limits<int>::max() - digit) / 10) {
+            return false;
+          }
+          parsed = parsed * 10 + digit;
+        }
+        if (parsed <= 0) {
+          return false;
+        }
+        valueOut = parsed;
+        return true;
+      };
+      int value = 0;
+      if (!parsePositiveInt(transform.arguments[0], value)) {
+        error_ = transform.name + " requires a positive integer argument";
+        return false;
+      }
+      uint64_t bytes = static_cast<uint64_t>(value);
+      if (transform.name == "align_kbytes") {
+        bytes *= 1024ull;
+      }
+      if (bytes > std::numeric_limits<uint32_t>::max()) {
+        error_ = transform.name + " alignment too large on " + context;
+        return false;
+      }
+      alignmentOut = static_cast<uint32_t>(bytes);
+      hasAlignment = true;
+    }
+    return true;
+  };
+  auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+    if (!typeName.empty() && typeName[0] == '/') {
+      return typeName;
+    }
+    std::string resolved = resolveTypePath(typeName, namespacePrefix);
+    if (structNames_.count(resolved) > 0) {
+      return resolved;
+    }
+    auto importIt = importAliases_.find(typeName);
+    if (importIt != importAliases_.end()) {
+      return importIt->second;
+    }
+    return resolved;
+  };
+
+  std::unordered_map<std::string, LayoutInfo> layoutCache;
+  std::unordered_set<std::string> layoutStack;
+
+  std::function<bool(const Definition &, LayoutInfo &)> computeStructLayout;
+  std::function<bool(const BindingInfo &, const std::string &, LayoutInfo &)> typeLayoutForBinding;
+
+  computeStructLayout = [&](const Definition &def, LayoutInfo &out) -> bool {
+    auto cached = layoutCache.find(def.fullPath);
+    if (cached != layoutCache.end()) {
+      out = cached->second;
+      return true;
+    }
+    if (!layoutStack.insert(def.fullPath).second) {
+      error_ = "recursive struct layout not supported: " + def.fullPath;
+      return false;
+    }
+    uint32_t structAlign = 1;
+    uint32_t explicitStructAlign = 1;
+    bool hasStructAlign = false;
+    if (!extractAlignment(def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign)) {
+      return false;
+    }
+    uint32_t offset = 0;
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        continue;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+        return false;
+      }
+      LayoutInfo fieldLayout;
+      if (!typeLayoutForBinding(binding, def.namespacePrefix, fieldLayout)) {
+        return false;
+      }
+      uint32_t explicitFieldAlign = 1;
+      bool hasFieldAlign = false;
+      const std::string fieldContext = "field " + def.fullPath + "/" + stmt.name;
+      if (!extractAlignment(stmt.transforms, fieldContext, explicitFieldAlign, hasFieldAlign)) {
+        return false;
+      }
+      if (hasFieldAlign && explicitFieldAlign < fieldLayout.alignmentBytes) {
+        error_ = "alignment requirement on " + fieldContext + " is smaller than required alignment of " +
+                 std::to_string(fieldLayout.alignmentBytes);
+        return false;
+      }
+      uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, fieldLayout.alignmentBytes)
+                                          : fieldLayout.alignmentBytes;
+      offset = alignTo(offset, fieldAlign);
+      offset += fieldLayout.sizeBytes;
+      structAlign = std::max(structAlign, fieldAlign);
+    }
+    if (hasStructAlign && explicitStructAlign < structAlign) {
+      error_ = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +
+               std::to_string(structAlign);
+      return false;
+    }
+    structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
+    uint32_t totalSize = alignTo(offset, structAlign);
+    LayoutInfo layout{totalSize, structAlign};
+    layoutCache.emplace(def.fullPath, layout);
+    layoutStack.erase(def.fullPath);
+    out = layout;
+    return true;
+  };
+
+  typeLayoutForBinding = [&](const BindingInfo &binding,
+                             const std::string &namespacePrefix,
+                             LayoutInfo &layoutOut) -> bool {
+    std::string normalized = normalizeBindingTypeName(binding.typeName);
+    if (normalized == "i32" || normalized == "int" || normalized == "f32") {
+      layoutOut = {4u, 4u};
+      return true;
+    }
+    if (normalized == "i64" || normalized == "u64" || normalized == "f64") {
+      layoutOut = {8u, 8u};
+      return true;
+    }
+    if (normalized == "bool") {
+      layoutOut = {1u, 1u};
+      return true;
+    }
+    if (normalized == "string") {
+      layoutOut = {8u, 8u};
+      return true;
+    }
+    if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
+      layoutOut = {8u, 8u};
+      return true;
+    }
+    if (binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "map") {
+      layoutOut = {8u, 8u};
+      return true;
+    }
+    std::string structPath = resolveStructTypePath(binding.typeName, namespacePrefix);
+    auto defIt = defMap_.find(structPath);
+    if (defIt == defMap_.end()) {
+      error_ = "unknown struct type for layout: " + binding.typeName;
+      return false;
+    }
+    LayoutInfo nested;
+    if (!computeStructLayout(*defIt->second, nested)) {
+      return false;
+    }
+    layoutOut = nested;
+    return true;
+  };
+
+  for (const auto &def : program_.definitions) {
+    if (!isStructDefinition(def)) {
+      continue;
+    }
+    LayoutInfo layout;
+    if (!computeStructLayout(def, layout)) {
       return false;
     }
   }

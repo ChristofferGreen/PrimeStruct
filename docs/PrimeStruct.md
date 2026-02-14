@@ -76,13 +76,13 @@ module {
 - **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
 - **IR definition (draft):**
-  - **Module:** `{ string_table, functions, entry_index, version }`.
+  - **Module:** `{ string_table, struct_layouts, functions, entry_index, version }`.
   - **Function:** `{ name, instructions }` where instructions are linear, stack-based ops with immediates.
   - **Instruction:** `{ op, imm }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning depends on `op`.
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
   - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR versioning).
   - **Entry:** `entry_index` points to the entry function in `functions`; its signature is enforced by the front-end.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
@@ -484,7 +484,7 @@ for(
 
 ## VM Design (draft)
 - **Instruction set:** ~50 stack-based ops covering control flow, stack manipulation, memory/pointer access, optional coroutine primitives. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR versioning:** current portable IR is PSIR v9 (adds `PrintArgvUnsafe` for unchecked entry-arg prints, plus `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
+- **PSIR versioning:** current portable IR is PSIR v11 (adds struct layout manifests on top of `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.

@@ -61,6 +61,40 @@ log(1i32) {
   CHECK(readFile(outPath).empty());
 }
 
+TEST_CASE("struct Create/Destroy helpers run in C++ emitter") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value{1i32}
+
+  [effects(io_out)]
+  Create() {
+    print_line(1i32)
+  }
+
+  [effects(io_out)]
+  Destroy() {
+    print_line(2i32)
+  }
+}
+
+[return<int>]
+main() {
+  Thing()
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_struct_lifecycle.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_lifecycle_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_struct_lifecycle_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "1\n2\n");
+}
+
 TEST_CASE("compiles and runs import alias in C++ emitter") {
   const std::string source = R"(
 import /util

@@ -23,6 +23,7 @@ private:
   bool buildDefinitionMaps();
   bool buildParameters();
   bool inferUnknownReturnKinds();
+  bool validateStructLayouts();
   bool validateDefinitions();
   bool validateExecutions();
   bool validateEntry();

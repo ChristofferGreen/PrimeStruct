@@ -58,6 +58,35 @@ enum class IrOpcode : uint8_t {
   LoadStringByte,
 };
 
+enum class IrStructFieldCategory : uint8_t {
+  Default = 0,
+  Pod,
+  Handle,
+  GpuLane,
+};
+
+enum class IrStructPaddingKind : uint8_t {
+  None = 0,
+  Align,
+};
+
+struct IrStructField {
+  std::string name;
+  std::string envelope;
+  uint32_t offsetBytes = 0;
+  uint32_t sizeBytes = 0;
+  uint32_t alignmentBytes = 1;
+  IrStructPaddingKind paddingKind = IrStructPaddingKind::None;
+  IrStructFieldCategory category = IrStructFieldCategory::Default;
+};
+
+struct IrStructLayout {
+  std::string name;
+  uint32_t totalSizeBytes = 0;
+  uint32_t alignmentBytes = 1;
+  std::vector<IrStructField> fields;
+};
+
 constexpr uint64_t PrintFlagNewline = 1ull << 0;
 constexpr uint64_t PrintFlagStderr = 1ull << 1;
 constexpr uint64_t PrintFlagMask = PrintFlagNewline | PrintFlagStderr;
@@ -93,6 +122,7 @@ struct IrModule {
   std::vector<IrFunction> functions;
   int32_t entryIndex = -1;
   std::vector<std::string> stringTable;
+  std::vector<IrStructLayout> structLayouts;
 };
 
 } // namespace primec

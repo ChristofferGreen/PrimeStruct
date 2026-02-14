@@ -65,6 +65,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir emits struct layout metadata") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value{1i32}
+  [i64] count{2i64}
+}
+
+[return<void>]
+main() {
+  Thing()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+  auto layoutIt = std::find_if(module.structLayouts.begin(),
+                               module.structLayouts.end(),
+                               [](const primec::IrStructLayout &layout) { return layout.name == "/Thing"; });
+  REQUIRE(layoutIt != module.structLayouts.end());
+  CHECK(layoutIt->alignmentBytes == 8u);
+  CHECK(layoutIt->totalSizeBytes == 16u);
+  REQUIRE(layoutIt->fields.size() == 2u);
+  CHECK(layoutIt->fields[0].name == "value");
+  CHECK(layoutIt->fields[0].offsetBytes == 0u);
+  CHECK(layoutIt->fields[0].sizeBytes == 4u);
+  CHECK(layoutIt->fields[1].name == "count");
+  CHECK(layoutIt->fields[1].offsetBytes == 8u);
+  CHECK(layoutIt->fields[1].sizeBytes == 8u);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  auto decodedIt = std::find_if(decoded.structLayouts.begin(),
+                                decoded.structLayouts.end(),
+                                [](const primec::IrStructLayout &layout) { return layout.name == "/Thing"; });
+  REQUIRE(decodedIt != decoded.structLayouts.end());
+  CHECK(decodedIt->totalSizeBytes == 16u);
+  CHECK(decodedIt->fields.size() == 2u);
+}
+
 TEST_CASE("ir serialize roundtrip with implicit void return") {
   const std::string source = R"(
 [return<void>]

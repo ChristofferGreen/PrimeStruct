@@ -3,6 +3,7 @@
 #include "EmitterHelpers.h"
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <sstream>
 #include <unordered_map>
@@ -14,6 +15,7 @@ using namespace emitter;
 
 std::string Emitter::emitCpp(const Program &program, const std::string &entryPath) const {
   std::unordered_map<std::string, std::string> nameMap;
+  std::unordered_map<std::string, std::string> structTypeMap;
   std::unordered_map<std::string, std::vector<Expr>> paramMap;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
@@ -57,12 +59,151 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     return true;
   };
+  enum class HelperKind { Create, Destroy };
+  struct HelperSuffixInfo {
+    std::string_view suffix;
+    HelperKind kind;
+    std::string_view placement;
+  };
+  auto matchLifecycleHelper =
+      [](const std::string &fullPath, std::string &parentOut, HelperKind &kindOut, std::string &placementOut) -> bool {
+    static const std::array<HelperSuffixInfo, 8> suffixes = {{
+        {"Create", HelperKind::Create, ""},
+        {"Destroy", HelperKind::Destroy, ""},
+        {"CreateStack", HelperKind::Create, "stack"},
+        {"DestroyStack", HelperKind::Destroy, "stack"},
+        {"CreateHeap", HelperKind::Create, "heap"},
+        {"DestroyHeap", HelperKind::Destroy, "heap"},
+        {"CreateBuffer", HelperKind::Create, "buffer"},
+        {"DestroyBuffer", HelperKind::Destroy, "buffer"},
+    }};
+    for (const auto &info : suffixes) {
+      const std::string_view suffix = info.suffix;
+      if (fullPath.size() < suffix.size() + 1) {
+        continue;
+      }
+      const size_t suffixStart = fullPath.size() - suffix.size();
+      if (fullPath[suffixStart - 1] != '/') {
+        continue;
+      }
+      if (fullPath.compare(suffixStart, suffix.size(), suffix.data(), suffix.size()) != 0) {
+        continue;
+      }
+      parentOut = fullPath.substr(0, suffixStart - 1);
+      kindOut = info.kind;
+      placementOut = std::string(info.placement);
+      return true;
+    }
+    return false;
+  };
+  auto isLifecycleHelper = [&](const Definition &def, std::string &parentOut) {
+    HelperKind kind = HelperKind::Create;
+    std::string placement;
+    if (!matchLifecycleHelper(def.fullPath, parentOut, kind, placement)) {
+      parentOut.clear();
+      return false;
+    }
+    return true;
+  };
+  auto isHelperMutable = [](const Definition &def) {
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "mut") {
+        return true;
+      }
+    }
+    return false;
+  };
+  struct LifecycleHelpers {
+    const Definition *create = nullptr;
+    const Definition *destroy = nullptr;
+    const Definition *createStack = nullptr;
+    const Definition *destroyStack = nullptr;
+  };
+  std::unordered_map<std::string, LifecycleHelpers> helpersByStruct;
+
   for (const auto &def : program.definitions) {
-    nameMap[def.fullPath] = toCppName(def.fullPath);
     if (isStructDefinition(def)) {
+      structTypeMap[def.fullPath] = toCppName(def.fullPath);
+    }
+    std::string parentPath;
+    HelperKind kind = HelperKind::Create;
+    std::string placement;
+    if (matchLifecycleHelper(def.fullPath, parentPath, kind, placement)) {
+      auto &helpers = helpersByStruct[parentPath];
+      if (placement == "stack") {
+        if (kind == HelperKind::Create) {
+          helpers.createStack = &def;
+        } else {
+          helpers.destroyStack = &def;
+        }
+      } else if (placement.empty()) {
+        if (kind == HelperKind::Create) {
+          helpers.create = &def;
+        } else {
+          helpers.destroy = &def;
+        }
+      }
+    }
+  }
+
+  auto makeThisParam = [&](const std::string &structPath, bool isMutable) {
+    Expr param;
+    param.kind = Expr::Kind::Name;
+    param.isBinding = true;
+    param.name = "__self";
+    Transform typeTransform;
+    typeTransform.name = "Reference";
+    typeTransform.templateArgs.push_back(structPath);
+    param.transforms.push_back(std::move(typeTransform));
+    if (isMutable) {
+      Transform mutTransform;
+      mutTransform.name = "mut";
+      param.transforms.push_back(std::move(mutTransform));
+    }
+    return param;
+  };
+
+  auto returnTypeFor = [&](const Definition &def) {
+    ReturnKind returnKind = returnKinds[def.fullPath];
+    if (returnKind == ReturnKind::Void) {
+      return std::string("void");
+    }
+    if (returnKind == ReturnKind::Int64) {
+      return std::string("int64_t");
+    }
+    if (returnKind == ReturnKind::UInt64) {
+      return std::string("uint64_t");
+    }
+    if (returnKind == ReturnKind::Float32) {
+      return std::string("float");
+    }
+    if (returnKind == ReturnKind::Float64) {
+      return std::string("double");
+    }
+    if (returnKind == ReturnKind::Bool) {
+      return std::string("bool");
+    }
+    return std::string("int");
+  };
+
+  for (const auto &def : program.definitions) {
+    if (isStructDefinition(def)) {
+      nameMap[def.fullPath] = toCppName(def.fullPath) + "_ctor";
       paramMap[def.fullPath] = def.statements;
     } else {
-      paramMap[def.fullPath] = def.parameters;
+      nameMap[def.fullPath] = toCppName(def.fullPath);
+      std::string parentPath;
+      if (isLifecycleHelper(def, parentPath)) {
+        std::vector<Expr> params;
+        params.reserve(def.parameters.size() + 1);
+        params.push_back(makeThisParam(parentPath, isHelperMutable(def)));
+        for (const auto &param : def.parameters) {
+          params.push_back(param);
+        }
+        paramMap[def.fullPath] = std::move(params);
+      } else {
+        paramMap[def.fullPath] = def.parameters;
+      }
     }
     defMap[def.fullPath] = &def;
     returnKinds[def.fullPath] = getReturnKind(def);
@@ -813,22 +954,114 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   out << "  std::string text = std::to_string(value);\n";
   out << "  ps_write(stream, text.c_str(), text.size(), newline);\n";
   out << "}\n";
-  for (const auto &def : program.definitions) {
-    ReturnKind returnKind = returnKinds[def.fullPath];
-    std::string returnType = "int";
-    if (returnKind == ReturnKind::Void) {
-      returnType = "void";
-    } else if (returnKind == ReturnKind::Int64) {
-      returnType = "int64_t";
-    } else if (returnKind == ReturnKind::UInt64) {
-      returnType = "uint64_t";
-    } else if (returnKind == ReturnKind::Float32) {
-      returnType = "float";
-    } else if (returnKind == ReturnKind::Float64) {
-      returnType = "double";
-    } else if (returnKind == ReturnKind::Bool) {
-      returnType = "bool";
+  auto pickCreateHelper = [&](const std::string &structPath) -> const Definition * {
+    auto it = helpersByStruct.find(structPath);
+    if (it == helpersByStruct.end()) {
+      return nullptr;
     }
+    if (it->second.createStack) {
+      return it->second.createStack;
+    }
+    return it->second.create;
+  };
+  auto pickDestroyHelper = [&](const std::string &structPath) -> const Definition * {
+    auto it = helpersByStruct.find(structPath);
+    if (it == helpersByStruct.end()) {
+      return nullptr;
+    }
+    if (it->second.destroyStack) {
+      return it->second.destroyStack;
+    }
+    return it->second.destroy;
+  };
+  for (const auto &def : program.definitions) {
+    if (!isStructDefinition(def)) {
+      continue;
+    }
+    out << "struct " << structTypeMap.at(def.fullPath) << ";\n";
+  }
+  for (const auto &def : program.definitions) {
+    std::string parentPath;
+    if (!isLifecycleHelper(def, parentPath)) {
+      continue;
+    }
+    out << "static " << returnTypeFor(def) << " " << nameMap[def.fullPath] << "(";
+    const auto &params = paramMap[def.fullPath];
+    for (size_t i = 0; i < params.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      BindingInfo paramInfo = getBindingInfo(params[i]);
+      std::string paramType =
+          bindingTypeToCpp(paramInfo, def.namespacePrefix, importAliases, structTypeMap);
+      bool needsConst = !paramInfo.isMutable;
+      if (needsConst && paramType.rfind("const ", 0) == 0) {
+        needsConst = false;
+      }
+      out << (needsConst ? "const " : "") << paramType << " " << params[i].name;
+    }
+    out << ");\n";
+  }
+  for (const auto &def : program.definitions) {
+    if (!isStructDefinition(def)) {
+      continue;
+    }
+    const std::string &structType = structTypeMap.at(def.fullPath);
+    out << "struct " << structType << " {\n";
+    for (const auto &field : def.statements) {
+      if (!field.isBinding) {
+        continue;
+      }
+      BindingInfo binding = getBindingInfo(field);
+      std::string fieldType =
+          bindingTypeToCpp(binding, def.namespacePrefix, importAliases, structTypeMap);
+      out << "  " << fieldType << " " << field.name << ";\n";
+    }
+    const Definition *destroyHelper = pickDestroyHelper(def.fullPath);
+    if (destroyHelper) {
+      out << "  ~" << structType << "() {\n";
+      out << "    " << nameMap[destroyHelper->fullPath] << "(*this);\n";
+      out << "  }\n";
+    }
+    out << "};\n";
+
+    out << "static inline " << structType << " " << nameMap[def.fullPath] << "(";
+    const auto &fields = paramMap[def.fullPath];
+    for (size_t i = 0; i < fields.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      BindingInfo paramInfo = getBindingInfo(fields[i]);
+      std::string paramType =
+          bindingTypeToCpp(paramInfo, def.namespacePrefix, importAliases, structTypeMap);
+      bool needsConst = !paramInfo.isMutable;
+      if (needsConst && paramType.rfind("const ", 0) == 0) {
+        needsConst = false;
+      }
+      out << (needsConst ? "const " : "") << paramType << " " << fields[i].name;
+    }
+    out << ") {\n";
+    out << "  " << structType << " __instance{";
+    for (size_t i = 0; i < fields.size(); ++i) {
+      if (i > 0) {
+        out << ", ";
+      }
+      out << fields[i].name;
+    }
+    out << "};\n";
+    const Definition *createHelper = pickCreateHelper(def.fullPath);
+    if (createHelper) {
+      out << "  " << nameMap[createHelper->fullPath] << "(__instance);\n";
+    }
+    out << "  return __instance;\n";
+    out << "}\n";
+  }
+  for (const auto &def : program.definitions) {
+    if (isStructDefinition(def)) {
+      continue;
+    }
+    ReturnKind returnKind = returnKinds[def.fullPath];
+    std::string returnType = returnTypeFor(def);
     const auto &params = paramMap[def.fullPath];
     const bool structDef = isStructDefinition(def);
     out << "static " << returnType << " " << nameMap[def.fullPath] << "(";
@@ -837,7 +1070,8 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << ", ";
       }
       BindingInfo paramInfo = getBindingInfo(params[i]);
-      std::string paramType = bindingTypeToCpp(paramInfo);
+      std::string paramType =
+          bindingTypeToCpp(paramInfo, def.namespacePrefix, importAliases, structTypeMap);
       bool needsConst = !paramInfo.isMutable;
       if (needsConst && paramType.rfind("const ", 0) == 0) {
         needsConst = false;
@@ -852,7 +1086,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
-          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
         }
         out << ";\n";
         return;
@@ -863,7 +1097,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           const char *stream = (printBuiltin.target == PrintTarget::Err) ? "stderr" : "stdout";
           std::string argText = "\"\"";
           if (!stmt.args.empty()) {
-            argText = emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+            argText = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
           }
           out << pad << "ps_print_value(" << stream << ", " << argText << ", "
               << (printBuiltin.newline ? "true" : "false") << ");\n";
@@ -885,7 +1119,8 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
             binding.typeTemplateArg.clear();
           }
         }
-        std::string type = bindingTypeToCpp(binding);
+        const std::string typeNamespace = stmt.namespacePrefix.empty() ? def.namespacePrefix : stmt.namespacePrefix;
+        std::string type = bindingTypeToCpp(binding, typeNamespace, importAliases, structTypeMap);
         bool isReference = binding.typeName == "Reference";
         localTypes[stmt.name] = binding;
         bool needsConst = !binding.isMutable;
@@ -895,9 +1130,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
         if (!stmt.args.empty()) {
           if (isReference) {
-            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ")";
+            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ")";
           } else {
-            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
           }
         }
         out << ";\n";
@@ -920,7 +1155,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           const std::string resolved = resolveExprPath(candidate);
           return nameMap.count(resolved) == 0;
         };
-        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
+        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
         {
           auto blockTypes = localTypes;
           if (isIfBlockEnvelope(thenArg)) {
@@ -965,7 +1200,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         out << pad << "{\n";
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
         std::string countExpr =
-            emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+            emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
         std::unordered_map<std::string, ReturnKind> locals;
         locals.reserve(localTypes.size());
         for (const auto &entry : localTypes) {
@@ -988,7 +1223,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.kind == Expr::Kind::Call && isWhileCall(stmt) && stmt.args.size() == 2 && isLoopBlockEnvelope(stmt.args[1])) {
         out << pad << "while ("
-            << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
+            << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
         auto blockTypes = localTypes;
         for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
           emitStatement(bodyStmt, indent + 1, blockTypes);
@@ -1002,7 +1237,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         emitStatement(stmt.args[0], indent + 1, loopTypes);
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
         out << innerPad << "while ("
-            << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, loopTypes, returnKinds, hasMathImport) << ") {\n";
+            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, hasMathImport) << ") {\n";
         auto blockTypes = loopTypes;
         for (const auto &bodyStmt : stmt.args[3].bodyArguments) {
           emitStatement(bodyStmt, indent + 2, blockTypes);
@@ -1021,7 +1256,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string countExpr = "\"\"";
         ReturnKind countKind = ReturnKind::Unknown;
         if (!stmt.args.empty()) {
-          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
           std::unordered_map<std::string, ReturnKind> locals;
           locals.reserve(localTypes.size());
           for (const auto &entry : localTypes) {
@@ -1060,7 +1295,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         auto it = nameMap.find(full);
         if (it == nameMap.end()) {
-          out << pad << emitExpr(stmt, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
+          out << pad << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
           return;
         }
         out << pad << it->second << "(";
@@ -1077,7 +1312,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (i > 0) {
             out << ", ";
           }
-          out << emitExpr(*orderedArgs[i], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport);
+          out << emitExpr(*orderedArgs[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
         }
         if (!orderedArgs.empty()) {
           out << ", ";
@@ -1093,12 +1328,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
         out << pad << stmt.args.front().name << " = "
-            << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
+            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isPathSpaceBuiltinName(stmt) && nameMap.find(resolveExprPath(stmt)) == nameMap.end()) {
         for (const auto &arg : stmt.args) {
-          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ");\n";
+          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ");\n";
         }
         return;
       }
@@ -1106,50 +1341,50 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string vectorHelper;
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
           if (vectorHelper == "push") {
-            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ".push_back("
-                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "pop") {
             out << pad << "ps_vector_pop("
-                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "reserve") {
             out << pad << "ps_vector_reserve("
-                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "clear") {
-            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ".clear();\n";
             return;
           }
           if (vectorHelper == "remove_at") {
             out << pad << "ps_vector_remove_at("
-                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "remove_swap") {
             out << pad << "ps_vector_remove_swap("
-                << emitExpr(stmt.args[0], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
                 << ");\n";
             return;
           }
         }
       }
-      out << pad << emitExpr(stmt, nameMap, paramMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
+      out << pad << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
     };
     std::unordered_map<std::string, BindingInfo> localTypes;
     for (const auto &param : params) {

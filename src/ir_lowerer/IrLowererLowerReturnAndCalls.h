@@ -258,33 +258,6 @@
     }
     return it->second;
   };
-  auto isStructTransformName = [](const std::string &name) {
-    return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane";
-  };
-  auto isStructDefinition = [&](const Definition &def) {
-    bool hasStruct = false;
-    bool hasReturn = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "return") {
-        hasReturn = true;
-      }
-      if (isStructTransformName(transform.name)) {
-        hasStruct = true;
-      }
-    }
-    if (hasStruct) {
-      return true;
-    }
-    if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
-      return false;
-    }
-    for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
-        return false;
-      }
-    }
-    return true;
-  };
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
                                        const std::vector<Expr> &params,
                                        std::vector<const Expr *> &ordered) -> bool {

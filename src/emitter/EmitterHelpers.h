@@ -31,6 +31,14 @@ bool hasExplicitBindingTypeTransform(const Expr &expr);
 BindingInfo getBindingInfo(const Expr &expr);
 std::string bindingTypeToCpp(const BindingInfo &info);
 std::string bindingTypeToCpp(const std::string &typeName);
+std::string bindingTypeToCpp(const BindingInfo &info,
+                             const std::string &namespacePrefix,
+                             const std::unordered_map<std::string, std::string> &importAliases,
+                             const std::unordered_map<std::string, std::string> &structTypeMap);
+std::string bindingTypeToCpp(const std::string &typeName,
+                             const std::string &namespacePrefix,
+                             const std::unordered_map<std::string, std::string> &importAliases,
+                             const std::unordered_map<std::string, std::string> &structTypeMap);
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
 std::string typeNameForReturnKind(ReturnKind kind);
 ReturnKind returnKindForTypeName(const std::string &name);

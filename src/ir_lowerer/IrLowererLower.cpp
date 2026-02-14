@@ -3,6 +3,8 @@
 
 #include "IrLowererHelpers.h"
 
+#include <algorithm>
+#include <cctype>
 #include <functional>
 #include <limits>
 #include <unordered_map>
