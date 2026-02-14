@@ -445,10 +445,12 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     out.textFilters.clear();
     out.textTransformRules.clear();
     out.semanticTransforms.clear();
+    out.allowEnvelopeTextTransforms = false;
   } else {
     if (noTextTransforms) {
       out.textFilters.clear();
       out.textTransformRules.clear();
+      out.allowEnvelopeTextTransforms = false;
     }
     if (noSemanticTransforms) {
       out.semanticTransforms.clear();
@@ -551,6 +553,7 @@ int main(int argc, char **argv) {
   primec::TextFilterOptions textOptions;
   textOptions.enabledFilters = options.textFilters;
   textOptions.rules = options.textTransformRules;
+  textOptions.allowEnvelopeTransforms = options.allowEnvelopeTextTransforms;
   std::string filteredSource;
   if (!textPipeline.apply(source, filteredSource, error, textOptions)) {
     std::cerr << "Transform error: " << error << "\n";

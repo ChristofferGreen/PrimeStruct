@@ -986,7 +986,18 @@ bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envel
     pos = close + 1;
     skipWhitespaceAndComments(input, pos);
   }
-  if (pos >= input.size() || input[pos] != '(') {
+  if (pos >= input.size()) {
+    return false;
+  }
+  if (input[pos] == '{') {
+    size_t closeBrace = findMatchingCloseWithComments(input, pos, '{', '}');
+    if (closeBrace == std::string::npos) {
+      return false;
+    }
+    envelopeEnd = closeBrace;
+    return true;
+  }
+  if (input[pos] != '(') {
     return false;
   }
   size_t closeParen = findMatchingCloseWithComments(input, pos, '(', ')');
@@ -1472,7 +1483,9 @@ bool TextFilterPipeline::apply(const std::string &input,
   output = input;
   error.clear();
   if (options.enabledFilters.empty() && options.rules.empty()) {
-    return true;
+    if (!options.allowEnvelopeTransforms) {
+      return true;
+    }
   }
   return applyPerEnvelope(input, output, error, options.enabledFilters, options.rules, false, "");
 }

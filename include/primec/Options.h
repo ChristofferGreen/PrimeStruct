@@ -15,6 +15,7 @@ struct Options {
   std::string dumpStage;
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8"};
   std::vector<TextTransformRule> textTransformRules;
+  bool allowEnvelopeTextTransforms = true;
   std::vector<std::string> semanticTransforms;
   bool requireCanonicalSyntax = false;
   std::vector<std::string> defaultEffects = {"io_out", "io_err"};

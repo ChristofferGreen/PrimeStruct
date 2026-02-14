@@ -15,6 +15,7 @@ struct TextTransformRule {
 struct TextFilterOptions {
   std::vector<std::string> enabledFilters = {"collections", "operators", "implicit-utf8"};
   std::vector<TextTransformRule> rules;
+  bool allowEnvelopeTransforms = true;
 
   bool hasFilter(const std::string &name) const {
     for (const auto &filter : enabledFilters) {
