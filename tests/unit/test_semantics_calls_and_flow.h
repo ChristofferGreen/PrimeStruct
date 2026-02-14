@@ -40,6 +40,23 @@ main() {
   CHECK(error.find("repeat does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("brace constructor values validate") {
+  const std::string source = R"(
+[return<int>]
+pick([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(pick{ 3i32 })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("loop while for validate") {
   const std::string source = R"(
 [return<int>]

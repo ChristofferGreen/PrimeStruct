@@ -99,6 +99,37 @@ main() {
   CHECK(mainDef->statements[0].name == "return");
 }
 
+TEST_CASE("parses brace constructor values") {
+  const std::string source = R"(
+[return<int>]
+pick([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(pick{ 3i32 })
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  const auto &mainDef = program.definitions[1];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &pickCall = returnCall.args[0];
+  REQUIRE(pickCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(pickCall.args.size() == 1);
+  const auto &blockArg = pickCall.args[0];
+  REQUIRE(blockArg.kind == primec::Expr::Kind::Call);
+  CHECK(blockArg.name == "block");
+  CHECK(blockArg.hasBodyArguments);
+  REQUIRE(blockArg.bodyArguments.size() == 1);
+  CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses execution with arguments and body") {
   const std::string source = R"(
 [return<int>]

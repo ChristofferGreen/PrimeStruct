@@ -1268,7 +1268,8 @@ TEST_CASE("call body requires parameter list") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(helper { 1i32 })
+  [effects(io_out)] helper { 1i32 }
+  return(1i32)
 }
 )";
   primec::Lexer lexer(source);

@@ -290,6 +290,26 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     afterLabel = scan + 1;
     return true;
   };
+  auto parseBraceConstructor = [&](Expr &call, Expr &out) -> bool {
+    if (!allowSurfaceSyntax_) {
+      return fail("brace constructors require canonical call form");
+    }
+    Expr block;
+    block.kind = Expr::Kind::Call;
+    block.name = "block";
+    block.namespacePrefix = namespacePrefix;
+    block.hasBodyArguments = true;
+    {
+      BraceListGuard braceGuard(*this, true, true);
+      if (!parseBraceExprList(block.bodyArguments, namespacePrefix)) {
+        return false;
+      }
+    }
+    call.args.push_back(std::move(block));
+    call.argNames.push_back(std::nullopt);
+    out = std::move(call);
+    return true;
+  };
   auto parsePrimary = [&](Expr &out) -> bool {
     if (allowSurfaceSyntax_ && match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsed = false;
@@ -372,6 +392,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
             }
             out = std::move(call);
             return true;
+          }
+          if (!allowBareBindings_) {
+            return parseBraceConstructor(call, out);
           }
           return fail("call body requires parameter list");
         }
@@ -597,6 +620,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
             if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
               return false;
             }
+          } else if (!allowBareBindings_) {
+            return parseBraceConstructor(call, out);
           } else if (allowBareBindings_) {
             if (!call.templateArgs.empty()) {
               return fail("template arguments require a call");
