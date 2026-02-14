@@ -381,7 +381,7 @@ TEST_CASE("ir lowerer rejects unsupported math builtin") {
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(asin(0.5f)))
+  return(convert<int>(asinh(0.5f)))
 }
 )";
   primec::Program program;
@@ -392,7 +392,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support math builtin: asin") != std::string::npos);
+  CHECK(error.find("native backend does not support math builtin: asinh") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports math constant conversions") {

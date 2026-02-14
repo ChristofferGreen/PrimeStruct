@@ -689,9 +689,10 @@
               mathName == "clamp" || mathName == "saturate" || mathName == "lerp" || mathName == "fma" ||
               mathName == "hypot" || mathName == "copysign" || mathName == "radians" || mathName == "degrees" ||
               mathName == "sin" || mathName == "cos" || mathName == "tan" || mathName == "atan2" ||
-              mathName == "pow" || mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite" ||
-              mathName == "floor" || mathName == "ceil" || mathName == "round" || mathName == "trunc" ||
-              mathName == "fract" || mathName == "sqrt" || mathName == "cbrt") {
+              mathName == "asin" || mathName == "acos" || mathName == "atan" || mathName == "pow" ||
+              mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite" || mathName == "floor" ||
+              mathName == "ceil" || mathName == "round" || mathName == "trunc" || mathName == "fract" ||
+              mathName == "sqrt" || mathName == "cbrt") {
             // Supported in native/VM lowering.
           } else {
             error = "native backend does not support math builtin: " + mathName;
