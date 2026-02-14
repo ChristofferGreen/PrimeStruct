@@ -329,6 +329,30 @@ main([i32;] left; [i32;] right;) {
   CHECK(program.definitions[1].parameters.size() == 2);
 }
 
+TEST_CASE("parses leading separators in template lists") {
+  const std::string source = R"(
+[return<int>]
+pair<, i32; i32>() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [array<; i32>] values{array<i32>(1i32)}
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  CHECK(program.definitions[0].templateArgs.size() == 2);
+  const auto &binding = program.definitions[1].statements[0];
+  REQUIRE(binding.isBinding);
+  REQUIRE(binding.transforms.size() >= 1);
+  CHECK(binding.transforms[0].name == "array");
+  REQUIRE(binding.transforms[0].templateArgs.size() == 1);
+  CHECK(binding.transforms[0].templateArgs[0] == "i32");
+}
+
 TEST_CASE("parses comma-separated transform lists") {
   const std::string source = R"(
 [return<int>, effects(io_out)]

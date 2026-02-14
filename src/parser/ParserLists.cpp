@@ -291,6 +291,7 @@ bool Parser::parseTemplateList(std::vector<std::string> &out) {
   if (!expectRaw(TokenKind::LAngle, "expected '<'")) {
     return false;
   }
+  skipSeparators();
   if (matchRaw(TokenKind::RAngle)) {
     return fail("expected template identifier");
   }
@@ -366,6 +367,7 @@ bool Parser::parseTypeName(std::string &out) {
   if (matchRaw(TokenKind::LAngle)) {
     expectRaw(TokenKind::LAngle, "expected '<'");
     out += "<";
+    skipSeparators();
     if (matchRaw(TokenKind::RAngle)) {
       return fail("expected template identifier");
     }
