@@ -42,7 +42,7 @@ Legend:
 - ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
 
 **Backends & IR**
-- ○ Add GLSL/SPIR-V backend (docs mention GPU lowering, but there is no backend in `src/`).
+- ◐ Add GLSL/SPIR-V backend (docs mention GPU lowering, but there is no backend in `src/`).
 - ◐ Expand VM/native float support (parser/semantics/C++ emitter accept floats; VM/native reject float literals/types).
 - ◐ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).

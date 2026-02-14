@@ -1,5 +1,6 @@
 #include "primec/AstPrinter.h"
 #include "primec/Emitter.h"
+#include "primec/GlslEmitter.h"
 #include "primec/IncludeResolver.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrPrinter.h"
@@ -373,7 +374,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       }
       break;
     }
-    if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" || arg == "--emit=vm") {
+    if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" ||
+        arg == "--emit=vm" || arg == "--emit=glsl") {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "-o" && i + 1 < argc) {
       out.outputPath = argv[++i];
@@ -529,6 +531,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.outputPath = stem + ".cpp";
     } else if (out.emitKind == "ir") {
       out.outputPath = stem + ".psir";
+    } else if (out.emitKind == "glsl") {
+      out.outputPath = stem + ".glsl";
     } else {
       out.outputPath = stem;
     }
@@ -580,7 +584,7 @@ int main(int argc, char **argv) {
     if (!argError.empty()) {
       std::cerr << "Argument error: " << argError << "\n";
     }
-    std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm] <input.prime> [-o <output>] [--entry /path] "
+    std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl] <input.prime> [-o <output>] [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] [--text-transforms <list>] "
                  "[--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                  "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
@@ -715,11 +719,25 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  if (options.emitKind == "glsl") {
+    primec::GlslEmitter glslEmitter;
+    std::string glslSource;
+    if (!glslEmitter.emitSource(program, options.entryPath, glslSource, error)) {
+      std::cerr << "GLSL emit error: " << error << "\n";
+      return 2;
+    }
+    if (!writeFile(options.outputPath, glslSource)) {
+      std::cerr << "Failed to write output: " << options.outputPath << "\n";
+      return 2;
+    }
+    return 0;
+  }
+
   primec::Emitter emitter;
   std::string cppSource = emitter.emitCpp(program, options.entryPath);
 
   if (options.emitKind == "cpp") {
-  if (!writeFile(options.outputPath, cppSource)) {
+    if (!writeFile(options.outputPath, cppSource)) {
       std::cerr << "Failed to write output: " << options.outputPath << "\n";
       return 2;
     }

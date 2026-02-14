@@ -75,6 +75,7 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 #include "test_compile_run_smoke.h"
 #include "test_compile_run_vm_collections.h"
 #include "test_compile_run_emitters.h"
+#include "test_compile_run_glsl.h"
 #include "test_compile_run_native_backend.h"
 #include "test_compile_run_includes.h"
 #include "test_compile_run_text_filters.h"

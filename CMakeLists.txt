@@ -13,6 +13,7 @@ add_library(primec_lib
   src/emitter/EmitterExpr.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
   src/emitter/EmitterHelpersTypes.cpp
+  src/glsl_emitter/GlslEmitter.cpp
   src/IncludeResolver.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererLower.cpp
@@ -150,6 +151,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.vm.core
     primestruct.compile.run.vm.collections
     primestruct.compile.run.emitters.cpp
+    primestruct.compile.run.glsl
     primestruct.compile.run.native_backend.core
     primestruct.compile.run.native_backend.argv
     primestruct.compile.run.native_backend.control
