@@ -242,6 +242,26 @@ fourth() { return(0i32) }
   REQUIRE(block.bodyArguments.size() == 2);
 }
 
+TEST_CASE("parses trailing separators in lists") {
+  const std::string source = R"(
+[return<int>; effects(io_out);]
+pair<i32, i32,>() {
+  return(1i32;)
+}
+
+[return<int>,]
+main([i32;] left; [i32;] right;) {
+  [array<i32,>] values{array<i32,>(1i32; 2i32;);}
+  print_line("hi"utf8;)
+  return(plus(left; right;);)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  CHECK(program.definitions[0].templateArgs.size() == 2);
+  CHECK(program.definitions[1].parameters.size() == 2);
+}
+
 TEST_CASE("parses comma-separated transform lists") {
   const std::string source = R"(
 [return<int>, effects(io_out)]

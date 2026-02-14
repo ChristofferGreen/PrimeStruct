@@ -200,47 +200,100 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
 }
 
 bool Parser::parseTemplateList(std::vector<std::string> &out) {
-  if (!expect(TokenKind::LAngle, "expected '<'")) {
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
+  auto skipSeparators = [&]() {
+    skipCommentsOnly();
+    while (tokens_[pos_].kind == TokenKind::Comma || tokens_[pos_].kind == TokenKind::Semicolon) {
+      ++pos_;
+      skipCommentsOnly();
+    }
+  };
+
+  if (!expectRaw(TokenKind::LAngle, "expected '<'")) {
     return false;
   }
-  if (match(TokenKind::RAngle)) {
+  if (matchRaw(TokenKind::RAngle)) {
     return fail("expected template identifier");
   }
-  while (!match(TokenKind::RAngle)) {
-    if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
-    }
+  while (true) {
     std::string typeName;
     if (!parseTypeName(typeName)) {
       return false;
     }
     out.push_back(typeName);
-    if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
-    }
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
-      if (match(TokenKind::RAngle)) {
-        return fail("trailing comma not allowed in template argument list");
-      }
-      continue;
-    }
-    if (match(TokenKind::RAngle)) {
+    skipSeparators();
+    if (matchRaw(TokenKind::RAngle)) {
       break;
     }
-    if (match(TokenKind::Identifier)) {
+    if (matchRaw(TokenKind::Identifier)) {
       continue;
     }
     return fail("expected '>'");
   }
-  if (!expect(TokenKind::RAngle, "expected '>'")) {
+  if (!expectRaw(TokenKind::RAngle, "expected '>'")) {
     return false;
   }
   return true;
 }
 
 bool Parser::parseTypeName(std::string &out) {
-  Token name = consume(TokenKind::Identifier, "expected template identifier");
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+  auto consumeRaw = [&](TokenKind kind, const std::string &message) -> Token {
+    if (matchRaw(TokenKind::Invalid)) {
+      fail(describeInvalidToken(tokens_[pos_]));
+      return {TokenKind::End, ""};
+    }
+    if (!matchRaw(kind)) {
+      fail(message);
+      return {TokenKind::End, ""};
+    }
+    return tokens_[pos_++];
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
+  auto skipSeparators = [&]() {
+    skipCommentsOnly();
+    while (tokens_[pos_].kind == TokenKind::Comma || tokens_[pos_].kind == TokenKind::Semicolon) {
+      ++pos_;
+      skipCommentsOnly();
+    }
+  };
+
+  Token name = consumeRaw(TokenKind::Identifier, "expected template identifier");
   if (name.kind == TokenKind::End) {
     return false;
   }
@@ -249,17 +302,14 @@ bool Parser::parseTypeName(std::string &out) {
     return fail(nameError);
   }
   out = name.text;
-  if (match(TokenKind::LAngle)) {
-    expect(TokenKind::LAngle, "expected '<'");
+  if (matchRaw(TokenKind::LAngle)) {
+    expectRaw(TokenKind::LAngle, "expected '<'");
     out += "<";
-    if (match(TokenKind::RAngle)) {
+    if (matchRaw(TokenKind::RAngle)) {
       return fail("expected template identifier");
     }
     bool first = true;
-    while (!match(TokenKind::RAngle)) {
-      if (match(TokenKind::Semicolon)) {
-        return fail("semicolon is not allowed");
-      }
+    while (true) {
       std::string nested;
       if (!parseTypeName(nested)) {
         return false;
@@ -269,25 +319,16 @@ bool Parser::parseTypeName(std::string &out) {
       }
       out += nested;
       first = false;
-      if (match(TokenKind::Comma)) {
-        expect(TokenKind::Comma, "expected ','");
-        if (match(TokenKind::RAngle)) {
-          return fail("trailing comma not allowed in template argument list");
-        }
-        continue;
-      }
-      if (match(TokenKind::Semicolon)) {
-        return fail("semicolon is not allowed");
-      }
-      if (match(TokenKind::RAngle)) {
+      skipSeparators();
+      if (matchRaw(TokenKind::RAngle)) {
         break;
       }
-      if (match(TokenKind::Identifier)) {
+      if (matchRaw(TokenKind::Identifier)) {
         continue;
       }
       return fail("expected '>'");
     }
-    if (!expect(TokenKind::RAngle, "expected '>'")) {
+    if (!expectRaw(TokenKind::RAngle, "expected '>'")) {
       return false;
     }
     out += ">";
@@ -353,7 +394,7 @@ bool Parser::parseParameterList(std::vector<Expr> &out, const std::string &names
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::RParen)) {
-        return fail("trailing comma not allowed in parameter list");
+        break;
       }
       continue;
     }
@@ -432,7 +473,7 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::RParen)) {
-        return fail("trailing comma not allowed in argument list");
+        break;
       }
     } else {
       if (match(TokenKind::RParen)) {
@@ -636,7 +677,7 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     if (match(TokenKind::Comma)) {
       expect(TokenKind::Comma, "expected ','");
       if (match(TokenKind::RBrace)) {
-        return fail("trailing comma not allowed in brace list");
+        break;
       }
       continue;
     }
