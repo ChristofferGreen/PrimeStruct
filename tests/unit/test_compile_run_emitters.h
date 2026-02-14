@@ -678,6 +678,34 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs shared_scope loops") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] result{0i32}
+  [shared_scope]
+  loop(4i32) {
+    [i32 mut] total{0i32}
+    assign(total, plus(total, 1i32))
+    assign(result, total)
+  }
+  [shared_scope]
+  for([i32 mut] i{1i32} less_than(i 10i32) assign(i, multiply(i, 2i32))) {
+    [i32 mut] total{i}
+    assign(total, plus(total, 1i32))
+    assign(result, total)
+  }
+  return(result)
+}
+)";
+  const std::string srcPath = writeTemp("compile_shared_scope.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_shared_scope_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs increment decrement sugar") {
   const std::string source = R"(
 [return<int>]

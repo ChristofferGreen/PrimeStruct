@@ -244,7 +244,7 @@ statements and envelopes—any envelope can stand alone as a statement, and unus
 - **`public`, `private`, `package`:** field visibility tags; mutually exclusive.
 - **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
-- **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only.
+- **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only. Bindings declared in the loop body are initialized once before the loop body runs and persist for the duration of the loop without escaping the surrounding scope.
 The list above reflects the built-in transforms recognized by the compiler today; future additions will extend it here.
 
 ### Core library surface (draft)

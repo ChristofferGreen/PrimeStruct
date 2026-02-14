@@ -155,6 +155,174 @@ bool validateTransformListContext(const std::vector<Transform> &transforms,
   return true;
 }
 
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = expr.name;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  return name == nameToMatch;
+}
+
+bool isLoopCall(const Expr &expr) {
+  return isSimpleCallName(expr, "loop");
+}
+
+bool isWhileCall(const Expr &expr) {
+  return isSimpleCallName(expr, "while");
+}
+
+bool isForCall(const Expr &expr) {
+  return isSimpleCallName(expr, "for");
+}
+
+bool isLoopBodyEnvelope(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+    return false;
+  }
+  if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+    return false;
+  }
+  if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+    return false;
+  }
+  return true;
+}
+
+bool stripSharedScopeTransform(std::vector<Transform> &transforms,
+                               bool &found,
+                               const std::string &context,
+                               std::string &error) {
+  found = false;
+  for (auto it = transforms.begin(); it != transforms.end(); ++it) {
+    if (it->name != "shared_scope") {
+      continue;
+    }
+    if (found) {
+      error = "duplicate shared_scope transform on " + context;
+      return false;
+    }
+    if (!it->templateArgs.empty()) {
+      error = "shared_scope does not accept template arguments on " + context;
+      return false;
+    }
+    if (!it->arguments.empty()) {
+      error = "shared_scope does not accept arguments on " + context;
+      return false;
+    }
+    found = true;
+    transforms.erase(it);
+    break;
+  }
+  return true;
+}
+
+bool rewriteSharedScopeStatements(std::vector<Expr> &statements, std::string &error);
+
+bool rewriteSharedScopeStatement(Expr &stmt, std::string &error) {
+  if (stmt.kind == Expr::Kind::Call) {
+    bool hasSharedScope = false;
+    if (!stripSharedScopeTransform(stmt.transforms, hasSharedScope, "statement", error)) {
+      return false;
+    }
+    if (hasSharedScope) {
+      const bool isLoop = isLoopCall(stmt);
+      const bool isWhile = isWhileCall(stmt);
+      const bool isFor = isForCall(stmt);
+      if (!isLoop && !isWhile && !isFor) {
+        error = "shared_scope is only valid on loop/while/for statements";
+        return false;
+      }
+      const size_t bodyIndex = isFor ? 3 : 1;
+      if (stmt.args.size() <= bodyIndex) {
+        error = "shared_scope requires loop body";
+        return false;
+      }
+      Expr &body = stmt.args[bodyIndex];
+      if (!isLoopBodyEnvelope(body)) {
+        error = "shared_scope requires loop body in do() { ... }";
+        return false;
+      }
+      std::vector<Expr> hoisted;
+      std::vector<Expr> remaining;
+      for (auto &bodyStmt : body.bodyArguments) {
+        if (bodyStmt.isBinding) {
+          hoisted.push_back(std::move(bodyStmt));
+        } else {
+          remaining.push_back(std::move(bodyStmt));
+        }
+      }
+      body.bodyArguments = std::move(remaining);
+      if (!rewriteSharedScopeStatements(body.bodyArguments, error)) {
+        return false;
+      }
+      if (hoisted.empty()) {
+        return true;
+      }
+
+      Expr blockCall;
+      blockCall.kind = Expr::Kind::Call;
+      blockCall.name = "block";
+      blockCall.namespacePrefix = stmt.namespacePrefix;
+      blockCall.hasBodyArguments = true;
+      blockCall.bodyArguments.reserve(hoisted.size() + 2);
+
+      if (isFor) {
+        Expr initStmt = std::move(stmt.args[0]);
+        Expr cond = std::move(stmt.args[1]);
+        Expr step = std::move(stmt.args[2]);
+
+        Expr whileCall;
+        whileCall.kind = Expr::Kind::Call;
+        whileCall.name = "while";
+        whileCall.namespacePrefix = stmt.namespacePrefix;
+        whileCall.transforms = std::move(stmt.transforms);
+        whileCall.args.push_back(std::move(cond));
+        whileCall.argNames.push_back(std::nullopt);
+
+        Expr whileBody = std::move(body);
+        whileBody.bodyArguments.push_back(std::move(step));
+        whileCall.args.push_back(std::move(whileBody));
+        whileCall.argNames.push_back(std::nullopt);
+
+        blockCall.bodyArguments.push_back(std::move(initStmt));
+        for (auto &binding : hoisted) {
+          blockCall.bodyArguments.push_back(std::move(binding));
+        }
+        blockCall.bodyArguments.push_back(std::move(whileCall));
+        stmt = std::move(blockCall);
+        return true;
+      }
+
+      for (auto &binding : hoisted) {
+        blockCall.bodyArguments.push_back(std::move(binding));
+      }
+      blockCall.bodyArguments.push_back(std::move(stmt));
+      stmt = std::move(blockCall);
+      return true;
+    }
+
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      return rewriteSharedScopeStatements(stmt.bodyArguments, error);
+    }
+  }
+  return true;
+}
+
+bool rewriteSharedScopeStatements(std::vector<Expr> &statements, std::string &error) {
+  for (auto &stmt : statements) {
+    if (!rewriteSharedScopeStatement(stmt, error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool applySingleTypeToReturn(std::vector<Transform> &transforms,
                              bool force,
                              const std::string &context,
@@ -306,6 +474,16 @@ bool applySemanticTransforms(Program &program,
   }
   for (auto &exec : program.executions) {
     stripTextTransforms(exec);
+  }
+  for (auto &def : program.definitions) {
+    if (!rewriteSharedScopeStatements(def.statements, error)) {
+      return false;
+    }
+  }
+  for (auto &exec : program.executions) {
+    if (!rewriteSharedScopeStatements(exec.bodyArguments, error)) {
+      return false;
+    }
   }
   for (auto &def : program.definitions) {
     if (!applySingleTypeToReturn(def.transforms, forceSingleTypeToReturn, def.fullPath, error)) {

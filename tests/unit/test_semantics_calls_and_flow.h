@@ -81,6 +81,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("shared_scope rejects non-loop statements") {
+  const std::string source = R"(
+[return<int>]
+ping() {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [shared_scope] ping()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("shared_scope is only valid on loop/while/for statements") != std::string::npos);
+}
+
+TEST_CASE("shared_scope rejects arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [shared_scope(1)] loop(1i32) { }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("shared_scope does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("reference participates in signedness checks") {
   const std::string source = R"(
 [return<int>]
