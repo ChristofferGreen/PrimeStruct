@@ -43,7 +43,7 @@ spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i
 
 The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text transforms,
 the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
-transforms are configured via `--text-transforms=<list>` (the default list is `operators`, `collections`,
+transforms are configured via `--text-transforms=<list>` (the default list is `collections`, `operators`,
 `implicit-utf8`), semantic transforms via `--semantic-transforms=<list>`, and `--transform-list=<list>` is
 an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic);
 ambiguous names are errors. `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms`
