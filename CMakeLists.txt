@@ -29,6 +29,7 @@ add_library(primec_lib
   src/parser/ParserLists.cpp
   src/semantics/SemanticsHelpersCore.cpp
   src/semantics/SemanticsHelpersValidation.cpp
+  src/semantics/TemplateMonomorph.cpp
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorBuild.cpp

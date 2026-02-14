@@ -8,6 +8,10 @@
 
 namespace primec {
 
+namespace semantics {
+bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error);
+}
+
 namespace {
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
@@ -319,6 +323,9 @@ bool Semantics::validate(Program &program,
                          const std::vector<std::string> &defaultEffects,
                          const std::vector<std::string> &semanticTransforms) const {
   if (!applySemanticTransforms(program, semanticTransforms, error)) {
+    return false;
+  }
+  if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
     return false;
   }
   semantics::SemanticsValidator validator(program, entryPath, error, defaultEffects);

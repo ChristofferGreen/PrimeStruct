@@ -140,6 +140,61 @@ TEST_CASE("return transform rejects arguments") {
   CHECK(error.find("return transform does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("monomorphizes template definition bindings") {
+  primec::Program program;
+  primec::Definition identity =
+      makeDefinition("/identity", {makeTransform("return", std::string("T"))},
+                     {makeCall("/return", {makeName("value")})},
+                     {makeBinding("value", {makeTransform("T")}, {})});
+  identity.templateArgs = {"T"};
+  program.definitions.push_back(identity);
+
+  primec::Expr call = makeCall("/identity", {makeLiteral(1)});
+  call.templateArgs = {"i32"};
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("template argument count mismatch fails") {
+  primec::Program program;
+  primec::Definition wrap = makeDefinition("/wrap",
+                                           {makeTransform("return", std::string("int"))},
+                                           {makeCall("/return", {makeName("value")})},
+                                           {makeParameter("value", "int")});
+  wrap.templateArgs = {"T"};
+  program.definitions.push_back(wrap);
+
+  primec::Expr call = makeCall("/wrap", {makeLiteral(1)});
+  call.templateArgs = {"i32", "i64"};
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("template argument count mismatch") != std::string::npos);
+}
+
+TEST_CASE("template arguments required for templated calls") {
+  primec::Program program;
+  primec::Definition wrap = makeDefinition("/wrap",
+                                           {makeTransform("return", std::string("int"))},
+                                           {makeCall("/return", {makeName("value")})},
+                                           {makeParameter("value", "int")});
+  wrap.templateArgs = {"T"};
+  program.definitions.push_back(wrap);
+
+  primec::Expr call = makeCall("/wrap", {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("template arguments required") != std::string::npos);
+}
+
 TEST_CASE("struct definition cannot return a value") {
   primec::Program program;
   primec::Definition def = makeDefinition("/main", {makeTransform("struct")}, {});
