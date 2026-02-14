@@ -364,6 +364,30 @@ main() {
   CHECK(program.definitions[0].transforms[3].phase == primec::TransformPhase::Semantic);
 }
 
+TEST_CASE("parses transform groups with semicolons") {
+  const std::string source = R"(
+[text(operators; collections;); semantic(return<int>; effects(io_out; io_err;););]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 4);
+  CHECK(transforms[0].name == "operators");
+  CHECK(transforms[0].phase == primec::TransformPhase::Text);
+  CHECK(transforms[1].name == "collections");
+  CHECK(transforms[1].phase == primec::TransformPhase::Text);
+  CHECK(transforms[2].name == "return");
+  CHECK(transforms[2].phase == primec::TransformPhase::Semantic);
+  CHECK(transforms[3].name == "effects");
+  CHECK(transforms[3].phase == primec::TransformPhase::Semantic);
+  REQUIRE(transforms[3].arguments.size() == 2);
+  CHECK(transforms[3].arguments[0] == "io_out");
+  CHECK(transforms[3].arguments[1] == "io_err");
+}
+
 TEST_CASE("parses transform-prefixed execution") {
   const std::string source = R"(
 [return<int> effects(io_out)]
