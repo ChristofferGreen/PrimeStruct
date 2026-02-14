@@ -992,6 +992,20 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
+TEST_CASE("runs vm with string-keyed map binding lookup") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [string] key{"b"raw_utf8}
+  return(plus(at(values, key), count(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_literal_string_binding.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(
 [return<int>]

@@ -2617,6 +2617,24 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs native string-keyed map binding lookup") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  [string] key{"b"raw_utf8}
+  return(plus(at(values, key), count(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal_string_binding.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_binding_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.imports");
