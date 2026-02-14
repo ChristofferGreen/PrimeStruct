@@ -116,6 +116,40 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
+TEST_CASE("no transforms rejects float without suffix") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1.0, 2.0f32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_float_suffix.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_float_suffix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("float literal requires f32/f64 suffix") != std::string::npos);
+}
+
+TEST_CASE("no transforms rejects single-letter float suffix") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1f, 2.0f32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_float_f_suffix.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_float_f_suffix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --no-transforms 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("float literal requires f32/f64 suffix") != std::string::npos);
+}
+
 TEST_CASE("no transforms rejects increment sugar") {
   const std::string source = R"(
 [return<int>]

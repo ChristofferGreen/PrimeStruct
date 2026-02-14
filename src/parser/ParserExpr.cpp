@@ -518,13 +518,16 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (suffixLen == 0) {
         int floatWidth = 32;
         bool isFloat = false;
+        bool hasFloatWidthSuffix = false;
         if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f64") == 0) {
           floatWidth = 64;
           isFloat = true;
+          hasFloatWidthSuffix = true;
           text = text.substr(0, text.size() - 3);
         } else if (text.size() >= 3 && text.compare(text.size() - 3, 3, "f32") == 0) {
           floatWidth = 32;
           isFloat = true;
+          hasFloatWidthSuffix = true;
           text = text.substr(0, text.size() - 3);
         } else if (!text.empty() && text.back() == 'f') {
           floatWidth = 32;
@@ -537,6 +540,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
         if (!isFloat) {
           return fail("integer literal requires i32/i64/u64 suffix");
+        }
+        if (!allowSurfaceSyntax_ && !hasFloatWidthSuffix) {
+          return fail("float literal requires f32/f64 suffix in canonical mode");
         }
         text = stripNumericSeparators(text);
         if (!isValidFloatLiteral(text)) {
