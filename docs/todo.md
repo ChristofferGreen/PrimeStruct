@@ -17,7 +17,7 @@ Legend:
 
 **Syntax & Surface Features**
  - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, include/import lists); currently hard errors.
-- ○ Treat commas as optional separators everywhere the SyntaxSpec treats them as whitespace (statement lists and binding initializers, not just argument/template lists).
+- ✓ Treat commas as optional separators everywhere the SyntaxSpec treats them as whitespace (statement lists and binding initializers, not just argument/template lists).
 - ○ Allow trailing separators (comma/semicolon) in lists where the SyntaxSpec permits them; parser rejects trailing commas and semicolons entirely.
 - ○ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
 - ○ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/include resolver currently allow them).

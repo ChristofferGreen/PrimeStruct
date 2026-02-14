@@ -195,6 +195,53 @@ execute_repeat(1i32; 2i32);
   CHECK(program.executions[0].arguments.size() == 2);
 }
 
+TEST_CASE("parses comma-separated statements and bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{
+    first(),
+    second()
+  }
+  third(),
+  fourth()
+  return(value)
+}
+
+[return<int>]
+first() { return(1i32) }
+
+[return<int>]
+second() { return(2i32) }
+
+[return<int>]
+third() { return(0i32) }
+
+[return<int>]
+fourth() { return(0i32) }
+)";
+  const auto program = parseProgram(source);
+  const auto findDef = [&](const std::string &path) -> const primec::Definition * {
+    for (const auto &def : program.definitions) {
+      if (def.fullPath == path) {
+        return &def;
+      }
+    }
+    return nullptr;
+  };
+  const auto *mainDef = findDef("/main");
+  REQUIRE(mainDef != nullptr);
+  REQUIRE(mainDef->statements.size() >= 3);
+  const auto &binding = mainDef->statements[0];
+  REQUIRE(binding.isBinding);
+  REQUIRE(binding.args.size() == 1);
+  const auto &block = binding.args[0];
+  REQUIRE(block.kind == primec::Expr::Kind::Call);
+  CHECK(block.name == "block");
+  CHECK(block.hasBodyArguments);
+  REQUIRE(block.bodyArguments.size() == 2);
+}
+
 TEST_CASE("parses comma-separated transform lists") {
   const std::string source = R"(
 [return<int>, effects(io_out)]
