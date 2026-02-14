@@ -20,16 +20,69 @@ bool IrLowerer::lower(const Program &program,
     return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
            name == "pathspace_insert" || name == "pathspace_take";
   };
-  for (const auto &def : program.definitions) {
-    for (const auto &transform : def.transforms) {
+  auto validateEffectsTransforms =
+      [&](const std::vector<Transform> &transforms, const std::string &context) -> bool {
+    for (const auto &transform : transforms) {
       if (transform.name != "effects") {
         continue;
       }
       for (const auto &effect : transform.arguments) {
         if (!isSupportedEffect(effect)) {
-          error = "native backend does not support effect: " + effect + " on " + def.fullPath;
+          error = "native backend does not support effect: " + effect + " on " + context;
           return false;
         }
+      }
+    }
+    return true;
+  };
+  auto validateExprEffects = [&](const auto &self, const Expr &expr, const std::string &context) -> bool {
+    if (!validateEffectsTransforms(expr.transforms, context)) {
+      return false;
+    }
+    for (const auto &arg : expr.args) {
+      if (!self(self, arg, context)) {
+        return false;
+      }
+    }
+    for (const auto &bodyArg : expr.bodyArguments) {
+      if (!self(self, bodyArg, context)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  for (const auto &def : program.definitions) {
+    if (!validateEffectsTransforms(def.transforms, def.fullPath)) {
+      return false;
+    }
+    for (const auto &param : def.parameters) {
+      if (!validateExprEffects(validateExprEffects, param, def.fullPath)) {
+        return false;
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      if (!validateExprEffects(validateExprEffects, stmt, def.fullPath)) {
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      if (!validateExprEffects(validateExprEffects, *def.returnExpr, def.fullPath)) {
+        return false;
+      }
+    }
+  }
+  for (const auto &exec : program.executions) {
+    if (!validateEffectsTransforms(exec.transforms, exec.fullPath)) {
+      return false;
+    }
+    for (const auto &arg : exec.arguments) {
+      if (!validateExprEffects(validateExprEffects, arg, exec.fullPath)) {
+        return false;
+      }
+    }
+    for (const auto &bodyArg : exec.bodyArguments) {
+      if (!validateExprEffects(validateExprEffects, bodyArg, exec.fullPath)) {
+        return false;
       }
     }
   }
