@@ -638,6 +638,26 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("compiles and runs nested definition call") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [return<int>]
+  helper() {
+    return(5i32)
+  }
+  return(/main/helper())
+}
+)";
+  const std::string srcPath = writeTemp("compile_nested_definition_call.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_nested_definition_call_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("compiles and runs map literal") {
   const std::string source = R"(
 [return<int>]
