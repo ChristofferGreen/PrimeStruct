@@ -11,6 +11,7 @@
 #include "primec/Semantics.h"
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRegistry.h"
+#include "primec/TransformRules.h"
 #include "primec/Vm.h"
 
 #include <cctype>
@@ -167,6 +168,7 @@ bool parseTransformListAuto(const std::string &text,
 
 bool parseTransformRule(const std::string &text,
                         const std::vector<std::string> &defaults,
+                        bool expectText,
                         primec::TextTransformRule &rule,
                         std::string &error) {
   size_t sep = text.find('=');
@@ -216,7 +218,7 @@ bool parseTransformRule(const std::string &text,
   rule.path = pathSpec;
   rule.wildcard = wildcard;
   rule.recursive = recursive;
-  if (!parseTransformListForPhase(listSpec, defaults, true, rule.transforms, error)) {
+  if (!parseTransformListForPhase(listSpec, defaults, expectText, rule.transforms, error)) {
     return false;
   }
   return true;
@@ -224,6 +226,7 @@ bool parseTransformRule(const std::string &text,
 
 bool parseTransformRules(const std::string &text,
                          const std::vector<std::string> &defaults,
+                         bool expectText,
                          std::vector<primec::TextTransformRule> &out,
                          std::string &error) {
   out.clear();
@@ -239,7 +242,7 @@ bool parseTransformRules(const std::string &text,
         out.clear();
       } else {
         primec::TextTransformRule rule;
-        if (!parseTransformRule(token, defaults, rule, error)) {
+        if (!parseTransformRule(token, defaults, expectText, rule, error)) {
           return false;
         }
         out.push_back(std::move(rule));
@@ -385,13 +388,26 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
         return false;
       }
     } else if (arg == "--text-transform-rules" && i + 1 < argc) {
-      if (!parseTransformRules(argv[++i], defaultTextFilters(), out.textTransformRules, error)) {
+      if (!parseTransformRules(argv[++i], defaultTextFilters(), true, out.textTransformRules, error)) {
         return false;
       }
     } else if (arg.rfind("--text-transform-rules=", 0) == 0) {
       if (!parseTransformRules(arg.substr(std::string("--text-transform-rules=").size()),
                                defaultTextFilters(),
+                               true,
                                out.textTransformRules,
+                               error)) {
+        return false;
+      }
+    } else if (arg == "--semantic-transform-rules" && i + 1 < argc) {
+      if (!parseTransformRules(argv[++i], defaultSemanticTransforms(), false, out.semanticTransformRules, error)) {
+        return false;
+      }
+    } else if (arg.rfind("--semantic-transform-rules=", 0) == 0) {
+      if (!parseTransformRules(arg.substr(std::string("--semantic-transform-rules=").size()),
+                               defaultSemanticTransforms(),
+                               false,
+                               out.semanticTransformRules,
                                error)) {
         return false;
       }
@@ -445,6 +461,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     out.textFilters.clear();
     out.textTransformRules.clear();
     out.semanticTransforms.clear();
+    out.semanticTransformRules.clear();
     out.allowEnvelopeTextTransforms = false;
   } else {
     if (noTextTransforms) {
@@ -454,6 +471,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     }
     if (noSemanticTransforms) {
       out.semanticTransforms.clear();
+      out.semanticTransformRules.clear();
     }
   }
   out.requireCanonicalSyntax = noTransforms;
@@ -534,7 +552,7 @@ int main(int argc, char **argv) {
     }
     std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm] <input.prime> [-o <output>] [--entry /path] "
                  "[--include-path <dir>] [--text-filters <list>] [--text-transforms <list>] "
-                 "[--text-transform-rules <rules>] "
+                 "[--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                  "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                  "[--no-semantic-transforms] [--no-transforms] [--out-dir <dir>] "
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] [-- <program args...>]\n";
@@ -588,6 +606,10 @@ int main(int argc, char **argv) {
       std::cerr << "Unsupported dump stage: " << options.dumpStage << "\n";
       return 2;
     }
+  }
+
+  if (!options.semanticTransformRules.empty()) {
+    primec::applySemanticTransformRules(program, options.semanticTransformRules);
   }
 
   primec::Semantics semantics;

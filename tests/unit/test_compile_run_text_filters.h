@@ -349,6 +349,30 @@ main() {
   CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
 }
 
+TEST_CASE("semantic transform rules apply per path") {
+  const std::string source = R"(
+[i32]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_rules.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_err.txt").string();
+
+  const std::string okCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(okCmd) == 0);
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transform-rules=/main=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(ruleCmd) == 2);
+  CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
+}
+
 TEST_CASE("semantic transforms ignore text transforms") {
   const std::string source = R"(
 [operators i32]

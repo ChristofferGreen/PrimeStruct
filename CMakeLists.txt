@@ -19,6 +19,7 @@ add_library(primec_lib
   src/IrPrinter.cpp
   src/IrSerializer.cpp
   src/Lexer.cpp
+  src/TransformRules.cpp
   src/TransformRegistry.cpp
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
