@@ -280,6 +280,14 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
         entry += "=";
         continue;
       }
+      if (matchRaw(TokenKind::Ampersand)) {
+        consumeRaw(TokenKind::Ampersand, "expected lambda capture");
+        if (!entry.empty()) {
+          entry.push_back(' ');
+        }
+        entry += "&";
+        continue;
+      }
       break;
     }
     if (entry.empty()) {
@@ -290,7 +298,7 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
     if (matchRaw(TokenKind::RBracket)) {
       break;
     }
-    if (matchRaw(TokenKind::Identifier) || matchRaw(TokenKind::Equal)) {
+    if (matchRaw(TokenKind::Identifier) || matchRaw(TokenKind::Equal) || matchRaw(TokenKind::Ampersand)) {
       continue;
     }
     return fail("expected ',' or ']' after lambda capture");

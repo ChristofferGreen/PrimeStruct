@@ -144,6 +144,24 @@ main() {
   CHECK(lambdaExpr.lambdaCaptures[2] == "=");
 }
 
+TEST_CASE("parses lambda capture ampersand") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([&]([i32] value) { value })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &returnCall = program.definitions[0].statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  REQUIRE(lambdaExpr.isLambda);
+  REQUIRE(lambdaExpr.lambdaCaptures.size() == 1);
+  CHECK(lambdaExpr.lambdaCaptures[0] == "&");
+}
+
 TEST_CASE("parses brace constructor values") {
   const std::string source = R"(
 [return<int>]
