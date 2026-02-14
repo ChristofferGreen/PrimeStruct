@@ -520,6 +520,21 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with math clamp") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{clamp(2.5f32, 0.0f32, 1.0f32)}
+  [u64] b{clamp(9u64, 2u64, 6u64)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_clamp.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
+}
+
 TEST_CASE("runs vm with math pow") {
   const std::string source = R"(
 import /math/*

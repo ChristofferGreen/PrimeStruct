@@ -44,7 +44,7 @@ Legend:
 **Backends & IR**
 - ◐ Add GLSL/SPIR-V backend (docs mention GPU lowering, but there is no backend in `src/`).
 - ✓ Expand VM/native float support (parser/semantics/C++ emitter accept floats; VM/native reject float literals/types).
-- ◐ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
+- ✓ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
 
