@@ -52,7 +52,7 @@ Legend:
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Document the `repeat(count) { ... }` statement builtin (count accepts integers or bool; non-positive counts skip the body).
 - ✓ Document `block{ ... }` calls and the general `{}` body-argument form after `()` (parser accepts call bodies; spec currently limits bodies to special forms).
-- ○ Document map literal `key=value` syntax supported by the `collections` text filter.
+- ✓ Document map literal `key=value` syntax supported by the `collections` text filter.
 - ✓ Document unary `&` / `*` operator sugar (`location` / `dereference`) in the `operators` text transform or remove the feature.
 - ✓ Document single-letter float suffix `f` (treated as `f32`) or reject it in the lexer/parser.
 - ✓ Fix string literal rules: single-quoted strings are not raw in code (rawness is controlled by `raw_utf8`/`raw_ascii` suffix only).

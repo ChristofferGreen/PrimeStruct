@@ -329,6 +329,11 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `!a` -> `not(a)`
   - `&a` -> `location(a)`
   - `*a` -> `dereference(a)`
+- Collection literals (via the `collections` text transform) rewrite to constructor calls:
+  - `array<T>{...}` / `array<T>[...]` -> `array<T>(...)`
+  - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`
+  - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
+  - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` -> `map<i32, i32>(1i32, 2i32)`).
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
     `/<envelope>/method(value, args...)`, where `<envelope>` is the envelope name associated with `value`.
