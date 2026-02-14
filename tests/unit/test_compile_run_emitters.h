@@ -572,6 +572,33 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs loop while for sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  loop(2i32) {
+    assign(total, plus(total, 1i32))
+  }
+  while(less_than(i 3i32)) {
+    assign(total, plus(total, i))
+    assign(i, plus(i, 1i32))
+  }
+  for([i32 mut] j{0i32} less_than(j 2i32) assign(j, plus(j, 1i32))) {
+    assign(total, plus(total, j))
+  }
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_loop_while_for.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_loop_while_for_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs map literal") {
   const std::string source = R"(
 [return<int>]

@@ -21,7 +21,7 @@ Legend:
 - ✓ Allow trailing separators (comma/semicolon) in lists where the SyntaxSpec permits them; parser rejects trailing commas and semicolons entirely.
 - ✓ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
 - ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/include resolver currently allow them).
-- ○ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
+- ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ○ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ○ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
 - ○ Support nested definitions/lambdas inside definition bodies (spec references nested definitions receiving their own transforms; parser only allows bindings/expressions).
