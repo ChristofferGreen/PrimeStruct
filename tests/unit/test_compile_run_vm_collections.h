@@ -435,6 +435,20 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
+TEST_CASE("runs vm with vector capacity after pop") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  pop(values)
+  return(capacity(values))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_capacity_after_pop.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
+}
+
 TEST_CASE("rejects vm vector growth helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

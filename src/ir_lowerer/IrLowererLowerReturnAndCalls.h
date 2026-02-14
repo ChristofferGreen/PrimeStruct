@@ -717,6 +717,8 @@
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
+          function.instructions.push_back({IrOpcode::PushI64, 16});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
         }
@@ -977,17 +979,20 @@
           }
 
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+          bool isVectorTarget = false;
           if (target.kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.name);
             if (it != localsIn.end() &&
                 (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
               elemKind = it->second.valueKind;
+              isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
             }
           } else if (target.kind == Expr::Kind::Call) {
             std::string collection;
             if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
                 target.templateArgs.size() == 1) {
               elemKind = valueKindFromTypeName(target.templateArgs.front());
+              isVectorTarget = (collection == "vector");
             }
           }
           if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
@@ -1001,6 +1006,7 @@
             return false;
           }
 
+          const uint64_t headerSlots = isVectorTarget ? 2 : 1;
           const int32_t ptrLocal = allocTempLocal();
           if (!emitExpr(expr.args[0], localsIn)) {
             return false;
@@ -1042,7 +1048,7 @@
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({pushOneForIndex(indexKind), 1});
+          function.instructions.push_back({pushOneForIndex(indexKind), headerSlots});
           function.instructions.push_back({addForIndex(indexKind), 0});
           function.instructions.push_back({pushOneForIndex(indexKind), 16});
           function.instructions.push_back({mulForIndex(indexKind), 0});

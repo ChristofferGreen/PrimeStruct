@@ -853,6 +853,7 @@
         };
 
         const int32_t ptrLocal = allocTempLocal();
+        const int32_t elementOffset = 2;
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
 
@@ -944,7 +945,7 @@
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          pushIndexConst(indexKind, 1);
+          pushIndexConst(indexKind, elementOffset);
           function.instructions.push_back({addOp, 0});
           pushIndexConst(indexKind, 16);
           function.instructions.push_back({mulOp, 0});
@@ -953,7 +954,7 @@
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
-          pushIndexConst(indexKind, 1);
+          pushIndexConst(indexKind, elementOffset);
           function.instructions.push_back({addOp, 0});
           pushIndexConst(indexKind, 16);
           function.instructions.push_back({mulOp, 0});
@@ -994,7 +995,7 @@
 
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-        pushIndexConst(indexKind, 1);
+        pushIndexConst(indexKind, elementOffset);
         function.instructions.push_back({addOp, 0});
         pushIndexConst(indexKind, 16);
         function.instructions.push_back({mulOp, 0});
@@ -1003,7 +1004,7 @@
 
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-        pushIndexConst(indexKind, 2);
+        pushIndexConst(indexKind, elementOffset + 1);
         function.instructions.push_back({addOp, 0});
         pushIndexConst(indexKind, 16);
         function.instructions.push_back({mulOp, 0});

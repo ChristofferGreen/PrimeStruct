@@ -2972,11 +2972,17 @@
               return false;
             }
 
+            const bool isVector = (builtin == "vector");
             const int32_t baseLocal = nextLocal;
-            nextLocal += static_cast<int32_t>(1 + expr.args.size());
+            const int32_t headerSlots = isVector ? 2 : 1;
+            nextLocal += static_cast<int32_t>(headerSlots + expr.args.size());
 
             function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(expr.args.size()))});
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+            if (isVector) {
+              function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(expr.args.size()))});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+            }
 
             for (size_t i = 0; i < expr.args.size(); ++i) {
               const Expr &arg = expr.args[i];
@@ -2993,7 +2999,7 @@
                 return false;
               }
               function.instructions.push_back(
-                  {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + static_cast<int32_t>(i))});
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + headerSlots + static_cast<int32_t>(i))});
             }
 
             function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
