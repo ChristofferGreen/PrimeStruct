@@ -322,7 +322,7 @@ add([i32] left, [i32] right{1i32 2i32}) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("parameter defaults accept at most one argument") != std::string::npos);
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
 }
 
 TEST_CASE("infers parameter type from default initializer") {

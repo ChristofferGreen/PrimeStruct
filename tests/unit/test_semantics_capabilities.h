@@ -478,7 +478,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("struct definitions require field initializers") != std::string::npos);
+  CHECK(error.find("block expression requires a value") != std::string::npos);
 }
 
 TEST_CASE("struct definitions allow initialized fields") {

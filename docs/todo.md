@@ -38,7 +38,7 @@ Legend:
 - ○ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ○ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
 - ✓ Align default effects behavior: docs say entry defaults include `io_out`, but code applies no default effects unless `--default-effects` is provided.
-- ○ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
+- ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
 
 **Backends & IR**
 - ○ Add GLSL/SPIR-V backend (docs mention GPU lowering, but there is no backend in `src/`).

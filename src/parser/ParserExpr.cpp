@@ -299,11 +299,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     block.name = "block";
     block.namespacePrefix = namespacePrefix;
     block.hasBodyArguments = true;
-    {
-      BraceListGuard braceGuard(*this, true, true);
-      if (!parseBraceExprList(block.bodyArguments, namespacePrefix)) {
-        return false;
-      }
+    if (!parseValueBlock(block.bodyArguments, namespacePrefix)) {
+      return false;
     }
     call.args.push_back(std::move(block));
     call.argNames.push_back(std::nullopt);

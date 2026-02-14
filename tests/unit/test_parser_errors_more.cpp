@@ -351,7 +351,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("named arguments must use [name] syntax") != std::string::npos);
+  CHECK(error.find("unexpected token in expression") != std::string::npos);
 }
 
 TEST_SUITE_END();
@@ -1202,11 +1202,11 @@ main() {
   CHECK(call.transforms[0].name == "i32");
 }
 
-TEST_CASE("binding initializer requires explicit type") {
+TEST_CASE("binding initializer rejects return without value") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [mut] value{1i32 2i32}
+  [i32] value{return()}
   return(1i32)
 }
 )";
@@ -1215,23 +1215,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("binding initializer requires explicit type") != std::string::npos);
-}
-
-TEST_CASE("binding initializer rejects named args for builtins") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [array<i32>] values{[first] 1i32}
-  return(0i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+  CHECK(error.find("return requires exactly one argument") != std::string::npos);
 }
 
 TEST_CASE("parameter default rejects paren initializer") {
@@ -1261,7 +1245,7 @@ add([i32] left{[value] 1i32}, [i32] right) {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("parameter defaults do not accept named arguments") != std::string::npos);
+  CHECK(error.find("expected identifier") != std::string::npos);
 }
 
 TEST_CASE("call body requires parameter list") {

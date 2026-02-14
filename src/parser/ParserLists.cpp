@@ -444,81 +444,76 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
   return true;
 }
 
+bool Parser::parseValueBlock(std::vector<Expr> &out, const std::string &namespacePrefix) {
+  out.clear();
+  struct ReturnContextGuard {
+    explicit ReturnContextGuard(Parser &parser)
+        : parser_(parser),
+          previousTracker_(parser.returnTracker_),
+          previousReturnsVoid_(parser.returnsVoidContext_),
+          previousAllowImplicitVoid_(parser.allowImplicitVoidReturn_) {
+      parser_.returnTracker_ = nullptr;
+      parser_.returnsVoidContext_ = false;
+      parser_.allowImplicitVoidReturn_ = false;
+    }
+    ~ReturnContextGuard() {
+      parser_.returnTracker_ = previousTracker_;
+      parser_.returnsVoidContext_ = previousReturnsVoid_;
+      parser_.allowImplicitVoidReturn_ = previousAllowImplicitVoid_;
+    }
+    ReturnContextGuard(const ReturnContextGuard &) = delete;
+    ReturnContextGuard &operator=(const ReturnContextGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool *previousTracker_;
+    bool previousReturnsVoid_;
+    bool previousAllowImplicitVoid_;
+  } returnGuard(*this);
+
+  BraceListGuard braceGuard(*this, true, true);
+  if (!parseBraceExprList(out, namespacePrefix)) {
+    return false;
+  }
+  return normalizeValueBlock(out);
+}
+
+bool Parser::normalizeValueBlock(std::vector<Expr> &body) {
+  for (size_t i = 0; i < body.size(); ++i) {
+    Expr &expr = body[i];
+    if (expr.kind != Expr::Kind::Call || expr.name != "return") {
+      continue;
+    }
+    if (expr.args.size() != 1) {
+      return fail("return requires exactly one argument");
+    }
+    Expr value = std::move(expr.args.front());
+    body[i] = std::move(value);
+    body.resize(i + 1);
+    break;
+  }
+  return true;
+}
+
 bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
                                          std::vector<std::optional<std::string>> &argNames,
                                          const std::string &namespacePrefix) {
-  if (!expect(TokenKind::LBrace, "expected '{' after identifier")) {
+  Expr block;
+  block.kind = Expr::Kind::Call;
+  block.name = "block";
+  block.namespacePrefix = namespacePrefix;
+  block.hasBodyArguments = true;
+  if (!parseValueBlock(block.bodyArguments, namespacePrefix)) {
     return false;
   }
-  if (match(TokenKind::RBrace)) {
-    expect(TokenKind::RBrace, "expected '}'");
-    return true;
-  }
-  ArgumentLabelGuard labelGuard(*this);
-  while (true) {
-    if (match(TokenKind::Semicolon)) {
-      return fail("semicolon is not allowed");
-    }
-    std::optional<std::string> argName;
-    if (match(TokenKind::LBracket)) {
-      size_t savedPos = pos_;
-      expect(TokenKind::LBracket, "expected '['");
-      skipComments();
-      if (match(TokenKind::Identifier)) {
-        Token name = consume(TokenKind::Identifier, "expected argument label");
-        if (name.kind == TokenKind::End) {
-          return false;
-        }
-        if (name.text.find('/') != std::string::npos) {
-          return fail("named argument must be a simple identifier");
-        }
-        std::string nameError;
-        if (!validateIdentifierText(name.text, nameError)) {
-          return fail(nameError);
-        }
-        skipComments();
-        if (match(TokenKind::RBracket)) {
-          expect(TokenKind::RBracket, "expected ']' after argument label");
-          size_t nextIndex = pos_;
-          while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
-            ++nextIndex;
-          }
-          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
-            argName = name.text;
-          } else {
-            pos_ = savedPos;
-          }
-        } else {
-          pos_ = savedPos;
-        }
-      } else {
-        pos_ = savedPos;
-      }
-    }
-    if (match(TokenKind::Identifier)) {
-      size_t scan = pos_ + 1;
-      while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
-        ++scan;
-      }
-      if (scan < tokens_.size() && tokens_[scan].kind == TokenKind::Equal) {
-        return fail("named arguments must use [name] syntax");
-      }
-    }
-    Expr arg;
-    if (!parseExpr(arg, namespacePrefix)) {
-      return false;
-    }
-    out.push_back(std::move(arg));
-    argNames.push_back(std::move(argName));
-    if (match(TokenKind::Comma)) {
-      return fail("binding initializer arguments must be whitespace-separated");
-    }
-    if (match(TokenKind::RBrace)) {
-      break;
-    }
-  }
-  if (!expect(TokenKind::RBrace, "expected '}' after binding initializer")) {
-    return false;
+  out.clear();
+  argNames.clear();
+  if (block.bodyArguments.size() == 1 && !block.bodyArguments.front().isBinding) {
+    out.push_back(std::move(block.bodyArguments.front()));
+    argNames.push_back(std::nullopt);
+  } else {
+    out.push_back(std::move(block));
+    argNames.push_back(std::nullopt);
   }
   return true;
 }

@@ -10,7 +10,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding requires exactly one argument") != std::string::npos);
+  CHECK(error.find("block expression requires a value") != std::string::npos);
 }
 
 TEST_CASE("local binding accepts brace initializer") {
@@ -32,6 +32,19 @@ TEST_CASE("local binding infers type without transforms") {
 [return<int>]
 main() {
   value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding initializer infers type from value block") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] value{1i32 2i32}
   return(value)
 }
 )";
@@ -804,13 +817,42 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{[count] 3i32 [value] 4i32}
+  [thing] item{thing([count] 3i32 [value] 4i32)}
   return(1i32)
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("binding initializer accepts return value blocks") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{
+    [i32] temp{1i32}
+    return(plus(temp, 2i32))
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("binding initializer rejects named args for builtins") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>([first] 1i32)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("binding initializer allows struct constructor block") {

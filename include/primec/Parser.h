@@ -31,6 +31,8 @@ private:
                                    std::vector<std::optional<std::string>> &argNames,
                                    const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool parseValueBlock(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool normalizeValueBlock(std::vector<Expr> &body);
   bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed);
