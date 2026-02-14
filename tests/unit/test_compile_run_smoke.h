@@ -51,6 +51,22 @@ main() {
   CHECK(runCommand(runVmCmd) == 4);
 }
 
+TEST_CASE("rejects non-argv entry parameter in exe") {
+  const std::string source = R"(
+[return<int>]
+main([i32] value) {
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_entry_bad_param.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_entry_bad_param_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("entry definition must take a single array<string> parameter") != std::string::npos);
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]
