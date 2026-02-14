@@ -1205,6 +1205,22 @@ bool GlslEmitter::emitSource(const Program &program,
     error = "glsl backend requires entry definition " + entryPath;
     return false;
   }
+  auto isSupportedEffect = [](const std::string &) {
+    return false;
+  };
+  for (const auto &def : program.definitions) {
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "effects") {
+        continue;
+      }
+      for (const auto &effect : transform.arguments) {
+        if (!isSupportedEffect(effect)) {
+          error = "glsl backend does not support effect: " + effect + " on " + def.fullPath;
+          return false;
+        }
+      }
+    }
+  }
   if (!entryDef->parameters.empty()) {
     error = "glsl backend requires entry definition to have no parameters";
     return false;

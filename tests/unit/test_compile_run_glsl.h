@@ -182,6 +182,21 @@ main() {
   CHECK(output.find("isnan(") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter rejects explicit effects") {
+  const std::string source = R"(
+[return<void> effects(io_out)]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_effects.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_effects_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects non-void entry") {
   const std::string source = R"(
 [return<int>]
