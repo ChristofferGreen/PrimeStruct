@@ -880,7 +880,8 @@
               int32_t stringIndex = -1;
               size_t length = 0;
               if (!resolveStringTableTarget(expr.args[1], localsIn, stringIndex, length)) {
-                error = "native backend requires map lookup key to be string literal or binding";
+                error =
+                    "native backend requires map lookup key to be string literal or binding backed by literals";
                 return false;
               }
               function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});

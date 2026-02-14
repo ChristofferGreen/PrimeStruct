@@ -2668,6 +2668,23 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("rejects native map lookup with argv string key") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}
+  [string] key{args[0i32]}
+  return(at_unsafe(values, key))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_lookup_argv_key.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_lookup_argv_key_err.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("map lookup key") != std::string::npos);
+}
+
 TEST_CASE("rejects native map literal string key from argv binding") {
   const std::string source = R"(
 [return<int>]
