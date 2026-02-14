@@ -123,6 +123,27 @@ TEST_CASE("expands bare slash includes with semicolons") {
   CHECK(source.find("INCLUDE_BARE_SEMI_B") != std::string::npos);
 }
 
+TEST_CASE("expands bare slash includes with whitespace separators") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_ws_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_ws_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "lib_a" / "lib.prime", "// INCLUDE_BARE_WS_A\n");
+  writeFile(includeRoot / "lib_b" / "lib.prime", "// INCLUDE_BARE_WS_B\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib_a /lib_b>\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_BARE_WS_A") != std::string::npos);
+  CHECK(source.find("INCLUDE_BARE_WS_B") != std::string::npos);
+}
+
 TEST_CASE("bare slash include does not use absolute filesystem path") {
   auto absRoot = std::filesystem::path("/tmp") / "primec_tests" / "include_bare_absolute";
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_absolute_base";
