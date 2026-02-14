@@ -13,7 +13,7 @@ bool validateProgram(const std::string &source, const std::string &entry, std::s
     return false;
   }
   primec::Semantics semantics;
-  return semantics.validate(program, entry, error, {});
+  return semantics.validate(program, entry, error, {"io_out", "io_err"});
 }
 } // namespace
 

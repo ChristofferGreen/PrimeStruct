@@ -2526,6 +2526,7 @@ execute_repeat(1i32) { return(2i32) }
 
 TEST_CASE("print requires io_out effect") {
   const std::string source = R"(
+[effects(io_err)]
 main() {
   print("hello"utf8)
 }
@@ -2533,6 +2534,17 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("io_out") != std::string::npos);
+}
+
+TEST_CASE("implicit default effects allow print") {
+  const std::string source = R"(
+main() {
+  print_line("hello"utf8)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("print_error requires io_err effect") {

@@ -25,7 +25,7 @@ bool parseProgramWithError(const std::string &source, std::string &error) {
 bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
   auto program = parseProgram(source);
   primec::Semantics semantics;
-  return semantics.validate(program, entry, error, {});
+  return semantics.validate(program, entry, error, {"io_out", "io_err"});
 }
 
 bool validateProgramWithDefaults(const std::string &source,
