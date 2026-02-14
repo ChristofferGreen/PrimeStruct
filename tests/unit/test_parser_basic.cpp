@@ -1214,6 +1214,23 @@ main() {
   CHECK(transforms[2].templateArgs[0] == "int");
 }
 
+TEST_CASE("parses boolean transform arguments") {
+  const std::string source = R"(
+[tag(true false)]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  CHECK(transforms[0].name == "tag");
+  REQUIRE(transforms[0].arguments.size() == 2);
+  CHECK(transforms[0].arguments[0] == "true");
+  CHECK(transforms[0].arguments[1] == "false");
+}
+
 TEST_CASE("parses transform arguments without commas") {
   const std::string source = R"(
 [effects(global_write io_out) return<int>]

@@ -35,6 +35,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return fail("transform list cannot be empty");
   }
   auto parseTransformItem = [&](TransformPhase phase, Transform &transform) -> bool {
+    auto isBoolLiteral = [](const std::string &text) {
+      return text == "true" || text == "false";
+    };
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -61,9 +64,11 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           if (arg.kind == TokenKind::End) {
             return false;
           }
-          std::string argError;
-          if (!validateIdentifierText(arg.text, argError)) {
-            return fail(argError);
+          if (!isBoolLiteral(arg.text)) {
+            std::string argError;
+            if (!validateIdentifierText(arg.text, argError)) {
+              return fail(argError);
+            }
           }
           transform.arguments.push_back(arg.text);
         } else if (match(TokenKind::Number)) {
@@ -123,6 +128,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return true;
   };
   while (!match(TokenKind::RBracket)) {
+    auto isBoolLiteral = [](const std::string &text) {
+      return text == "true" || text == "false";
+    };
     Token name = consume(TokenKind::Identifier, "expected transform identifier");
     if (name.kind == TokenKind::End) {
       return false;
@@ -156,9 +164,11 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           if (arg.kind == TokenKind::End) {
             return false;
           }
-          std::string argError;
-          if (!validateIdentifierText(arg.text, argError)) {
-            return fail(argError);
+          if (!isBoolLiteral(arg.text)) {
+            std::string argError;
+            if (!validateIdentifierText(arg.text, argError)) {
+              return fail(argError);
+            }
           }
           transform.arguments.push_back(arg.text);
         } else if (match(TokenKind::Number)) {
