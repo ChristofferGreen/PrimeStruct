@@ -165,6 +165,36 @@ main() {
   CHECK(program.imports[3] == "/math/pi");
 }
 
+TEST_CASE("parses semicolon separators") {
+  const std::string source = R"(
+import /math/sin; /math/cos
+
+[return<int>; effects(io_out)]
+main([i32] left; [i32] right) {
+  [i32] sum{plus(left; right)}
+  print_line("hi"utf8);
+  return(sum);
+};
+
+[return<int>]
+pair<i32; i32>() {
+  return(1i32);
+};
+
+execute_repeat(1i32; 2i32);
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.imports.size() == 2);
+  CHECK(program.imports[0] == "/math/sin");
+  CHECK(program.imports[1] == "/math/cos");
+  REQUIRE(program.definitions.size() == 2);
+  CHECK(program.definitions[0].parameters.size() == 2);
+  REQUIRE(program.definitions[0].transforms.size() == 2);
+  CHECK(program.definitions[1].templateArgs.size() == 2);
+  CHECK(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 2);
+}
+
 TEST_CASE("parses comma-separated transform lists") {
   const std::string source = R"(
 [return<int>, effects(io_out)]
