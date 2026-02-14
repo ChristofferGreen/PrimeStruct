@@ -58,6 +58,28 @@ main() {
   CHECK(output.find("counter = 2") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter allows increment/decrement in expressions") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] counter{0i32}
+  inc{increment(counter)}
+  dec{decrement(counter)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_inc_dec_expr.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_inc_dec_expr.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int inc") != std::string::npos);
+  CHECK(output.find("int dec") != std::string::npos);
+  CHECK(output.find("++counter") != std::string::npos);
+  CHECK(output.find("--counter") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes if blocks") {
   const std::string source = R"(
 [return<void>]

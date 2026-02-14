@@ -400,6 +400,32 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     value = castExpr(value, it->second.type);
     return {"(" + target.name + " = " + value.code + ")", it->second.type};
   }
+  if (name == "increment" || name == "decrement") {
+    if (expr.args.size() != 1) {
+      error = "glsl backend requires increment/decrement target to be a local name";
+      return {};
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind != Expr::Kind::Name) {
+      error = "glsl backend requires increment/decrement target to be a local name";
+      return {};
+    }
+    auto it = state.locals.find(target.name);
+    if (it == state.locals.end()) {
+      error = "glsl backend requires local binding for increment/decrement target";
+      return {};
+    }
+    if (!it->second.isMutable) {
+      error = "glsl backend requires increment/decrement target to be mutable";
+      return {};
+    }
+    if (!isNumericType(it->second.type)) {
+      error = "glsl backend requires increment/decrement target to be numeric";
+      return {};
+    }
+    const char *op = (name == "increment") ? "++" : "--";
+    return {"(" + std::string(op) + target.name + ")", it->second.type};
+  }
   if (name == "equal" || name == "not_equal" || name == "less_than" || name == "less_equal" ||
       name == "greater_than" || name == "greater_equal") {
     if (expr.args.size() != 2) {
