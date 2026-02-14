@@ -617,6 +617,27 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs brace constructor value") {
+  const std::string source = R"(
+[return<int>]
+pick([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(pick{ 3i32 })
+}
+)";
+  const std::string srcPath = writeTemp("compile_brace_constructor_value.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_brace_constructor_value_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("compiles and runs map literal") {
   const std::string source = R"(
 [return<int>]
