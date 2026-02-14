@@ -89,14 +89,14 @@ Type aliases:
 - `int` and `float` are target-chosen aliases (at least `i32`/`f32`, potentially `i64`/`f64` on some platforms/backends). Prefer explicit widths for deterministic cross-target behavior.
 - Bool literals: `true`, `false`.
 - String literals:
-  - Double-quoted strings process escapes: `"hello"utf8`.
-  - Single-quoted strings are raw (no escape processing): `'hi'utf8`.
-  - Surface form accepts `utf8`/`ascii` suffixes; the `implicit-utf8` text transform appends `utf8` to bare strings.
-  - **Canonical/bottom-level form uses double-quoted strings with escapes normalized and an explicit `utf8`/`ascii` suffix.**
+  - Double-quoted and single-quoted strings both process escapes unless a raw suffix is used.
+  - Raw strings use `raw_utf8` / `raw_ascii` suffixes and do not process escapes.
+  - Surface form accepts `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the `implicit-utf8` text transform appends `utf8` to bare strings.
+  - **Canonical/bottom-level form uses `raw_utf8` / `raw_ascii` with unescaped content, choosing a quote type that avoids escapes when possible.**
   - `ascii` rejects non-ASCII bytes.
   - Escape sequences in double-quoted strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
   - Any other escape sequence is rejected.
-  - Single-quoted strings cannot contain a single quote; use a double-quoted string with `\\'` when needed.
+  - Single-quoted strings may contain escaped single quotes (`\\'`); use whichever quote form avoids escaping.
 
 ### 2.4 Punctuation Tokens
 
