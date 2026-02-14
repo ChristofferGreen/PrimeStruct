@@ -691,6 +691,96 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           return true;
         }
+        std::string copySignName;
+        if (getBuiltinCopysignName(expr, copySignName, hasMathImport)) {
+          if (expr.args.size() != 2) {
+            error = copySignName + " requires exactly two arguments";
+            return false;
+          }
+          LocalInfo::ValueKind xKind = inferExprKind(expr.args[0], localsIn);
+          LocalInfo::ValueKind yKind = inferExprKind(expr.args[1], localsIn);
+          auto isFloatKind = [](LocalInfo::ValueKind kind) {
+            return kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::Float64;
+          };
+          if (!isFloatKind(xKind) || !isFloatKind(yKind)) {
+            error = copySignName + " requires float arguments";
+            return false;
+          }
+          if (xKind != yKind) {
+            error = copySignName + " requires float arguments of the same type";
+            return false;
+          }
+          int32_t tempX = allocTempLocal();
+          int32_t tempY = allocTempLocal();
+          int32_t tempAbs = allocTempLocal();
+          int32_t tempOut = allocTempLocal();
+
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempY)});
+
+          IrOpcode cmpLtOp = (xKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
+          IrOpcode negOp = (xKind == LocalInfo::ValueKind::Float64) ? IrOpcode::NegF64 : IrOpcode::NegF32;
+
+          auto pushFloatZero = [&]() {
+            if (xKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              double value = 0.0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            uint32_t bits = 0;
+            float value = 0.0f;
+            std::memcpy(&bits, &value, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatZero();
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t useNeg = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({negOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAbs)});
+          size_t jumpAbsEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          size_t usePosIndex = function.instructions.size();
+          function.instructions[useNeg].imm = static_cast<int32_t>(usePosIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAbs)});
+
+          size_t absEndIndex = function.instructions.size();
+          function.instructions[jumpAbsEnd].imm = static_cast<int32_t>(absEndIndex);
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
+          pushFloatZero();
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t usePositive = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAbs)});
+          function.instructions.push_back({negOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+          size_t jumpToEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+
+          size_t usePositiveIndex = function.instructions.size();
+          function.instructions[usePositive].imm = static_cast<int32_t>(usePositiveIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAbs)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          return true;
+        }
         std::string powName;
         if (getBuiltinPowName(expr, powName, hasMathImport)) {
           if (expr.args.size() != 2) {

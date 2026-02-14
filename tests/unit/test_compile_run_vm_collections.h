@@ -625,6 +625,21 @@ main() {
   CHECK(runCommand(runCmd) == 11);
 }
 
+TEST_CASE("runs vm with math copysign") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{copysign(3.0f32, -1.0f32)}
+  [f32] b{copysign(4.0f32, 1.0f32)}
+  return(convert<int>(plus(a, b)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_copysign.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*
