@@ -870,6 +870,23 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("compiles and runs pointer operator sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{7i32}
+  [Pointer<i32>] ptr{&value}
+  return(*ptr)
+}
+)";
+  const std::string srcPath = writeTemp("compile_pointer_sugar.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_pointer_sugar_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
 TEST_CASE("rejects method call on map") {
   const std::string source = R"(
 [return<int>]

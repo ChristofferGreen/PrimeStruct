@@ -320,6 +320,8 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `a && b` -> `and(a, b)`
   - `a || b` -> `or(a, b)`
   - `!a` -> `not(a)`
+  - `&a` -> `location(a)`
+  - `*a` -> `dereference(a)`
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
     `/<envelope>/method(value, args...)`, where `<envelope>` is the envelope name associated with `value`.
