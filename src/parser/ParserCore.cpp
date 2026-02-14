@@ -19,6 +19,10 @@ bool isControlKeyword(const std::string &name) {
   return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for";
 }
 
+bool isLoopFormKeyword(const std::string &name) {
+  return name == "loop" || name == "while" || name == "for";
+}
+
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
   while (index < tokens.size() && isIgnorableToken(tokens[index].kind)) {
     ++index;
@@ -743,12 +747,6 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       if (name.kind == TokenKind::End) {
         return false;
       }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
-          return fail(nameError);
-        }
-      }
       if (name.text == "if") {
         return fail("if statement cannot have transforms");
       }
@@ -757,7 +755,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       }
 
       const bool bindingTransforms = isBindingTransformList(statementTransforms);
-      if (allowSurfaceSyntax_ && (name.text == "loop" || name.text == "while" || name.text == "for")) {
+      if (allowSurfaceSyntax_ && isLoopFormKeyword(name.text)) {
         Expr loopExpr;
         bool parsedLoop = false;
         if (!tryParseLoopFormAfterName(loopExpr, def.namespacePrefix, name.text, statementTransforms, parsedLoop)) {
@@ -767,6 +765,10 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
           def.statements.push_back(std::move(loopExpr));
           continue;
         }
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        return fail(nameError);
       }
 
       Expr callExpr;

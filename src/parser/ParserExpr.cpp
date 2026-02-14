@@ -330,12 +330,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (name.kind == TokenKind::End) {
         return false;
       }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
-          return fail(nameError);
-        }
-      }
       if (allowSurfaceSyntax_ && isLoopFormKeyword(name.text)) {
         bool parsedLoop = false;
         if (!tryParseLoopFormAfterName(out, namespacePrefix, name.text, transforms, parsedLoop)) {
@@ -343,6 +337,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
         if (parsedLoop) {
           return true;
+        }
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+          return fail(nameError);
         }
       }
       std::vector<std::string> templateArgs;
@@ -566,12 +566,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         out.boolValue = name.text == "true";
         return true;
       }
-      std::string nameError;
-      if (!validateIdentifierText(name.text, nameError)) {
-        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
-          return fail(nameError);
-        }
-      }
       if (allowSurfaceSyntax_ && isLoopFormKeyword(name.text)) {
         bool parsedLoop = false;
         const std::vector<Transform> noTransforms;
@@ -580,6 +574,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         }
         if (parsedLoop) {
           return true;
+        }
+      }
+      std::string nameError;
+      if (!validateIdentifierText(name.text, nameError)) {
+        if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+          return fail(nameError);
         }
       }
       std::vector<std::string> templateArgs;
