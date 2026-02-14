@@ -341,6 +341,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "binding not allowed in expression context";
       return false;
     }
+    std::optional<EffectScope> effectScope;
+    if (!expr.transforms.empty()) {
+      std::unordered_set<std::string> executionEffects;
+      if (!resolveExecutionEffects(expr, executionEffects)) {
+        return false;
+      }
+      effectScope.emplace(*this, std::move(executionEffects));
+    }
     if (isIfCall(expr)) {
       if (hasNamedArguments(expr.argNames)) {
         error_ = "named arguments not supported for builtin calls";

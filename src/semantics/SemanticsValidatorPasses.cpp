@@ -86,6 +86,63 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
   return true;
 }
 
+bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut) {
+  effectsOut = activeEffects_;
+  bool sawEffects = false;
+  bool sawCapabilities = false;
+  std::unordered_set<std::string> capabilities;
+  std::string context = resolveCalleePath(expr);
+  if (context.empty()) {
+    context = expr.name.empty() ? "<execution>" : expr.name;
+  }
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects") {
+      if (sawEffects) {
+        error_ = "duplicate effects transform on " + context;
+        return false;
+      }
+      sawEffects = true;
+      if (!validateEffectsTransform(transform, context, error_)) {
+        return false;
+      }
+      effectsOut.clear();
+      for (const auto &arg : transform.arguments) {
+        effectsOut.insert(arg);
+      }
+    } else if (transform.name == "capabilities") {
+      if (sawCapabilities) {
+        error_ = "duplicate capabilities transform on " + context;
+        return false;
+      }
+      sawCapabilities = true;
+      if (!validateCapabilitiesTransform(transform, context, error_)) {
+        return false;
+      }
+      capabilities.clear();
+      for (const auto &arg : transform.arguments) {
+        capabilities.insert(arg);
+      }
+    }
+  }
+  if (sawEffects) {
+    for (const auto &effect : effectsOut) {
+      if (activeEffects_.count(effect) == 0) {
+        error_ = "execution effects must be a subset of enclosing effects on " + context + ": " + effect;
+        return false;
+      }
+    }
+  }
+  if (sawCapabilities) {
+    for (const auto &capability : capabilities) {
+      if (effectsOut.count(capability) == 0) {
+        error_ = "capability requires matching effect on " + context + ": " + capability;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
     activeEffects_ = resolveEffects(def.transforms);

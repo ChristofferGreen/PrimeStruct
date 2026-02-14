@@ -3,6 +3,7 @@
 #include "primec/StringLiteral.h"
 
 #include <functional>
+#include <optional>
 #include <unordered_set>
 
 namespace primec::semantics {

@@ -2536,6 +2536,34 @@ main() {
   CHECK(error.find("io_out") != std::string::npos);
 }
 
+TEST_CASE("execution effects must be subset of definition effects") {
+  const std::string source = R"(
+[return<void>]
+noop() {
+}
+
+[effects(io_out) return<void>]
+main() {
+  [effects(io_err)] noop()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("execution effects must be a subset of enclosing effects") != std::string::npos);
+}
+
+TEST_CASE("execution effects scope vector literals") {
+  const std::string source = R"(
+[effects(heap_alloc io_out) return<void>]
+main() {
+  [effects(io_out)] vector<i32>(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+}
+
 TEST_CASE("implicit default effects allow print") {
   const std::string source = R"(
 main() {

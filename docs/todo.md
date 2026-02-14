@@ -25,7 +25,7 @@ Legend:
 - ○ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ○ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
 - ○ Support nested definitions/lambdas inside definition bodies (spec references nested definitions receiving their own transforms; parser only allows bindings/expressions).
-- ○ Allow execution-style transforms inside bodies and argument lists (SyntaxSpec allows `[effects(io_out)] log()` anywhere a form is allowed; parser treats leading `[...]` as a binding and rejects `()`).
+- ✓ Allow execution-style transforms inside bodies and argument lists (SyntaxSpec allows `[effects(io_out)] log()` anywhere a form is allowed; parser treats leading `[...]` as a binding and rejects `()`).
 - ○ Support brace constructor forms in value positions (`Type{ ... }` in arguments/returns); parser currently requires `()` or treats braces as bindings.
 
 **Types & Semantics**

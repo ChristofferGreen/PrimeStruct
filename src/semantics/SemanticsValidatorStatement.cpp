@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include <functional>
+#include <optional>
 
 namespace primec::semantics {
 
@@ -367,6 +368,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     locals.emplace(stmt.name, info);
     return true;
+  }
+  std::optional<EffectScope> effectScope;
+  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.transforms.empty()) {
+    std::unordered_set<std::string> executionEffects;
+    if (!resolveExecutionEffects(stmt, executionEffects)) {
+      return false;
+    }
+    effectScope.emplace(*this, std::move(executionEffects));
   }
   if (stmt.kind != Expr::Kind::Call) {
     if (!allowBindings) {

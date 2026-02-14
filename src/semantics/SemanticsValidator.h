@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "SemanticsHelpers.h"
@@ -58,6 +59,19 @@ private:
 
   std::unordered_set<std::string> resolveEffects(const std::vector<Transform> &transforms) const;
   bool validateCapabilitiesSubset(const std::vector<Transform> &transforms, const std::string &context);
+  bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
+
+  struct EffectScope {
+    SemanticsValidator &validator;
+    std::unordered_set<std::string> previous;
+    EffectScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> next)
+        : validator(validatorIn), previous(std::move(validatorIn.activeEffects_)) {
+      validator.activeEffects_ = std::move(next);
+    }
+    ~EffectScope() {
+      validator.activeEffects_ = std::move(previous);
+    }
+  };
 
   const Program &program_;
   const std::string &entryPath_;
