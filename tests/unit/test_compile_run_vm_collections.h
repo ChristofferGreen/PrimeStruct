@@ -640,6 +640,21 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
+TEST_CASE("runs vm with math angle helpers") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{radians(90.0f32)}
+  [f32] b{degrees(1.0f32)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_angles.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 58);
+}
+
 TEST_CASE("rejects vm unsupported math builtin") {
   const std::string source = R"(
 import /math/*

@@ -781,6 +781,41 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           return true;
         }
+        std::string angleName;
+        if (getBuiltinAngleName(expr, angleName, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            error = angleName + " requires exactly one argument";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+          if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
+            error = angleName + " requires float argument";
+            return false;
+          }
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          auto pushFloatConst = [&](double value) {
+            if (argKind == LocalInfo::ValueKind::Float64) {
+              uint64_t bits = 0;
+              std::memcpy(&bits, &value, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF64, bits});
+              return;
+            }
+            float f32 = static_cast<float>(value);
+            uint32_t bits = 0;
+            std::memcpy(&bits, &f32, sizeof(bits));
+            function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+          };
+          if (angleName == "radians") {
+            pushFloatConst(0.017453292519943295); // pi / 180
+          } else {
+            pushFloatConst(57.29577951308232); // 180 / pi
+          }
+          function.instructions.push_back(
+              {argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::MulF64 : IrOpcode::MulF32, 0});
+          return true;
+        }
         std::string powName;
         if (getBuiltinPowName(expr, powName, hasMathImport)) {
           if (expr.args.size() != 2) {

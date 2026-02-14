@@ -1587,6 +1587,25 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("compiles and runs native math angle helpers") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{radians(90.0f32)}
+  [f32] b{degrees(1.0f32)}
+  return(plus(convert<int>(a), convert<int>(b)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_angles.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_angles_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 58);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi
