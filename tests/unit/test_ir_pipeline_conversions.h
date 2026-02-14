@@ -376,12 +376,44 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer rejects unsupported math builtin") {
+TEST_CASE("ir lowerer supports hyperbolic math") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(asinh(0.5f)))
+  [f32] a{sinh(0.0f32)}
+  [f32] b{cosh(0.0f32)}
+  [f32] c{tanh(0.0f32)}
+  [f32] d{asinh(0.0f32)}
+  [f32] e{acosh(1.0f32)}
+  [f32] f{atanh(0.0f32)}
+  [f32] sum{plus(plus(a, b), plus(c, plus(d, plus(e, f))))}
+  return(convert<int>(sum))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 1);
+}
+
+TEST_CASE("ir lowerer rejects float pow in native backend") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(convert<int>(pow(2.0f32, 3.0f32)))
 }
 )";
   primec::Program program;
@@ -392,7 +424,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", module, error));
-  CHECK(error.find("native backend does not support math builtin: asinh") != std::string::npos);
+  CHECK(error.find("pow requires integer arguments in the native backend") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer supports math constant conversions") {

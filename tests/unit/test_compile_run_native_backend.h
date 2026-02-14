@@ -1671,6 +1671,30 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native math hyperbolic") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] a{sinh(0.0f32)}
+  [f32] b{cosh(0.0f32)}
+  [f32] c{tanh(0.0f32)}
+  [f32] d{asinh(0.0f32)}
+  [f32] e{acosh(1.0f32)}
+  [f32] f{atanh(0.0f32)}
+  [f32] sum{plus(plus(a, b), plus(c, plus(d, plus(e, f))))}
+  return(convert<int>(sum))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_hyperbolic.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_hyperbolic_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
 import /math/min /math/pi
@@ -1688,22 +1712,22 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("rejects native unsupported math builtin") {
+TEST_CASE("rejects native float pow in native backend") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(asinh(1.0f)))
+  return(convert<int>(pow(2.0f32, 3.0f32)))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_math_asinh_unsupported.prime", source);
+  const std::string srcPath = writeTemp("compile_native_math_pow_float.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_math_asinh_unsupported_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_native_math_pow_float_err.txt").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Native lowering error: native backend does not support math builtin: asinh\n");
+  CHECK(readFile(errPath) == "Native lowering error: pow requires integer arguments in the native backend\n");
 }
 
 TEST_CASE("compiles and runs native i64 arithmetic") {

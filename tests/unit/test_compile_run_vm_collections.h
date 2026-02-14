@@ -708,20 +708,40 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
-TEST_CASE("rejects vm unsupported math builtin") {
+TEST_CASE("runs vm with math hyperbolic") {
   const std::string source = R"(
 import /math/*
 [return<int>]
 main() {
-  return(convert<int>(asinh(1.0f)))
+  [f32] a{sinh(0.0f32)}
+  [f32] b{cosh(0.0f32)}
+  [f32] c{tanh(0.0f32)}
+  [f32] d{asinh(0.0f32)}
+  [f32] e{acosh(1.0f32)}
+  [f32] f{atanh(0.0f32)}
+  [f32] sum{plus(plus(a, b), plus(c, plus(d, plus(e, f))))}
+  return(convert<int>(sum))
 }
 )";
-  const std::string srcPath = writeTemp("vm_math_asinh_unsupported.prime", source);
+  const std::string srcPath = writeTemp("vm_math_hyperbolic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("rejects vm float pow in native backend") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(convert<int>(pow(2.0f32, 3.0f32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_pow_float_unsupported.prime", source);
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_math_asinh_unsupported_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_vm_math_pow_float_unsupported_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support math builtin: asinh\n");
+  CHECK(readFile(errPath) == "VM lowering error: pow requires integer arguments in the vm backend\n");
 }
 
 TEST_CASE("runs vm with convert bool from integers") {

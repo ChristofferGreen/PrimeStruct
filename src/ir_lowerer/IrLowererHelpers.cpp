@@ -264,6 +264,26 @@ bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare) {
   return out == "asin" || out == "acos" || out == "atan";
 }
 
+bool getBuiltinHyperbolicName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "sinh" || out == "cosh" || out == "tanh";
+}
+
+bool getBuiltinArcHyperbolicName(const Expr &expr, std::string &out, bool allowBare) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(expr.name, out, allowBare)) {
+    return false;
+  }
+  return out == "asinh" || out == "acosh" || out == "atanh";
+}
+
 bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
