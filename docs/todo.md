@@ -11,7 +11,7 @@ Legend:
 - ✓ Add auto-injected transform rules and path filters (`/math/*`, recurse flags) described in docs; currently only a global text filter list exists.
 - ✓ Support text transforms appending additional text transforms to the same node (self-expansion in the transform pipeline).
 - ✓ Align CLI naming and behavior with docs: support `--text-transforms`, `--no-text-transforms`, and true auto-deduction in `--transform-list` (currently `--text-filters` only).
-- ○ Apply `single_type_to_return` via semantic transforms or per-definition markers (it is currently toggled via the text filter list).
+- ✓ Apply `single_type_to_return` via semantic transforms or per-definition markers (it is currently toggled via the text filter list).
 - ○ Document `--emit=ir` (PSIR bytecode output) in the docs or remove it from the CLI.
 - ○ Enforce canonical-only parsing when `--no-transforms` is active (disable parser sugar like `if(...) {}` / `value[index]` and require explicit return transforms); currently still accepts surface forms.
 
