@@ -423,6 +423,9 @@ Helpers:
 - `reserve(value, capacity)` / `capacity(value)`
 - `clear(value)` / `remove_at(value, index)` / `remove_swap(value, index)`
 
+Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only
+(not valid in expression contexts).
+
 ### 8.3 Maps
 
 ```
