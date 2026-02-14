@@ -374,6 +374,32 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     out.code = "(-" + arg.code + ")";
     return out;
   }
+  if (name == "assign") {
+    if (expr.args.size() != 2) {
+      error = "glsl backend requires assign(target, value)";
+      return {};
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind != Expr::Kind::Name) {
+      error = "glsl backend requires assign target to be a local name";
+      return {};
+    }
+    auto it = state.locals.find(target.name);
+    if (it == state.locals.end()) {
+      error = "glsl backend requires local binding for assign target";
+      return {};
+    }
+    if (!it->second.isMutable) {
+      error = "glsl backend requires assign target to be mutable";
+      return {};
+    }
+    ExprResult value = emitExpr(expr.args[1], state, error);
+    if (!error.empty()) {
+      return {};
+    }
+    value = castExpr(value, it->second.type);
+    return {"(" + target.name + " = " + value.code + ")", it->second.type};
+  }
   if (name == "equal" || name == "not_equal" || name == "less_than" || name == "less_equal" ||
       name == "greater_than" || name == "greater_equal") {
     if (expr.args.size() != 2) {

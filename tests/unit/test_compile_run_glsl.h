@@ -39,6 +39,25 @@ main() {
   CHECK(output.find("float result") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter allows assign in expressions") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] counter{0i32}
+  value{assign(counter, 2i32)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_assign_expr.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_assign_expr.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int value") != std::string::npos);
+  CHECK(output.find("counter = 2") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes if blocks") {
   const std::string source = R"(
 [return<void>]
