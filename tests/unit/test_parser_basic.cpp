@@ -69,6 +69,36 @@ TEST_CASE("parses slash path definition") {
   CHECK(program.definitions[0].fullPath == "/demo/widget");
 }
 
+TEST_CASE("parses nested definitions inside bodies") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  helper() {
+    return(1i32)
+  }
+  return(2i32)
+}
+)";
+
+  const auto program = parseProgram(source);
+  const auto findDef = [&](const std::string &path) -> const primec::Definition * {
+    for (const auto &def : program.definitions) {
+      if (def.fullPath == path) {
+        return &def;
+      }
+    }
+    return nullptr;
+  };
+  const auto *mainDef = findDef("/main");
+  const auto *helperDef = findDef("/main/helper");
+  REQUIRE(mainDef != nullptr);
+  REQUIRE(helperDef != nullptr);
+  CHECK(helperDef->namespacePrefix == "/main");
+  REQUIRE(mainDef->statements.size() == 1);
+  CHECK(mainDef->statements[0].kind == primec::Expr::Kind::Call);
+  CHECK(mainDef->statements[0].name == "return");
+}
+
 TEST_CASE("parses execution with arguments and body") {
   const std::string source = R"(
 [return<int>]

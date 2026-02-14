@@ -34,10 +34,14 @@ private:
   bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed);
+  bool tryParseNestedDefinition(std::vector<Definition> &defs,
+                                const std::vector<Transform> &transforms,
+                                const std::string &parentPath,
+                                bool &parsed);
   bool definitionHasReturnBeforeClose() const;
   bool isDefinitionSignature(bool *paramsAreIdentifiers) const;
   bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;
-  bool parseDefinitionBody(Definition &def, bool allowNoReturn);
+  bool parseDefinitionBody(Definition &def, bool allowNoReturn, std::vector<Definition> &defs);
   bool parseExpr(Expr &expr, const std::string &namespacePrefix);
   bool finalizeBindingInitializer(Expr &binding);
   bool allowMathBareName(const std::string &name) const;

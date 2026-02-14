@@ -590,6 +590,29 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("lifecycle helpers allow nested definitions") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+
+  Create() {
+  }
+
+  Destroy() {
+  }
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("lifecycle helpers require struct tag") {
   const std::string source = R"(
 thing() {

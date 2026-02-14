@@ -322,7 +322,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
     def.parameters = std::move(parameters);
-    if (!parseDefinitionBody(def, hasStructTransform)) {
+    if (!parseDefinitionBody(def, hasStructTransform, defs)) {
       return false;
     }
     defs.push_back(std::move(def));
@@ -552,7 +552,104 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   return tokens_[braceIndex].kind == TokenKind::LBrace;
 }
 
-bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
+bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
+                                      const std::vector<Transform> &transforms,
+                                      const std::string &parentPath,
+                                      bool &parsed) {
+  parsed = false;
+  if (!match(TokenKind::Identifier)) {
+    return true;
+  }
+  const size_t savedPos = pos_;
+  Token name = consume(TokenKind::Identifier, "expected identifier");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    if (!isControlKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+      return fail(nameError);
+    }
+    pos_ = savedPos;
+    return true;
+  }
+
+  std::vector<std::string> templateArgs;
+  if (match(TokenKind::LAngle)) {
+    if (!parseTemplateList(templateArgs)) {
+      return false;
+    }
+  }
+
+  if (!match(TokenKind::LParen)) {
+    pos_ = savedPos;
+    return true;
+  }
+  if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
+    return false;
+  }
+
+  bool hasReturnTransform = false;
+  bool hasStructTransform = false;
+  for (const auto &transform : transforms) {
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+    }
+    if (isStructTransformName(transform.name)) {
+      hasStructTransform = true;
+    }
+  }
+
+  if (name.text == "repeat" && !hasReturnTransform && !hasStructTransform) {
+    pos_ = savedPos;
+    return true;
+  }
+
+  bool paramsAreIdentifiers = false;
+  bool isDefinition = false;
+  if (hasReturnTransform) {
+    isDefinition = true;
+  } else if (hasStructTransform) {
+    isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
+  } else {
+    isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+  }
+
+  if (!isDefinition) {
+    pos_ = savedPos;
+    return true;
+  }
+  if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasStructTransform) {
+    return fail("definition requires explicit return transform in canonical mode");
+  }
+
+  std::vector<Expr> parameters;
+  if (!parseParameterList(parameters, parentPath)) {
+    return false;
+  }
+  if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
+    return false;
+  }
+  if (!match(TokenKind::LBrace)) {
+    return fail("definitions must have a body");
+  }
+
+  Definition def;
+  def.name = name.text;
+  def.namespacePrefix = parentPath;
+  def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+  def.transforms = transforms;
+  def.templateArgs = std::move(templateArgs);
+  def.parameters = std::move(parameters);
+  if (!parseDefinitionBody(def, hasStructTransform, defs)) {
+    return false;
+  }
+  defs.push_back(std::move(def));
+  parsed = true;
+  return true;
+}
+
+bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vector<Definition> &defs) {
   bool returnsVoid = false;
   bool hasReturnTransform = false;
   for (const auto &transform : def.transforms) {
@@ -631,6 +728,14 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn) {
         def.statements.push_back(std::move(ifExpr));
         continue;
       }
+    }
+
+    bool parsedNestedDefinition = false;
+    if (!tryParseNestedDefinition(defs, statementTransforms, def.fullPath, parsedNestedDefinition)) {
+      return false;
+    }
+    if (parsedNestedDefinition) {
+      continue;
     }
 
     if (!statementTransforms.empty()) {
