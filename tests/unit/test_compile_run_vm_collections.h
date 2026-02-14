@@ -435,7 +435,7 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("rejects vm vector helpers") {
+TEST_CASE("rejects vm vector growth helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -449,6 +449,25 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath) == "VM lowering error: vm backend does not support vector helper: push\n");
+}
+
+TEST_CASE("runs vm with vector shrink helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
+  pop(values)
+  remove_at(values, 1i32)
+  remove_swap(values, 0i32)
+  last{at(values, 0i32)}
+  size{count(values)}
+  clear(values)
+  return(plus(plus(last, size), count(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_shrink_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
 }
 
 TEST_CASE("runs vm with math abs/sign/min/max") {

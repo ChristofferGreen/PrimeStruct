@@ -307,7 +307,7 @@ for(
 ```
 - **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers / brace constructors), `return(value)` returns from the block and yields its value.
-- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or bindings. Vector growth operations still require heap allocation and are not supported in VM/native yet.
+- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or bindings. Vector growth operations (`push`, `reserve`) still require heap allocation and are not supported in VM/native yet; shrinking helpers (`pop`, `clear`, `remove_at`, `remove_swap`) are supported for fixed-capacity vectors.
 
 ### Standard Library Reference (draft, v0)
 - **Status:** this reference is a snapshot of the current builtin surface. It will be versioned once the standard library is split into packages.

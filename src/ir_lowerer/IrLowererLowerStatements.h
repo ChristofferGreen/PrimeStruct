@@ -793,6 +793,253 @@
       }
       return true;
     }
+    if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall) {
+      std::string vectorHelper;
+      if (isSimpleCallName(stmt, "push")) {
+        vectorHelper = "push";
+      } else if (isSimpleCallName(stmt, "pop")) {
+        vectorHelper = "pop";
+      } else if (isSimpleCallName(stmt, "reserve")) {
+        vectorHelper = "reserve";
+      } else if (isSimpleCallName(stmt, "clear")) {
+        vectorHelper = "clear";
+      } else if (isSimpleCallName(stmt, "remove_at")) {
+        vectorHelper = "remove_at";
+      } else if (isSimpleCallName(stmt, "remove_swap")) {
+        vectorHelper = "remove_swap";
+      }
+
+      if (!vectorHelper.empty()) {
+        if (!stmt.templateArgs.empty()) {
+          error = vectorHelper + " does not accept template arguments";
+          return false;
+        }
+        if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+          error = vectorHelper + " does not accept block arguments";
+          return false;
+        }
+        if (vectorHelper == "push" || vectorHelper == "reserve") {
+          error = "native backend does not support vector helper: " + vectorHelper;
+          return false;
+        }
+
+        const size_t expectedArgs = (vectorHelper == "pop" || vectorHelper == "clear") ? 1 : 2;
+        if (stmt.args.size() != expectedArgs) {
+          if (expectedArgs == 1) {
+            error = vectorHelper + " requires exactly one argument";
+          } else {
+            error = vectorHelper + " requires exactly two arguments";
+          }
+          return false;
+        }
+
+        const Expr &target = stmt.args.front();
+        if (target.kind != Expr::Kind::Name) {
+          error = vectorHelper + " requires mutable vector binding";
+          return false;
+        }
+        auto it = localsIn.find(target.name);
+        if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
+          error = vectorHelper + " requires mutable vector binding";
+          return false;
+        }
+
+        auto pushIndexConst = [&](LocalInfo::ValueKind kind, int32_t value) {
+          if (kind == LocalInfo::ValueKind::Int32) {
+            function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(value)});
+          } else {
+            function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+          }
+        };
+
+        const int32_t ptrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+
+        if (vectorHelper == "clear") {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 0});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+          return true;
+        }
+
+        const int32_t countLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+        if (vectorHelper == "pop") {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 0});
+          function.instructions.push_back({IrOpcode::CmpEqI32, 0});
+          size_t jumpNonEmpty = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          emitVectorPopOnEmpty();
+          size_t nonEmptyIndex = function.instructions.size();
+          function.instructions[jumpNonEmpty].imm = static_cast<int32_t>(nonEmptyIndex);
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back({IrOpcode::SubI32, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+          return true;
+        }
+
+        LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+        if (!isSupportedIndexKind(indexKind)) {
+          error = vectorHelper + " requires integer index";
+          return false;
+        }
+
+        IrOpcode cmpLtOp =
+            (indexKind == LocalInfo::ValueKind::Int32)
+                ? IrOpcode::CmpLtI32
+                : (indexKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtU64);
+        IrOpcode addOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::AddI32 : IrOpcode::AddI64;
+        IrOpcode subOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::SubI32 : IrOpcode::SubI64;
+        IrOpcode mulOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::MulI32 : IrOpcode::MulI64;
+
+        const int32_t indexLocal = allocTempLocal();
+        if (!emitExpr(stmt.args[1], localsIn)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+        if (indexKind != LocalInfo::ValueKind::UInt64) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+          function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+          function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+          size_t jumpNonNegative = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          emitVectorIndexOutOfBounds();
+          size_t nonNegativeIndex = function.instructions.size();
+          function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+        }
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+        function.instructions.push_back({cmpGeForIndex(indexKind), 0});
+        size_t jumpInRange = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        emitVectorIndexOutOfBounds();
+        size_t inRangeIndex = function.instructions.size();
+        function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
+
+        const int32_t lastIndexLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+        pushIndexConst(indexKind, 1);
+        function.instructions.push_back({subOp, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
+
+        if (vectorHelper == "remove_swap") {
+          const int32_t destPtrLocal = allocTempLocal();
+          const int32_t srcPtrLocal = allocTempLocal();
+          const int32_t tempValueLocal = allocTempLocal();
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+          pushIndexConst(indexKind, 1);
+          function.instructions.push_back({addOp, 0});
+          pushIndexConst(indexKind, 16);
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
+          pushIndexConst(indexKind, 1);
+          function.instructions.push_back({addOp, 0});
+          pushIndexConst(indexKind, 16);
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValueLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back({IrOpcode::SubI32, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+          return true;
+        }
+
+        const int32_t destPtrLocal = allocTempLocal();
+        const int32_t srcPtrLocal = allocTempLocal();
+        const int32_t tempValueLocal = allocTempLocal();
+
+        const size_t loopStart = function.instructions.size();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
+        function.instructions.push_back({cmpLtOp, 0});
+        size_t jumpLoopEnd = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        pushIndexConst(indexKind, 1);
+        function.instructions.push_back({addOp, 0});
+        pushIndexConst(indexKind, 16);
+        function.instructions.push_back({mulOp, 0});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        pushIndexConst(indexKind, 2);
+        function.instructions.push_back({addOp, 0});
+        pushIndexConst(indexKind, 16);
+        function.instructions.push_back({mulOp, 0});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+        function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValueLocal)});
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
+        function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+        function.instructions.push_back({IrOpcode::Pop, 0});
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+        pushIndexConst(indexKind, 1);
+        function.instructions.push_back({addOp, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+        function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+
+        size_t loopEndIndex = function.instructions.size();
+        function.instructions[jumpLoopEnd].imm = static_cast<int32_t>(loopEndIndex);
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+        function.instructions.push_back({IrOpcode::PushI32, 1});
+        function.instructions.push_back({IrOpcode::SubI32, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+        function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+        function.instructions.push_back({IrOpcode::Pop, 0});
+        return true;
+      }
+    }
     if (stmt.kind == Expr::Kind::Call) {
       if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn) && !isStringCountCall(stmt, localsIn) &&
           !isVectorCapacityCall(stmt, localsIn)) {

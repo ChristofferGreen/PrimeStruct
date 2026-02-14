@@ -2306,7 +2306,7 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("rejects native vector helpers") {
+TEST_CASE("rejects native vector growth helpers") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -2326,6 +2326,29 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath) ==
         "Native lowering error: native backend does not support vector helper: push\n");
+}
+
+TEST_CASE("compiles and runs native vector shrink helpers") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 4i32)}
+  pop(values)
+  remove_at(values, 1i32)
+  remove_swap(values, 0i32)
+  last{at(values, 0i32)}
+  size{count(values)}
+  clear(values)
+  return(plus(plus(last, size), count(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_shrink_helpers.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_shrink_helpers_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_CASE("compiles and runs native vector literal count helper") {

@@ -528,6 +528,24 @@ bool IrLowerer::lower(const Program &program,
     function.instructions.push_back({IrOpcode::ReturnI32, 0});
   };
 
+  auto emitVectorIndexOutOfBounds = [&]() {
+    uint64_t flags = encodePrintFlags(true, true);
+    int32_t msgIndex = internString("vector index out of bounds");
+    function.instructions.push_back(
+        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+    function.instructions.push_back({IrOpcode::PushI32, 3});
+    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+  };
+
+  auto emitVectorPopOnEmpty = [&]() {
+    uint64_t flags = encodePrintFlags(true, true);
+    int32_t msgIndex = internString("vector pop on empty");
+    function.instructions.push_back(
+        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+    function.instructions.push_back({IrOpcode::PushI32, 3});
+    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+  };
+
   auto emitPowNegativeExponent = [&]() {
     uint64_t flags = encodePrintFlags(true, true);
     int32_t msgIndex = internString("pow exponent must be non-negative");
