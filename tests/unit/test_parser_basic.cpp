@@ -155,6 +155,48 @@ main() {
   CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses block call without parens") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{ 3i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &blockCall = returnCall.args[0];
+  REQUIRE(blockCall.kind == primec::Expr::Kind::Call);
+  CHECK(blockCall.name == "block");
+  CHECK(blockCall.args.empty());
+  CHECK(blockCall.hasBodyArguments);
+  REQUIRE(blockCall.bodyArguments.size() == 1);
+}
+
+TEST_CASE("parses call with trailing body arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  use(1i32) { log(2i32) }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 2);
+  const auto &useCall = mainDef.statements[0];
+  REQUIRE(useCall.kind == primec::Expr::Kind::Call);
+  CHECK(useCall.name == "use");
+  CHECK(useCall.hasBodyArguments);
+  REQUIRE(useCall.bodyArguments.size() == 1);
+  CHECK(useCall.bodyArguments[0].kind == primec::Expr::Kind::Call);
+}
+
 TEST_CASE("parses execution with arguments and body") {
   const std::string source = R"(
 [return<int>]

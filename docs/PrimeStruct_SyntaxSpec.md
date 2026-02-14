@@ -244,7 +244,7 @@ form           = literal
                | while_form
                | for_form ;
 
-call           = name template_opt args ;
+call           = name template_opt args body_args_opt ;
 name           = identifier | slash_path ;
 
 brace_ctor     = name template_opt value_block ;
@@ -259,14 +259,15 @@ while_form     = transforms_opt "while" "(" form ")" block_if_body ;
 for_slot       = binding | form ;
 for_form       = transforms_opt "for" "(" for_slot for_slot for_slot ")" block_if_body ;
 
-value_block     = "{" stmt_list_opt "}" ;
+body_args_opt  = [ "{" stmt_list_opt "}" ] ;
+value_block    = "{" stmt_list_opt "}" ;
 
 literal        = int_lit | float_lit | bool_lit | string_lit ;
 ```
 
 Notes:
 - `binding` reuses the Envelope; it becomes a local declaration.
-- `execution` is a call-style form (optionally prefixed by transforms) with mandatory parentheses and no body. Definitions require a body block.
+- `execution` is a call-style form (optionally prefixed by transforms) with mandatory parentheses and an optional trailing body block. Definitions require a body block.
   - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an implicit empty body.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
 - `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
@@ -275,12 +276,14 @@ Notes:
   - `array<i32; i64  u64>`
   - `call(a, b; c  d)`
   - `[text(operators; collections, implicit-utf8)]`
-- `loop`, `while`, and `for` are special forms that accept a body block; they are not generic call bodies.
+- Calls may include a trailing body block (`foo(args) { ... }`) that becomes a list of body arguments on the call envelope.
+- `loop`, `while`, and `for` are special surface forms that accept a body block and are rewritten into canonical calls.
 - Canonical control-flow calls use definition envelopes as arguments (e.g., `if(cond, then() { ... }, else() { ... })`).
   Envelope names in this position are for readability only; any name is accepted and ignored by the compiler.
 - `loop`, `while`, and `for` may be prefixed by transforms; `[shared_scope]` marks the loop body scope as shared across iterations.
 - Text transforms accept only identifier/literal arguments; semantic transforms may accept full forms. If a text transform is given a non-simple argument, it is a diagnostic.
 - `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In statement position, `name{...}` is parsed as a binding.
+- `block{...}` is shorthand for `block() { ... }` and constructs a value block without a parameter list. `block()` with a trailing body block is allowed in any form position.
 - `quoted_string` in include declarations is a raw quoted string without suffixes.
 
 ## 5. Desugaring and Canonical Core
