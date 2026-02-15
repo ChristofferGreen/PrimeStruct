@@ -100,6 +100,24 @@ execute_repeat(3i32) { main(), main() main() }
   CHECK(program.executions[0].bodyArguments.size() == 3);
 }
 
+TEST_CASE("parses execution body with transform-prefixed call") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+execute_repeat(1i32) { [effects(io_out)] print_line("hi"utf8) }
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  const auto &bodyArgs = program.executions[0].bodyArguments;
+  REQUIRE(bodyArgs.size() == 1);
+  CHECK(bodyArgs[0].name == "print_line");
+  REQUIRE(bodyArgs[0].transforms.size() == 1);
+  CHECK(bodyArgs[0].transforms[0].name == "effects");
+}
+
 TEST_CASE("parses execution with identifier argument and body") {
   const std::string source = R"(
 [return<int>]

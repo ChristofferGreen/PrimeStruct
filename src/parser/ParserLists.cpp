@@ -897,9 +897,6 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
       }
       continue;
     }
-    if (!allowBraceBindings_ && match(TokenKind::LBracket)) {
-      return fail("execution body arguments cannot be bindings");
-    }
     Expr arg;
     if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsedIf = false;
