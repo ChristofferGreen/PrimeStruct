@@ -463,6 +463,21 @@ main() {
   CHECK(error.find("ascii string literal contains non-ASCII characters") != std::string::npos);
 }
 
+TEST_CASE("raw string literal rejects embedded quotes") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("he\"llo"raw_utf8)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("raw string literal cannot contain quote characters") != std::string::npos);
+}
+
 TEST_CASE("named arguments rejected for print builtin") {
   const std::string source = R"(
 [return<void> effects(io_out)]

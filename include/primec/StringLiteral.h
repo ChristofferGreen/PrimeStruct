@@ -108,6 +108,15 @@ inline bool parseStringLiteralToken(const std::string &token, ParsedStringLitera
   if (!raw && !literalText.empty() && literalText.front() == '\'') {
     raw = true;
   }
+  if (raw && literalText.size() >= 2) {
+    const char quote = literalText.front();
+    for (size_t i = 1; i + 1 < literalText.size(); ++i) {
+      if (literalText[i] == quote) {
+        error = "raw string literal cannot contain quote characters";
+        return false;
+      }
+    }
+  }
   std::string decoded;
   if (!decodeStringLiteralText(literalText, decoded, error, raw)) {
     return false;
