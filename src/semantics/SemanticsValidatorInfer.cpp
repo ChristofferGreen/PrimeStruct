@@ -120,6 +120,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (!isIfBlockEnvelope(candidate)) {
           return false;
         }
+        bool sawReturn = false;
         for (const auto &bodyExpr : candidate.bodyArguments) {
           if (bodyExpr.isBinding) {
             BindingInfo binding;
@@ -133,7 +134,17 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             localsOut.emplace(bodyExpr.name, std::move(binding));
             continue;
           }
-          valueExprOut = &bodyExpr;
+          if (isReturnCall(bodyExpr)) {
+            if (bodyExpr.args.size() != 1) {
+              return false;
+            }
+            valueExprOut = &bodyExpr.args.front();
+            sawReturn = true;
+            continue;
+          }
+          if (!sawReturn) {
+            valueExprOut = &bodyExpr;
+          }
         }
         return valueExprOut != nullptr;
       };
@@ -163,6 +174,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         std::unordered_map<std::string, BindingInfo> blockLocals = locals;
         ReturnKind result = ReturnKind::Unknown;
+        bool sawReturn = false;
         for (const auto &bodyExpr : expr.bodyArguments) {
           if (bodyExpr.isBinding) {
             BindingInfo info;
@@ -186,7 +198,16 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             blockLocals.emplace(bodyExpr.name, std::move(info));
             continue;
           }
-          result = inferExprReturnKind(bodyExpr, params, blockLocals);
+          if (isReturnCall(bodyExpr)) {
+            if (bodyExpr.args.size() == 1) {
+              result = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+              sawReturn = true;
+            }
+            continue;
+          }
+          if (!sawReturn) {
+            result = inferExprReturnKind(bodyExpr, params, blockLocals);
+          }
         }
         return result;
       }

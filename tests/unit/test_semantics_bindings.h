@@ -1456,6 +1456,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression allows explicit return value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block(){
+    [i32] inner{1i32}
+    return(plus(inner, 2i32))
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("block expression rejects void return value") {
+  const std::string source = R"(
+[return<void>]
+log() {
+  return()
+}
+
+[return<int>]
+main() {
+  return(block(){
+    return(log())
+  })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block expression requires a value") != std::string::npos);
+}
+
+TEST_CASE("if expression allows return value in branch blocks") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(true, then(){
+    return(1i32)
+  }, else(){
+    return(2i32)
+  }))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block expression must end with value") {
   const std::string source = R"(
 [return<int>]

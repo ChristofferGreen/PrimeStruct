@@ -11,6 +11,14 @@
                 branchLocals.emplace(bodyExpr.name, info);
                 continue;
               }
+              if (isReturnCall(bodyExpr)) {
+                if (bodyExpr.args.size() != 1) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                sawValue = true;
+                lastKind = inferExprKind(bodyExpr.args.front(), branchLocals);
+                continue;
+              }
               sawValue = true;
               lastKind = inferExprKind(bodyExpr, branchLocals);
             }
@@ -33,7 +41,18 @@
                   error = "if branch blocks must end with an expression";
                   return false;
                 }
+                if (isReturnCall(bodyStmt)) {
+                  if (bodyStmt.args.size() != 1) {
+                    error = "return requires a value in if branch";
+                    return false;
+                  }
+                  return emitExpr(bodyStmt.args.front(), branchLocals);
+                }
                 return emitExpr(bodyStmt, branchLocals);
+              }
+              if (isReturnCall(bodyStmt)) {
+                error = "return must be final expression in if branch";
+                return false;
               }
               if (!emitStatement(bodyStmt, branchLocals)) {
                 return false;

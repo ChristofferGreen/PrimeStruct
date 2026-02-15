@@ -3294,7 +3294,18 @@
                 error = "block expression must end with an expression";
                 return false;
               }
+              if (isReturnCall(bodyStmt)) {
+                if (bodyStmt.args.size() != 1) {
+                  error = "return requires a value in block expression";
+                  return false;
+                }
+                return emitExpr(bodyStmt.args.front(), blockLocals);
+              }
               return emitExpr(bodyStmt, blockLocals);
+            }
+            if (isReturnCall(bodyStmt)) {
+              error = "return must be final expression in block";
+              return false;
             }
             if (!emitStatement(bodyStmt, blockLocals)) {
               return false;

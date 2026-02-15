@@ -524,7 +524,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       return nullptr;
     }
     const Expr *valueExpr = nullptr;
-    for (const auto &bodyExpr : candidate.bodyArguments) {
+    for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
+      const Expr &bodyExpr = candidate.bodyArguments[i];
       if (bodyExpr.isBinding) {
         continue;
       }
@@ -701,7 +702,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           std::unordered_map<std::string, BindingInfo> branchLocals = locals;
           const Expr *valueExpr = nullptr;
-          for (const auto &bodyExpr : branch.bodyArguments) {
+          for (size_t i = 0; i < branch.bodyArguments.size(); ++i) {
+            const Expr &bodyExpr = branch.bodyArguments[i];
+            const bool isLast = (i + 1 == branch.bodyArguments.size());
             if (bodyExpr.isBinding) {
               if (isParam(params, bodyExpr.name) || branchLocals.count(bodyExpr.name) > 0) {
                 error_ = "duplicate binding name: " + bodyExpr.name;
@@ -748,6 +751,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 }
               }
               branchLocals.emplace(bodyExpr.name, info);
+              continue;
+            }
+            if (isReturnCall(bodyExpr)) {
+              if (!isLast) {
+                error_ = std::string("return must be final expression in ") + label + " block";
+                return false;
+              }
+              if (bodyExpr.args.size() != 1) {
+                error_ = std::string("return requires a value in ") + label + " block";
+                return false;
+              }
+              if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
+                return false;
+              }
+              valueExpr = &bodyExpr.args.front();
               continue;
             }
             if (!validateExpr(params, branchLocals, bodyExpr)) {
@@ -866,6 +884,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           blockLocals.emplace(bodyExpr.name, info);
           continue;
+        }
+        if (isReturnCall(bodyExpr)) {
+          if (!isLast) {
+            error_ = "return must be final expression in block";
+            return false;
+          }
+          if (bodyExpr.args.size() != 1) {
+            error_ = "return requires a value in block expression";
+            return false;
+          }
+          if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
+            return false;
+          }
+          ReturnKind kind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+          if (kind == ReturnKind::Void) {
+            if (!isStructConstructorValueExpr(bodyExpr.args.front())) {
+              error_ = "block expression requires a value";
+              return false;
+            }
+          }
+          return true;
         }
         if (!validateExpr(params, blockLocals, bodyExpr)) {
           return false;

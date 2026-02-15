@@ -1237,13 +1237,25 @@ bool emitValueBlock(const Expr &blockExpr,
         error = "glsl backend requires block to end with a value expression";
         return false;
       }
-      result = emitExpr(stmt, state, error);
+      const Expr *valueExpr = &stmt;
+      if (isSimpleCallName(stmt, "return")) {
+        if (stmt.args.size() != 1) {
+          error = "glsl backend requires return(value) in value blocks";
+          return false;
+        }
+        valueExpr = &stmt.args.front();
+      }
+      result = emitExpr(*valueExpr, state, error);
       if (!error.empty()) {
         return false;
       }
       appendIndented(out, result.prelude, indent);
       result.prelude.clear();
       return true;
+    }
+    if (isSimpleCallName(stmt, "return")) {
+      error = "glsl backend requires return to be final expression in value blocks";
+      return false;
     }
     if (!emitStatement(stmt, state, out, error, indent)) {
       return false;

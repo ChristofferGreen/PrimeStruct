@@ -271,6 +271,7 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   }
   LocalTypeMap blockLocals = locals;
   const Expr *valueExpr = nullptr;
+  bool sawReturn = false;
   for (const auto &bodyExpr : initializer.bodyArguments) {
     if (bodyExpr.isBinding) {
       BindingInfo binding;
@@ -283,7 +284,17 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
       }
       continue;
     }
-    valueExpr = &bodyExpr;
+    if (isReturnCall(bodyExpr)) {
+      if (bodyExpr.args.size() != 1) {
+        return false;
+      }
+      valueExpr = &bodyExpr.args.front();
+      sawReturn = true;
+      continue;
+    }
+    if (!sawReturn) {
+      valueExpr = &bodyExpr;
+    }
   }
   if (!valueExpr) {
     return false;

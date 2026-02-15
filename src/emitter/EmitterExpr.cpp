@@ -649,13 +649,46 @@ std::string Emitter::emitExpr(const Expr &expr,
     for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
       const Expr &stmt = expr.bodyArguments[i];
       const bool isLast = (i + 1 == expr.bodyArguments.size());
+      if (!isLast && isReturnCall(stmt)) {
+        if (stmt.args.size() == 1) {
+          out << "return "
+              << emitExpr(stmt.args.front(),
+                          nameMap,
+                          paramMap,
+                          structTypeMap,
+                          importAliases,
+                          blockTypes,
+                          returnKinds,
+                          allowMathBare)
+              << "; ";
+        } else {
+          out << "return 0; ";
+        }
+        break;
+      }
       if (isLast) {
         if (stmt.isBinding) {
           out << "return 0; ";
           break;
         }
+        const Expr *valueExpr = &stmt;
+        if (isReturnCall(stmt)) {
+          if (stmt.args.size() == 1) {
+            valueExpr = &stmt.args.front();
+          } else {
+            out << "return 0; ";
+            break;
+          }
+        }
         out << "return "
-            << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, blockTypes, returnKinds, allowMathBare)
+            << emitExpr(*valueExpr,
+                        nameMap,
+                        paramMap,
+                        structTypeMap,
+                        importAliases,
+                        blockTypes,
+                        returnKinds,
+                        allowMathBare)
             << "; ";
         break;
       }
@@ -786,13 +819,39 @@ std::string Emitter::emitExpr(const Expr &expr,
       for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
         const Expr &stmt = candidate.bodyArguments[i];
         const bool isLast = (i + 1 == candidate.bodyArguments.size());
+        if (!isLast && isReturnCall(stmt)) {
+          if (stmt.args.size() == 1) {
+            out << "return "
+                << emitExpr(stmt.args.front(),
+                            nameMap,
+                            paramMap,
+                            structTypeMap,
+                            importAliases,
+                            branchTypes,
+                            returnKinds,
+                            allowMathBare)
+                << "; ";
+          } else {
+            out << "return 0; ";
+          }
+          break;
+        }
         if (isLast) {
           if (stmt.isBinding) {
             out << "return 0; ";
             break;
           }
+          const Expr *valueExpr = &stmt;
+          if (isReturnCall(stmt)) {
+            if (stmt.args.size() == 1) {
+              valueExpr = &stmt.args.front();
+            } else {
+              out << "return 0; ";
+              break;
+            }
+          }
           out << "return "
-              << emitExpr(stmt,
+              << emitExpr(*valueExpr,
                           nameMap,
                           paramMap,
                           structTypeMap,
