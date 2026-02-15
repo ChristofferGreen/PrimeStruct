@@ -678,17 +678,153 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "block requires block arguments";
       return false;
     }
+    auto isLoopBlockEnvelope = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      return true;
+    };
+    auto validateLoopBody = [&](const Expr &body, const std::unordered_map<std::string, BindingInfo> &baseLocals) -> bool {
+      if (!isLoopBlockEnvelope(body)) {
+        error_ = "loop body requires a block envelope";
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = baseLocals;
+      for (const auto &bodyExpr : body.bodyArguments) {
+        if (!validateStatement(params,
+                               blockLocals,
+                               bodyExpr,
+                               ReturnKind::Unknown,
+                               false,
+                               true,
+                               nullptr,
+                               body.namespacePrefix)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    auto returnKindForLoopBinding = [&](const BindingInfo &binding) -> ReturnKind {
+      if (binding.typeName == "Reference") {
+        return returnKindForTypeName(binding.typeTemplateArg);
+      }
+      return returnKindForTypeName(binding.typeName);
+    };
     if (isLoopCall(expr)) {
-      error_ = "loop is only supported as a statement";
-      return false;
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "loop does not accept trailing block arguments";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "loop does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 2) {
+        error_ = "loop requires count and body";
+        return false;
+      }
+      const Expr &count = expr.args[0];
+      if (!validateExpr(params, locals, count)) {
+        return false;
+      }
+      ReturnKind countKind = inferExprReturnKind(count, params, locals);
+      if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64) {
+        error_ = "loop count requires integer";
+        return false;
+      }
+      if (count.kind == Expr::Kind::Literal && !count.isUnsigned) {
+        if ((count.intWidth == 32 && static_cast<int32_t>(count.literalValue) < 0) ||
+            (count.intWidth == 64 && static_cast<int64_t>(count.literalValue) < 0)) {
+          error_ = "loop count must be non-negative";
+          return false;
+        }
+      }
+      return validateLoopBody(expr.args[1], locals);
     }
     if (isWhileCall(expr)) {
-      error_ = "while is only supported as a statement";
-      return false;
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "while does not accept trailing block arguments";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "while does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 2) {
+        error_ = "while requires condition and body";
+        return false;
+      }
+      const Expr &cond = expr.args[0];
+      if (!validateExpr(params, locals, cond)) {
+        return false;
+      }
+      ReturnKind condKind = inferExprReturnKind(cond, params, locals);
+      if (condKind != ReturnKind::Bool) {
+        error_ = "while condition requires bool";
+        return false;
+      }
+      return validateLoopBody(expr.args[1], locals);
     }
     if (isForCall(expr)) {
-      error_ = "for is only supported as a statement";
-      return false;
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "for does not accept trailing block arguments";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "for does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 4) {
+        error_ = "for requires init, condition, step, and body";
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> loopLocals = locals;
+      if (!validateStatement(params, loopLocals, expr.args[0], ReturnKind::Unknown, false, true, nullptr, expr.namespacePrefix)) {
+        return false;
+      }
+      const Expr &cond = expr.args[1];
+      if (cond.isBinding) {
+        if (!validateStatement(params, loopLocals, cond, ReturnKind::Unknown, false, true, nullptr, expr.namespacePrefix)) {
+          return false;
+        }
+        auto it = loopLocals.find(cond.name);
+        ReturnKind condKind = it == loopLocals.end() ? ReturnKind::Unknown : returnKindForLoopBinding(it->second);
+        if (condKind != ReturnKind::Bool) {
+          error_ = "for condition requires bool";
+          return false;
+        }
+      } else {
+        if (!validateExpr(params, loopLocals, cond)) {
+          return false;
+        }
+        ReturnKind condKind = inferExprReturnKind(cond, params, loopLocals);
+        if (condKind != ReturnKind::Bool) {
+          error_ = "for condition requires bool";
+          return false;
+        }
+      }
+      if (!validateStatement(params, loopLocals, expr.args[2], ReturnKind::Unknown, false, true, nullptr, expr.namespacePrefix)) {
+        return false;
+      }
+      return validateLoopBody(expr.args[3], loopLocals);
     }
     if (isRepeatCall(expr)) {
       error_ = "repeat is only supported as a statement";

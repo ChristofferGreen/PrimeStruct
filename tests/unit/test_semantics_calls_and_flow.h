@@ -81,6 +81,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("loop allowed in value blocks") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{
+    loop(2i32) { }
+    7i32
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("loop value block requires value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{ loop(1i32) { } }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer requires a value") != std::string::npos);
+}
+
 TEST_CASE("for condition accepts binding") {
   const std::string source = R"(
 [return<int>]

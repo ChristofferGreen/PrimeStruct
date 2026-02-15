@@ -95,6 +95,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return returnKindForTypeName(it->second.typeName);
   }
   if (expr.kind == Expr::Kind::Call) {
+    if (isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) || isRepeatCall(expr)) {
+      return ReturnKind::Void;
+    }
     if (isIfCall(expr) && expr.args.size() == 3) {
       auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
