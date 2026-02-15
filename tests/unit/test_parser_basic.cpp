@@ -705,6 +705,28 @@ main() {
   CHECK(loopCall.args[3].name == "do");
 }
 
+TEST_CASE("parses for form with separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for([i32] i{0i32}; less_than(i 3i32), increment(i)) {
+    plus(i 1i32)
+  }
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 2);
+  const auto &loopCall = program.definitions[0].statements[0];
+  REQUIRE(loopCall.kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.name == "for");
+  REQUIRE(loopCall.args.size() == 4);
+  CHECK(loopCall.args[0].isBinding);
+  REQUIRE(loopCall.args[3].kind == primec::Expr::Kind::Call);
+  CHECK(loopCall.args[3].name == "do");
+}
+
 TEST_CASE("parses transform-prefixed loop form") {
   const std::string source = R"(
 [return<int> effects(io_out)]
