@@ -50,7 +50,7 @@ main() {
   CHECK(error.find("lambda requires a body") != std::string::npos);
 }
 
-TEST_CASE("block shorthand rejected in canonical mode") {
+TEST_CASE("block shorthand allowed in canonical mode") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -61,8 +61,8 @@ main() {
   primec::Parser parser(lexer.tokenize(), false);
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("block shorthand requires canonical call form") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("reserved keyword cannot name definition") {

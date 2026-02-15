@@ -99,6 +99,33 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
+TEST_CASE("no transforms accepts brace constructors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(i32{ 1i32 })
+}
+)";
+  const std::string srcPath = writeTemp("compile_no_transforms_brace_ctor.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_brace_ctor_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_no_transforms_brace_ctor_native").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --no-transforms";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --no-transforms";
+  CHECK(runCommand(runVmCmd) == 1);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --no-transforms";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 1);
+}
+
 TEST_CASE("no transforms rejects infix operators") {
   const std::string source = R"(
 [return<int>]

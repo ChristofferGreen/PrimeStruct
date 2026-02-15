@@ -386,9 +386,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     return true;
   };
   auto parseBraceConstructor = [&](Expr &call, Expr &out) -> bool {
-    if (!allowSurfaceSyntax_) {
-      return fail("brace constructors require canonical call form");
-    }
     auto isPrimitiveBraceType = [&](const std::string &name) -> bool {
       if (name.empty() || name.find('/') != std::string::npos) {
         return false;
@@ -502,15 +499,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (match(TokenKind::LBrace)) {
-        if (!bindingTransforms) {
-          if (call.name == "block") {
-            if (!allowSurfaceSyntax_) {
-              return fail("block shorthand requires canonical call form");
-            }
-            call.hasBodyArguments = true;
-            if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
-              return false;
-            }
+          if (!bindingTransforms) {
+            if (call.name == "block") {
+              call.hasBodyArguments = true;
+              if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
+                return false;
+              }
             out = std::move(call);
             return true;
           }
@@ -758,9 +752,6 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
           if (call.name == "block") {
-            if (!allowSurfaceSyntax_) {
-              return fail("block shorthand requires canonical call form");
-            }
             hasCallSyntax = true;
             call.hasBodyArguments = true;
             if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
