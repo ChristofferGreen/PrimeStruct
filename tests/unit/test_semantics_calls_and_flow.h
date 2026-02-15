@@ -94,6 +94,19 @@ main() {
   CHECK(error.find("loop body requires a block envelope") != std::string::npos);
 }
 
+TEST_CASE("loop rejects negative count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop(-1i32) { }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop count must be non-negative") != std::string::npos);
+}
+
 TEST_CASE("loop blocks ignore definition name collisions") {
   const std::string source = R"(
 [return<void>]

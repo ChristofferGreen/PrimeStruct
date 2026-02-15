@@ -518,6 +518,15 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return true;
   };
+  auto isNegativeIntegerLiteral = [&](const Expr &expr) -> bool {
+    if (expr.kind != Expr::Kind::Literal || expr.isUnsigned) {
+      return false;
+    }
+    if (expr.intWidth == 32) {
+      return static_cast<int32_t>(expr.literalValue) < 0;
+    }
+    return static_cast<int64_t>(expr.literalValue) < 0;
+  };
   if (isLoopCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
@@ -542,6 +551,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     ReturnKind countKind = inferExprReturnKind(count, params, locals);
     if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64) {
       error_ = "loop count requires integer";
+      return false;
+    }
+    if (isNegativeIntegerLiteral(count)) {
+      error_ = "loop count must be non-negative";
       return false;
     }
     return validateLoopBody(stmt.args[1], locals);
