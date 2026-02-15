@@ -112,7 +112,7 @@ size_t skipQuotedLiteral(const std::string &text, size_t start) {
   size_t pos = start + 1;
   while (pos < text.size()) {
     char c = text[pos];
-    if (c == '\\' && pos + 1 < text.size()) {
+    if (quote == '"' && c == '\\' && pos + 1 < text.size()) {
       pos += 2;
       continue;
     }

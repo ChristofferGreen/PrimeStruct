@@ -69,7 +69,7 @@ TEST_CASE("quoted helper functions") {
   CHECK(findQuotedStart(quoted, 0) == std::string::npos);
 
   std::string single = "'a\\'b'";
-  CHECK(skipQuotedForward(single, 0) == single.size());
+  CHECK(skipQuotedForward(single, 0) == 4);
 
   std::string unterminated = "\"oops";
   CHECK(skipQuotedForward(unterminated, 0) == std::string::npos);

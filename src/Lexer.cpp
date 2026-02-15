@@ -206,7 +206,7 @@ Token Lexer::readString(char quote) {
   advance();
   while (pos_ < source_.size()) {
     char c = source_[pos_];
-    if (c == '\\') {
+    if (c == '\\' && quote == '"') {
       advance();
       if (pos_ < source_.size()) {
         advance();

@@ -142,10 +142,11 @@ size_t findQuotedStart(const std::string &text, size_t endQuote) {
   if (endQuote == 0) {
     return std::string::npos;
   }
+  const bool allowEscape = quote == '"';
   size_t pos = endQuote;
   while (pos > 0) {
     --pos;
-    if (text[pos] == quote && !isEscaped(text, pos)) {
+    if (text[pos] == quote && (!allowEscape || !isEscaped(text, pos))) {
       return pos;
     }
   }
@@ -156,7 +157,7 @@ size_t skipQuotedForward(const std::string &text, size_t start) {
   char quote = text[start];
   size_t pos = start + 1;
   while (pos < text.size()) {
-    if (text[pos] == '\\' && pos + 1 < text.size()) {
+    if (quote == '"' && text[pos] == '\\' && pos + 1 < text.size()) {
       pos += 2;
       continue;
     }
