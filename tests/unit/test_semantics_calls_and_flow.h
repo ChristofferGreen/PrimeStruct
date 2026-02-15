@@ -3140,7 +3140,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
+  CHECK(error.find("requires an integer/bool or string literal/binding argument") != std::string::npos);
 }
 
 TEST_CASE("print rejects collection argument") {
@@ -3152,7 +3152,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
+  CHECK(error.find("requires an integer/bool or string literal/binding argument") != std::string::npos);
 }
 
 TEST_CASE("print rejects missing arguments") {
@@ -3321,7 +3321,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("requires a numeric/bool or string literal/binding argument") != std::string::npos);
+  CHECK(error.find("requires an integer/bool or string literal/binding argument") != std::string::npos);
 }
 
 TEST_CASE("print accepts string binding") {
@@ -3360,6 +3360,18 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("print rejects float literal") {
+  const std::string source = R"(
+[effects(io_out)]
+main() {
+  print_line(1.0f32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires an integer/bool or string literal/binding argument") != std::string::npos);
 }
 
 TEST_CASE("print_error accepts bool binding") {

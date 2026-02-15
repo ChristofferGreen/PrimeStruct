@@ -119,8 +119,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return true;
     }
     ReturnKind kind = inferExprReturnKind(arg, paramsIn, localsIn);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
-        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
       return true;
     }
     if (kind == ReturnKind::Void) {
@@ -130,13 +129,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (const BindingInfo *paramBinding = findParamBinding(paramsIn, arg.name)) {
         ReturnKind paramKind = returnKindForBinding(*paramBinding);
         return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
-               paramKind == ReturnKind::Bool || paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+               paramKind == ReturnKind::Bool;
       }
       auto it = localsIn.find(arg.name);
       if (it != localsIn.end()) {
         ReturnKind localKind = returnKindForBinding(it->second);
         return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
-               localKind == ReturnKind::Bool || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
+               localKind == ReturnKind::Bool;
       }
     }
     if (isPointerLikeExpr(arg, paramsIn, localsIn)) {
@@ -716,7 +715,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return false;
     }
     if (!isPrintableExpr(stmt.args.front(), params, locals)) {
-      error_ = printBuiltin.name + " requires a numeric/bool or string literal/binding argument";
+      error_ = printBuiltin.name + " requires an integer/bool or string literal/binding argument";
       return false;
     }
     return true;
