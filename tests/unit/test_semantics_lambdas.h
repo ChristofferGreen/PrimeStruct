@@ -48,4 +48,17 @@ main() {
   CHECK(error.find("unknown capture: missing") != std::string::npos);
 }
 
+TEST_CASE("lambda rejects invalid capture qualifier") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] base{1i32}
+  [foo base]([i32] offset) { return(offset) }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid lambda capture") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -2,19 +2,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const std::unordered_map<std::string, BindingInfo> &locals,
                                       const Expr &expr) {
   if (expr.isLambda) {
-    auto lastToken = [](const std::string &text) -> std::string {
-      size_t end = text.size();
-      while (end > 0 && std::isspace(static_cast<unsigned char>(text[end - 1])) != 0) {
-        --end;
+    auto splitTokens = [](const std::string &text) {
+      std::vector<std::string> tokens;
+      std::string token;
+      bool inToken = false;
+      for (char c : text) {
+        if (std::isspace(static_cast<unsigned char>(c)) != 0) {
+          if (inToken) {
+            tokens.push_back(token);
+            token.clear();
+            inToken = false;
+          }
+          continue;
+        }
+        token.push_back(c);
+        inToken = true;
       }
-      if (end == 0) {
-        return {};
+      if (inToken) {
+        tokens.push_back(token);
       }
-      size_t start = end;
-      while (start > 0 && std::isspace(static_cast<unsigned char>(text[start - 1])) == 0) {
-        --start;
-      }
-      return text.substr(start, end - start);
+      return tokens;
     };
     auto addCapturedBinding = [&](std::unordered_map<std::string, BindingInfo> &lambdaLocals,
                                   const std::string &name) -> bool {
@@ -44,18 +51,48 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!expr.lambdaCaptures.empty()) {
       bool captureAll = false;
       std::vector<std::string> captureNames;
+      std::unordered_set<std::string> explicitNames;
       captureNames.reserve(expr.lambdaCaptures.size());
+      explicitNames.reserve(expr.lambdaCaptures.size());
       for (const auto &capture : expr.lambdaCaptures) {
-        std::string name = lastToken(capture);
-        if (name.empty()) {
+        std::vector<std::string> tokens = splitTokens(capture);
+        if (tokens.empty()) {
           error_ = "invalid lambda capture";
           return false;
         }
-        if (name == "=" || name == "&") {
-          captureAll = true;
+        if (tokens.size() == 1) {
+          const std::string &token = tokens[0];
+          if (token == "=" || token == "&") {
+            captureAll = true;
+            continue;
+          }
+          if (!explicitNames.insert(token).second) {
+            error_ = "duplicate lambda capture: " + token;
+            return false;
+          }
+          captureNames.push_back(token);
           continue;
         }
-        captureNames.push_back(std::move(name));
+        if (tokens.size() == 2) {
+          const std::string &qualifier = tokens[0];
+          const std::string &name = tokens[1];
+          if (qualifier != "value" && qualifier != "ref") {
+            error_ = "invalid lambda capture";
+            return false;
+          }
+          if (name == "=" || name == "&") {
+            error_ = "invalid lambda capture";
+            return false;
+          }
+          if (!explicitNames.insert(name).second) {
+            error_ = "duplicate lambda capture: " + name;
+            return false;
+          }
+          captureNames.push_back(name);
+          continue;
+        }
+        error_ = "invalid lambda capture";
+        return false;
       }
       if (captureAll) {
         for (const auto &param : params) {
@@ -67,6 +104,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!addCapturedBinding(lambdaLocals, entry.first)) {
             return false;
           }
+        }
+        for (const auto &name : captureNames) {
+          if (findParamBinding(params, name) || locals.count(name) > 0) {
+            continue;
+          }
+          error_ = "unknown capture: " + name;
+          return false;
         }
       } else {
         for (const auto &name : captureNames) {
