@@ -201,6 +201,23 @@ TEST_CASE("unquoted include path with dot fails") {
   CHECK(error.find("invalid slash path identifier") != std::string::npos);
 }
 
+TEST_CASE("include version mismatch across paths fails") {
+  auto tempRoot = std::filesystem::temp_directory_path() / "primec_tests";
+  auto rootA = tempRoot / "include_versions_a";
+  auto rootB = tempRoot / "include_versions_b";
+  writeFile(rootA / "1.2.0" / "lib" / "a" / "module.prime", "// LIB_A\n");
+  writeFile(rootB / "1.2.1" / "lib" / "b" / "module.prime", "// LIB_B\n");
+
+  const std::string srcPath =
+      writeTemp("main_include_version_mismatch.prime",
+                "include</lib/a, /lib/b, version=\"1.2\">\n[return<int>]\nmain(){ return(1i32) }\n");
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error, {rootA.string(), rootB.string()}));
+  CHECK(error.find("include version mismatch") != std::string::npos);
+}
+
 TEST_CASE("unquoted include path with reserved keyword fails") {
   const std::string srcPath = writeTemp("main_include_reserved_segment.prime", "include</if/io>\n");
   std::string source;
