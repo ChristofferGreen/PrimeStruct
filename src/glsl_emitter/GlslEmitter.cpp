@@ -37,6 +37,7 @@ struct EmitState {
 struct ExprResult {
   std::string code;
   GlslType type = GlslType::Unknown;
+  std::string prelude;
 };
 
 std::string glslTypeName(GlslType type);
@@ -96,6 +97,23 @@ std::string emitPowHelper(GlslType type, bool isSigned) {
   out += "  return result;\n";
   out += "}\n";
   return out;
+}
+
+void appendIndented(std::string &out, const std::string &text, const std::string &indent) {
+  if (text.empty()) {
+    return;
+  }
+  size_t start = 0;
+  while (start < text.size()) {
+    size_t end = text.find('\n', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    out += indent;
+    out.append(text, start, end - start);
+    out += "\n";
+    start = end + 1;
+  }
 }
 
 bool isSimpleCallName(const Expr &expr, const char *name) {
@@ -382,6 +400,12 @@ std::string ensureFloatLiteral(const std::string &literal) {
 }
 
 ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error);
+bool emitValueBlock(const Expr &blockExpr,
+                    EmitState &state,
+                    std::string &out,
+                    std::string &error,
+                    const std::string &indent,
+                    ExprResult &result);
 
 ExprResult castExpr(const ExprResult &expr, GlslType target) {
   if (expr.type == target) {
@@ -390,6 +414,7 @@ ExprResult castExpr(const ExprResult &expr, GlslType target) {
   ExprResult out;
   out.type = target;
   out.code = glslTypeName(target) + "(" + expr.code + ")";
+  out.prelude = expr.prelude;
   return out;
 }
 
@@ -411,6 +436,8 @@ ExprResult emitBinaryNumeric(const Expr &leftExpr, const Expr &rightExpr, const 
   ExprResult out;
   out.type = resultType;
   out.code = "(" + left.code + " " + op + " " + right.code + ")";
+  out.prelude = left.prelude;
+  out.prelude += right.prelude;
   return out;
 }
 
@@ -438,7 +465,10 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     return out;
   }
   if (expr.kind == Expr::Kind::BoolLiteral) {
-    return {expr.boolValue ? "true" : "false", GlslType::Bool};
+    ExprResult out;
+    out.type = GlslType::Bool;
+    out.code = expr.boolValue ? "true" : "false";
+    return out;
   }
   if (expr.kind == Expr::Kind::FloatLiteral) {
     ExprResult out;
@@ -459,18 +489,30 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = state.locals.find(expr.name);
     if (it != state.locals.end()) {
-      return {expr.name, it->second.type};
+      ExprResult out;
+      out.type = it->second.type;
+      out.code = expr.name;
+      return out;
     }
     std::string constantName;
     if (getMathConstantName(expr, constantName)) {
       state.needsFp64Ext = true;
       if (constantName == "pi") {
-        return {"double(3.14159265358979323846)", GlslType::Double};
+        ExprResult out;
+        out.type = GlslType::Double;
+        out.code = "double(3.14159265358979323846)";
+        return out;
       }
       if (constantName == "tau") {
-        return {"double(6.28318530717958647692)", GlslType::Double};
+        ExprResult out;
+        out.type = GlslType::Double;
+        out.code = "double(6.28318530717958647692)";
+        return out;
       }
-      return {"double(2.71828182845904523536)", GlslType::Double};
+      ExprResult out;
+      out.type = GlslType::Double;
+      out.code = "double(2.71828182845904523536)";
+      return out;
     }
     error = "glsl backend requires local binding for name: " + expr.name;
     return {};
@@ -480,6 +522,44 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     return {};
   }
   const std::string name = normalizeName(expr);
+  if (name == "block") {
+    if (!expr.hasBodyArguments) {
+      error = "glsl backend requires block() { ... }";
+      return {};
+    }
+    if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
+      error = "glsl backend requires block() { ... }";
+      return {};
+    }
+    EmitState blockState = state;
+    std::string blockBody;
+    ExprResult blockResult;
+    if (!emitValueBlock(expr, blockState, blockBody, error, "  ", blockResult)) {
+      return {};
+    }
+    std::string typeName = glslTypeName(blockResult.type);
+    if (typeName.empty()) {
+      error = "glsl backend requires numeric or boolean block values";
+      return {};
+    }
+    std::string tempName = allocTempName(state, "_ps_block_");
+    ExprResult out;
+    out.type = blockResult.type;
+    out.code = tempName;
+    out.prelude = typeName + " " + tempName + ";\n";
+    out.prelude += "{\n";
+    out.prelude += blockBody;
+    out.prelude += "  " + tempName + " = " + blockResult.code + ";\n";
+    out.prelude += "}\n";
+    state.needsInt64Ext = state.needsInt64Ext || blockState.needsInt64Ext;
+    state.needsFp64Ext = state.needsFp64Ext || blockState.needsFp64Ext;
+    state.needsIntPow = state.needsIntPow || blockState.needsIntPow;
+    state.needsUIntPow = state.needsUIntPow || blockState.needsUIntPow;
+    state.needsInt64Pow = state.needsInt64Pow || blockState.needsInt64Pow;
+    state.needsUInt64Pow = state.needsUInt64Pow || blockState.needsUInt64Pow;
+    state.tempIndex = blockState.tempIndex;
+    return out;
+  }
   if (name == "plus" || name == "minus" || name == "multiply" || name == "divide") {
     if (expr.args.size() != 2) {
       error = "glsl backend requires binary numeric operator arguments";
@@ -504,6 +584,7 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     ExprResult out;
     out.type = arg.type;
     out.code = "(-" + arg.code + ")";
+    out.prelude = arg.prelude;
     return out;
   }
   if (name == "assign") {
@@ -530,7 +611,11 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       return {};
     }
     value = castExpr(value, it->second.type);
-    return {"(" + target.name + " = " + value.code + ")", it->second.type};
+    ExprResult out;
+    out.type = it->second.type;
+    out.code = "(" + target.name + " = " + value.code + ")";
+    out.prelude = value.prelude;
+    return out;
   }
   if (name == "increment" || name == "decrement") {
     if (expr.args.size() != 1) {
@@ -556,7 +641,10 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       return {};
     }
     const char *op = (name == "increment") ? "++" : "--";
-    return {"(" + std::string(op) + target.name + ")", it->second.type};
+    ExprResult out;
+    out.type = it->second.type;
+    out.code = "(" + std::string(op) + target.name + ")";
+    return out;
   }
   if (name == "equal" || name == "not_equal" || name == "less_than" || name == "less_equal" ||
       name == "greater_than" || name == "greater_equal") {
@@ -600,6 +688,8 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     ExprResult out;
     out.type = GlslType::Bool;
     out.code = "(" + left.code + " " + op + " " + right.code + ")";
+    out.prelude = left.prelude;
+    out.prelude += right.prelude;
     return out;
   }
   if (name == "and" || name == "or") {
@@ -622,6 +712,8 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
     ExprResult out;
     out.type = GlslType::Bool;
     out.code = "(" + left.code + (name == "and" ? " && " : " || ") + right.code + ")";
+    out.prelude = left.prelude;
+    out.prelude += right.prelude;
     return out;
   }
   if (name == "not") {
@@ -637,7 +729,11 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       error = "glsl backend requires boolean operand";
       return {};
     }
-    return {"(!" + arg.code + ")", GlslType::Bool};
+    ExprResult out;
+    out.type = GlslType::Bool;
+    out.code = "(!" + arg.code + ")";
+    out.prelude = arg.prelude;
+    return out;
   }
   std::string mathName;
   if (getMathBuiltinName(expr, mathName)) {
@@ -660,10 +756,17 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       if (mathName == "sign" && (arg.type == GlslType::UInt || arg.type == GlslType::UInt64)) {
         std::string zeroLiteral = literalForType(arg.type, 0);
         std::string oneLiteral = literalForType(arg.type, 1);
-        return {"(" + arg.code + " == " + zeroLiteral + " ? " + zeroLiteral + " : " + oneLiteral + ")",
-                arg.type};
+        ExprResult out;
+        out.type = arg.type;
+        out.code = "(" + arg.code + " == " + zeroLiteral + " ? " + zeroLiteral + " : " + oneLiteral + ")";
+        out.prelude = arg.prelude;
+        return out;
       }
-      return {std::string(func) + "(" + arg.code + ")", arg.type};
+      ExprResult out;
+      out.type = arg.type;
+      out.code = std::string(func) + "(" + arg.code + ")";
+      out.prelude = arg.prelude;
+      return out;
     };
     auto emitBinaryMath = [&](const char *func, bool requireFloat) -> ExprResult {
       if (expr.args.size() != 2) {
@@ -688,7 +791,12 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       }
       left = castExpr(left, common);
       right = castExpr(right, common);
-      return {std::string(func) + "(" + left.code + ", " + right.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = std::string(func) + "(" + left.code + ", " + right.code + ")";
+      out.prelude = left.prelude;
+      out.prelude += right.prelude;
+      return out;
     };
 
     if (mathName == "abs") {
@@ -731,7 +839,13 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       value = castExpr(value, common);
       minValue = castExpr(minValue, common);
       maxValue = castExpr(maxValue, common);
-      return {"clamp(" + value.code + ", " + minValue.code + ", " + maxValue.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = "clamp(" + value.code + ", " + minValue.code + ", " + maxValue.code + ")";
+      out.prelude = value.prelude;
+      out.prelude += minValue.prelude;
+      out.prelude += maxValue.prelude;
+      return out;
     }
     if (mathName == "saturate") {
       if (expr.args.size() != 1) {
@@ -748,7 +862,11 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       }
       std::string zeroLiteral = literalForType(value.type, 0);
       std::string oneLiteral = literalForType(value.type, 1);
-      return {"clamp(" + value.code + ", " + zeroLiteral + ", " + oneLiteral + ")", value.type};
+      ExprResult out;
+      out.type = value.type;
+      out.code = "clamp(" + value.code + ", " + zeroLiteral + ", " + oneLiteral + ")";
+      out.prelude = value.prelude;
+      return out;
     }
     if (mathName == "lerp") {
       if (expr.args.size() != 3) {
@@ -778,7 +896,13 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       start = castExpr(start, common);
       end = castExpr(end, common);
       t = castExpr(t, common);
-      return {"(" + start.code + " + (" + end.code + " - " + start.code + ") * " + t.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = "(" + start.code + " + (" + end.code + " - " + start.code + ") * " + t.code + ")";
+      out.prelude = start.prelude;
+      out.prelude += end.prelude;
+      out.prelude += t.prelude;
+      return out;
     }
     if (mathName == "pow") {
       if (expr.args.size() != 2) {
@@ -800,7 +924,12 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       base = castExpr(base, common);
       exponent = castExpr(exponent, common);
       if (common == GlslType::Float || common == GlslType::Double) {
-        return {"pow(" + base.code + ", " + exponent.code + ")", common};
+        ExprResult out;
+        out.type = common;
+        out.code = "pow(" + base.code + ", " + exponent.code + ")";
+        out.prelude = base.prelude;
+        out.prelude += exponent.prelude;
+        return out;
       }
       if (!isIntegerType(common)) {
         error = "pow requires numeric arguments";
@@ -817,7 +946,12 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       } else if (common == GlslType::UInt64) {
         state.needsUInt64Pow = true;
       }
-      return {funcName + "(" + base.code + ", " + exponent.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = funcName + "(" + base.code + ", " + exponent.code + ")";
+      out.prelude = base.prelude;
+      out.prelude += exponent.prelude;
+      return out;
     }
     if (mathName == "floor") {
       return emitUnaryMath("floor", true);
@@ -851,7 +985,11 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
         return {};
       }
       std::string oneThird = glslTypeName(arg.type) + "(1.0/3.0)";
-      return {"pow(" + arg.code + ", " + oneThird + ")", arg.type};
+      ExprResult out;
+      out.type = arg.type;
+      out.code = "pow(" + arg.code + ", " + oneThird + ")";
+      out.prelude = arg.prelude;
+      return out;
     }
     if (mathName == "exp") {
       return emitUnaryMath("exp", true);
@@ -879,7 +1017,11 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
         return {};
       }
       std::string tenLiteral = literalForType(arg.type, 10);
-      return {"(log(" + arg.code + ") / log(" + tenLiteral + "))", arg.type};
+      ExprResult out;
+      out.type = arg.type;
+      out.code = "(log(" + arg.code + ") / log(" + tenLiteral + "))";
+      out.prelude = arg.prelude;
+      return out;
     }
     if (mathName == "sin" || mathName == "cos" || mathName == "tan" || mathName == "asin" || mathName == "acos" ||
         mathName == "atan" || mathName == "radians" || mathName == "degrees" || mathName == "sinh" ||
@@ -910,7 +1052,12 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       }
       y = castExpr(y, common);
       x = castExpr(x, common);
-      return {"atan(" + y.code + ", " + x.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = "atan(" + y.code + ", " + x.code + ")";
+      out.prelude = y.prelude;
+      out.prelude += x.prelude;
+      return out;
     }
     if (mathName == "fma") {
       if (expr.args.size() != 3) {
@@ -944,7 +1091,13 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       a = castExpr(a, common);
       b = castExpr(b, common);
       c = castExpr(c, common);
-      return {"fma(" + a.code + ", " + b.code + ", " + c.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = "fma(" + a.code + ", " + b.code + ", " + c.code + ")";
+      out.prelude = a.prelude;
+      out.prelude += b.prelude;
+      out.prelude += c.prelude;
+      return out;
     }
     if (mathName == "hypot") {
       if (expr.args.size() != 2) {
@@ -969,7 +1122,12 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       }
       a = castExpr(a, common);
       b = castExpr(b, common);
-      return {"sqrt(" + a.code + " * " + a.code + " + " + b.code + " * " + b.code + ")", common};
+      ExprResult out;
+      out.type = common;
+      out.code = "sqrt(" + a.code + " * " + a.code + " + " + b.code + " * " + b.code + ")";
+      out.prelude = a.prelude;
+      out.prelude += b.prelude;
+      return out;
     }
     if (mathName == "copysign") {
       if (expr.args.size() != 2) {
@@ -994,7 +1152,12 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       }
       mag = castExpr(mag, common);
       sign = castExpr(sign, common);
-      return {"(abs(" + mag.code + ") * sign(" + sign.code + "))", common};
+      ExprResult out;
+      out.type = common;
+      out.code = "(abs(" + mag.code + ") * sign(" + sign.code + "))";
+      out.prelude = mag.prelude;
+      out.prelude += sign.prelude;
+      return out;
     }
     if (mathName == "is_nan" || mathName == "is_inf" || mathName == "is_finite") {
       if (expr.args.size() != 1) {
@@ -1010,7 +1173,11 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
         return {};
       }
       std::string func = mathName == "is_nan" ? "isnan" : (mathName == "is_inf" ? "isinf" : "isfinite");
-      return {func + "(" + arg.code + ")", GlslType::Bool};
+      ExprResult out;
+      out.type = GlslType::Bool;
+      out.code = func + "(" + arg.code + ")";
+      out.prelude = arg.prelude;
+      return out;
     }
     error = "glsl backend does not support math builtin: " + mathName;
     return {};
@@ -1074,6 +1241,8 @@ bool emitValueBlock(const Expr &blockExpr,
       if (!error.empty()) {
         return false;
       }
+      appendIndented(out, result.prelude, indent);
+      result.prelude.clear();
       return true;
     }
     if (!emitStatement(stmt, state, out, error, indent)) {
@@ -1133,6 +1302,10 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
       }
       state.needsInt64Ext = state.needsInt64Ext || blockState.needsInt64Ext;
       state.needsFp64Ext = state.needsFp64Ext || blockState.needsFp64Ext;
+      state.needsIntPow = state.needsIntPow || blockState.needsIntPow;
+      state.needsUIntPow = state.needsUIntPow || blockState.needsUIntPow;
+      state.needsInt64Pow = state.needsInt64Pow || blockState.needsInt64Pow;
+      state.needsUInt64Pow = state.needsUInt64Pow || blockState.needsUInt64Pow;
       state.tempIndex = blockState.tempIndex;
       state.locals[stmt.name] = {bindingType, isMutable};
       // GLSL const requires an initializer, so block initializers emit a scoped assignment.
@@ -1147,6 +1320,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     if (!error.empty()) {
       return false;
     }
+    appendIndented(out, init.prelude, indent);
     GlslType bindingType = init.type;
     if (hasExplicitType) {
       bindingType = glslTypeFromName(explicitType, state, error);
@@ -1201,6 +1375,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       value = castExpr(value, it->second.type);
+      appendIndented(out, value.prelude, indent);
       out += indent + target.name + " = " + value.code + ";\n";
       return true;
     }
@@ -1247,6 +1422,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         error = "glsl backend requires if condition to be bool";
         return false;
       }
+      appendIndented(out, cond.prelude, indent);
       const Expr &thenExpr = stmt.args[1];
       auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
@@ -1319,6 +1495,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       noteTypeExtensions(count.type, state);
+      appendIndented(out, count.prelude, indent);
       const std::string counterName = allocTempName(state, "_ps_loop_");
       const std::string counterType = glslTypeName(count.type);
       const std::string zeroLiteral = literalForType(count.type, 0);
@@ -1360,6 +1537,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       noteTypeExtensions(counterType, state);
+      appendIndented(out, count.prelude, indent);
       ExprResult countCast = castExpr(count, counterType);
       const std::string counterName = allocTempName(state, "_ps_repeat_");
       const std::string counterTypeName = glslTypeName(counterType);
@@ -1402,7 +1580,17 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         error = "glsl backend requires while body block";
         return false;
       }
-      out += indent + "while (" + cond.code + ") {\n";
+      if (cond.prelude.empty()) {
+        out += indent + "while (" + cond.code + ") {\n";
+        if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "  ")) {
+          return false;
+        }
+        out += indent + "}\n";
+        return true;
+      }
+      out += indent + "while (true) {\n";
+      appendIndented(out, cond.prelude, indent + "  ");
+      out += indent + "  if (!(" + cond.code + ")) { break; }\n";
       if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "  ")) {
         return false;
       }
@@ -1461,16 +1649,31 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
           state.locals = savedLocals;
           return false;
         }
-        out += indent + "  while (" + cond.code + ") {\n";
-        if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
-          state.locals = savedLocals;
-          return false;
+        if (cond.prelude.empty()) {
+          out += indent + "  while (" + cond.code + ") {\n";
+          if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
+            state.locals = savedLocals;
+            return false;
+          }
+          if (!emitStatement(stepExpr, state, out, error, indent + "    ")) {
+            state.locals = savedLocals;
+            return false;
+          }
+          out += indent + "  }\n";
+        } else {
+          out += indent + "  while (true) {\n";
+          appendIndented(out, cond.prelude, indent + "    ");
+          out += indent + "    if (!(" + cond.code + ")) { break; }\n";
+          if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
+            state.locals = savedLocals;
+            return false;
+          }
+          if (!emitStatement(stepExpr, state, out, error, indent + "    ")) {
+            state.locals = savedLocals;
+            return false;
+          }
+          out += indent + "  }\n";
         }
-        if (!emitStatement(stepExpr, state, out, error, indent + "    ")) {
-          state.locals = savedLocals;
-          return false;
-        }
-        out += indent + "  }\n";
       }
       out += indent + "}\n";
       state.locals = savedLocals;
@@ -1480,6 +1683,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     if (!error.empty()) {
       return false;
     }
+    appendIndented(out, exprResult.prelude, indent);
     out += indent + exprResult.code + ";\n";
     return true;
   }
