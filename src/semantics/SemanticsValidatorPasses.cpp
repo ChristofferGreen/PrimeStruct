@@ -457,6 +457,14 @@ bool SemanticsValidator::validateStructLayouts() {
   std::function<bool(const BindingInfo &, const std::string &, LayoutInfo &)> typeLayoutForBinding;
 
   computeStructLayout = [&](const Definition &def, LayoutInfo &out) -> bool {
+    auto isStaticField = [&](const Expr &stmt) -> bool {
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "static") {
+          return true;
+        }
+      }
+      return false;
+    };
     auto cached = layoutCache.find(def.fullPath);
     if (cached != layoutCache.end()) {
       out = cached->second;
@@ -482,10 +490,12 @@ bool SemanticsValidator::validateStructLayouts() {
       return false;
     }
     uint32_t offset = 0;
+    uint32_t staticOffset = 0;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
         continue;
       }
+      const bool fieldIsStatic = isStaticField(stmt);
       BindingInfo binding;
       std::optional<std::string> restrictType;
       if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
@@ -508,17 +518,20 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, fieldLayout.alignmentBytes)
                                           : fieldLayout.alignmentBytes;
-      uint32_t alignedOffset = alignTo(offset, fieldAlign);
-      if (requireNoPadding && alignedOffset != offset) {
+      uint32_t *activeOffset = fieldIsStatic ? &staticOffset : &offset;
+      uint32_t alignedOffset = alignTo(*activeOffset, fieldAlign);
+      if (requireNoPadding && alignedOffset != *activeOffset) {
         error_ = "no_padding disallows alignment padding on " + fieldContext;
         return false;
       }
-      if (requirePlatformPadding && alignedOffset != offset && !hasFieldAlign) {
+      if (requirePlatformPadding && alignedOffset != *activeOffset && !hasFieldAlign) {
         error_ = "platform_independent_padding requires explicit alignment on " + fieldContext;
         return false;
       }
-      offset = alignedOffset + fieldLayout.sizeBytes;
-      structAlign = std::max(structAlign, fieldAlign);
+      *activeOffset = alignedOffset + fieldLayout.sizeBytes;
+      if (!fieldIsStatic) {
+        structAlign = std::max(structAlign, fieldAlign);
+      }
     }
     if (hasStructAlign && explicitStructAlign < structAlign) {
       error_ = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +

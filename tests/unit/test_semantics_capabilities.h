@@ -455,6 +455,24 @@ main() {
   CHECK(error.find("alignment requirement on struct /Thing") != std::string::npos);
 }
 
+TEST_CASE("static fields do not affect struct alignment") {
+  const std::string source = R"(
+[struct align_bytes(4)]
+Thing() {
+  [static i64] shared{1i64}
+  [i32] value{2i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pod transform validates without args") {
   const std::string source = R"(
 [pod]
