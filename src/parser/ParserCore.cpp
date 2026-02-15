@@ -360,7 +360,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     exec.templateArgs = std::move(templateArgs);
     exec.arguments = std::move(arguments);
     exec.argumentNames = std::move(argumentNames);
-    exec.hasBodyArguments = false;
+    exec.hasBodyArguments = true;
     execs.push_back(std::move(exec));
     return true;
   }

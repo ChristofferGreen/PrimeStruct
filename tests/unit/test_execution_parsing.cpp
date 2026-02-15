@@ -41,6 +41,17 @@ execute_task(1i32) { }
   CHECK(program.executions[0].hasBodyArguments);
 }
 
+TEST_CASE("parses execution without body as empty") {
+  const std::string source = R"(
+execute_task(1i32)
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].arguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments.empty());
+  CHECK(program.executions[0].hasBodyArguments);
+}
+
 TEST_CASE("parses execution with body arguments") {
   const std::string source = R"(
 [return<int>]

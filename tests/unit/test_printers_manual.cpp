@@ -154,6 +154,7 @@ TEST_CASE("ast printer covers executions with templates and bodies") {
   primec::Execution execNoBody;
   execNoBody.fullPath = "/ping";
   execNoBody.arguments = {makeString("\"ok\"utf8")};
+  execNoBody.hasBodyArguments = true;
 
   program.executions.push_back(execWithBody);
   program.executions.push_back(execNoBody);
@@ -163,7 +164,7 @@ TEST_CASE("ast printer covers executions with templates and bodies") {
   const std::string expected =
       "ast {\n"
       "  [effects<io>] /run<i32>([count] 1, 2) { step<f32>(3) }\n"
-      "  /ping(\"ok\"utf8)\n"
+      "  /ping(\"ok\"utf8) { }\n"
       "}\n";
   CHECK(dump == expected);
 }
