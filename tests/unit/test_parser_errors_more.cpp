@@ -922,6 +922,21 @@ main() {
   CHECK(error.find("invalid float literal") != std::string::npos);
 }
 
+TEST_CASE("leading dot float literal validates exponent") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(.5e)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid float literal") != std::string::npos);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.named_args");

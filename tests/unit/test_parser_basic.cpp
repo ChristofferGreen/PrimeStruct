@@ -1458,6 +1458,36 @@ main() {
   CHECK(program.definitions[0].returnExpr->floatWidth == 32);
 }
 
+TEST_CASE("parses float literals with leading dot") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(.5)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == ".5");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
+TEST_CASE("parses negative leading dot float literals") {
+  const std::string source = R"(
+[return<float>]
+main() {
+  return(-.5f32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  CHECK(program.definitions[0].returnExpr->kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(program.definitions[0].returnExpr->floatValue == "-.5");
+  CHECK(program.definitions[0].returnExpr->floatWidth == 32);
+}
+
 TEST_CASE("parses float literals with suffix after dot") {
   const std::string source = R"(
 [return<float>]

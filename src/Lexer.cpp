@@ -26,6 +26,10 @@ std::vector<Token> Lexer::tokenize() {
       tokens.push_back(readIdentifier());
     } else if (std::isdigit(static_cast<unsigned char>(c)) ||
                (c == '-' && pos_ + 1 < source_.size() &&
+                (std::isdigit(static_cast<unsigned char>(source_[pos_ + 1])) ||
+                 (source_[pos_ + 1] == '.' && pos_ + 2 < source_.size() &&
+                  std::isdigit(static_cast<unsigned char>(source_[pos_ + 2]))))) ||
+               (c == '.' && pos_ + 1 < source_.size() &&
                 std::isdigit(static_cast<unsigned char>(source_[pos_ + 1])))) {
       tokens.push_back(readNumber());
     } else {

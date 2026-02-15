@@ -85,6 +85,17 @@ TEST_CASE("lexes numeric literals with suffixes and exponents") {
   CHECK(tokens[9].text == "1e+3f");
 }
 
+TEST_CASE("lexes leading dot float literals") {
+  const auto tokens = lex(".5f32 -.5f32 .5");
+  REQUIRE(tokens.size() >= 3);
+  CHECK(tokens[0].kind == primec::TokenKind::Number);
+  CHECK(tokens[0].text == ".5f32");
+  CHECK(tokens[1].kind == primec::TokenKind::Number);
+  CHECK(tokens[1].text == "-.5f32");
+  CHECK(tokens[2].kind == primec::TokenKind::Number);
+  CHECK(tokens[2].text == ".5");
+}
+
 TEST_CASE("lexes numeric literals with comma separators") {
   const auto tokens = lex("1,000i32 0xAB,CDi32 1,234.5f32");
   REQUIRE(tokens.size() >= 3);
