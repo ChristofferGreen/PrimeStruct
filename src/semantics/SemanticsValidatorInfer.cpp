@@ -96,10 +96,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call) {
     if (isIfCall(expr) && expr.args.size() == 3) {
-      auto isIfBranchEnvelopeName = [&](const Expr &candidate) -> bool {
-        return candidate.name == "then" || candidate.name == "else" || candidate.name == "/then" ||
-               candidate.name == "/else";
-      };
       auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
           return false;
@@ -110,11 +106,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
           return false;
         }
-        if (isIfBranchEnvelopeName(candidate)) {
-          return true;
-        }
-        const std::string resolved = resolveCalleePath(candidate);
-        return defMap_.find(resolved) == defMap_.end();
+        return true;
       };
       auto inferBlockEnvelopeValue = [&](const Expr &candidate,
                                          const std::unordered_map<std::string, BindingInfo> &localsIn,

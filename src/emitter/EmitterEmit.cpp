@@ -417,8 +417,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
             return false;
           }
-          const std::string resolved = resolveExprPath(candidate);
-          return defMap.find(resolved) == defMap.end();
+          return true;
         };
         auto inferBranchValueKind = [&](const Expr &candidate,
                                         const std::unordered_map<std::string, ReturnKind> &localsBase) -> ReturnKind {
@@ -1190,8 +1189,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
             return false;
           }
-          const std::string resolved = resolveExprPath(candidate);
-          return nameMap.count(resolved) == 0;
+          return true;
         };
         out << pad << "if (" << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
         {

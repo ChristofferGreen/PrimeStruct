@@ -3325,7 +3325,7 @@
             if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
               return false;
             }
-            return resolveDefinitionCall(candidate) == nullptr;
+            return true;
           };
           auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
             if (!isIfBlockEnvelope(candidate)) {

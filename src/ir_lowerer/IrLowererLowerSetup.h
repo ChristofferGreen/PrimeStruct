@@ -1494,8 +1494,7 @@ bool IrLowerer::lower(const Program &program,
             if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
               return false;
             }
-            const std::string resolved = resolveExprPath(candidate);
-            return defMap.find(resolved) == defMap.end();
+            return true;
           };
           auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
             if (!isIfBlockEnvelope(candidate)) {

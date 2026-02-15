@@ -542,7 +542,7 @@
         if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
           return false;
         }
-        return resolveDefinitionCall(candidate) == nullptr;
+        return true;
       };
       auto emitBranch = [&](const Expr &branch, LocalMap &branchLocals) -> bool {
         if (isIfBlockEnvelope(branch)) {

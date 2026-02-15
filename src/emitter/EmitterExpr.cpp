@@ -238,8 +238,7 @@ std::string Emitter::emitExpr(const Expr &expr,
       if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
         return false;
       }
-      const std::string resolved = resolveExprPath(candidate);
-      return nameMap.count(resolved) == 0;
+      return true;
     };
     auto emitBranchValueExpr =
         [&](const Expr &candidate, std::unordered_map<std::string, BindingInfo> branchTypes) -> std::string {

@@ -1037,14 +1037,26 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       const Expr &thenExpr = stmt.args[1];
-      if (!isSimpleCallName(thenExpr, "then") || !thenExpr.hasBodyArguments) {
+      auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+          return false;
+        }
+        if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+          return false;
+        }
+        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+          return false;
+        }
+        return true;
+      };
+      if (!isIfBlockEnvelope(thenExpr)) {
         error = "glsl backend requires then() { ... } block";
         return false;
       }
       const Expr *elseExpr = nullptr;
       if (stmt.args.size() == 3) {
         elseExpr = &stmt.args[2];
-        if (!isSimpleCallName(*elseExpr, "else") || !elseExpr->hasBodyArguments) {
+        if (!isIfBlockEnvelope(*elseExpr)) {
           error = "glsl backend requires else() { ... } block";
           return false;
         }

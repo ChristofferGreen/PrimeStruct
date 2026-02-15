@@ -298,6 +298,28 @@ main() {
   CHECK(error.find("if does not accept trailing block arguments") != std::string::npos);
 }
 
+TEST_CASE("if blocks ignore definition name collisions") {
+  const std::string source = R"(
+[return<void>]
+branch() {
+  return()
+}
+
+[return<void>]
+other() {
+  return()
+}
+
+[return<int>]
+main() {
+  return(if(true, branch(){ 1i32 }, other(){ 2i32 }))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("if rejects named arguments") {
   const std::string source = R"(
 [return<int>]

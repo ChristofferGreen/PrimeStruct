@@ -459,8 +459,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
           return false;
         }
-        const std::string resolved = resolveCalleePath(candidate);
-        return defMap_.find(resolved) == defMap_.end();
+        return true;
       };
       auto validateBranchValueKind =
           [&](const Expr &branch, const char *label, ReturnKind &kindOut, bool &stringOut) -> bool {
