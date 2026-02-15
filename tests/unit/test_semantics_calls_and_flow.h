@@ -1553,6 +1553,46 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("method calls support templated definitions") {
+  const std::string source = R"(
+namespace i32 {
+  [return<i32>]
+  wrap<T>([i32] self) {
+    return(self)
+  }
+}
+
+[return<i32>]
+main() {
+  [i32] value{1i32}
+  return(value.wrap<i32>())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("method calls reject template args on non-template defs") {
+  const std::string source = R"(
+namespace i32 {
+  [return<i32>]
+  inc([i32] self) {
+    return(plus(self, 1i32))
+  }
+}
+
+[return<i32>]
+main() {
+  [i32] value{1i32}
+  return(value.inc<i32>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /i32/inc") != std::string::npos);
+}
+
 TEST_CASE("method calls reject pointer receivers") {
   const std::string source = R"(
 [return<int>]

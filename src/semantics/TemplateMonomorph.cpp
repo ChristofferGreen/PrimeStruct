@@ -37,6 +37,8 @@ struct Context {
   std::vector<Execution> outputExecs;
 };
 
+using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
+
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "struct" ||
@@ -115,6 +117,83 @@ std::string replacePathPrefix(const std::string &path, const std::string &prefix
   return replacement + path.substr(prefix.size());
 }
 
+bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut) {
+  if (!expr.isBinding) {
+    return false;
+  }
+  if (!hasExplicitBindingTypeTransform(expr)) {
+    return false;
+  }
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities" || transform.name == "return") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    infoOut.typeName = transform.name;
+    infoOut.typeTemplateArg.clear();
+    if (!transform.templateArgs.empty()) {
+      infoOut.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
+    }
+    return true;
+  }
+  return false;
+}
+
+bool resolveMethodCallTemplateTarget(const Expr &expr,
+                                     const LocalTypeMap &locals,
+                                     const Context &ctx,
+                                     std::string &pathOut) {
+  pathOut.clear();
+  if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
+    return false;
+  }
+  const Expr &receiver = expr.args.front();
+  std::string typeName;
+  if (receiver.kind == Expr::Kind::Name) {
+    auto it = locals.find(receiver.name);
+    if (it != locals.end()) {
+      typeName = it->second.typeName;
+    }
+  } else if (receiver.kind == Expr::Kind::Literal) {
+    typeName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
+  } else if (receiver.kind == Expr::Kind::BoolLiteral) {
+    typeName = "bool";
+  } else if (receiver.kind == Expr::Kind::FloatLiteral) {
+    typeName = receiver.floatWidth == 64 ? "f64" : "f32";
+  } else if (receiver.kind == Expr::Kind::StringLiteral) {
+    typeName = "string";
+  } else if (receiver.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(receiver, collection)) {
+      typeName = collection;
+    }
+  }
+  if (typeName.empty()) {
+    return false;
+  }
+  if (isPrimitiveBindingTypeName(typeName)) {
+    pathOut = "/" + normalizeBindingTypeName(typeName) + "/" + expr.name;
+    return true;
+  }
+  std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  if (ctx.sourceDefs.count(resolvedType) == 0) {
+    auto aliasIt = ctx.importAliases.find(typeName);
+    if (aliasIt != ctx.importAliases.end()) {
+      resolvedType = aliasIt->second;
+    }
+  }
+  if (ctx.sourceDefs.count(resolvedType) == 0) {
+    return false;
+  }
+  pathOut = resolvedType + "/" + expr.name;
+  return true;
+}
+
 std::string resolveNameToPath(const std::string &name,
                               const std::string &namespacePrefix,
                               const std::unordered_map<std::string, std::string> &importAliases,
@@ -155,7 +234,8 @@ bool rewriteExpr(Expr &expr,
                  const std::unordered_set<std::string> &allowedParams,
                  const std::string &namespacePrefix,
                  Context &ctx,
-                 std::string &error);
+                 std::string &error,
+                 const LocalTypeMap &locals);
 
 bool instantiateTemplate(const std::string &basePath,
                          const std::vector<std::string> &resolvedArgs,
@@ -335,7 +415,8 @@ bool rewriteExpr(Expr &expr,
                  const std::unordered_set<std::string> &allowedParams,
                  const std::string &namespacePrefix,
                  Context &ctx,
-                 std::string &error) {
+                 std::string &error,
+                 const LocalTypeMap &locals) {
   expr.namespacePrefix = namespacePrefix;
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return false;
@@ -353,13 +434,18 @@ bool rewriteExpr(Expr &expr,
       lambdaMapping.erase(param);
     }
     for (auto &param : expr.args) {
-      if (!rewriteExpr(param, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error)) {
+      if (!rewriteExpr(param, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, locals)) {
         return false;
       }
     }
+    LocalTypeMap lambdaLocals = locals;
     for (auto &bodyArg : expr.bodyArguments) {
-      if (!rewriteExpr(bodyArg, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error)) {
+      if (!rewriteExpr(bodyArg, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, lambdaLocals)) {
         return false;
+      }
+      BindingInfo info;
+      if (extractExplicitBindingType(bodyArg, info)) {
+        lambdaLocals[bodyArg.name] = info;
       }
     }
     return true;
@@ -399,15 +485,45 @@ bool rewriteExpr(Expr &expr,
       return false;
     }
   }
+  if (expr.isMethodCall) {
+    std::string methodPath;
+    if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
+      const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
+      if (isTemplateDef) {
+        if (expr.templateArgs.empty()) {
+          error = "template arguments required for " + methodPath;
+          return false;
+        }
+        if (allConcrete) {
+          std::string specializedPath;
+          if (!instantiateTemplate(methodPath, expr.templateArgs, ctx, error, specializedPath)) {
+            return false;
+          }
+          expr.name = specializedPath;
+          expr.templateArgs.clear();
+          expr.isMethodCall = false;
+        }
+      } else if (isKnownDef && !expr.templateArgs.empty()) {
+        error = "template arguments are only supported on templated definitions: " + methodPath;
+        return false;
+      }
+    }
+  }
 
   for (auto &arg : expr.args) {
-    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error)) {
+    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, locals)) {
       return false;
     }
   }
+  LocalTypeMap bodyLocals = locals;
   for (auto &arg : expr.bodyArguments) {
-    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error)) {
+    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, bodyLocals)) {
       return false;
+    }
+    BindingInfo info;
+    if (extractExplicitBindingType(arg, info)) {
+      bodyLocals[arg.name] = info;
     }
   }
   return true;
@@ -421,18 +537,28 @@ bool rewriteDefinition(Definition &def,
   if (!rewriteTransforms(def.transforms, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
     return false;
   }
+  LocalTypeMap locals;
+  locals.reserve(def.parameters.size() + def.statements.size());
   for (auto &param : def.parameters) {
-    if (!rewriteExpr(param, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
+    if (!rewriteExpr(param, mapping, allowedParams, def.namespacePrefix, ctx, error, locals)) {
       return false;
+    }
+    BindingInfo info;
+    if (extractExplicitBindingType(param, info)) {
+      locals[param.name] = info;
     }
   }
   for (auto &stmt : def.statements) {
-    if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
+    if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals)) {
       return false;
+    }
+    BindingInfo info;
+    if (extractExplicitBindingType(stmt, info)) {
+      locals[stmt.name] = info;
     }
   }
   if (def.returnExpr.has_value()) {
-    if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
+    if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals)) {
       return false;
     }
   }
@@ -463,7 +589,8 @@ bool rewriteExecution(Execution &exec, Context &ctx, std::string &error) {
   execExpr.argNames = exec.argumentNames;
   execExpr.bodyArguments = exec.bodyArguments;
   execExpr.hasBodyArguments = exec.hasBodyArguments;
-  if (!rewriteExpr(execExpr, SubstMap{}, {}, exec.namespacePrefix, ctx, error)) {
+  LocalTypeMap emptyLocals;
+  if (!rewriteExpr(execExpr, SubstMap{}, {}, exec.namespacePrefix, ctx, error, emptyLocals)) {
     return false;
   }
   exec.name = execExpr.name;
