@@ -13,6 +13,7 @@ public:
                 const std::string &entryPath,
                 std::string &error,
                 const std::vector<std::string> &defaultEffects,
+                const std::vector<std::string> &entryDefaultEffects,
                 const std::vector<std::string> &semanticTransforms = {}) const;
 };
 

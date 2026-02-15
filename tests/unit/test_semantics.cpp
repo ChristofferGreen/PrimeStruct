@@ -25,16 +25,25 @@ bool parseProgramWithError(const std::string &source, std::string &error) {
 bool validateProgram(const std::string &source, const std::string &entry, std::string &error) {
   auto program = parseProgram(source);
   primec::Semantics semantics;
-  return semantics.validate(program, entry, error, {"io_out", "io_err"});
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  return semantics.validate(program, entry, error, defaults, defaults);
+}
+
+bool validateProgramWithDefaults(const std::string &source,
+                                 const std::string &entry,
+                                 const std::vector<std::string> &defaultEffects,
+                                 const std::vector<std::string> &entryDefaultEffects,
+                                 std::string &error) {
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  return semantics.validate(program, entry, error, defaultEffects, entryDefaultEffects);
 }
 
 bool validateProgramWithDefaults(const std::string &source,
                                  const std::string &entry,
                                  const std::vector<std::string> &defaultEffects,
                                  std::string &error) {
-  auto program = parseProgram(source);
-  primec::Semantics semantics;
-  return semantics.validate(program, entry, error, defaultEffects);
+  return validateProgramWithDefaults(source, entry, defaultEffects, defaultEffects, error);
 }
 } // namespace
 

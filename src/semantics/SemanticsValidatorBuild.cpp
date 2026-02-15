@@ -8,6 +8,7 @@ namespace primec::semantics {
 
 bool SemanticsValidator::buildDefinitionMaps() {
   defaultEffectSet_.clear();
+  entryDefaultEffectSet_.clear();
   defMap_.clear();
   returnKinds_.clear();
   structNames_.clear();
@@ -28,6 +29,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
       return false;
     }
     defaultEffectSet_.insert(effect);
+  }
+  for (const auto &effect : entryDefaultEffects_) {
+    if (!isEffectName(effect)) {
+      error_ = "invalid entry default effect: " + effect;
+      return false;
+    }
+    entryDefaultEffectSet_.insert(effect);
   }
 
   for (const auto &def : program_.definitions) {

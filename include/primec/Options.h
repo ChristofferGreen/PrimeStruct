@@ -19,7 +19,8 @@ struct Options {
   bool allowEnvelopeTextTransforms = true;
   std::vector<std::string> semanticTransforms;
   bool requireCanonicalSyntax = false;
-  std::vector<std::string> defaultEffects = {"io_out"};
+  std::vector<std::string> defaultEffects;
+  std::vector<std::string> entryDefaultEffects = {"io_out"};
   std::vector<std::string> programArgs;
   std::vector<std::string> includePaths;
 };

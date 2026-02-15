@@ -15,14 +15,22 @@ namespace {
 bool parseAndValidate(const std::string &source,
                       primec::Program &program,
                       std::string &error,
-                      std::vector<std::string> defaultEffects = {}) {
+                      const std::vector<std::string> &defaultEffects,
+                      const std::vector<std::string> &entryDefaultEffects) {
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   if (!parser.parse(program, error)) {
     return false;
   }
   primec::Semantics semantics;
-  return semantics.validate(program, "/main", error, defaultEffects);
+  return semantics.validate(program, "/main", error, defaultEffects, entryDefaultEffects);
+}
+
+bool parseAndValidate(const std::string &source,
+                      primec::Program &program,
+                      std::string &error,
+                      std::vector<std::string> defaultEffects = {}) {
+  return parseAndValidate(source, program, error, defaultEffects, defaultEffects);
 }
 } // namespace
 

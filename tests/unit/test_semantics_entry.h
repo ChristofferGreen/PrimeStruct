@@ -60,6 +60,38 @@ main([array<string>] args{array<string>("hi"utf8)}) {
   CHECK(error.find("entry parameter does not allow a default value") != std::string::npos);
 }
 
+TEST_CASE("entry default effects enable io_out") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line("hello"utf8)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgramWithDefaults(source, "/main", {}, {"io_out"}, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("non-entry defaults remain pure") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  log()
+  return(1i32)
+}
+
+[return<void>]
+log() {
+  print_line("hello"utf8)
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgramWithDefaults(source, "/main", {}, {"io_out"}, error));
+  CHECK(error.find("print_line requires io_out effect") != std::string::npos);
+}
+
 
 TEST_SUITE_END();
 

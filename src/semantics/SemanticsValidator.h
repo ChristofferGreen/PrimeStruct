@@ -15,7 +15,8 @@ public:
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,
                      std::string &error,
-                     const std::vector<std::string> &defaultEffects);
+                     const std::vector<std::string> &defaultEffects,
+                     const std::vector<std::string> &entryDefaultEffects);
 
   bool run();
 
@@ -58,7 +59,7 @@ private:
   bool statementAlwaysReturns(const Expr &stmt);
   bool blockAlwaysReturns(const std::vector<Expr> &statements);
 
-  std::unordered_set<std::string> resolveEffects(const std::vector<Transform> &transforms) const;
+  std::unordered_set<std::string> resolveEffects(const std::vector<Transform> &transforms, bool isEntry) const;
   bool validateCapabilitiesSubset(const std::vector<Transform> &transforms, const std::string &context);
   bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
 
@@ -78,8 +79,10 @@ private:
   const std::string &entryPath_;
   std::string &error_;
   const std::vector<std::string> &defaultEffects_;
+  const std::vector<std::string> &entryDefaultEffects_;
 
   std::unordered_set<std::string> defaultEffectSet_;
+  std::unordered_set<std::string> entryDefaultEffectSet_;
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_set<std::string> structNames_;

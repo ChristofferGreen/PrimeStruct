@@ -499,6 +499,7 @@ bool Semantics::validate(Program &program,
                          const std::string &entryPath,
                          std::string &error,
                          const std::vector<std::string> &defaultEffects,
+                         const std::vector<std::string> &entryDefaultEffects,
                          const std::vector<std::string> &semanticTransforms) const {
   if (!applySemanticTransforms(program, semanticTransforms, error)) {
     return false;
@@ -506,7 +507,7 @@ bool Semantics::validate(Program &program,
   if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
     return false;
   }
-  semantics::SemanticsValidator validator(program, entryPath, error, defaultEffects);
+  semantics::SemanticsValidator validator(program, entryPath, error, defaultEffects, entryDefaultEffects);
   return validator.run();
 }
 

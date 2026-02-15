@@ -45,7 +45,8 @@ bool isLifecycleHelperName(const std::string &fullPath) {
 
 } // namespace
 
-std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::vector<Transform> &transforms) const {
+std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::vector<Transform> &transforms,
+                                                                    bool isEntry) const {
   bool sawEffects = false;
   std::unordered_set<std::string> effects;
   for (const auto &transform : transforms) {
@@ -59,7 +60,7 @@ std::unordered_set<std::string> SemanticsValidator::resolveEffects(const std::ve
     }
   }
   if (!sawEffects) {
-    effects = defaultEffectSet_;
+    effects = isEntry ? entryDefaultEffectSet_ : defaultEffectSet_;
   }
   return effects;
 }
@@ -149,7 +150,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
 
 bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
-    activeEffects_ = resolveEffects(def.transforms);
+    activeEffects_ = resolveEffects(def.transforms, def.fullPath == entryPath_);
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
       return false;
     }
@@ -198,7 +199,7 @@ bool SemanticsValidator::validateDefinitions() {
 
 bool SemanticsValidator::validateExecutions() {
   for (const auto &exec : program_.executions) {
-    activeEffects_ = resolveEffects(exec.transforms);
+    activeEffects_ = resolveEffects(exec.transforms, false);
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {

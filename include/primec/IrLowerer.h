@@ -13,6 +13,7 @@ class IrLowerer {
   bool lower(const Program &program,
              const std::string &entryPath,
              const std::vector<std::string> &defaultEffects,
+             const std::vector<std::string> &entryDefaultEffects,
              IrModule &out,
              std::string &error) const;
 };
