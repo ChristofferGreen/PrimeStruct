@@ -433,6 +433,21 @@ main() {
   CHECK(error.find("canonical string literal requires utf8/ascii suffix") != std::string::npos);
 }
 
+TEST_CASE("canonical string literal requires normalized escapes") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("he\'llo"utf8)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("canonical string literal must use normalized escapes") != std::string::npos);
+}
+
 TEST_CASE("string literal rejects unknown suffix") {
   const std::string source = R"(
 [return<void>]

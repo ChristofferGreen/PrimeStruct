@@ -693,6 +693,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (!normalizeStringLiteralToken(text.text, normalized, parseError)) {
         return fail(parseError);
       }
+      if (!allowSurfaceSyntax_ && normalized != text.text) {
+        return fail("canonical string literal must use normalized escapes");
+      }
       out.kind = Expr::Kind::StringLiteral;
       out.namespacePrefix = namespacePrefix;
       out.stringValue = std::move(normalized);
