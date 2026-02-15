@@ -140,6 +140,28 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("C++ emitter renders lambda captures") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] base{3i32}
+  [i32 mut] bump{2i32}
+  holder{[value base, ref bump]([i32] x) { [i32] sum{plus(x, base)} return(sum) }}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_lambda.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("const auto holder") != std::string::npos);
+  CHECK(output.find("[base, &bump]") != std::string::npos);
+  CHECK(output.find("const int x") != std::string::npos);
+  CHECK(output.find("const int sum") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs import alias in C++ emitter") {
   const std::string source = R"(
 import /util

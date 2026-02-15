@@ -1133,7 +1133,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       if (stmt.isBinding) {
         BindingInfo binding = getBindingInfo(stmt);
-        if (!hasExplicitBindingTypeTransform(stmt) && stmt.args.size() == 1) {
+        const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+        const bool lambdaInit = stmt.args.size() == 1 && stmt.args.front().isLambda;
+        if (!hasExplicitType && stmt.args.size() == 1 && !lambdaInit) {
           std::unordered_map<std::string, ReturnKind> locals;
           locals.reserve(localTypes.size());
           for (const auto &entry : localTypes) {
@@ -1147,26 +1149,31 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           }
         }
         const std::string typeNamespace = stmt.namespacePrefix.empty() ? def.namespacePrefix : stmt.namespacePrefix;
-        std::string type = bindingTypeToCpp(binding, typeNamespace, importAliases, structTypeMap);
-        bool isReference = binding.typeName == "Reference";
         localTypes[stmt.name] = binding;
-        const bool useRef =
-            !binding.isMutable && !binding.isCopy && isReferenceCandidate(binding) && !stmt.args.empty();
-        if (useRef) {
-          if (type.rfind("const ", 0) != 0) {
-            out << pad << "const " << type << " & " << stmt.name;
-          } else {
-            out << pad << type << " & " << stmt.name;
-          }
+        const bool useAuto = !hasExplicitType && lambdaInit;
+        bool isReference = binding.typeName == "Reference";
+        if (useAuto) {
+          out << pad << (binding.isMutable ? "" : "const ") << "auto " << stmt.name;
         } else {
-          bool needsConst = !binding.isMutable;
-          if (needsConst && type.rfind("const ", 0) == 0) {
-            needsConst = false;
+          std::string type = bindingTypeToCpp(binding, typeNamespace, importAliases, structTypeMap);
+          const bool useRef =
+              !binding.isMutable && !binding.isCopy && isReferenceCandidate(binding) && !stmt.args.empty();
+          if (useRef) {
+            if (type.rfind("const ", 0) != 0) {
+              out << pad << "const " << type << " & " << stmt.name;
+            } else {
+              out << pad << type << " & " << stmt.name;
+            }
+          } else {
+            bool needsConst = !binding.isMutable;
+            if (needsConst && type.rfind("const ", 0) == 0) {
+              needsConst = false;
+            }
+            out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
           }
-          out << pad << (needsConst ? "const " : "") << type << " " << stmt.name;
         }
         if (!stmt.args.empty()) {
-          if (isReference) {
+          if (!useAuto && isReference) {
             out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ")";
           } else {
             out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
