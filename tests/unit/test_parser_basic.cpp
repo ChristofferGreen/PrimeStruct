@@ -1820,10 +1820,8 @@ main() {
   const auto &expr = *program.definitions[0].returnExpr;
   CHECK(expr.kind == primec::Expr::Kind::Call);
   CHECK(expr.name == "block");
-  REQUIRE(expr.bodyArguments.size() == 2);
-  CHECK(expr.bodyArguments[0].kind == primec::Expr::Kind::Call);
-  CHECK(expr.bodyArguments[0].name == "return");
-  CHECK(expr.bodyArguments[1].kind == primec::Expr::Kind::Literal);
+  REQUIRE(expr.bodyArguments.size() == 1);
+  CHECK(expr.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
 TEST_CASE("parses if sugar with block statements in return argument") {

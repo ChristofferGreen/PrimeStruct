@@ -255,6 +255,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression allows return value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block{
+    return(2i32)
+    3i32
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block expression requires block arguments") {
   const std::string source = R"(
 [return<int>]

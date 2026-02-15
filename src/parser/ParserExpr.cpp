@@ -452,8 +452,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
             return fail("control-flow body sugar requires canonical call form");
           }
           call.hasBodyArguments = true;
-          if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
-            return false;
+          if (call.name == "block") {
+            if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
+              return false;
+            }
+          } else {
+            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+              return false;
+            }
           }
         }
         out = std::move(call);
@@ -466,7 +472,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
               return fail("block shorthand requires canonical call form");
             }
             call.hasBodyArguments = true;
-            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
               return false;
             }
             out = std::move(call);
@@ -705,7 +711,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
             }
             hasCallSyntax = true;
             call.hasBodyArguments = true;
-            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
               return false;
             }
           } else if (!allowBareBindings_) {
@@ -732,8 +738,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           }
           hasCallSyntax = true;
           call.hasBodyArguments = true;
-          if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
-            return false;
+          if (call.name == "block") {
+            if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
+              return false;
+            }
+          } else {
+            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+              return false;
+            }
           }
         }
       }
