@@ -204,6 +204,26 @@ main() {
   CHECK(output.find("value = (base + 2)") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter handles brace constructor values") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [bool] flag{
+    return(bool{ equal(1i32, 1i32) })
+  }
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_brace_ctor.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_brace_ctor.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("bool flag") != std::string::npos);
+  CHECK(output.find("flag = _ps_block_") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter handles math constants") {
   const std::string source = R"(
 [return<void>]
