@@ -1294,24 +1294,6 @@ main() {
   CHECK(transforms[2].templateArgs[0] == "int");
 }
 
-TEST_CASE("parses empty transform argument lists") {
-  const std::string source = R"(
-[effects(), tag(;), return<int>]
-main() {
-  return(1i32)
-}
-)";
-  const auto program = parseProgram(source);
-  REQUIRE(program.definitions.size() == 1);
-  const auto &transforms = program.definitions[0].transforms;
-  REQUIRE(transforms.size() == 3);
-  CHECK(transforms[0].name == "effects");
-  CHECK(transforms[0].arguments.empty());
-  CHECK(transforms[1].name == "tag");
-  CHECK(transforms[1].arguments.empty());
-  CHECK(transforms[2].name == "return");
-}
-
 TEST_CASE("parses boolean transform arguments") {
   const std::string source = R"(
 [tag(true false)]

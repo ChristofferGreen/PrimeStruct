@@ -225,8 +225,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     const bool allowFullForms = allowFullTransformArguments(phase, transform.name);
     expect(TokenKind::LParen, "expected '('");
     if (match(TokenKind::RParen)) {
-      expect(TokenKind::RParen, "expected ')'");
-      return true;
+      return fail("transform argument list cannot be empty");
     }
     while (true) {
       if (allowFullForms) {
