@@ -1400,7 +1400,7 @@ main() {
 TEST_CASE("if expression rejects mixed string/numeric branches") {
   const std::string source = R"(
 main() {
-  [string] message{if(true, "hello"utf8, 1i32)}
+  [string] message{if(true, then(){ "hello"utf8 }, else(){ 1i32 })}
 }
 )";
   std::string error;

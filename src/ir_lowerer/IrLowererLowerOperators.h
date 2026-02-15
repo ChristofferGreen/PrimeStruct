@@ -3327,10 +3327,11 @@
             }
             return true;
           };
+          if (!isIfBlockEnvelope(thenArg) || !isIfBlockEnvelope(elseArg)) {
+            error = "if branches require block envelopes";
+            return false;
+          }
           auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
-            if (!isIfBlockEnvelope(candidate)) {
-              return inferExprKind(candidate, localsBase);
-            }
             LocalMap branchLocals = localsBase;
             bool sawValue = false;
             LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;

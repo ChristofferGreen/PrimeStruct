@@ -548,11 +548,12 @@
         }
         return true;
       };
+      if (!isIfBlockEnvelope(thenArg) || !isIfBlockEnvelope(elseArg)) {
+        error = "if branches require block envelopes";
+        return false;
+      }
       auto emitBranch = [&](const Expr &branch, LocalMap &branchLocals) -> bool {
-        if (isIfBlockEnvelope(branch)) {
-          return emitBlock(branch, branchLocals);
-        }
-        return emitStatement(branch, branchLocals);
+        return emitBlock(branch, branchLocals);
       };
       size_t jumpIfZeroIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});

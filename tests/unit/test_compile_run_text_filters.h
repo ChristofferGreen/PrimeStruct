@@ -1035,7 +1035,7 @@ TEST_CASE("compiles and runs if expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(false, 4i32, 9i32))
+  return(if(false, then(){ 4i32 }, else(){ 9i32 }))
 }
 )";
   const std::string srcPath = writeTemp("compile_if_expr.prime", source);
@@ -1050,7 +1050,7 @@ TEST_CASE("runs if expression in vm") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(false, 4i32, 9i32))
+  return(if(false, then(){ 4i32 }, else(){ 9i32 }))
 }
 )";
   const std::string srcPath = writeTemp("vm_if_expr.prime", source);
@@ -1111,7 +1111,7 @@ TEST_CASE("compiles and runs lazy if expression taking then branch") {
 main() {
   [array<i32>] values{array<i32>(4i32)}
   [i32] n{values.count()}
-  return(if(equal(n, 1i32), values[0i32], values[9i32]))
+  return(if(equal(n, 1i32), then(){ values[0i32] }, else(){ values[9i32] }))
 }
 )";
   const std::string srcPath = writeTemp("compile_if_lazy_then.prime", source);
@@ -1145,7 +1145,7 @@ TEST_CASE("compiles and runs lazy if expression taking else branch") {
 main() {
   [array<i32>] values{array<i32>(4i32)}
   [i32] n{values.count()}
-  return(if(equal(n, 0i32), values[9i32], values[0i32]))
+  return(if(equal(n, 0i32), then(){ values[9i32] }, else(){ values[0i32] }))
 }
 )";
   const std::string srcPath = writeTemp("compile_if_lazy_else.prime", source);

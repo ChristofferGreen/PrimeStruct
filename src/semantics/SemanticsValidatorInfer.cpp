@@ -118,8 +118,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         valueExprOut = nullptr;
         localsOut = localsIn;
         if (!isIfBlockEnvelope(candidate)) {
-          valueExprOut = &candidate;
-          return true;
+          return false;
         }
         for (const auto &bodyExpr : candidate.bodyArguments) {
           if (bodyExpr.isBinding) {

@@ -473,23 +473,24 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return true;
     };
     auto validateBranch = [&](const Expr &branch) -> bool {
-      std::unordered_map<std::string, BindingInfo> branchLocals = locals;
-      if (isIfBlockEnvelope(branch)) {
-        for (const auto &bodyExpr : branch.bodyArguments) {
-          if (!validateStatement(params,
-                                 branchLocals,
-                                 bodyExpr,
-                                 returnKind,
-                                 allowReturn,
-                                 allowBindings,
-                                 sawReturn,
-                                 namespacePrefix)) {
-            return false;
-          }
-        }
-        return true;
+      if (!isIfBlockEnvelope(branch)) {
+        error_ = "if branches require block envelopes";
+        return false;
       }
-      return validateStatement(params, branchLocals, branch, returnKind, allowReturn, allowBindings, sawReturn, namespacePrefix);
+      std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+      for (const auto &bodyExpr : branch.bodyArguments) {
+        if (!validateStatement(params,
+                               branchLocals,
+                               bodyExpr,
+                               returnKind,
+                               allowReturn,
+                               allowBindings,
+                               sawReturn,
+                               namespacePrefix)) {
+          return false;
+        }
+      }
+      return true;
     };
     if (!validateBranch(thenArg)) {
       return false;

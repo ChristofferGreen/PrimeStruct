@@ -1032,7 +1032,7 @@ namespace i64 {
 
 [return<int>]
 main() {
-  [mut] value{if(false, 2i32, 5i64)}
+  [mut] value{if(false, then(){ 2i32 }, else(){ 5i64 })}
   return(convert<i32>(value.inc()))
 }
 )";

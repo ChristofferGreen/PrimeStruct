@@ -422,7 +422,7 @@ TEST_CASE("if rejects trailing block arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(true, 1i32, 2i32) { 3i32 })
+  return(if(true, then(){ 1i32 }, else(){ 2i32 }) { 3i32 })
 }
 )";
   std::string error;
@@ -452,11 +452,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("if requires branch envelopes") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(true, 1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if branches require block envelopes") != std::string::npos);
+}
+
 TEST_CASE("if rejects named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if([cond] true, [then] 1i32, [alt] 2i32))
+  return(if([cond] true, [then] then(){ 1i32 }, [alt] else(){ 2i32 }))
 }
 )";
   std::string error;

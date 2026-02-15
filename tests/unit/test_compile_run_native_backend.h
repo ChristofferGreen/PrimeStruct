@@ -37,7 +37,7 @@ TEST_CASE("compiles and runs if expression in native backend") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(if(false, 4i32, 9i32))
+  return(if(false, then(){ 4i32 }, else(){ 9i32 }))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_if_expr.prime", source);

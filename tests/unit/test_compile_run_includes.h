@@ -752,7 +752,7 @@ TEST_CASE("compiles and runs block binding inference for mixed if numeric types"
 [return<int> effects(io_out)]
 main() {
   print_line(block(){
-    [mut] value{if(false, 1i32, 5000000000i64)}
+    [mut] value{if(false, then(){ 1i32 }, else(){ 5000000000i64 })}
     value
   })
   return(0i32)

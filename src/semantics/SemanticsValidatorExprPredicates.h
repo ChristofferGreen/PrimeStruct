@@ -507,25 +507,21 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const std::string resolved = resolveCalleePath(candidate);
     return structNames_.count(resolved) > 0;
   };
-  auto isIfBranchEnvelopeName = [&](const Expr &candidate) -> bool {
-    return candidate.name == "then" || candidate.name == "else" || candidate.name == "/then" ||
-           candidate.name == "/else";
-  };
-  auto getEnvelopeValueExpr = [&](const Expr &candidate) -> const Expr * {
+  auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-      return nullptr;
+      return false;
     }
     if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
-      return nullptr;
+      return false;
     }
     if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-      return nullptr;
+      return false;
     }
-    if (!isIfBranchEnvelopeName(candidate)) {
-      const std::string resolved = resolveCalleePath(candidate);
-      if (defMap_.find(resolved) != defMap_.end()) {
-        return nullptr;
-      }
+    return true;
+  };
+  auto getEnvelopeValueExpr = [&](const Expr &candidate) -> const Expr * {
+    if (!isIfBlockEnvelope(candidate)) {
+      return nullptr;
     }
     const Expr *valueExpr = nullptr;
     for (const auto &bodyExpr : candidate.bodyArguments) {
@@ -694,18 +690,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         };
         return isStringCollectionTarget(target);
       };
-      auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
-        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-          return false;
-        }
-        if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
-          return false;
-        }
-        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-          return false;
-        }
-        return true;
-      };
       auto validateBranchValueKind =
           [&](const Expr &branch, const char *label, ReturnKind &kindOut, bool &stringOut) -> bool {
         kindOut = ReturnKind::Unknown;
@@ -787,21 +771,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           return true;
         }
-
-        if (!validateExpr(params, locals, branch)) {
-          return false;
-        }
-        kindOut = inferExprReturnKind(branch, params, locals);
-        stringOut = isStringValue(branch, locals);
-        if (kindOut == ReturnKind::Void) {
-          if (isStructConstructorValueExpr(branch)) {
-            kindOut = ReturnKind::Unknown;
-          } else {
-            error_ = "if branches must produce a value";
-            return false;
-          }
-        }
-        return true;
+        error_ = "if branches require block envelopes";
+        return false;
       };
 
       ReturnKind thenKind = ReturnKind::Unknown;
