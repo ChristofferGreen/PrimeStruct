@@ -158,6 +158,30 @@ main() {
   CHECK(output.find("value = (value + 1)") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter handles shared_scope blocks") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] acc{0i32}
+  [shared_scope]
+  for([i32 mut] i{0i32}, less_than(i, 2i32), increment(i)) {
+    [i32] inner{1i32}
+    assign(acc, plus(acc, inner))
+  }
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_shared_scope.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_shared_scope.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int acc") != std::string::npos);
+  CHECK(output.find("int inner") != std::string::npos);
+  CHECK(output.find("while (") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
 import /math/*

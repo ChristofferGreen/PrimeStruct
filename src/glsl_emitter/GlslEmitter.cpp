@@ -76,6 +76,15 @@ bool getMathBuiltinName(const Expr &expr, std::string &out) {
          out == "is_finite";
 }
 
+bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {
+  for (const auto &name : argNames) {
+    if (name.has_value()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "public" || name == "private" ||
@@ -1021,6 +1030,18 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       out += indent + targetName + (isSimpleCallName(stmt, "increment") ? "++" : "--") + ";\n";
+      return true;
+    }
+    if (isSimpleCallName(stmt, "block")) {
+      if (!stmt.args.empty() || !stmt.templateArgs.empty() || hasNamedArguments(stmt.argNames)) {
+        error = "glsl backend requires block() { ... }";
+        return false;
+      }
+      out += indent + "{\n";
+      if (!emitBlock(stmt.bodyArguments, state, out, error, indent + "  ")) {
+        return false;
+      }
+      out += indent + "}\n";
       return true;
     }
     if (isSimpleCallName(stmt, "if")) {
