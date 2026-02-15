@@ -598,6 +598,21 @@ main() {
   CHECK(error.find("missing return statement in definition body") != std::string::npos);
 }
 
+TEST_CASE("block return does not satisfy definition return") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_out)] block{ return(1i32) }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("missing return statement in definition body") != std::string::npos);
+}
+
 TEST_CASE("import inside namespace fails") {
   const std::string source = R"(
 namespace demo {

@@ -818,7 +818,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
             if (callExpr.name == "block") {
               hasCallSyntax = true;
               callExpr.hasBodyArguments = true;
-              if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+              if (!parseValueBlock(callExpr.bodyArguments, def.namespacePrefix)) {
                 return false;
               }
               def.statements.push_back(std::move(callExpr));
@@ -829,7 +829,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
           if (callExpr.name == "block") {
             hasCallSyntax = true;
             callExpr.hasBodyArguments = true;
-            if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+            if (!parseValueBlock(callExpr.bodyArguments, def.namespacePrefix)) {
               return false;
             }
           } else {
@@ -853,8 +853,14 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
           }
           hasCallSyntax = true;
           callExpr.hasBodyArguments = true;
-          if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
-            return false;
+          if (callExpr.name == "block") {
+            if (!parseValueBlock(callExpr.bodyArguments, def.namespacePrefix)) {
+              return false;
+            }
+          } else {
+            if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+              return false;
+            }
           }
         }
       }
