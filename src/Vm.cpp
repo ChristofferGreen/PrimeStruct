@@ -655,6 +655,22 @@ bool executeImpl(const IrModule &module,
         result = stack.back();
         return true;
       }
+      case IrOpcode::ReturnF32: {
+        if (stack.empty()) {
+          error = "IR stack underflow on return";
+          return false;
+        }
+        result = static_cast<uint64_t>(static_cast<uint32_t>(stack.back()));
+        return true;
+      }
+      case IrOpcode::ReturnF64: {
+        if (stack.empty()) {
+          error = "IR stack underflow on return";
+          return false;
+        }
+        result = stack.back();
+        return true;
+      }
       case IrOpcode::PrintI32: {
         if (stack.empty()) {
           error = "IR stack underflow on print";

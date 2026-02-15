@@ -223,6 +223,77 @@ main() {
   CHECK(result == 1);
 }
 
+TEST_CASE("ir lowers f32 returns") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(1.25f32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
+  CHECK(error.empty());
+
+  bool sawReturn = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::ReturnF32) {
+      sawReturn = true;
+      break;
+    }
+  }
+  CHECK(sawReturn);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  uint32_t bits = static_cast<uint32_t>(result);
+  float value = 0.0f;
+  std::memcpy(&value, &bits, sizeof(value));
+  CHECK(value == doctest::Approx(1.25f));
+}
+
+TEST_CASE("ir lowers f64 returns") {
+  const std::string source = R"(
+[return<f64>]
+main() {
+  return(2.5f64)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
+  CHECK(error.empty());
+
+  bool sawReturn = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::ReturnF64) {
+      sawReturn = true;
+      break;
+    }
+  }
+  CHECK(sawReturn);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  double value = 0.0;
+  std::memcpy(&value, &result, sizeof(value));
+  CHECK(value == doctest::Approx(2.5));
+}
+
 TEST_CASE("ir lowers bool comparison with signed integer") {
   const std::string source = R"(
 [return<bool>]

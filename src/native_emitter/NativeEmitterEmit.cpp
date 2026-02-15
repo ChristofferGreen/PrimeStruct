@@ -354,6 +354,12 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::ReturnI64:
         emitter.emitReturn();
         break;
+      case IrOpcode::ReturnF32:
+        emitter.emitReturn();
+        break;
+      case IrOpcode::ReturnF64:
+        emitter.emitReturn();
+        break;
       case IrOpcode::PrintI32: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;

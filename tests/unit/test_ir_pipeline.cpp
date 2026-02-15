@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 #include "third_party/doctest.h"
 

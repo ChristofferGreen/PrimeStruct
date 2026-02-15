@@ -112,6 +112,10 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "ReturnI32";
       case IrOpcode::ReturnI64:
         return "ReturnI64";
+      case IrOpcode::ReturnF32:
+        return "ReturnF32";
+      case IrOpcode::ReturnF64:
+        return "ReturnF64";
       case IrOpcode::PrintI32:
         return "PrintI32";
       case IrOpcode::PrintI64:
@@ -298,6 +302,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return 0;
       case IrOpcode::ReturnI32:
       case IrOpcode::ReturnI64:
+      case IrOpcode::ReturnF32:
+      case IrOpcode::ReturnF64:
         return -1;
       case IrOpcode::PrintI32:
       case IrOpcode::PrintI64:
@@ -353,7 +359,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
       return true;
     };
 
-    if (inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64) {
+    if (inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64 ||
+        inst.op == IrOpcode::ReturnF32 || inst.op == IrOpcode::ReturnF64) {
       continue;
     }
     if (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) {

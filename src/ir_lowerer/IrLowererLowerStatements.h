@@ -506,8 +506,12 @@
         function.instructions.push_back({IrOpcode::ReturnI64, 0});
       } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
         function.instructions.push_back({IrOpcode::ReturnI32, 0});
+      } else if (returnKind == LocalInfo::ValueKind::Float32) {
+        function.instructions.push_back({IrOpcode::ReturnF32, 0});
+      } else if (returnKind == LocalInfo::ValueKind::Float64) {
+        function.instructions.push_back({IrOpcode::ReturnF64, 0});
       } else {
-        error = "native backend only supports returning integer or bool values";
+        error = "native backend only supports returning numeric or bool values";
         return false;
       }
       sawReturn = true;
