@@ -397,10 +397,6 @@ bool applyPass(const std::string &input,
     while (pos < input.size()) {
       char c = input[pos];
       if (inString) {
-        if (c == '\\' && pos + 1 < input.size()) {
-          pos += 2;
-          continue;
-        }
         if (c == quote) {
           inString = false;
         }
