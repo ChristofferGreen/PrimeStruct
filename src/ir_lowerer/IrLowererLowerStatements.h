@@ -822,10 +822,6 @@
           error = vectorHelper + " does not accept block arguments";
           return false;
         }
-        if (vectorHelper == "push" || vectorHelper == "reserve") {
-          error = "native backend does not support vector helper: " + vectorHelper;
-          return false;
-        }
 
         const size_t expectedArgs = (vectorHelper == "pop" || vectorHelper == "clear") ? 1 : 2;
         if (stmt.args.size() != expectedArgs) {
@@ -873,6 +869,103 @@
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
         function.instructions.push_back({IrOpcode::LoadIndirect, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+        int32_t capacityLocal = -1;
+        if (vectorHelper == "push" || vectorHelper == "reserve") {
+          capacityLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 16});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+        }
+
+        if (vectorHelper == "reserve") {
+          LocalInfo::ValueKind capacityKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+          if (!isSupportedIndexKind(capacityKind)) {
+            error = "reserve requires integer capacity";
+            return false;
+          }
+
+          const int32_t desiredLocal = allocTempLocal();
+          if (!emitExpr(stmt.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(desiredLocal)});
+
+          if (capacityKind != LocalInfo::ValueKind::UInt64) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+            function.instructions.push_back({pushZeroForIndex(capacityKind), 0});
+            function.instructions.push_back({cmpLtForIndex(capacityKind), 0});
+            size_t jumpNonNegative = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitVectorReserveNegative();
+            size_t nonNegativeIndex = function.instructions.size();
+            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+          }
+
+          IrOpcode cmpLtOp =
+              (capacityKind == LocalInfo::ValueKind::Int32)
+                  ? IrOpcode::CmpLtI32
+                  : (capacityKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtU64);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t jumpWithinCapacity = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          emitVectorReserveExceeded();
+          size_t withinCapacityIndex = function.instructions.size();
+          function.instructions[jumpWithinCapacity].imm = static_cast<int32_t>(withinCapacityIndex);
+          return true;
+        }
+
+        if (vectorHelper == "push") {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+          function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+          size_t jumpHasSpace = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+          const int32_t valueLocal = allocTempLocal();
+          if (!emitExpr(stmt.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+
+          const int32_t destPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(elementOffset)});
+          function.instructions.push_back({IrOpcode::AddI32, 0});
+          function.instructions.push_back({IrOpcode::PushI32, 16});
+          function.instructions.push_back({IrOpcode::MulI32, 0});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back({IrOpcode::AddI32, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+
+          size_t jumpEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t errorIndex = function.instructions.size();
+          emitVectorCapacityExceeded();
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpHasSpace].imm = static_cast<int32_t>(errorIndex);
+          function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+          return true;
+        }
 
         if (vectorHelper == "pop") {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});

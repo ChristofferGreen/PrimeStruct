@@ -2358,26 +2358,67 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("rejects native vector growth helpers") {
+TEST_CASE("compiles and runs native vector push helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  pop(values)
+  reserve(values, 3i32)
+  push(values, 9i32)
+  return(plus(values[2i32], capacity(values)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_push.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_vector_push_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+}
+
+TEST_CASE("rejects native vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  push(values, 3i32)
-  return(values.count())
+  reserve(values, 3i32)
+  return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_vector_push_unsupported.prime", source);
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_unsupported.prime", source);
   const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_push_unsupported_exe").string();
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_unsupported_exe").string();
   const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_native_vector_push_err.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_native_vector_reserve_err.txt").string();
 
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "Native lowering error: native backend does not support vector helper: push\n");
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector reserve exceeds capacity\n");
+}
+
+TEST_CASE("rejects native vector push beyond capacity") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_push_full.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_full_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_vector_push_full_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector capacity exceeded\n");
 }
 
 TEST_CASE("compiles and runs native vector shrink helpers") {

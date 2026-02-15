@@ -466,20 +466,52 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("rejects vm vector growth helpers") {
+TEST_CASE("runs vm with vector push helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  pop(values)
+  reserve(values, 3i32)
+  push(values, 9i32)
+  return(plus(values[2i32], capacity(values)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_push.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
+TEST_CASE("rejects vm vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  push(values, 3i32)
-  return(values.count())
+  reserve(values, 3i32)
+  return(0i32)
 }
 )";
-  const std::string srcPath = writeTemp("vm_vector_push_unsupported.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_push_err.txt").string();
+  const std::string srcPath = writeTemp("vm_vector_reserve_unsupported.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support vector helper: push\n");
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector reserve exceeds capacity\n");
+}
+
+TEST_CASE("rejects vm vector push beyond capacity") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 2i32)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_push_full.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_vector_push_full_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "vector capacity exceeded\n");
 }
 
 TEST_CASE("runs vm with vector shrink helpers") {
