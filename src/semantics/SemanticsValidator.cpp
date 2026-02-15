@@ -56,4 +56,43 @@ bool SemanticsValidator::hasAnyMathImport() const {
   return mathImportAll_ || !mathImports_.empty();
 }
 
+bool SemanticsValidator::isEntryArgsName(const std::string &name) const {
+  if (currentDefinitionPath_ != entryPath_) {
+    return false;
+  }
+  if (entryArgsName_.empty()) {
+    return false;
+  }
+  return name == entryArgsName_;
+}
+
+bool SemanticsValidator::isEntryArgsAccess(const Expr &expr) const {
+  if (currentDefinitionPath_ != entryPath_ || entryArgsName_.empty()) {
+    return false;
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(expr, accessName) || expr.args.size() != 2) {
+    return false;
+  }
+  if (expr.args.front().kind != Expr::Kind::Name) {
+    return false;
+  }
+  return expr.args.front().name == entryArgsName_;
+}
+
+bool SemanticsValidator::isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals,
+                                                 const Expr &expr) const {
+  if (currentDefinitionPath_ != entryPath_) {
+    return false;
+  }
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = locals.find(expr.name);
+  return it != locals.end() && it->second.isEntryArgString;
+}
+
 } // namespace primec::semantics

@@ -176,12 +176,8 @@ echo([string] msg) {
 }
 
 [return<int> effects(io_out)]
-main([array<string>] args) {
-  if(greater_than(args.count(), 1i32)) {
-    echo(args[1i32])
-  } else {
-    echo("missing"utf8)
-  }
+main() {
+  echo("alpha"utf8)
   return(0i32)
 }
 )";
@@ -191,7 +187,7 @@ main([array<string>] args) {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " alpha > " + outPath;
+  const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "alpha\n");
 }
@@ -618,7 +614,7 @@ main([array<string>] args) {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath) ==
-        "Native lowering error: native backend only supports count() on string literals or string bindings\n");
+        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
 }
 
 TEST_CASE("native argv string binding index fails") {
@@ -635,10 +631,10 @@ main([array<string>] args) {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath) ==
-        "Native lowering error: native backend only supports indexing into string literals or string bindings\n");
+        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
 }
 
-TEST_CASE("compiles and runs native argv call argument unsafe skips bounds") {
+TEST_CASE("rejects native argv call argument unsafe") {
   const std::string source = R"(
 [return<void> effects(io_out)]
 echo([string] msg) {
@@ -652,18 +648,13 @@ main([array<string>] args) {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_argv_call_unsafe.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_argv_call_unsafe_exe").string();
-  const std::string outPath =
-      (std::filesystem::temp_directory_path() / "primec_native_argv_call_unsafe_out.txt").string();
   const std::string errPath =
       (std::filesystem::temp_directory_path() / "primec_native_argv_call_unsafe_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  const std::string runCmd = exePath + " > " + outPath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(errPath).empty());
-  CHECK(readFile(outPath).empty());
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
 }
 
 TEST_SUITE_END();
@@ -2779,7 +2770,8 @@ main([array<string>] args) {
       (std::filesystem::temp_directory_path() / "primec_native_map_indexing_argv_key_err.txt").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("map lookup key") != std::string::npos);
+  CHECK(readFile(errPath) ==
+        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
 }
 
 TEST_CASE("compiles and runs native string-keyed map binding lookup") {
@@ -2814,7 +2806,8 @@ main([array<string>] args) {
       (std::filesystem::temp_directory_path() / "primec_native_map_lookup_argv_key_err.txt").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("map lookup key") != std::string::npos);
+  CHECK(readFile(errPath) ==
+        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
 }
 
 TEST_CASE("rejects native map literal string key from argv binding") {
@@ -2835,7 +2828,8 @@ main([array<string>] args) {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("map literal string keys") != std::string::npos);
+  CHECK(readFile(errPath) ==
+        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
 }
 
 TEST_SUITE_END();

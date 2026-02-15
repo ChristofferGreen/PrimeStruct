@@ -289,7 +289,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = "binding requires exactly one argument";
       return false;
     }
-    if (!validateExpr(params, locals, stmt.args.front())) {
+    const Expr &initializer = stmt.args.front();
+    const bool entryArgInit = isEntryArgsAccess(initializer);
+    const bool entryArgStringInit = isEntryArgStringBinding(locals, initializer);
+    std::optional<EntryArgStringScope> entryArgScope;
+    if (entryArgInit || entryArgStringInit) {
+      entryArgScope.emplace(*this, true);
+    }
+    if (!validateExpr(params, locals, initializer)) {
       return false;
     }
     auto isStructConstructor = [&](const Expr &expr) -> bool {
@@ -341,13 +348,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       return false;
     };
-    ReturnKind initKind = inferExprReturnKind(stmt.args.front(), params, locals);
-    if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(stmt.args.front())) {
+    ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
+    if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
       error_ = "binding initializer requires a value";
       return false;
     }
     if (!hasExplicitBindingTypeTransform(stmt)) {
-      (void)inferBindingTypeFromInitializer(stmt.args.front(), params, locals, info);
+      (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -356,8 +363,15 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         return false;
       }
     }
+    if (entryArgInit || entryArgStringInit) {
+      if (normalizeBindingTypeName(info.typeName) != "string") {
+        error_ = "entry argument strings require string bindings";
+        return false;
+      }
+      info.isEntryArgString = true;
+    }
     if (info.typeName == "Reference") {
-      const Expr &init = stmt.args.front();
+      const Expr &init = initializer;
       std::string pointerName;
       if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
           pointerName != "location" || init.args.size() != 1) {
@@ -729,8 +743,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = printBuiltin.name + " requires " + effectName + " effect";
       return false;
     }
-    if (!validateExpr(params, locals, stmt.args.front())) {
-      return false;
+    {
+      EntryArgStringScope entryArgScope(*this, true);
+      if (!validateExpr(params, locals, stmt.args.front())) {
+        return false;
+      }
     }
     if (!isPrintableExpr(stmt.args.front(), params, locals)) {
       error_ = printBuiltin.name + " requires an integer/bool or string literal/binding argument";

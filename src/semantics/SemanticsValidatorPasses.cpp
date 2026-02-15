@@ -150,6 +150,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
 
 bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
+    currentDefinitionPath_ = def.fullPath;
     activeEffects_ = resolveEffects(def.transforms, def.fullPath == entryPath_);
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
       return false;
@@ -194,10 +195,12 @@ bool SemanticsValidator::validateDefinitions() {
       }
     }
   }
+  currentDefinitionPath_.clear();
   return true;
 }
 
 bool SemanticsValidator::validateExecutions() {
+  currentDefinitionPath_.clear();
   for (const auto &exec : program_.executions) {
     activeEffects_ = resolveEffects(exec.transforms, false);
     bool sawEffects = false;

@@ -39,6 +39,9 @@ private:
                                        BindingInfo &bindingOut);
   bool allowMathBareName(const std::string &name) const;
   bool hasAnyMathImport() const;
+  bool isEntryArgsName(const std::string &name) const;
+  bool isEntryArgsAccess(const Expr &expr) const;
+  bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
 
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
@@ -74,6 +77,17 @@ private:
       validator.activeEffects_ = std::move(previous);
     }
   };
+  struct EntryArgStringScope {
+    SemanticsValidator &validator;
+    bool previous = false;
+    EntryArgStringScope(SemanticsValidator &validatorIn, bool allow)
+        : validator(validatorIn), previous(validatorIn.allowEntryArgStringUse_) {
+      validator.allowEntryArgStringUse_ = allow;
+    }
+    ~EntryArgStringScope() {
+      validator.allowEntryArgStringUse_ = previous;
+    }
+  };
 
   const Program &program_;
   const std::string &entryPath_;
@@ -92,6 +106,9 @@ private:
   std::unordered_map<std::string, std::string> importAliases_;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
+  std::string entryArgsName_;
+  std::string currentDefinitionPath_;
+  bool allowEntryArgStringUse_ = false;
 };
 
 } // namespace primec::semantics

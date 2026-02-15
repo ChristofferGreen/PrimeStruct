@@ -203,6 +203,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return true;
   }
+  if (!allowEntryArgStringUse_) {
+    if (isEntryArgsAccess(expr) || isEntryArgStringBinding(locals, expr)) {
+      error_ = "entry argument strings are only supported in print calls or string bindings";
+      return false;
+    }
+  }
   std::optional<EffectScope> effectScope;
   if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.transforms.empty()) {
     std::unordered_set<std::string> executionEffects;

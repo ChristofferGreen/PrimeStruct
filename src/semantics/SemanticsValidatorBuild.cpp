@@ -384,6 +384,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
 }
 
 bool SemanticsValidator::buildParameters() {
+  entryArgsName_.clear();
   struct HelperSuffixInfo {
     std::string_view suffix;
     std::string_view placement;
@@ -512,6 +513,12 @@ bool SemanticsValidator::buildParameters() {
           error_ = "mut transform is only supported on lifecycle helpers: " + def.fullPath;
           return false;
         }
+      }
+    }
+    if (def.fullPath == entryPath_) {
+      if (params.size() == 1 && params.front().binding.typeName == "array" &&
+          params.front().binding.typeTemplateArg == "string") {
+        entryArgsName_ = params.front().name;
       }
     }
     paramsByDef_[def.fullPath] = std::move(params);
