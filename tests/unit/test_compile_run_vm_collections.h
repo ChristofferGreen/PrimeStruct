@@ -482,6 +482,25 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("runs vm with vector mutator method calls") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values.pop()
+  values.reserve(3i32)
+  values.push(9i32)
+  values.remove_at(1i32)
+  values.remove_swap(0i32)
+  values.clear()
+  return(values.count())
+}
+)";
+  const std::string srcPath = writeTemp("vm_vector_mutator_methods.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("rejects vm vector reserve beyond capacity") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

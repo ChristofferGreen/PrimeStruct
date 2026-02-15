@@ -408,7 +408,7 @@ for(
   - Collections can appear anywhere forms are allowed, including execution arguments.
   - Numeric/bool array literals (`array<i32>{...}`, `array<i64>{...}`, `array<u64>{...}`, `array<bool>{...}`) lower through IR/VM/native.
   - `vector<T>` is a resizable, owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic constructors (0..N). Vector operations that grow capacity require `effects(heap_alloc)` (or the active default effects set); literals with one or more elements are treated as growth operations. VM/native implement vectors with fixed capacity; `push`/`reserve` are allowed only up to the existing capacity (exceeding it is a runtime error), and `reserve` does not reallocate.
-  - Vector helpers: `count(value)` / `value.count()`, `at(value, index)`, `at_unsafe(value, index)`, `push(value, item)`, `pop(value)`, `reserve(value, capacity)`, `capacity(value)`, `clear(value)`, `remove_at(value, index)`, `remove_swap(value, index)`.
+  - Vector helpers: `count(value)` / `value.count()`, `at(value, index)`, `at_unsafe(value, index)`, `push(value, item)`, `pop(value)`, `reserve(value, capacity)`, `capacity(value)`, `clear(value)`, `remove_at(value, index)`, `remove_swap(value, index)` (method-call forms like `value.push(...)` are accepted for helpers).
   - Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals; other string key expressions require the C++ emitter (which uses `std::string_view` keys).

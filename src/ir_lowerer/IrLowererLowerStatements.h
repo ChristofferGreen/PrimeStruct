@@ -797,7 +797,7 @@
       }
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall) {
+    if (stmt.kind == Expr::Kind::Call) {
       std::string vectorHelper;
       if (isSimpleCallName(stmt, "push")) {
         vectorHelper = "push";
