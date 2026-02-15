@@ -46,6 +46,17 @@ TEST_CASE("pipeline preserves include with comments") {
   CHECK(output == source);
 }
 
+TEST_CASE("pipeline preserves include with payload comments") {
+  const std::string source =
+      "include</std/io /* > should be ignored */>\n[return<int>]\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("pipeline preserves single-quoted include paths") {
   const std::string source = "include<'/std\\\\'>\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;

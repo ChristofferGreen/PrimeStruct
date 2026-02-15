@@ -433,6 +433,23 @@ bool applyPass(const std::string &input,
         ++pos;
         continue;
       }
+      if (c == '/' && pos + 1 < input.size()) {
+        if (input[pos + 1] == '/') {
+          pos += 2;
+          while (pos < input.size() && input[pos] != '\n') {
+            ++pos;
+          }
+          continue;
+        }
+        if (input[pos + 1] == '*') {
+          size_t end = input.find("*/", pos + 2);
+          if (end == std::string::npos) {
+            return false;
+          }
+          pos = end + 2;
+          continue;
+        }
+      }
       if (c == '"' || c == '\'') {
         inString = true;
         quote = c;
