@@ -351,6 +351,27 @@ TEST_CASE("allows comments around version attribute") {
   CHECK(source.find("INCLUDE_COMMENT_VERSION") != std::string::npos);
 }
 
+TEST_CASE("allows comments containing > in include list") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_comment_bracket_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_comment_bracket_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_COMMENT_BRACKET\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime",
+                "include<\"/lib.prime\" /* ignore > here */, version=\"1.2\" >\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_COMMENT_BRACKET") != std::string::npos);
+}
+
 TEST_CASE("resolves versioned absolute include from include path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_root";

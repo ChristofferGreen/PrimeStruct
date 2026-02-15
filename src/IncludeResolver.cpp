@@ -164,6 +164,56 @@ size_t skipWhitespaceAndComments(const std::string &text, size_t start) {
   return pos;
 }
 
+size_t findIncludePayloadEnd(const std::string &source, size_t start) {
+  size_t pos = start;
+  bool inBarePath = false;
+  while (pos < source.size()) {
+    char c = source[pos];
+    if (c == '>') {
+      return pos;
+    }
+    if (c == '"' || c == '\'') {
+      size_t next = skipQuotedLiteral(source, pos);
+      if (next >= source.size()) {
+        return source.find('>', pos + 1);
+      }
+      pos = next;
+      inBarePath = false;
+      continue;
+    }
+    if (std::isspace(static_cast<unsigned char>(c)) || c == ',' || c == ';') {
+      ++pos;
+      inBarePath = false;
+      continue;
+    }
+    if (c == '=') {
+      ++pos;
+      inBarePath = false;
+      continue;
+    }
+    if (!inBarePath && c == '/' && pos + 1 < source.size()) {
+      if (source[pos + 1] == '/') {
+        pos = skipLineComment(source, pos);
+        continue;
+      }
+      if (source[pos + 1] == '*') {
+        pos = skipBlockComment(source, pos);
+        continue;
+      }
+      inBarePath = true;
+      ++pos;
+      continue;
+    }
+    if (!inBarePath && c == '/') {
+      inBarePath = true;
+      ++pos;
+      continue;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
 bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payloadStart, size_t &payloadEnd) {
   if (pos + 7 > source.size()) {
     return false;
@@ -183,7 +233,7 @@ bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payload
     return false;
   }
   payloadStart = scan + 1;
-  payloadEnd = source.find('>', payloadStart);
+  payloadEnd = findIncludePayloadEnd(source, payloadStart);
   return true;
 }
 
