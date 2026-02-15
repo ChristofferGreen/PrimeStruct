@@ -385,8 +385,38 @@ bool applyPass(const std::string &input,
     if (scan < input.size() && isTokenChar(input[scan])) {
       return false;
     }
-    while (scan < input.size() && std::isspace(static_cast<unsigned char>(input[scan]))) {
-      ++scan;
+    auto skipWhitespaceAndComments = [&](size_t &pos) -> bool {
+      bool advanced = true;
+      while (advanced) {
+        advanced = false;
+        while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
+          ++pos;
+          advanced = true;
+        }
+        if (pos + 1 < input.size() && input[pos] == '/') {
+          if (input[pos + 1] == '/') {
+            pos += 2;
+            while (pos < input.size() && input[pos] != '\n') {
+              ++pos;
+            }
+            advanced = true;
+            continue;
+          }
+          if (input[pos + 1] == '*') {
+            size_t end = input.find("*/", pos + 2);
+            if (end == std::string::npos) {
+              return false;
+            }
+            pos = end + 2;
+            advanced = true;
+            continue;
+          }
+        }
+      }
+      return true;
+    };
+    if (!skipWhitespaceAndComments(scan)) {
+      return false;
     }
     if (scan >= input.size() || input[scan] != '<') {
       return false;
