@@ -226,7 +226,10 @@ bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payload
   }
   size_t scan = pos + 7;
   if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
-    return false;
+    if (!(source[scan] == '/' && scan + 1 < source.size() &&
+          (source[scan + 1] == '/' || source[scan + 1] == '*'))) {
+      return false;
+    }
   }
   scan = skipWhitespaceAndComments(source, scan);
   if (scan >= source.size() || source[scan] != '<') {

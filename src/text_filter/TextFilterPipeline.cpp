@@ -383,7 +383,10 @@ bool applyPass(const std::string &input,
     }
     size_t scan = index + IncludeLen;
     if (scan < input.size() && isTokenChar(input[scan])) {
-      return false;
+      if (!(input[scan] == '/' && scan + 1 < input.size() &&
+            (input[scan + 1] == '/' || input[scan + 1] == '*'))) {
+        return false;
+      }
     }
     auto skipWhitespaceAndComments = [&](size_t &pos) -> bool {
       bool advanced = true;

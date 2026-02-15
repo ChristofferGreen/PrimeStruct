@@ -83,6 +83,19 @@ TEST_CASE("expands include with whitespace") {
   CHECK(source.find(marker) != std::string::npos);
 }
 
+TEST_CASE("expands include with tight comment") {
+  const std::string marker = "LIB_TIGHT_COMMENT";
+  const std::string libPath = writeTemp("lib_tight_comment.prime", "// " + marker + "\n");
+  const std::string srcPath = writeTemp("main_tight_comment.prime", "include/* note */<\"" + libPath + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find(marker) != std::string::npos);
+}
+
 TEST_CASE("expands include with bare slash path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_root";
