@@ -33,6 +33,28 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
+TEST_CASE("compiles and runs primitive brace constructors") {
+  const std::string source = R"(
+[return<bool>]
+truthy() {
+  return(bool{ 35i32 })
+}
+
+[return<int>]
+main() {
+  return(convert<int>(truthy()))
+}
+)";
+  const std::string srcPath = writeTemp("compile_brace_convert.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_brace_convert_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string runVmCmd = "./primevm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(runVmCmd) == 1);
+}
+
 TEST_CASE("default entry path is main") {
   const std::string source = R"(
 [return<int>]

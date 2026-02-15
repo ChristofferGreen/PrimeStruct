@@ -364,6 +364,17 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (!allowSurfaceSyntax_) {
       return fail("brace constructors require canonical call form");
     }
+    auto isPrimitiveBraceType = [&](const std::string &name) -> bool {
+      if (name.empty() || name.find('/') != std::string::npos) {
+        return false;
+      }
+      return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "bool" ||
+             name == "float" || name == "f32" || name == "f64";
+    };
+    if (call.templateArgs.empty() && isPrimitiveBraceType(call.name)) {
+      call.templateArgs.push_back(call.name);
+      call.name = "convert";
+    }
     Expr block;
     block.kind = Expr::Kind::Call;
     block.name = "block";

@@ -193,6 +193,35 @@ main() {
   CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses primitive brace constructor as convert") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(bool{ 35i32 })
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &convertCall = returnCall.args[0];
+  REQUIRE(convertCall.kind == primec::Expr::Kind::Call);
+  CHECK(convertCall.name == "convert");
+  REQUIRE(convertCall.templateArgs.size() == 1);
+  CHECK(convertCall.templateArgs[0] == "bool");
+  REQUIRE(convertCall.args.size() == 1);
+  const auto &blockArg = convertCall.args[0];
+  REQUIRE(blockArg.kind == primec::Expr::Kind::Call);
+  CHECK(blockArg.name == "block");
+  CHECK(blockArg.hasBodyArguments);
+  REQUIRE(blockArg.bodyArguments.size() == 1);
+  CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses block call without parens") {
   const std::string source = R"(
 [return<int>]
