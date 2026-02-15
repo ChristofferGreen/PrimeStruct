@@ -124,6 +124,27 @@ main() {
   REQUIRE(lambdaExpr.bodyArguments.size() == 1);
 }
 
+TEST_CASE("parses lambda return inside void definitions") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  []([i32] value) { return(value) }
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &lambdaExpr = mainDef.statements[0];
+  REQUIRE(lambdaExpr.isLambda);
+  REQUIRE(lambdaExpr.bodyArguments.size() == 1);
+  const auto &returnCall = lambdaExpr.bodyArguments[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  CHECK(returnCall.name == "return");
+  REQUIRE(returnCall.args.size() == 1);
+}
+
 TEST_CASE("parses lambda captures with separators") {
   const std::string source = R"(
 [return<int>]

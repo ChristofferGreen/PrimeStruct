@@ -266,6 +266,31 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
   }
   std::vector<Expr> body;
   {
+    struct ReturnContextGuard {
+      explicit ReturnContextGuard(Parser &parser)
+          : parser_(parser),
+            previousTracker_(parser.returnTracker_),
+            previousReturnsVoid_(parser.returnsVoidContext_),
+            previousAllowImplicitVoid_(parser.allowImplicitVoidReturn_) {
+        parser_.returnTracker_ = nullptr;
+        parser_.returnsVoidContext_ = false;
+        parser_.allowImplicitVoidReturn_ = true;
+      }
+      ~ReturnContextGuard() {
+        parser_.returnTracker_ = previousTracker_;
+        parser_.returnsVoidContext_ = previousReturnsVoid_;
+        parser_.allowImplicitVoidReturn_ = previousAllowImplicitVoid_;
+      }
+      ReturnContextGuard(const ReturnContextGuard &) = delete;
+      ReturnContextGuard &operator=(const ReturnContextGuard &) = delete;
+
+    private:
+      Parser &parser_;
+      bool *previousTracker_;
+      bool previousReturnsVoid_;
+      bool previousAllowImplicitVoid_;
+    } returnGuard(*this);
+
     BraceListGuard braceGuard(*this, true, true);
     if (!parseBraceExprList(body, namespacePrefix)) {
       return false;
