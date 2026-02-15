@@ -81,6 +81,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("for condition accepts binding") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32} [bool] keep{less_than(i, 2i32)} assign(i, plus(i, 1i32))) {
+    if(keep, then(){ assign(total, plus(total, 1i32)) }, else(){ assign(total, plus(total, 0i32)) })
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("for condition binding requires bool") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for([i32] i{0i32} [i32] keep{1i32} assign(i, plus(i, 1i32))) {
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("for condition requires bool") != std::string::npos);
+}
+
 TEST_CASE("loop rejects non-block body") {
   const std::string source = R"(
 [return<int>]

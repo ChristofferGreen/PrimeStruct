@@ -608,13 +608,31 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return false;
     }
     const Expr &cond = stmt.args[1];
-    if (!validateExpr(params, loopLocals, cond)) {
-      return false;
-    }
-    ReturnKind condKind = inferExprReturnKind(cond, params, loopLocals);
-    if (condKind != ReturnKind::Bool) {
-      error_ = "for condition requires bool";
-      return false;
+    auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
+      if (binding.typeName == "Reference") {
+        return returnKindForTypeName(binding.typeTemplateArg);
+      }
+      return returnKindForTypeName(binding.typeName);
+    };
+    if (cond.isBinding) {
+      if (!validateStatement(params, loopLocals, cond, returnKind, false, allowBindings, nullptr, namespacePrefix)) {
+        return false;
+      }
+      auto it = loopLocals.find(cond.name);
+      ReturnKind condKind = it == loopLocals.end() ? ReturnKind::Unknown : returnKindForBinding(it->second);
+      if (condKind != ReturnKind::Bool) {
+        error_ = "for condition requires bool";
+        return false;
+      }
+    } else {
+      if (!validateExpr(params, loopLocals, cond)) {
+        return false;
+      }
+      ReturnKind condKind = inferExprReturnKind(cond, params, loopLocals);
+      if (condKind != ReturnKind::Bool) {
+        error_ = "for condition requires bool";
+        return false;
+      }
     }
     if (!validateStatement(params, loopLocals, stmt.args[2], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
       return false;
