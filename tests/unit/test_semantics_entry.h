@@ -2070,7 +2070,7 @@ main() {
 
 TEST_CASE("single_type_to_return rejects arguments") {
   const std::string source = R"(
-[single_type_to_return(1) i32]
+[single_type_to_return(1i32) i32]
 main() {
   return(1i32)
 }

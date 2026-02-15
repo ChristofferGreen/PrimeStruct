@@ -5,6 +5,7 @@
 #include "primec/StringLiteral.h"
 #include "primec/TransformRegistry.h"
 
+#include <sstream>
 #include <utility>
 
 namespace primec {
@@ -26,6 +27,124 @@ bool isArgumentLabelValueStart(TokenKind kind) {
 bool isIgnorableToken(TokenKind kind) {
   return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
 }
+
+void printTransforms(std::ostringstream &out, const std::vector<Transform> &transforms) {
+  if (transforms.empty()) {
+    return;
+  }
+  out << "[";
+  for (size_t i = 0; i < transforms.size(); ++i) {
+    if (i > 0) {
+      out << ", ";
+    }
+    out << transforms[i].name;
+    if (!transforms[i].templateArgs.empty()) {
+      out << "<";
+      for (size_t t = 0; t < transforms[i].templateArgs.size(); ++t) {
+        if (t > 0) {
+          out << ", ";
+        }
+        out << transforms[i].templateArgs[t];
+      }
+      out << ">";
+    }
+    if (!transforms[i].arguments.empty()) {
+      out << "(";
+      for (size_t argIndex = 0; argIndex < transforms[i].arguments.size(); ++argIndex) {
+        if (argIndex > 0) {
+          out << ", ";
+        }
+        out << transforms[i].arguments[argIndex];
+      }
+      out << ")";
+    }
+  }
+  out << "] ";
+}
+
+void printTemplateArgs(std::ostringstream &out, const std::vector<std::string> &args) {
+  if (args.empty()) {
+    return;
+  }
+  out << "<";
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (i > 0) {
+      out << ", ";
+    }
+    out << args[i];
+  }
+  out << ">";
+}
+
+void printExpr(std::ostringstream &out, const Expr &expr) {
+  switch (expr.kind) {
+    case Expr::Kind::Literal:
+      if (expr.isUnsigned) {
+        out << expr.literalValue << (expr.intWidth == 64 ? "u64" : "u32");
+      } else {
+        out << static_cast<int64_t>(expr.literalValue) << (expr.intWidth == 64 ? "i64" : "i32");
+      }
+      break;
+    case Expr::Kind::BoolLiteral:
+      out << (expr.boolValue ? "true" : "false");
+      break;
+    case Expr::Kind::FloatLiteral:
+      out << expr.floatValue << (expr.floatWidth == 64 ? "f64" : "f32");
+      break;
+    case Expr::Kind::StringLiteral:
+      out << expr.stringValue;
+      break;
+    case Expr::Kind::Name:
+      out << expr.name;
+      break;
+    case Expr::Kind::Call:
+      if (expr.isMethodCall && !expr.args.empty()) {
+        printExpr(out, expr.args.front());
+        out << "." << expr.name;
+        printTemplateArgs(out, expr.templateArgs);
+        out << "(";
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          if (i > 1) {
+            out << ", ";
+          }
+          if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+            out << "[" << *expr.argNames[i] << "] ";
+          }
+          printExpr(out, expr.args[i]);
+        }
+        out << ")";
+      } else {
+        if (!expr.transforms.empty()) {
+          printTransforms(out, expr.transforms);
+        }
+        out << expr.name;
+        printTemplateArgs(out, expr.templateArgs);
+        const bool useBraces = expr.isBinding;
+        out << (useBraces ? "{" : "(");
+        for (size_t i = 0; i < expr.args.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+            out << "[" << *expr.argNames[i] << "] ";
+          }
+          printExpr(out, expr.args[i]);
+        }
+        out << (useBraces ? "}" : ")");
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        out << " { ";
+        for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
+          if (i > 0) {
+            out << ", ";
+          }
+          printExpr(out, expr.bodyArguments[i]);
+        }
+        out << " }";
+      }
+      break;
+  }
+}
 } // namespace
 
 bool Parser::parseTransformList(std::vector<Transform> &out) {
@@ -37,41 +156,6 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
   }
   auto isBoolLiteral = [](const std::string &text) {
     return text == "true" || text == "false";
-  };
-  auto isWordToken = [](TokenKind kind) {
-    return kind == TokenKind::Identifier || kind == TokenKind::Number || kind == TokenKind::String ||
-           kind == TokenKind::KeywordImport || kind == TokenKind::KeywordNamespace;
-  };
-  auto formatTransformArgumentTokens = [&](size_t start, size_t end, std::string &out) -> bool {
-    out.clear();
-    bool hasToken = false;
-    TokenKind prevKind = TokenKind::End;
-    for (size_t i = start; i < end; ++i) {
-      const Token &token = tokens_[i];
-      if (token.kind == TokenKind::Comment) {
-        continue;
-      }
-      std::string text = token.text;
-      if (token.kind == TokenKind::String) {
-        std::string normalized;
-        std::string parseError;
-        if (!normalizeStringLiteralToken(token.text, normalized, parseError)) {
-          const size_t savedPos = pos_;
-          pos_ = i;
-          fail(parseError);
-          pos_ = savedPos;
-          return false;
-        }
-        text = std::move(normalized);
-      }
-      if (hasToken && isWordToken(prevKind) && isWordToken(token.kind)) {
-        out.push_back(' ');
-      }
-      out.append(text);
-      hasToken = true;
-      prevKind = token.kind;
-    }
-    return hasToken;
   };
   auto parseSimpleTransformArgument = [&](std::vector<std::string> &args) -> bool {
     if (match(TokenKind::Identifier)) {
@@ -112,72 +196,13 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return fail("expected transform argument");
   };
   auto parseFullTransformArgument = [&](std::vector<std::string> &args) -> bool {
-    size_t start = pos_;
-    int parenDepth = 0;
-    int braceDepth = 0;
-    int bracketDepth = 0;
-    int angleDepth = 0;
-    bool sawToken = false;
-    while (pos_ < tokens_.size()) {
-      const Token &token = tokens_[pos_];
-      if (token.kind == TokenKind::Invalid) {
-        return fail(describeInvalidToken(token));
-      }
-      if (token.kind == TokenKind::Comment) {
-        ++pos_;
-        continue;
-      }
-      if (parenDepth == 0 && braceDepth == 0 && bracketDepth == 0 && angleDepth == 0) {
-        if (token.kind == TokenKind::RParen || token.kind == TokenKind::Comma || token.kind == TokenKind::Semicolon) {
-          break;
-        }
-      }
-      sawToken = true;
-      switch (token.kind) {
-        case TokenKind::LParen:
-          ++parenDepth;
-          break;
-        case TokenKind::RParen:
-          if (parenDepth > 0) {
-            --parenDepth;
-          }
-          break;
-        case TokenKind::LBrace:
-          ++braceDepth;
-          break;
-        case TokenKind::RBrace:
-          if (braceDepth > 0) {
-            --braceDepth;
-          }
-          break;
-        case TokenKind::LBracket:
-          ++bracketDepth;
-          break;
-        case TokenKind::RBracket:
-          if (bracketDepth > 0) {
-            --bracketDepth;
-          }
-          break;
-        case TokenKind::LAngle:
-          ++angleDepth;
-          break;
-        case TokenKind::RAngle:
-          if (angleDepth > 0) {
-            --angleDepth;
-          }
-          break;
-        default:
-          break;
-      }
-      ++pos_;
-    }
-    if (!sawToken) {
-      return fail("expected transform argument");
-    }
-    std::string argText;
-    if (!formatTransformArgumentTokens(start, pos_, argText)) {
+    Expr arg;
+    if (!parseExpr(arg, currentNamespacePrefix())) {
       return false;
     }
+    std::ostringstream out;
+    printExpr(out, arg);
+    std::string argText = out.str();
     if (argText.empty()) {
       return fail("expected transform argument");
     }
