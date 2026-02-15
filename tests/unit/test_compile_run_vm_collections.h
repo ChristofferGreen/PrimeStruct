@@ -263,7 +263,7 @@ main() {
   CHECK(readFile(outPath) == "line\nnext\n");
 }
 
-TEST_CASE("runs vm with escaped utf8 single-quoted strings") {
+TEST_CASE("runs vm with raw utf8 single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -276,7 +276,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_utf8_escaped_single_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "line\nnext\n");
+  CHECK(readFile(outPath) == "line\\nnext\n");
 }
 
 TEST_SUITE_END();

@@ -90,14 +90,14 @@ Type aliases:
 - Software numeric envelopes `integer`, `decimal`, and `complex` are reserved but not supported yet. Using them as binding/return types, template arguments, or `convert<T>` targets is a semantic error (`software numeric types are not supported yet`).
 - Bool literals: `true`, `false`.
 - String literals:
-  - Double-quoted and single-quoted strings both process escapes unless a raw suffix is used.
-  - Raw strings use `raw_utf8` / `raw_ascii` suffixes and do not process escapes.
+  - Double-quoted strings process escapes unless a raw suffix is used.
+  - Single-quoted strings are raw and do not process escapes; `raw_utf8` / `raw_ascii` also force raw.
   - Surface form accepts `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the `implicit-utf8` text transform appends `utf8` to bare strings.
-  - **Canonical/bottom-level form uses `raw_utf8` / `raw_ascii` with unescaped content, choosing a quote type that avoids escapes when possible.**
+  - **Canonical/bottom-level form uses double-quoted strings with normalized escapes and an explicit `utf8`/`ascii` suffix.**
   - `ascii` rejects non-ASCII bytes.
   - Escape sequences in double-quoted strings: `\\n`, `\\r`, `\\t`, `\\\\`, `\\\"`, `\\'`, `\\0`.
   - Any other escape sequence is rejected.
-  - Single-quoted strings may contain escaped single quotes (`\\'`); use whichever quote form avoids escaping.
+  - To include a single quote, use a double-quoted string or a raw suffix.
   - VM/native backends only support `count`/`at`/`at_unsafe` on string literals or bindings initialized from literals; argv-derived strings are print-only.
 
 ### 2.4 Punctuation Tokens

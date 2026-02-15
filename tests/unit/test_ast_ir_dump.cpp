@@ -123,7 +123,7 @@ main() {
   const std::string expected =
       "ast {\n"
       "  [return<void>] /main() {\n"
-      "    log(\"hello\"raw_utf8)\n"
+      "    log(\"hello\"utf8)\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);
@@ -142,7 +142,7 @@ main() {
   const std::string expected =
       "module {\n"
       "  def /main(): void {\n"
-      "    call log(\"hello\"raw_utf8)\n"
+      "    call log(\"hello\"utf8)\n"
       "    return\n"
       "  }\n"
       "}\n";

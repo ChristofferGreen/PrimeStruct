@@ -975,7 +975,7 @@ main() {
   CHECK(readFile(outPath) == "line\nnext\n");
 }
 
-TEST_CASE("compiles and runs native escaped utf8 single-quoted strings") {
+TEST_CASE("compiles and runs native raw utf8 single-quoted strings") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -993,7 +993,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "line\nnext\n");
+  CHECK(readFile(outPath) == "line\\nnext\n");
 }
 
 TEST_CASE("compiles and runs native string binding print") {

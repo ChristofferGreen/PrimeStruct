@@ -105,6 +105,9 @@ inline bool parseStringLiteralToken(const std::string &token, ParsedStringLitera
     error = "unknown string literal suffix: " + suffix;
     return false;
   }
+  if (!raw && !literalText.empty() && literalText.front() == '\'') {
+    raw = true;
+  }
   std::string decoded;
   if (!decodeStringLiteralText(literalText, decoded, error, raw)) {
     return false;
@@ -133,19 +136,36 @@ inline bool normalizeStringLiteralToken(const std::string &token, std::string &n
     error = "ascii string literal contains non-ASCII characters";
     return false;
   }
-  const bool hasDoubleQuote = parsed.decoded.find('"') != std::string::npos;
-  const bool hasSingleQuote = parsed.decoded.find('\'') != std::string::npos;
-  if (hasDoubleQuote && hasSingleQuote) {
-    normalized = token;
-    return true;
-  }
-  const char quote = hasDoubleQuote ? '\'' : '"';
   normalized.clear();
   normalized.reserve(parsed.decoded.size() + 12);
-  normalized.push_back(quote);
-  normalized.append(parsed.decoded);
-  normalized.push_back(quote);
-  normalized.append(parsed.encoding == StringEncoding::Ascii ? "raw_ascii" : "raw_utf8");
+  normalized.push_back('"');
+  for (unsigned char c : parsed.decoded) {
+    switch (c) {
+      case '\n':
+        normalized.append("\\n");
+        break;
+      case '\r':
+        normalized.append("\\r");
+        break;
+      case '\t':
+        normalized.append("\\t");
+        break;
+      case '\\':
+        normalized.append("\\\\");
+        break;
+      case '"':
+        normalized.append("\\\"");
+        break;
+      case '\0':
+        normalized.append("\\0");
+        break;
+      default:
+        normalized.push_back(static_cast<char>(c));
+        break;
+    }
+  }
+  normalized.push_back('"');
+  normalized.append(parsed.encoding == StringEncoding::Ascii ? "ascii" : "utf8");
   return true;
 }
 

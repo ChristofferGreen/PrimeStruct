@@ -940,7 +940,7 @@ main() {
   REQUIRE(program.definitions[0].transforms.size() == 2);
   CHECK(program.definitions[0].transforms[0].name == "tag");
   REQUIRE(program.definitions[0].transforms[0].arguments.size() == 1);
-  CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"raw_utf8");
+  CHECK(program.definitions[0].transforms[0].arguments[0] == "\"demo\"utf8");
 }
 
 TEST_CASE("parses transform list with comma separators") {
@@ -1385,7 +1385,7 @@ main() {
   REQUIRE(transforms.size() == 2);
   CHECK(transforms[0].name == "doc");
   REQUIRE(transforms[0].arguments.size() == 1);
-  CHECK(transforms[0].arguments[0] == "\"hello world\"raw_utf8");
+  CHECK(transforms[0].arguments[0] == "\"hello world\"utf8");
   CHECK(transforms[1].name == "return");
 }
 
@@ -1624,7 +1624,7 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello\"raw_utf8");
+  CHECK(stmt.args[0].stringValue == "\"hello\"utf8");
 }
 
 TEST_CASE("parses string literal escape sequences") {
@@ -1641,7 +1641,7 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == std::string("\"hello\nworld\"raw_utf8"));
+  CHECK(stmt.args[0].stringValue == std::string("\"hello\\nworld\"utf8"));
 }
 
 TEST_CASE("parses single-quoted string literal arguments") {
@@ -1658,10 +1658,10 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello\"raw_utf8");
+  CHECK(stmt.args[0].stringValue == "\"hello\"utf8");
 }
 
-TEST_CASE("parses single-quoted string literal escapes") {
+TEST_CASE("parses single-quoted string literal raw content") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -1675,10 +1675,10 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == std::string("\"hello\nworld\"raw_utf8"));
+  CHECK(stmt.args[0].stringValue == std::string("\"hello\\\\nworld\"utf8"));
 }
 
-TEST_CASE("normalizes string literals with double quotes to single-quoted raw") {
+TEST_CASE("normalizes string literals with double-quoted escapes") {
   const std::string source = R"(
 [return<void>]
 main() {
@@ -1692,7 +1692,7 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == std::string("'he\"llo'raw_utf8"));
+  CHECK(stmt.args[0].stringValue == std::string("\"he\\\"llo\"utf8"));
 }
 
 TEST_CASE("parses ascii string literal arguments") {
@@ -1709,7 +1709,7 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello\"raw_ascii");
+  CHECK(stmt.args[0].stringValue == "\"hello\"ascii");
 }
 
 TEST_CASE("parses raw string literal arguments") {
@@ -1725,7 +1725,7 @@ TEST_CASE("parses raw string literal arguments") {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello world\"raw_utf8");
+  CHECK(stmt.args[0].stringValue == "\"hello world\"utf8");
 }
 
 TEST_CASE("parses raw string literal escapes") {
@@ -1742,7 +1742,7 @@ main() {
   CHECK(stmt.kind == primec::Expr::Kind::Call);
   REQUIRE(stmt.args.size() == 1);
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
-  CHECK(stmt.args[0].stringValue == "\"hello\\q\"raw_utf8");
+  CHECK(stmt.args[0].stringValue == "\"hello\\\\q\"utf8");
 }
 
 TEST_CASE("parses method call sugar") {
