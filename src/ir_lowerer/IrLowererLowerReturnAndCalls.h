@@ -441,16 +441,30 @@
     }
 
     const bool structDef = isStructDefinition(callee);
-    const std::vector<Expr> &callParams = structDef ? callee.statements : callee.parameters;
+    std::vector<Expr> structParams;
+    auto isStaticField = [](const Expr &stmt) -> bool {
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "static") {
+          return true;
+        }
+      }
+      return false;
+    };
     if (structDef) {
-      for (const auto &param : callParams) {
+      structParams.reserve(callee.statements.size());
+      for (const auto &param : callee.statements) {
         if (!param.isBinding) {
           error = "struct definitions may only contain field bindings: " + callee.fullPath;
           inlineStack.erase(callee.fullPath);
           return false;
         }
+        if (isStaticField(param)) {
+          continue;
+        }
+        structParams.push_back(param);
       }
     }
+    const std::vector<Expr> &callParams = structDef ? structParams : callee.parameters;
 
     std::vector<const Expr *> orderedArgs;
     if (!buildOrderedCallArguments(callExpr, callParams, orderedArgs)) {

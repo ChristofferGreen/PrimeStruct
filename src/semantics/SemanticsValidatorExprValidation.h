@@ -976,10 +976,21 @@
     if (calleeParams.empty() && structNames_.count(resolved) > 0) {
       std::vector<ParameterInfo> fieldParams;
       fieldParams.reserve(it->second->statements.size());
+      auto isStaticField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
       for (const auto &stmt : it->second->statements) {
         if (!stmt.isBinding) {
           error_ = "struct definitions may only contain field bindings: " + resolved;
           return false;
+        }
+        if (isStaticField(stmt)) {
+          continue;
         }
         ParameterInfo field;
         field.name = stmt.name;

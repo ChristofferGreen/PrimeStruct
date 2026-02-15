@@ -473,6 +473,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct constructors ignore static fields") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [static i32] shared{1i32}
+  [i32] value{2i32}
+}
+
+[return<int>]
+main() {
+  Thing(3i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pod transform validates without args") {
   const std::string source = R"(
 [pod]
