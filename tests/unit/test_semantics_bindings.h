@@ -574,7 +574,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("binding array type requires one template argument") {

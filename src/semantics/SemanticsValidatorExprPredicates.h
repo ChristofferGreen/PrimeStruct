@@ -726,8 +726,18 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      error_ = "block arguments are only supported on statement calls";
-      return false;
+      const std::string resolved = resolveCalleePath(expr);
+      if (defMap_.find(resolved) == defMap_.end()) {
+        error_ = "block arguments require a definition target: " + resolved;
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      for (const auto &bodyExpr : expr.bodyArguments) {
+        if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
+                               expr.namespacePrefix)) {
+          return false;
+        }
+      }
     }
     if (isReturnCall(expr)) {
       error_ = "return not allowed in expression context";

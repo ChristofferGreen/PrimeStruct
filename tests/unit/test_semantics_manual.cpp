@@ -430,25 +430,34 @@ TEST_CASE("return not allowed in expression context") {
   CHECK(error.find("return not allowed in expression context") != std::string::npos);
 }
 
-TEST_CASE("empty block arguments not allowed in expressions") {
+TEST_CASE("expression call accepts empty block arguments") {
   primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/task", {makeTransform("return", std::string("int"))}, {makeCall("/return", {makeLiteral(3)})}));
   primec::Expr blockCall = makeCall("task");
   blockCall.hasBodyArguments = true;
   program.definitions.push_back(makeDefinition(
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("block arguments not allowed in expression context") {
+TEST_CASE("expression call accepts block arguments") {
   primec::Program program;
-  primec::Expr blockCall = makeCall("task", {}, {}, {makeLiteral(1)});
+  primec::Expr returnExpr = makeCall("/return", {makeName("input")});
+  program.definitions.push_back(makeDefinition("/task",
+                                               {makeTransform("return", std::string("int"))},
+                                               {returnExpr},
+                                               {makeParameter("input")}));
+  primec::Expr binding = makeBinding("temp", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr blockCall = makeCall("task", {makeLiteral(2)}, {}, {binding, makeName("temp")});
+  blockCall.hasBodyArguments = true;
   program.definitions.push_back(makeDefinition(
       "/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {blockCall})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("block expression yields last expression") {

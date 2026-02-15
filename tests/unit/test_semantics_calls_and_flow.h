@@ -827,7 +827,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("capacity rejects wrong argument count") {
@@ -1336,7 +1336,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("count builtin rejects missing argument") {
@@ -1523,7 +1523,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("array access rejects template arguments") {
@@ -1571,7 +1571,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("unsafe array access rejects template arguments") {
@@ -1607,7 +1607,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments are only supported on statement calls") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
 TEST_CASE("array access rejects non-integer index") {
