@@ -630,6 +630,30 @@ main() {
   CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
 }
 
+TEST_CASE("expression effects narrow active effects") {
+  const std::string source = R"(
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  return([effects(io_out)] vector<i32>(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+}
+
+TEST_CASE("expression effects must be subset of enclosing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([effects(pathspace_notify)] plus(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("execution effects must be a subset of enclosing effects") != std::string::npos);
+}
+
 TEST_CASE("vector literal allows heap_alloc effect") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

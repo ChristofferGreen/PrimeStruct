@@ -5,6 +5,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     error_ = "lambda expressions are not supported yet";
     return false;
   }
+  std::optional<EffectScope> effectScope;
+  if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.transforms.empty()) {
+    std::unordered_set<std::string> executionEffects;
+    if (!resolveExecutionEffects(expr, executionEffects)) {
+      return false;
+    }
+    effectScope.emplace(*this, std::move(executionEffects));
+  }
   auto isMutableBinding = [&](const std::vector<ParameterInfo> &paramsIn,
                               const std::unordered_map<std::string, BindingInfo> &localsIn,
                               const std::string &name) -> bool {
