@@ -662,6 +662,29 @@ main() {
   CHECK(error.find("native backend does not support string literals") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer rejects lambda expressions") {
+  const std::string source = R"(
+[return<void>]
+holder([int] value) {
+  return()
+}
+
+[return<void>]
+main() {
+  holder([]([i32] value) { plus(value, 1i32) })
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  CHECK_FALSE(lowerer.lower(program, "/main", {}, module, error));
+  CHECK(error.find("native backend does not support lambdas") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer rejects non-literal string bindings") {
   const std::string source = R"(
 [return<int>]

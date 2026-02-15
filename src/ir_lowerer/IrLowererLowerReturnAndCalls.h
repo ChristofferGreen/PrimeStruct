@@ -574,6 +574,10 @@
   };
 
   emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
+    if (expr.isLambda) {
+      error = "native backend does not support lambdas";
+      return false;
+    }
     switch (expr.kind) {
       case Expr::Kind::Literal: {
         if (expr.intWidth == 64 || expr.isUnsigned) {
