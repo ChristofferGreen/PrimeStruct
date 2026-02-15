@@ -2572,6 +2572,22 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native map indexing sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(values[3i32])
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_indexing.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_map_indexing_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 4);
+}
+
 TEST_CASE("compiles and runs native map at_unsafe helper") {
   const std::string source = R"(
 [return<int>]
@@ -2712,6 +2728,23 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
+}
+
+TEST_CASE("compiles and runs native string-keyed map indexing sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  return(values["b"raw_utf8])
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_indexing_string_key.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_indexing_string_key_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs native string-keyed map binding lookup") {

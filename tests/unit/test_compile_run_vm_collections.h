@@ -979,6 +979,19 @@ main() {
   CHECK(runCommand(runCmd) == 4);
 }
 
+TEST_CASE("runs vm with map indexing sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
+  return(values[3i32])
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_indexing.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
+}
+
 TEST_CASE("runs vm with map at_unsafe helper") {
   const std::string source = R"(
 [return<int>]
@@ -1072,6 +1085,19 @@ main() {
   const std::string srcPath = writeTemp("vm_map_literal_string_key.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 5);
+}
+
+TEST_CASE("runs vm with string-keyed map indexing sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
+  return(values["b"raw_utf8])
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_indexing_string_key.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with string-keyed map binding lookup") {
