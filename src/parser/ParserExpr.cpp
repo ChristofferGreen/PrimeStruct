@@ -462,6 +462,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (match(TokenKind::LBrace)) {
         if (!bindingTransforms) {
           if (call.name == "block") {
+            if (!allowSurfaceSyntax_) {
+              return fail("block shorthand requires canonical call form");
+            }
             call.hasBodyArguments = true;
             if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
               return false;
@@ -697,6 +700,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
           if (call.name == "block") {
+            if (!allowSurfaceSyntax_) {
+              return fail("block shorthand requires canonical call form");
+            }
             hasCallSyntax = true;
             call.hasBodyArguments = true;
             if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
