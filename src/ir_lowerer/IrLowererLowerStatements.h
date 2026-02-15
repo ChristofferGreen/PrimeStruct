@@ -15,9 +15,7 @@
                 if (bodyExpr.args.size() != 1) {
                   return LocalInfo::ValueKind::Unknown;
                 }
-                sawValue = true;
-                lastKind = inferExprKind(bodyExpr.args.front(), branchLocals);
-                continue;
+                return inferExprKind(bodyExpr.args.front(), branchLocals);
               }
               sawValue = true;
               lastKind = inferExprKind(bodyExpr, branchLocals);
@@ -36,23 +34,25 @@
             for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
               const Expr &bodyStmt = candidate.bodyArguments[i];
               const bool isLast = (i + 1 == candidate.bodyArguments.size());
-              if (isLast) {
-                if (bodyStmt.isBinding) {
+              if (bodyStmt.isBinding) {
+                if (isLast) {
                   error = "if branch blocks must end with an expression";
                   return false;
                 }
-                if (isReturnCall(bodyStmt)) {
-                  if (bodyStmt.args.size() != 1) {
-                    error = "return requires a value in if branch";
-                    return false;
-                  }
-                  return emitExpr(bodyStmt.args.front(), branchLocals);
+                if (!emitStatement(bodyStmt, branchLocals)) {
+                  return false;
                 }
-                return emitExpr(bodyStmt, branchLocals);
+                continue;
               }
               if (isReturnCall(bodyStmt)) {
-                error = "return must be final expression in if branch";
-                return false;
+                if (bodyStmt.args.size() != 1) {
+                  error = "return requires a value in if branch";
+                  return false;
+                }
+                return emitExpr(bodyStmt.args.front(), branchLocals);
+              }
+              if (isLast) {
+                return emitExpr(bodyStmt, branchLocals);
               }
               if (!emitStatement(bodyStmt, branchLocals)) {
                 return false;

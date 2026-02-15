@@ -1232,20 +1232,22 @@ bool emitValueBlock(const Expr &blockExpr,
   for (size_t i = 0; i < blockExpr.bodyArguments.size(); ++i) {
     const Expr &stmt = blockExpr.bodyArguments[i];
     const bool isLast = (i + 1 == blockExpr.bodyArguments.size());
-    if (isLast) {
-      if (stmt.isBinding) {
+    if (stmt.isBinding) {
+      if (isLast) {
         error = "glsl backend requires block to end with a value expression";
         return false;
       }
-      const Expr *valueExpr = &stmt;
-      if (isSimpleCallName(stmt, "return")) {
-        if (stmt.args.size() != 1) {
-          error = "glsl backend requires return(value) in value blocks";
-          return false;
-        }
-        valueExpr = &stmt.args.front();
+      if (!emitStatement(stmt, state, out, error, indent)) {
+        return false;
       }
-      result = emitExpr(*valueExpr, state, error);
+      continue;
+    }
+    if (isSimpleCallName(stmt, "return")) {
+      if (stmt.args.size() != 1) {
+        error = "glsl backend requires return(value) in value blocks";
+        return false;
+      }
+      result = emitExpr(stmt.args.front(), state, error);
       if (!error.empty()) {
         return false;
       }
@@ -1253,9 +1255,14 @@ bool emitValueBlock(const Expr &blockExpr,
       result.prelude.clear();
       return true;
     }
-    if (isSimpleCallName(stmt, "return")) {
-      error = "glsl backend requires return to be final expression in value blocks";
-      return false;
+    if (isLast) {
+      result = emitExpr(stmt, state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      appendIndented(out, result.prelude, indent);
+      result.prelude.clear();
+      return true;
     }
     if (!emitStatement(stmt, state, out, error, indent)) {
       return false;

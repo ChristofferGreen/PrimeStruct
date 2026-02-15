@@ -702,9 +702,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           }
           std::unordered_map<std::string, BindingInfo> branchLocals = locals;
           const Expr *valueExpr = nullptr;
-          for (size_t i = 0; i < branch.bodyArguments.size(); ++i) {
-            const Expr &bodyExpr = branch.bodyArguments[i];
-            const bool isLast = (i + 1 == branch.bodyArguments.size());
+          bool sawReturn = false;
+          for (const auto &bodyExpr : branch.bodyArguments) {
             if (bodyExpr.isBinding) {
               if (isParam(params, bodyExpr.name) || branchLocals.count(bodyExpr.name) > 0) {
                 error_ = "duplicate binding name: " + bodyExpr.name;
@@ -754,10 +753,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               continue;
             }
             if (isReturnCall(bodyExpr)) {
-              if (!isLast) {
-                error_ = std::string("return must be final expression in ") + label + " block";
-                return false;
-              }
               if (bodyExpr.args.size() != 1) {
                 error_ = std::string("return requires a value in ") + label + " block";
                 return false;
@@ -766,12 +761,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 return false;
               }
               valueExpr = &bodyExpr.args.front();
+              sawReturn = true;
               continue;
             }
             if (!validateExpr(params, branchLocals, bodyExpr)) {
               return false;
             }
-            valueExpr = &bodyExpr;
+            if (!sawReturn) {
+              valueExpr = &bodyExpr;
+            }
           }
           if (!valueExpr) {
             error_ = std::string(label) + " block must end with an expression";
@@ -830,11 +828,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      bool sawReturn = false;
       for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
         const Expr &bodyExpr = expr.bodyArguments[i];
         const bool isLast = (i + 1 == expr.bodyArguments.size());
         if (bodyExpr.isBinding) {
-          if (isLast) {
+          if (isLast && !sawReturn) {
             error_ = "block expression must end with an expression";
             return false;
           }
@@ -886,10 +885,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           continue;
         }
         if (isReturnCall(bodyExpr)) {
-          if (!isLast) {
-            error_ = "return must be final expression in block";
-            return false;
-          }
           if (bodyExpr.args.size() != 1) {
             error_ = "return requires a value in block expression";
             return false;
@@ -904,12 +899,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               return false;
             }
           }
-          return true;
+          sawReturn = true;
+          continue;
         }
         if (!validateExpr(params, blockLocals, bodyExpr)) {
           return false;
         }
-        if (isLast) {
+        if (isLast && !sawReturn) {
           ReturnKind kind = inferExprReturnKind(bodyExpr, params, blockLocals);
           if (kind == ReturnKind::Void) {
             if (!isStructConstructorValueExpr(bodyExpr)) {

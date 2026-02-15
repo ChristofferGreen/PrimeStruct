@@ -1556,6 +1556,12 @@ bool IrLowerer::lower(const Program &program,
                 branchLocals.emplace(bodyExpr.name, info);
                 continue;
               }
+              if (isReturnCall(bodyExpr)) {
+                if (bodyExpr.args.size() != 1) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                return inferExprKind(bodyExpr.args.front(), branchLocals);
+              }
               sawValue = true;
               lastKind = inferExprKind(bodyExpr, branchLocals);
             }
@@ -1599,6 +1605,12 @@ bool IrLowerer::lower(const Program &program,
                 info.valueKind = valueKind;
                 blockLocals.emplace(bodyExpr.name, info);
                 continue;
+              }
+              if (isReturnCall(bodyExpr)) {
+                if (bodyExpr.args.size() != 1) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
+                return inferExprKind(bodyExpr.args.front(), blockLocals);
               }
               result = inferExprKind(bodyExpr, blockLocals);
             }

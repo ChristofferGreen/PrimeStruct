@@ -283,6 +283,27 @@ main() {
   CHECK(output.find("int value") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter handles block expression early return") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] value{block(){
+    return(3i32)
+    4i32
+  }}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_block_early_return.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_block_early_return.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int value") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
 import /math/*

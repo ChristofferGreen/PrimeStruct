@@ -1471,6 +1471,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("block expression allows early return") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(block(){
+    return(3i32)
+    4i32
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block expression rejects void return value") {
   const std::string source = R"(
 [return<void>]

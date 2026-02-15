@@ -3289,23 +3289,25 @@
           for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
             const Expr &bodyStmt = expr.bodyArguments[i];
             const bool isLast = (i + 1 == expr.bodyArguments.size());
-            if (isLast) {
-              if (bodyStmt.isBinding) {
+            if (bodyStmt.isBinding) {
+              if (isLast) {
                 error = "block expression must end with an expression";
                 return false;
               }
-              if (isReturnCall(bodyStmt)) {
-                if (bodyStmt.args.size() != 1) {
-                  error = "return requires a value in block expression";
-                  return false;
-                }
-                return emitExpr(bodyStmt.args.front(), blockLocals);
+              if (!emitStatement(bodyStmt, blockLocals)) {
+                return false;
               }
-              return emitExpr(bodyStmt, blockLocals);
+              continue;
             }
             if (isReturnCall(bodyStmt)) {
-              error = "return must be final expression in block";
-              return false;
+              if (bodyStmt.args.size() != 1) {
+                error = "return requires a value in block expression";
+                return false;
+              }
+              return emitExpr(bodyStmt.args.front(), blockLocals);
+            }
+            if (isLast) {
+              return emitExpr(bodyStmt, blockLocals);
             }
             if (!emitStatement(bodyStmt, blockLocals)) {
               return false;
