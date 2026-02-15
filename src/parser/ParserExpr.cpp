@@ -675,6 +675,19 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       if (text.kind == TokenKind::End) {
         return false;
       }
+      if (!allowSurfaceSyntax_) {
+        std::string literalText;
+        std::string suffix;
+        if (!splitStringLiteralToken(text.text, literalText, suffix)) {
+          return fail("invalid string literal");
+        }
+        if (literalText.empty() || literalText.front() != '"') {
+          return fail("canonical string literal requires double quotes");
+        }
+        if (suffix != "utf8" && suffix != "ascii") {
+          return fail("canonical string literal requires utf8/ascii suffix");
+        }
+      }
       std::string normalized;
       std::string parseError;
       if (!normalizeStringLiteralToken(text.text, normalized, parseError)) {

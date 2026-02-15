@@ -403,6 +403,36 @@ main() {
   CHECK(error.find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
 }
 
+TEST_CASE("canonical string literal requires double quotes") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line('hello'utf8)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("canonical string literal requires double quotes") != std::string::npos);
+}
+
+TEST_CASE("canonical string literal rejects raw suffix") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("hello"raw_utf8)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("canonical string literal requires utf8/ascii suffix") != std::string::npos);
+}
+
 TEST_CASE("string literal rejects unknown suffix") {
   const std::string source = R"(
 [return<void>]

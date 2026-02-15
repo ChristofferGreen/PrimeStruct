@@ -1546,7 +1546,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp --no-transforms " + srcPath + " -o /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") != std::string::npos);
+  CHECK(readFile(errPath).find("canonical string literal requires utf8/ascii suffix") != std::string::npos);
 }
 
 TEST_CASE("writes outputs under out dir") {
