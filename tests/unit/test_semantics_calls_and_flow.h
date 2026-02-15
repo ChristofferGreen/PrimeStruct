@@ -1598,6 +1598,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("method calls reject template args for block-inferred receiver") {
+  const std::string source = R"(
+namespace i32 {
+  [return<i32>]
+  inc([i32] self) {
+    return(plus(self, 1i32))
+  }
+}
+
+[return<i32>]
+main() {
+  [mut] value{1i32 2i32}
+  return(value.inc<i32>())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /i32/inc") != std::string::npos);
+}
+
 TEST_CASE("method calls reject template args on non-template defs") {
   const std::string source = R"(
 namespace i32 {

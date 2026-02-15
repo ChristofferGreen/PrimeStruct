@@ -153,6 +153,15 @@ bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut) {
   return false;
 }
 
+std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx);
+
+bool inferBindingTypeForMonomorph(const Expr &initializer,
+                                  const std::vector<ParameterInfo> &params,
+                                  const LocalTypeMap &locals,
+                                  bool allowMathBare,
+                                  Context &ctx,
+                                  BindingInfo &infoOut);
+
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
                                      const Context &ctx,
@@ -236,6 +245,50 @@ std::string resolveNameToPath(const std::string &name,
     return aliasIt->second;
   }
   return root;
+}
+
+bool inferBindingTypeForMonomorph(const Expr &initializer,
+                                  const std::vector<ParameterInfo> &params,
+                                  const LocalTypeMap &locals,
+                                  bool allowMathBare,
+                                  Context &ctx,
+                                  BindingInfo &infoOut) {
+  if (tryInferBindingTypeFromInitializer(initializer, params, locals, infoOut, allowMathBare)) {
+    return true;
+  }
+  if (initializer.kind != Expr::Kind::Call || !isBlockCall(initializer) || !initializer.hasBodyArguments) {
+    return false;
+  }
+  const std::string resolved = resolveCalleePath(initializer, initializer.namespacePrefix, ctx);
+  if (ctx.sourceDefs.count(resolved) > 0) {
+    return false;
+  }
+  if (!initializer.args.empty() || !initializer.templateArgs.empty() || hasNamedArguments(initializer.argNames)) {
+    return false;
+  }
+  if (initializer.bodyArguments.empty()) {
+    return false;
+  }
+  LocalTypeMap blockLocals = locals;
+  const Expr *valueExpr = nullptr;
+  for (const auto &bodyExpr : initializer.bodyArguments) {
+    if (bodyExpr.isBinding) {
+      BindingInfo binding;
+      if (extractExplicitBindingType(bodyExpr, binding)) {
+        blockLocals[bodyExpr.name] = binding;
+      } else if (bodyExpr.args.size() == 1) {
+        if (inferBindingTypeForMonomorph(bodyExpr.args.front(), params, blockLocals, allowMathBare, ctx, binding)) {
+          blockLocals[bodyExpr.name] = binding;
+        }
+      }
+      continue;
+    }
+    valueExpr = &bodyExpr;
+  }
+  if (!valueExpr) {
+    return false;
+  }
+  return inferBindingTypeForMonomorph(*valueExpr, params, blockLocals, allowMathBare, ctx, infoOut);
 }
 
 bool rewriteExpr(Expr &expr,
@@ -457,7 +510,7 @@ bool rewriteExpr(Expr &expr,
       if (extractExplicitBindingType(param, info)) {
         lambdaLocals[param.name] = info;
       } else if (param.isBinding && param.args.size() == 1) {
-        if (tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, info, allowMathBare)) {
+        if (inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
           lambdaLocals[param.name] = info;
         }
       }
@@ -471,7 +524,7 @@ bool rewriteExpr(Expr &expr,
       if (extractExplicitBindingType(bodyArg, info)) {
         lambdaLocals[bodyArg.name] = info;
       } else if (bodyArg.isBinding && bodyArg.args.size() == 1) {
-        if (tryInferBindingTypeFromInitializer(bodyArg.args.front(), params, lambdaLocals, info, allowMathBare)) {
+        if (inferBindingTypeForMonomorph(bodyArg.args.front(), params, lambdaLocals, allowMathBare, ctx, info)) {
           lambdaLocals[bodyArg.name] = info;
         }
       }
@@ -553,7 +606,7 @@ bool rewriteExpr(Expr &expr,
     if (extractExplicitBindingType(arg, info)) {
       bodyLocals[arg.name] = info;
     } else if (arg.isBinding && arg.args.size() == 1) {
-      if (tryInferBindingTypeFromInitializer(arg.args.front(), params, bodyLocals, info, allowMathBare)) {
+      if (inferBindingTypeForMonomorph(arg.args.front(), params, bodyLocals, allowMathBare, ctx, info)) {
         bodyLocals[arg.name] = info;
       }
     }
@@ -589,7 +642,7 @@ bool rewriteDefinition(Definition &def,
       }
       params.push_back(std::move(paramInfo));
     } else if (param.isBinding && param.args.size() == 1) {
-      if (tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, info, allowMathBare)) {
+      if (inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
         locals[param.name] = info;
         ParameterInfo paramInfo;
         paramInfo.name = param.name;
@@ -607,7 +660,7 @@ bool rewriteDefinition(Definition &def,
     if (extractExplicitBindingType(stmt, info)) {
       locals[stmt.name] = info;
     } else if (stmt.isBinding && stmt.args.size() == 1) {
-      if (tryInferBindingTypeFromInitializer(stmt.args.front(), params, locals, info, allowMathBare)) {
+      if (inferBindingTypeForMonomorph(stmt.args.front(), params, locals, allowMathBare, ctx, info)) {
         locals[stmt.name] = info;
       }
     }
