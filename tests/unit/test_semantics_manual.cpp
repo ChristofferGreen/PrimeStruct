@@ -297,7 +297,7 @@ TEST_CASE("if block wrappers do not require special names") {
   CHECK(error.empty());
 }
 
-TEST_CASE("block arguments allowed on statement calls") {
+TEST_CASE("block arguments accept bindings on statement calls") {
   primec::Program program;
   primec::Expr binding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
   primec::Expr callWithBlock = makeCall("foo", {}, {}, {binding});
@@ -307,8 +307,8 @@ TEST_CASE("block arguments allowed on statement calls") {
       makeDefinition("/main", {makeTransform("return", std::string("int"))},
                      {callWithBlock, makeCall("/return", {makeLiteral(1)})}));
   std::string error;
-  CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
+  CHECK(validateProgram(program, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("binding blocks are rejected") {

@@ -1476,7 +1476,7 @@ execute_repeat([count] 2i32, [count] 3i32)
   CHECK(error.find("duplicate named argument: count") != std::string::npos);
 }
 
-TEST_CASE("execution body arguments must be calls") {
+TEST_CASE("execution body accepts literal forms") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1491,11 +1491,11 @@ execute_repeat([i32] x) {
 execute_repeat(3i32) { 1i32 }
 )";
   std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("execution body arguments must be calls") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("execution body arguments cannot be bindings") {
+TEST_CASE("execution body accepts bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1510,11 +1510,11 @@ execute_repeat([i32] x) {
 execute_repeat(3i32) { [i32] value{1i32} }
 )";
   std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("execution body rejects nested bindings") {
+TEST_CASE("execution body accepts nested bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1529,11 +1529,11 @@ execute_repeat([i32] x) {
 execute_repeat(3i32) { if(true, then(){ [i32] value{2i32} }, else(){ }) }
 )";
   std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("execution body rejects nested non-call expressions") {
+TEST_CASE("execution body accepts nested literals") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1548,8 +1548,8 @@ execute_repeat([i32] x) {
 execute_repeat(3i32) { if(true, then(){ 1i32 }, else(){ main() }) }
 )";
   std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("execution body arguments must be calls") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("execution body accepts if statement sugar") {

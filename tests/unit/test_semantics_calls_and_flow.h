@@ -160,7 +160,7 @@ main() {
   CHECK(error.find("block arguments require a definition target") != std::string::npos);
 }
 
-TEST_CASE("statement call with block arguments rejects bindings") {
+TEST_CASE("statement call with block arguments accepts bindings") {
   const std::string source = R"(
 [return<void>]
 execute_repeat([i32] count) {
@@ -176,8 +176,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding not allowed in execution body") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("block binding infers string type") {

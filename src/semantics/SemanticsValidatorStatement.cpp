@@ -925,7 +925,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
     for (const auto &bodyExpr : stmt.bodyArguments) {
-      if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, false, nullptr, namespacePrefix)) {
+      if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, true, nullptr, namespacePrefix)) {
         return false;
       }
     }

@@ -295,15 +295,7 @@ bool SemanticsValidator::validateExecutions() {
     }
     std::unordered_map<std::string, BindingInfo> execLocals;
     for (const auto &arg : exec.bodyArguments) {
-      if (arg.kind != Expr::Kind::Call) {
-        error_ = "execution body arguments must be calls";
-        return false;
-      }
-      if (arg.isBinding) {
-        error_ = "execution body arguments cannot be bindings";
-        return false;
-      }
-      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, false, nullptr, exec.namespacePrefix)) {
+      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, true, nullptr, exec.namespacePrefix)) {
         return false;
       }
     }

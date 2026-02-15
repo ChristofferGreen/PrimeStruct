@@ -71,7 +71,7 @@ execute_repeat(3i32) { main() main() }
   CHECK(program.executions[0].bodyArguments.size() == 2);
 }
 
-TEST_CASE("rejects execution body with non-call form") {
+TEST_CASE("parses execution body with non-call form") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -80,9 +80,12 @@ main() {
 
 execute_repeat(1i32) { 1i32 }
 )";
-  std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("execution body arguments must be calls") != std::string::npos);
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].bodyArguments.size() == 1);
+  const auto &arg = program.executions[0].bodyArguments[0];
+  CHECK(arg.kind == primec::Expr::Kind::Literal);
+  CHECK(arg.literalValue == 1);
 }
 
 TEST_CASE("parses execution body with mixed separators") {
@@ -162,7 +165,7 @@ execute_repeat(1i32) {
   CHECK(stmt.args[2].bodyArguments[0].name == "main");
 }
 
-TEST_CASE("rejects execution body with bindings") {
+TEST_CASE("parses execution body with bindings") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -171,9 +174,13 @@ main() {
 
 execute_repeat(1i32) { [i32] value{1i32} main() }
 )";
-  std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("execution body arguments cannot be bindings") != std::string::npos);
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  const auto &bodyArgs = program.executions[0].bodyArguments;
+  REQUIRE(bodyArgs.size() == 2);
+  CHECK(bodyArgs[0].isBinding);
+  CHECK(bodyArgs[0].name == "value");
+  CHECK(bodyArgs[1].name == "main");
 }
 
 TEST_CASE("rejects execution body with return") {
