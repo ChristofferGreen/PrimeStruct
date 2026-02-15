@@ -182,6 +182,28 @@ main() {
   CHECK(output.find("while (") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter handles block initializers") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] value{
+    [i32] base{1i32}
+    plus(base, 2i32)
+  }
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_block_init.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_block_init.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int value") != std::string::npos);
+  CHECK(output.find("int base") != std::string::npos);
+  CHECK(output.find("value = (base + 2)") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
 import /math/*

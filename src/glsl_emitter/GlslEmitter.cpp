@@ -931,6 +931,38 @@ bool emitBlock(const std::vector<Expr> &stmts,
   return true;
 }
 
+bool emitValueBlock(const Expr &blockExpr,
+                    EmitState &state,
+                    std::string &out,
+                    std::string &error,
+                    const std::string &indent,
+                    ExprResult &result) {
+  if (blockExpr.bodyArguments.empty()) {
+    error = "glsl backend requires block to yield a value";
+    return false;
+  }
+  for (size_t i = 0; i < blockExpr.bodyArguments.size(); ++i) {
+    const Expr &stmt = blockExpr.bodyArguments[i];
+    const bool isLast = (i + 1 == blockExpr.bodyArguments.size());
+    if (isLast) {
+      if (stmt.isBinding) {
+        error = "glsl backend requires block to end with a value expression";
+        return false;
+      }
+      result = emitExpr(stmt, state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      return true;
+    }
+    if (!emitStatement(stmt, state, out, error, indent)) {
+      return false;
+    }
+  }
+  error = "glsl backend requires block to yield a value";
+  return false;
+}
+
 bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::string &error, const std::string &indent) {
   if (stmt.isBinding) {
     bool isMutable = false;
@@ -953,7 +985,44 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     }
     std::string explicitType;
     bool hasExplicitType = getExplicitBindingTypeName(stmt, explicitType);
-    ExprResult init = emitExpr(stmt.args.front(), state, error);
+    const Expr &initExpr = stmt.args.front();
+    if (isSimpleCallName(initExpr, "block") && initExpr.hasBodyArguments) {
+      if (!initExpr.args.empty() || !initExpr.templateArgs.empty() || hasNamedArguments(initExpr.argNames)) {
+        error = "glsl backend requires block() { ... }";
+        return false;
+      }
+      EmitState blockState = state;
+      std::string blockBody;
+      ExprResult blockResult;
+      if (!emitValueBlock(initExpr, blockState, blockBody, error, indent + "  ", blockResult)) {
+        return false;
+      }
+      GlslType bindingType = blockResult.type;
+      if (hasExplicitType) {
+        bindingType = glslTypeFromName(explicitType, state, error);
+        if (!error.empty()) {
+          return false;
+        }
+        blockResult = castExpr(blockResult, bindingType);
+      }
+      std::string typeName = glslTypeName(bindingType);
+      if (typeName.empty()) {
+        error = "glsl backend requires numeric or boolean binding types";
+        return false;
+      }
+      state.needsInt64Ext = state.needsInt64Ext || blockState.needsInt64Ext;
+      state.needsFp64Ext = state.needsFp64Ext || blockState.needsFp64Ext;
+      state.tempIndex = blockState.tempIndex;
+      state.locals[stmt.name] = {bindingType, isMutable};
+      // GLSL const requires an initializer, so block initializers emit a scoped assignment.
+      out += indent + typeName + " " + stmt.name + ";\n";
+      out += indent + "{\n";
+      out += blockBody;
+      out += indent + "  " + stmt.name + " = " + blockResult.code + ";\n";
+      out += indent + "}\n";
+      return true;
+    }
+    ExprResult init = emitExpr(initExpr, state, error);
     if (!error.empty()) {
       return false;
     }
