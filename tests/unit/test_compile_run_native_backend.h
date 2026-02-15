@@ -767,6 +767,29 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs native shared_scope for binding condition") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  [shared_scope]
+  for([i32 mut] i{0i32} [bool] keep{less_than(i, 3i32)} assign(i, plus(i, 1i32))) {
+    [i32 mut] acc{0i32}
+    if(keep, then(){ assign(acc, plus(acc, 1i32)) }, else(){})
+    assign(total, plus(total, acc))
+  }
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_shared_scope_for_cond.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_shared_scope_for_cond_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs native pointer helpers") {
   const std::string source = R"(
 [return<int>]

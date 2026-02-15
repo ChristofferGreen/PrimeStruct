@@ -276,25 +276,33 @@ bool rewriteSharedScopeStatement(Expr &stmt, std::string &error) {
         Expr initStmt = std::move(stmt.args[0]);
         Expr cond = std::move(stmt.args[1]);
         Expr step = std::move(stmt.args[2]);
+        Expr forBody = std::move(body);
 
-        Expr whileCall;
-        whileCall.kind = Expr::Kind::Call;
-        whileCall.name = "while";
-        whileCall.namespacePrefix = stmt.namespacePrefix;
-        whileCall.transforms = std::move(stmt.transforms);
-        whileCall.args.push_back(std::move(cond));
-        whileCall.argNames.push_back(std::nullopt);
+        Expr noOpInit;
+        noOpInit.kind = Expr::Kind::Call;
+        noOpInit.name = "block";
+        noOpInit.namespacePrefix = stmt.namespacePrefix;
+        noOpInit.hasBodyArguments = true;
 
-        Expr whileBody = std::move(body);
-        whileBody.bodyArguments.push_back(std::move(step));
-        whileCall.args.push_back(std::move(whileBody));
-        whileCall.argNames.push_back(std::nullopt);
+        Expr forCall;
+        forCall.kind = Expr::Kind::Call;
+        forCall.name = "for";
+        forCall.namespacePrefix = stmt.namespacePrefix;
+        forCall.transforms = std::move(stmt.transforms);
+        forCall.args.push_back(std::move(noOpInit));
+        forCall.argNames.push_back(std::nullopt);
+        forCall.args.push_back(std::move(cond));
+        forCall.argNames.push_back(std::nullopt);
+        forCall.args.push_back(std::move(step));
+        forCall.argNames.push_back(std::nullopt);
+        forCall.args.push_back(std::move(forBody));
+        forCall.argNames.push_back(std::nullopt);
 
         blockCall.bodyArguments.push_back(std::move(initStmt));
         for (auto &binding : hoisted) {
           blockCall.bodyArguments.push_back(std::move(binding));
         }
-        blockCall.bodyArguments.push_back(std::move(whileCall));
+        blockCall.bodyArguments.push_back(std::move(forCall));
         stmt = std::move(blockCall);
         return true;
       }
