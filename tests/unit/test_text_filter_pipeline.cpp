@@ -93,6 +93,41 @@ TEST_CASE("filters ignore block comments") {
   CHECK(output.find("\"raw\"utf8") == std::string::npos);
 }
 
+TEST_CASE("append_operators only modifies opted-in lists") {
+  const std::string source = R"(
+[return<int>]
+main(){ return(1i32+2i32) }
+
+[append_operators return<int>]
+helper(){ return(1i32+2i32) }
+)";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"append_operators"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("[return<int> operators]") == std::string::npos);
+  CHECK(output.find("[append_operators return<int> operators]") != std::string::npos);
+}
+
+TEST_CASE("append_operators does not duplicate operators") {
+  const std::string source = R"(
+[append_operators operators return<int>]
+main(){ return(1i32+2i32) }
+)";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"append_operators"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("[append_operators operators return<int> operators]") == std::string::npos);
+  CHECK(output.find("[append_operators operators return<int>]") != std::string::npos);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.rewrites");

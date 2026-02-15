@@ -1066,41 +1066,43 @@ size_t findNextTransformListStart(const std::string &input, size_t start) {
 
 bool appendOperatorsTransform(const std::string &input, std::string &output, std::string &error) {
   output = input;
-  size_t listStart = findNextTransformListStart(output, 0);
-  if (listStart == std::string::npos) {
-    return true;
-  }
-  size_t listEnd = findMatchingCloseWithComments(output, listStart, '[', ']');
-  if (listEnd == std::string::npos) {
-    error = "unterminated transform list";
-    return false;
-  }
-  auto isIdentifierChar = [](char c) {
-    return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '/';
-  };
-  const std::string needle = "operators";
-  for (size_t pos = listStart + 1; pos + needle.size() <= listEnd; ++pos) {
-    if (output.compare(pos, needle.size(), needle) != 0) {
-      continue;
-    }
-    char prev = (pos > listStart + 1) ? output[pos - 1] : '\0';
-    char next = (pos + needle.size() < listEnd) ? output[pos + needle.size()] : '\0';
-    if (!isIdentifierChar(prev) && !isIdentifierChar(next)) {
-      return true;
-    }
-  }
-  bool hasContent = false;
-  for (size_t pos = listStart + 1; pos < listEnd; ++pos) {
-    if (!std::isspace(static_cast<unsigned char>(output[pos]))) {
-      hasContent = true;
+  size_t scanPos = 0;
+  while (scanPos < output.size()) {
+    size_t listStart = findNextTransformListStart(output, scanPos);
+    if (listStart == std::string::npos) {
       break;
     }
+    TransformListScan listScan;
+    if (!scanTransformList(output, listStart, listScan)) {
+      error = "unterminated transform list";
+      return false;
+    }
+    bool hasAppendOperators = false;
+    bool hasOperators = false;
+    for (const auto &name : listScan.textTransforms) {
+      if (name == "append_operators") {
+        hasAppendOperators = true;
+      } else if (name == "operators") {
+        hasOperators = true;
+      }
+    }
+    if (hasAppendOperators && !hasOperators) {
+      bool hasContent = false;
+      for (size_t pos = listStart + 1; pos < listScan.end; ++pos) {
+        if (!std::isspace(static_cast<unsigned char>(output[pos]))) {
+          hasContent = true;
+          break;
+        }
+      }
+      std::string insertText = "operators";
+      if (hasContent) {
+        insertText = " " + insertText;
+      }
+      output.insert(listScan.end, insertText);
+      listScan.end += insertText.size();
+    }
+    scanPos = listScan.end + 1;
   }
-  std::string insertText = "operators";
-  if (hasContent) {
-    insertText = " " + insertText;
-  }
-  output.insert(listEnd, insertText);
   return true;
 }
 
