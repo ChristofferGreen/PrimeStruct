@@ -68,6 +68,18 @@ TEST_CASE("pipeline preserves include with payload comments") {
   CHECK(output == source);
 }
 
+TEST_CASE("implicit-utf8 runs in include-like paths") {
+  const std::string source = "main(){ /path/include<\"hello\"> }\n";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters = {"implicit-utf8"};
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("\"hello\"utf8") != std::string::npos);
+}
+
 TEST_CASE("pipeline preserves single-quoted include paths") {
   const std::string source = "include<'/std\\\\'>\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;

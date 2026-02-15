@@ -378,11 +378,11 @@ bool applyPass(const std::string &input,
     if (input.compare(index, IncludeLen, "include") != 0) {
       return false;
     }
-    if (index > 0 && isTokenChar(input[index - 1])) {
+    if (index > 0 && (isTokenChar(input[index - 1]) || input[index - 1] == '/')) {
       return false;
     }
     size_t scan = index + IncludeLen;
-    if (scan < input.size() && isTokenChar(input[scan])) {
+    if (scan < input.size() && (isTokenChar(input[scan]) || input[scan] == '/')) {
       if (!(input[scan] == '/' && scan + 1 < input.size() &&
             (input[scan + 1] == '/' || input[scan + 1] == '*'))) {
         return false;
