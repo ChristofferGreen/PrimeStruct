@@ -304,6 +304,25 @@ main() {
   CHECK(output.find("int value") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter ignores pathspace builtins") {
+  const std::string source = R"(
+[return<void> effects(pathspace_notify, pathspace_insert, pathspace_take)]
+main() {
+  notify("/events/test"utf8, 1i32)
+  insert("/events/test"utf8, 2i32)
+  take("/events/test"utf8)
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_pathspace.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_pathspace.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("void main") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
 import /math/*

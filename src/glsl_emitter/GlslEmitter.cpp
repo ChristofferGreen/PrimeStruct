@@ -186,6 +186,9 @@ bool isBindingAuxTransformName(const std::string &name) {
 bool rejectEffectTransforms(const std::vector<Transform> &transforms,
                             const std::string &context,
                             std::string &error) {
+  auto isAllowedEffect = [](const std::string &name) -> bool {
+    return name.rfind("pathspace_", 0) == 0;
+  };
   for (const auto &transform : transforms) {
     if (transform.name != "effects" && transform.name != "capabilities") {
       continue;
@@ -193,13 +196,17 @@ bool rejectEffectTransforms(const std::vector<Transform> &transforms,
     if (transform.arguments.empty()) {
       continue;
     }
-    const std::string &effectName = transform.arguments.front();
-    if (transform.name == "effects") {
-      error = "glsl backend does not support effect: " + effectName + " on " + context;
-    } else {
+    for (const auto &effectName : transform.arguments) {
+      if (transform.name == "effects") {
+        if (isAllowedEffect(effectName)) {
+          continue;
+        }
+        error = "glsl backend does not support effect: " + effectName + " on " + context;
+        return false;
+      }
       error = "glsl backend does not support capability: " + effectName + " on " + context;
+      return false;
     }
-    return false;
   }
   return true;
 }
@@ -1426,6 +1433,46 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       out += indent + "}\n";
+      return true;
+    }
+    if (isSimpleCallName(stmt, "notify") || isSimpleCallName(stmt, "insert") || isSimpleCallName(stmt, "take")) {
+      const char *name = stmt.name.c_str();
+      const size_t expectedArgs = isSimpleCallName(stmt, "take") ? 1 : 2;
+      if (hasNamedArguments(stmt.argNames)) {
+        error = "glsl backend requires " + std::string(name) + " to use positional arguments";
+        return false;
+      }
+      if (!stmt.templateArgs.empty()) {
+        error = "glsl backend does not support template arguments on " + std::string(name);
+        return false;
+      }
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error = "glsl backend does not support block arguments on " + std::string(name);
+        return false;
+      }
+      if (stmt.args.size() != expectedArgs) {
+        error = "glsl backend requires " + std::string(name) + " with " + std::to_string(expectedArgs) +
+                " argument" + (expectedArgs == 1 ? "" : "s");
+        return false;
+      }
+      if (!stmt.args.empty()) {
+        const Expr &pathExpr = stmt.args.front();
+        if (pathExpr.kind != Expr::Kind::StringLiteral) {
+          error = "glsl backend requires string literal path for " + std::string(name);
+          return false;
+        }
+      }
+      for (size_t i = 0; i < stmt.args.size(); ++i) {
+        if (i == 0 && stmt.args[i].kind == Expr::Kind::StringLiteral) {
+          continue;
+        }
+        ExprResult arg = emitExpr(stmt.args[i], state, error);
+        if (!error.empty()) {
+          return false;
+        }
+        appendIndented(out, arg.prelude, indent);
+        out += indent + arg.code + ";\n";
+      }
       return true;
     }
     if (isSimpleCallName(stmt, "if")) {
