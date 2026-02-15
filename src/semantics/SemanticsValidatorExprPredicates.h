@@ -50,6 +50,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     std::unordered_map<std::string, BindingInfo> lambdaLocals;
     if (!expr.lambdaCaptures.empty()) {
       bool captureAll = false;
+      std::string captureAllToken;
       std::vector<std::string> captureNames;
       std::unordered_set<std::string> explicitNames;
       captureNames.reserve(expr.lambdaCaptures.size());
@@ -63,6 +64,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (tokens.size() == 1) {
           const std::string &token = tokens[0];
           if (token == "=" || token == "&") {
+            if (!captureAllToken.empty()) {
+              error_ = "invalid lambda capture";
+              return false;
+            }
+            captureAllToken = token;
             captureAll = true;
             continue;
           }

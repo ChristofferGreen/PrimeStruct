@@ -61,4 +61,17 @@ main() {
   CHECK(error.find("invalid lambda capture") != std::string::npos);
 }
 
+TEST_CASE("lambda rejects conflicting capture-all tokens") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] base{1i32}
+  [=, &]([i32] offset) { return(offset) }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("invalid lambda capture") != std::string::npos);
+}
+
 TEST_SUITE_END();
