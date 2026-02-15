@@ -226,6 +226,25 @@ main() {
   CHECK(output.find("double e_val") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter writes integer pow helper") {
+  const std::string source = R"(
+import /math/*
+[return<void>]
+main() {
+  [i32] value{pow(2i32, 3i32)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_int_pow.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_int_pow.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_pow_i32") != std::string::npos);
+  CHECK(output.find("int value") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
 import /math/*

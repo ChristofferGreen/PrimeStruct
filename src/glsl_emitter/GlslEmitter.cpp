@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace primec {
 namespace {
@@ -26,6 +27,10 @@ struct EmitState {
   std::unordered_map<std::string, LocalInfo> locals;
   bool needsInt64Ext = false;
   bool needsFp64Ext = false;
+  bool needsIntPow = false;
+  bool needsUIntPow = false;
+  bool needsInt64Pow = false;
+  bool needsUInt64Pow = false;
   uint32_t tempIndex = 0;
 };
 
@@ -34,12 +39,63 @@ struct ExprResult {
   GlslType type = GlslType::Unknown;
 };
 
+std::string glslTypeName(GlslType type);
+std::string literalForType(GlslType type, int value);
+
 std::string normalizeName(const Expr &expr) {
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
   return name;
+}
+
+std::string powHelperName(GlslType type) {
+  switch (type) {
+  case GlslType::Int:
+    return "ps_pow_i32";
+  case GlslType::UInt:
+    return "ps_pow_u32";
+  case GlslType::Int64:
+    return "ps_pow_i64";
+  case GlslType::UInt64:
+    return "ps_pow_u64";
+  default:
+    return "ps_pow_unknown";
+  }
+}
+
+std::string emitPowHelper(GlslType type, bool isSigned) {
+  std::string typeName = glslTypeName(type);
+  std::string funcName = powHelperName(type);
+  std::string zeroLiteral = literalForType(type, 0);
+  std::string oneLiteral = literalForType(type, 1);
+  std::string out;
+  out += typeName + " " + funcName + "(" + typeName + " base, " + typeName + " exp) {\n";
+  if (isSigned) {
+    out += "  if (exp < " + zeroLiteral + ") {\n";
+    out += "    return " + zeroLiteral + ";\n";
+    out += "  }\n";
+  }
+  out += "  " + typeName + " result = " + oneLiteral + ";\n";
+  out += "  " + typeName + " factor = base;\n";
+  out += "  " + typeName + " e = exp;\n";
+  out += "  while (";
+  if (isSigned) {
+    out += "e > " + zeroLiteral;
+  } else {
+    out += "e != " + zeroLiteral;
+  }
+  out += ") {\n";
+  out += "    if ((e & " + oneLiteral + ") != " + zeroLiteral + ") {\n";
+  out += "      result = result * factor;\n";
+  out += "    }\n";
+  out += "    factor = factor * factor;\n";
+  out += "    e = e >> " + oneLiteral + ";\n";
+  out += "  }\n";
+  out += "  return result;\n";
+  out += "}\n";
+  return out;
 }
 
 bool isSimpleCallName(const Expr &expr, const char *name) {
@@ -725,7 +781,43 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
       return {"(" + start.code + " + (" + end.code + " - " + start.code + ") * " + t.code + ")", common};
     }
     if (mathName == "pow") {
-      return emitBinaryMath("pow", true);
+      if (expr.args.size() != 2) {
+        error = "pow requires exactly two arguments";
+        return {};
+      }
+      ExprResult base = emitExpr(expr.args[0], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      ExprResult exponent = emitExpr(expr.args[1], state, error);
+      if (!error.empty()) {
+        return {};
+      }
+      GlslType common = combineNumericTypes(base.type, exponent.type, error);
+      if (common == GlslType::Unknown) {
+        return {};
+      }
+      base = castExpr(base, common);
+      exponent = castExpr(exponent, common);
+      if (common == GlslType::Float || common == GlslType::Double) {
+        return {"pow(" + base.code + ", " + exponent.code + ")", common};
+      }
+      if (!isIntegerType(common)) {
+        error = "pow requires numeric arguments";
+        return {};
+      }
+      noteTypeExtensions(common, state);
+      std::string funcName = powHelperName(common);
+      if (common == GlslType::Int) {
+        state.needsIntPow = true;
+      } else if (common == GlslType::UInt) {
+        state.needsUIntPow = true;
+      } else if (common == GlslType::Int64) {
+        state.needsInt64Pow = true;
+      } else if (common == GlslType::UInt64) {
+        state.needsUInt64Pow = true;
+      }
+      return {funcName + "(" + base.code + ", " + exponent.code + ")", common};
     }
     if (mathName == "floor") {
       return emitUnaryMath("floor", true);
@@ -1490,6 +1582,18 @@ bool GlslEmitter::emitSource(const Program &program,
   }
   if (state.needsFp64Ext) {
     out += "#extension GL_ARB_gpu_shader_fp64 : require\n";
+  }
+  if (state.needsIntPow) {
+    out += emitPowHelper(GlslType::Int, true);
+  }
+  if (state.needsUIntPow) {
+    out += emitPowHelper(GlslType::UInt, false);
+  }
+  if (state.needsInt64Pow) {
+    out += emitPowHelper(GlslType::Int64, true);
+  }
+  if (state.needsUInt64Pow) {
+    out += emitPowHelper(GlslType::UInt64, false);
   }
   out += "void main() {\n";
   out += body;
