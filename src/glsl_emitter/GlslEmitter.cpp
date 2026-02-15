@@ -76,6 +76,24 @@ bool getMathBuiltinName(const Expr &expr, std::string &out) {
          out == "is_finite";
 }
 
+bool getMathConstantName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = normalizeName(expr);
+  if (normalized.rfind("math/", 0) == 0) {
+    normalized = normalized.substr(5);
+  }
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  if (normalized == "pi" || normalized == "tau" || normalized == "e") {
+    out = normalized;
+    return true;
+  }
+  return false;
+}
+
 bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {
   for (const auto &name : argNames) {
     if (name.has_value()) {
@@ -384,11 +402,22 @@ ExprResult emitExpr(const Expr &expr, EmitState &state, std::string &error) {
   }
   if (expr.kind == Expr::Kind::Name) {
     auto it = state.locals.find(expr.name);
-    if (it == state.locals.end()) {
-      error = "glsl backend requires local binding for name: " + expr.name;
-      return {};
+    if (it != state.locals.end()) {
+      return {expr.name, it->second.type};
     }
-    return {expr.name, it->second.type};
+    std::string constantName;
+    if (getMathConstantName(expr, constantName)) {
+      state.needsFp64Ext = true;
+      if (constantName == "pi") {
+        return {"double(3.14159265358979323846)", GlslType::Double};
+      }
+      if (constantName == "tau") {
+        return {"double(6.28318530717958647692)", GlslType::Double};
+      }
+      return {"double(2.71828182845904523536)", GlslType::Double};
+    }
+    error = "glsl backend requires local binding for name: " + expr.name;
+    return {};
   }
   if (expr.kind != Expr::Kind::Call) {
     error = "glsl backend encountered unsupported expression";

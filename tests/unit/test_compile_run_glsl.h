@@ -204,6 +204,28 @@ main() {
   CHECK(output.find("value = (base + 2)") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter handles math constants") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [f64] pi_val{/math/pi}
+  [f64] tau_val{/math/tau}
+  [f64] e_val{/math/e}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_math_constants.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_math_constants.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("#extension GL_ARB_gpu_shader_fp64 : require") != std::string::npos);
+  CHECK(output.find("double pi_val") != std::string::npos);
+  CHECK(output.find("double tau_val") != std::string::npos);
+  CHECK(output.find("double e_val") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
 import /math/*
