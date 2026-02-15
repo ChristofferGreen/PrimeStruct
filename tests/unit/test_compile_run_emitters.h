@@ -162,6 +162,25 @@ main() {
   CHECK(output.find("const int sum") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter preserves explicit lambda captures") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] base{3i32}
+  [i32 mut] bump{2i32}
+  holder{[=, ref bump]([i32] x) { return(plus(x, bump)) }}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_lambda_explicit.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_lambda_explicit.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("[=, &bump]") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs import alias in C++ emitter") {
   const std::string source = R"(
 import /util

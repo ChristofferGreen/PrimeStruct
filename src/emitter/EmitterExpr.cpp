@@ -110,17 +110,15 @@ std::string Emitter::emitExpr(const Expr &expr,
       out << captureAllToken;
       firstCapture = false;
     }
-    if (captureAllToken.empty()) {
-      for (const auto &capture : explicitCaptures) {
-        if (!firstCapture) {
-          out << ", ";
-        }
-        if (capture.byRef) {
-          out << "&";
-        }
-        out << capture.name;
-        firstCapture = false;
+    for (const auto &capture : explicitCaptures) {
+      if (!firstCapture) {
+        out << ", ";
       }
+      if (capture.byRef) {
+        out << "&";
+      }
+      out << capture.name;
+      firstCapture = false;
     }
     out << "](";
     for (size_t i = 0; i < expr.args.size(); ++i) {
