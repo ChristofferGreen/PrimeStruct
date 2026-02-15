@@ -719,6 +719,25 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
+TEST_CASE("compiles and runs for binding condition") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32} [bool] keep{less_than(i, 3i32)} assign(i, plus(i, 1i32))) {
+    if(keep, then(){ assign(total, plus(total, 2i32)) }, else(){})
+  }
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_for_condition_binding.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_for_condition_binding_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("compiles and runs shared_scope loops") {
   const std::string source = R"(
 [return<int>]

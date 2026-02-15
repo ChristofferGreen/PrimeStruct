@@ -1209,32 +1209,58 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         state.locals = savedLocals;
         return false;
       }
-      ExprResult cond = emitExpr(stmt.args[1], state, error);
-      if (!error.empty()) {
-        state.locals = savedLocals;
-        return false;
-      }
-      if (cond.type != GlslType::Bool) {
-        error = "glsl backend requires for condition to be bool";
-        state.locals = savedLocals;
-        return false;
-      }
+      const Expr &condExpr = stmt.args[1];
+      const Expr &stepExpr = stmt.args[2];
       const Expr &bodyExpr = stmt.args[3];
       if (!isLoopBlockEnvelope(bodyExpr)) {
         error = "glsl backend requires for body block";
         state.locals = savedLocals;
         return false;
       }
-      out += indent + "  while (" + cond.code + ") {\n";
-      if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
-        state.locals = savedLocals;
-        return false;
+      if (condExpr.isBinding) {
+        out += indent + "  while (true) {\n";
+        if (!emitStatement(condExpr, state, out, error, indent + "    ")) {
+          state.locals = savedLocals;
+          return false;
+        }
+        auto condIt = state.locals.find(condExpr.name);
+        if (condIt == state.locals.end() || condIt->second.type != GlslType::Bool) {
+          error = "glsl backend requires for condition to be bool";
+          state.locals = savedLocals;
+          return false;
+        }
+        out += indent + "    if (!" + condExpr.name + ") { break; }\n";
+        if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
+          state.locals = savedLocals;
+          return false;
+        }
+        if (!emitStatement(stepExpr, state, out, error, indent + "    ")) {
+          state.locals = savedLocals;
+          return false;
+        }
+        out += indent + "  }\n";
+      } else {
+        ExprResult cond = emitExpr(condExpr, state, error);
+        if (!error.empty()) {
+          state.locals = savedLocals;
+          return false;
+        }
+        if (cond.type != GlslType::Bool) {
+          error = "glsl backend requires for condition to be bool";
+          state.locals = savedLocals;
+          return false;
+        }
+        out += indent + "  while (" + cond.code + ") {\n";
+        if (!emitBlock(bodyExpr.bodyArguments, state, out, error, indent + "    ")) {
+          state.locals = savedLocals;
+          return false;
+        }
+        if (!emitStatement(stepExpr, state, out, error, indent + "    ")) {
+          state.locals = savedLocals;
+          return false;
+        }
+        out += indent + "  }\n";
       }
-      if (!emitStatement(stmt.args[2], state, out, error, indent + "    ")) {
-        state.locals = savedLocals;
-        return false;
-      }
-      out += indent + "  }\n";
       out += indent + "}\n";
       state.locals = savedLocals;
       return true;

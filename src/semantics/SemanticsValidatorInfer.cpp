@@ -717,6 +717,11 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
       if (!inferStatement(stmt.args[0], loopLocals)) {
         return false;
       }
+      if (stmt.args[1].isBinding) {
+        if (!inferStatement(stmt.args[1], loopLocals)) {
+          return false;
+        }
+      }
       if (!inferStatement(stmt.args[2], loopLocals)) {
         return false;
       }

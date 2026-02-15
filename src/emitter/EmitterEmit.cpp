@@ -1279,14 +1279,29 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         auto loopTypes = localTypes;
         emitStatement(stmt.args[0], indent + 1, loopTypes);
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
-        out << innerPad << "while ("
-            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, hasMathImport) << ") {\n";
-        auto blockTypes = loopTypes;
-        for (const auto &bodyStmt : stmt.args[3].bodyArguments) {
-          emitStatement(bodyStmt, indent + 2, blockTypes);
+        const Expr &cond = stmt.args[1];
+        const Expr &step = stmt.args[2];
+        const Expr &body = stmt.args[3];
+        if (cond.isBinding) {
+          out << innerPad << "while (true) {\n";
+          auto blockTypes = loopTypes;
+          emitStatement(cond, indent + 2, blockTypes);
+          out << innerPad << "  if (!" << cond.name << ") { break; }\n";
+          for (const auto &bodyStmt : body.bodyArguments) {
+            emitStatement(bodyStmt, indent + 2, blockTypes);
+          }
+          emitStatement(step, indent + 2, blockTypes);
+          out << innerPad << "}\n";
+        } else {
+          out << innerPad << "while ("
+              << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, hasMathImport) << ") {\n";
+          auto blockTypes = loopTypes;
+          for (const auto &bodyStmt : body.bodyArguments) {
+            emitStatement(bodyStmt, indent + 2, blockTypes);
+          }
+          emitStatement(step, indent + 2, loopTypes);
+          out << innerPad << "}\n";
         }
-        emitStatement(stmt.args[2], indent + 2, loopTypes);
-        out << innerPad << "}\n";
         out << pad << "}\n";
         return;
       }
