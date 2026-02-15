@@ -194,9 +194,47 @@ main() {
   CHECK(error.find("unknown import path: /util/*") != std::string::npos);
 }
 
+TEST_CASE("import rejects /math without wildcard after semicolon") {
+  const std::string source = R"(
+import /util; /math
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(parseProgramWithError(source, error));
+  CHECK(error.find("import /math is not supported; use import /math/* or /math/<name>") != std::string::npos);
+}
+
 TEST_CASE("import accepts whitespace-separated paths") {
   const std::string source = R"(
 import /util /math/*
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(min(inc(2i32), 4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import accepts semicolon-separated paths") {
+  const std::string source = R"(
+import /util; /math/*
 namespace util {
   [return<int>]
   inc([i32] value) {

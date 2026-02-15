@@ -195,14 +195,14 @@ bool Parser::parseImport(Program &program) {
       }
     }
     skipComments();
-    if (match(TokenKind::Comma)) {
-      expect(TokenKind::Comma, "expected ','");
-      if (match(TokenKind::End)) {
-        return fail("expected import path");
+    while (match(TokenKind::Comma) || match(TokenKind::Semicolon)) {
+      if (match(TokenKind::Comma)) {
+        expect(TokenKind::Comma, "expected ','");
+      } else {
+        expect(TokenKind::Semicolon, "expected ';'");
       }
-      continue;
+      skipComments();
     }
-    skipComments();
     if (tokens_[pos_].kind == TokenKind::Identifier && !tokens_[pos_].text.empty() &&
         tokens_[pos_].text[0] == '/') {
       continue;

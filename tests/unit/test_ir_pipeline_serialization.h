@@ -40,6 +40,31 @@ main() {
   CHECK(result == 3);
 }
 
+TEST_CASE("ir lowers semicolon-separated imports") {
+  const std::string source = R"(
+import /util; /math/*
+namespace util {
+  [return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(min(inc(2i32), 4i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowers struct constructor call") {
   const std::string source = R"(
 [struct]
