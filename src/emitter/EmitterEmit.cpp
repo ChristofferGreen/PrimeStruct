@@ -1226,8 +1226,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
           return false;
         }
-        const std::string resolved = resolveExprPath(candidate);
-        return nameMap.count(resolved) == 0;
+        return true;
       };
       if (stmt.kind == Expr::Kind::Call && isLoopCall(stmt) && stmt.args.size() == 2) {
         const int repeatIndex = repeatCounter++;

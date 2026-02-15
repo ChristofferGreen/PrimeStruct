@@ -81,6 +81,51 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("loop rejects non-block body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop(2i32, plus(1i32, 2i32))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop body requires a block envelope") != std::string::npos);
+}
+
+TEST_CASE("loop blocks ignore definition name collisions") {
+  const std::string source = R"(
+[return<void>]
+branch() {
+  return()
+}
+
+[return<void>]
+stepper() {
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  loop(2i32, branch() {
+    assign(total, plus(total, 1i32))
+  })
+  while(less_than(total, 3i32), branch() {
+    assign(total, plus(total, 1i32))
+  })
+  for([i32 mut] i{0i32}, less_than(i, 2i32), assign(i, plus(i, 1i32)), stepper() {
+    assign(total, plus(total, i))
+  })
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("shared_scope rejects non-loop statements") {
   const std::string source = R"(
 [return<int>]

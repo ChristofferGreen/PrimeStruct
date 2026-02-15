@@ -578,7 +578,7 @@
       if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
         return false;
       }
-      return resolveDefinitionCall(candidate) == nullptr;
+      return true;
     };
     if (isLoopCall(stmt)) {
       if (stmt.args.size() != 2) {

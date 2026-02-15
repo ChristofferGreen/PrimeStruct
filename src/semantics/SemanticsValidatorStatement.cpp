@@ -496,8 +496,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
       return false;
     }
-    const std::string resolved = resolveCalleePath(candidate);
-    return defMap_.find(resolved) == defMap_.end();
+    return true;
   };
   auto validateLoopBody = [&](const Expr &body, const std::unordered_map<std::string, BindingInfo> &baseLocals) -> bool {
     if (!isLoopBlockEnvelope(body)) {
