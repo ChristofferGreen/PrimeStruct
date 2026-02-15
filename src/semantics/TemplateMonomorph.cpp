@@ -117,6 +117,15 @@ std::string replacePathPrefix(const std::string &path, const std::string &prefix
   return replacement + path.substr(prefix.size());
 }
 
+bool hasMathImport(const Context &ctx) {
+  for (const auto &importPath : ctx.program.imports) {
+    if (importPath.rfind("/math/", 0) == 0 && importPath.size() > 6) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut) {
   if (!expr.isBinding) {
     return false;
@@ -235,7 +244,9 @@ bool rewriteExpr(Expr &expr,
                  const std::string &namespacePrefix,
                  Context &ctx,
                  std::string &error,
-                 const LocalTypeMap &locals);
+                 const LocalTypeMap &locals,
+                 const std::vector<ParameterInfo> &params,
+                 bool allowMathBare);
 
 bool instantiateTemplate(const std::string &basePath,
                          const std::vector<std::string> &resolvedArgs,
@@ -416,7 +427,9 @@ bool rewriteExpr(Expr &expr,
                  const std::string &namespacePrefix,
                  Context &ctx,
                  std::string &error,
-                 const LocalTypeMap &locals) {
+                 const LocalTypeMap &locals,
+                 const std::vector<ParameterInfo> &params,
+                 bool allowMathBare) {
   expr.namespacePrefix = namespacePrefix;
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return false;
@@ -433,19 +446,34 @@ bool rewriteExpr(Expr &expr,
     for (const auto &param : expr.templateArgs) {
       lambdaMapping.erase(param);
     }
+    LocalTypeMap lambdaLocals = locals;
+    lambdaLocals.reserve(lambdaLocals.size() + expr.args.size() + expr.bodyArguments.size());
     for (auto &param : expr.args) {
-      if (!rewriteExpr(param, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, locals)) {
+      if (!rewriteExpr(param, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, lambdaLocals, params,
+                       allowMathBare)) {
         return false;
       }
+      BindingInfo info;
+      if (extractExplicitBindingType(param, info)) {
+        lambdaLocals[param.name] = info;
+      } else if (param.isBinding && param.args.size() == 1) {
+        if (tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, info, allowMathBare)) {
+          lambdaLocals[param.name] = info;
+        }
+      }
     }
-    LocalTypeMap lambdaLocals = locals;
     for (auto &bodyArg : expr.bodyArguments) {
-      if (!rewriteExpr(bodyArg, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, lambdaLocals)) {
+      if (!rewriteExpr(bodyArg, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, lambdaLocals, params,
+                       allowMathBare)) {
         return false;
       }
       BindingInfo info;
       if (extractExplicitBindingType(bodyArg, info)) {
         lambdaLocals[bodyArg.name] = info;
+      } else if (bodyArg.isBinding && bodyArg.args.size() == 1) {
+        if (tryInferBindingTypeFromInitializer(bodyArg.args.front(), params, lambdaLocals, info, allowMathBare)) {
+          lambdaLocals[bodyArg.name] = info;
+        }
       }
     }
     return true;
@@ -512,18 +540,22 @@ bool rewriteExpr(Expr &expr,
   }
 
   for (auto &arg : expr.args) {
-    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, locals)) {
+    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
   }
   LocalTypeMap bodyLocals = locals;
   for (auto &arg : expr.bodyArguments) {
-    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, bodyLocals)) {
+    if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, bodyLocals, params, allowMathBare)) {
       return false;
     }
     BindingInfo info;
     if (extractExplicitBindingType(arg, info)) {
       bodyLocals[arg.name] = info;
+    } else if (arg.isBinding && arg.args.size() == 1) {
+      if (tryInferBindingTypeFromInitializer(arg.args.front(), params, bodyLocals, info, allowMathBare)) {
+        bodyLocals[arg.name] = info;
+      }
     }
   }
   return true;
@@ -537,28 +569,52 @@ bool rewriteDefinition(Definition &def,
   if (!rewriteTransforms(def.transforms, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
     return false;
   }
+  const bool allowMathBare = hasMathImport(ctx);
+  std::vector<ParameterInfo> params;
+  params.reserve(def.parameters.size());
   LocalTypeMap locals;
   locals.reserve(def.parameters.size() + def.statements.size());
   for (auto &param : def.parameters) {
-    if (!rewriteExpr(param, mapping, allowedParams, def.namespacePrefix, ctx, error, locals)) {
+    if (!rewriteExpr(param, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
     BindingInfo info;
     if (extractExplicitBindingType(param, info)) {
       locals[param.name] = info;
+      ParameterInfo paramInfo;
+      paramInfo.name = param.name;
+      paramInfo.binding = info;
+      if (param.args.size() == 1) {
+        paramInfo.defaultExpr = &param.args.front();
+      }
+      params.push_back(std::move(paramInfo));
+    } else if (param.isBinding && param.args.size() == 1) {
+      if (tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, info, allowMathBare)) {
+        locals[param.name] = info;
+        ParameterInfo paramInfo;
+        paramInfo.name = param.name;
+        paramInfo.binding = info;
+        paramInfo.defaultExpr = &param.args.front();
+        params.push_back(std::move(paramInfo));
+      }
     }
   }
   for (auto &stmt : def.statements) {
-    if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals)) {
+    if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
       return false;
     }
     BindingInfo info;
     if (extractExplicitBindingType(stmt, info)) {
       locals[stmt.name] = info;
+    } else if (stmt.isBinding && stmt.args.size() == 1) {
+      if (tryInferBindingTypeFromInitializer(stmt.args.front(), params, locals, info, allowMathBare)) {
+        locals[stmt.name] = info;
+      }
     }
   }
   if (def.returnExpr.has_value()) {
-    if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals)) {
+    if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params,
+                     allowMathBare)) {
       return false;
     }
   }
@@ -590,7 +646,8 @@ bool rewriteExecution(Execution &exec, Context &ctx, std::string &error) {
   execExpr.bodyArguments = exec.bodyArguments;
   execExpr.hasBodyArguments = exec.hasBodyArguments;
   LocalTypeMap emptyLocals;
-  if (!rewriteExpr(execExpr, SubstMap{}, {}, exec.namespacePrefix, ctx, error, emptyLocals)) {
+  const bool allowMathBare = hasMathImport(ctx);
+  if (!rewriteExpr(execExpr, SubstMap{}, {}, exec.namespacePrefix, ctx, error, emptyLocals, {}, allowMathBare)) {
     return false;
   }
   exec.name = execExpr.name;

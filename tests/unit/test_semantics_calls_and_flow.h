@@ -1573,6 +1573,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("templated method calls infer receiver types") {
+  const std::string source = R"(
+namespace i32 {
+  [return<i32>]
+  wrap<T>([i32] self) {
+    return(self)
+  }
+}
+
+[return<i32>]
+compute([i32] input) {
+  [mut] value{input}
+  return(value.wrap<i32>())
+}
+
+[return<i32>]
+main() {
+  return(compute(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("method calls reject template args on non-template defs") {
   const std::string source = R"(
 namespace i32 {
