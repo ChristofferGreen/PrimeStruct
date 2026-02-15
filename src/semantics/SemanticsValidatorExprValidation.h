@@ -488,14 +488,10 @@
         const bool isBooleanOp = builtinName == "and" || builtinName == "or" || builtinName == "not";
         if (isBooleanOp) {
           for (const auto &arg : expr.args) {
-            if (!isIntegerOrBoolExpr(arg, params, locals)) {
-              error_ = "boolean operators require integer or bool operands";
+            if (!isBoolExpr(arg, params, locals)) {
+              error_ = "boolean operators require bool operands";
               return false;
             }
-          }
-          if (hasMixedSignedness(expr.args, true)) {
-            error_ = "boolean operators do not support mixed signed/unsigned operands";
-            return false;
           }
         } else {
           bool sawString = false;

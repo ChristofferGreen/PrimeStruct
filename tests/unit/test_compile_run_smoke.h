@@ -356,11 +356,11 @@ main() {
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs boolean ops with integer inputs") {
+TEST_CASE("compiles and runs boolean ops with conversions") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(and(1i32, or(0i32, not(0i32))))
+  return(and(convert<bool>(1i32), or(convert<bool>(0i32), not(convert<bool>(0i32)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_bool_ops_int.prime", source);
@@ -383,10 +383,10 @@ TEST_CASE("compiles and runs boolean ops short-circuit") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32 mut] value{0i32}
-  or(1i32, assign(value, 2i32))
-  and(0i32, assign(value, 3i32))
-  return(value)
+  [bool mut] witness{false}
+  or(true, assign(witness, true))
+  and(false, assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   const std::string srcPath = writeTemp("compile_bool_ops_short_circuit.prime", source);

@@ -855,9 +855,9 @@ TEST_CASE("compiles and runs short-circuit and") {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
-  [i32 mut] witness{0i32}
-  assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
-  return(witness)
+  [bool mut] witness{false}
+  and(equal(value, 0i32), assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   const std::string srcPath = writeTemp("compile_and_short.prime", source);
@@ -873,9 +873,9 @@ TEST_CASE("compiles and runs short-circuit or") {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
-  [i32 mut] witness{0i32}
-  assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
-  return(witness)
+  [bool mut] witness{false}
+  or(equal(value, 1i32), assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   const std::string srcPath = writeTemp("compile_or_short.prime", source);
@@ -890,7 +890,7 @@ TEST_CASE("compiles and runs numeric boolean ops") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(or(0i32, 2i32))
+  return(or(convert<bool>(0i32), convert<bool>(2i32)))
 }
 )";
   const std::string srcPath = writeTemp("compile_bool_numeric.prime", source);
@@ -1281,7 +1281,7 @@ TEST_CASE("compiles and runs and operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(1i32&&1i32)
+  return(true&&true)
 }
 )";
   const std::string srcPath = writeTemp("compile_and_op.prime", source);
@@ -1296,7 +1296,7 @@ TEST_CASE("compiles and runs or operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(0i32||1i32)
+  return(false||true)
 }
 )";
   const std::string srcPath = writeTemp("compile_or_op.prime", source);
@@ -1311,7 +1311,7 @@ TEST_CASE("compiles and runs not operator rewrite") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(!0i32)
+  return(!false)
 }
 )";
   const std::string srcPath = writeTemp("compile_not_op.prime", source);
@@ -1326,7 +1326,7 @@ TEST_CASE("compiles and runs not operator with parentheses") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(!(0i32))
+  return(!(false))
 }
 )";
   const std::string srcPath = writeTemp("compile_not_paren.prime", source);

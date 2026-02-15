@@ -266,6 +266,39 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return false;
   };
+  auto isBoolExpr = [&](const Expr &arg,
+                        const std::vector<ParameterInfo> &paramsIn,
+                        const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
+    ReturnKind kind = inferExprReturnKind(arg, paramsIn, localsIn);
+    if (kind == ReturnKind::Bool) {
+      return true;
+    }
+    if (kind == ReturnKind::Void || kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+      return false;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
+        return false;
+      }
+      if (isPointerExpr(arg, paramsIn, localsIn)) {
+        return false;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(paramsIn, arg.name)) {
+          ReturnKind paramKind = returnKindForBinding(*paramBinding);
+          return paramKind == ReturnKind::Bool;
+        }
+        auto it = localsIn.find(arg.name);
+        if (it != localsIn.end()) {
+          ReturnKind localKind = returnKindForBinding(it->second);
+          return localKind == ReturnKind::Bool;
+        }
+      }
+      return true;
+    }
+    return false;
+  };
   auto isNumericExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||

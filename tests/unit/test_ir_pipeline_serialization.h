@@ -770,7 +770,7 @@ TEST_CASE("ir lowers numeric boolean ops") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(and(1i32, not(0i32)))
+  return(and(true, not(false)))
 }
 )";
   primec::Program program;
@@ -795,9 +795,9 @@ TEST_CASE("ir lowers short-circuit and") {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
-  [i32 mut] witness{0i32}
-  assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
-  return(witness)
+  [bool mut] witness{false}
+  and(equal(value, 0i32), assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   primec::Program program;
@@ -834,9 +834,9 @@ TEST_CASE("ir lowers short-circuit or") {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
-  [i32 mut] witness{0i32}
-  assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
-  return(witness)
+  [bool mut] witness{false}
+  or(equal(value, 1i32), assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   primec::Program program;

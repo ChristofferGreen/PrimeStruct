@@ -1314,11 +1314,11 @@ main() {
   }
 }
 
-TEST_CASE("boolean operators accept integer operands") {
+TEST_CASE("boolean operators accept bool operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(and(0i32, 1i32))
+  return(and(false, true))
 }
 )";
   std::string error;
@@ -1326,35 +1326,35 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("boolean operators accept unsigned operands") {
+TEST_CASE("boolean operators reject integer operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(or(0u64, 1u64))
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("boolean operators reject mixed signedness") {
-  const std::string source = R"(
-[return<bool>]
-main() {
-  return(and(true, 1u64))
+  return(or(0i32, 1i32))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators do not support mixed signed/unsigned operands") != std::string::npos);
+  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
 }
 
-TEST_CASE("not accepts integer operand") {
+TEST_CASE("boolean operators reject unsigned operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(not(0i32))
+  return(and(0u64, 1u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
+}
+
+TEST_CASE("not accepts bool operand") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(not(false))
 }
 )";
   std::string error;
@@ -1371,7 +1371,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
+  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
 }
 
 TEST_CASE("convert requires template argument") {

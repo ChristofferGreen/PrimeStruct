@@ -1253,7 +1253,7 @@ TEST_CASE("builtin and calls validate") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(and(1i32, 1i32))
+  return(and(true, false))
 }
 )";
   std::string error;
@@ -1265,12 +1265,12 @@ TEST_CASE("builtin and rejects float operands") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(and(1.5f, 1i32))
+  return(and(1.5f, true))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
+  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
 }
 
 TEST_CASE("builtin and rejects struct operands") {
@@ -1282,19 +1282,19 @@ thing() {
 [return<bool>]
 main() {
   [thing] item{1i32}
-  return(and(item, 1i32))
+  return(and(item, true))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("boolean operators require integer or bool operands") != std::string::npos);
+  CHECK(error.find("boolean operators require bool operands") != std::string::npos);
 }
 
 TEST_CASE("builtin or calls validate") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(or(0i32, 1i32))
+  return(or(false, true))
 }
 )";
   std::string error;
@@ -1306,7 +1306,7 @@ TEST_CASE("builtin not calls validate") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(not(0i32))
+  return(not(false))
 }
 )";
   std::string error;

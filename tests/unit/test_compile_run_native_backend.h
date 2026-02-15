@@ -1863,7 +1863,7 @@ TEST_CASE("compiles and runs native numeric boolean ops") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(or(and(0i32, 5i32), not(0i32)))
+  return(or(and(convert<bool>(0i32), convert<bool>(5i32)), not(convert<bool>(0i32))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_bool_numeric.prime", source);
@@ -1879,9 +1879,9 @@ TEST_CASE("compiles and runs native short-circuit and") {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
-  [i32 mut] witness{0i32}
-  assign(value, and(equal(value, 0i32), assign(witness, 9i32)))
-  return(witness)
+  [bool mut] witness{false}
+  and(equal(value, 0i32), assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_and_short.prime", source);
@@ -1897,9 +1897,9 @@ TEST_CASE("compiles and runs native short-circuit or") {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
-  [i32 mut] witness{0i32}
-  assign(value, or(equal(value, 1i32), assign(witness, 9i32)))
-  return(witness)
+  [bool mut] witness{false}
+  or(equal(value, 1i32), assign(witness, true))
+  return(convert<int>(witness))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_or_short.prime", source);
