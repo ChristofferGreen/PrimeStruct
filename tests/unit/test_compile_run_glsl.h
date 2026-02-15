@@ -141,10 +141,10 @@ TEST_CASE("glsl emitter writes loops") {
 [return<void>]
 main() {
   [i32 mut] value{0i32}
-  loop(2i32, do() { assign(value, plus(value, 1i32)) })
-  while(less_than(value, 3i32), do() { assign(value, plus(value, 1i32)) })
+  loop(2i32, stepper() { assign(value, plus(value, 1i32)) })
+  while(less_than(value, 3i32), branch() { assign(value, plus(value, 1i32)) })
   repeat(2i32) { assign(value, plus(value, 1i32)) }
-  for([i32 mut] i{0i32}, less_than(i, 2i32), increment(i), do() { assign(value, plus(value, i)) })
+  for([i32 mut] i{0i32}, less_than(i, 2i32), increment(i), body() { assign(value, plus(value, i)) })
   return()
 }
 )";

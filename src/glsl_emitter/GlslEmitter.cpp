@@ -1076,15 +1076,27 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
       out += "\n";
       return true;
     }
+    auto isLoopBlockEnvelope = [&](const Expr &candidate) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      return true;
+    };
     if (isSimpleCallName(stmt, "loop")) {
       if (stmt.args.size() != 2) {
-        error = "glsl backend requires loop(count, do() { ... })";
+        error = "glsl backend requires loop(count, body() { ... })";
         return false;
       }
       const Expr &countExpr = stmt.args[0];
       const Expr &bodyExpr = stmt.args[1];
-      if (!isSimpleCallName(bodyExpr, "do") || !bodyExpr.hasBodyArguments) {
-        error = "glsl backend requires loop body in do() { ... }";
+      if (!isLoopBlockEnvelope(bodyExpr)) {
+        error = "glsl backend requires loop body block";
         return false;
       }
       ExprResult count = emitExpr(countExpr, state, error);
@@ -1163,7 +1175,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     }
     if (isSimpleCallName(stmt, "while")) {
       if (stmt.args.size() != 2) {
-        error = "glsl backend requires while(cond, do() { ... })";
+        error = "glsl backend requires while(cond, body() { ... })";
         return false;
       }
       ExprResult cond = emitExpr(stmt.args[0], state, error);
@@ -1175,8 +1187,8 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       const Expr &bodyExpr = stmt.args[1];
-      if (!isSimpleCallName(bodyExpr, "do") || !bodyExpr.hasBodyArguments) {
-        error = "glsl backend requires while body in do() { ... }";
+      if (!isLoopBlockEnvelope(bodyExpr)) {
+        error = "glsl backend requires while body block";
         return false;
       }
       out += indent + "while (" + cond.code + ") {\n";
@@ -1188,7 +1200,7 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
     }
     if (isSimpleCallName(stmt, "for")) {
       if (stmt.args.size() != 4) {
-        error = "glsl backend requires for(init, cond, step, do() { ... })";
+        error = "glsl backend requires for(init, cond, step, body() { ... })";
         return false;
       }
       auto savedLocals = state.locals;
@@ -1208,8 +1220,8 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         return false;
       }
       const Expr &bodyExpr = stmt.args[3];
-      if (!isSimpleCallName(bodyExpr, "do") || !bodyExpr.hasBodyArguments) {
-        error = "glsl backend requires for body in do() { ... }";
+      if (!isLoopBlockEnvelope(bodyExpr)) {
+        error = "glsl backend requires for body block";
         state.locals = savedLocals;
         return false;
       }
