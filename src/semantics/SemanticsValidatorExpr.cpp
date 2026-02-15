@@ -2,6 +2,7 @@
 
 #include "primec/StringLiteral.h"
 
+#include <cctype>
 #include <functional>
 #include <optional>
 #include <unordered_set>

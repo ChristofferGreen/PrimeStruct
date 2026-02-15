@@ -43,3 +43,4 @@ bool validateProgramWithDefaults(const std::string &source,
 #include "test_semantics_bindings.h"
 #include "test_semantics_imports.h"
 #include "test_semantics_calls_and_flow.h"
+#include "test_semantics_lambdas.h"

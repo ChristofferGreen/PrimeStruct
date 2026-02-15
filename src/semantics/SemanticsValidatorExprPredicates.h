@@ -2,8 +2,156 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const std::unordered_map<std::string, BindingInfo> &locals,
                                       const Expr &expr) {
   if (expr.isLambda) {
-    error_ = "lambda expressions are not supported yet";
-    return false;
+    auto lastToken = [](const std::string &text) -> std::string {
+      size_t end = text.size();
+      while (end > 0 && std::isspace(static_cast<unsigned char>(text[end - 1])) != 0) {
+        --end;
+      }
+      if (end == 0) {
+        return {};
+      }
+      size_t start = end;
+      while (start > 0 && std::isspace(static_cast<unsigned char>(text[start - 1])) == 0) {
+        --start;
+      }
+      return text.substr(start, end - start);
+    };
+    auto addCapturedBinding = [&](std::unordered_map<std::string, BindingInfo> &lambdaLocals,
+                                  const std::string &name) -> bool {
+      if (lambdaLocals.count(name) > 0) {
+        error_ = "duplicate lambda capture: " + name;
+        return false;
+      }
+      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+        lambdaLocals.emplace(name, *paramBinding);
+        return true;
+      }
+      auto it = locals.find(name);
+      if (it != locals.end()) {
+        lambdaLocals.emplace(name, it->second);
+        return true;
+      }
+      error_ = "unknown capture: " + name;
+      return false;
+    };
+
+    if (!expr.hasBodyArguments && expr.bodyArguments.empty()) {
+      error_ = "lambda requires a body";
+      return false;
+    }
+
+    std::unordered_map<std::string, BindingInfo> lambdaLocals;
+    if (!expr.lambdaCaptures.empty()) {
+      bool captureAll = false;
+      std::vector<std::string> captureNames;
+      captureNames.reserve(expr.lambdaCaptures.size());
+      for (const auto &capture : expr.lambdaCaptures) {
+        std::string name = lastToken(capture);
+        if (name.empty()) {
+          error_ = "invalid lambda capture";
+          return false;
+        }
+        if (name == "=" || name == "&") {
+          captureAll = true;
+          continue;
+        }
+        captureNames.push_back(std::move(name));
+      }
+      if (captureAll) {
+        for (const auto &param : params) {
+          if (!addCapturedBinding(lambdaLocals, param.name)) {
+            return false;
+          }
+        }
+        for (const auto &entry : locals) {
+          if (!addCapturedBinding(lambdaLocals, entry.first)) {
+            return false;
+          }
+        }
+      } else {
+        for (const auto &name : captureNames) {
+          if (!addCapturedBinding(lambdaLocals, name)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    std::unordered_set<std::string> seen;
+    std::vector<ParameterInfo> lambdaParams;
+    lambdaParams.reserve(expr.args.size());
+    for (const auto &param : expr.args) {
+      if (!param.isBinding) {
+        error_ = "lambda parameters must use binding syntax";
+        return false;
+      }
+      if (param.hasBodyArguments || !param.bodyArguments.empty()) {
+        error_ = "lambda parameter does not accept block arguments: " + param.name;
+        return false;
+      }
+      if (!seen.insert(param.name).second) {
+        error_ = "duplicate parameter: " + param.name;
+        return false;
+      }
+      if (lambdaLocals.count(param.name) > 0) {
+        error_ = "duplicate binding name: " + param.name;
+        return false;
+      }
+      BindingInfo binding;
+      std::optional<std::string> restrictType;
+      if (!parseBindingInfo(param, expr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+        return false;
+      }
+      if (param.args.size() > 1) {
+        error_ = "lambda parameter defaults accept at most one argument: " + param.name;
+        return false;
+      }
+      if (param.args.size() == 1 && !isDefaultExprAllowed(param.args.front())) {
+        if (param.args.front().kind == Expr::Kind::Call && hasNamedArguments(param.args.front().argNames)) {
+          error_ = "lambda parameter default does not accept named arguments: " + param.name;
+        } else {
+          error_ = "lambda parameter default must be a literal or pure expression: " + param.name;
+        }
+        return false;
+      }
+      if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
+        (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
+      }
+      ParameterInfo info;
+      info.name = param.name;
+      info.binding = std::move(binding);
+      if (param.args.size() == 1) {
+        info.defaultExpr = &param.args.front();
+      }
+      if (restrictType.has_value()) {
+        const bool hasTemplate = !info.binding.typeTemplateArg.empty();
+        if (!restrictMatchesBinding(*restrictType,
+                                    info.binding.typeName,
+                                    info.binding.typeTemplateArg,
+                                    hasTemplate,
+                                    expr.namespacePrefix)) {
+          error_ = "restrict type does not match binding type";
+          return false;
+        }
+      }
+      lambdaLocals.emplace(info.name, info.binding);
+      lambdaParams.push_back(std::move(info));
+    }
+
+    bool sawReturn = false;
+    for (const auto &stmt : expr.bodyArguments) {
+      if (!validateStatement(lambdaParams,
+                             lambdaLocals,
+                             stmt,
+                             ReturnKind::Unknown,
+                             true,
+                             true,
+                             &sawReturn,
+                             expr.namespacePrefix)) {
+        return false;
+      }
+    }
+    return true;
   }
   std::optional<EffectScope> effectScope;
   if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.transforms.empty()) {
