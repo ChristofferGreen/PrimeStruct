@@ -203,11 +203,11 @@ bool applyPass(const std::string &input,
             ++scan;
             continue;
           }
-          if (c == ',' && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+          if ((c == ',' || c == ';') && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
             entryHasPairEquals = false;
             sawValueBoundary = false;
             pendingPairSeparator = false;
-            rewritten.push_back(c);
+            rewritten.push_back(',');
             ++scan;
             continue;
           }
