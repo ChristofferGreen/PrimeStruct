@@ -349,6 +349,78 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("no_padding transform validates without args") {
+  const std::string source = R"(
+[no_padding]
+Thing() {
+  [i32] a{1i32}
+  [i32] b{2i32}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("no_padding rejects alignment padding") {
+  const std::string source = R"(
+[no_padding]
+Thing() {
+  [i32] a{1i32}
+  [i64] b{2i64}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no_padding disallows alignment padding on field /Thing/b") != std::string::npos);
+}
+
+TEST_CASE("platform_independent_padding rejects implicit padding") {
+  const std::string source = R"(
+[platform_independent_padding]
+Thing() {
+  [i32] a{1i32}
+  [i64] b{2i64}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("platform_independent_padding requires explicit alignment on field /Thing/b") != std::string::npos);
+}
+
+TEST_CASE("platform_independent_padding allows explicit alignment") {
+  const std::string source = R"(
+[platform_independent_padding]
+Thing() {
+  [i32] a{1i32}
+  [align_bytes(8) i64] b{2i64}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("struct alignment rejects smaller field requirement") {
   const std::string source = R"(
 [struct]

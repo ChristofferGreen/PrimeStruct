@@ -1,7 +1,8 @@
     bool hasReturnTransformLocal = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
-          transform.name == "gpu_lane") {
+          transform.name == "gpu_lane" || transform.name == "no_padding" ||
+          transform.name == "platform_independent_padding") {
         info.returnsVoid = true;
         hasReturnTransformLocal = true;
         break;

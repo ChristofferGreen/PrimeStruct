@@ -111,7 +111,8 @@ bool validateAlignTransform(const Transform &transform, const std::string &conte
 }
 
 bool isStructTransformName(const std::string &name) {
-  return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane";
+  return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
+         name == "platform_independent_padding";
 }
 
 bool validateNamedArguments(const std::vector<Expr> &args,

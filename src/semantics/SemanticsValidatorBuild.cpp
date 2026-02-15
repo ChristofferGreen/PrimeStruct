@@ -52,7 +52,33 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     bool sawEffects = false;
     bool sawCapabilities = false;
+    bool sawNoPadding = false;
+    bool sawPlatformPadding = false;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
+        if (!transform.templateArgs.empty()) {
+          error_ = transform.name + " transform does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error_ = transform.name + " transform does not accept arguments on " + def.fullPath;
+          return false;
+        }
+        if (transform.name == "no_padding") {
+          if (sawNoPadding) {
+            error_ = "duplicate no_padding transform on " + def.fullPath;
+            return false;
+          }
+          sawNoPadding = true;
+        } else {
+          if (sawPlatformPadding) {
+            error_ = "duplicate platform_independent_padding transform on " + def.fullPath;
+            return false;
+          }
+          sawPlatformPadding = true;
+        }
+        continue;
+      }
       if (isBindingQualifierName(transform.name)) {
         error_ = "binding visibility/static transforms are only valid on bindings: " + def.fullPath;
         return false;
@@ -105,6 +131,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
           return false;
         }
       }
+    }
+    if (sawNoPadding && sawPlatformPadding) {
+      error_ = "no_padding and platform_independent_padding are mutually exclusive on " + def.fullPath;
+      return false;
     }
     bool isStruct = false;
     bool hasReturnTransform = false;

@@ -170,7 +170,8 @@ bool IrLowerer::lower(const Program &program,
   }
 
   auto isStructTransformName = [](const std::string &name) {
-    return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane";
+    return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
+           name == "platform_independent_padding";
   };
   auto isStructDefinition = [&](const Definition &def) {
     bool hasStruct = false;

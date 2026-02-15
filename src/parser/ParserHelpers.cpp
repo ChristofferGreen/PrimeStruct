@@ -116,7 +116,8 @@ bool validateTransformName(const std::string &text, std::string &error) {
 }
 
 bool isStructTransformName(const std::string &text) {
-  return text == "struct" || text == "pod" || text == "handle" || text == "gpu_lane";
+  return text == "struct" || text == "pod" || text == "handle" || text == "gpu_lane" || text == "no_padding" ||
+         text == "platform_independent_padding";
 }
 
 bool isBuiltinName(const std::string &name, bool allowMathBare) {

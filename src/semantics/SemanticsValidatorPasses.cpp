@@ -214,6 +214,10 @@ bool SemanticsValidator::validateExecutions() {
         error_ = "mut transform is not allowed on executions: " + exec.fullPath;
         return false;
       }
+      if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
+        error_ = "layout transforms are not supported on executions: " + exec.fullPath;
+        return false;
+      }
       if (isBindingQualifierName(transform.name)) {
         error_ = "binding visibility/static transforms are only valid on bindings: " + exec.fullPath;
         return false;
@@ -462,6 +466,15 @@ bool SemanticsValidator::validateStructLayouts() {
       error_ = "recursive struct layout not supported: " + def.fullPath;
       return false;
     }
+    bool requireNoPadding = false;
+    bool requirePlatformPadding = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "no_padding") {
+        requireNoPadding = true;
+      } else if (transform.name == "platform_independent_padding") {
+        requirePlatformPadding = true;
+      }
+    }
     uint32_t structAlign = 1;
     uint32_t explicitStructAlign = 1;
     bool hasStructAlign = false;
@@ -495,8 +508,16 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, fieldLayout.alignmentBytes)
                                           : fieldLayout.alignmentBytes;
-      offset = alignTo(offset, fieldAlign);
-      offset += fieldLayout.sizeBytes;
+      uint32_t alignedOffset = alignTo(offset, fieldAlign);
+      if (requireNoPadding && alignedOffset != offset) {
+        error_ = "no_padding disallows alignment padding on " + fieldContext;
+        return false;
+      }
+      if (requirePlatformPadding && alignedOffset != offset && !hasFieldAlign) {
+        error_ = "platform_independent_padding requires explicit alignment on " + fieldContext;
+        return false;
+      }
+      offset = alignedOffset + fieldLayout.sizeBytes;
       structAlign = std::max(structAlign, fieldAlign);
     }
     if (hasStructAlign && explicitStructAlign < structAlign) {
@@ -506,6 +527,14 @@ bool SemanticsValidator::validateStructLayouts() {
     }
     structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
     uint32_t totalSize = alignTo(offset, structAlign);
+    if (requireNoPadding && totalSize != offset) {
+      error_ = "no_padding disallows trailing padding on struct " + def.fullPath;
+      return false;
+    }
+    if (requirePlatformPadding && totalSize != offset && !hasStructAlign) {
+      error_ = "platform_independent_padding requires explicit struct alignment on " + def.fullPath;
+      return false;
+    }
     LayoutInfo layout{totalSize, structAlign};
     layoutCache.emplace(def.fullPath, layout);
     layoutStack.erase(def.fullPath);
