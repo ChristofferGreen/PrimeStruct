@@ -40,6 +40,46 @@ main() {
   CHECK(error.find("repeat does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("loop rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop<i32>(2i32) { }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("while rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  while<bool>(true) { }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("while does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("for rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for<i32>([i32 mut] i{0i32} less_than(i, 2i32) assign(i, plus(i, 1i32))) {
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("for does not accept template arguments") != std::string::npos);
+}
+
 TEST_CASE("brace constructor values validate") {
   const std::string source = R"(
 [return<int>]

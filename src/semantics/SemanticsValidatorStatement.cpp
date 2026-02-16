@@ -546,12 +546,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = "named arguments not supported for builtin calls";
       return false;
     }
-    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = "loop does not accept trailing block arguments";
-      return false;
-    }
     if (!stmt.templateArgs.empty()) {
       error_ = "loop does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "loop does not accept trailing block arguments";
       return false;
     }
     if (stmt.args.size() != 2) {
@@ -578,12 +578,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = "named arguments not supported for builtin calls";
       return false;
     }
-    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = "while does not accept trailing block arguments";
-      return false;
-    }
     if (!stmt.templateArgs.empty()) {
       error_ = "while does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "while does not accept trailing block arguments";
       return false;
     }
     if (stmt.args.size() != 2) {
@@ -606,12 +606,12 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       error_ = "named arguments not supported for builtin calls";
       return false;
     }
-    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = "for does not accept trailing block arguments";
-      return false;
-    }
     if (!stmt.templateArgs.empty()) {
       error_ = "for does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "for does not accept trailing block arguments";
       return false;
     }
     if (stmt.args.size() != 4) {
