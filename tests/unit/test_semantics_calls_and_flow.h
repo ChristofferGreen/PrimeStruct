@@ -630,6 +630,18 @@ main() {
   CHECK(error.find("if requires condition") != std::string::npos);
 }
 
+TEST_CASE("if condition requires bool") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(if(1i32, then(){ 1i32 }, else(){ 2i32 }))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("if condition requires bool") != std::string::npos);
+}
+
 TEST_CASE("if statement sugar accepts call arguments") {
   const std::string source = R"(
 [return<int>]
