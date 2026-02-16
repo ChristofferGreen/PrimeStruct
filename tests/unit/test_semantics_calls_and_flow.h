@@ -156,6 +156,19 @@ main() {
   CHECK(error.find("for condition requires bool") != std::string::npos);
 }
 
+TEST_CASE("for requires init condition step and body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for([i32 mut] i{0i32} less_than(i, 2i32) assign(i, plus(i, 1i32)))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("for requires init, condition, step, and body") != std::string::npos);
+}
+
 TEST_CASE("loop rejects non-block body") {
   const std::string source = R"(
 [return<int>]
