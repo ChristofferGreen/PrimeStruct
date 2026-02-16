@@ -197,14 +197,14 @@ bool rejectEffectTransforms(const std::vector<Transform> &transforms,
       continue;
     }
     for (const auto &effectName : transform.arguments) {
-      if (transform.name == "effects") {
-        if (isAllowedEffect(effectName)) {
-          continue;
-        }
-        error = "glsl backend does not support effect: " + effectName + " on " + context;
-        return false;
+      if (isAllowedEffect(effectName)) {
+        continue;
       }
-      error = "glsl backend does not support capability: " + effectName + " on " + context;
+      if (transform.name == "effects") {
+        error = "glsl backend does not support effect: " + effectName + " on " + context;
+      } else {
+        error = "glsl backend does not support capability: " + effectName + " on " + context;
+      }
       return false;
     }
   }
