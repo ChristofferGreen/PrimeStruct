@@ -869,6 +869,32 @@ main() {
   CHECK(readFile(outPath) == "default effects\n");
 }
 
+TEST_CASE("default entry effects enable io output") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  print_line("entry default effects"utf8)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_entry_default_effects.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_entry_default_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_entry_default_out.txt").string();
+  const std::string vmOutPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_entry_default_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "entry default effects\n");
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + vmOutPath;
+  CHECK(runCommand(runVmCmd) == 0);
+  CHECK(readFile(vmOutPath) == "entry default effects\n");
+}
+
 TEST_CASE("default effects token does not enable io_err output") {
   const std::string source = R"(
 [return<int>]
