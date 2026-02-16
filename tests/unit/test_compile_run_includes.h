@@ -180,6 +180,44 @@ TEST_CASE("compiles and runs include expansion with comments") {
   CHECK(runCommand(nativePath) == 7);
 }
 
+TEST_CASE("compiles and runs duplicate includes once") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_duplicate";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories(includeRoot / "1.2.0" / "std" / "io");
+    std::ofstream lib(includeRoot / "1.2.0" / "std" / "io" / "lib.prime");
+    CHECK(lib.good());
+    lib << "[return<int>]\nhelper(){ return(9i32) }\n";
+    CHECK(lib.good());
+  }
+
+  const std::string source =
+      "include<\"/std/io\", version=\"1.2.0\">\n"
+      "include<\"/std/io\", version=\"1.2.0\">\n"
+      "[return<int>]\n"
+      "main(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_duplicate_include.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_duplicate_inc_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_duplicate_inc_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                    " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+
+  const std::string runVmCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(runVmCmd) == 9);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
+                                       " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 9);
+}
+
 TEST_CASE("compiles and runs versioned include with single quotes") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_single_quotes";
