@@ -1475,15 +1475,8 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
                 " argument" + (expectedArgs == 1 ? "" : "s");
         return false;
       }
-      if (!stmt.args.empty()) {
-        const Expr &pathExpr = stmt.args.front();
-        if (pathExpr.kind != Expr::Kind::StringLiteral) {
-          error = "glsl backend requires string literal path for " + std::string(name);
-          return false;
-        }
-      }
       for (size_t i = 0; i < stmt.args.size(); ++i) {
-        if (i == 0 && stmt.args[i].kind == Expr::Kind::StringLiteral) {
+        if (i == 0) {
           continue;
         }
         ExprResult arg = emitExpr(stmt.args[i], state, error);

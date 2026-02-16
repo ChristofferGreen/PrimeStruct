@@ -384,9 +384,9 @@ TEST_CASE("glsl emitter ignores pathspace builtins") {
   const std::string source = R"(
 [return<void> effects(pathspace_notify, pathspace_insert, pathspace_take)]
 main() {
-  notify("/events/test"utf8, 1i32)
-  insert("/events/test"utf8, 2i32)
-  take("/events/test"utf8)
+  notify(array<string>("/events/test"utf8)[0i32], 1i32)
+  insert(array<string>("/events/test"utf8)[0i32], 2i32)
+  take(array<string>("/events/test"utf8)[0i32])
   return()
 }
 )";
