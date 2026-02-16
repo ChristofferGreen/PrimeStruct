@@ -1082,6 +1082,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer minus rejects pointer + pointer") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first{3i32}
+  [i32] second{4i32}
+  return(minus(location(first), location(second)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pointer arithmetic does not support pointer + pointer") != std::string::npos);
+}
+
+TEST_CASE("pointer minus rejects pointer on right") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{3i32}
+  [Pointer<i32>] ptr{location(value)}
+  return(minus(1i32, ptr))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pointer arithmetic requires pointer on the left") != std::string::npos);
+}
+
 TEST_CASE("pointer plus accepts reference locations") {
   const std::string source = R"(
 [return<int>]
