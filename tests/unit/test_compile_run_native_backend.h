@@ -895,6 +895,30 @@ main() {
   CHECK(readFile(vmOutPath) == "entry default effects\n");
 }
 
+TEST_CASE("entry defaults do not apply to helpers") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  log()
+  return(0i32)
+}
+
+[return<void>]
+log() {
+  print_line("helper"utf8)
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_entry_defaults_helpers.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_entry_defaults_helpers_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("print_line requires io_out effect") != std::string::npos);
+}
+
 TEST_CASE("default effects token does not enable io_err output") {
   const std::string source = R"(
 [return<int>]
