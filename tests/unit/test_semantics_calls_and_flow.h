@@ -2333,6 +2333,44 @@ job([b] 2i32, 1i32)
   CHECK(error.empty());
 }
 
+TEST_CASE("execution unknown named argument fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([i32] a, [i32] b) {
+  return(a)
+}
+
+job([c] 1i32, [b] 2i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown named argument: c") != std::string::npos);
+}
+
+TEST_CASE("execution duplicate named argument fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+job([a] 1i32, [a] 2i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate named argument: a") != std::string::npos);
+}
+
 TEST_CASE("execution arguments reject named builtins") {
   const std::string source = R"(
 [return<int>]
