@@ -275,28 +275,34 @@ main() {
 }
 
 TEST_CASE("binding rejects placement transforms") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [stack i32] value{1i32}
-  return(value)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("placement transforms are not supported on bindings") != std::string::npos);
+  const char *placements[] = {"stack", "heap", "buffer"};
+  for (const auto *placement : placements) {
+    CAPTURE(placement);
+    const std::string source =
+        std::string("[return<int>]\n") +
+        "main() {\n"
+        "  [" + placement + " i32] value{1i32}\n"
+        "  return(value)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("placement transforms are not supported on bindings") != std::string::npos);
+  }
 }
 
 TEST_CASE("parameter rejects placement transforms") {
-  const std::string source = R"(
-[return<int>]
-main([stack i32] value) {
-  return(value)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("placement transforms are not supported on bindings") != std::string::npos);
+  const char *placements[] = {"stack", "heap", "buffer"};
+  for (const auto *placement : placements) {
+    CAPTURE(placement);
+    const std::string source =
+        std::string("[return<int>]\n") +
+        "main([" + placement + " i32] value) {\n"
+        "  return(value)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("placement transforms are not supported on bindings") != std::string::npos);
+  }
 }
 
 TEST_CASE("binding rejects duplicate static transform") {
