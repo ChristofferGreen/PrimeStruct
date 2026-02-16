@@ -195,6 +195,19 @@ main() {
   CHECK(error.find("loop count requires integer") != std::string::npos);
 }
 
+TEST_CASE("while condition requires bool") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  while(1i32) { }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("while condition requires bool") != std::string::npos);
+}
+
 TEST_CASE("loop blocks ignore definition name collisions") {
   const std::string source = R"(
 [return<void>]
