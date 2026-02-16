@@ -479,6 +479,20 @@ main() {
   CHECK(error.find("unknown escape sequence") != std::string::npos);
 }
 
+TEST_CASE("non-ASCII identifier rejects") {
+  const std::string source = R"(
+[return<void>]
+maín() {
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid character") != std::string::npos);
+}
+
 TEST_CASE("ascii string literal rejects non-ASCII characters") {
   const std::string source = R"(
 [return<void>]
