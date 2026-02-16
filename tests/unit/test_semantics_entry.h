@@ -24,6 +24,18 @@ main([i32] value) {
   CHECK(error.find("entry definition must take a single array<string> parameter") != std::string::npos);
 }
 
+TEST_CASE("entry definition rejects multiple parameters") {
+  const std::string source = R"(
+[return<int>]
+main([array<string>] args, [i32] value) {
+  return(args.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("entry definition must take a single array<string> parameter") != std::string::npos);
+}
+
 TEST_CASE("entry definition without args parameter is allowed") {
   const std::string source = R"(
 [return<int>]
