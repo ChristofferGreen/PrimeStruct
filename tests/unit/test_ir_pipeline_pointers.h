@@ -305,6 +305,34 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("pointer minus uses byte offsets in VM") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first{4i32}
+  [i32] second{9i32}
+  return(dereference(minus(location(second), 16i32)))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  bool ok = vm.execute(module, result, error);
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(result == 4);
+}
+
 TEST_CASE("pointer plus accepts u64 offsets") {
   const std::string source = R"(
 [return<int>]
