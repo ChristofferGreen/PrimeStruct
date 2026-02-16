@@ -208,6 +208,19 @@ main() {
   CHECK(error.find("while condition requires bool") != std::string::npos);
 }
 
+TEST_CASE("while requires condition and body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  while(true)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("while requires condition and body") != std::string::npos);
+}
+
 TEST_CASE("loop blocks ignore definition name collisions") {
   const std::string source = R"(
 [return<void>]
