@@ -66,6 +66,61 @@ main() {
   CHECK(result == 1);
 }
 
+TEST_CASE("ir treats integer width convert as no-op") {
+  const std::string source = R"(
+[return<u64>]
+main() {
+  return(convert<u64>(-1i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  auto isConvertOp = [](primec::IrOpcode op) -> bool {
+    switch (op) {
+      case primec::IrOpcode::ConvertI32ToF32:
+      case primec::IrOpcode::ConvertI32ToF64:
+      case primec::IrOpcode::ConvertI64ToF32:
+      case primec::IrOpcode::ConvertI64ToF64:
+      case primec::IrOpcode::ConvertU64ToF32:
+      case primec::IrOpcode::ConvertU64ToF64:
+      case primec::IrOpcode::ConvertF32ToI32:
+      case primec::IrOpcode::ConvertF32ToI64:
+      case primec::IrOpcode::ConvertF32ToU64:
+      case primec::IrOpcode::ConvertF64ToI32:
+      case primec::IrOpcode::ConvertF64ToI64:
+      case primec::IrOpcode::ConvertF64ToU64:
+      case primec::IrOpcode::ConvertF32ToF64:
+      case primec::IrOpcode::ConvertF64ToF32:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  bool sawConvert = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (isConvertOp(inst.op)) {
+      sawConvert = true;
+      break;
+    }
+  }
+  CHECK_FALSE(sawConvert);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == UINT64_MAX);
+}
+
 TEST_CASE("ir lowers location of reference") {
   const std::string source = R"(
 [return<int>]
