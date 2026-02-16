@@ -234,6 +234,23 @@ main([array<string>] args) {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("primevm supports argv string bindings") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main([array<string>] args) {
+  [string] first{args[1i32]}
+  print_line(first)
+  return(args.count())
+}
+)";
+  const std::string srcPath = writeTemp("primevm_args_binding.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primevm_args_binding_out.txt").string();
+
+  const std::string runVmCmd = "./primevm " + srcPath + " --entry /main -- alpha beta > " + outPath;
+  CHECK(runCommand(runVmCmd) == 3);
+  CHECK(readFile(outPath) == "alpha\n");
+}
+
 TEST_CASE("compiles and runs with line comments after expressions") {
   const std::string source = R"(
 [return<int>]
