@@ -1103,6 +1103,20 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
+TEST_CASE("runs vm with map literal string binding key") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] key{"b"raw_utf8}
+  [map<string, i32>] values{map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
+  return(at(values, key))
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_literal_string_binding_key.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with string-keyed map indexing sugar") {
   const std::string source = R"(
 [return<int>]

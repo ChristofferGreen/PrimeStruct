@@ -2859,6 +2859,24 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs native map literal string binding key") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] key{"b"raw_utf8}
+  [map<string, i32>] values{map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
+  return(at(values, key))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal_string_binding_key.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_binding_key_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
+}
+
 TEST_CASE("compiles and runs native string-keyed map indexing sugar") {
   const std::string source = R"(
 [return<int>]
