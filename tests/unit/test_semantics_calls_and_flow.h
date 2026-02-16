@@ -2662,6 +2662,19 @@ main() {
   CHECK(error.find("clamp requires numeric operands") != std::string::npos);
 }
 
+TEST_CASE("clamp rejects mixed signed/unsigned operands") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  return(clamp(1i32, 0u64, 2u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("clamp does not support mixed signed/unsigned operands") != std::string::npos);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.comparisons_literals");
