@@ -2333,6 +2333,25 @@ job([b] 2i32, 1i32)
   CHECK(error.empty());
 }
 
+TEST_CASE("execution named argument duplicates positional parameter fails") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+job([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+job(1i32, [a] 2i32)
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named argument duplicates parameter: a") != std::string::npos);
+}
+
 TEST_CASE("execution unknown named argument fails") {
   const std::string source = R"(
 [return<int>]
