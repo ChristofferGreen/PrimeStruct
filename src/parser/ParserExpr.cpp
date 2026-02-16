@@ -159,12 +159,70 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
   }
   expect(TokenKind::LParen, "expected '(' after " + keyword);
   std::vector<Expr> slots;
+  std::vector<std::optional<std::string>> slotNames;
+  auto parseSlot = [&](Expr &slot) -> bool {
+    std::optional<std::string> argName;
+    if (match(TokenKind::LBracket)) {
+      size_t savedLabelPos = pos_;
+      expect(TokenKind::LBracket, "expected '['");
+      skipComments();
+      if (match(TokenKind::Identifier)) {
+        Token name = consume(TokenKind::Identifier, "expected argument label");
+        if (name.kind == TokenKind::End) {
+          return false;
+        }
+        if (name.text.find('/') != std::string::npos) {
+          return fail("named argument must be a simple identifier");
+        }
+        std::string nameError;
+        if (!validateIdentifierText(name.text, nameError)) {
+          return fail(nameError);
+        }
+        skipComments();
+        if (match(TokenKind::RBracket)) {
+          expect(TokenKind::RBracket, "expected ']' after argument label");
+          size_t nextIndex = pos_;
+          while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
+            ++nextIndex;
+          }
+          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+            bool looksLikeBinding = false;
+            if (allowBareBindings_ && tokens_[nextIndex].kind == TokenKind::Identifier) {
+              size_t afterName = nextIndex + 1;
+              while (afterName < tokens_.size() && isIgnorableToken(tokens_[afterName].kind)) {
+                ++afterName;
+              }
+              if (afterName < tokens_.size() && tokens_[afterName].kind == TokenKind::LBrace) {
+                looksLikeBinding = true;
+              }
+            }
+            if (!looksLikeBinding) {
+              argName = name.text;
+            } else {
+              pos_ = savedLabelPos;
+            }
+          } else {
+            pos_ = savedLabelPos;
+          }
+        } else {
+          pos_ = savedLabelPos;
+        }
+      } else {
+        pos_ = savedLabelPos;
+      }
+    }
+    if (!parseExpr(slot, namespacePrefix)) {
+      return false;
+    }
+    slotNames.push_back(argName);
+    return true;
+  };
   if (keyword == "for") {
     BareBindingGuard bindingGuard(*this, true);
     ArgumentLabelGuard labelGuard(*this);
     for (int i = 0; i < 3; ++i) {
       Expr slot;
-      if (!parseExpr(slot, namespacePrefix)) {
+      if (!parseSlot(slot)) {
         return false;
       }
       slots.push_back(std::move(slot));
@@ -173,7 +231,7 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
     Expr slot;
     {
       BareBindingGuard bindingGuard(*this, false);
-      if (!parseExpr(slot, namespacePrefix)) {
+      if (!parseSlot(slot)) {
         return false;
       }
     }
@@ -207,9 +265,14 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
   loopCall.name = keyword;
   loopCall.namespacePrefix = namespacePrefix;
   loopCall.transforms = transforms;
-  for (auto &slot : slots) {
+  for (size_t i = 0; i < slots.size(); ++i) {
+    auto &slot = slots[i];
     loopCall.args.push_back(std::move(slot));
-    loopCall.argNames.push_back(std::nullopt);
+    if (i < slotNames.size()) {
+      loopCall.argNames.push_back(slotNames[i]);
+    } else {
+      loopCall.argNames.push_back(std::nullopt);
+    }
   }
   loopCall.args.push_back(std::move(bodyCall));
   loopCall.argNames.push_back(std::nullopt);

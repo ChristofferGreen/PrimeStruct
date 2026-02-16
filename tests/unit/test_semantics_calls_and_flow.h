@@ -40,6 +40,45 @@ main() {
   CHECK(error.find("repeat does not accept template arguments") != std::string::npos);
 }
 
+TEST_CASE("loop rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop([count] 2i32, do(){ })
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("while rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  while([condition] true, do(){ })
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
+TEST_CASE("for rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  for([init] [i32 mut] i{0i32}, [condition] less_than(i, 2i32), [step] assign(i, plus(i, 1i32)), do(){ })
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+}
+
 TEST_CASE("loop rejects template arguments") {
   const std::string source = R"(
 [return<int>]
