@@ -224,6 +224,29 @@ main() {
   CHECK(output.find("flag = _ps_block_") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter ignores print builtins") {
+  const std::string source = R"(
+[return<void> effects(io_out, io_err)]
+main() {
+  [i32 mut] counter{0i32}
+  print(assign(counter, 2i32))
+  print("hello"utf8)
+  print_line(1i32)
+  print_error(2i32)
+  print_line_error(3i32)
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_print_noop.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_print_noop.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int counter") != std::string::npos);
+  CHECK(output.find("counter = 2") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter handles math constants") {
   const std::string source = R"(
 [return<void>]
@@ -369,7 +392,7 @@ main() {
 
 TEST_CASE("glsl emitter rejects explicit effects") {
   const std::string source = R"(
-[return<void> effects(io_out)]
+[return<void> effects(heap_alloc)]
 main() {
 }
 )";
@@ -386,7 +409,7 @@ TEST_CASE("glsl emitter rejects effects on executions") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [effects(io_out)] plus(1i32, 2i32)
+  [effects(heap_alloc)] plus(1i32, 2i32)
   return()
 }
 )";
@@ -396,7 +419,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
+  CHECK(readFile(errPath).find("execution effects must be a subset") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter rejects non-void entry") {

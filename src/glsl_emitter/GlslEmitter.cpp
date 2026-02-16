@@ -187,7 +187,7 @@ bool rejectEffectTransforms(const std::vector<Transform> &transforms,
                             const std::string &context,
                             std::string &error) {
   auto isAllowedEffect = [](const std::string &name) -> bool {
-    return name.rfind("pathspace_", 0) == 0;
+    return name == "io_out" || name == "io_err" || name.rfind("pathspace_", 0) == 0;
   };
   for (const auto &transform : transforms) {
     if (transform.name != "effects" && transform.name != "capabilities") {
@@ -1473,6 +1473,37 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
         appendIndented(out, arg.prelude, indent);
         out += indent + arg.code + ";\n";
       }
+      return true;
+    }
+    if (isSimpleCallName(stmt, "print") || isSimpleCallName(stmt, "print_line") || isSimpleCallName(stmt, "print_error") ||
+        isSimpleCallName(stmt, "print_line_error")) {
+      const std::string name = normalizeName(stmt);
+      if (hasNamedArguments(stmt.argNames)) {
+        error = "glsl backend requires " + name + " to use positional arguments";
+        return false;
+      }
+      if (!stmt.templateArgs.empty()) {
+        error = "glsl backend does not support template arguments on " + name;
+        return false;
+      }
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error = "glsl backend does not support block arguments on " + name;
+        return false;
+      }
+      if (stmt.args.size() != 1) {
+        error = "glsl backend requires " + name + " with exactly one argument";
+        return false;
+      }
+      const Expr &argExpr = stmt.args.front();
+      if (argExpr.kind == Expr::Kind::StringLiteral) {
+        return true;
+      }
+      ExprResult arg = emitExpr(argExpr, state, error);
+      if (!error.empty()) {
+        return false;
+      }
+      appendIndented(out, arg.prelude, indent);
+      out += indent + arg.code + ";\n";
       return true;
     }
     if (isSimpleCallName(stmt, "if")) {
