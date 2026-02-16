@@ -403,6 +403,30 @@ main() {
   CHECK(runCommand(nativePath) == 1);
 }
 
+TEST_CASE("compiles and runs convert bool from negative integer") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(convert<bool>(-1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_convert_bool_negative.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_convert_bool_negative_exe").string();
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_convert_bool_negative_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 1);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 1);
+}
+
 TEST_CASE("compiles and runs boolean ops short-circuit") {
   const std::string source = R"(
 [return<int>]
