@@ -205,6 +205,23 @@ add([i32] left, [i32] right{plus(1i32, 2i32)}) {
   CHECK(error.empty());
 }
 
+TEST_CASE("parameter qualifiers are allowed") {
+  const std::string source = R"(
+[return<int>]
+add([i32 mut] left, [copy i32] right) {
+  return(plus(left, right))
+}
+
+[return<int>]
+main() {
+  return(add(1i32, 2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("parameter default vector literal requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
