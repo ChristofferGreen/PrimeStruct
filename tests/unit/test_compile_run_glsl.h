@@ -16,6 +16,22 @@ main() {
   CHECK(output.find("void main()") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter allows entry args parameter") {
+  const std::string source = R"(
+[return<void>]
+main([array<string>] args) {
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_entry_args.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_entry_args.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("void main()") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter writes spirv when tool available") {
   if (!hasSpirvTools()) {
     return;

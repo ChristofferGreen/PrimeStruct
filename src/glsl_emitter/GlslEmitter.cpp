@@ -247,6 +247,26 @@ bool getExplicitBindingTypeName(const Expr &expr, std::string &outTypeName) {
   return false;
 }
 
+bool isEntryArgsParam(const Expr &expr) {
+  bool sawType = false;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      return false;
+    }
+    sawType = true;
+    if (transform.name != "array" || transform.templateArgs.size() != 1 || transform.templateArgs.front() != "string") {
+      return false;
+    }
+  }
+  return sawType;
+}
+
 GlslType glslTypeFromName(const std::string &name, EmitState &state, std::string &error) {
   if (name == "bool") {
     return GlslType::Bool;
@@ -1841,8 +1861,10 @@ bool GlslEmitter::emitSource(const Program &program,
     }
   }
   if (!entryDef->parameters.empty()) {
-    error = "glsl backend requires entry definition to have no parameters";
-    return false;
+    if (entryDef->parameters.size() != 1 || !isEntryArgsParam(entryDef->parameters.front())) {
+      error = "glsl backend requires entry definition to have no parameters or a single array<string> parameter";
+      return false;
+    }
   }
   bool hasReturnTransform = false;
   bool returnsVoid = false;
