@@ -195,6 +195,19 @@ main() {
   CHECK(error.find("loop count requires integer") != std::string::npos);
 }
 
+TEST_CASE("loop requires count and body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop(2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop requires count and body") != std::string::npos);
+}
+
 TEST_CASE("while condition requires bool") {
   const std::string source = R"(
 [return<int>]
