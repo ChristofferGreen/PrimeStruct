@@ -1721,23 +1721,26 @@ execute_repeat(2i32) { main() }
 }
 
 TEST_CASE("execution rejects placement transforms") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-[stack]
-execute_repeat(2i32) { main() }
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("placement transforms are not supported") != std::string::npos);
+  const char *placements[] = {"stack", "heap", "buffer"};
+  for (const auto *placement : placements) {
+    CAPTURE(placement);
+    const std::string source =
+        std::string("[return<int>]\n") +
+        "main() {\n"
+        "  return(1i32)\n"
+        "}\n"
+        "\n"
+        "[return<void>]\n"
+        "execute_repeat([i32] x) {\n"
+        "  return()\n"
+        "}\n"
+        "\n"
+        "[" + placement + "]\n"
+        "execute_repeat(2i32) { main() }\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("placement transforms are not supported") != std::string::npos);
+  }
 }
 
 TEST_CASE("execution rejects duplicate effects transforms") {
