@@ -188,6 +188,23 @@ add([i32] left, [i32] right{10i32}) {
   CHECK(error.empty());
 }
 
+TEST_CASE("parameter default pure expression is allowed") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+
+[return<int>]
+add([i32] left, [i32] right{plus(1i32, 2i32)}) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("parameter default vector literal requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
