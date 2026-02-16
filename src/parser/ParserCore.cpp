@@ -782,7 +782,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       }
       std::string nameError;
       if (!validateIdentifierText(name.text, nameError)) {
-        return fail(nameError);
+        if (!isLoopFormKeyword(name.text) || (!match(TokenKind::LParen) && !match(TokenKind::LAngle))) {
+          return fail(nameError);
+        }
       }
 
       Expr callExpr;

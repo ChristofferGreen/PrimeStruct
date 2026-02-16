@@ -1617,7 +1617,7 @@ main() {
   CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
 }
 
-TEST_CASE("transform-prefixed loop requires body") {
+TEST_CASE("transform-prefixed loop parses without body") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1629,7 +1629,7 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("reserved keyword cannot be used as identifier: loop") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 TEST_SUITE_END();

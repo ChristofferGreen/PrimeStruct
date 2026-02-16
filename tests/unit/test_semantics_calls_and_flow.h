@@ -406,6 +406,32 @@ main() {
   CHECK(error.find("shared_scope does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("shared_scope rejects template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [shared_scope<i32>] loop(1i32) { }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("shared_scope does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("shared_scope requires loop body envelope") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [shared_scope] loop(1i32, do())
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("shared_scope requires loop body in do() { ... }") != std::string::npos);
+}
+
 TEST_CASE("shared_scope hoists while bindings") {
   const std::string source = R"(
 [return<int>]
