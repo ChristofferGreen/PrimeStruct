@@ -927,6 +927,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct brace constructor uses last expression") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+use([thing] item) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(use(thing{
+    [i32] temp{1i32}
+    plus(temp, 2i32)
+  }))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("binding initializer accepts labeled arguments") {
   const std::string source = R"(
 [struct]
