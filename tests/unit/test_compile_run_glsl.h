@@ -244,6 +244,32 @@ main() {
   CHECK(output.find("while (") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter handles shared_scope while") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  [shared_scope]
+  while(less_than(i, 3i32)) {
+    [i32] inner{1i32}
+    assign(total, plus(total, inner))
+    assign(i, plus(i, 1i32))
+  }
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_shared_scope_while.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_glsl_shared_scope_while.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("int total") != std::string::npos);
+  CHECK(output.find("int inner") != std::string::npos);
+  CHECK(output.find("while (") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter handles block initializers") {
   const std::string source = R"(
 [return<void>]
