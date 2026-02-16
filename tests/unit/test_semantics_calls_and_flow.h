@@ -406,6 +406,27 @@ main() {
   CHECK(error.find("shared_scope does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("shared_scope hoists while bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  [shared_scope]
+  while(less_than(i, 3i32)) {
+    [i32 mut] acc{0i32}
+    assign(acc, plus(acc, 1i32))
+    assign(total, plus(total, acc))
+    assign(i, plus(i, 1i32))
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("reference participates in signedness checks") {
   const std::string source = R"(
 [return<int>]
