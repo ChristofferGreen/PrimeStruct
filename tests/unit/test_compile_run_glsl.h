@@ -16,6 +16,52 @@ main() {
   CHECK(output.find("void main()") != std::string::npos);
 }
 
+TEST_CASE("defaults to glsl extension for emit=glsl") {
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_glsl.prime", source);
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_glsl_default_out";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " --out-dir " + outDir.string() + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  std::filesystem::path outputPath = outDir / std::filesystem::path(srcPath).stem();
+  outputPath.replace_extension(".glsl");
+  CHECK(std::filesystem::exists(outputPath));
+}
+
+TEST_CASE("defaults to spv extension for emit=spirv") {
+  if (!hasSpirvTools()) {
+    return;
+  }
+  const std::string source = R"(
+[return<void>]
+main() {
+}
+)";
+  const std::string srcPath = writeTemp("compile_default_spirv.prime", source);
+  const std::filesystem::path outDir = std::filesystem::temp_directory_path() / "primec_spirv_default_out";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::string compileCmd =
+      "./primec --emit=spirv " + srcPath + " --out-dir " + outDir.string() + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  std::filesystem::path outputPath = outDir / std::filesystem::path(srcPath).stem();
+  outputPath.replace_extension(".spv");
+  CHECK(std::filesystem::exists(outputPath));
+  CHECK(std::filesystem::file_size(outputPath) > 0);
+}
+
 TEST_CASE("glsl emitter allows entry args parameter") {
   const std::string source = R"(
 [return<void>]
