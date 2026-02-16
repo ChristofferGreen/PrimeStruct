@@ -81,6 +81,22 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("for accepts semicolon separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32}; less_than(i, 3i32); assign(i, plus(i, 1i32))) {
+    assign(total, plus(total, i))
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("loop allowed in value blocks") {
   const std::string source = R"(
 [return<int>]
