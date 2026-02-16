@@ -1072,6 +1072,22 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("rejects vm map literal string values") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<string, string>("a"raw_utf8, "b"raw_utf8)
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_map_literal_string_values.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_map_literal_string_values_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend only supports numeric/bool map values\n");
+}
+
 TEST_CASE("runs vm with string-keyed map literals") {
   const std::string source = R"(
 [return<int>]

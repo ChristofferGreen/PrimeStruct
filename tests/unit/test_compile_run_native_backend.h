@@ -2820,6 +2820,26 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native map literal string values") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  map<string, string>("a"raw_utf8, "b"raw_utf8)
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_map_literal_string_values.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_values_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_map_literal_string_values_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) == "Native lowering error: native backend only supports numeric/bool map values\n");
+}
+
 TEST_CASE("compiles and runs native string-keyed map literals") {
   const std::string source = R"(
 [return<int>]
