@@ -601,15 +601,19 @@ main() {
 }
 
 TEST_CASE("placement transforms are rejected") {
-  const std::string source = R"(
-[stack]
-main() {
-  [i32] value{1i32}
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("placement transforms are not supported") != std::string::npos);
+  const char *placements[] = {"stack", "heap", "buffer"};
+  for (const auto *placement : placements) {
+    CAPTURE(placement);
+    const std::string source =
+        std::string("[") + placement +
+        "]\n"
+        "main() {\n"
+        "  [i32] value{1i32}\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("placement transforms are not supported") != std::string::npos);
+  }
 }
 
 TEST_CASE("struct definitions require field initializers") {
