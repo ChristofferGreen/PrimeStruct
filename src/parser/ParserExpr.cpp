@@ -161,6 +161,7 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
   std::vector<Expr> slots;
   if (keyword == "for") {
     BareBindingGuard bindingGuard(*this, true);
+    ArgumentLabelGuard labelGuard(*this);
     for (int i = 0; i < 3; ++i) {
       Expr slot;
       if (!parseExpr(slot, namespacePrefix)) {
