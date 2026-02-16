@@ -1178,6 +1178,33 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer plus accepts i64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{3i32}
+  return(dereference(plus(location(value), 16i64)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pointer minus accepts i64 offsets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] first{3i32}
+  [i32] second{4i32}
+  return(dereference(minus(location(second), 16i64)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("pointer minus rejects pointer + pointer") {
   const std::string source = R"(
 [return<int>]
