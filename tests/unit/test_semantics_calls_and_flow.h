@@ -160,6 +160,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("loop accepts i64 count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  loop(2i64) {
+    assign(total, plus(total, 1i32))
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("loop accepts u64 count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  loop(2u64) {
+    assign(total, plus(total, 1i32))
+  }
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("for accepts semicolon separators") {
   const std::string source = R"(
 [return<int>]
