@@ -72,6 +72,18 @@ main([array<string>] args{array<string>("hi"utf8)}) {
   CHECK(error.find("entry parameter does not allow a default value") != std::string::npos);
 }
 
+TEST_CASE("entry definition rejects templated definition") {
+  const std::string source = R"(
+[return<int>]
+main<T>() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("entry definition cannot be templated: /main") != std::string::npos);
+}
+
 TEST_CASE("entry default effects enable io_out") {
   const std::string source = R"(
 [return<int>]
