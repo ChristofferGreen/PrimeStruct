@@ -563,15 +563,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (match(TokenKind::LBrace)) {
-          if (!bindingTransforms) {
-            if (call.name == "block") {
-              call.hasBodyArguments = true;
-              if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
-                return false;
-              }
-            out = std::move(call);
-            return true;
-          }
+        if (!bindingTransforms) {
           if (!allowBareBindings_) {
             return parseBraceConstructor(call, out);
           }
@@ -815,13 +807,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
-          if (call.name == "block") {
-            hasCallSyntax = true;
-            call.hasBodyArguments = true;
-            if (!parseValueBlock(call.bodyArguments, namespacePrefix)) {
-              return false;
-            }
-          } else if (!allowBareBindings_) {
+          if (!allowBareBindings_) {
             return parseBraceConstructor(call, out);
           } else if (allowBareBindings_) {
             if (!call.templateArgs.empty()) {

@@ -568,11 +568,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("block expression without parens validates") {
+TEST_CASE("block expression with parens validates") {
   const std::string source = R"(
 [return<bool>]
 main() {
-  return(block{
+  return(block() {
     [mut] value{"hello"utf8}
     equal(value, "hello"utf8)
   })
@@ -587,7 +587,7 @@ TEST_CASE("block expression allows return value") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{
+  return(block() {
     return(2i32)
     3i32
   })
@@ -626,7 +626,7 @@ TEST_CASE("block expression requires a value") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{ })
+  return(block() { })
 }
 )";
   std::string error;
@@ -638,7 +638,7 @@ TEST_CASE("block expression must end with expression") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{
+  return(block() {
     [i32] value{1i32}
   })
 }

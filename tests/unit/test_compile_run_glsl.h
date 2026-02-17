@@ -397,7 +397,7 @@ TEST_CASE("glsl emitter handles block expressions in arguments") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [i32] value{plus(block{ [i32] base{1i32} base }, 2i32)}
+  [i32] value{plus(block() { [i32] base{1i32} base }, 2i32)}
   return()
 }
 )";

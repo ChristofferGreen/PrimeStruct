@@ -243,11 +243,11 @@ main() {
   CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
-TEST_CASE("parses block call without parens") {
+TEST_CASE("parses block call with parens") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{ 3i32 })
+  return(block() { 3i32 })
 }
 )";
   const auto program = parseProgram(source);
@@ -1874,11 +1874,11 @@ main() {
   CHECK(expr.args[2].bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
-TEST_CASE("parses block expression without parens") {
+TEST_CASE("parses block expression with parens") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{ 1i32 })
+  return(block() { 1i32 })
 }
 )";
   const auto program = parseProgram(source);
@@ -1896,7 +1896,7 @@ TEST_CASE("parses block expression with mixed separators") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{ 1i32, 2i32 3i32 })
+  return(block() { 1i32, 2i32 3i32 })
 }
 )";
   const auto program = parseProgram(source);
@@ -1913,7 +1913,7 @@ TEST_CASE("parses return inside block expression list") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{ return(1i32) 2i32 })
+  return(block() { return(1i32) 2i32 })
 }
 )";
   const auto program = parseProgram(source);
@@ -1950,7 +1950,7 @@ TEST_CASE("parses if sugar inside block with mixed separators") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(block{ if(true) { 1i32 } else { 2i32 }, 3i32 4i32 })
+  return(block() { if(true) { 1i32 } else { 2i32 }, 3i32 4i32 })
 }
 )";
   const auto program = parseProgram(source);

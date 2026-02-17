@@ -51,19 +51,16 @@ main() {
   CHECK(error.find("lambda requires a body") != std::string::npos);
 }
 
-TEST_CASE("block shorthand allowed in canonical mode") {
+TEST_CASE("block shorthand rejected in expression context") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(block{ 1i32 })
 }
 )";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize(), false);
-  primec::Program program;
   std::string error;
-  CHECK(parser.parse(program, error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("block requires block arguments") != std::string::npos);
 }
 
 TEST_CASE("reserved keyword cannot name definition") {
@@ -677,7 +674,7 @@ TEST_CASE("block return does not satisfy definition return") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [effects(io_out)] block{ return(1i32) }
+  [effects(io_out)] block() { return(1i32) }
 }
 )";
   primec::Lexer lexer(source);

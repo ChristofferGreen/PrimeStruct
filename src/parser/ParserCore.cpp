@@ -799,37 +799,20 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
           if (!bindingTransforms) {
-            if (callExpr.name == "block") {
-              hasCallSyntax = true;
-              callExpr.hasBodyArguments = true;
-              if (!parseValueBlock(callExpr.bodyArguments, def.namespacePrefix)) {
-                return false;
-              }
-              def.statements.push_back(std::move(callExpr));
-              continue;
-            }
             return fail("call body requires parameter list");
           }
-          if (callExpr.name == "block") {
-            hasCallSyntax = true;
-            callExpr.hasBodyArguments = true;
-            if (!parseValueBlock(callExpr.bodyArguments, def.namespacePrefix)) {
-              return false;
-            }
-          } else {
-            if (!callExpr.templateArgs.empty()) {
-              return fail("template arguments require a call");
-            }
-            callExpr.isBinding = true;
-            if (!parseBindingInitializerList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
-              return false;
-            }
-            if (!finalizeBindingInitializer(callExpr)) {
-              return false;
-            }
-            def.statements.push_back(std::move(callExpr));
-            continue;
+          if (!callExpr.templateArgs.empty()) {
+            return fail("template arguments require a call");
           }
+          callExpr.isBinding = true;
+          if (!parseBindingInitializerList(callExpr.args, callExpr.argNames, def.namespacePrefix)) {
+            return false;
+          }
+          if (!finalizeBindingInitializer(callExpr)) {
+            return false;
+          }
+          def.statements.push_back(std::move(callExpr));
+          continue;
         } else {
           if (!allowSurfaceSyntax_ &&
               (callExpr.name == "if" || callExpr.name == "loop" || callExpr.name == "while" || callExpr.name == "for")) {
