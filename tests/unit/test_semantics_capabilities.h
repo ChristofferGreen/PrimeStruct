@@ -784,7 +784,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("lifecycle helpers require struct tag") {
+TEST_CASE("lifecycle helpers allow field-only struct parents") {
   const std::string source = R"(
 thing() {
   [i32] value{1i32}
@@ -800,8 +800,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("lifecycle helper must be nested inside a struct") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("lifecycle helpers provide this") {
