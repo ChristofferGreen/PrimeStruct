@@ -708,6 +708,25 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("text transform rules ignore nested transform lists") {
+  const std::string source = R"(
+main() {
+  [implicit-utf8 string] name{"ok"}
+  print_line("nope")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_nested_list.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_nested_list_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none " +
+      "--text-transform-rules=/main=operators 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
 TEST_CASE("text transform rules recurse when requested") {
   const std::string source = R"(
 namespace math {

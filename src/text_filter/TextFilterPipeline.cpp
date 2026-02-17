@@ -1423,12 +1423,16 @@ bool filtersEqual(const std::vector<std::string> &left, const std::vector<std::s
 }
 
 bool scanLeadingTransformList(const std::string &input, std::vector<std::string> &out) {
-  size_t listStart = findNextTransformListStart(input, 0);
-  if (listStart == std::string::npos) {
+  size_t pos = 0;
+  skipWhitespaceAndComments(input, pos);
+  if (pos >= input.size() || input[pos] != '[') {
+    return false;
+  }
+  if (!isTransformListBoundary(input, pos)) {
     return false;
   }
   TransformListScan listScan;
-  if (!scanTransformList(input, listStart, listScan)) {
+  if (!scanTransformList(input, pos, listScan)) {
     return false;
   }
   out = listScan.textTransforms;
