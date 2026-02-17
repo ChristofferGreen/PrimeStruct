@@ -265,6 +265,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("align_bytes accepts digit separators") {
+  const std::string source = R"(
+[align_bytes(1,024), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("align_bytes rejects non-integer argument") {
   const std::string source = R"(
 [align_bytes(foo), return<int>]
@@ -316,6 +328,18 @@ main() {
 TEST_CASE("align_kbytes validates integer argument") {
   const std::string source = R"(
 [align_kbytes(4), return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("align_kbytes accepts hex literal") {
+  const std::string source = R"(
+[align_kbytes(0x10), return<int>]
 main() {
   return(1i32)
 }

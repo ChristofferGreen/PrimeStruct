@@ -68,28 +68,53 @@ bool validateCapabilitiesTransform(const Transform &transform, const std::string
 }
 
 bool parsePositiveIntArg(const std::string &text, int &value) {
-  std::string digits = text;
-  if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
-    digits.resize(digits.size() - 3);
+  if (text.empty()) {
+    return false;
+  }
+  std::string cleaned;
+  cleaned.reserve(text.size());
+  for (char c : text) {
+    if (c != ',') {
+      cleaned.push_back(c);
+    }
+  }
+  std::string digits = cleaned;
+  if (digits.size() > 3) {
+    const std::string suffix = digits.substr(digits.size() - 3);
+    if (suffix == "i32" || suffix == "i64" || suffix == "u64") {
+      digits.resize(digits.size() - 3);
+    }
+  }
+  if (digits.empty() || digits[0] == '-') {
+    return false;
+  }
+  int base = 10;
+  if (digits.size() > 2 && digits[0] == '0' && (digits[1] == 'x' || digits[1] == 'X')) {
+    base = 16;
+    digits = digits.substr(2);
   }
   if (digits.empty()) {
     return false;
   }
-  int parsed = 0;
   for (char c : digits) {
-    if (!std::isdigit(static_cast<unsigned char>(c))) {
+    if (base == 16) {
+      if (!std::isxdigit(static_cast<unsigned char>(c))) {
+        return false;
+      }
+    } else if (!std::isdigit(static_cast<unsigned char>(c))) {
       return false;
     }
-    int digit = c - '0';
-    if (parsed > (std::numeric_limits<int>::max() - digit) / 10) {
-      return false;
-    }
-    parsed = parsed * 10 + digit;
   }
-  if (parsed <= 0) {
+  unsigned long long parsed = 0;
+  try {
+    parsed = std::stoull(digits, nullptr, base);
+  } catch (const std::exception &) {
     return false;
   }
-  value = parsed;
+  if (parsed == 0 || parsed > static_cast<unsigned long long>(std::numeric_limits<int>::max())) {
+    return false;
+  }
+  value = static_cast<int>(parsed);
   return true;
 }
 
