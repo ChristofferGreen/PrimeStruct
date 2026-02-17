@@ -511,7 +511,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
     }
-    if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
       return false;
     }
     if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
@@ -925,7 +925,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
         return false;
       }
-      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
         return false;
       }
       if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
@@ -1111,7 +1111,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
     }
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBlockCall(expr)) {
       const std::string resolved = resolveCalleePath(expr);
       if (defMap_.find(resolved) == defMap_.end()) {
         error_ = "block arguments require a definition target: " + resolved;

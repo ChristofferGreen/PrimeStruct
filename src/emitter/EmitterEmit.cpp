@@ -412,7 +412,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
             return false;
           }
-          if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+          if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
             return false;
           }
           if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
@@ -1191,7 +1191,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
             return false;
           }
-          if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+          if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
             return false;
           }
           if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {

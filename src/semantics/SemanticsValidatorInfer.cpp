@@ -103,7 +103,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
           return false;
         }
-        if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+        if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
           return false;
         }
         if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {

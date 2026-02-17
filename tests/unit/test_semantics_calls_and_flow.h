@@ -53,6 +53,22 @@ main() {
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
+TEST_CASE("loop body rejects named arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  loop(2i32, body([step] 1i32) {
+    assign(total, plus(total, 1i32))
+  })
+  return(total)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop body requires a block envelope") != std::string::npos);
+}
+
 TEST_CASE("while rejects named arguments") {
   const std::string source = R"(
 [return<int>]

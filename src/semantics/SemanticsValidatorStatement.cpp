@@ -266,7 +266,6 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return false;
   };
-
   if (stmt.isBinding) {
     if (!allowBindings) {
       error_ = "binding not allowed in execution body";
@@ -306,18 +305,17 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       const std::string resolved = resolveCalleePath(expr);
       return structNames_.count(resolved) > 0;
     };
-    auto getEnvelopeValueExpr = [&](const Expr &candidate) -> const Expr * {
+    auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
       if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-        return nullptr;
-      }
-      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
         return nullptr;
       }
       if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
         return nullptr;
       }
-      const std::string resolved = resolveCalleePath(candidate);
-      if (defMap_.find(resolved) != defMap_.end()) {
+      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+        return nullptr;
+      }
+      if (!allowAnyName && !isBlockCall(candidate)) {
         return nullptr;
       }
       const Expr *valueExpr = nullptr;
@@ -337,13 +335,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (isIfCall(candidate) && candidate.args.size() == 3) {
         const Expr &thenArg = candidate.args[1];
         const Expr &elseArg = candidate.args[2];
-        const Expr *thenValue = getEnvelopeValueExpr(thenArg);
-        const Expr *elseValue = getEnvelopeValueExpr(elseArg);
+        const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
+        const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
         const Expr &thenExpr = thenValue ? *thenValue : thenArg;
         const Expr &elseExpr = elseValue ? *elseValue : elseArg;
         return isStructConstructorValueExpr(thenExpr) && isStructConstructorValueExpr(elseExpr);
       }
-      if (const Expr *valueExpr = getEnvelopeValueExpr(candidate)) {
+      if (const Expr *valueExpr = getEnvelopeValueExpr(candidate, false)) {
         return isStructConstructorValueExpr(*valueExpr);
       }
       return false;
@@ -464,7 +462,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
         return false;
       }
-      if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
         return false;
       }
       if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
@@ -945,7 +943,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return true;
     }
   }
-  if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+  if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBlockCall(stmt)) {
     std::string collectionName;
     if (getBuiltinCollectionName(stmt, collectionName)) {
       error_ = collectionName + " literal does not accept block arguments";
@@ -978,7 +976,7 @@ bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
     }
-    if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
       return false;
     }
     if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
