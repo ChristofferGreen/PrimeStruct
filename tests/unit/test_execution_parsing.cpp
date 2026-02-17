@@ -14,13 +14,6 @@ primec::Program parseProgram(const std::string &source) {
   return program;
 }
 
-bool parseProgramWithError(const std::string &source, std::string &error) {
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  return parser.parse(program, error);
-}
-
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.parser.executions");
@@ -36,18 +29,19 @@ execute_task(1i32)
   CHECK_FALSE(program.executions[0].hasBodyArguments);
 }
 
-TEST_CASE("rejects execution body") {
+TEST_CASE("parses execution body arguments") {
   const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
+execute_task(1i32) {
+  [i32] value{2i32}
+  main()
 }
-
-execute_task(1i32) { }
 )";
-  std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("executions do not accept body arguments") != std::string::npos);
+  const auto program = parseProgram(source);
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].hasBodyArguments);
+  REQUIRE(program.executions[0].bodyArguments.size() == 2);
+  CHECK(program.executions[0].bodyArguments[0].isBinding);
+  CHECK(program.executions[0].bodyArguments[1].kind == primec::Expr::Kind::Call);
 }
 
 TEST_CASE("parses execution transforms") {

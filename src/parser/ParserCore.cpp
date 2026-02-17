@@ -351,9 +351,6 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return false;
   }
 
-  if (match(TokenKind::LBrace)) {
-    return fail("executions do not accept body arguments");
-  }
   Execution exec;
   exec.name = name.text;
   exec.namespacePrefix = currentNamespacePrefix();
@@ -362,6 +359,13 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.templateArgs = std::move(templateArgs);
   exec.arguments = std::move(arguments);
   exec.argumentNames = std::move(argumentNames);
+  if (match(TokenKind::LBrace)) {
+    BraceListGuard braceGuard(*this, true, false);
+    exec.hasBodyArguments = true;
+    if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
+      return false;
+    }
+  }
   execs.push_back(std::move(exec));
   return true;
 }

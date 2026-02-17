@@ -290,10 +290,6 @@ bool SemanticsValidator::validateExecutions() {
     if (!validateCapabilitiesSubset(exec.transforms, exec.fullPath)) {
       return false;
     }
-    if (exec.hasBodyArguments || !exec.bodyArguments.empty()) {
-      error_ = "executions do not accept body arguments: " + exec.fullPath;
-      return false;
-    }
     Expr execTarget;
     if (!exec.name.empty()) {
       execTarget.name = exec.name;

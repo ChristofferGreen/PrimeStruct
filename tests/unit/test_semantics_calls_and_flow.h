@@ -3315,23 +3315,23 @@ main() {
   CHECK(error.find("return not allowed in execution body") != std::string::npos);
 }
 
-TEST_CASE("execution body is rejected") {
+TEST_CASE("execution body arguments validate") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-[return<int>]
+[return<void>]
 execute_repeat([i32] x) {
-  return(x)
+  return()
 }
 
 execute_repeat(1i32) { main() }
 )";
   std::string error;
-  CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("executions do not accept body arguments") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("print requires io_out effect") {
