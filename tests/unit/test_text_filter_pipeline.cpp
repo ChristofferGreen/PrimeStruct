@@ -1089,6 +1089,26 @@ TEST_CASE("does not rewrite operators around block comments") {
   CHECK(output == source);
 }
 
+TEST_CASE("does not rewrite operators after block comments") {
+  const std::string source = "main(){ return(a/*x*/+b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("does not rewrite operators before block comments") {
+  const std::string source = "main(){ return(a+/*x*/b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.implicit_i32");

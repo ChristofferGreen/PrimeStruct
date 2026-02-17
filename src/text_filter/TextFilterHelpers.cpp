@@ -39,6 +39,23 @@ bool isHexDigitChar(char c) {
   return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 
+bool isCommentStart(const std::string &input, size_t index) {
+  if (index + 1 >= input.size()) {
+    return false;
+  }
+  if (input[index] != '/') {
+    return false;
+  }
+  return input[index + 1] == '/' || input[index + 1] == '*';
+}
+
+bool isCommentEnd(const std::string &input, size_t index) {
+  if (index == 0 || index >= input.size()) {
+    return false;
+  }
+  return input[index] == '/' && input[index - 1] == '*';
+}
+
 bool isNumericSeparator(const std::string &text, size_t index) {
   if (index == 0 || index + 1 >= text.size()) {
     return false;
@@ -95,6 +112,9 @@ bool isUnaryPrefixPosition(const std::string &input, size_t index) {
 
 bool isRightOperandStartChar(const std::string &input, size_t index) {
   char c = input[index];
+  if (isCommentStart(input, index)) {
+    return false;
+  }
   if (isOperatorTokenChar(c) || c == '(' || c == '"' || c == '\'' || c == '[' || c == '{') {
     return true;
   }
@@ -672,6 +692,9 @@ bool rewriteUnaryMutation(const std::string &input,
     return true;
   }
   if (index == 0 || !isLeftOperandEndChar(input[index - 1])) {
+    return false;
+  }
+  if (isCommentEnd(input, index - 1)) {
     return false;
   }
   if (rightStart < input.size() && isRightOperandStartChar(input, rightStart)) {

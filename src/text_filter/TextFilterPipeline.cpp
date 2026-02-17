@@ -275,6 +275,9 @@ bool applyPass(const std::string &input,
     if (input[index] != first || index == 0 || index + 1 >= input.size() || input[index + 1] != second) {
       return false;
     }
+    if (isCommentEnd(input, index - 1)) {
+      return false;
+    }
     if (!isLeftOperandEndChar(input[index - 1]) || index + 2 >= input.size() ||
         !isRightOperandStartChar(input, index + 2)) {
       return false;
@@ -323,6 +326,9 @@ bool applyPass(const std::string &input,
       return false;
     }
     if (isExponentSign(input, index)) {
+      return false;
+    }
+    if (isCommentEnd(input, index - 1)) {
       return false;
     }
     if (!isLeftOperandEndChar(input[index - 1]) || !isRightOperandStartChar(input, index + 1)) {
