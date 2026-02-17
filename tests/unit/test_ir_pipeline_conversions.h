@@ -1065,6 +1065,50 @@ main() {
   CHECK(result == 10);
 }
 
+TEST_CASE("ir lowerer rejects negative loop counts at runtime") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] count{minus(0i32, 1i32)}
+  loop(count, do() { })
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  bool sawLoopMessage = false;
+  for (const auto &text : module.stringTable) {
+    if (text == "loop count must be non-negative") {
+      sawLoopMessage = true;
+      break;
+    }
+  }
+  CHECK(sawLoopMessage);
+
+  bool sawLoopPrint = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintString) {
+      sawLoopPrint = true;
+      break;
+    }
+  }
+  CHECK(sawLoopPrint);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
 TEST_CASE("ir lowerer supports numeric vector literals") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

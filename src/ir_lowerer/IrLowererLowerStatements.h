@@ -623,6 +623,26 @@
       const int32_t counterLocal = allocTempLocal();
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
 
+      if (countKind == LocalInfo::ValueKind::Int32) {
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
+        function.instructions.push_back({IrOpcode::PushI32, 0});
+        function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+        size_t jumpNonNegative = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        emitLoopCountNegative();
+        size_t nonNegativeIndex = function.instructions.size();
+        function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+      } else if (countKind == LocalInfo::ValueKind::Int64) {
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
+        function.instructions.push_back({IrOpcode::PushI64, 0});
+        function.instructions.push_back({IrOpcode::CmpLtI64, 0});
+        size_t jumpNonNegative = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        emitLoopCountNegative();
+        size_t nonNegativeIndex = function.instructions.size();
+        function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+      }
+
       const size_t checkIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
       if (countKind == LocalInfo::ValueKind::Int32) {
