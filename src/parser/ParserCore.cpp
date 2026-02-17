@@ -427,7 +427,14 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
-    if (isIgnorableToken(kind)) {
+    if (kind == TokenKind::Comma || kind == TokenKind::Semicolon) {
+      if (depth == 1 && braceDepth == 0) {
+        prevAtDepth1 = TokenKind::Comma;
+      }
+      ++index;
+      continue;
+    }
+    if (kind == TokenKind::Comment) {
       ++index;
       continue;
     }
@@ -490,7 +497,14 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
-    if (isIgnorableToken(kind)) {
+    if (kind == TokenKind::Comma || kind == TokenKind::Semicolon) {
+      if (depth == 1 && braceDepth == 0) {
+        prevAtDepth1 = TokenKind::Comma;
+      }
+      ++index;
+      continue;
+    }
+    if (kind == TokenKind::Comment) {
       ++index;
       continue;
     }

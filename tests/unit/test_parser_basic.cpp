@@ -834,6 +834,18 @@ main([i32] a{1i32} [i32] b{2i32}) {
   CHECK(program.definitions[0].returnExpr->args.size() == 2);
 }
 
+TEST_CASE("parses semicolon parameters without return transform") {
+  const std::string source = R"(
+main([i32] left; [i32] right) {
+  return(plus(left, right))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].parameters.size() == 2);
+  CHECK(program.definitions[0].name == "main");
+}
+
 TEST_CASE("parses template arguments without commas") {
   const std::string source = R"(
 [return<int>]
