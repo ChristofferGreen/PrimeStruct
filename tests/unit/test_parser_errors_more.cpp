@@ -1365,22 +1365,6 @@ add([i32] left{[value] 1i32}, [i32] right) {
   CHECK(error.find("expected identifier") != std::string::npos);
 }
 
-TEST_CASE("call body requires parameter list") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [effects(io_out)] helper { 1i32 }
-  return(1i32)
-}
-)";
-  primec::Lexer lexer(source);
-  primec::Parser parser(lexer.tokenize());
-  primec::Program program;
-  std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("call body requires parameter list") != std::string::npos);
-}
-
 TEST_CASE("method call requires parameter list") {
   const std::string source = R"(
 [return<int>]

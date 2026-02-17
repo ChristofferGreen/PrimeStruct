@@ -235,6 +235,19 @@ main() {
   CHECK(error.find("binding does not accept effects transform") != std::string::npos);
 }
 
+TEST_CASE("binding rejects effects transform without explicit type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_out)] value{1i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding does not accept effects transform") != std::string::npos);
+}
+
 TEST_CASE("binding rejects capabilities transform arguments") {
   const std::string source = R"(
 [return<int>]

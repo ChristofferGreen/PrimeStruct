@@ -576,11 +576,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (match(TokenKind::LBrace)) {
-        if (!bindingTransforms) {
-          if (!allowBareBindings_) {
-            return parseBraceConstructor(call, out);
-          }
-          return fail("call body requires parameter list");
+        if (!bindingTransforms && !allowBareBindings_) {
+          return parseBraceConstructor(call, out);
         }
         if (!call.templateArgs.empty()) {
           return fail("template arguments require a call");

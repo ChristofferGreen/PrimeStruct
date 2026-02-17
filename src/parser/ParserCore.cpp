@@ -812,9 +812,6 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       }
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
-          if (!bindingTransforms) {
-            return fail("call body requires parameter list");
-          }
           if (!callExpr.templateArgs.empty()) {
             return fail("template arguments require a call");
           }
