@@ -87,6 +87,9 @@ bool isUnaryPrefixPosition(const std::string &input, size_t index) {
     return true;
   }
   char prev = input[index - 1];
+  if (prev == '/' && index >= 2 && input[index - 2] == '*') {
+    return true;
+  }
   if (prev == ')' || prev == ']' || prev == '}') {
     return false;
   }
