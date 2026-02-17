@@ -821,6 +821,24 @@ main() {
   CHECK(error.find("binding not allowed in expression") != std::string::npos);
 }
 
+TEST_CASE("execution rejects binding transforms") {
+  const std::string source = R"(
+[return<void>]
+ping() {
+  return()
+}
+
+[return<int>]
+main() {
+  [mut] ping()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform is not allowed on executions") != std::string::npos);
+}
+
 TEST_CASE("unknown identifier fails") {
   const std::string source = R"(
 [return<int>]

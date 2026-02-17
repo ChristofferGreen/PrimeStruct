@@ -127,6 +127,33 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       for (const auto &arg : transform.arguments) {
         capabilities.insert(arg);
       }
+    } else if (transform.name == "return") {
+      error_ = "return transform not allowed on executions: " + context;
+      return false;
+    } else if (transform.name == "mut") {
+      error_ = "mut transform is not allowed on executions: " + context;
+      return false;
+    } else if (transform.name == "copy") {
+      error_ = "copy transform is not allowed on executions: " + context;
+      return false;
+    } else if (transform.name == "restrict") {
+      error_ = "restrict transform is not allowed on executions: " + context;
+      return false;
+    } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
+      error_ = "placement transforms are not supported: " + context;
+      return false;
+    } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
+      error_ = "alignment transforms are not supported on executions: " + context;
+      return false;
+    } else if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
+      error_ = "layout transforms are not supported on executions: " + context;
+      return false;
+    } else if (isBindingQualifierName(transform.name)) {
+      error_ = "binding visibility/static transforms are only valid on bindings: " + context;
+      return false;
+    } else if (isStructTransformName(transform.name)) {
+      error_ = "struct transforms are not allowed on executions: " + context;
+      return false;
     }
   }
   if (sawEffects) {
