@@ -3279,6 +3279,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("return rejected in execution body") {
+  const std::string source = R"(
+[return<int>]
+execute_repeat([i32] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  execute_repeat(1i32) { return(1i32) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return not allowed in execution body") != std::string::npos);
+}
+
 TEST_CASE("execution body is rejected") {
   const std::string source = R"(
 [return<int>]
