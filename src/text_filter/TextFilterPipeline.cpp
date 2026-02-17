@@ -1265,6 +1265,119 @@ void advanceNamespaceScan(const std::string &input,
   }
 }
 
+size_t findNextEnvelopeStart(const std::string &input, size_t start) {
+  size_t pos = start;
+  int parenDepth = 0;
+  int bodyDepth = 0;
+  std::vector<NamespaceBlock> namespaceStack;
+  while (pos < input.size()) {
+    char c = input[pos];
+    if (c == '"' || c == '\'') {
+      size_t end = skipQuotedForward(input, pos);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end;
+      continue;
+    }
+    if (c == 'R' && pos + 2 < input.size() && input[pos + 1] == '"' && input[pos + 2] == '(') {
+      size_t end = input.find(")\"", pos + 3);
+      if (end == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = end + 2;
+      continue;
+    }
+    if (c == '/' && pos + 1 < input.size()) {
+      if (input[pos + 1] == '/') {
+        pos += 2;
+        while (pos < input.size() && input[pos] != '\n') {
+          ++pos;
+        }
+        continue;
+      }
+      if (input[pos + 1] == '*') {
+        size_t end = input.find("*/", pos + 2);
+        if (end == std::string::npos) {
+          return std::string::npos;
+        }
+        pos = end + 2;
+        continue;
+      }
+    }
+    if (c == '[') {
+      size_t close = findMatchingCloseWithComments(input, pos, '[', ']');
+      if (close == std::string::npos) {
+        return std::string::npos;
+      }
+      pos = close + 1;
+      continue;
+    }
+    if (!namespaceStack.empty() && pos == namespaceStack.back().end && input[pos] == '}') {
+      namespaceStack.pop_back();
+      ++pos;
+      continue;
+    }
+    NamespaceBlock block;
+    size_t afterPos = pos;
+    if (parseNamespaceBlock(input, pos, afterPos, block)) {
+      namespaceStack.push_back(std::move(block));
+      pos = afterPos;
+      continue;
+    }
+    if (c == '(') {
+      ++parenDepth;
+      ++pos;
+      continue;
+    }
+    if (c == ')') {
+      if (parenDepth > 0) {
+        --parenDepth;
+      }
+      ++pos;
+      continue;
+    }
+    if (c == '{') {
+      ++bodyDepth;
+      ++pos;
+      continue;
+    }
+    if (c == '}') {
+      if (bodyDepth > 0) {
+        --bodyDepth;
+      }
+      ++pos;
+      continue;
+    }
+    if (bodyDepth == 0 && parenDepth == 0 && isIdentifierStart(c)) {
+      if (pos > 0 && isIdentifierBody(input[pos - 1])) {
+        ++pos;
+        continue;
+      }
+      size_t namePos = pos;
+      std::string name;
+      if (!parseIdentifier(input, namePos, name)) {
+        ++pos;
+        continue;
+      }
+      if (name == "namespace" || name == "import" || name == "include") {
+        pos = namePos;
+        continue;
+      }
+      size_t probe = pos;
+      size_t envelopeEnd = std::string::npos;
+      std::string envelopeName;
+      if (scanEnvelopeAfterList(input, probe, envelopeEnd, envelopeName)) {
+        return pos;
+      }
+      pos = namePos;
+      continue;
+    }
+    ++pos;
+  }
+  return std::string::npos;
+}
+
 std::string buildNamespacePrefix(const std::string &basePrefix, const std::vector<NamespaceBlock> &stack) {
   std::string prefix = basePrefix;
   for (const auto &entry : stack) {
@@ -1360,34 +1473,62 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
   const bool filterActive = containsFilterName(activeFilters, filter);
   while (scanPos < input.size()) {
     size_t listStart = findNextTransformListStart(input, scanPos);
-    if (listStart == std::string::npos) {
+    size_t envelopeStart = findNextEnvelopeStart(input, scanPos);
+    size_t nextStart = std::string::npos;
+    bool isTransformList = false;
+    if (listStart != std::string::npos &&
+        (envelopeStart == std::string::npos || listStart < envelopeStart)) {
+      nextStart = listStart;
+      isTransformList = true;
+    } else if (envelopeStart != std::string::npos) {
+      nextStart = envelopeStart;
+      isTransformList = false;
+    }
+    if (nextStart == std::string::npos) {
       break;
     }
-    advanceNamespaceScan(input, scanPos, listStart, namespaceStack);
+    advanceNamespaceScan(input, scanPos, nextStart, namespaceStack);
     std::string namespacePrefix = buildNamespacePrefix(baseNamespacePrefix, namespaceStack);
-    TransformListScan listScan;
-    if (!scanTransformList(input, listStart, listScan)) {
-      break;
-    }
-    if (suppress && listStart == 0) {
-      scanPos = listScan.end + 1;
-      suppress = false;
-      continue;
-    }
+    size_t envelopeStartPos = nextStart;
     size_t envelopeEnd = std::string::npos;
     std::string envelopeName;
-    if (!scanEnvelopeAfterList(input, listScan.end + 1, envelopeEnd, envelopeName)) {
-      scanPos = listScan.end + 1;
-      suppress = false;
-      continue;
+    std::vector<std::string> explicitTransforms;
+    if (isTransformList) {
+      TransformListScan listScan;
+      if (!scanTransformList(input, listStart, listScan)) {
+        break;
+      }
+      if (suppress && listStart == 0) {
+        scanPos = listScan.end + 1;
+        suppress = false;
+        continue;
+      }
+      if (!scanEnvelopeAfterList(input, listScan.end + 1, envelopeEnd, envelopeName)) {
+        scanPos = listScan.end + 1;
+        suppress = false;
+        continue;
+      }
+      explicitTransforms = std::move(listScan.textTransforms);
+    } else {
+      if (suppress && envelopeStart == 0) {
+        scanPos = envelopeStart + 1;
+        suppress = false;
+        continue;
+      }
+      size_t probe = envelopeStart;
+      if (!scanEnvelopeAfterList(input, probe, envelopeEnd, envelopeName)) {
+        scanPos = envelopeStart + 1;
+        suppress = false;
+        continue;
+      }
     }
-    std::string chunk = input.substr(pos, listStart - pos);
+    std::string chunk = input.substr(pos, envelopeStartPos - pos);
     std::string filteredChunk;
     if (!applyFilterToChunk(chunk, filteredChunk, error, filterActive ? &filter : nullptr)) {
       return false;
     }
     output.append(filteredChunk);
-    std::string envelope = input.substr(listStart, envelopeEnd - listStart + 1);
+    std::string envelope = input.substr(envelopeStartPos, envelopeEnd - envelopeStartPos + 1);
     const std::vector<std::string> *autoFilters = &activeFilters;
     if (!rules.empty()) {
       std::string fullPath = makeFullPath(envelopeName, namespacePrefix);
@@ -1396,7 +1537,7 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
       }
     }
     const std::vector<std::string> &envelopeFilters =
-        listScan.textTransforms.empty() ? *autoFilters : listScan.textTransforms;
+        explicitTransforms.empty() ? *autoFilters : explicitTransforms;
     const bool inheritsFilters = filtersEqual(envelopeFilters, activeFilters);
     std::string filteredEnvelope;
     if (inheritsFilters) {
