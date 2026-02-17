@@ -610,6 +610,27 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("per-envelope text transforms apply to executions in arguments") {
+  const std::string source = R"(
+[return<int>]
+add([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+
+[return<int>]
+main() {
+  return([operators] add(1i32+2i32, 3i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_per_env_exec_args.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_per_env_exec_args_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main --text-transforms=none";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 6);
+}
+
 TEST_CASE("text transforms can append additional transforms") {
   const std::string source = R"(
 [append_operators return<int>]
