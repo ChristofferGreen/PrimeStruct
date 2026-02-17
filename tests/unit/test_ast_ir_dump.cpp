@@ -628,14 +628,14 @@ main() {
   CHECK(dump == expected);
 }
 
-TEST_CASE("ast dump prints execution body arguments") {
+TEST_CASE("ast dump prints execution arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-execute_repeat(2i32) { main(), main() }
+execute_repeat(2i32)
 )";
   const auto program = parseProgram(source);
   primec::AstPrinter printer;
@@ -645,19 +645,19 @@ execute_repeat(2i32) { main(), main() }
       "  [return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
-      "  /execute_repeat(2) { main(), main() }\n"
+      "  /execute_repeat(2)\n"
       "}\n";
   CHECK(dump == expected);
 }
 
-TEST_CASE("ir dump prints execution body arguments") {
+TEST_CASE("ir dump prints execution arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-execute_repeat(2i32) { main(), main() }
+execute_repeat(2i32)
 )";
   const auto program = parseProgram(source);
   primec::IrPrinter printer;
@@ -667,7 +667,7 @@ execute_repeat(2i32) { main(), main() }
       "  def /main(): i32 {\n"
       "    return 1\n"
       "  }\n"
-      "  exec /execute_repeat(2) { main(), main() }\n"
+      "  exec /execute_repeat(2)\n"
       "}\n";
   CHECK(dump == expected);
 }
@@ -679,7 +679,7 @@ main() {
   return(1i32)
 }
 
-execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32}) { }
+execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32})
 )";
   const auto program = parseProgramWithFilters(source);
   primec::AstPrinter printer;
@@ -689,7 +689,7 @@ execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32}) {
       "  [return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
-      "  /execute_task([items] array<i32>(1, 2), [pairs] map<i32, i32>(1, 2)) { }\n"
+      "  /execute_task([items] array<i32>(1, 2), [pairs] map<i32, i32>(1, 2))\n"
       "}\n";
   CHECK(dump == expected);
 }
@@ -701,7 +701,7 @@ main() {
   return(1i32)
 }
 
-execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32}) { }
+execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32})
 )";
   const auto program = parseProgramWithFilters(source);
   primec::IrPrinter printer;
@@ -711,19 +711,19 @@ execute_task([items] array<i32>{1i32, 2i32}, [pairs] map<i32, i32>{1i32=2i32}) {
       "  def /main(): i32 {\n"
       "    return 1\n"
       "  }\n"
-      "  exec /execute_task([items] array(1, 2), [pairs] map(1, 2)) { }\n"
+      "  exec /execute_task([items] array(1, 2), [pairs] map(1, 2))\n"
       "}\n";
   CHECK(dump == expected);
 }
 
-TEST_CASE("ir dump prints execution named arguments with body") {
+TEST_CASE("ir dump prints execution named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-execute_repeat([count] 2i32) { main(), main() }
+execute_repeat([count] 2i32)
 )";
   const auto program = parseProgram(source);
   primec::IrPrinter printer;
@@ -733,19 +733,19 @@ execute_repeat([count] 2i32) { main(), main() }
       "  def /main(): i32 {\n"
       "    return 1\n"
       "  }\n"
-      "  exec /execute_repeat([count] 2) { main(), main() }\n"
+      "  exec /execute_repeat([count] 2)\n"
       "}\n";
   CHECK(dump == expected);
 }
 
-TEST_CASE("ast dump prints execution named arguments with body") {
+TEST_CASE("ast dump prints execution named arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-execute_repeat([count] 2i32) { main(), main() }
+execute_repeat([count] 2i32)
 )";
   const auto program = parseProgram(source);
   primec::AstPrinter printer;
@@ -755,7 +755,7 @@ execute_repeat([count] 2i32) { main(), main() }
       "  [return<int>] /main() {\n"
       "    return 1\n"
       "  }\n"
-      "  /execute_repeat([count] 2) { main(), main() }\n"
+      "  /execute_repeat([count] 2)\n"
       "}\n";
   CHECK(dump == expected);
 }

@@ -351,20 +351,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return false;
   }
 
-  if (!match(TokenKind::LBrace)) {
-    Execution exec;
-    exec.name = name.text;
-    exec.namespacePrefix = currentNamespacePrefix();
-    exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
-    exec.transforms = std::move(transforms);
-    exec.templateArgs = std::move(templateArgs);
-    exec.arguments = std::move(arguments);
-    exec.argumentNames = std::move(argumentNames);
-    exec.hasBodyArguments = true;
-    execs.push_back(std::move(exec));
-    return true;
+  if (match(TokenKind::LBrace)) {
+    return fail("executions do not accept body arguments");
   }
-
   Execution exec;
   exec.name = name.text;
   exec.namespacePrefix = currentNamespacePrefix();
@@ -373,13 +362,6 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.templateArgs = std::move(templateArgs);
   exec.arguments = std::move(arguments);
   exec.argumentNames = std::move(argumentNames);
-  {
-    BraceListGuard braceGuard(*this, true, false);
-    if (!parseBraceExprList(exec.bodyArguments, exec.namespacePrefix)) {
-      return false;
-    }
-  }
-  exec.hasBodyArguments = true;
   execs.push_back(std::move(exec));
   return true;
 }

@@ -1566,7 +1566,7 @@ execute_repeat([count] 2i32, [count] 3i32)
   CHECK(error.find("duplicate named argument: count") != std::string::npos);
 }
 
-TEST_CASE("execution body accepts literal forms") {
+TEST_CASE("execution body is rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1578,144 +1578,11 @@ execute_repeat([i32] x) {
   return(x)
 }
 
-execute_repeat(3i32) { 1i32 }
+execute_repeat(3i32) { main(), main() }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts bindings") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<int>]
-execute_repeat([i32] x) {
-  return(x)
-}
-
-execute_repeat(3i32) { [i32] value{1i32} }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts nested bindings") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(3i32) { if(true, then(){ [i32] value{2i32} }, else(){ }) }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts nested literals") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(3i32) { if(true, then(){ 1i32 }, else(){ main() }) }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts if statement sugar") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(3i32) { if(true) { main() } else { main() } }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts multiple calls") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(2i32) { main(), main() }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts whitespace-separated calls") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(2i32) { main() main() }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("execution body accepts empty list") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  return(1i32)
-}
-
-[return<void>]
-execute_repeat([i32] x) {
-  return()
-}
-
-execute_repeat(2i32) { }
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(parseProgramWithError(source, error));
+  CHECK(error.find("executions do not accept body arguments") != std::string::npos);
 }
 
 TEST_CASE("execution rejects copy transform") {
@@ -1731,7 +1598,7 @@ execute_repeat([i32] x) {
 }
 
 [copy]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1751,7 +1618,7 @@ execute_repeat([i32] x) {
 }
 
 [mut]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1771,7 +1638,7 @@ execute_repeat([i32] x) {
 }
 
 [restrict]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1794,7 +1661,7 @@ TEST_CASE("execution rejects placement transforms") {
         "}\n"
         "\n"
         "[" + placement + "]\n"
-        "execute_repeat(2i32) { main() }\n";
+        "execute_repeat(2i32)\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
     CHECK(error.find("placement transforms are not supported") != std::string::npos);
@@ -1814,7 +1681,7 @@ execute_repeat([i32] x) {
 }
 
 [effects(io_out) effects(asset_read)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1834,7 +1701,7 @@ execute_repeat([i32] x) {
 }
 
 [capabilities(io_out) capabilities(asset_read)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1854,7 +1721,7 @@ execute_repeat([i32] x) {
 }
 
 [effects("io"utf8)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1874,7 +1741,7 @@ execute_repeat([i32] x) {
 }
 
 [capabilities("io"utf8)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1894,7 +1761,7 @@ execute_repeat([i32] x) {
 }
 
 [effects(io_out, io_out)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1914,7 +1781,7 @@ execute_repeat([i32] x) {
 }
 
 [capabilities(io_out, io_out)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1934,7 +1801,7 @@ execute_repeat([i32] x) {
 }
 
 [effects<io_out>]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1954,7 +1821,7 @@ execute_repeat([i32] x) {
 }
 
 [capabilities<io_out>]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1974,7 +1841,7 @@ execute_repeat([i32] x) {
 }
 
 [effects(io_out) capabilities(io_err)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1994,7 +1861,7 @@ execute_repeat([i32] x) {
 }
 
 [effects(io_out) capabilities(io_out)]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
@@ -2014,7 +1881,7 @@ execute_repeat([i32] x) {
 }
 
 [struct]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -2034,7 +1901,7 @@ execute_repeat([i32] x) {
 }
 
 [public]
-execute_repeat(2i32) { main() }
+execute_repeat(2i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -2054,7 +1921,7 @@ execute_repeat([i32] x) {
 }
 
 [align_bytes(16)]
-execute_repeat(3i32) { main() }
+execute_repeat(3i32)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));

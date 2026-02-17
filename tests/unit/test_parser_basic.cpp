@@ -285,20 +285,21 @@ main() {
   CHECK(useCall.bodyArguments[0].kind == primec::Expr::Kind::Call);
 }
 
-TEST_CASE("parses execution with arguments and body") {
+TEST_CASE("parses execution with arguments") {
   const std::string source = R"(
 [return<int>]
 main() {
   return(1i32)
 }
 
-execute_repeat(3i32) { main() }
+execute_repeat(3i32)
 )";
   const auto program = parseProgram(source);
   CHECK(program.executions.size() == 1);
   CHECK(program.executions[0].fullPath == "/execute_repeat");
   CHECK(program.executions[0].arguments.size() == 1);
-  CHECK(program.executions[0].bodyArguments.size() == 1);
+  CHECK(program.executions[0].bodyArguments.empty());
+  CHECK_FALSE(program.executions[0].hasBodyArguments);
 }
 
 TEST_CASE("parses import paths with comments") {
@@ -890,13 +891,13 @@ main() /* body gap */ {
   CHECK(program.definitions.size() == 1);
 }
 
-TEST_CASE("parses comment between exec args and body") {
+TEST_CASE("parses comment between exec args and terminator") {
   const std::string source = R"(
-execute_repeat(2i32) /* exec gap */ { main() }
+execute_repeat(2i32) /* exec gap */
 )";
   const auto program = parseProgram(source);
   CHECK(program.executions.size() == 1);
-  CHECK(program.executions[0].hasBodyArguments);
+  CHECK_FALSE(program.executions[0].hasBodyArguments);
 }
 
 TEST_CASE("parses local binding statements") {

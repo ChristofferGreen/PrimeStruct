@@ -46,9 +46,7 @@ log([i32] value) {
 }
 
 [effects(io_out)]
-log(1i32) {
-  print_line("exec"utf8)
-}
+log(1i32)
 )";
   const std::string srcPath = writeTemp("compile_exec_ignored.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_exec_ignored_exe").string();

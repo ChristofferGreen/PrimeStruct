@@ -3231,7 +3231,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("return not allowed in execution body") {
+TEST_CASE("execution body is rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -3243,11 +3243,11 @@ execute_repeat([i32] x) {
   return(x)
 }
 
-execute_repeat(1i32) { return(2i32) }
+execute_repeat(1i32) { main() }
 )";
   std::string error;
   CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("return not allowed in execution body") != std::string::npos);
+  CHECK(error.find("executions do not accept body arguments") != std::string::npos);
 }
 
 TEST_CASE("print requires io_out effect") {
@@ -3922,25 +3922,6 @@ TEST_CASE("default effects allow print") {
   const std::string source = R"(
 [return<void>]
 main() {
-  print_line("hello"utf8)
-}
-)";
-  std::string error;
-  CHECK(validateProgramWithDefaults(source, "/main", {"io_out"}, error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("default effects allow print in execution body") {
-  const std::string source = R"(
-[return<void>]
-execute_repeat([i32] count) {
-}
-
-[return<void>]
-main() {
-}
-
-execute_repeat(1i32) {
   print_line("hello"utf8)
 }
 )";

@@ -119,7 +119,6 @@ TEST_CASE("ir printer covers bindings assigns and exec bodies") {
   exec.fullPath = "/run";
   exec.transforms = {makeTransform("effects", {"io"})};
   exec.arguments = {makeLiteral(1)};
-  exec.bodyArguments = {makeCall("step", {makeLiteral(2)})};
 
   primec::Program program;
   program.definitions.push_back(def);
@@ -135,12 +134,12 @@ TEST_CASE("ir printer covers bindings assigns and exec bodies") {
       "    call blend(value) { inner(1) }\n"
       "    return value\n"
       "  }\n"
-      "  exec [effects<io>] /run(1) { step(2) }\n"
+      "  exec [effects<io>] /run(1)\n"
       "}\n";
   CHECK(dump == expected);
 }
 
-TEST_CASE("ast printer covers executions with templates and bodies") {
+TEST_CASE("ast printer covers executions with templates") {
   primec::Program program;
 
   primec::Execution execWithBody;
@@ -149,12 +148,10 @@ TEST_CASE("ast printer covers executions with templates and bodies") {
   execWithBody.templateArgs = {"i32"};
   execWithBody.arguments = {makeLiteral(1), makeLiteral(2)};
   execWithBody.argumentNames = {std::string("count"), std::nullopt};
-  execWithBody.bodyArguments = {makeCall("step", {makeLiteral(3)}, {}, {}, {}, {"f32"})};
 
   primec::Execution execNoBody;
   execNoBody.fullPath = "/ping";
   execNoBody.arguments = {makeString("\"ok\"utf8")};
-  execNoBody.hasBodyArguments = true;
 
   program.executions.push_back(execWithBody);
   program.executions.push_back(execNoBody);
@@ -163,8 +160,8 @@ TEST_CASE("ast printer covers executions with templates and bodies") {
   const std::string dump = printer.print(program);
   const std::string expected =
       "ast {\n"
-      "  [effects<io>] /run<i32>([count] 1, 2) { step<f32>(3) }\n"
-      "  /ping(\"ok\"utf8) { }\n"
+      "  [effects<io>] /run<i32>([count] 1, 2)\n"
+      "  /ping(\"ok\"utf8)\n"
       "}\n";
   CHECK(dump == expected);
 }

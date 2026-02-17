@@ -1137,7 +1137,7 @@ main() {
   return(1i32)
 }
 
-execute_task([a] 1i32, 2i32) { }
+execute_task([a] 1i32, 2i32)
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
@@ -1159,7 +1159,7 @@ execute_task([array<i32>] items) {
   return()
 }
 
-execute_task([items] array<i32>([first] 1i32)) { }
+execute_task([items] array<i32>([first] 1i32))
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
@@ -1173,7 +1173,7 @@ main() {
   return(1i32)
 }
 
-execute_task([items] array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32)) { }
+execute_task([items] array<i32>(1i32, 2i32), map<i32, i32>(1i32, 2i32))
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
