@@ -217,6 +217,16 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
     slotNames.push_back(argName);
     return true;
   };
+  auto consumeSlotSeparator = [&]() {
+    skipComments();
+    if (match(TokenKind::Comma)) {
+      expect(TokenKind::Comma, "expected ','");
+      return;
+    }
+    if (match(TokenKind::Semicolon)) {
+      expect(TokenKind::Semicolon, "expected ';'");
+    }
+  };
   if (keyword == "for") {
     BareBindingGuard bindingGuard(*this, true);
     ArgumentLabelGuard labelGuard(*this);
@@ -226,6 +236,9 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
         return false;
       }
       slots.push_back(std::move(slot));
+      if (i < 2) {
+        consumeSlotSeparator();
+      }
     }
   } else {
     Expr slot;
