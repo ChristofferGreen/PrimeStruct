@@ -85,3 +85,13 @@ Legend:
 - ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
 - ○ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
 - ○ Scope and plan IDE/LSP integration once the compiler stabilizes.
+- ○ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
+- ○ Decide on LLVM backend support (implement or remove future-LLVM references).
+- ○ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
+- ○ Finalize struct/envelope category rules, placement policy, and category mapping.
+- ○ Finalize core library surface/standard math spec and document backend-specific limits.
+- ○ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
+- ○ Finalize literals & composite construction semantics beyond suffix rules.
+- ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
+- ○ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
+- ○ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
