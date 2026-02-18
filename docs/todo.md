@@ -103,3 +103,5 @@ Legend:
 - ○ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
 - ○ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
 - ○ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
+- ○ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
+- ○ Finalize and version the Standard Library Reference (currently draft v0).
