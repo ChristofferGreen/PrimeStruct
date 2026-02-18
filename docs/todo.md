@@ -111,3 +111,6 @@ Legend:
 - ○ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
 - ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
 - ○ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
+- ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
+- ○ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
+- ○ For `tools/PrimeStructc`, decide whether to honor include `version="..."` (or document that it is ignored).
