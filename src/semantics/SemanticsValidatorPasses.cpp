@@ -303,6 +303,14 @@ bool SemanticsValidator::validateExecutions() {
       error_ = "unknown execution target: " + resolvedPath;
       return false;
     }
+    const std::unordered_set<std::string> targetEffects =
+        resolveEffects(it->second->transforms, it->second->fullPath == entryPath_);
+    for (const auto &effect : activeEffects_) {
+      if (targetEffects.count(effect) == 0) {
+        error_ = "execution effects must be a subset of enclosing effects on " + resolvedPath + ": " + effect;
+        return false;
+      }
+    }
     if (!validateNamedArguments(exec.arguments, exec.argumentNames, resolvedPath, error_)) {
       return false;
     }

@@ -3443,6 +3443,26 @@ main() {
   CHECK(error.find("execution effects must be a subset of enclosing effects") != std::string::npos);
 }
 
+TEST_CASE("top-level execution effects must be subset of target effects") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+
+[effects(io_out) return<void>]
+task() {
+  return()
+}
+
+[effects(io_err)]
+task()
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("execution effects must be a subset of enclosing effects") != std::string::npos);
+}
+
 TEST_CASE("execution effects scope vector literals") {
   const std::string source = R"(
 [effects(heap_alloc io_out) return<void>]
