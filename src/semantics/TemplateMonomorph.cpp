@@ -51,6 +51,31 @@ bool isBuiltinTemplateContainer(const std::string &name) {
   return name == "array" || name == "vector" || name == "map" || isBuiltinTemplateTypeName(name);
 }
 
+bool isStructDefinition(const Definition &def) {
+  bool isStruct = false;
+  bool hasReturnTransform = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+    }
+    if (isStructTransformName(transform.name)) {
+      isStruct = true;
+    }
+  }
+  if (isStruct) {
+    return true;
+  }
+  if (hasReturnTransform || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+    return false;
+  }
+  for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -189,6 +214,14 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     std::string collection;
     if (getBuiltinCollectionName(receiver, collection)) {
       typeName = collection;
+    }
+    if (typeName.empty() && !receiver.isMethodCall && !receiver.isBinding) {
+      std::string resolved = resolveCalleePath(receiver, receiver.namespacePrefix, ctx);
+      auto defIt = ctx.sourceDefs.find(resolved);
+      if (defIt != ctx.sourceDefs.end() && isStructDefinition(defIt->second)) {
+        pathOut = resolved + "/" + expr.name;
+        return true;
+      }
     }
   }
   if (typeName.empty()) {

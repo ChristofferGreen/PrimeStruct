@@ -408,6 +408,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           typeName = inferred;
         }
       }
+      if (typeName.empty() && receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+        const std::string resolvedType = resolveCalleePath(receiver);
+        if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
+          resolvedOut = resolvedType + "/" + expr.name;
+          return true;
+        }
+      }
       if (typeName.empty()) {
         return false;
       }

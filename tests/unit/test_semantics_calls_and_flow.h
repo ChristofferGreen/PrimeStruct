@@ -2158,6 +2158,28 @@ main() {
   CHECK(error.find("unknown method: /Foo/missing") != std::string::npos);
 }
 
+TEST_CASE("method calls resolve on struct constructor expressions") {
+  const std::string source = R"(
+[struct]
+Foo() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+/Foo/ping([Foo] self) {
+  return(9i32)
+}
+
+[return<int>]
+main() {
+  return(Foo().ping())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("count builtin rejects template arguments") {
   const std::string source = R"(
 [return<int>]

@@ -176,6 +176,13 @@
           return true;
         }
       }
+      if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+        const std::string resolvedType = resolveCalleePath(receiver);
+        if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
+          resolvedOut = resolvedType + "/" + methodName;
+          return true;
+        }
+      }
       std::string typeName;
       std::string typeTemplateArg;
       if (receiver.kind == Expr::Kind::Name) {
