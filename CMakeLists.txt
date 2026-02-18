@@ -14,6 +14,9 @@ add_library(primec_lib
   src/emitter/EmitterHelpersBuiltins.cpp
   src/emitter/EmitterHelpersTypes.cpp
   src/glsl_emitter/GlslEmitter.cpp
+  src/glsl_emitter/GlslEmitterExpr.cpp
+  src/glsl_emitter/GlslEmitterHelpers.cpp
+  src/glsl_emitter/GlslEmitterStatements.cpp
   src/IncludeResolver.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererLower.cpp
@@ -39,6 +42,9 @@ add_library(primec_lib
   src/semantics/SemanticsValidatorPasses.cpp
   src/semantics/SemanticsValidatorStatement.cpp
   src/text_filter/TextFilterHelpers.cpp
+  src/text_filter/TextFilterPipelineEnvelope.cpp
+  src/text_filter/TextFilterPipelinePass.cpp
+  src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
   src/Vm.cpp
 )
