@@ -61,3 +61,16 @@ Legend:
 - ✓ Document vector helper calls (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) as statement-only or allow them in expression contexts.
 - ✓ Add missing `/math/*` builtins present in code: `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, `is_finite`.
 - ✓ Add PathSpace builtins (`notify`, `insert`, `take`) to `docs/PrimeStruct_SyntaxSpec.md` (currently only in the design doc).
+
+**Spec Completion & Open Design**
+- ○ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
+- ○ Define constructor semantics beyond `Create`/`Destroy`, including constant member behavior and default initialization rules.
+- ○ Finalize the literal suffix catalog, including canonical raw string behavior across backends.
+- ○ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
+- ○ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.
+- ○ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
+- ○ Close the SyntaxSpec draft: review feedback, reconcile grammar, and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
+- ○ Align examples across docs once SyntaxSpec is finalized (ensure runnable examples + IR snippets still match).
+- ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
+- ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
+- ○ Define reference counting / heap value lifetime model for VM/native backends.
