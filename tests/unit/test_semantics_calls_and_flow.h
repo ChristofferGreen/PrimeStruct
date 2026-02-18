@@ -256,7 +256,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("loop allowed in value blocks") {
+TEST_CASE("loop rejected in value blocks") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -268,11 +268,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("loop value block requires value") {
+TEST_CASE("loop rejected in single-item value blocks") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -282,7 +282,39 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer requires a value") != std::string::npos);
+  CHECK(error.find("loop is only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("while rejected in value blocks") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{
+    while(true) { }
+    1i32
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("while is only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("for rejected in value blocks") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  value{
+    for([i32 mut] i{0i32} less_than(i, 2i32) assign(i, plus(i, 1i32))) { }
+    1i32
+  }
+  return(value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("for is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("for condition accepts binding") {
