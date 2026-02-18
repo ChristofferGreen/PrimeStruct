@@ -19,6 +19,31 @@ Each stage halts on error (reporting diagnostics immediately) and exposes `--dum
 - **Risk log:** record open questions (borrow checker, capability taxonomy, GPU backend constraints) and mitigation/rollback strategies.
 - **Exit:** only after this phase is reviewed/approved do parser/IR/backend implementations begin; the conformance suite derives from the frozen charter instead of chasing a moving target.
 
+## Project Charter (v1 target)
+- Language core: envelope syntax (definitions + executions), slash paths, namespaces, includes/imports, binding initializers, return annotations, effects annotations, and deterministic canonicalization rules.
+- Transform pipeline: ordered text transforms, ordered semantic transforms, explicit `text(...)` / `semantic(...)` grouping, and auto-deduction for registered transforms.
+- Determinism: stable diagnostics, fixed evaluation order, stable IR emission, and canonical string normalization across backends.
+- IR: PSIR serialization with versioning, explicit opcode list, and a stable module layout shared by all backends.
+- Backends: C++ emitter and VM bytecode are required targets; GLSL/SPIR-V is a supported optional target with explicit documented constraints.
+- Standard library: a documented core subset (math + collections + IO primitives) with a per-backend support matrix.
+- Tooling: `primec`, `primevm`, `--dump-stage` and snapshot-style tests for parser/IR/diagnostics.
+- Change control: any feature outside this charter requires a docs update plus an explicit acceptance gate.
+
+## Deferred Features (not in v1)
+- Borrow checker and lifetime enforcement beyond basic effects gating.
+- Full capability taxonomy and policy-driven capability enforcement (beyond documented effects).
+- PathSpace integration beyond `notify`/`insert`/`take` helpers and basic runtime hooks.
+- Full software numeric envelopes (`integer`/`decimal`/`complex`) and mixed-mode numeric ops.
+- `class<Name>(...)` surface syntax and composition/extends semantics.
+- Placement transforms (`stack`/`heap`/`buffer`) and placement-driven layout guarantees.
+- Recursive struct layouts and cross-module layout stability guarantees.
+- Metal backend and LLVM backend support.
+- JIT, chunk caching, or dynamic recompilation tooling.
+- IDE/LSP integration and PathSpace-native editor tooling.
+- Standard library packaging/version negotiation beyond a single in-tree reference set.
+- `tools/PrimeStructc` feature parity with the main compiler and template codegen.
+- Tail-call or tail-execution optimization guarantees across all backends.
+
 ## Phase 1 — Minimal Compiler That Emits an Executable
 Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source file into a runnable native executable. This is the smallest vertical slice that proves parsing, IR, a backend, and a host toolchain handoff.
 

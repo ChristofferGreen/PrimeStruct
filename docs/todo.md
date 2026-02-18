@@ -63,7 +63,7 @@ Legend:
 - ✓ Add PathSpace builtins (`notify`, `insert`, `take`) to `docs/PrimeStruct_SyntaxSpec.md` (currently only in the design doc).
 
 **Spec Completion & Open Design**
-- ○ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
+- ✓ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
 - ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ○ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
 - ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
