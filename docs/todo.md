@@ -67,9 +67,9 @@ Legend:
 - ✓ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ✓ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
 - ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
-- ○ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
+- ✓ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
 - ○ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
-- ○ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
+- ✓ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
 - ○ Close the SyntaxSpec draft: review feedback, reconcile grammar, and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
 - ○ Decide on Unicode identifier support and update lexer/parser/docs accordingly.
 - ○ Finalize the literal suffix catalog, including canonical raw string behavior across backends.

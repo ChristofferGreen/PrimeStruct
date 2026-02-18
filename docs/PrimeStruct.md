@@ -189,6 +189,12 @@ module {
 - **Ordering:** the compiler scans transforms left-to-right, appending each to its phase list while preserving relative order within the text and semantic phases.
 - **Scope:** a text transform may rewrite any token inside the enclosing definition/execution envelope (transform list, templates, parameters, and body). Nested definitions/lambdas receive their own transform lists.
 - **Self-expansion:** text transforms may append additional text transforms to the same node; appended transforms run after the current transform.
+- **Applicability limits (v1):**
+  - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`, `single_type_to_return`.
+  - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
+  - **Bindings only:** access/visibility markers (`public`, `private`, `package`, `static`).
+  - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
+  - Any transform outside its allowed scope is a compile-time error with a diagnostic naming the enclosing path.
 
 ### Example function syntax
 ```
