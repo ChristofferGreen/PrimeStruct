@@ -1485,7 +1485,10 @@ void advanceNamespaceScan(const std::string &input,
 void advanceDefinitionScan(const std::string &input,
                            size_t &scanPos,
                            size_t targetPos,
-                           std::vector<DefinitionBlock> &stack) {
+                           std::vector<DefinitionBlock> &stack,
+                           int targetBodyDepth) {
+  int parenDepth = 0;
+  int bodyDepth = 0;
   while (scanPos < targetPos) {
     char c = input[scanPos];
     if (c == '"' || c == '\'') {
@@ -1533,7 +1536,31 @@ void advanceDefinitionScan(const std::string &input,
       scanPos = close + 1;
       continue;
     }
-    if (isIdentifierStart(c)) {
+    if (c == '(') {
+      ++parenDepth;
+      ++scanPos;
+      continue;
+    }
+    if (c == ')') {
+      if (parenDepth > 0) {
+        --parenDepth;
+      }
+      ++scanPos;
+      continue;
+    }
+    if (c == '{') {
+      ++bodyDepth;
+      ++scanPos;
+      continue;
+    }
+    if (c == '}') {
+      if (bodyDepth > 0) {
+        --bodyDepth;
+      }
+      ++scanPos;
+      continue;
+    }
+    if (bodyDepth == targetBodyDepth && parenDepth == 0 && isIdentifierStart(c)) {
       if (scanPos > 0 && isIdentifierBody(input[scanPos - 1])) {
         ++scanPos;
         continue;
@@ -1553,7 +1580,7 @@ void advanceDefinitionScan(const std::string &input,
   }
 }
 
-size_t findNextEnvelopeStart(const std::string &input, size_t start) {
+size_t findNextEnvelopeStart(const std::string &input, size_t start, int targetBodyDepth) {
   size_t pos = start;
   int parenDepth = 0;
   int bodyDepth = 0;
@@ -1637,8 +1664,23 @@ size_t findNextEnvelopeStart(const std::string &input, size_t start) {
       ++pos;
       continue;
     }
-    if (bodyDepth == 0 && parenDepth == 0 && isIdentifierStart(c)) {
+    if (bodyDepth == targetBodyDepth && parenDepth == 0 && isIdentifierStart(c)) {
       if (pos > 0 && isIdentifierBody(input[pos - 1])) {
+        ++pos;
+        continue;
+      }
+      if (targetBodyDepth > 0) {
+        DefinitionBlock block;
+        size_t afterPos = pos;
+        if (parseDefinitionBlock(input, pos, afterPos, block)) {
+          return pos;
+        }
+        size_t namePos = pos;
+        std::string name;
+        if (parseIdentifier(input, namePos, name)) {
+          pos = namePos;
+          continue;
+        }
         ++pos;
         continue;
       }
@@ -1776,12 +1818,13 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
   size_t pos = 0;
   size_t scanPos = 0;
   bool suppress = suppressLeadingOverride;
+  const int targetBodyDepth = suppressLeadingOverride ? 1 : 0;
   std::vector<NamespaceBlock> namespaceStack;
   std::vector<DefinitionBlock> definitionStack;
   const bool filterActive = containsFilterName(activeFilters, filter);
   while (scanPos < input.size()) {
     size_t listStart = findNextTransformListStart(input, scanPos);
-    size_t envelopeStart = findNextEnvelopeStart(input, scanPos);
+    size_t envelopeStart = findNextEnvelopeStart(input, scanPos, targetBodyDepth);
     size_t nextStart = std::string::npos;
     bool isTransformList = false;
     if (listStart != std::string::npos &&
@@ -1798,7 +1841,7 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
     size_t contextPos = scanPos;
     advanceNamespaceScan(input, contextPos, nextStart, namespaceStack);
     contextPos = scanPos;
-    advanceDefinitionScan(input, contextPos, nextStart, definitionStack);
+    advanceDefinitionScan(input, contextPos, nextStart, definitionStack, targetBodyDepth);
     scanPos = nextStart;
     std::string namespacePrefix = buildNamespacePrefix(baseNamespacePrefix, namespaceStack);
     std::string definitionBase = baseDefinitionPrefix.empty() ? namespacePrefix : baseDefinitionPrefix;

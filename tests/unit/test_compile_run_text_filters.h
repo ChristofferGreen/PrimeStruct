@@ -712,7 +712,6 @@ TEST_CASE("text transform rules apply to nested definitions") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [return<int>]
   helper() {
     return(1i32+2i32)
   }
