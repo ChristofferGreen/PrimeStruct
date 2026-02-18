@@ -105,3 +105,6 @@ Legend:
 - ○ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
 - ○ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
 - ○ Finalize and version the Standard Library Reference (currently draft v0).
+- ○ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
+- ○ Define pointer/reference target envelope whitelist and conversion rules per backend.
+- ○ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
