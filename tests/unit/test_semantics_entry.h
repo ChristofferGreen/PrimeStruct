@@ -1566,7 +1566,7 @@ execute_repeat([count] 2i32, [count] 3i32)
   CHECK(error.find("duplicate named argument: count") != std::string::npos);
 }
 
-TEST_CASE("execution body arguments validate") {
+TEST_CASE("execution body arguments are rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -1584,8 +1584,8 @@ execute_repeat(3i32) {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(parseProgramWithError(source, error));
+  CHECK(error.find("executions do not accept body blocks") != std::string::npos);
 }
 
 TEST_CASE("execution rejects copy transform") {
