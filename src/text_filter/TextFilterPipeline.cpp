@@ -1022,6 +1022,44 @@ bool scanTransformList(const std::string &input, size_t start, TransformListScan
   return true;
 }
 
+bool scanLambdaEnvelope(const std::string &input, size_t listStart, size_t &listEnd, size_t &envelopeEnd) {
+  listEnd = findMatchingCloseWithComments(input, listStart, '[', ']');
+  if (listEnd == std::string::npos) {
+    return false;
+  }
+  size_t pos = listEnd + 1;
+  skipWhitespaceAndComments(input, pos);
+  if (pos >= input.size()) {
+    return false;
+  }
+  if (input[pos] == '<') {
+    size_t close = findMatchingCloseWithComments(input, pos, '<', '>');
+    if (close == std::string::npos) {
+      return false;
+    }
+    pos = close + 1;
+    skipWhitespaceAndComments(input, pos);
+  }
+  if (pos >= input.size() || input[pos] != '(') {
+    return false;
+  }
+  size_t closeParen = findMatchingCloseWithComments(input, pos, '(', ')');
+  if (closeParen == std::string::npos) {
+    return false;
+  }
+  pos = closeParen + 1;
+  skipWhitespaceAndComments(input, pos);
+  if (pos >= input.size() || input[pos] != '{') {
+    return false;
+  }
+  size_t closeBrace = findMatchingCloseWithComments(input, pos, '{', '}');
+  if (closeBrace == std::string::npos) {
+    return false;
+  }
+  envelopeEnd = closeBrace;
+  return true;
+}
+
 bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envelopeEnd, std::string &nameOut) {
   size_t pos = start;
   skipWhitespaceAndComments(input, pos);
@@ -1109,6 +1147,12 @@ size_t findNextTransformListStart(const std::string &input, size_t start) {
       }
     }
     if (c == '[' && isTransformListBoundary(input, pos)) {
+      size_t listEnd = std::string::npos;
+      size_t lambdaEnd = std::string::npos;
+      if (scanLambdaEnvelope(input, pos, listEnd, lambdaEnd)) {
+        pos = listEnd + 1;
+        continue;
+      }
       return pos;
     }
     ++pos;
@@ -1621,6 +1665,13 @@ size_t findNextEnvelopeStart(const std::string &input, size_t start, int targetB
       }
     }
     if (c == '[') {
+      if (bodyDepth == targetBodyDepth) {
+        size_t listEnd = std::string::npos;
+        size_t lambdaEnd = std::string::npos;
+        if (scanLambdaEnvelope(input, pos, listEnd, lambdaEnd)) {
+          return pos;
+        }
+      }
       size_t close = findMatchingCloseWithComments(input, pos, '[', ']');
       if (close == std::string::npos) {
         return std::string::npos;
@@ -1774,6 +1825,11 @@ bool scanLeadingTransformList(const std::string &input, std::vector<std::string>
   if (!isTransformListBoundary(input, pos)) {
     return false;
   }
+  size_t listEnd = std::string::npos;
+  size_t lambdaEnd = std::string::npos;
+  if (scanLambdaEnvelope(input, pos, listEnd, lambdaEnd)) {
+    return false;
+  }
   TransformListScan listScan;
   if (!scanTransformList(input, pos, listScan)) {
     return false;
@@ -1802,7 +1858,8 @@ bool applyPerEnvelope(const std::string &input,
                       const std::vector<TextTransformRule> &rules,
                       bool suppressLeadingOverride,
                       const std::string &baseNamespacePrefix,
-                      const std::string &baseDefinitionPrefix);
+                      const std::string &baseDefinitionPrefix,
+                      const std::vector<std::string> &baseFilters);
 
 bool applyPerEnvelopeFilterPass(const std::string &input,
                                 std::string &output,
@@ -1813,7 +1870,8 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
                                 bool suppressLeadingOverride,
                                 const std::string &baseNamespacePrefix,
                                 const std::string &baseDefinitionPrefix,
-                                bool allowExplicitRecursion) {
+                                bool allowExplicitRecursion,
+                                const std::vector<std::string> &baseFilters) {
   output.clear();
   size_t pos = 0;
   size_t scanPos = 0;
@@ -1848,13 +1906,14 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
     std::string definitionPrefix = buildDefinitionPrefix(definitionBase, definitionStack);
     size_t envelopeStartPos = nextStart;
     size_t envelopeEnd = std::string::npos;
-    std::string envelopeName;
-    std::vector<std::string> explicitTransforms;
-    bool envelopeIsDefinition = false;
-    std::string definitionFullPath;
-    if (isTransformList) {
-      TransformListScan listScan;
-      if (!scanTransformList(input, listStart, listScan)) {
+  std::string envelopeName;
+  std::vector<std::string> explicitTransforms;
+  bool envelopeIsDefinition = false;
+  bool envelopeIsLambda = false;
+  std::string definitionFullPath;
+  if (isTransformList) {
+    TransformListScan listScan;
+    if (!scanTransformList(input, listStart, listScan)) {
         break;
       }
       if (suppress && listStart == 0) {
@@ -1880,17 +1939,28 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
         suppress = false;
         continue;
       }
-      size_t probe = envelopeStart;
-      if (!scanEnvelopeAfterList(input, probe, envelopeEnd, envelopeName)) {
-        scanPos = envelopeStart + 1;
-        suppress = false;
-        continue;
-      }
-      DefinitionBlock definitionBlock;
-      size_t afterPos = envelopeStart;
-      if (parseDefinitionBlock(input, envelopeStart, afterPos, definitionBlock)) {
-        envelopeIsDefinition = true;
-        definitionFullPath = makeFullPath(definitionBlock.name, definitionPrefix);
+      if (input[envelopeStart] == '[') {
+        size_t listEnd = std::string::npos;
+        if (!scanLambdaEnvelope(input, envelopeStart, listEnd, envelopeEnd)) {
+          scanPos = envelopeStart + 1;
+          suppress = false;
+          continue;
+        }
+        envelopeIsLambda = true;
+        envelopeName.clear();
+      } else {
+        size_t probe = envelopeStart;
+        if (!scanEnvelopeAfterList(input, probe, envelopeEnd, envelopeName)) {
+          scanPos = envelopeStart + 1;
+          suppress = false;
+          continue;
+        }
+        DefinitionBlock definitionBlock;
+        size_t afterPos = envelopeStart;
+        if (parseDefinitionBlock(input, envelopeStart, afterPos, definitionBlock)) {
+          envelopeIsDefinition = true;
+          definitionFullPath = makeFullPath(definitionBlock.name, definitionPrefix);
+        }
       }
     }
     std::string chunk = input.substr(pos, envelopeStartPos - pos);
@@ -1901,7 +1971,10 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
     output.append(filteredChunk);
     std::string envelope = input.substr(envelopeStartPos, envelopeEnd - envelopeStartPos + 1);
     const std::vector<std::string> *autoFilters = &activeFilters;
-    if (!rules.empty()) {
+    if (envelopeIsDefinition || envelopeIsLambda) {
+      autoFilters = &baseFilters;
+    }
+    if (!rules.empty() && !envelopeIsLambda) {
       std::string fullPath = makeFullPath(envelopeName, envelopeIsDefinition ? definitionPrefix : namespacePrefix);
       if (const auto *ruleFilters = selectRuleTransforms(rules, fullPath)) {
         autoFilters = ruleFilters;
@@ -1922,13 +1995,21 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
                                       true,
                                       namespacePrefix,
                                       nextDefinitionPrefix,
-                                      allowExplicitRecursion)) {
+                                      allowExplicitRecursion,
+                                      baseFilters)) {
         return false;
       }
       output.append(filteredEnvelope);
     } else if (allowExplicitRecursion) {
-      if (!applyPerEnvelope(
-              envelope, filteredEnvelope, error, envelopeFilters, rules, true, namespacePrefix, nextDefinitionPrefix)) {
+      if (!applyPerEnvelope(envelope,
+                            filteredEnvelope,
+                            error,
+                            envelopeFilters,
+                            rules,
+                            true,
+                            namespacePrefix,
+                            nextDefinitionPrefix,
+                            baseFilters)) {
         return false;
       }
       output.append(filteredEnvelope);
@@ -1955,7 +2036,8 @@ bool applyPerEnvelope(const std::string &input,
                       const std::vector<TextTransformRule> &rules,
                       bool suppressLeadingOverride,
                       const std::string &baseNamespacePrefix,
-                      const std::string &baseDefinitionPrefix) {
+                      const std::string &baseDefinitionPrefix,
+                      const std::vector<std::string> &baseFilters) {
   std::vector<std::string> activeFilters = filters;
   if (activeFilters.empty()) {
     return applyPerEnvelopeFilterPass(input,
@@ -1967,7 +2049,8 @@ bool applyPerEnvelope(const std::string &input,
                                       suppressLeadingOverride,
                                       baseNamespacePrefix,
                                       baseDefinitionPrefix,
-                                      true);
+                                      true,
+                                      baseFilters);
   }
   std::unordered_set<std::string> applied;
   std::string current = input;
@@ -1987,7 +2070,8 @@ bool applyPerEnvelope(const std::string &input,
                                     suppressLeadingOverride,
                                     baseNamespacePrefix,
                                     baseDefinitionPrefix,
-                                    allowExplicitRecursion)) {
+                                    allowExplicitRecursion,
+                                    baseFilters)) {
       return false;
     }
     current.swap(next);
@@ -2021,7 +2105,8 @@ bool TextFilterPipeline::apply(const std::string &input,
       return true;
     }
   }
-  return applyPerEnvelope(input, output, error, options.enabledFilters, options.rules, false, "", "");
+  return applyPerEnvelope(
+      input, output, error, options.enabledFilters, options.rules, false, "", "", options.enabledFilters);
 }
 
 } // namespace primec

@@ -183,6 +183,25 @@ main(){ return(1i32+2i32) }
   CHECK(output.find("[append_operators operators return<int>]") != std::string::npos);
 }
 
+TEST_CASE("pipeline isolates lambda bodies from transforms") {
+  const std::string source = R"(
+[operators]
+main() {
+  return(1i32+2i32)
+  return([]([i32] value){ return(value+3i32) })
+}
+)";
+  primec::TextFilterPipeline pipeline;
+  primec::TextFilterOptions options;
+  options.enabledFilters.clear();
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error, options));
+  CHECK(error.empty());
+  CHECK(output.find("plus(1i32, 2i32)") != std::string::npos);
+  CHECK(output.find("value+3i32") != std::string::npos);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.rewrites");
