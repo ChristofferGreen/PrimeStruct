@@ -108,3 +108,6 @@ Legend:
 - ○ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
 - ○ Define pointer/reference target envelope whitelist and conversion rules per backend.
 - ○ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
+- ○ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
+- ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
+- ○ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
