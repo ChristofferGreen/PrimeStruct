@@ -99,3 +99,7 @@ Legend:
 - ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ○ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
 - ○ Support recursive struct layouts or document them as explicitly unsupported.
+- ○ Define the supported IR opcode subset per backend (native/VM/GLSL) and align validation to reject unsupported cases earlier.
+- ○ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
+- ○ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
+- ○ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
