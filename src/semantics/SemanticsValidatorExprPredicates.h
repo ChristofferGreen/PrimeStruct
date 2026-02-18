@@ -1077,27 +1077,40 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (candidate.kind != Expr::Kind::Call) {
         return false;
       }
-      if (isSimpleCallName(candidate, "push")) {
+      auto matchesHelper = [&](const char *helper) -> bool {
+        if (isSimpleCallName(candidate, helper)) {
+          return true;
+        }
+        if (candidate.name.empty()) {
+          return false;
+        }
+        std::string normalized = candidate.name;
+        if (!normalized.empty() && normalized[0] == '/') {
+          normalized.erase(0, 1);
+        }
+        return normalized == std::string("vector/") + helper;
+      };
+      if (matchesHelper("push")) {
         nameOut = "push";
         return true;
       }
-      if (isSimpleCallName(candidate, "pop")) {
+      if (matchesHelper("pop")) {
         nameOut = "pop";
         return true;
       }
-      if (isSimpleCallName(candidate, "reserve")) {
+      if (matchesHelper("reserve")) {
         nameOut = "reserve";
         return true;
       }
-      if (isSimpleCallName(candidate, "clear")) {
+      if (matchesHelper("clear")) {
         nameOut = "clear";
         return true;
       }
-      if (isSimpleCallName(candidate, "remove_at")) {
+      if (matchesHelper("remove_at")) {
         nameOut = "remove_at";
         return true;
       }
-      if (isSimpleCallName(candidate, "remove_swap")) {
+      if (matchesHelper("remove_swap")) {
         nameOut = "remove_swap";
         return true;
       }

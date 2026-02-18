@@ -1834,6 +1834,33 @@ TEST_CASE("vector helpers are statement-only in expressions") {
   }
 }
 
+TEST_CASE("namespaced vector helper accepts statement form") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  /vector/push(values, 2i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("namespaced vector helper is statement-only in expressions") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  return(/vector/push(values, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("only supported as a statement") != std::string::npos);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.access");
