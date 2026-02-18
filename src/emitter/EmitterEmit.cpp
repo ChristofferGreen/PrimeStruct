@@ -1347,7 +1347,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         std::string full = resolveExprPath(stmt);
         if (stmt.isMethodCall && !isArrayCountCall(stmt, localTypes) && !isMapCountCall(stmt, localTypes)) {
           std::string methodPath;
-          if (resolveMethodCallPath(stmt, localTypes, importAliases, returnKinds, methodPath)) {
+          if (resolveMethodCallPath(stmt, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
             full = methodPath;
           }
         }

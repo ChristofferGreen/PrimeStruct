@@ -1181,6 +1181,7 @@ bool IrLowerer::lower(const Program &program,
       return nullptr;
     }
     std::string typeName;
+    std::string resolvedTypePath;
     if (receiver.kind == Expr::Kind::Name) {
       auto it = localsIn.find(receiver.name);
       if (it == localsIn.end()) {
@@ -1213,8 +1214,27 @@ bool IrLowerer::lower(const Program &program,
       if (typeName.empty()) {
         typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
       }
+      if (typeName.empty() && !receiver.isBinding && !receiver.isMethodCall) {
+        std::string resolved = resolveExprPath(receiver);
+        auto importIt = importAliases.find(receiver.name);
+        if (structNames.count(resolved) == 0 && importIt != importAliases.end()) {
+          resolved = importIt->second;
+        }
+        if (structNames.count(resolved) > 0) {
+          resolvedTypePath = resolved;
+        }
+      }
     } else {
       typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
+    }
+    if (!resolvedTypePath.empty()) {
+      const std::string resolved = resolvedTypePath + "/" + callExpr.name;
+      auto defIt = defMap.find(resolved);
+      if (defIt == defMap.end()) {
+        error = "unknown method: " + resolved;
+        return nullptr;
+      }
+      return defIt->second;
     }
     if (typeName.empty()) {
       error = "unknown method target for " + callExpr.name;

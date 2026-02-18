@@ -473,6 +473,7 @@ bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
                            const std::unordered_map<std::string, std::string> &importAliases,
+                           const std::unordered_map<std::string, std::string> &structTypeMap,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
                            std::string &resolvedOut) {
   if (!call.isMethodCall || call.args.empty()) {
@@ -516,7 +517,7 @@ bool resolveMethodCallPath(const Expr &call,
           return "";
         }
         std::string methodPath;
-        if (resolveMethodCallPath(expr, localTypes, importAliases, returnKinds, methodPath)) {
+        if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
           auto it = returnKinds.find(methodPath);
           if (it != returnKinds.end()) {
             return typeNameForReturnKind(it->second);
@@ -534,6 +535,17 @@ bool resolveMethodCallPath(const Expr &call,
       return false;
     }
     typeName = it->second.typeName;
+  } else if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall && !receiver.isBinding) {
+    std::string resolved = resolveExprPath(receiver);
+    auto importIt = importAliases.find(receiver.name);
+    if (structTypeMap.count(resolved) == 0 && importIt != importAliases.end()) {
+      resolved = importIt->second;
+    }
+    if (structTypeMap.count(resolved) > 0) {
+      resolvedOut = resolved + "/" + call.name;
+      return true;
+    }
+    typeName = inferPrimitiveTypeName(receiver);
   } else {
     typeName = inferPrimitiveTypeName(receiver);
   }

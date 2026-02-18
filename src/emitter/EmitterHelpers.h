@@ -78,6 +78,7 @@ bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
                            const std::unordered_map<std::string, std::string> &importAliases,
+                           const std::unordered_map<std::string, std::string> &structTypeMap,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
                            std::string &resolvedOut);
 bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);

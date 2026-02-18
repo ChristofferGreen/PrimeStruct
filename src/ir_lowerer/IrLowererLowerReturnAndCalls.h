@@ -431,7 +431,8 @@
     if (!getReturnInfo(callee.fullPath, returnInfo)) {
       return false;
     }
-    if (returnInfo.returnsVoid && requireValue) {
+    const bool structDef = isStructDefinition(callee);
+    if (returnInfo.returnsVoid && requireValue && !structDef) {
       error = "void call not allowed in expression context: " + callee.fullPath;
       return false;
     }
@@ -439,8 +440,6 @@
       error = "native backend does not support recursive calls: " + callee.fullPath;
       return false;
     }
-
-    const bool structDef = isStructDefinition(callee);
     std::vector<Expr> structParams;
     auto isStaticField = [](const Expr &stmt) -> bool {
       for (const auto &transform : stmt.transforms) {
@@ -582,6 +581,10 @@
 
     if (!context.returnsVoid) {
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(context.returnLocal)});
+    }
+    if (structDef && requireValue && context.returnsVoid) {
+      // VM/native treat struct constructor calls as void; synthesize a value for expression contexts.
+      function.instructions.push_back({IrOpcode::PushI32, 0});
     }
 
     inlineStack.erase(callee.fullPath);

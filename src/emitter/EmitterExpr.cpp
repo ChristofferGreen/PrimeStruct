@@ -441,7 +441,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         std::string full = resolveExprPath(stmt);
         if (stmt.isMethodCall && !isArrayCountCall(stmt, activeTypes) && !isMapCountCall(stmt, activeTypes)) {
           std::string methodPath;
-          if (resolveMethodCallPath(stmt, activeTypes, importAliases, returnKinds, methodPath)) {
+          if (resolveMethodCallPath(stmt, activeTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
             full = methodPath;
           }
         }
@@ -603,7 +603,7 @@ std::string Emitter::emitExpr(const Expr &expr,
   if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) &&
       !isStringCountCall(expr, localTypes)) {
     std::string methodPath;
-    if (resolveMethodCallPath(expr, localTypes, importAliases, returnKinds, methodPath)) {
+    if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
       full = methodPath;
     }
   }
@@ -632,7 +632,7 @@ std::string Emitter::emitExpr(const Expr &expr,
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
     std::string methodPath;
-    if (resolveMethodCallPath(methodExpr, localTypes, importAliases, returnKinds, methodPath)) {
+    if (resolveMethodCallPath(methodExpr, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
       full = methodPath;
     }
   }
