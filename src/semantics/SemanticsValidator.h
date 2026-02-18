@@ -42,6 +42,7 @@ private:
   bool isEntryArgsName(const std::string &name) const;
   bool isEntryArgsAccess(const Expr &expr) const;
   bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
+  bool isBuiltinBlockCall(const Expr &expr) const;
 
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,

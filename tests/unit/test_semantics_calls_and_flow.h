@@ -690,6 +690,27 @@ main() {
   CHECK(error.find("block requires block arguments") != std::string::npos);
 }
 
+TEST_CASE("user-defined block call ignores builtin rules") {
+  const std::string source = R"(
+[return<int>]
+block([i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [i32 mut] result{block(1i32)}
+  block(2i32) {
+    assign(result, 3i32)
+  }
+  return(result)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block expression rejects arguments") {
   const std::string source = R"(
 [return<int>]

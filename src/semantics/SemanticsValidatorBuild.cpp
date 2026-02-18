@@ -579,6 +579,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   return root;
 }
 
+bool SemanticsValidator::isBuiltinBlockCall(const Expr &expr) const {
+  if (!isBlockCall(expr)) {
+    return false;
+  }
+  return defMap_.count(resolveCalleePath(expr)) == 0;
+}
+
 bool SemanticsValidator::isParam(const std::vector<ParameterInfo> &params, const std::string &name) const {
   for (const auto &param : params) {
     if (param.name == name) {

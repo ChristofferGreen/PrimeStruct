@@ -328,7 +328,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
         return nullptr;
       }
-      if (!allowAnyName && !isBlockCall(candidate)) {
+      if (!allowAnyName && !isBuiltinBlockCall(candidate)) {
         return nullptr;
       }
       const Expr *valueExpr = nullptr;
@@ -707,16 +707,11 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     }
     return true;
   }
-  if (isBlockCall(stmt) && !stmt.hasBodyArguments) {
+  if (isBuiltinBlockCall(stmt) && !stmt.hasBodyArguments) {
     error_ = "block requires block arguments";
     return false;
   }
-  if (isBlockCall(stmt) && stmt.hasBodyArguments) {
-    const std::string resolved = resolveCalleePath(stmt);
-    if (defMap_.find(resolved) != defMap_.end()) {
-      error_ = "block arguments require a definition target: " + resolved;
-      return false;
-    }
+  if (isBuiltinBlockCall(stmt) && stmt.hasBodyArguments) {
     if (hasNamedArguments(stmt.argNames) || !stmt.args.empty() || !stmt.templateArgs.empty()) {
       error_ = "block does not accept arguments";
       return false;
@@ -956,7 +951,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return true;
     }
   }
-  if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBlockCall(stmt)) {
+  if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt)) {
     std::string collectionName;
     if (getBuiltinCollectionName(stmt, collectionName)) {
       error_ = collectionName + " literal does not accept block arguments";
@@ -1010,11 +1005,8 @@ bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
   if (isIfCall(stmt) && stmt.args.size() == 3) {
     return branchAlwaysReturns(stmt.args[1]) && branchAlwaysReturns(stmt.args[2]);
   }
-  if (isBlockCall(stmt) && stmt.hasBodyArguments) {
-    const std::string resolved = resolveCalleePath(stmt);
-    if (defMap_.find(resolved) == defMap_.end()) {
-      return blockAlwaysReturns(stmt.bodyArguments);
-    }
+  if (isBuiltinBlockCall(stmt) && stmt.hasBodyArguments) {
+    return blockAlwaysReturns(stmt.bodyArguments);
   }
   return false;
 }

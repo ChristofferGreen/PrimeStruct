@@ -813,12 +813,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
-    if (isBlockCall(expr) && expr.hasBodyArguments) {
-      const std::string resolved = resolveCalleePath(expr);
-      if (defMap_.find(resolved) != defMap_.end()) {
-        error_ = "block arguments require a definition target: " + resolved;
-        return false;
-      }
+    if (isBuiltinBlockCall(expr) && expr.hasBodyArguments) {
       if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
         error_ = "block expression does not accept arguments";
         return false;
@@ -917,7 +912,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
-    if (isBlockCall(expr)) {
+    if (isBuiltinBlockCall(expr)) {
       error_ = "block requires block arguments";
       return false;
     }
@@ -988,7 +983,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
     }
-    if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBlockCall(expr)) {
+    if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
       const std::string resolved = resolveCalleePath(expr);
       if (defMap_.find(resolved) == defMap_.end()) {
         error_ = "block arguments require a definition target: " + resolved;
