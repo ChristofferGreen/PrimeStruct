@@ -708,6 +708,28 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("text transform rules apply to nested definitions") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [return<int>]
+  helper() {
+    return(1i32+2i32)
+  }
+  return(/main/helper())
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_nested_def.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_nested_def_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=/main/*=operators";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
 TEST_CASE("text transform rules ignore nested transform lists") {
   const std::string source = R"(
 main() {
