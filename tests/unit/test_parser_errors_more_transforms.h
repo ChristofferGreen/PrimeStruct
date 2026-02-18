@@ -20,6 +20,37 @@ main() {
   CHECK(error.find("transform text group cannot be empty") != std::string::npos);
 }
 
+TEST_CASE("text transform group requires parentheses") {
+  const std::string source = R"(
+[text]
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform group requires parentheses") != std::string::npos);
+}
+
+TEST_CASE("semantic transform group requires parentheses") {
+  const std::string source = R"(
+[semantic<foo>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform group requires parentheses") != std::string::npos);
+}
+
 TEST_CASE("transform arguments cannot be empty") {
   const std::string source = R"(
 [effects()]

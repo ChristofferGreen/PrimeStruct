@@ -320,11 +320,14 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (!validateTransformName(name.text, nameError)) {
       return fail(nameError);
     }
-    if ((name.text == "text" || name.text == "semantic") && match(TokenKind::LParen)) {
-      if (!parseTransformGroup(name.text)) {
-        return false;
+    if (name.text == "text" || name.text == "semantic") {
+      if (match(TokenKind::LParen)) {
+        if (!parseTransformGroup(name.text)) {
+          return false;
+        }
+        continue;
       }
-      continue;
+      return fail(name.text + " transform group requires parentheses");
     }
     Transform transform;
     transform.name = name.text;
