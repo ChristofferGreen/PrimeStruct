@@ -633,6 +633,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("method call with block arguments targets definition") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value{1i32}
+}
+
+[return<void>]
+/Thing/do([Thing] self) {
+  return()
+}
+
+[return<int>]
+main() {
+  [Thing] item{Thing()}
+  item.do() {
+    [i32] temp{2i32}
+  }
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("block binding infers string type") {
   const std::string source = R"(
 [return<bool>]

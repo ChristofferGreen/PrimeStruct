@@ -951,13 +951,67 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       return true;
     }
   }
+  auto resolveBodyArgumentTarget = [&](const Expr &callExpr, std::string &resolvedOut) {
+    if (!callExpr.isMethodCall) {
+      resolvedOut = resolveCalleePath(callExpr);
+      return;
+    }
+    if (callExpr.args.empty()) {
+      resolvedOut = resolveCalleePath(callExpr);
+      return;
+    }
+    const Expr &receiver = callExpr.args.front();
+    const std::string &methodName = callExpr.name;
+    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+      const std::string resolvedType = resolveCalleePath(receiver);
+      if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
+        resolvedOut = resolvedType + "/" + methodName;
+        return;
+      }
+    }
+    std::string typeName;
+    if (receiver.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
+        typeName = paramBinding->typeName;
+      } else {
+        auto it = locals.find(receiver.name);
+        if (it != locals.end()) {
+          typeName = it->second.typeName;
+        }
+      }
+    }
+    if (typeName.empty()) {
+      std::string inferred = typeNameForReturnKind(inferExprReturnKind(receiver, params, locals));
+      if (!inferred.empty()) {
+        typeName = inferred;
+      }
+    }
+    if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
+      resolvedOut = resolveCalleePath(callExpr);
+      return;
+    }
+    if (isPrimitiveBindingTypeName(typeName)) {
+      resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
+      return;
+    }
+    std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+    if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
+      auto importIt = importAliases_.find(typeName);
+      if (importIt != importAliases_.end()) {
+        resolvedType = importIt->second;
+      }
+    }
+    resolvedOut = resolvedType + "/" + methodName;
+  };
+
   if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt)) {
     std::string collectionName;
     if (getBuiltinCollectionName(stmt, collectionName)) {
       error_ = collectionName + " literal does not accept block arguments";
       return false;
     }
-    std::string resolved = resolveCalleePath(stmt);
+    std::string resolved;
+    resolveBodyArgumentTarget(stmt, resolved);
     if (defMap_.count(resolved) == 0) {
       error_ = "block arguments require a definition target: " + resolved;
       return false;

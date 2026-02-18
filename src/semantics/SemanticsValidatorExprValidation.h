@@ -297,6 +297,19 @@
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
     }
+    if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
+      if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {
+        error_ = "block arguments require a definition target: " + resolved;
+        return false;
+      }
+      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      for (const auto &bodyExpr : expr.bodyArguments) {
+        if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
+                               expr.namespacePrefix)) {
+          return false;
+        }
+      }
+    }
     PathSpaceBuiltin pathSpaceBuiltin;
     if (getPathSpaceBuiltin(expr, pathSpaceBuiltin) && defMap_.find(resolved) == defMap_.end()) {
       error_ = pathSpaceBuiltin.name + " is statement-only";
