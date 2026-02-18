@@ -29,6 +29,21 @@ Each stage halts on error (reporting diagnostics immediately) and exposes `--dum
 - Tooling: `primec`, `primevm`, `--dump-stage` and snapshot-style tests for parser/IR/diagnostics.
 - Change control: any feature outside this charter requires a docs update plus an explicit acceptance gate.
 
+## Risk Log (Phase 0)
+Each risk lists a mitigation and a concrete fallback so the project can keep moving if the
+open question is unresolved.
+
+| Risk | Impact | Mitigation | Fallback |
+| --- | --- | --- | --- |
+| Borrow checker design remains unclear. | Resource safety rules vary by backend, leading to unsound or inconsistent behavior. | Scope borrow checking to opt-in transforms only; document minimal safety checks first. | Remove borrow-checking claims from v1 and gate on explicit transforms only. |
+| Capability taxonomy is not finalized. | Effects/capabilities drift between docs, diagnostics, and runtime logging. | Define a minimal capability list (IO + memory + GPU) and lock it for v1. | Treat capabilities as diagnostic-only metadata until taxonomy stabilizes. |
+| GPU backend constraints are underspecified. | GLSL/SPIR-V output may accept unsupported effects or types. | Publish an explicit GPU support matrix and reject unsupported effects/types early. | Mark GPU backend as experimental and limit to math-only + POD structs. |
+| IR/PSIR versioning slips. | Backends diverge on opcode interpretation or serialized layouts. | Freeze v1 opcode set, add migration notes, and version the serialized header. | Reject unknown IR versions and require recompile in tooling. |
+| Struct layout guarantees are ambiguous. | ABI/layout mismatches across native/VM/GPU. | Require layout manifests and add conformance tests per backend. | Document layout as backend-defined and disallow cross-backend struct reuse. |
+| Default effect policy changes. | Behavior differs between CLI defaults and docs. | Keep defaults centralized in `Options` and tests covering defaults. | Require explicit `[effects]` in examples and templates. |
+| Execution emission is unclear. | Executions parse but are ignored by some backends. | Decide and document whether executions are lowered per backend. | Treat executions as diagnostics-only until a backend implements them. |
+| Stdlib surface drifts across backends. | Code runs on one backend but fails on another. | Maintain a per-backend stdlib support table + tests. | Provide a “core subset” and gate all samples to it. |
+
 ## Deferred Features (not in v1)
 - Borrow checker and lifetime enforcement beyond basic effects gating.
 - Full capability taxonomy and policy-driven capability enforcement (beyond documented effects).

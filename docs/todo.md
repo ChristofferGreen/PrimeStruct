@@ -64,7 +64,7 @@ Legend:
 
 **Spec Completion & Open Design**
 - ✓ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
-- ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
+- ✓ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ○ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
 - ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
 - ○ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
