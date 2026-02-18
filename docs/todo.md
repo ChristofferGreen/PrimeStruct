@@ -115,6 +115,8 @@ Legend:
 - ○ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
 - ○ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
 - ○ Refresh README once the spec stabilizes (current status, backend support, and roadmap).
+- ○ Define a per-backend type support matrix (allowed binding/return/local types by backend).
+- ○ Define math builtin operand type rules and backend-specific restrictions (e.g., integer pow errors).
 - ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
 - ○ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
 - ○ For `tools/PrimeStructc`, decide whether to honor include `version="..."` (or document that it is ignored).
