@@ -223,6 +223,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       return true;
     }
     const bool allowFullForms = allowFullTransformArguments(phase, transform.name);
+    auto failTextTransformArgument = [&]() -> bool {
+      return fail("text transform arguments must be identifiers or literals");
+    };
     expect(TokenKind::LParen, "expected '('");
     if (match(TokenKind::RParen)) {
       return fail("transform argument list cannot be empty");
@@ -233,8 +236,16 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
           return false;
         }
       } else {
+        if (match(TokenKind::LBracket) || match(TokenKind::LParen) || match(TokenKind::LBrace) ||
+            match(TokenKind::LAngle)) {
+          return failTextTransformArgument();
+        }
         if (!parseSimpleTransformArgument(transform.arguments)) {
           return false;
+        }
+        if (match(TokenKind::LBracket) || match(TokenKind::LParen) || match(TokenKind::LBrace) ||
+            match(TokenKind::LAngle)) {
+          return failTextTransformArgument();
         }
       }
       if (match(TokenKind::RParen)) {

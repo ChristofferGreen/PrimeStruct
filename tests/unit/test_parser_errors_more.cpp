@@ -1263,7 +1263,22 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected transform argument") != std::string::npos);
+  CHECK(error.find("text transform arguments must be identifiers or literals") != std::string::npos);
+}
+
+TEST_CASE("text transform arguments reject full forms") {
+  const std::string source = R"(
+[text(custom(foo(1i32)))]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("text transform arguments must be identifiers or literals") != std::string::npos);
 }
 
 TEST_CASE("transform template argument required") {
