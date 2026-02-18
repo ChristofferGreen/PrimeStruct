@@ -13,13 +13,13 @@ struct Options {
   std::string outDir = ".";
   std::string entryPath = "/main";
   std::string dumpStage;
-  std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8"};
+  std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};
   std::vector<TextTransformRule> textTransformRules;
   std::vector<TextTransformRule> semanticTransformRules;
   bool allowEnvelopeTextTransforms = true;
   std::vector<std::string> semanticTransforms;
   bool requireCanonicalSyntax = false;
-  std::vector<std::string> defaultEffects;
+  std::vector<std::string> defaultEffects = {"io_out"};
   std::vector<std::string> entryDefaultEffects = {"io_out"};
   std::vector<std::string> programArgs;
   std::vector<std::string> includePaths;

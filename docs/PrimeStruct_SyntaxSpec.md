@@ -74,7 +74,7 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 - Integer literals:
   - Optional leading `-` is part of the literal token (e.g. `-1i32`).
   - Decimal and hex forms are accepted (`0x` / `0X` prefix for hex).
-  - `i32`, `i64`, `u64` suffixes required (unless the `implicit-i32` text transform is enabled).
+  - `i32`, `i64`, `u64` suffixes required unless `implicit-i32` is enabled (default).
   - Commas may appear between digits in the integer part as digit separators and are ignored for value.
   - Examples: `0i32`, `42i64`, `7u64`, `-1i32`, `0xFFu64`.
 - Float literals:
@@ -462,10 +462,9 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 ## 9. Effects
 
 - Effects are declared via `[effects(...)]` on definitions or executions.
-- Defaults can be supplied by `primec --default-effects`.
+- Defaults can be supplied by `primec --default-effects` (the compiler enables `io_out` by default unless set to `none`).
 - Backends reject unsupported effects.
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
-  - The entry definition starts with a default effect set (by default includes `io_out`), which can be overridden via `--default-effects`.
 
 ## 10. Return Semantics
 

@@ -26,7 +26,7 @@
 
 namespace {
 std::vector<std::string> defaultTextFilters() {
-  return {"collections", "operators", "implicit-utf8"};
+  return {"collections", "operators", "implicit-utf8", "implicit-i32"};
 }
 
 std::vector<std::string> defaultSemanticTransforms() {
