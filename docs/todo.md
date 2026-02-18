@@ -74,3 +74,14 @@ Legend:
 - ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
 - ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
 - ○ Define reference counting / heap value lifetime model for VM/native backends.
+- ○ Decide on standard library package versioning and implement `--stdlib-version` (or remove the planned flag).
+- ○ Define and implement stdlib conformance markers for VM/native subset differences.
+- ○ Implement Metal backend output or remove it from the backend roadmap.
+- ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
+- ○ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.
+- ○ Decide on Unicode identifier support and update lexer/parser/docs accordingly.
+- ○ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.
+- ○ Implement the `class<Name>(...)` surface (composition/extends semantics) or remove it from docs.
+- ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
+- ○ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
+- ○ Scope and plan IDE/LSP integration once the compiler stabilizes.
