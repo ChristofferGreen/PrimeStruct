@@ -97,3 +97,5 @@ Legend:
 - ○ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
 - ○ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
 - ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
+- ○ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
+- ○ Support recursive struct layouts or document them as explicitly unsupported.
