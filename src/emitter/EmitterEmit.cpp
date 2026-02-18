@@ -1344,43 +1344,18 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         return;
       }
       if (stmt.kind == Expr::Kind::Call && (stmt.hasBodyArguments || !stmt.bodyArguments.empty())) {
-        std::string full = resolveExprPath(stmt);
-        if (stmt.isMethodCall && !isArrayCountCall(stmt, localTypes) && !isMapCountCall(stmt, localTypes)) {
-          std::string methodPath;
-          if (resolveMethodCallPath(stmt, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
-            full = methodPath;
-          }
-        }
-        auto it = nameMap.find(full);
-        if (it == nameMap.end()) {
-          out << pad << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
-          return;
-        }
-        out << pad << it->second << "(";
-        std::vector<const Expr *> orderedArgs;
-        auto paramIt = paramMap.find(full);
-        if (paramIt != paramMap.end()) {
-          orderedArgs = orderCallArguments(stmt, paramIt->second);
-        } else {
-          for (const auto &arg : stmt.args) {
-            orderedArgs.push_back(&arg);
-          }
-        }
-        for (size_t i = 0; i < orderedArgs.size(); ++i) {
-          if (i > 0) {
-            out << ", ";
-          }
-          out << emitExpr(*orderedArgs[i], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
-        }
-        if (!orderedArgs.empty()) {
-          out << ", ";
-        }
-        out << "[&]() {\n";
+        Expr callExpr = stmt;
+        callExpr.bodyArguments.clear();
+        callExpr.hasBodyArguments = false;
+        out << pad
+            << emitExpr(callExpr, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+            << ";\n";
+        out << pad << "{\n";
+        auto blockTypes = localTypes;
         for (const auto &bodyStmt : stmt.bodyArguments) {
-          emitStatement(bodyStmt, indent + 1, localTypes);
+          emitStatement(bodyStmt, indent + 1, blockTypes);
         }
-        out << pad << "}";
-        out << ");\n";
+        out << pad << "}\n";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&

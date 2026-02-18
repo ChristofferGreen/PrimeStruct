@@ -406,6 +406,36 @@ main() {
   CHECK(runCommand(nativePath) == 9);
 }
 
+TEST_CASE("compiles and runs call with body block") {
+  const std::string source = R"(
+[return<int>]
+sum([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{0i32}
+  [i32] total{ sum(2i32, 3i32) { assign(value, 7i32) } }
+  return(plus(total, value))
+}
+)";
+  const std::string srcPath = writeTemp("compile_call_body_block.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_call_body_block_exe").string();
+  const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_call_body_block_native").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 12);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 12);
+}
+
 TEST_CASE("compiles and runs boolean ops with conversions") {
   const std::string source = R"(
 [return<bool>]

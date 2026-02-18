@@ -901,6 +901,42 @@
       return true;
     }
     if (stmt.kind == Expr::Kind::Call) {
+      if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBlockCall(stmt)) {
+        Expr callExpr = stmt;
+        callExpr.bodyArguments.clear();
+        callExpr.hasBodyArguments = false;
+        const Definition *callee = nullptr;
+        if (callExpr.isMethodCall && !isArrayCountCall(callExpr, localsIn) && !isStringCountCall(callExpr, localsIn) &&
+            !isVectorCapacityCall(callExpr, localsIn)) {
+          callee = resolveMethodCallDefinition(callExpr, localsIn);
+          if (!callee) {
+            return false;
+          }
+        } else {
+          callee = resolveDefinitionCall(callExpr);
+          if (!callee) {
+            error = "block arguments require a definition target: " + resolveExprPath(callExpr);
+            return false;
+          }
+        }
+        ReturnInfo info;
+        if (!getReturnInfo(callee->fullPath, info)) {
+          return false;
+        }
+        if (!emitInlineDefinitionCall(callExpr, *callee, localsIn, false)) {
+          return false;
+        }
+        if (!info.returnsVoid) {
+          function.instructions.push_back({IrOpcode::Pop, 0});
+        }
+        LocalMap blockLocals = localsIn;
+        for (const auto &bodyExpr : stmt.bodyArguments) {
+          if (!emitStatement(bodyExpr, blockLocals)) {
+            return false;
+          }
+        }
+        return true;
+      }
       std::string vectorHelper;
       if (isSimpleCallName(stmt, "push")) {
         vectorHelper = "push";

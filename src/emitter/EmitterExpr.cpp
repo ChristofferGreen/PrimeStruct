@@ -438,51 +438,17 @@ std::string Emitter::emitExpr(const Expr &expr,
         return;
       }
       if (stmt.kind == Expr::Kind::Call && (stmt.hasBodyArguments || !stmt.bodyArguments.empty())) {
-        std::string full = resolveExprPath(stmt);
-        if (stmt.isMethodCall && !isArrayCountCall(stmt, activeTypes) && !isMapCountCall(stmt, activeTypes)) {
-          std::string methodPath;
-          if (resolveMethodCallPath(stmt, activeTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
-            full = methodPath;
-          }
-        }
-        auto it = nameMap.find(full);
-        if (it == nameMap.end()) {
-          out << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, allowMathBare)
-              << "; ";
-          return;
-        }
-        out << it->second << "(";
-        std::vector<const Expr *> orderedArgs;
-        auto paramIt = paramMap.find(full);
-        if (paramIt != paramMap.end()) {
-          orderedArgs = orderCallArguments(stmt, paramIt->second);
-        } else {
-          for (const auto &arg : stmt.args) {
-            orderedArgs.push_back(&arg);
-          }
-        }
-        for (size_t i = 0; i < orderedArgs.size(); ++i) {
-          if (i > 0) {
-            out << ", ";
-          }
-          out << emitExpr(*orderedArgs[i],
-                          nameMap,
-                          paramMap,
-                          structTypeMap,
-                          importAliases,
-                          activeTypes,
-                          returnKinds,
-                          allowMathBare);
-        }
-        if (!orderedArgs.empty()) {
-          out << ", ";
-        }
-        out << "[&]() { ";
+        Expr callExpr = stmt;
+        callExpr.bodyArguments.clear();
+        callExpr.hasBodyArguments = false;
+        out << emitExpr(callExpr, nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, allowMathBare)
+            << "; ";
+        out << "{ ";
+        auto blockTypes = activeTypes;
         for (const auto &bodyStmt : stmt.bodyArguments) {
-          emitLambdaStatement(bodyStmt, activeTypes);
+          emitLambdaStatement(bodyStmt, blockTypes);
         }
-        out << "}";
-        out << "); ";
+        out << "} ";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
@@ -784,6 +750,44 @@ std::string Emitter::emitExpr(const Expr &expr,
           << "; ";
     }
     out << "}())";
+    return out.str();
+  }
+  if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlock(expr, nameMap)) {
+    Expr callExpr = expr;
+    callExpr.bodyArguments.clear();
+    callExpr.hasBodyArguments = false;
+    Expr blockExpr = expr;
+    blockExpr.name = "block";
+    blockExpr.args.clear();
+    blockExpr.templateArgs.clear();
+    blockExpr.argNames.clear();
+    blockExpr.isMethodCall = false;
+    blockExpr.isBinding = false;
+    blockExpr.isLambda = false;
+    blockExpr.hasBodyArguments = true;
+    std::ostringstream out;
+    out << "([&]() { ";
+    out << "auto ps_call_value = "
+        << emitExpr(callExpr,
+                    nameMap,
+                    paramMap,
+                    structTypeMap,
+                    importAliases,
+                    localTypes,
+                    returnKinds,
+                    allowMathBare)
+        << "; ";
+    out << "(void)"
+        << emitExpr(blockExpr,
+                    nameMap,
+                    paramMap,
+                    structTypeMap,
+                    importAliases,
+                    localTypes,
+                    returnKinds,
+                    allowMathBare)
+        << "; ";
+    out << "return ps_call_value; }())";
     return out.str();
   }
   if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {

@@ -660,6 +660,24 @@
         return false;
       }
       case Expr::Kind::Call: {
+        if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBlockCall(expr)) {
+          Expr callExpr = expr;
+          callExpr.bodyArguments.clear();
+          callExpr.hasBodyArguments = false;
+          if (!emitExpr(callExpr, localsIn)) {
+            return false;
+          }
+          const int32_t resultLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+          LocalMap blockLocals = localsIn;
+          for (const auto &bodyExpr : expr.bodyArguments) {
+            if (!emitStatement(bodyExpr, blockLocals)) {
+              return false;
+            }
+          }
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+          return true;
+        }
         if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
             !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
           Expr methodExpr = expr;
