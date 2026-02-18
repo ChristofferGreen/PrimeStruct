@@ -465,6 +465,8 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Defaults can be supplied by `primec --default-effects` (the compiler enables `io_out` by default unless set to `none`).
 - Backends reject unsupported effects.
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
+  - Recognized v1 capabilities: `io_out`, `io_err`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
+    `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `render_graph`.
 
 ## 10. Return Semantics
 
