@@ -95,3 +95,5 @@ Legend:
 - ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
 - ○ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
 - ○ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
+- ○ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
+- ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
