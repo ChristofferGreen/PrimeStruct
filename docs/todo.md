@@ -63,60 +63,59 @@ Legend:
 - ✓ Add PathSpace builtins (`notify`, `insert`, `take`) to `docs/PrimeStruct_SyntaxSpec.md` (currently only in the design doc).
 
 **Spec Completion & Open Design**
+- ○ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
+- ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ○ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
-- ○ Define constructor semantics beyond `Create`/`Destroy`, including constant member behavior and default initialization rules.
+- ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
+- ○ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
+- ○ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
+- ○ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
+- ○ Close the SyntaxSpec draft: review feedback, reconcile grammar, and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
+- ○ Decide on Unicode identifier support and update lexer/parser/docs accordingly.
 - ○ Finalize the literal suffix catalog, including canonical raw string behavior across backends.
 - ○ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
+- ○ Finalize literals & composite construction semantics beyond suffix rules.
+- ○ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
 - ○ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.
-- ○ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
-- ○ Close the SyntaxSpec draft: review feedback, reconcile grammar, and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
-- ○ Align examples across docs once SyntaxSpec is finalized (ensure runnable examples + IR snippets still match).
-- ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
-- ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
-- ○ Define reference counting / heap value lifetime model for VM/native backends.
+- ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
+- ○ Define pointer/reference target envelope whitelist and conversion rules per backend.
+- ○ Define constructor semantics beyond `Create`/`Destroy`, including constant member behavior and default initialization rules.
+- ○ Finalize struct/envelope category rules, placement policy, and category mapping.
+- ○ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.
+- ○ Support recursive struct layouts or document them as explicitly unsupported.
+- ○ Implement the `class<Name>(...)` surface (composition/extends semantics) or remove it from docs.
+- ○ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
+- ○ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
+- ○ Finalize core library surface/standard math spec and document backend-specific limits.
+- ○ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
+- ○ Define math builtin operand type rules and backend-specific restrictions (e.g., integer pow errors).
+- ○ Finalize and version the Standard Library Reference (currently draft v0).
 - ○ Decide on standard library package versioning and implement `--stdlib-version` (or remove the planned flag).
 - ○ Define and implement stdlib conformance markers for VM/native subset differences.
-- ○ Implement Metal backend output or remove it from the backend roadmap.
-- ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
-- ○ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.
-- ○ Decide on Unicode identifier support and update lexer/parser/docs accordingly.
-- ○ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.
-- ○ Implement the `class<Name>(...)` surface (composition/extends semantics) or remove it from docs.
 - ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
-- ○ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
-- ○ Scope and plan IDE/LSP integration once the compiler stabilizes.
+- ○ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
+- ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
 - ○ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
-- ○ Decide on LLVM backend support (implement or remove future-LLVM references).
-- ○ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
-- ○ Finalize struct/envelope category rules, placement policy, and category mapping.
-- ○ Finalize core library surface/standard math spec and document backend-specific limits.
-- ○ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
-- ○ Finalize literals & composite construction semantics beyond suffix rules.
-- ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
-- ○ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
-- ○ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
-- ○ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
-- ○ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
-- ○ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
-- ○ Support recursive struct layouts or document them as explicitly unsupported.
-- ○ Define the supported IR opcode subset per backend (native/VM/GLSL) and align validation to reject unsupported cases earlier.
-- ○ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
 - ○ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
+- ○ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.
+- ○ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
+- ○ Define reference counting / heap value lifetime model for VM/native backends.
+- ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
+- ○ Define a per-backend type support matrix (allowed binding/return/local types by backend).
 - ○ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
-- ○ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
-- ○ Finalize and version the Standard Library Reference (currently draft v0).
-- ○ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
-- ○ Define pointer/reference target envelope whitelist and conversion rules per backend.
 - ○ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
-- ○ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
+- ○ Define the supported IR opcode subset per backend (native/VM/GLSL) and align validation to reject unsupported cases earlier.
 - ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
 - ○ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
 - ○ Enumerate VM backend unsupported opcodes/runtime errors and add tests/allowlist documentation.
 - ○ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
-- ○ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
-- ○ Refresh README once the spec stabilizes (current status, backend support, and roadmap).
-- ○ Define a per-backend type support matrix (allowed binding/return/local types by backend).
-- ○ Define math builtin operand type rules and backend-specific restrictions (e.g., integer pow errors).
+- ○ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
 - ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
+- ○ Implement Metal backend output or remove it from the backend roadmap.
+- ○ Decide on LLVM backend support (implement or remove future-LLVM references).
+- ○ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
+- ○ Scope and plan IDE/LSP integration once the compiler stabilizes.
+- ○ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
 - ○ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
 - ○ For `tools/PrimeStructc`, decide whether to honor include `version="..."` (or document that it is ignored).
+- ○ Refresh README once the spec stabilizes (current status, backend support, and roadmap).
