@@ -113,6 +113,8 @@ Legend:
 - ○ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
 - ○ Enumerate VM backend unsupported opcodes/runtime errors and add tests/allowlist documentation.
 - ○ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
+- ○ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
+- ○ Refresh README once the spec stabilizes (current status, backend support, and roadmap).
 - ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
 - ○ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
 - ○ For `tools/PrimeStructc`, decide whether to honor include `version="..."` (or document that it is ignored).
