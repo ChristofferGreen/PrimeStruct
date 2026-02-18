@@ -79,7 +79,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_template_parsing.cpp
     tests/unit/test_compile_run.cpp
     tests/unit/test_text_filter_helpers.cpp
-    tests/unit/test_text_filter_pipeline.cpp
+    tests/unit/test_text_filter_pipeline_basics.cpp
+    tests/unit/test_text_filter_pipeline_rewrites.cpp
+    tests/unit/test_text_filter_pipeline_implicit_utf8.cpp
+    tests/unit/test_text_filter_pipeline_implicit_i32.cpp
+    tests/unit/test_text_filter_pipeline_collections.cpp
     tests/unit/test_printers_manual.cpp
     tests/unit/test_semantics_manual.cpp
     tests/unit/test_lexer.cpp
