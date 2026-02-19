@@ -297,12 +297,16 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   bool paramsAreIdentifiers = false;
   bool isDefinition = false;
+  const bool copyShorthand = allowSurfaceSyntax_ && name.text == "Copy" && isCopyConstructorShorthandSignature();
   if (hasReturnTransform) {
     isDefinition = true;
   } else if (hasStructTransform) {
     isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
   } else {
     isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+  }
+  if (copyShorthand) {
+    isDefinition = true;
   }
   if (!allowSurfaceSyntax_ && isDefinition && !hasReturnTransform && !hasStructTransform) {
     return fail("definition requires explicit return transform in canonical mode");
@@ -312,8 +316,14 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   if (isDefinition) {
     std::vector<Expr> parameters;
-    if (!parseParameterList(parameters, currentNamespacePrefix())) {
-      return false;
+    if (copyShorthand) {
+      if (!parseCopyConstructorShorthand(parameters, currentNamespacePrefix())) {
+        return false;
+      }
+    } else {
+      if (!parseParameterList(parameters, currentNamespacePrefix())) {
+        return false;
+      }
     }
     if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
       return false;
@@ -554,6 +564,51 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   return tokens_[braceIndex].kind == TokenKind::LBrace;
 }
 
+bool Parser::isCopyConstructorShorthandSignature() const {
+  size_t index = pos_;
+  auto skipCommentsOnly = [&]() {
+    while (index < tokens_.size() && tokens_[index].kind == TokenKind::Comment) {
+      ++index;
+    }
+  };
+  skipCommentsOnly();
+  if (index >= tokens_.size() || tokens_[index].kind != TokenKind::Identifier) {
+    return false;
+  }
+  ++index;
+  skipCommentsOnly();
+  if (index >= tokens_.size() || tokens_[index].kind != TokenKind::RParen) {
+    return false;
+  }
+  size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  if (braceIndex >= tokens_.size()) {
+    return false;
+  }
+  return tokens_[braceIndex].kind == TokenKind::LBrace;
+}
+
+bool Parser::parseCopyConstructorShorthand(std::vector<Expr> &out, const std::string &namespacePrefix) {
+  Token name = consume(TokenKind::Identifier, "expected parameter identifier");
+  if (name.kind == TokenKind::End) {
+    return false;
+  }
+  std::string nameError;
+  if (!validateIdentifierText(name.text, nameError)) {
+    return fail(nameError);
+  }
+  Expr param;
+  param.kind = Expr::Kind::Call;
+  param.name = name.text;
+  param.namespacePrefix = namespacePrefix;
+  param.isBinding = true;
+  Transform typeTransform;
+  typeTransform.name = "Reference";
+  typeTransform.templateArgs.push_back("Self");
+  param.transforms.push_back(std::move(typeTransform));
+  out.push_back(std::move(param));
+  return true;
+}
+
 bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
                                       const std::vector<Transform> &transforms,
                                       const std::string &parentPath,
@@ -609,12 +664,16 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
 
   bool paramsAreIdentifiers = false;
   bool isDefinition = false;
+  const bool copyShorthand = allowSurfaceSyntax_ && name.text == "Copy" && isCopyConstructorShorthandSignature();
   if (hasReturnTransform) {
     isDefinition = true;
   } else if (hasStructTransform) {
     isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
   } else {
     isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+  }
+  if (copyShorthand) {
+    isDefinition = true;
   }
 
   if (!isDefinition) {
@@ -626,8 +685,14 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   }
 
   std::vector<Expr> parameters;
-  if (!parseParameterList(parameters, parentPath)) {
-    return false;
+  if (copyShorthand) {
+    if (!parseCopyConstructorShorthand(parameters, parentPath)) {
+      return false;
+    }
+  } else {
+    if (!parseParameterList(parameters, parentPath)) {
+      return false;
+    }
   }
   if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
     return false;

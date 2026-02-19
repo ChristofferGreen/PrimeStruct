@@ -1,0 +1,16 @@
+[struct]
+Widget() {
+  [i32] value{1i32}
+
+  [mut]
+  Copy(other) {
+    assign(this, other)
+  }
+}
+
+[return<int>]
+main() {
+  [Widget mut] a{Widget()}
+  [Widget] b{Widget()}
+  return(0i32)
+}

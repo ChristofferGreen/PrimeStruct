@@ -42,6 +42,8 @@ private:
                                 const std::vector<Transform> &transforms,
                                 const std::string &parentPath,
                                 bool &parsed);
+  bool isCopyConstructorShorthandSignature() const;
+  bool parseCopyConstructorShorthand(std::vector<Expr> &out, const std::string &namespacePrefix);
   bool definitionHasReturnBeforeClose() const;
   bool isDefinitionSignature(bool *paramsAreIdentifiers) const;
   bool isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) const;

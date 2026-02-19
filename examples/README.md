@@ -20,6 +20,7 @@ From `build-debug/`:
 - `examples/assign_mutable.prime`: `mut` + `assign`.
 - `examples/collections.prime`: brace collection literals.
 - `examples/collections_brackets.prime`: bracket collection literals + indexing.
+- `examples/copy_constructor.prime`: `Copy` constructor shorthand inside structs.
 - `examples/if_else.prime`: `if` in statement position.
 - `examples/if_expression.prime`: `if` in expression position (both branches yield values).
 - `examples/loop_while_for.prime`: `loop`, `while`, and `for` statement forms.

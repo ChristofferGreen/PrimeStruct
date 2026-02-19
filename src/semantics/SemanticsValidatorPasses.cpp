@@ -16,9 +16,10 @@ struct HelperSuffixInfo {
 };
 
 bool isLifecycleHelperName(const std::string &fullPath) {
-  static const std::array<HelperSuffixInfo, 8> suffixes = {{
+  static const std::array<HelperSuffixInfo, 9> suffixes = {{
       {"Create", ""},
       {"Destroy", ""},
+      {"Copy", ""},
       {"CreateStack", "stack"},
       {"DestroyStack", "stack"},
       {"CreateHeap", "heap"},

@@ -204,7 +204,7 @@ main() {
   CHECK(error.find("lifecycle helpers must return void") != std::string::npos);
 }
 
-TEST_CASE("lifecycle helpers reject parameters") {
+TEST_CASE("Create helpers reject parameters") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -223,6 +223,76 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("lifecycle helpers do not accept parameters") != std::string::npos);
+}
+
+TEST_CASE("Copy helper accepts shorthand parameter") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+
+  [mut]
+  Copy(other) {
+    assign(this, other)
+  }
+}
+
+[return<int>]
+main() {
+  [thing mut] a{thing()}
+  [thing] b{thing()}
+  /thing/Copy(a, b)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("Copy helper accepts Reference<Self> parameter") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+
+  [mut]
+  Copy([Reference<Self>] other) {
+    assign(this, other)
+  }
+}
+
+[return<int>]
+main() {
+  [thing mut] a{thing()}
+  [thing] b{thing()}
+  /thing/Copy(a, b)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("Copy helper requires reference parameter") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+
+  [mut]
+  Copy([i32] other) {
+    assign(this, other)
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Copy helper requires [Reference<Self>] parameter") != std::string::npos);
 }
 
 TEST_CASE("mut transform is rejected on non-helpers") {

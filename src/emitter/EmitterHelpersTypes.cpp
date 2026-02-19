@@ -281,6 +281,12 @@ std::string resolveStructTypeName(const std::string &typeName,
   if (typeName.empty()) {
     return "";
   }
+  if (typeName == "Self") {
+    auto it = structTypeMap.find(namespacePrefix);
+    if (it != structTypeMap.end()) {
+      return it->second;
+    }
+  }
   std::string resolved = typeName;
   if (!resolved.empty() && resolved[0] != '/') {
     resolved = resolveTypePath(typeName, namespacePrefix);

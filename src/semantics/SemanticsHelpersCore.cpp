@@ -869,6 +869,20 @@ bool parseBindingInfo(const Expr &expr,
   if (typeName.empty()) {
     typeName = "int";
   }
+  if (typeName == "Self") {
+    if (structTypes.count(namespacePrefix) == 0) {
+      error = "Self is only valid inside struct definitions";
+      return false;
+    }
+    typeName = namespacePrefix;
+  }
+  if (typeHasTemplate && info.typeTemplateArg == "Self") {
+    if (structTypes.count(namespacePrefix) == 0) {
+      error = "Self is only valid inside struct definitions";
+      return false;
+    }
+    info.typeTemplateArg = namespacePrefix;
+  }
   if (restrictType.has_value()) {
     if (auto softwareType = findSoftwareNumericType(*restrictType)) {
       error = "software numeric types are not supported yet: " + *softwareType;
