@@ -35,6 +35,56 @@ TEST_CASE("rewrites plus operator without spaces") {
   CHECK(output.find("plus(a, b)") != std::string::npos);
 }
 
+TEST_CASE("rewrites plus operator with spaces") {
+  const std::string source = "main(){ return(a + b) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(a, b)") != std::string::npos);
+}
+
+TEST_CASE("rewrites assign operator with spaces") {
+  const std::string source = "main(){ value = other }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(value, other)") != std::string::npos);
+}
+
+TEST_CASE("rewrites assignment with divide precedence") {
+  const std::string source = "main(){ avg = convert<f32>(total) / convert<f32>(count) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(avg, divide(convert<f32>(total), convert<f32>(count)))") != std::string::npos);
+}
+
+TEST_CASE("rewrites multiply before plus") {
+  const std::string source = "main(){ return(a + b * c) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("plus(a, multiply(b, c))") != std::string::npos);
+}
+
+TEST_CASE("rewrites chained assignment right associative") {
+  const std::string source = "main(){ a = b = c }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(a, assign(b, c))") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with float literals") {
   const std::string source = "main(){ return(1.5f+2.5f) }\n";
   primec::TextFilterPipeline pipeline;

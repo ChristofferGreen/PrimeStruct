@@ -402,57 +402,57 @@ TEST_CASE("does not rewrite nested template lists") {
   CHECK(output == source);
 }
 
-TEST_CASE("does not rewrite spaced slash") {
+TEST_CASE("rewrites spaced slash") {
   const std::string source = "main(){ return(a / b) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output.find("divide(a, b)") != std::string::npos);
 }
 
-TEST_CASE("does not rewrite spaced plus") {
+TEST_CASE("rewrites spaced plus") {
   const std::string source = "main(){ return(a + b) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output.find("plus(a, b)") != std::string::npos);
 }
 
-TEST_CASE("does not rewrite spaced minus") {
+TEST_CASE("rewrites spaced minus") {
   const std::string source = "main(){ return(a - b) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output.find("minus(a, b)") != std::string::npos);
 }
 
-TEST_CASE("does not rewrite spaced multiply") {
+TEST_CASE("rewrites spaced multiply") {
   const std::string source = "main(){ return(a * b) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output.find("multiply(a, b)") != std::string::npos);
 }
 
-TEST_CASE("does not rewrite spaced less_than") {
+TEST_CASE("rewrites spaced less_than") {
   const std::string source = "main(){ return(a < b) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output.find("less_than(a, b)") != std::string::npos);
 }
 
-TEST_CASE("does not rewrite spaced comparisons and boolean ops") {
+TEST_CASE("rewrites spaced comparisons and boolean ops") {
   const std::string source =
       "main(){\n"
       "  return(a > b)\n"
@@ -469,7 +469,14 @@ TEST_CASE("does not rewrite spaced comparisons and boolean ops") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output == source);
+  CHECK(output.find("greater_than(a, b)") != std::string::npos);
+  CHECK(output.find("less_equal(a, b)") != std::string::npos);
+  CHECK(output.find("greater_equal(a, b)") != std::string::npos);
+  CHECK(output.find("equal(a, b)") != std::string::npos);
+  CHECK(output.find("not_equal(a, b)") != std::string::npos);
+  CHECK(output.find("and(a, b)") != std::string::npos);
+  CHECK(output.find("or(a, b)") != std::string::npos);
+  CHECK(output.find("assign(a, b)") != std::string::npos);
 }
 
 TEST_CASE("does not rewrite spaced not operator") {

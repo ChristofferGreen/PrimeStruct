@@ -23,7 +23,7 @@ std::vector<std::string> defaultTextFilters() {
 }
 
 std::vector<std::string> defaultSemanticTransforms() {
-  return {};
+  return {"single_type_to_return"};
 }
 
 std::vector<std::string> defaultEffectsList() {

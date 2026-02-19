@@ -1,31 +1,30 @@
 import /math/*
+
 namespace demo {
   [return<void>]
   summarize_scores([array<i32>] scores) {
-    [i32 mut] idx{0}
     [i32 mut] total{0}
     [i32 mut] best{0}
     [i32] count{scores.count()}
     [f32 mut] avg{0.0f32}
 
-    loop(count) {
+    for([i32 mut] idx{0}; idx < count; ++idx) {
       [i32] value{scores[idx]}
-      assign(best, max(best, value))
-      assign(total, total+value)
-      assign(idx, idx+1)
+      best = max(best, value)
+      total = total + value
     };
 
-    if(count==0) {
-      assign(avg, 0.0f32)
+    if(count == 0) {
+      avg = 0.0f32
     } else {
-      assign(avg, divide(convert<f32>(total), convert<f32>(count)))
+      avg = convert<f32>(total) / convert<f32>(count)
     }
 
-    print_line("scores="utf8)
+    print_line("scores=")
     print_line(count)
-    print_line("best="utf8)
+    print_line("best=")
     print_line(best)
-    print_line("total="utf8)
+    print_line("total=")
     print_line(total)
   }
 
@@ -36,7 +35,7 @@ namespace demo {
   }
 }
 
-[return<void>]
+[void]
 main() {
   /demo/main()
   return()

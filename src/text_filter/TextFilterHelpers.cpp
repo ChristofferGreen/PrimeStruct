@@ -596,6 +596,9 @@ bool rewriteUnaryAddressOf(const std::string &input,
   if (input[index] != '&' || index + 1 >= input.size() || input[index + 1] == '&') {
     return false;
   }
+  if (index > 0 && input[index - 1] == '&') {
+    return false;
+  }
   if (!isUnaryPrefixPosition(input, index)) {
     return false;
   }

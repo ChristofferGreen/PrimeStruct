@@ -289,7 +289,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("implicit suffix disabled by default") {
+TEST_CASE("implicit suffix enabled by default") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -301,7 +301,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 8);
 }
 
 TEST_CASE("compiles and runs if") {
@@ -465,4 +466,3 @@ main() {
   CHECK(runCommand(runNativeCmd) == 4);
   CHECK(readFile(errPath).empty());
 }
-

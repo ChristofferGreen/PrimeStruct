@@ -17,7 +17,7 @@ struct Options {
   std::vector<TextTransformRule> textTransformRules;
   std::vector<TextTransformRule> semanticTransformRules;
   bool allowEnvelopeTextTransforms = true;
-  std::vector<std::string> semanticTransforms;
+  std::vector<std::string> semanticTransforms = {"single_type_to_return"};
   bool requireCanonicalSyntax = false;
   std::vector<std::string> defaultEffects = {"io_out"};
   std::vector<std::string> entryDefaultEffects = {"io_out"};

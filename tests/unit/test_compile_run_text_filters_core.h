@@ -326,7 +326,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("transform list default disables implicit i32") {
+TEST_CASE("transform list default enables implicit i32") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -334,13 +334,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_transform_list_default_no_i32.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_transform_list_default_no_i32_err.txt").string();
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_default_i32_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --transform-list=default 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --transform-list=default";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
 }
 
 TEST_CASE("transform list none rejects infix operators") {
@@ -505,6 +505,7 @@ TEST_CASE("semantic transform rules apply per path") {
   const std::string source = R"(
 [i32]
 main() {
+  return(1u64)
 }
 )";
   const std::string srcPath = writeTemp("compile_semantic_transform_rules.prime", source);
@@ -514,15 +515,16 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_err.txt").string();
 
   const std::string okCmd =
-      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) + " --entry /main";
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none";
   CHECK(runCommand(okCmd) == 0);
 
   const std::string ruleCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) +
-      " -o /dev/null --entry /main --semantic-transform-rules=/main=single_type_to_return 2> " +
+      " -o /dev/null --entry /main --semantic-transforms=none --semantic-transform-rules=/main=single_type_to_return 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(ruleCmd) == 2);
-  CHECK(readFile(errPath).find("missing return statement") != std::string::npos);
+  CHECK(readFile(errPath).find("return type mismatch") != std::string::npos);
 }
 
 TEST_CASE("semantic transforms ignore text transforms") {
@@ -782,4 +784,3 @@ main() {
   CHECK(runCommand(recurseCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 }
-

@@ -116,7 +116,7 @@ module {
 
 ## Proposed Architecture
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and borrow-checked resource usage.
-- **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
+- **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
 - **IR definition (draft):**
   - **Module:** `{ string_table, struct_layouts, functions, entry_index, version }`.
@@ -158,7 +158,7 @@ module {
   - Note: the current C++ emitter only generates code for definitions; executions are parsed/validated but not emitted.
 - **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
   - **Surface vs canonical:** surface syntax may omit the return transform and rely on inference; canonical/bottom-level syntax always carries an explicit `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<int>] main() { return(0i32) }`.
-  - **Optional convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`), but it only runs when explicitly enabled via `--semantic-transforms` / `--transform-list` or a per-definition transform.
+- **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list).
 - **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 - **Capability taxonomy (v1):**
@@ -222,7 +222,7 @@ statements and envelopes—any envelope can stand alone as a statement, and unus
 
 ### Slash paths & textual operator transforms
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the Envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
-- Text transforms run before the AST exists. Operator transforms (e.g., divide) scan the raw character stream: when a `/` is sandwiched between non-whitespace characters they rewrite the surrounding text (`/foo / /bar` → `divide(/foo, /bar)`), but when `/` begins a path segment (start of line or immediately after whitespace/delimiters) the transform leaves it untouched (`/foo/bar/lol()` stays intact). Other operators follow the same no-whitespace rule (`a>b` → `greater_than(a, b)`, `a<b` → `less_than(a, b)`, `a>=b` → `greater_equal(a, b)`, `a<=b` → `less_equal(a, b)`, `a==b` → `equal(a, b)`, `a!=b` → `not_equal(a, b)`, `a&&b` → `and(a, b)`, `a||b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a=b` → `assign(a, b)`, `++a` / `a++` → `increment(a)`, `--a` / `a--` → `decrement(a)`).
+- Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary operators respect standard precedence and associativity: `*`/`/` bind tighter than `+`/`-`, comparisons (`<`, `>`, `<=`, `>=`, `==`, `!=`) bind tighter than `&&`/`||`, and assignment (`=`) is lowest precedence and right-associative. Operators follow the same operand-based rule (`a > b` → `greater_than(a, b)`, `a < b` → `less_than(a, b)`, `a >= b` → `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b` → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` → `increment(a)`, `--a` / `a--` → `decrement(a)`).
 - Because includes expand first, slash paths survive every transform untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
 
 ### Struct & envelope categories (draft)
@@ -277,31 +277,36 @@ statements and envelopes—any envelope can stand alone as a statement, and unus
 ### Transforms (draft)
 - **Purpose:** transforms are metafunctions that rewrite tokens (text transforms) or stamp semantic flags on the AST (semantic transforms). Later passes (borrow checker, backend filters) consume the semantic flags; transforms do not emit code directly.
 - **Evaluation mode:** when the compiler sees `[transform ...]`, it routes through the metafunction's declared signature—pure token rewrites operate on the raw stream, while semantic transforms receive the AST node and in-place metadata writers.
+- **Registry note:** only registered text transforms can appear in `text(...)` groups or `--text-transforms`; only registered semantic transforms can appear in `semantic(...)` groups or `--semantic-transforms`. Other transform names are treated as semantic directives and validated by the semantics pass (they cannot be forced into `text(...)`).
 
-**Text transforms (token-level)**
+**Text transforms (token-level, registered)**
 - **`append_operators`:** injects `operators` into the leading transform list when missing, enabling text-transform self-expansion without repeating `operators` everywhere.
 - **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
+  - Example: `a = b` rewrites to `assign(a, b)`.
 - **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into constructor calls.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
 - **`implicit-i32`:** appends `i32` to bare integer literals (enabled by default).
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
 
-**Semantic transforms (AST-level)**
+**Semantic transforms (AST-level, registered)**
+- **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`); enabled by default, but can be disabled or overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
+
+**Semantic directives (AST-level, validated)**
 - **`copy`:** force copy-on-entry for a parameter or binding, even when references are the default. Often paired with `mut`.
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is only valid on lifecycle helpers to make `this` mutable; executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T` (or satisfy concept-like predicates once defined). Applied alongside `copy`/`mut` when needed.
 - **`return<T>`:** optional contract that pins the inferred return envelope. Recommended for public APIs or when disambiguation is required.
-- **`single_type_to_return`:** optional transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`); disabled by default and only runs when enabled in the transform list or CLI (`--semantic-transforms` / `--transform-list`).
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
 - **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
+- **`no_padding`, `platform_independent_padding`:** layout constraints for struct definitions; they reject backend-added padding or non-deterministic padding respectively.
 - **`capabilities(...)`:** reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
 - **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
 - **`public`, `private`, `package`:** field visibility tags; mutually exclusive.
 - **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
 - **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only. Bindings declared in the loop body are initialized once before the loop body runs and persist for the duration of the loop without escaping the surrounding scope.
-The list above reflects the built-in transforms recognized by the compiler today; future additions will extend it here.
+The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them here.
 
 ### Core library surface (draft)
 - **Standard math (draft):** the core math set lives under `/math/*` (e.g., `/math/sin`, `/math/pi`). `import /math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.

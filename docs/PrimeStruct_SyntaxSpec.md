@@ -44,7 +44,8 @@ spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i
 The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text transforms,
 the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
 transforms are configured via `--text-transforms=<list>` (the default list is `collections`, `operators`,
-`implicit-utf8`), semantic transforms via `--semantic-transforms=<list>`, and `--transform-list=<list>` is
+`implicit-utf8`), semantic transforms via `--semantic-transforms=<list>` (default: `single_type_to_return`), and
+`--transform-list=<list>` is
 an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic);
 ambiguous names are errors. `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms`
 disable transforms.
@@ -311,6 +312,10 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - Bindings are allowed in any `for` slot; `cond` must evaluate to `bool`.
 - `repeat(count) { ... }` is a statement-only builtin; `count` accepts integer or `bool`, and non-positive counts skip the body.
 - Operators are rewritten into calls:
+  - Binary operators allow optional whitespace around the operator token (e.g., `a = b`, `a= b`, `a =b`), but the
+    operator token itself is still contiguous (`==` cannot be written as `= =`).
+  - Precedence matches conventional rules: `*`/`/` bind tighter than `+`/`-`, comparisons bind tighter than `&&`/`||`,
+    and assignment (`=`) is the lowest precedence and right-associative.
   - `a + b` -> `plus(a, b)`
   - `a - b` -> `minus(a, b)`
   - `a * b` -> `multiply(a, b)`
