@@ -11,6 +11,17 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("infers array return type without transform") {
+  const std::string source = R"(
+main() {
+  return(array<i32>{1i32, 2i32})
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("restrict matches inferred binding type during return inference") {
   const std::string source = R"(
 main() {

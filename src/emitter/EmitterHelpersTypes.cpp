@@ -51,6 +51,14 @@ ReturnKind getReturnKind(const Definition &def) {
     if (typeName == "f64") {
       return ReturnKind::Float64;
     }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        return ReturnKind::Array;
+      }
+    }
     break;
   }
   return ReturnKind::Unknown;
@@ -83,6 +91,36 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 std::string resolveExprPath(const Expr &expr);
+
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+  base.clear();
+  arg.clear();
+  const size_t open = text.find('<');
+  if (open == std::string::npos || open == 0 || text.back() != '>') {
+    return false;
+  }
+  base = text.substr(0, open);
+  int depth = 0;
+  size_t start = open + 1;
+  for (size_t i = start; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      depth++;
+      continue;
+    }
+    if (c == '>') {
+      if (depth == 0) {
+        if (i + 1 != text.size()) {
+          return false;
+        }
+        arg = text.substr(start, i - start);
+        return true;
+      }
+      depth--;
+    }
+  }
+  return false;
+}
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   out.clear();
@@ -427,6 +465,8 @@ std::string typeNameForReturnKind(ReturnKind kind) {
       return "f32";
     case ReturnKind::Float64:
       return "f64";
+    case ReturnKind::Array:
+      return "array";
     default:
       return "";
   }
@@ -454,10 +494,21 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "void") {
     return ReturnKind::Void;
   }
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(name, base, arg) && base == "array") {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+      return ReturnKind::Array;
+    }
+  }
   return ReturnKind::Unknown;
 }
 
 ReturnKind combineNumericKinds(ReturnKind left, ReturnKind right) {
+  if (left == ReturnKind::Array || right == ReturnKind::Array) {
+    return ReturnKind::Unknown;
+  }
   if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
     return ReturnKind::Unknown;
   }

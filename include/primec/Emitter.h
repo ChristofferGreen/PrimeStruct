@@ -19,7 +19,7 @@ public:
     bool isStatic = false;
     BindingVisibility visibility = BindingVisibility::Private;
   };
-  enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
+  enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void, Array };
   std::string emitCpp(const Program &program, const std::string &entryPath) const;
 
 private:

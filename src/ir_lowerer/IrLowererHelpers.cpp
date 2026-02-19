@@ -53,6 +53,36 @@ bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) 
   return false;
 }
 
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+  base.clear();
+  arg.clear();
+  const size_t open = text.find('<');
+  if (open == std::string::npos || open == 0 || text.back() != '>') {
+    return false;
+  }
+  base = text.substr(0, open);
+  int depth = 0;
+  size_t start = open + 1;
+  for (size_t i = start; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      depth++;
+      continue;
+    }
+    if (c == '>') {
+      if (depth == 0) {
+        if (i + 1 != text.size()) {
+          return false;
+        }
+        arg = text.substr(start, i - start);
+        return true;
+      }
+      depth--;
+    }
+  }
+  return false;
+}
+
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
   if (isSimpleCallName(expr, "print")) {
     out.target = PrintTarget::Out;

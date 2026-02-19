@@ -11,6 +11,7 @@
 
   struct ReturnInfo {
     bool returnsVoid = false;
+    bool returnsArray = false;
     LocalInfo::ValueKind kind = LocalInfo::ValueKind::Unknown;
   };
 
@@ -19,6 +20,7 @@
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
 
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
+  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
 
   auto typeNameForValueKind = [](LocalInfo::ValueKind kind) -> std::string {
     switch (kind) {
@@ -181,6 +183,53 @@
     return LocalInfo::ValueKind::Unknown;
   };
 
+  inferArrayElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.name);
+      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+        return it->second.valueKind;
+      }
+      return LocalInfo::ValueKind::Unknown;
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
+        return valueKindFromTypeName(expr.templateArgs.front());
+      }
+      if (!expr.isMethodCall) {
+        const std::string resolved = resolveExprPath(expr);
+        auto defIt = defMap.find(resolved);
+        if (defIt != defMap.end()) {
+          ReturnInfo info;
+          if (getReturnInfo && getReturnInfo(resolved, info) && !info.returnsVoid && info.returnsArray) {
+            return info.kind;
+          }
+        }
+        if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && !isArrayCountCall(expr, localsIn) &&
+            !isStringCountCall(expr, localsIn)) {
+          Expr methodExpr = expr;
+          methodExpr.isMethodCall = true;
+          const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
+          if (callee) {
+            ReturnInfo info;
+            if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid && info.returnsArray) {
+              return info.kind;
+            }
+          }
+        }
+      } else {
+        const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
+        if (callee) {
+          ReturnInfo info;
+          if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid && info.returnsArray) {
+            return info.kind;
+          }
+        }
+      }
+    }
+    return LocalInfo::ValueKind::Unknown;
+  };
+
   inferExprKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     switch (expr.kind) {
       case Expr::Kind::Literal:
@@ -218,6 +267,9 @@
           if (defIt != defMap.end()) {
             ReturnInfo info;
             if (getReturnInfo && getReturnInfo(resolved, info) && !info.returnsVoid) {
+              if (info.returnsArray) {
+                return LocalInfo::ValueKind::Unknown;
+              }
               return info.kind;
             }
             return LocalInfo::ValueKind::Unknown;
@@ -230,6 +282,9 @@
             if (callee) {
               ReturnInfo info;
               if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid) {
+                if (info.returnsArray) {
+                  return LocalInfo::ValueKind::Unknown;
+                }
                 return info.kind;
               }
               return LocalInfo::ValueKind::Unknown;
@@ -240,6 +295,9 @@
           if (callee) {
             ReturnInfo info;
             if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid) {
+              if (info.returnsArray) {
+                return LocalInfo::ValueKind::Unknown;
+              }
               return info.kind;
             }
             return LocalInfo::ValueKind::Unknown;
@@ -359,6 +417,81 @@
           auto leftKind = inferExprKind(expr.args[0], localsIn);
           auto rightKind = inferExprKind(expr.args[1], localsIn);
           return combineNumericKinds(leftKind, rightKind);
+        }
+        if (getBuiltinFmaName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 3) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          auto firstKind = inferExprKind(expr.args[0], localsIn);
+          auto secondKind = inferExprKind(expr.args[1], localsIn);
+          auto thirdKind = inferExprKind(expr.args[2], localsIn);
+          return combineNumericKinds(combineNumericKinds(firstKind, secondKind), thirdKind);
+        }
+        if (getBuiltinHypotName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 2) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          auto leftKind = inferExprKind(expr.args[0], localsIn);
+          auto rightKind = inferExprKind(expr.args[1], localsIn);
+          return combineNumericKinds(leftKind, rightKind);
+        }
+        if (getBuiltinCopysignName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 2) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          auto leftKind = inferExprKind(expr.args[0], localsIn);
+          auto rightKind = inferExprKind(expr.args[1], localsIn);
+          return combineNumericKinds(leftKind, rightKind);
+        }
+        if (getBuiltinAngleName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinTrigName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinTrig2Name(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 2) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          auto leftKind = inferExprKind(expr.args[0], localsIn);
+          auto rightKind = inferExprKind(expr.args[1], localsIn);
+          return combineNumericKinds(leftKind, rightKind);
+        }
+        if (getBuiltinArcTrigName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinHyperbolicName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinArcHyperbolicName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinExpName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
+        if (getBuiltinLogName(expr, builtin, hasMathImport)) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
         }
         if (getBuiltinAbsSignName(expr, builtin, hasMathImport)) {
           if (expr.args.size() != 1) {

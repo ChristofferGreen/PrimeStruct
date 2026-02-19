@@ -12,6 +12,18 @@ main() {
   CHECK(error.find("unsupported return type") != std::string::npos);
 }
 
+TEST_CASE("array return requires template argument") {
+  const std::string source = R"(
+[return<array>]
+main() {
+  return(array<i32>{1i32})
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("array return type requires exactly one template argument") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type fails") {
   const std::string source = R"(
 [return<complex>]
@@ -167,6 +179,18 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("array return type validates") {
+  const std::string source = R"(
+[return<array<i32>>]
+main() {
+  return(array<i32>{1i32, 2i32})
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("int alias maps to i32") {
   const std::string source = R"(
 [return<int>]
@@ -201,6 +225,18 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("return type mismatch") != std::string::npos);
+}
+
+TEST_CASE("return type mismatch for array fails") {
+  const std::string source = R"(
+[return<array<i32>>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch: expected array") != std::string::npos);
 }
 
 TEST_CASE("return type mismatch for bool fails") {

@@ -293,6 +293,8 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         return "f32";
       case ReturnKind::Float64:
         return "f64";
+      case ReturnKind::Array:
+        return "array";
       default:
         return "";
     }
@@ -301,7 +303,8 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
     if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
       return ReturnKind::Unknown;
     }
-    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void ||
+        left == ReturnKind::Array || right == ReturnKind::Array) {
       return ReturnKind::Unknown;
     }
     if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {

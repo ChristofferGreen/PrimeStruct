@@ -159,6 +159,24 @@ module {
 - **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
   - **Surface vs canonical:** surface syntax may omit the return transform and rely on inference; canonical/bottom-level syntax always carries an explicit `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<int>] main() { return(0i32) }`.
 - **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list).
+Array returns use `return<array<T>>` (or `[array<T>]` with `single_type_to_return`) and surface as `array` in the IR.
+
+Example:
+```
+[return<array<i32>>]
+make_pair() {
+  return(array<i32>{1i32, 2i32})
+}
+```
+
+Expected IR (shape only):
+```
+module {
+  def /make_pair(): array {
+    return array(1, 2)
+  }
+}
+```
 - **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 - **Capability taxonomy (v1):**

@@ -28,4 +28,5 @@ From `build-debug/`:
 - `examples/namespace_call.prime`: namespace blocks + slash-path calls.
 - `examples/pointers_and_references.prime`: `Pointer<T>`, `Reference<T>`, `location`, `dereference`.
 - `examples/features_overview.prime`: high-level tour (imports, namespace, collections, loops, operators, indexing, effects).
+- `examples/raytracer.prime`: simple ray tracer (reflective spheres + checkerboard) emitting PPM.
 - `examples/syntax_braces.prime`: bindings use `{}` initializers; calls use `()`; mixed with `if`.

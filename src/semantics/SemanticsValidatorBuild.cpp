@@ -651,6 +651,8 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
       return "f32";
     case ReturnKind::Float64:
       return "f64";
+    case ReturnKind::Array:
+      return "array";
     default:
       return "";
   }

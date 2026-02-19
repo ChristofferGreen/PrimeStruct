@@ -269,6 +269,22 @@
         if (!emitExpr(stmt.args.front(), localsIn)) {
           return false;
         }
+        if (context.returnsArray) {
+          LocalInfo::ValueKind arrayKind = inferArrayElementKind(stmt.args.front(), localsIn);
+          if (arrayKind == LocalInfo::ValueKind::Unknown) {
+            error = "native backend only supports returning array values";
+            return false;
+          }
+          if (arrayKind == LocalInfo::ValueKind::String) {
+            error = "native backend does not support string array return types";
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+          size_t jumpIndex = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          context.returnJumps.push_back(jumpIndex);
+          return true;
+        }
         LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
         if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
             returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool ||
@@ -303,18 +319,27 @@
       if (!emitExpr(stmt.args.front(), localsIn)) {
         return false;
       }
-      LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
-      if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64) {
+      LocalInfo::ValueKind arrayKind = inferArrayElementKind(stmt.args.front(), localsIn);
+      if (arrayKind != LocalInfo::ValueKind::Unknown) {
+        if (arrayKind == LocalInfo::ValueKind::String) {
+          error = "native backend does not support string array return types";
+          return false;
+        }
         function.instructions.push_back({IrOpcode::ReturnI64, 0});
-      } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
-        function.instructions.push_back({IrOpcode::ReturnI32, 0});
-      } else if (returnKind == LocalInfo::ValueKind::Float32) {
-        function.instructions.push_back({IrOpcode::ReturnF32, 0});
-      } else if (returnKind == LocalInfo::ValueKind::Float64) {
-        function.instructions.push_back({IrOpcode::ReturnF64, 0});
       } else {
-        error = "native backend only supports returning numeric or bool values";
-        return false;
+        LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
+        if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64) {
+          function.instructions.push_back({IrOpcode::ReturnI64, 0});
+        } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
+          function.instructions.push_back({IrOpcode::ReturnI32, 0});
+        } else if (returnKind == LocalInfo::ValueKind::Float32) {
+          function.instructions.push_back({IrOpcode::ReturnF32, 0});
+        } else if (returnKind == LocalInfo::ValueKind::Float64) {
+          function.instructions.push_back({IrOpcode::ReturnF64, 0});
+        } else {
+          error = "native backend only supports returning numeric or bool values";
+          return false;
+        }
       }
       sawReturn = true;
       return true;

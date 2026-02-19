@@ -19,6 +19,15 @@
         info.returnsVoid = true;
         break;
       }
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+        info.returnsArray = true;
+        info.kind = valueKindFromTypeName(arg);
+        info.returnsVoid = false;
+        break;
+      }
+      info.returnsArray = false;
       info.kind = valueKindFromTypeName(typeName);
       info.returnsVoid = false;
       break;
@@ -32,7 +41,11 @@
           return false;
         }
         if (info.kind == LocalInfo::ValueKind::String) {
-          error = "native backend does not support string return types on " + def.fullPath;
+          if (info.returnsArray) {
+            error = "native backend does not support string array return types on " + def.fullPath;
+          } else {
+            error = "native backend does not support string return types on " + def.fullPath;
+          }
           returnInferenceStack.erase(path);
           return false;
         }
@@ -73,6 +86,8 @@
         }
 
         LocalInfo::ValueKind inferred = LocalInfo::ValueKind::Unknown;
+        bool inferredArray = false;
+        LocalInfo::ValueKind inferredArrayKind = LocalInfo::ValueKind::Unknown;
         bool sawReturnLocal = false;
         bool inferredVoid = false;
         std::function<bool(const Expr &, LocalMap &)> inferStatement;
@@ -109,6 +124,23 @@
               inferredVoid = true;
               return true;
             }
+            LocalInfo::ValueKind arrayKind = inferArrayElementKind(stmt.args.front(), activeLocals);
+            if (arrayKind != LocalInfo::ValueKind::Unknown) {
+              if (arrayKind == LocalInfo::ValueKind::String) {
+                error = "native backend does not support string array return types on " + def.fullPath;
+                return false;
+              }
+              if (!inferredArray && inferred == LocalInfo::ValueKind::Unknown) {
+                inferredArray = true;
+                inferredArrayKind = arrayKind;
+                return true;
+              }
+              if (inferredArray && inferredArrayKind == arrayKind) {
+                return true;
+              }
+              error = "conflicting return types on " + def.fullPath;
+              return false;
+            }
             LocalInfo::ValueKind kind = inferExprKind(stmt.args.front(), activeLocals);
             if (kind == LocalInfo::ValueKind::Unknown) {
               error = "unable to infer return type on " + def.fullPath;
@@ -116,6 +148,10 @@
             }
             if (kind == LocalInfo::ValueKind::String) {
               error = "native backend does not support string return types on " + def.fullPath;
+              return false;
+            }
+            if (inferredArray) {
+              error = "conflicting return types on " + def.fullPath;
               return false;
             }
             if (inferred == LocalInfo::ValueKind::Unknown) {
@@ -166,7 +202,7 @@
           }
         }
         if (!sawReturnLocal || inferredVoid) {
-          if (sawReturnLocal && inferred != LocalInfo::ValueKind::Unknown) {
+          if (sawReturnLocal && (inferred != LocalInfo::ValueKind::Unknown || inferredArray)) {
             error = "conflicting return types on " + def.fullPath;
             returnInferenceStack.erase(path);
             return false;
@@ -174,7 +210,13 @@
           info.returnsVoid = true;
         } else {
           info.returnsVoid = false;
-          info.kind = inferred;
+          if (inferredArray) {
+            info.returnsArray = true;
+            info.kind = inferredArrayKind;
+          } else {
+            info.returnsArray = false;
+            info.kind = inferred;
+          }
           if (info.kind == LocalInfo::ValueKind::Unknown) {
             error = "unable to infer return type on " + def.fullPath;
             returnInferenceStack.erase(path);
@@ -193,6 +235,7 @@
   struct InlineContext {
     std::string defPath;
     bool returnsVoid = false;
+    bool returnsArray = false;
     LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
     int32_t returnLocal = -1;
     std::vector<size_t> returnJumps;

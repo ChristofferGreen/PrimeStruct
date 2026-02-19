@@ -22,7 +22,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
       return ReturnKind::Unknown;
     }
-    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void ||
+        left == ReturnKind::Array || right == ReturnKind::Array) {
       return ReturnKind::Unknown;
     }
     if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
@@ -80,6 +81,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           return refKind;
         }
       }
+      if (paramBinding->typeName == "array" && !paramBinding->typeTemplateArg.empty()) {
+        return ReturnKind::Array;
+      }
       return returnKindForTypeName(paramBinding->typeName);
     }
     auto it = locals.find(expr.name);
@@ -92,11 +96,18 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return refKind;
       }
     }
+    if (it->second.typeName == "array" && !it->second.typeTemplateArg.empty()) {
+      return ReturnKind::Array;
+    }
     return returnKindForTypeName(it->second.typeName);
   }
   if (expr.kind == Expr::Kind::Call) {
     if (isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) || isRepeatCall(expr)) {
       return ReturnKind::Void;
+    }
+    std::string collection;
+    if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
+      return ReturnKind::Array;
     }
     if (isIfCall(expr) && expr.args.size() == 3) {
       auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {

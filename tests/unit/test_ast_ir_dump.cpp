@@ -42,7 +42,7 @@ main() {
   return(7i32)
 }
 )";
-  const auto program = parseProgram(source);
+  const auto program = parseProgramWithFilters(source);
   primec::AstPrinter printer;
   const std::string dump = printer.print(program);
   const std::string expected =
@@ -279,6 +279,25 @@ main() {
       "  def /main(): bool {\n"
       "    let flag: bool = true\n"
       "    return flag\n"
+      "  }\n"
+      "}\n";
+  CHECK(dump == expected);
+}
+
+TEST_CASE("ir dump prints array return type") {
+  const std::string source = R"(
+[return<array<i32>>]
+main() {
+  return(array<i32>{1i32, 2i32})
+}
+)";
+  const auto program = parseProgram(source);
+  primec::IrPrinter printer;
+  const std::string dump = printer.print(program);
+  const std::string expected =
+      "module {\n"
+      "  def /main(): array {\n"
+      "    return array(block() { 1, 2 })\n"
       "  }\n"
       "}\n";
   CHECK(dump == expected);

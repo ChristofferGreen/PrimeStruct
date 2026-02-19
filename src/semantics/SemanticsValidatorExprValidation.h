@@ -237,7 +237,7 @@
           kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool) {
         return true;
       }
-      if (kind == ReturnKind::Void) {
+      if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
         return false;
       }
       if (arg.kind == Expr::Kind::StringLiteral) {

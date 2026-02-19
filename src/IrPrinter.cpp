@@ -1,5 +1,6 @@
 #include "primec/IrPrinter.h"
 
+#include <cctype>
 #include <cstdint>
 #include <functional>
 #include <sstream>
@@ -9,7 +10,7 @@
 namespace primec {
 
 namespace {
-enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void };
+enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void, Array };
 
 std::string joinTemplateArgs(const std::vector<std::string> &args) {
   std::ostringstream out;
@@ -20,6 +21,74 @@ std::string joinTemplateArgs(const std::vector<std::string> &args) {
     out << args[i];
   }
   return out.str();
+}
+
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+  base.clear();
+  arg.clear();
+  const size_t open = text.find('<');
+  if (open == std::string::npos || open == 0 || text.back() != '>') {
+    return false;
+  }
+  base = text.substr(0, open);
+  int depth = 0;
+  size_t start = open + 1;
+  for (size_t i = start; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      depth++;
+      continue;
+    }
+    if (c == '>') {
+      if (depth == 0) {
+        if (i + 1 != text.size()) {
+          return false;
+        }
+        arg = text.substr(start, i - start);
+        return true;
+      }
+      depth--;
+    }
+  }
+  return false;
+}
+
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+  out.clear();
+  int depth = 0;
+  size_t start = 0;
+  auto pushSegment = [&](size_t end) {
+    size_t segStart = start;
+    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
+      ++segStart;
+    }
+    size_t segEnd = end;
+    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+      --segEnd;
+    }
+    out.push_back(text.substr(segStart, segEnd - segStart));
+  };
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+      }
+      continue;
+    }
+    if (c == ',' && depth == 0) {
+      pushSegment(i);
+      start = i + 1;
+    }
+  }
+  if (!text.empty()) {
+    pushSegment(text.size());
+  }
+  return !out.empty();
 }
 
 std::string bindingTypeName(const Expr &expr) {
@@ -271,6 +340,14 @@ ReturnKind getReturnKind(const Definition &def) {
     if (typeName == "f64") {
       return ReturnKind::Float64;
     }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        return ReturnKind::Array;
+      }
+    }
   }
   return ReturnKind::Unknown;
 }
@@ -293,6 +370,9 @@ const char *returnTypeName(ReturnKind kind) {
   }
   if (kind == ReturnKind::Bool) {
     return "bool";
+  }
+  if (kind == ReturnKind::Array) {
+    return "array";
   }
   return "i32";
 }
@@ -318,6 +398,14 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "void") {
     return ReturnKind::Void;
+  }
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(name, base, arg) && base == "array") {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+      return ReturnKind::Array;
+    }
   }
   return ReturnKind::Unknown;
 }

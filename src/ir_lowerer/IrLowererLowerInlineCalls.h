@@ -122,11 +122,13 @@
     InlineContext context;
     context.defPath = callee.fullPath;
     context.returnsVoid = returnInfo.returnsVoid;
+    context.returnsArray = returnInfo.returnsArray;
     context.returnKind = returnInfo.kind;
     if (!context.returnsVoid) {
       context.returnLocal = allocTempLocal();
       IrOpcode zeroOp = IrOpcode::PushI32;
-      if (context.returnKind == LocalInfo::ValueKind::Int64 || context.returnKind == LocalInfo::ValueKind::UInt64) {
+      if (context.returnsArray || context.returnKind == LocalInfo::ValueKind::Int64 ||
+          context.returnKind == LocalInfo::ValueKind::UInt64) {
         zeroOp = IrOpcode::PushI64;
       } else if (context.returnKind == LocalInfo::ValueKind::Float64) {
         zeroOp = IrOpcode::PushF64;
@@ -165,4 +167,3 @@
     inlineStack.erase(callee.fullPath);
     return true;
   };
-

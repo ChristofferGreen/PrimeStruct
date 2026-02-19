@@ -239,7 +239,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
       return true;
     }
-    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void) {
+    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void ||
+        kind == ReturnKind::Array) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
@@ -273,8 +274,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (kind == ReturnKind::Bool) {
       return true;
     }
-    if (kind == ReturnKind::Void || kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
-        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+    if (kind == ReturnKind::Void || kind == ReturnKind::Array || kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
+        kind == ReturnKind::UInt64 || kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
@@ -305,7 +306,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
       return true;
     }
-    if (kind == ReturnKind::Bool || kind == ReturnKind::Void) {
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Array) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
@@ -337,8 +338,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
       return true;
     }
-    if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-        kind == ReturnKind::UInt64) {
+    if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Array || kind == ReturnKind::Int ||
+        kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
@@ -375,7 +376,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
       return NumericCategory::Integer;
     }
-    if (kind == ReturnKind::Void) {
+    if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
       return NumericCategory::Unknown;
     }
     if (kind == ReturnKind::Unknown) {
@@ -454,7 +455,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
       return true;
     }
-    if (kind == ReturnKind::Void) {
+    if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
@@ -722,7 +723,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 return false;
               }
               ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
-              if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
+              if (initKind == ReturnKind::Void &&
+                  !isStructConstructorValueExpr(bodyExpr.args.front())) {
                 error_ = "binding initializer requires a value";
                 return false;
               }
@@ -849,7 +851,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             return false;
           }
           ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
-          if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(bodyExpr.args.front())) {
+          if (initKind == ReturnKind::Void &&
+              !isStructConstructorValueExpr(bodyExpr.args.front())) {
             error_ = "binding initializer requires a value";
             return false;
           }

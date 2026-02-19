@@ -24,6 +24,7 @@ std::string joinTemplateArgs(const std::vector<std::string> &args);
 ReturnKind getReturnKind(const Definition &def);
 bool isPrimitiveBindingTypeName(const std::string &name);
 std::string normalizeBindingTypeName(const std::string &name);
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
 bool isBindingQualifierName(const std::string &name);
 bool isBindingAuxTransformName(const std::string &name);

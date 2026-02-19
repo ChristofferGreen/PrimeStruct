@@ -79,7 +79,8 @@
       return false;
     };
     ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
-    if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
+    if (initKind == ReturnKind::Void &&
+        !isStructConstructorValueExpr(initializer)) {
       error_ = "binding initializer requires a value";
       return false;
     }
@@ -156,7 +157,11 @@
       if (returnKind != ReturnKind::Unknown) {
         ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
         if (exprKind != returnKind) {
-          error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
+          if (returnKind == ReturnKind::Array) {
+            error_ = "return type mismatch: expected array";
+          } else {
+            error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
+          }
           return false;
         }
       }

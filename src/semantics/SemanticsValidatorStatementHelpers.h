@@ -115,7 +115,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
       return true;
     }
-    if (kind == ReturnKind::Void) {
+    if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
       return false;
     }
     if (arg.kind == Expr::Kind::Name) {
@@ -147,7 +147,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
       return true;
     }
-    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void) {
+    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void ||
+        kind == ReturnKind::Array) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {

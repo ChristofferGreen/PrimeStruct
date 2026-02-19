@@ -74,6 +74,9 @@ std::string normalizeBindingTypeName(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
+  if (name == "array") {
+    return "array";
+  }
   return name;
 }
 
@@ -217,6 +220,14 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "void") {
     return ReturnKind::Void;
   }
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(name, base, arg) && base == "array") {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+      return ReturnKind::Array;
+    }
+  }
   return ReturnKind::Unknown;
 }
 
@@ -235,10 +246,29 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
       error = "software numeric types are not supported yet: " + *softwareType;
       return ReturnKind::Unknown;
     }
-    ReturnKind nextKind = returnKindForTypeName(transform.templateArgs.front());
+    const std::string &typeName = transform.templateArgs.front();
+    ReturnKind nextKind = returnKindForTypeName(typeName);
     if (nextKind == ReturnKind::Unknown) {
-      error = "unsupported return type on " + def.fullPath;
-      return ReturnKind::Unknown;
+      if (typeName == "array") {
+        error = "array return type requires exactly one template argument on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(typeName, base, arg) || base != "array") {
+        error = "unsupported return type on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+        error = "array return type requires exactly one template argument on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      const std::string elem = normalizeBindingTypeName(args.front());
+      if (!isPrimitiveBindingTypeName(elem)) {
+        error = "unsupported return type on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
     }
     if (sawReturn) {
       if (nextKind == kind) {

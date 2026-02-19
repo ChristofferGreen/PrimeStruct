@@ -174,6 +174,25 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (returnKind == ReturnKind::Bool) {
       return std::string("bool");
     }
+    if (returnKind == ReturnKind::Array) {
+      std::string typeName = "array<i32>";
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "return" && !transform.templateArgs.empty()) {
+          typeName = transform.templateArgs.front();
+          break;
+        }
+      }
+      BindingInfo info;
+      info.typeName = "array";
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+        info.typeTemplateArg = arg;
+      } else {
+        info.typeTemplateArg = "i32";
+      }
+      return bindingTypeToCpp(info, def.namespacePrefix, importAliases, structTypeMap);
+    }
     return std::string("int");
   };
   auto appendParam = [&](std::ostringstream &out,
