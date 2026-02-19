@@ -56,3 +56,18 @@ Files:
 - `benchmarks/json_parse.cpp`
 - `benchmarks/json_parse.rs`
 - `benchmarks/json_parse.prime`
+
+## Compile Speed (large source)
+
+This benchmark generates a large PrimeStruct source file (default 100,000 lines)
+and measures how long `primec` takes to compile it.
+
+Targets:
+- `primestruct_cpp`: C++ emitter (`--emit=cpp`) output only.
+- `primestruct_native`: native codegen backend (`--emit=native`) when available.
+
+Controls:
+- `BENCH_COMPILE_LINES` sets the source line count.
+- `BENCH_COMPILE_RUNS` sets the number of timed runs (defaults to `BENCH_RUNS`).
+
+The generated source is written to the benchmark output directory.

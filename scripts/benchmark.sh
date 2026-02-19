@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build-debug"
 RUNS="${BENCH_RUNS:-5}"
 BENCH_DIR="${BENCH_DIR:-}"
+COMPILE_RUNS="${BENCH_COMPILE_RUNS:-}"
+COMPILE_LINES="${BENCH_COMPILE_LINES:-100000}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -29,6 +31,9 @@ while [[ $# -gt 0 ]]; do
 
 if [[ -z "$BENCH_DIR" ]]; then
   BENCH_DIR="$BUILD_DIR/benchmarks"
+fi
+if [[ -z "$COMPILE_RUNS" ]]; then
+  COMPILE_RUNS="$RUNS"
 fi
 
 PRIMEC_BIN="$BUILD_DIR/primec"
@@ -69,6 +74,10 @@ fi
 
 mkdir -p "$BENCH_DIR"
 
+COMPILE_SRC="$BENCH_DIR/compile_speed.prime"
+COMPILE_CPP="$BENCH_DIR/compile_speed.cpp"
+COMPILE_NATIVE="$BENCH_DIR/compile_speed_native"
+
 C_SRC="$ROOT_DIR/benchmarks/aggregate.c"
 CPP_SRC="$ROOT_DIR/benchmarks/aggregate.cpp"
 RS_SRC="$ROOT_DIR/benchmarks/aggregate.rs"
@@ -101,6 +110,44 @@ PRIME_JSON_PARSE_CPP="$BENCH_DIR/json_parse_primestruct.cpp"
 PRIME_JSON_PARSE_CPP_EXE="$BENCH_DIR/json_parse_primestruct_cpp"
 PRIME_JSON_PARSE_NATIVE_EXE="$BENCH_DIR/json_parse_primestruct_native"
 
+"$PYTHON" - "$COMPILE_SRC" "$COMPILE_LINES" <<'PY'
+import sys
+
+path = sys.argv[1]
+target_lines = int(sys.argv[2])
+
+lines = ["namespace bench {"]
+reserve = 5
+remaining = target_lines - len(lines) - reserve
+if remaining < 0:
+    raise SystemExit(f"compile benchmark requires at least {reserve + 1} lines")
+
+num_funcs = remaining // 4
+extra = remaining % 4
+
+for i in range(num_funcs):
+    lines.append("[void]")
+    lines.append(f"noop{i}() {{")
+    lines.append("  return()")
+    lines.append("}")
+
+for _ in range(extra):
+    lines.append("")
+
+lines.append("[i32]")
+lines.append("main() {")
+lines.append("  return(0)")
+lines.append("}")
+lines.append("}")
+
+if len(lines) != target_lines:
+    raise SystemExit(f"generated {len(lines)} lines, expected {target_lines}")
+
+with open(path, "w", newline="\n") as handle:
+    handle.write("\n".join(lines))
+    handle.write("\n")
+PY
+
 "$CC" -O3 -DNDEBUG -std=c11 "$C_SRC" -o "$C_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_SRC" -o "$CPP_EXE"
 "$RUSTC" -O "$RS_SRC" -o "$RS_EXE"
@@ -128,13 +175,21 @@ fi
 
 (
   cd "$BENCH_DIR"
-  "$PYTHON" - "$RUNS" "$RUN_NATIVE" <<'PY'
+  "$PYTHON" - "$RUNS" "$RUN_NATIVE" "$COMPILE_RUNS" "$COMPILE_LINES" "$COMPILE_SRC" \
+    "$PRIMEC_BIN" "$COMPILE_CPP" "$COMPILE_NATIVE" <<'PY'
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 runs = int(sys.argv[1])
 run_native = int(sys.argv[2]) != 0
+compile_runs = int(sys.argv[3])
+compile_lines = int(sys.argv[4])
+compile_src = sys.argv[5]
+primec_bin = sys.argv[6]
+compile_cpp = sys.argv[7]
+compile_native = sys.argv[8]
 
 def primestruct_entries(name: str):
     entries = [
@@ -165,6 +220,8 @@ benchmarks = [
 print("Benchmark runs:", runs)
 if not run_native:
     print("Note: PrimeStruct native backend not available; skipping.")
+print("Compile benchmark lines:", compile_lines)
+print("Compile benchmark runs:", compile_runs)
 
 def run_entry(label: str, path: str) -> None:
     print(f"\n== {label} ==")
@@ -182,9 +239,64 @@ def run_entry(label: str, path: str) -> None:
     print(f"mean:   {mean:.6f}s")
     print(f"median: {median:.6f}s")
 
+def run_compile_entry(label: str, cmd: list[str], outputs: list[str]) -> None:
+    print(f"\n== {label} ==")
+    check = subprocess.run(cmd, capture_output=True, text=True)
+    if check.returncode != 0:
+        print("compile failed")
+        if check.stdout:
+            print("stdout:", check.stdout.strip())
+        if check.stderr:
+            print("stderr:", check.stderr.strip())
+        check.check_returncode()
+    times = []
+    for _ in range(compile_runs):
+        for out in outputs:
+            try:
+                Path(out).unlink()
+            except FileNotFoundError:
+                pass
+        start = time.perf_counter()
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        times.append(time.perf_counter() - start)
+    mean = sum(times) / len(times)
+    median = sorted(times)[len(times) // 2]
+    print(f"mean:   {mean:.6f}s")
+    print(f"median: {median:.6f}s")
+
 for bench, entries in benchmarks:
     print(f"\n=== {bench} ===")
     for label, exe in entries:
         run_entry(label, exe)
+
+compile_entries = [
+    ("primestruct_cpp", [
+        primec_bin,
+        "--emit=cpp",
+        compile_src,
+        "-o",
+        compile_cpp,
+        "--entry",
+        "/bench/main",
+    ], [compile_cpp]),
+]
+if run_native:
+    compile_entries.append((
+        "primestruct_native",
+        [
+            primec_bin,
+            "--emit=native",
+            compile_src,
+            "-o",
+            compile_native,
+            "--entry",
+            "/bench/main",
+        ],
+        [compile_native],
+    ))
+
+print("\n=== compile_speed ===")
+for label, cmd, outputs in compile_entries:
+    run_compile_entry(label, cmd, outputs)
 PY
 )
