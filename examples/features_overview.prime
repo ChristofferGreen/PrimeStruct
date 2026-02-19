@@ -6,7 +6,7 @@ namespace demo {
     [i32 mut] total{0}
     [i32 mut] best{0}
     [i32] count{scores.count()}
-    [f32 mut] avg{0.0f32}
+    [f32 mut] avg{0.0}
 
     for([i32 mut] idx{0}; idx < count; ++idx) {
       [i32] value{scores[idx]}
@@ -15,7 +15,7 @@ namespace demo {
     };
 
     if(count == 0) {
-      avg = 0.0f32
+      avg = 0.0
     } else {
       avg = convert<f32>(total) / convert<f32>(count)
     }
