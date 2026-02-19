@@ -301,6 +301,18 @@ bool rewriteBinaryOperatorsWithPrecedence(const std::string &input, std::string 
     if (matchNonOperandKeyword(input, pos, keyword)) {
       output.append(keyword);
       pos += keyword.size();
+      if (keyword == "import" || keyword == "include") {
+        size_t end = pos;
+        while (end < input.size() && input[end] != '\n' && input[end] != ';') {
+          ++end;
+        }
+        output.append(input.substr(pos, end - pos));
+        pos = end;
+        if (pos < input.size() && input[pos] == ';') {
+          output.push_back(';');
+          ++pos;
+        }
+      }
       continue;
     }
     if (input[pos] == '/' && pos + 1 < input.size()) {
