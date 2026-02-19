@@ -1,7 +1,7 @@
 import /math/*
 
 namespace demo {
-  [return<void>]
+  [void]
   summarize_scores([array<i32>] scores) {
     [i32 mut] total{0}
     [i32 mut] best{0}
@@ -28,7 +28,7 @@ namespace demo {
     print_line(total)
   }
 
-  [return<void>]
+  [void]
   main() {
     [array<i32>] scores{array<i32>{4, 8, 15, 16, 23, 42}}
     summarize_scores(scores)
