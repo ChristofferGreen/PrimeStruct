@@ -1,30 +1,30 @@
 [return<int> effects(io_out)]
 main() {
-  [string] data('{"users":[{"id":1,"name":"alice","score":12},{"id":2,"name":"bob","score":7},{"id":3,"name":"carol","score":42}],"active":true,"count":3,"misc":{"neg":-7,"escape":"a\n\"b\"","unicode":"\u0041","zip":90210},"tags":["a","b","c"]}'raw_utf8)
-  [i32] len(count(data))
-  [i32] outer(20000i32)
+  [string] data{'{"users":[{"id":1,"name":"alice","score":12},{"id":2,"name":"bob","score":7},{"id":3,"name":"carol","score":42}],"active":true,"count":3,"misc":{"neg":-7,"escape":"a\n\"b\"","unicode":"\u0041","zip":90210},"tags":["a","b","c"]}'raw_utf8}
+  [i32] len{count(data)}
+  [i32] outer{20000i32}
 
-  [i64 mut] tokenTotal(0i64)
-  [i64 mut] numberCount(0i64)
-  [i64 mut] numberSum(0i64)
-  [i64 mut] stringBytes(0i64)
+  [i64 mut] tokenTotal{0i64}
+  [i64 mut] numberCount{0i64}
+  [i64 mut] numberSum{0i64}
+  [i64 mut] stringBytes{0i64}
 
   repeat(outer) {
-    [i64 mut] localTokens(0i64)
-    [i64 mut] localNumberCount(0i64)
-    [i64 mut] localNumberSum(0i64)
-    [i64 mut] localStringBytes(0i64)
+    [i64 mut] localTokens{0i64}
+    [i64 mut] localNumberCount{0i64}
+    [i64 mut] localNumberSum{0i64}
+    [i64 mut] localStringBytes{0i64}
 
-    [bool mut] inString(false)
-    [bool mut] escape(false)
-    [i32 mut] unicodeDigits(0i32)
-    [bool mut] inNumber(false)
-    [i64 mut] sign(1i64)
-    [i64 mut] value(0i64)
+    [bool mut] inString{false}
+    [bool mut] escape{false}
+    [i32 mut] unicodeDigits{0i32}
+    [bool mut] inNumber{false}
+    [i64 mut] sign{1i64}
+    [i64 mut] value{0i64}
 
-    [i32 mut] idx(0i32)
+    [i32 mut] idx{0i32}
     repeat(len) {
-      [i32] ch(at_unsafe(data, idx))
+      [i32] ch{at_unsafe(data, idx)}
 
       if(inString) {
         if(greater_than(unicodeDigits, 0i32)) {
@@ -53,7 +53,7 @@ main() {
       } else {
         if(inNumber) {
           if(and(greater_equal(ch, 48i32), less_equal(ch, 57i32))) {
-            [i64] digit(convert<i64>(minus(ch, 48i32)))
+            [i64] digit{convert<i64>(minus(ch, 48i32))}
             assign(value, plus(multiply(value, 10i64), digit))
           } else {
             assign(localNumberSum, plus(localNumberSum, multiply(sign, value)))
@@ -74,7 +74,7 @@ main() {
               assign(value, 0i64)
             } else {
               if(and(greater_equal(ch, 48i32), less_equal(ch, 57i32))) {
-                [i64] digit(convert<i64>(minus(ch, 48i32)))
+                [i64] digit{convert<i64>(minus(ch, 48i32))}
                 assign(inNumber, true)
                 assign(sign, 1i64)
                 assign(value, digit)

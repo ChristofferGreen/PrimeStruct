@@ -443,6 +443,14 @@ for(
   ```
 - **Open design items:** decide constructor semantics (beyond the `Create`/`Destroy` helpers) and constant member behaviour once the package/effect designs settle.
 
+## Move/Copy/Destroy (draft)
+- **Lifecycle set:** structured types can define `Create`, `Move`, `Copy`, and `Destroy` helpers. `Create` and `Destroy` are already established; `Move`/`Copy` follow C++-style semantics.
+- **Copy signature:** the canonical copy constructor is `Copy([Reference<Self>] other) { ... }`. A shorthand `Copy(other) { ... }` desugars to the reference form.
+- **Explicit move:** `move(value)` is the explicit consume helper; it transfers ownership and marks the source binding as moved-from.
+- **Use-after-move:** any use of a moved-from binding is a compile error unless it is re-initialized (e.g., `assign(value, ...)`) or shadowed.
+- **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no implicit `null` literal; `0x0` is just a numeric value).
+- **References:** `Reference<T>` bindings are not implicitly movable; move semantics for references must be explicit if enabled.
+
 ## Lambdas & Higher-Order Functions (draft)
 - **Syntax mirrors definitions:** lambdas omit the identifier (`[capture] <T>(params){ body }`). Captures rewrite into explicit parameters/structs.
 - **Capture semantics:** support `[]`, `[=]`, `[&]`, and explicit notations (`[value x, ref y]`). Captures compile to generated structs with `invoke` methods.

@@ -1,14 +1,14 @@
 [return<int> effects(io_out)]
 main() {
-  [string] data('{"users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"},{"id":3,"name":"carol"}],"active":true,"count":3,"tags":["a","b","c"]}'utf8)
-  [i32] len(count(data))
-  [i32] outer(20000i32)
-  [i64 mut] total(0i64)
+  [string] data{'{"users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"},{"id":3,"name":"carol"}],"active":true,"count":3,"tags":["a","b","c"]}'utf8}
+  [i32] len{count(data)}
+  [i32] outer{20000i32}
+  [i64 mut] total{0i64}
   repeat(outer) {
-    [i64 mut] local(0i64)
-    [i32 mut] idx(0i32)
+    [i64 mut] local{0i64}
+    [i32 mut] idx{0i32}
     repeat(len) {
-      [i32] ch(at_unsafe(data, idx))
+      [i32] ch{at_unsafe(data, idx)}
       if(equal(ch, 123i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
       if(equal(ch, 125i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }
       if(equal(ch, 91i32)) { assign(local, plus(local, 1i64)) } else { 0i64 }

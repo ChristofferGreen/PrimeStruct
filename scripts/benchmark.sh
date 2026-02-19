@@ -140,7 +140,8 @@ def emit_file(path: str, header: list[str], func_lines: list[str], footer: list[
     extra = remaining % block
 
     for i in range(num_funcs):
-        lines.extend(line.format(i=i) for line in func_lines)
+        for line in func_lines:
+            lines.append(line.replace("{i}", str(i)))
 
     for _ in range(extra):
         lines.append("")
@@ -158,7 +159,7 @@ emit_file(
     paths["c"],
     ["#include <stdint.h>", ""],
     [
-        "static int32_t noop{i}(int32_t x) {{",
+        "static int32_t noop{i}(int32_t x) {",
         "  int32_t y = x + 1;",
         "  return y;",
         "}",
@@ -174,7 +175,7 @@ emit_file(
     paths["cpp"],
     ["#include <cstdint>", ""],
     [
-        "static int32_t noop{i}(int32_t x) {{",
+        "static int32_t noop{i}(int32_t x) {",
         "  int32_t y = x + 1;",
         "  return y;",
         "}",
@@ -190,7 +191,7 @@ emit_file(
     paths["rs"],
     [],
     [
-        "fn noop{i}(x: i32) -> i32 {{",
+        "fn noop{i}(x: i32) -> i32 {",
         "  let y = x + 1;",
         "  y",
         "}",
@@ -206,7 +207,7 @@ emit_file(
     ["namespace bench {"],
     [
         "[void]",
-        "noop{i}() {{",
+        "noop{i}() {",
         "  return()",
         "}",
     ],
