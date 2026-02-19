@@ -67,6 +67,7 @@ Legend:
 - ✓ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ✓ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
 - ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
+- ○ (Low) Investigate multithreaded semantics pass (task pool per root function) with deterministic diagnostics.
 - ✓ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
 - ✓ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
 - ✓ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
