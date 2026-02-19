@@ -63,6 +63,9 @@ This benchmark generates a large PrimeStruct source file (default 100,000 lines)
 and measures how long `primec` takes to compile it.
 
 Targets:
+- `c`: `cc -O3` compile of the generated C source.
+- `cpp`: `c++ -O3` compile of the generated C++ source.
+- `rust`: `rustc -O` compile of the generated Rust source.
 - `primestruct_cpp`: C++ emitter (`--emit=cpp`) output only.
 - `primestruct_native`: native codegen backend (`--emit=native`) when available.
 

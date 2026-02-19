@@ -74,9 +74,15 @@ fi
 
 mkdir -p "$BENCH_DIR"
 
+COMPILE_C_SRC="$BENCH_DIR/compile_speed.c"
+COMPILE_CPP_SRC="$BENCH_DIR/compile_speed.cpp"
+COMPILE_RS_SRC="$BENCH_DIR/compile_speed.rs"
 COMPILE_SRC="$BENCH_DIR/compile_speed.prime"
-COMPILE_CPP="$BENCH_DIR/compile_speed.cpp"
-COMPILE_NATIVE="$BENCH_DIR/compile_speed_native"
+COMPILE_C_EXE="$BENCH_DIR/compile_speed_c"
+COMPILE_CPP_EXE="$BENCH_DIR/compile_speed_cpp"
+COMPILE_RS_EXE="$BENCH_DIR/compile_speed_rust"
+COMPILE_CPP="$BENCH_DIR/compile_speed_primestruct.cpp"
+COMPILE_NATIVE="$BENCH_DIR/compile_speed_primestruct_native"
 
 C_SRC="$ROOT_DIR/benchmarks/aggregate.c"
 CPP_SRC="$ROOT_DIR/benchmarks/aggregate.cpp"
@@ -110,42 +116,108 @@ PRIME_JSON_PARSE_CPP="$BENCH_DIR/json_parse_primestruct.cpp"
 PRIME_JSON_PARSE_CPP_EXE="$BENCH_DIR/json_parse_primestruct_cpp"
 PRIME_JSON_PARSE_NATIVE_EXE="$BENCH_DIR/json_parse_primestruct_native"
 
-"$PYTHON" - "$COMPILE_SRC" "$COMPILE_LINES" <<'PY'
+"$PYTHON" - "$COMPILE_C_SRC" "$COMPILE_CPP_SRC" "$COMPILE_RS_SRC" \
+  "$COMPILE_SRC" "$COMPILE_LINES" <<'PY'
 import sys
 
-path = sys.argv[1]
-target_lines = int(sys.argv[2])
+paths = {
+    "c": sys.argv[1],
+    "cpp": sys.argv[2],
+    "rs": sys.argv[3],
+    "prime": sys.argv[4],
+}
+target_lines = int(sys.argv[5])
 
-lines = ["namespace bench {"]
-reserve = 5
-remaining = target_lines - len(lines) - reserve
-if remaining < 0:
-    raise SystemExit(f"compile benchmark requires at least {reserve + 1} lines")
+def emit_file(path: str, header: list[str], func_lines: list[str], footer: list[str]) -> None:
+    lines = header[:]
+    reserve = len(footer)
+    remaining = target_lines - len(lines) - reserve
+    if remaining < 0:
+        raise SystemExit(f"compile benchmark requires at least {reserve + 1} lines")
 
-num_funcs = remaining // 4
-extra = remaining % 4
+    block = len(func_lines)
+    num_funcs = remaining // block
+    extra = remaining % block
 
-for i in range(num_funcs):
-    lines.append("[void]")
-    lines.append(f"noop{i}() {{")
-    lines.append("  return()")
-    lines.append("}")
+    for i in range(num_funcs):
+        lines.extend(line.format(i=i) for line in func_lines)
 
-for _ in range(extra):
-    lines.append("")
+    for _ in range(extra):
+        lines.append("")
 
-lines.append("[i32]")
-lines.append("main() {")
-lines.append("  return(0)")
-lines.append("}")
-lines.append("}")
+    lines.extend(footer)
 
-if len(lines) != target_lines:
-    raise SystemExit(f"generated {len(lines)} lines, expected {target_lines}")
+    if len(lines) != target_lines:
+        raise SystemExit(f"generated {len(lines)} lines, expected {target_lines}")
 
-with open(path, "w", newline="\n") as handle:
-    handle.write("\n".join(lines))
-    handle.write("\n")
+    with open(path, "w", newline="\n") as handle:
+        handle.write("\n".join(lines))
+        handle.write("\n")
+
+emit_file(
+    paths["c"],
+    ["#include <stdint.h>", ""],
+    [
+        "static int32_t noop{i}(int32_t x) {{",
+        "  int32_t y = x + 1;",
+        "  return y;",
+        "}",
+    ],
+    [
+        "int main(void) {",
+        "  return 0;",
+        "}",
+    ],
+)
+
+emit_file(
+    paths["cpp"],
+    ["#include <cstdint>", ""],
+    [
+        "static int32_t noop{i}(int32_t x) {{",
+        "  int32_t y = x + 1;",
+        "  return y;",
+        "}",
+    ],
+    [
+        "int main() {",
+        "  return 0;",
+        "}",
+    ],
+)
+
+emit_file(
+    paths["rs"],
+    [],
+    [
+        "fn noop{i}(x: i32) -> i32 {{",
+        "  let y = x + 1;",
+        "  y",
+        "}",
+    ],
+    [
+        "fn main() {",
+        "}",
+    ],
+)
+
+emit_file(
+    paths["prime"],
+    ["namespace bench {"],
+    [
+        "[void]",
+        "noop{i}() {{",
+        "  return()",
+        "}",
+    ],
+    [
+        "[i32]",
+        "main() {",
+        "  return(0)",
+        "}",
+        "}",
+    ],
+)
 PY
 
 "$CC" -O3 -DNDEBUG -std=c11 "$C_SRC" -o "$C_EXE"
@@ -176,7 +248,10 @@ fi
 (
   cd "$BENCH_DIR"
   "$PYTHON" - "$RUNS" "$RUN_NATIVE" "$COMPILE_RUNS" "$COMPILE_LINES" "$COMPILE_SRC" \
-    "$PRIMEC_BIN" "$COMPILE_CPP" "$COMPILE_NATIVE" <<'PY'
+    "$COMPILE_C_SRC" "$COMPILE_CPP_SRC" "$COMPILE_RS_SRC" \
+    "$CC" "$CXX" "$RUSTC" "$PRIMEC_BIN" \
+    "$COMPILE_C_EXE" "$COMPILE_CPP_EXE" "$COMPILE_RS_EXE" \
+    "$COMPILE_CPP" "$COMPILE_NATIVE" <<'PY'
 import subprocess
 import sys
 import time
@@ -187,9 +262,18 @@ run_native = int(sys.argv[2]) != 0
 compile_runs = int(sys.argv[3])
 compile_lines = int(sys.argv[4])
 compile_src = sys.argv[5]
-primec_bin = sys.argv[6]
-compile_cpp = sys.argv[7]
-compile_native = sys.argv[8]
+compile_c_src = sys.argv[6]
+compile_cpp_src = sys.argv[7]
+compile_rs_src = sys.argv[8]
+cc = sys.argv[9]
+cxx = sys.argv[10]
+rustc = sys.argv[11]
+primec_bin = sys.argv[12]
+compile_c_exe = sys.argv[13]
+compile_cpp_exe = sys.argv[14]
+compile_rs_exe = sys.argv[15]
+compile_cpp = sys.argv[16]
+compile_native = sys.argv[17]
 
 def primestruct_entries(name: str):
     entries = [
@@ -270,6 +354,31 @@ for bench, entries in benchmarks:
         run_entry(label, exe)
 
 compile_entries = [
+    ("c", [
+        cc,
+        "-O3",
+        "-DNDEBUG",
+        "-std=c11",
+        compile_c_src,
+        "-o",
+        compile_c_exe,
+    ], [compile_c_exe]),
+    ("cpp", [
+        cxx,
+        "-O3",
+        "-DNDEBUG",
+        "-std=c++23",
+        compile_cpp_src,
+        "-o",
+        compile_cpp_exe,
+    ], [compile_cpp_exe]),
+    ("rust", [
+        rustc,
+        "-O",
+        compile_rs_src,
+        "-o",
+        compile_rs_exe,
+    ], [compile_rs_exe]),
     ("primestruct_cpp", [
         primec_bin,
         "--emit=cpp",
