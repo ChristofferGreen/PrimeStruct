@@ -488,6 +488,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     };
     std::string resolved = resolveCalleePath(expr);
     bool hasResolvedPath = !expr.isMethodCall;
+    if (expr.isMethodCall && expr.name == "ok" && expr.args.size() >= 1) {
+      const Expr &receiver = expr.args.front();
+      if (receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+        return (expr.args.size() > 1) ? ReturnKind::Int64 : ReturnKind::Int;
+      }
+    }
     if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
       std::string elemType;
       std::string keyType;

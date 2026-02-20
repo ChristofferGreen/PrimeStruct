@@ -1,4 +1,125 @@
 
+  struct LocalInfo {
+    int32_t index = 0;
+    bool isMutable = false;
+    enum class Kind { Value, Pointer, Reference, Array, Vector, Map } kind = Kind::Value;
+    enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
+    ValueKind mapKeyKind = ValueKind::Unknown;
+    ValueKind mapValueKind = ValueKind::Unknown;
+    bool isFileHandle = false;
+    bool isResult = false;
+    bool resultHasValue = false;
+    enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
+    int32_t stringIndex = -1;
+    bool argvChecked = true;
+    bool referenceToArray = false;
+  };
+  struct OnErrorHandler {
+    std::string handlerPath;
+    std::vector<Expr> boundArgs;
+  };
+  struct ResultReturnInfo {
+    bool isResult = false;
+    bool hasValue = false;
+  };
+
+  auto trimText = [](const std::string &text) {
+    size_t start = 0;
+    while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
+      start++;
+    }
+    size_t end = text.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
+      end--;
+    }
+    return text.substr(start, end - start);
+  };
+  auto splitTemplateArgs = [&](const std::string &text, std::vector<std::string> &out) -> bool {
+    out.clear();
+    int depth = 0;
+    size_t start = 0;
+    for (size_t i = 0; i < text.size(); ++i) {
+      char c = text[i];
+      if (c == '<') {
+        depth++;
+        continue;
+      }
+      if (c == '>') {
+        if (depth == 0) {
+          return false;
+        }
+        depth--;
+        continue;
+      }
+      if (c == ',' && depth == 0) {
+        out.push_back(trimText(text.substr(start, i - start)));
+        start = i + 1;
+      }
+    }
+    if (depth != 0) {
+      return false;
+    }
+    out.push_back(trimText(text.substr(start)));
+    return true;
+  };
+  auto valueKindFromTypeName = [&](const std::string &name) -> LocalInfo::ValueKind {
+    if (name == "int" || name == "i32") {
+      return LocalInfo::ValueKind::Int32;
+    }
+    if (name == "i64") {
+      return LocalInfo::ValueKind::Int64;
+    }
+    if (name == "u64") {
+      return LocalInfo::ValueKind::UInt64;
+    }
+    if (name == "float" || name == "f32") {
+      return LocalInfo::ValueKind::Float32;
+    }
+    if (name == "f64") {
+      return LocalInfo::ValueKind::Float64;
+    }
+    if (name == "bool") {
+      return LocalInfo::ValueKind::Bool;
+    }
+    if (name == "string") {
+      return LocalInfo::ValueKind::String;
+    }
+    if (name == "FileError") {
+      return LocalInfo::ValueKind::Int32;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(name, base, arg) && base == "File") {
+      return LocalInfo::ValueKind::Int64;
+    }
+    return LocalInfo::ValueKind::Unknown;
+  };
+  auto parseResultTypeName = [&](const std::string &typeName,
+                                 bool &hasValue,
+                                 LocalInfo::ValueKind &valueKind) -> bool {
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTemplateArgs(arg, args)) {
+      return false;
+    }
+    if (args.size() == 1) {
+      hasValue = false;
+      valueKind = LocalInfo::ValueKind::Unknown;
+      return true;
+    }
+    if (args.size() == 2) {
+      hasValue = true;
+      valueKind = valueKindFromTypeName(args.front());
+      return true;
+    }
+    return false;
+  };
+
+
   bool hasMathImport = false;
   auto isMathImport = [](const std::string &path) -> bool {
     if (path == "/math/*") {
@@ -15,6 +136,8 @@
 
   bool hasReturnTransform = false;
   bool returnsVoid = false;
+  ResultReturnInfo entryResultInfo;
+  bool entryHasResultInfo = false;
   for (const auto &transform : entryDef->transforms) {
     if (transform.name != "return") {
       continue;
@@ -22,6 +145,15 @@
     hasReturnTransform = true;
     if (transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
       returnsVoid = true;
+    }
+    if (transform.templateArgs.size() == 1) {
+      bool resultHasValue = false;
+      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+      if (parseResultTypeName(transform.templateArgs.front(), resultHasValue, resultValueKind)) {
+        entryResultInfo.isResult = true;
+        entryResultInfo.hasValue = resultHasValue;
+        entryHasResultInfo = true;
+      }
     }
   }
   if (!hasReturnTransform && !entryDef->returnExpr.has_value()) {
@@ -31,22 +163,14 @@
   IrFunction function;
   function.name = entryPath;
   bool sawReturn = false;
-  struct LocalInfo {
-    int32_t index = 0;
-    bool isMutable = false;
-    enum class Kind { Value, Pointer, Reference, Array, Vector, Map } kind = Kind::Value;
-    enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
-    ValueKind mapKeyKind = ValueKind::Unknown;
-    ValueKind mapValueKind = ValueKind::Unknown;
-    enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
-    int32_t stringIndex = -1;
-    bool argvChecked = true;
-    bool referenceToArray = false;
-  };
   using LocalMap = std::unordered_map<std::string, LocalInfo>;
   LocalMap locals;
   int32_t nextLocal = 0;
+  int32_t onErrorTempCounter = 0;
   std::vector<std::string> stringTable;
+  std::vector<std::vector<int32_t>> fileScopeStack;
+  std::optional<OnErrorHandler> currentOnError;
+  std::optional<ResultReturnInfo> currentReturnResult;
 
   auto internString = [&](const std::string &text) -> int32_t {
     for (size_t i = 0; i < stringTable.size(); ++i) {
@@ -408,6 +532,68 @@
     }
     return "/" + expr.name;
   };
+  auto parseTransformArgumentExpr = [&](const std::string &text,
+                                        const std::string &namespacePrefix,
+                                        Expr &out) -> bool {
+    Lexer lexer(text);
+    Parser parser(lexer.tokenize());
+    std::string parseError;
+    if (!parser.parseExpression(out, namespacePrefix, parseError)) {
+      error = parseError.empty() ? "invalid transform argument expression" : parseError;
+      return false;
+    }
+    return true;
+  };
+  auto parseOnErrorTransform = [&](const std::vector<Transform> &transforms,
+                                   const std::string &namespacePrefix,
+                                   const std::string &context,
+                                   std::optional<OnErrorHandler> &out) -> bool {
+    out.reset();
+    for (const auto &transform : transforms) {
+      if (transform.name != "on_error") {
+        continue;
+      }
+      if (out.has_value()) {
+        error = "duplicate on_error transform on " + context;
+        return false;
+      }
+      if (transform.templateArgs.size() != 2) {
+        error = "on_error requires exactly two template arguments on " + context;
+        return false;
+      }
+      Expr handlerExpr;
+      handlerExpr.kind = Expr::Kind::Name;
+      handlerExpr.name = transform.templateArgs[1];
+      handlerExpr.namespacePrefix = namespacePrefix;
+      std::string handlerPath = resolveExprPath(handlerExpr);
+      auto defIt = defMap.find(handlerPath);
+      if (defIt == defMap.end()) {
+        error = "unknown on_error handler: " + handlerPath;
+        return false;
+      }
+      OnErrorHandler handler;
+      handler.handlerPath = handlerPath;
+      handler.boundArgs.reserve(transform.arguments.size());
+      for (const auto &argText : transform.arguments) {
+        Expr argExpr;
+        if (!parseTransformArgumentExpr(argText, namespacePrefix, argExpr)) {
+          return false;
+        }
+        handler.boundArgs.push_back(std::move(argExpr));
+      }
+      out = std::move(handler);
+    }
+    return true;
+  };
+  std::unordered_map<std::string, std::optional<OnErrorHandler>> onErrorByDef;
+  onErrorByDef.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    std::optional<OnErrorHandler> handler;
+    if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, handler)) {
+      return false;
+    }
+    onErrorByDef.emplace(def.fullPath, std::move(handler));
+  }
 
   auto parseMathName = [&](const std::string &name, std::string &out) -> bool {
     if (name.empty()) {
@@ -458,41 +644,6 @@
     return out == "pi" || out == "tau" || out == "e";
   };
 
-  auto valueKindFromTypeName = [](const std::string &name) -> LocalInfo::ValueKind {
-    if (name == "int" || name == "i32") {
-      return LocalInfo::ValueKind::Int32;
-    }
-    if (name == "i64") {
-      return LocalInfo::ValueKind::Int64;
-    }
-    if (name == "u64") {
-      return LocalInfo::ValueKind::UInt64;
-    }
-    if (name == "float" || name == "f32") {
-      return LocalInfo::ValueKind::Float32;
-    }
-    if (name == "f64") {
-      return LocalInfo::ValueKind::Float64;
-    }
-    if (name == "bool") {
-      return LocalInfo::ValueKind::Bool;
-    }
-    if (name == "string") {
-      return LocalInfo::ValueKind::String;
-    }
-    return LocalInfo::ValueKind::Unknown;
-  };
-  auto trimText = [](const std::string &text) {
-    size_t start = 0;
-    while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
-      ++start;
-    }
-    size_t end = text.size();
-    while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
-      --end;
-    }
-    return text.substr(start, end - start);
-  };
   auto setReferenceArrayInfo = [&](const Expr &expr, LocalInfo &info) {
     if (info.kind != LocalInfo::Kind::Reference) {
       return;
@@ -573,6 +724,18 @@
           return valueKindFromTypeName(transform.templateArgs[1]);
         }
         return LocalInfo::ValueKind::Unknown;
+      }
+      if (transform.name == "Result") {
+        if (transform.templateArgs.size() == 1) {
+          return LocalInfo::ValueKind::Int32;
+        }
+        if (transform.templateArgs.size() == 2) {
+          return LocalInfo::ValueKind::Int64;
+        }
+        return LocalInfo::ValueKind::Unknown;
+      }
+      if (transform.name == "File") {
+        return LocalInfo::ValueKind::Int64;
       }
       LocalInfo::ValueKind kindValue = valueKindFromTypeName(transform.name);
       if (kindValue != LocalInfo::ValueKind::Unknown) {

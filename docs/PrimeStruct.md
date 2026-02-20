@@ -180,7 +180,7 @@ module {
 - **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 - **Capability taxonomy (v1):**
-  - **IO:** `io_out` (stdout), `io_err` (stderr).
+  - **IO:** `io_out` (stdout), `io_err` (stderr), `file_write` (filesystem output).
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
   - **PathSpace:** `pathspace_notify`, `pathspace_insert`, `pathspace_take`.
@@ -408,7 +408,7 @@ for(
 - **Core builtins (root namespace):**
   - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
   - **`increment(target)` / `decrement(target)`** (statement): mutation helpers used by `++`/`--` desugaring.
-- **`convert<T>(value)`**: explicit conversion for `int/i32/i64/u64/bool/f32/f64` in VM/native.
+  - **`convert<T>(value)`**: explicit conversion for `int/i32/i64/u64/bool/f32/f64` in VM/native.
   - **`if(cond, then() { ... }, else() { ... })`**: canonical conditional form after desugaring.
   - **`loop(count, do() { ... })`** (statement): loop helper with integer count.
   - **`while(cond, do() { ... })`** (statement): loop helper with bool condition.
@@ -422,6 +422,60 @@ for(
   - **PathSpace helpers:** `notify`, `insert`, `take`.
   - **Operators (desugared forms):** `plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`.
   - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
+  - **Result helpers (draft):**
+    - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
+    - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
+    - `Result.error()` returns `true` when the result is an error.
+    - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
+    - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
+
+### Error Handling (draft)
+- **`Result` propagation:** the postfix `?` operator unwraps `Result<T, Error>` in-place; on error, it invokes a local
+  `on_error` handler and then returns the error from the current function.
+- **Local handlers:** error handling is explicit and local to the scope that declares it.
+  - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
+    block body.
+  - Handlers do **not** flow into nested blocks; any nested block using `?` must declare its own `on_error`.
+  - A missing `on_error` for a `?` usage is a compile-time error.
+  - The handler signature is `Handler(ErrorType err, args...)`.
+  - Bound arguments are evaluated when the error is raised, not at declaration time.
+
+### File I/O (draft)
+- **RAII object:** `File<Mode>` is the owning file handle with automatic close on scope exit (`Destroy`).
+  - `File<Mode>` is move-only; `Copy` is a compile-time error.
+  - `close()` disarms the handle so `Destroy` becomes a no-op.
+- **Modes:** `Read`, `Write`, `Append`.
+- **Construction:** `File<Mode>(path)` returns `Result<File<Mode>, FileError>`.
+  - `path` is a `string` (string literal or literal-backed binding in VM/native).
+- **Methods (all return `Result<FileError>`):**
+  - `write(values...)` (variadic text write)
+  - `write_line(values...)` (variadic + newline)
+  - `write_byte(u8_value)`
+  - `write_bytes(array<u8>)`
+  - `flush()`
+  - `close()`
+- **Error type:** `FileError` carries `why()` (owned `string`).
+- **Effect requirement:** all file operations require `effects(file_write)`.
+- **Example:**
+  ```
+  [return<Result<FileError>> effects(file_write, io_err)
+   on_error<FileError, /log_file_error>(path)]
+  write_ppm([string] path, [i32] width, [i32] height) {
+    [File<Write>] file{ File<Write>(path)? }
+    file.write_line("P3")?
+    file.write_line(width, " ", height)?
+    file.write_line("255")?
+    file.write_line(255, " ", 0, " ", 0)?
+    return(Result.ok())
+  }
+
+  [effects(io_err)]
+  /log_file_error([FileError] err, [string] path) {
+    print_line_error(path)
+    print_line_error(": "utf8)
+    print_line_error(err.why())
+  }
+  ```
 
 ## Runtime Stack Model (draft)
 - **Frames:** each execution pushes a frame recording the instruction pointer, constants, locals, captures, and effect mask. Frames are immutable from the caller’s perspective; `assign` creates new bindings.

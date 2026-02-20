@@ -15,6 +15,18 @@
       error = "native backend does not support recursive calls: " + callee.fullPath;
       return false;
     }
+    std::optional<OnErrorHandler> scopedOnError;
+    auto onErrorIt = onErrorByDef.find(callee.fullPath);
+    if (onErrorIt != onErrorByDef.end()) {
+      scopedOnError = onErrorIt->second;
+    }
+    OnErrorScope onErrorScope(currentOnError, scopedOnError);
+    std::optional<ResultReturnInfo> scopedResult;
+    if (returnInfo.isResult) {
+      scopedResult = ResultReturnInfo{true, returnInfo.resultHasValue};
+    }
+    ResultReturnScope resultScope(currentReturnResult, scopedResult);
+    pushFileScope();
     std::vector<Expr> structParams;
     auto isStaticField = [](const Expr &stmt) -> bool {
       for (const auto &transform : stmt.transforms) {
@@ -72,6 +84,16 @@
           }
         }
       }
+      for (const auto &transform : param.transforms) {
+        if (transform.name == "File") {
+          paramInfo.isFileHandle = true;
+          paramInfo.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (transform.name == "Result") {
+          paramInfo.isResult = true;
+          paramInfo.resultHasValue = (transform.templateArgs.size() == 2);
+          paramInfo.valueKind = paramInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        }
+      }
       setReferenceArrayInfo(param, paramInfo);
 
       if (isStringBinding(param)) {
@@ -118,6 +140,9 @@
       }
       calleeLocals.emplace(param.name, paramInfo);
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
+      if (paramInfo.isFileHandle) {
+        fileScopeStack.back().push_back(paramInfo.index);
+      }
     }
 
     InlineContext context;
@@ -151,9 +176,11 @@
         }
       }
     }
-    size_t endIndex = function.instructions.size();
+    size_t cleanupIndex = function.instructions.size();
+    emitFileScopeCleanup(fileScopeStack.back());
+    popFileScope();
     for (size_t jumpIndex : context.returnJumps) {
-      function.instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);
+      function.instructions[jumpIndex].imm = static_cast<int32_t>(cleanupIndex);
     }
     activeInlineContext = prevContext;
 

@@ -298,6 +298,8 @@ Token Lexer::readPunct() {
     return {TokenKind::Star, "*", startLine, startColumn};
   case '&':
     return {TokenKind::Ampersand, "&", startLine, startColumn};
+  case '?':
+    return {TokenKind::Question, "?", startLine, startColumn};
   case ';':
     return {TokenKind::Semicolon, ";", startLine, startColumn};
   default:

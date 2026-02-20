@@ -547,11 +547,121 @@
             emitMulLocal(valueLocal, valueLocal, outLocal);
           };
 
+          auto emitFloatTruncToLocal = [&](int32_t valueLocal, int32_t outLocal) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            if (argKind == LocalInfo::ValueKind::Float32) {
+              function.instructions.push_back({IrOpcode::ConvertF32ToI32, 0});
+              function.instructions.push_back({IrOpcode::ConvertI32ToF32, 0});
+            } else {
+              function.instructions.push_back({IrOpcode::ConvertF64ToI64, 0});
+              function.instructions.push_back({IrOpcode::ConvertI64ToF64, 0});
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+          };
+
+          auto emitFloorToLocal = [&](int32_t valueLocal, int32_t outLocal) {
+            emitFloatTruncToLocal(valueLocal, outLocal);
+            IrOpcode cmpOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpGtF64 : IrOpcode::CmpGtF32;
+            IrOpcode subFloatOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({cmpOp, 0});
+            size_t useValue = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
+            pushFloatConst(1.0);
+            function.instructions.push_back({subFloatOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+            size_t jumpEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            size_t useValueIndex = function.instructions.size();
+            function.instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
+            size_t endIndex = function.instructions.size();
+            function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+          };
+
           int32_t tempX = allocTempLocal();
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+
+          constexpr double kPi = 3.14159265358979323846;
+          constexpr double kTau = 6.28318530717958647692;
+          constexpr double kHalfPi = 1.57079632679489661923;
+          int32_t tempScale = allocTempLocal();
+          int32_t tempFloor = allocTempLocal();
+          int32_t tempMul = allocTempLocal();
+          IrOpcode cmpGtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpGtF64 : IrOpcode::CmpGtF32;
+          IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
+
+          // Range-reduce x into [-pi, pi] to keep the series stable.
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(kTau);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempScale)});
+          emitFloorToLocal(tempScale, tempFloor);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempFloor)});
+          pushFloatConst(kTau);
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempMul)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempMul)});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(kPi);
+          function.instructions.push_back({cmpGtOp, 0});
+          size_t skipWrap = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(kTau);
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+          size_t jumpWrapEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t skipWrapIndex = function.instructions.size();
+          function.instructions[skipWrap].imm = static_cast<int32_t>(skipWrapIndex);
+          size_t wrapEndIndex = function.instructions.size();
+          function.instructions[jumpWrapEnd].imm = static_cast<int32_t>(wrapEndIndex);
+
+          int32_t tempSinSign = allocTempLocal();
+          int32_t tempCosSign = allocTempLocal();
+          pushFloatConst(1.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSinSign)});
+          pushFloatConst(1.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCosSign)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(kHalfPi);
+          function.instructions.push_back({cmpGtOp, 0});
+          size_t skipUpper = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          pushFloatConst(kPi);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(-1.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCosSign)});
+          size_t skipUpperIndex = function.instructions.size();
+          function.instructions[skipUpper].imm = static_cast<int32_t>(skipUpperIndex);
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(-kHalfPi);
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t skipLower = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(kPi);
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(-1.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSinSign)});
+          pushFloatConst(-1.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCosSign)});
+          size_t skipLowerIndex = function.instructions.size();
+          function.instructions[skipLower].imm = static_cast<int32_t>(skipLowerIndex);
 
           int32_t tempX2 = allocTempLocal();
           emitSquare(tempX, tempX2);
@@ -577,6 +687,8 @@
             pushFloatConst(5040.0);
             function.instructions.push_back({divOp, 0});
             function.instructions.push_back({subOp, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSinSign)});
+            function.instructions.push_back({mulOp, 0});
             return true;
           }
 
@@ -599,6 +711,8 @@
             pushFloatConst(720.0);
             function.instructions.push_back({divOp, 0});
             function.instructions.push_back({subOp, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempCosSign)});
+            function.instructions.push_back({mulOp, 0});
             return true;
           }
 
@@ -630,6 +744,8 @@
           pushFloatConst(5040.0);
           function.instructions.push_back({divOp, 0});
           function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSinSign)});
+          function.instructions.push_back({mulOp, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSin)});
 
           pushFloatConst(1.0);
@@ -645,6 +761,8 @@
           pushFloatConst(720.0);
           function.instructions.push_back({divOp, 0});
           function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempCosSign)});
+          function.instructions.push_back({mulOp, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCos)});
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSin)});

@@ -70,12 +70,16 @@
         error = "loop body requires a block envelope";
         return false;
       }
+      OnErrorScope onErrorScope(currentOnError, std::nullopt);
+      pushFileScope();
       LocalMap bodyLocals = localsIn;
       for (const auto &bodyStmt : body.bodyArguments) {
         if (!emitStatement(bodyStmt, bodyLocals)) {
           return false;
         }
       }
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
 
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
       if (countKind == LocalInfo::ValueKind::Int32) {
@@ -219,6 +223,8 @@
       const size_t jumpEndIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
+      OnErrorScope onErrorScope(currentOnError, std::nullopt);
+      pushFileScope();
       LocalMap bodyLocals = loopLocals;
       for (const auto &bodyStmt : body.bodyArguments) {
         if (!emitStatement(bodyStmt, bodyLocals)) {
@@ -228,6 +234,8 @@
       if (!emitStatement(step, loopLocals)) {
         return false;
       }
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
 
       function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
       const size_t endIndex = function.instructions.size();
@@ -271,12 +279,16 @@
       const size_t jumpEndIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
+      OnErrorScope onErrorScope(currentOnError, std::nullopt);
+      pushFileScope();
       LocalMap bodyLocals = localsIn;
       for (const auto &bodyStmt : stmt.bodyArguments) {
         if (!emitStatement(bodyStmt, bodyLocals)) {
           return false;
         }
       }
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
 
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
       if (countKind == LocalInfo::ValueKind::Int32) {
@@ -298,12 +310,20 @@
         error = "block does not accept arguments";
         return false;
       }
+      std::optional<OnErrorHandler> blockOnError;
+      if (!parseOnErrorTransform(stmt.transforms, stmt.namespacePrefix, "block", blockOnError)) {
+        return false;
+      }
+      OnErrorScope onErrorScope(currentOnError, blockOnError);
+      pushFileScope();
       LocalMap blockLocals = localsIn;
       for (const auto &bodyStmt : stmt.bodyArguments) {
         if (!emitStatement(bodyStmt, blockLocals)) {
           return false;
         }
       }
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
       return true;
     }
     if (stmt.kind == Expr::Kind::Call) {
@@ -335,12 +355,16 @@
         if (!info.returnsVoid) {
           function.instructions.push_back({IrOpcode::Pop, 0});
         }
+        OnErrorScope onErrorScope(currentOnError, std::nullopt);
+        pushFileScope();
         LocalMap blockLocals = localsIn;
         for (const auto &bodyExpr : stmt.bodyArguments) {
           if (!emitStatement(bodyExpr, blockLocals)) {
             return false;
           }
         }
+        emitFileScopeCleanup(fileScopeStack.back());
+        popFileScope();
         return true;
       }
       std::string vectorHelper;

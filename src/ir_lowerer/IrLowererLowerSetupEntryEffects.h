@@ -20,7 +20,7 @@ bool IrLowerer::lower(const Program &program,
 
   auto isSupportedEffect = [](const std::string &name) {
     return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
-           name == "pathspace_insert" || name == "pathspace_take";
+           name == "pathspace_insert" || name == "pathspace_take" || name == "file_write";
   };
   auto resolveActiveEffects = [&](const std::vector<Transform> &transforms, bool isEntry) {
     std::unordered_set<std::string> effects;

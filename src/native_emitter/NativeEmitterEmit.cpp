@@ -1,6 +1,8 @@
 #include "primec/NativeEmitter.h"
 #include "NativeEmitterInternals.h"
 
+#include <fcntl.h>
+
 namespace primec {
 using namespace native_emitter;
 bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const {
@@ -34,7 +36,9 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
     }
     if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
-        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
+        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe ||
+        inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
+        inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
       needsPrintScratch = true;
     }
     if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
@@ -96,6 +100,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     for (const auto &text : module.stringTable) {
       stringOffsets.push_back(static_cast<uint64_t>(stringData.size()));
       stringData.insert(stringData.end(), text.begin(), text.end());
+      stringData.push_back(0);
     }
   }
   std::vector<size_t> instOffsets(fn.instructions.size() + 1, 0);
@@ -395,6 +400,64 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(stringIndex)});
         break;
       }
+      case IrOpcode::FileOpenRead: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "native backend encountered invalid string index";
+          return false;
+        }
+        size_t fixupIndex = emitter.emitFileOpenPlaceholder(O_RDONLY, 0);
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        break;
+      }
+      case IrOpcode::FileOpenWrite: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "native backend encountered invalid string index";
+          return false;
+        }
+        size_t fixupIndex = emitter.emitFileOpenPlaceholder(O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        break;
+      }
+      case IrOpcode::FileOpenAppend: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "native backend encountered invalid string index";
+          return false;
+        }
+        size_t fixupIndex = emitter.emitFileOpenPlaceholder(O_WRONLY | O_CREAT | O_APPEND, 0644);
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        break;
+      }
+      case IrOpcode::FileClose:
+        emitter.emitFileClose();
+        break;
+      case IrOpcode::FileFlush:
+        emitter.emitFileFlush();
+        break;
+      case IrOpcode::FileWriteI32:
+        emitter.emitFileWriteI32(scratchOffset, scratchBytes);
+        break;
+      case IrOpcode::FileWriteI64:
+        emitter.emitFileWriteI64(scratchOffset, scratchBytes);
+        break;
+      case IrOpcode::FileWriteU64:
+        emitter.emitFileWriteU64(scratchOffset, scratchBytes);
+        break;
+      case IrOpcode::FileWriteString: {
+        if (inst.imm >= module.stringTable.size()) {
+          error = "native backend encountered invalid string index";
+          return false;
+        }
+        size_t fixupIndex = emitter.emitFileWriteStringPlaceholder(
+            module.stringTable[static_cast<size_t>(inst.imm)].size(), scratchOffset);
+        stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
+        break;
+      }
+      case IrOpcode::FileWriteByte:
+        emitter.emitFileWriteByte(scratchOffset);
+        break;
+      case IrOpcode::FileWriteNewline:
+        emitter.emitFileWriteNewline(scratchOffset);
+        break;
       case IrOpcode::PrintArgv: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;

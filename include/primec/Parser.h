@@ -14,6 +14,7 @@ public:
   explicit Parser(std::vector<Token> tokens, bool allowSurfaceSyntax = true);
 
   bool parse(Program &program, std::string &error);
+  bool parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error);
 
 private:
   bool parseImport(Program &program);

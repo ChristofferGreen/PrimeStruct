@@ -13,6 +13,8 @@
     bool returnsVoid = false;
     bool returnsArray = false;
     LocalInfo::ValueKind kind = LocalInfo::ValueKind::Unknown;
+    bool isResult = false;
+    bool resultHasValue = false;
   };
 
   std::unordered_map<std::string, ReturnInfo> returnInfoCache;
@@ -280,6 +282,51 @@
         return LocalInfo::ValueKind::Unknown;
       }
       case Expr::Kind::Call: {
+        if (expr.isMethodCall) {
+          if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+              expr.args.front().name == "Result" && expr.name == "ok") {
+            return expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          }
+          if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+            auto it = localsIn.find(expr.args.front().name);
+            if (it != localsIn.end() && it->second.isFileHandle) {
+              if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
+                  expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+                return LocalInfo::ValueKind::Int32;
+              }
+            }
+          }
+        } else {
+          if (isSimpleCallName(expr, "File")) {
+            return LocalInfo::ValueKind::Int64;
+          }
+          if (isSimpleCallName(expr, "try") && expr.args.size() == 1) {
+            const Expr &arg = expr.args.front();
+            if (arg.kind == Expr::Kind::Name) {
+              auto it = localsIn.find(arg.name);
+              if (it != localsIn.end() && it->second.isResult) {
+                return it->second.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+              }
+            }
+            if (arg.kind == Expr::Kind::Call) {
+              if (!arg.isMethodCall && isSimpleCallName(arg, "File")) {
+                return LocalInfo::ValueKind::Int64;
+              }
+              if (arg.isMethodCall && !arg.args.empty() && arg.args.front().kind == Expr::Kind::Name) {
+                auto it = localsIn.find(arg.args.front().name);
+                if (it != localsIn.end() && it->second.isFileHandle) {
+                  if (arg.name == "write" || arg.name == "write_line" || arg.name == "write_byte" ||
+                      arg.name == "write_bytes" || arg.name == "flush" || arg.name == "close") {
+                    return LocalInfo::ValueKind::Int32;
+                  }
+                }
+                if (arg.args.front().name == "Result" && arg.name == "ok") {
+                  return arg.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+                }
+              }
+            }
+          }
+        }
         if (!expr.isMethodCall) {
           const std::string resolved = resolveExprPath(expr);
           auto defIt = defMap.find(resolved);

@@ -21,6 +21,7 @@ enum class TokenKind {
   Equal,
   Star,
   Ampersand,
+  Question,
   Semicolon,
   Comment,
   KeywordNamespace,

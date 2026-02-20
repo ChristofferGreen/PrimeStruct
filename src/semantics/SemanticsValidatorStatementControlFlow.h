@@ -16,6 +16,7 @@
       return false;
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = baseLocals;
+    OnErrorScope onErrorScope(*this, std::nullopt);
     for (const auto &bodyExpr : body.bodyArguments) {
       if (!validateStatement(params,
                              blockLocals,
@@ -39,6 +40,12 @@
     }
     return static_cast<int64_t>(expr.literalValue) < 0;
   };
+  for (const auto &transform : stmt.transforms) {
+    if (transform.name == "on_error" && !isBuiltinBlockCall(stmt)) {
+      error_ = "on_error is only valid on definitions and block scopes";
+      return false;
+    }
+  }
   if (isLoopCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
@@ -188,6 +195,7 @@
       return false;
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+    OnErrorScope onErrorScope(*this, std::nullopt);
     for (const auto &bodyExpr : stmt.bodyArguments) {
       if (!validateStatement(params,
                              blockLocals,
@@ -211,7 +219,20 @@
       error_ = "block does not accept arguments";
       return false;
     }
+    std::optional<OnErrorHandler> blockOnError;
+    if (!parseOnErrorTransform(stmt.transforms, stmt.namespacePrefix, "block", blockOnError)) {
+      return false;
+    }
+    if (blockOnError.has_value()) {
+      OnErrorScope onErrorArgsScope(*this, std::nullopt);
+      for (const auto &arg : blockOnError->boundArgs) {
+        if (!validateExpr(params, locals, arg)) {
+          return false;
+        }
+      }
+    }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+    OnErrorScope onErrorScope(*this, blockOnError);
     for (const auto &bodyExpr : stmt.bodyArguments) {
       if (!validateStatement(params,
                              blockLocals,

@@ -998,6 +998,17 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       current = std::move(call);
       continue;
     }
+    if (match(TokenKind::Question)) {
+      expect(TokenKind::Question, "expected '?'");
+      Expr call;
+      call.kind = Expr::Kind::Call;
+      call.name = "try";
+      call.namespacePrefix = namespacePrefix;
+      call.args.push_back(current);
+      call.argNames.push_back(std::nullopt);
+      current = std::move(call);
+      continue;
+    }
     break;
   }
 

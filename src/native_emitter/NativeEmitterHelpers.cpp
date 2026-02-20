@@ -130,6 +130,28 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintArgvUnsafe";
       case IrOpcode::LoadStringByte:
         return "LoadStringByte";
+      case IrOpcode::FileOpenRead:
+        return "FileOpenRead";
+      case IrOpcode::FileOpenWrite:
+        return "FileOpenWrite";
+      case IrOpcode::FileOpenAppend:
+        return "FileOpenAppend";
+      case IrOpcode::FileClose:
+        return "FileClose";
+      case IrOpcode::FileFlush:
+        return "FileFlush";
+      case IrOpcode::FileWriteI32:
+        return "FileWriteI32";
+      case IrOpcode::FileWriteI64:
+        return "FileWriteI64";
+      case IrOpcode::FileWriteU64:
+        return "FileWriteU64";
+      case IrOpcode::FileWriteString:
+        return "FileWriteString";
+      case IrOpcode::FileWriteByte:
+        return "FileWriteByte";
+      case IrOpcode::FileWriteNewline:
+        return "FileWriteNewline";
       case IrOpcode::PushF32:
         return "PushF32";
       case IrOpcode::PushF64:
@@ -316,6 +338,21 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return -1;
       case IrOpcode::LoadStringByte:
         return 0;
+      case IrOpcode::FileOpenRead:
+      case IrOpcode::FileOpenWrite:
+      case IrOpcode::FileOpenAppend:
+        return 1;
+      case IrOpcode::FileClose:
+      case IrOpcode::FileFlush:
+        return 0;
+      case IrOpcode::FileWriteString:
+      case IrOpcode::FileWriteNewline:
+        return 0;
+      case IrOpcode::FileWriteI32:
+      case IrOpcode::FileWriteI64:
+      case IrOpcode::FileWriteU64:
+      case IrOpcode::FileWriteByte:
+        return -1;
       default:
         return 0;
     }

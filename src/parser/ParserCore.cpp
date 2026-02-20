@@ -148,6 +148,18 @@ bool Parser::parse(Program &program, std::string &error) {
   return true;
 }
 
+bool Parser::parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error) {
+  error_ = &error;
+  error.clear();
+  if (!parseExpr(expr, namespacePrefix)) {
+    return false;
+  }
+  if (!match(TokenKind::End)) {
+    return fail("unexpected token after expression");
+  }
+  return true;
+}
+
 bool Parser::parseImport(Program &program) {
   if (!expect(TokenKind::KeywordImport, "expected 'import'")) {
     return false;

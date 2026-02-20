@@ -96,3 +96,4 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 #include "test_compile_run_includes.h"
 #include "test_compile_run_text_filters.h"
 #include "test_compile_run_bindings_and_examples.h"
+#include "test_compile_run_math_conformance.h"

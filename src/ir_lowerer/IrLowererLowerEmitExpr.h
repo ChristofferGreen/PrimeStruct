@@ -76,14 +76,375 @@
           }
           const int32_t resultLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+          OnErrorScope onErrorScope(currentOnError, std::nullopt);
+          pushFileScope();
           LocalMap blockLocals = localsIn;
           for (const auto &bodyExpr : expr.bodyArguments) {
             if (!emitStatement(bodyExpr, blockLocals)) {
               return false;
             }
           }
+          emitFileScopeCleanup(fileScopeStack.back());
+          popFileScope();
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
           return true;
+        }
+        if (!expr.isMethodCall && isSimpleCallName(expr, "try")) {
+          if (expr.args.size() != 1) {
+            error = "try requires exactly one argument";
+            return false;
+          }
+          if (!currentOnError.has_value()) {
+            error = "missing on_error for ? usage";
+            return false;
+          }
+          if (!currentReturnResult.has_value() || !currentReturnResult->isResult) {
+            error = "try requires Result return type";
+            return false;
+          }
+          ResultExprInfo resultInfo;
+          if (!resolveResultExprInfo(expr.args.front(), localsIn, resultInfo) || !resultInfo.isResult) {
+            error = "try requires Result argument";
+            return false;
+          }
+          if (!emitExpr(expr.args.front(), localsIn)) {
+            return false;
+          }
+          const int32_t resultLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+
+          auto emitOnErrorReturn = [&](int32_t errorLocal) -> bool {
+            if (!currentOnError.has_value()) {
+              error = "missing on_error for ? usage";
+              return false;
+            }
+            const OnErrorHandler &handler = *currentOnError;
+            auto defIt = defMap.find(handler.handlerPath);
+            if (defIt == defMap.end()) {
+              error = "unknown on_error handler: " + handler.handlerPath;
+              return false;
+            }
+            std::string errorName = "__on_error_err_" + std::to_string(onErrorTempCounter++);
+            LocalInfo errorInfo;
+            errorInfo.index = errorLocal;
+            errorInfo.isMutable = false;
+            errorInfo.kind = LocalInfo::Kind::Value;
+            errorInfo.valueKind = LocalInfo::ValueKind::Int32;
+            LocalMap handlerLocals = localsIn;
+            handlerLocals.emplace(errorName, errorInfo);
+
+            Expr errorExpr;
+            errorExpr.kind = Expr::Kind::Name;
+            errorExpr.name = errorName;
+            errorExpr.namespacePrefix = expr.namespacePrefix;
+
+            Expr callExpr;
+            callExpr.kind = Expr::Kind::Call;
+            callExpr.name = handler.handlerPath;
+            callExpr.namespacePrefix = expr.namespacePrefix;
+            callExpr.isMethodCall = false;
+            callExpr.isBinding = false;
+            callExpr.args.reserve(handler.boundArgs.size() + 1);
+            callExpr.args.push_back(errorExpr);
+            for (const auto &argExpr : handler.boundArgs) {
+              callExpr.args.push_back(argExpr);
+            }
+            ReturnInfo handlerReturn;
+            if (!getReturnInfo(defIt->second->fullPath, handlerReturn)) {
+              return false;
+            }
+            if (!emitInlineDefinitionCall(callExpr, *defIt->second, handlerLocals, false)) {
+              return false;
+            }
+            if (!handlerReturn.returnsVoid) {
+              function.instructions.push_back({IrOpcode::Pop, 0});
+            }
+
+            const bool returnHasValue = currentReturnResult->hasValue;
+            if (activeInlineContext) {
+              InlineContext &context = *activeInlineContext;
+              if (context.returnLocal < 0) {
+                error = "native backend missing inline return local";
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              if (returnHasValue) {
+                function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+                function.instructions.push_back({IrOpcode::MulI64, 0});
+              }
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+              size_t jumpIndex = function.instructions.size();
+              function.instructions.push_back({IrOpcode::Jump, 0});
+              context.returnJumps.push_back(jumpIndex);
+              return true;
+            }
+            emitFileScopeCleanupAll();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+            if (returnHasValue) {
+              function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+              function.instructions.push_back({IrOpcode::MulI64, 0});
+              function.instructions.push_back({IrOpcode::ReturnI64, 0});
+            } else {
+              function.instructions.push_back({IrOpcode::ReturnI32, 0});
+            }
+            return true;
+          };
+
+          if (resultInfo.hasValue) {
+            const int32_t errorLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+            function.instructions.push_back({IrOpcode::DivI64, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+            function.instructions.push_back({IrOpcode::PushI64, 0});
+            function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+            size_t jumpError = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+            function.instructions.push_back({IrOpcode::MulI64, 0});
+            function.instructions.push_back({IrOpcode::SubI64, 0});
+            size_t jumpEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            size_t errorIndex = function.instructions.size();
+            function.instructions[jumpError].imm = static_cast<int32_t>(errorIndex);
+            if (!emitOnErrorReturn(errorLocal)) {
+              return false;
+            }
+            size_t endIndex = function.instructions.size();
+            function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+            return true;
+          }
+          const int32_t errorLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, 0});
+          function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+          size_t jumpError = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::PushI32, 0});
+          size_t jumpEnd = function.instructions.size();
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          size_t errorIndex = function.instructions.size();
+          function.instructions[jumpError].imm = static_cast<int32_t>(errorIndex);
+          if (!emitOnErrorReturn(errorLocal)) {
+            return false;
+          }
+          size_t endIndex = function.instructions.size();
+          function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+          return true;
+        }
+        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+            expr.args.front().name == "Result" && expr.name == "ok") {
+          if (expr.args.size() == 1) {
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            return true;
+          }
+          if (expr.args.size() != 2) {
+            error = "Result.ok accepts at most one argument";
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
+          if (argKind != LocalInfo::ValueKind::Int32 && argKind != LocalInfo::ValueKind::Bool) {
+            error = "native backend only supports Result.ok with 32-bit values";
+            return false;
+          }
+          return emitExpr(expr.args[1], localsIn);
+        }
+        if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
+          if (expr.templateArgs.size() != 1) {
+            error = "File requires exactly one template argument";
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error = "File requires exactly one path argument";
+            return false;
+          }
+          int32_t stringIndex = -1;
+          size_t length = 0;
+          if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+            error = "native backend only supports File() with string literals or literal-backed bindings";
+            return false;
+          }
+          if (expr.templateArgs.front() == "Read") {
+            function.instructions.push_back({IrOpcode::FileOpenRead, static_cast<uint64_t>(stringIndex)});
+            return true;
+          }
+          if (expr.templateArgs.front() == "Write") {
+            function.instructions.push_back({IrOpcode::FileOpenWrite, static_cast<uint64_t>(stringIndex)});
+            return true;
+          }
+          if (expr.templateArgs.front() == "Append") {
+            function.instructions.push_back({IrOpcode::FileOpenAppend, static_cast<uint64_t>(stringIndex)});
+            return true;
+          }
+          error = "File requires Read, Write, or Append mode";
+          return false;
+        }
+        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+          auto it = localsIn.find(expr.args.front().name);
+          if (it != localsIn.end() && it->second.isFileHandle) {
+            const int32_t handleIndex = it->second.index;
+            auto emitWriteStep = [&](const Expr &arg, int32_t errorLocal) -> bool {
+              int32_t stringIndex = -1;
+              size_t length = 0;
+              if (resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+                function.instructions.push_back({IrOpcode::FileWriteString, static_cast<uint64_t>(stringIndex)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+                return true;
+              }
+              LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
+              if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::FileWriteI32, 0});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+                return true;
+              }
+              if (kind == LocalInfo::ValueKind::Int64) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::FileWriteI64, 0});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+                return true;
+              }
+              if (kind == LocalInfo::ValueKind::UInt64) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+                if (!emitExpr(arg, localsIn)) {
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::FileWriteU64, 0});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+                return true;
+              }
+              error = "file write requires integer/bool or string arguments";
+              return false;
+            };
+            if (expr.name == "write" || expr.name == "write_line") {
+              const int32_t errorLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::PushI32, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+              for (size_t i = 1; i < expr.args.size(); ++i) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+                function.instructions.push_back({IrOpcode::PushI64, 0});
+                function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+                size_t skipIndex = function.instructions.size();
+                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+                if (!emitWriteStep(expr.args[i], errorLocal)) {
+                  return false;
+                }
+                size_t afterIndex = function.instructions.size();
+                function.instructions[skipIndex].imm = static_cast<int32_t>(afterIndex);
+              }
+              if (expr.name == "write_line") {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+                function.instructions.push_back({IrOpcode::PushI64, 0});
+                function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+                size_t skipIndex = function.instructions.size();
+                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+                function.instructions.push_back({IrOpcode::FileWriteNewline, 0});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+                size_t afterIndex = function.instructions.size();
+                function.instructions[skipIndex].imm = static_cast<int32_t>(afterIndex);
+              }
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              return true;
+            }
+            if (expr.name == "write_byte") {
+              if (expr.args.size() != 2) {
+                error = "write_byte requires exactly one argument";
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+              if (!emitExpr(expr.args[1], localsIn)) {
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::FileWriteByte, 0});
+              return true;
+            }
+            if (expr.name == "write_bytes") {
+              if (expr.args.size() != 2) {
+                error = "write_bytes requires exactly one argument";
+                return false;
+              }
+              const Expr &bytesExpr = expr.args[1];
+              const int32_t ptrLocal = allocTempLocal();
+              if (!emitExpr(bytesExpr, localsIn)) {
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              const int32_t countLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+              const int32_t indexLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::PushI32, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+              const int32_t errorLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::PushI32, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+
+              size_t loopStart = function.instructions.size();
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              function.instructions.push_back({IrOpcode::PushI64, 0});
+              function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+              size_t jumpError = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+              function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+              size_t jumpLoopEnd = function.instructions.size();
+              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({IrOpcode::PushI32, 1});
+              function.instructions.push_back({IrOpcode::AddI32, 0});
+              function.instructions.push_back({IrOpcode::PushI32, 16});
+              function.instructions.push_back({IrOpcode::MulI32, 0});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              function.instructions.push_back({IrOpcode::FileWriteByte, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({IrOpcode::PushI32, 1});
+              function.instructions.push_back({IrOpcode::AddI32, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+              function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+
+              size_t loopEnd = function.instructions.size();
+              function.instructions[jumpError].imm = static_cast<int32_t>(loopEnd);
+              function.instructions[jumpLoopEnd].imm = static_cast<int32_t>(loopEnd);
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              return true;
+            }
+            if (expr.name == "flush") {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+              function.instructions.push_back({IrOpcode::FileFlush, 0});
+              return true;
+            }
+            if (expr.name == "close") {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
+              function.instructions.push_back({IrOpcode::FileClose, 0});
+              const int32_t errorLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+              function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(-1))});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(handleIndex)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              return true;
+            }
+          }
         }
         if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
             !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {

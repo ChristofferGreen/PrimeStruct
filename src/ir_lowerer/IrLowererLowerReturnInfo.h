@@ -15,6 +15,16 @@
         continue;
       }
       const std::string &typeName = transform.templateArgs.front();
+      bool resultHasValue = false;
+      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+      if (parseResultTypeName(typeName, resultHasValue, resultValueKind)) {
+        info.returnsArray = false;
+        info.returnsVoid = false;
+        info.isResult = true;
+        info.resultHasValue = resultHasValue;
+        info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        break;
+      }
       if (typeName == "void") {
         info.returnsVoid = true;
         break;
@@ -249,6 +259,48 @@
   auto allocTempLocal = [&]() -> int32_t {
     return nextLocal++;
   };
+  struct OnErrorScope {
+    std::optional<OnErrorHandler> &target;
+    std::optional<OnErrorHandler> previous;
+    OnErrorScope(std::optional<OnErrorHandler> &targetIn, std::optional<OnErrorHandler> next)
+        : target(targetIn), previous(targetIn) {
+      target = std::move(next);
+    }
+    ~OnErrorScope() { target = std::move(previous); }
+  };
+  struct ResultReturnScope {
+    std::optional<ResultReturnInfo> &target;
+    std::optional<ResultReturnInfo> previous;
+    ResultReturnScope(std::optional<ResultReturnInfo> &targetIn, std::optional<ResultReturnInfo> next)
+        : target(targetIn), previous(targetIn) {
+      target = std::move(next);
+    }
+    ~ResultReturnScope() { target = std::move(previous); }
+  };
+  auto emitFileCloseIfValid = [&](int32_t localIndex) {
+    function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIndex)});
+    function.instructions.push_back({IrOpcode::PushI64, 0});
+    function.instructions.push_back({IrOpcode::CmpGeI64, 0});
+    size_t jumpSkip = function.instructions.size();
+    function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+    function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIndex)});
+    function.instructions.push_back({IrOpcode::FileClose, 0});
+    function.instructions.push_back({IrOpcode::Pop, 0});
+    size_t skipIndex = function.instructions.size();
+    function.instructions[jumpSkip].imm = static_cast<int32_t>(skipIndex);
+  };
+  auto emitFileScopeCleanup = [&](const std::vector<int32_t> &scope) {
+    for (auto it = scope.rbegin(); it != scope.rend(); ++it) {
+      emitFileCloseIfValid(*it);
+    }
+  };
+  auto emitFileScopeCleanupAll = [&]() {
+    for (auto it = fileScopeStack.rbegin(); it != fileScopeStack.rend(); ++it) {
+      emitFileScopeCleanup(*it);
+    }
+  };
+  auto pushFileScope = [&]() { fileScopeStack.emplace_back(); };
+  auto popFileScope = [&]() { fileScopeStack.pop_back(); };
 
   auto emitBlock = [&](const Expr &blockExpr, LocalMap &blockLocals) -> bool {
     if (blockExpr.kind != Expr::Kind::Call) {
@@ -259,11 +311,15 @@
       error = "native backend does not support arguments on if branch blocks";
       return false;
     }
+    OnErrorScope onErrorScope(currentOnError, std::nullopt);
+    pushFileScope();
     for (const auto &stmt : blockExpr.bodyArguments) {
       if (!emitStatement(stmt, blockLocals)) {
         return false;
       }
     }
+    emitFileScopeCleanup(fileScopeStack.back());
+    popFileScope();
     return true;
   };
 
@@ -323,6 +379,68 @@
       return nullptr;
     }
     return it->second;
+  };
+  struct ResultExprInfo {
+    bool isResult = false;
+    bool hasValue = false;
+  };
+  auto resolveResultExprInfo = [&](const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) -> bool {
+    out = ResultExprInfo{};
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.name);
+      if (it != localsIn.end() && it->second.isResult) {
+        out.isResult = true;
+        out.hasValue = it->second.resultHasValue;
+        return true;
+      }
+      return false;
+    }
+    if (expr.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
+      out.isResult = true;
+      out.hasValue = true;
+      return true;
+    }
+    if (expr.isMethodCall && !expr.args.empty()) {
+      if (expr.args.front().kind == Expr::Kind::Name) {
+        if (expr.args.front().name == "Result" && expr.name == "ok") {
+          out.isResult = true;
+          out.hasValue = (expr.args.size() > 1);
+          return true;
+        }
+        auto it = localsIn.find(expr.args.front().name);
+        if (it != localsIn.end() && it->second.isFileHandle) {
+          if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
+              expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+            out.isResult = true;
+            out.hasValue = false;
+            return true;
+          }
+        }
+      }
+      const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
+      if (callee) {
+        ReturnInfo info;
+        if (getReturnInfo && getReturnInfo(callee->fullPath, info) && info.isResult) {
+          out.isResult = true;
+          out.hasValue = info.resultHasValue;
+          return true;
+        }
+      }
+      return false;
+    }
+    const Definition *callee = resolveDefinitionCall(expr);
+    if (callee) {
+      ReturnInfo info;
+      if (getReturnInfo && getReturnInfo(callee->fullPath, info) && info.isResult) {
+        out.isResult = true;
+        out.hasValue = info.resultHasValue;
+        return true;
+      }
+    }
+    return false;
   };
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
                                        const std::vector<Expr> &params,

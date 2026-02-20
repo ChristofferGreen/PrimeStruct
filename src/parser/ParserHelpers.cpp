@@ -151,10 +151,10 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          candidate == "greater_equal" || candidate == "less_equal" || candidate == "equal" || candidate == "not_equal" ||
          candidate == "and" || candidate == "or" || candidate == "not" ||
          (isMathBuiltin && (allowMathBare || isMathQualified)) ||
-         candidate == "increment" || candidate == "decrement" ||
+         candidate == "increment" || candidate == "decrement" || candidate == "try" ||
          candidate == "if" || candidate == "then" || candidate == "else" ||
          candidate == "repeat" || candidate == "return" || candidate == "array" || candidate == "vector" ||
-         candidate == "map" || candidate == "count" || candidate == "capacity" || candidate == "push" ||
+         candidate == "map" || candidate == "File" || candidate == "count" || candidate == "capacity" || candidate == "push" ||
          candidate == "pop" || candidate == "reserve" || candidate == "clear" || candidate == "remove_at" ||
          candidate == "remove_swap" || candidate == "at" || candidate == "at_unsafe" || candidate == "convert" ||
          candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||

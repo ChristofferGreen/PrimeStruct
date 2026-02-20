@@ -114,7 +114,7 @@
     return true;
   }
   std::optional<EffectScope> effectScope;
-  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.transforms.empty()) {
+  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.transforms.empty() && !isBuiltinBlockCall(stmt)) {
     std::unordered_set<std::string> executionEffects;
     if (!resolveExecutionEffects(stmt, executionEffects)) {
       return false;
@@ -213,6 +213,7 @@
         return false;
       }
       std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+      OnErrorScope onErrorScope(*this, std::nullopt);
       for (const auto &bodyExpr : branch.bodyArguments) {
         if (!validateStatement(params,
                                branchLocals,

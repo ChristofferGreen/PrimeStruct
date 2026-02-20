@@ -1,4 +1,6 @@
 #include "primec/IrLowerer.h"
+#include "primec/Lexer.h"
+#include "primec/Parser.h"
 #include "primec/StringLiteral.h"
 
 #include "IrLowererHelpers.h"

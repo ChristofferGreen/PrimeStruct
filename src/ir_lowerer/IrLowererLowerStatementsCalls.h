@@ -43,11 +43,25 @@
     return true;
   };
 
+  std::optional<OnErrorHandler> entryOnError;
+  auto entryOnErrorIt = onErrorByDef.find(entryDef->fullPath);
+  if (entryOnErrorIt != onErrorByDef.end()) {
+    entryOnError = entryOnErrorIt->second;
+  }
+  OnErrorScope entryOnErrorScope(currentOnError, entryOnError);
+  std::optional<ResultReturnInfo> entryResult;
+  if (entryHasResultInfo) {
+    entryResult = entryResultInfo;
+  }
+  ResultReturnScope entryResultScope(currentReturnResult, entryResult);
+  pushFileScope();
   for (const auto &stmt : entryDef->statements) {
     if (!emitStatement(stmt, locals)) {
       return false;
     }
   }
+  emitFileScopeCleanup(fileScopeStack.back());
+  popFileScope();
 
   if (!sawReturn) {
     if (returnsVoid) {

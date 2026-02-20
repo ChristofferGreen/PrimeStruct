@@ -52,6 +52,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     bool sawEffects = false;
     bool sawCapabilities = false;
+    bool sawOnError = false;
     bool sawNoPadding = false;
     bool sawPlatformPadding = false;
     for (const auto &transform : def.transforms) {
@@ -94,6 +95,16 @@ bool SemanticsValidator::buildDefinitionMaps() {
       if (transform.name == "return") {
         if (!transform.arguments.empty()) {
           error_ = "return transform does not accept arguments on " + def.fullPath;
+          return false;
+        }
+      } else if (transform.name == "on_error") {
+        if (sawOnError) {
+          error_ = "duplicate on_error transform on " + def.fullPath;
+          return false;
+        }
+        sawOnError = true;
+        if (transform.templateArgs.size() != 2) {
+          error_ = "on_error requires exactly two template arguments on " + def.fullPath;
           return false;
         }
       } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {

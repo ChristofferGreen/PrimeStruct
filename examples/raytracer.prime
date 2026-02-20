@@ -179,17 +179,18 @@ to_byte([f32] value) {
   return(convert<int>(clamped * 255.0 + 0.5))
 }
 
-[int]
+[return<Result<FileError>> effects(file_write, io_err)
+ on_error<FileError, /log_file_error>("raytracer.ppm"utf8)]
 main() {
+  [string] path{"raytracer.ppm"utf8}
   [int] width{800}
   [int] height{600}
   [array<f32>] origin{vec(0.0, 0.8, 2.5)}
 
-  print_line("P3"utf8)
-  print(width)
-  print(" "utf8)
-  print_line(height)
-  print_line("255"utf8)
+  [File<Write>] file{File<Write>(path)?}
+  file.write_line("P3"utf8)?
+  file.write_line(width, " "utf8, height)?
+  file.write_line("255"utf8)?
 
   for([int mut] y{0}; y < height; ++y) {
     for([int mut] x{0}; x < width; ++x) {
@@ -201,13 +202,17 @@ main() {
       [int] g{to_byte(color[1])}
       [int] b{to_byte(color[2])}
 
-      print(r)
-      print(" "utf8)
-      print(g)
-      print(" "utf8)
-      print_line(b)
+      [on_error<FileError, /log_file_error>("raytracer.ppm"utf8)] block() {
+        file.write_line(r, " "utf8, g, " "utf8, b)?
+      }
     }
   }
 
-  return(0)
+  return(Result.ok())
+}
+
+[effects(io_err)]
+/log_file_error([FileError] err, [string] path) {
+  print_line_error("failed to write: "utf8)
+  print_line_error(path)
 }

@@ -331,6 +331,50 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs native sin range reduction") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] value{sin(20.0f32)}
+  if(value > 0.0f32) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_sin_range.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_sin_range_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("compiles and runs native sin pi accuracy") {
+  const std::string source = R"(
+import /math/*
+[return<int>]
+main() {
+  [f32] value{abs(sin(pi))}
+  if(value < 0.01f32) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_math_sin_pi.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_math_sin_pi_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs native math arc trig helpers") {
   const std::string source = R"(
 import /math/*

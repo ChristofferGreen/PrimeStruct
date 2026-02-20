@@ -222,6 +222,17 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   std::string base;
   std::string arg;
+  if (splitTemplateTypeName(name, base, arg) && base == "Result") {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(arg, args)) {
+      if (args.size() == 1) {
+        return ReturnKind::Int;
+      }
+      if (args.size() == 2) {
+        return ReturnKind::Int64;
+      }
+    }
+  }
   if (splitTemplateTypeName(name, base, arg) && base == "array") {
     std::vector<std::string> args;
     if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
@@ -362,7 +373,8 @@ bool isRootBuiltinName(const std::string &name) {
   return normalized == "assign" || normalized == "if" || normalized == "then" || normalized == "else" ||
          normalized == "loop" || normalized == "while" || normalized == "for" || normalized == "repeat" ||
          normalized == "return" || normalized == "array" || normalized == "vector" || normalized == "map" ||
-         normalized == "count" || normalized == "capacity" || normalized == "push" || normalized == "pop" ||
+         normalized == "File" || normalized == "try" || normalized == "count" || normalized == "capacity" ||
+         normalized == "push" || normalized == "pop" ||
          normalized == "reserve" || normalized == "clear" || normalized == "remove_at" || normalized == "remove_swap" ||
          normalized == "at" || normalized == "at_unsafe" || normalized == "convert" ||
          normalized == "location" || normalized == "dereference" ||
@@ -937,8 +949,10 @@ bool parseBindingInfo(const Expr &expr,
       }
     }
     if (structTypes.count(resolved) == 0) {
-      error = "unsupported binding type: " + typeName;
-      return false;
+      if (typeName != "FileError") {
+        error = "unsupported binding type: " + typeName;
+        return false;
+      }
     }
   }
   auto isStructTypeName = [&](const std::string &candidate) -> bool {

@@ -470,16 +470,28 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Defaults can be supplied by `primec --default-effects` (the compiler enables `io_out` by default unless set to `none`).
 - Backends reject unsupported effects.
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
-  - Recognized v1 capabilities: `io_out`, `io_err`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
+  - Recognized v1 capabilities: `io_out`, `io_err`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
     `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `render_graph`.
 
-## 10. Return Semantics
+## 10. Error Handling (Draft)
+
+- `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
+- The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
+  from the current definition.
+- Error handlers are declared with a semantic transform on the same scope as the `?` usage:
+  - `on_error<ErrorType, Handler>(args...)`
+  - The handler signature is `Handler(ErrorType err, args...)`.
+  - Bound arguments are evaluated when the error is raised.
+  - `on_error` does not apply to nested blocks; any block containing `?` must declare its own `on_error`.
+  - Missing `on_error` for a `?` usage is a compile-time error.
+
+## 11. Return Semantics
 
 - `return(value)` is explicit and canonical; parentheses are required.
 - `return()` is valid for `void` definitions.
 - Non-void definitions must return along all control paths.
 
-## 11. Entry Definition
+## 12. Entry Definition
 
 - The compiler entry point is selected with `--entry /path` (default `/main`).
 - The entry definition may take either zero parameters or a single `array<string>` parameter.
@@ -488,13 +500,13 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - `args.count()` and `count(args)` are supported; indexing `args[index]` is bounds-checked unless
   `at_unsafe` is used.
 
-## 12. Backend Notes (Syntax-Relevant)
+## 13. Backend Notes (Syntax-Relevant)
 
 - VM/native backends accept a restricted subset of envelopes/operations (see design doc).
 - Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
 - The C++ emitter supports broader operations and full string handling.
 
-## 13. Error Rules (Selected)
+## 14. Error Rules (Selected)
 
 - `at(value, index)` on non-collections is rejected.
 - Duplicate labeled arguments are rejected.

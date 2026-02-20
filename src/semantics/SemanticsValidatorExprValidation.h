@@ -146,6 +146,11 @@
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
+      if (methodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+        resolvedOut = "/result/ok";
+        isBuiltinOut = true;
+        return true;
+      }
       std::string elemType;
       if (methodName == "count") {
         if (resolveVectorTarget(receiver, elemType)) {
@@ -202,6 +207,19 @@
         if (!inferred.empty()) {
           typeName = inferred;
         }
+      }
+      if (typeName == "File") {
+        if (methodName == "write" || methodName == "write_line" || methodName == "write_byte" ||
+            methodName == "write_bytes" || methodName == "flush" || methodName == "close") {
+          resolvedOut = "/file/" + methodName;
+          isBuiltinOut = true;
+          return true;
+        }
+      }
+      if (typeName == "FileError" && methodName == "why") {
+        resolvedOut = "/file_error/why";
+        isBuiltinOut = true;
+        return true;
       }
       if (typeName.empty()) {
         error_ = "unknown method target for " + methodName;
@@ -311,6 +329,7 @@
         return false;
       }
       std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+      OnErrorScope onErrorScope(*this, std::nullopt);
       for (const auto &bodyExpr : expr.bodyArguments) {
         if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
                                expr.namespacePrefix)) {
@@ -329,6 +348,286 @@
     }
     auto it = defMap_.find(resolved);
     if (it == defMap_.end() || resolvedMethod) {
+      if (!expr.isMethodCall && isSimpleCallName(expr, "try")) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "try does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "try does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "try requires exactly one argument";
+          return false;
+        }
+        if (!currentOnError_.has_value()) {
+          error_ = "missing on_error for ? usage";
+          return false;
+        }
+        if (!currentResultType_.has_value() || !currentResultType_->isResult) {
+          error_ = "try requires Result return type";
+          return false;
+        }
+        if (!errorTypesMatch(currentResultType_->errorType, currentOnError_->errorType, expr.namespacePrefix)) {
+          error_ = "on_error error type mismatch";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        ResultTypeInfo argResult;
+        if (!resolveResultTypeForExpr(expr.args.front(), params, locals, argResult) || !argResult.isResult) {
+          error_ = "try requires Result argument";
+          return false;
+        }
+        if (!errorTypesMatch(argResult.errorType, currentOnError_->errorType, expr.namespacePrefix)) {
+          error_ = "try error type mismatch";
+          return false;
+        }
+        return true;
+      }
+      if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (expr.templateArgs.size() != 1) {
+          error_ = "File requires exactly one template argument";
+          return false;
+        }
+        const std::string &mode = expr.templateArgs.front();
+        if (mode != "Read" && mode != "Write" && mode != "Append") {
+          error_ = "File requires Read, Write, or Append mode";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "File requires exactly one path argument";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "File does not accept block arguments";
+          return false;
+        }
+        if (activeEffects_.count("file_write") == 0) {
+          error_ = "File requires file_write effect";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        if (!isStringExpr(expr.args.front())) {
+          error_ = "File requires string path argument";
+          return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/result/ok") {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "Result.ok does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "Result.ok does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() > 2) {
+          error_ = "Result.ok accepts at most one value argument";
+          return false;
+        }
+        for (size_t i = 1; i < expr.args.size(); ++i) {
+          if (!validateExpr(params, locals, expr.args[i])) {
+            return false;
+          }
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/file_error/why") {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "why does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "why does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "why does not accept arguments";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved.rfind("/file/", 0) == 0) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "file methods do not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "file methods do not accept block arguments";
+          return false;
+        }
+        if (expr.args.empty()) {
+          error_ = "file method missing receiver";
+          return false;
+        }
+        if (activeEffects_.count("file_write") == 0) {
+          error_ = "file operations require file_write effect";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args.front())) {
+          return false;
+        }
+        auto isFilePrintableExpr = [&](const Expr &arg) -> bool {
+          if (isStringExpr(arg)) {
+            return true;
+          }
+          ReturnKind kind = inferExprReturnKind(arg, params, locals);
+          if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+              kind == ReturnKind::Bool) {
+            return true;
+          }
+          if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
+            return false;
+          }
+          if (arg.kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+              ReturnKind paramKind = returnKindForBinding(*paramBinding);
+              return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                     paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Bool;
+            }
+            auto itLocal = locals.find(arg.name);
+            if (itLocal != locals.end()) {
+              ReturnKind localKind = returnKindForBinding(itLocal->second);
+              return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                     localKind == ReturnKind::UInt64 || localKind == ReturnKind::Bool;
+            }
+          }
+          if (isPointerLikeExpr(arg, params, locals)) {
+            return false;
+          }
+          if (arg.kind == Expr::Kind::Call) {
+            std::string builtinName;
+            if (getBuiltinCollectionName(arg, builtinName)) {
+              return false;
+            }
+          }
+          return false;
+        };
+        auto isIntegerOrBoolExpr = [&](const Expr &arg) -> bool {
+          ReturnKind kind = inferExprReturnKind(arg, params, locals);
+          if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+              kind == ReturnKind::Bool) {
+            return true;
+          }
+          if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Void ||
+              kind == ReturnKind::Array) {
+            return false;
+          }
+          if (kind == ReturnKind::Unknown) {
+            if (arg.kind == Expr::Kind::FloatLiteral || arg.kind == Expr::Kind::StringLiteral) {
+              return false;
+            }
+            if (isPointerExpr(arg, params, locals)) {
+              return false;
+            }
+            if (arg.kind == Expr::Kind::Name) {
+              if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+                ReturnKind paramKind = returnKindForBinding(*paramBinding);
+                return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
+                       paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Bool;
+              }
+              auto itLocal = locals.find(arg.name);
+              if (itLocal != locals.end()) {
+                ReturnKind localKind = returnKindForBinding(itLocal->second);
+                return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
+                       localKind == ReturnKind::UInt64 || localKind == ReturnKind::Bool;
+              }
+            }
+          }
+          return false;
+        };
+        if (expr.name == "write" || expr.name == "write_line") {
+          for (size_t i = 1; i < expr.args.size(); ++i) {
+            if (!validateExpr(params, locals, expr.args[i])) {
+              return false;
+            }
+            if (!isFilePrintableExpr(expr.args[i])) {
+              error_ = "file write requires integer/bool or string arguments";
+              return false;
+            }
+          }
+          return true;
+        }
+        if (expr.name == "write_byte") {
+          if (expr.args.size() != 2) {
+            error_ = "write_byte requires exactly one argument";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          if (!isIntegerOrBoolExpr(expr.args[1])) {
+            error_ = "write_byte requires integer argument";
+            return false;
+          }
+          return true;
+        }
+        if (expr.name == "write_bytes") {
+          if (expr.args.size() != 2) {
+            error_ = "write_bytes requires exactly one argument";
+            return false;
+          }
+          if (!validateExpr(params, locals, expr.args[1])) {
+            return false;
+          }
+          bool ok = false;
+          if (expr.args[1].kind == Expr::Kind::Call) {
+            std::string collection;
+            if (getBuiltinCollectionName(expr.args[1], collection) && collection == "array") {
+              ok = true;
+            }
+          }
+          if (expr.args[1].kind == Expr::Kind::Name) {
+            if (const BindingInfo *paramBinding = findParamBinding(params, expr.args[1].name)) {
+              ok = (paramBinding->typeName == "array");
+            } else {
+              auto itLocal = locals.find(expr.args[1].name);
+              ok = (itLocal != locals.end() && itLocal->second.typeName == "array");
+            }
+          }
+          if (!ok) {
+            error_ = "write_bytes requires array argument";
+            return false;
+          }
+          return true;
+        }
+        if (expr.name == "flush" || expr.name == "close") {
+          if (expr.args.size() != 1) {
+            error_ = expr.name + " does not accept arguments";
+            return false;
+          }
+          return true;
+        }
+      }
       if (hasNamedArguments(expr.argNames)) {
         std::string builtinName;
         bool isBuiltin = false;
@@ -342,7 +641,7 @@
             getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
             getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
             isAssignCall(expr) || isIfCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
-            isRepeatCall(expr) || expr.name == "count" ||
+            isRepeatCall(expr) || expr.name == "count" || expr.name == "File" || expr.name == "try" ||
             expr.name == "capacity" || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
             isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
             isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap")) {

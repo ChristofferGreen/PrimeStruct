@@ -11,8 +11,9 @@ constexpr std::array<std::string_view, 5> kTextTransforms = {
     "implicit-i32",
 };
 
-constexpr std::array<std::string_view, 1> kSemanticTransforms = {
+constexpr std::array<std::string_view, 2> kSemanticTransforms = {
     "single_type_to_return",
+    "on_error",
 };
 
 bool containsTransform(std::string_view name, const auto &list) {

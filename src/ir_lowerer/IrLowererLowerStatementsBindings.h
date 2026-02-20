@@ -84,6 +84,16 @@
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
       setReferenceArrayInfo(stmt, info);
+      for (const auto &transform : stmt.transforms) {
+        if (transform.name == "File") {
+          info.isFileHandle = true;
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (transform.name == "Result") {
+          info.isResult = true;
+          info.resultHasValue = (transform.templateArgs.size() == 2);
+          info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+        }
+      }
       valueKind = info.valueKind;
 
       if (valueKind == LocalInfo::ValueKind::String) {
@@ -204,6 +214,9 @@
       }
       localsIn.emplace(stmt.name, info);
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+      if (info.isFileHandle && !fileScopeStack.empty()) {
+        fileScopeStack.back().push_back(info.index);
+      }
       return true;
     }
     PrintBuiltin printBuiltin;
@@ -307,6 +320,7 @@
           error = "return requires exactly one argument";
           return false;
         }
+        emitFileScopeCleanupAll();
         function.instructions.push_back({IrOpcode::ReturnVoid, 0});
         sawReturn = true;
         return true;
@@ -322,6 +336,7 @@
       if (!emitExpr(stmt.args.front(), localsIn)) {
         return false;
       }
+      emitFileScopeCleanupAll();
       LocalInfo::ValueKind arrayKind = inferArrayElementKind(stmt.args.front(), localsIn);
       if (arrayKind != LocalInfo::ValueKind::Unknown) {
         if (arrayKind == LocalInfo::ValueKind::String) {

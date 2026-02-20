@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -67,6 +68,31 @@ private:
   bool validateCapabilitiesSubset(const std::vector<Transform> &transforms, const std::string &context);
   bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
 
+  struct ResultTypeInfo {
+    bool isResult = false;
+    bool hasValue = false;
+    std::string valueType;
+    std::string errorType;
+  };
+  struct OnErrorHandler {
+    std::string errorType;
+    std::string handlerPath;
+    std::vector<Expr> boundArgs;
+  };
+
+  bool parseTransformArgumentExpr(const std::string &text, const std::string &namespacePrefix, Expr &out);
+  bool resolveResultTypeFromTypeName(const std::string &typeName, ResultTypeInfo &out) const;
+  bool resolveResultTypeFromTemplateArg(const std::string &templateArg, ResultTypeInfo &out) const;
+  bool resolveResultTypeForExpr(const Expr &expr,
+                                const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                ResultTypeInfo &out) const;
+  bool parseOnErrorTransform(const std::vector<Transform> &transforms,
+                             const std::string &namespacePrefix,
+                             const std::string &context,
+                             std::optional<OnErrorHandler> &out);
+  bool errorTypesMatch(const std::string &left, const std::string &right, const std::string &namespacePrefix) const;
+
   struct EffectScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
@@ -87,6 +113,17 @@ private:
     }
     ~EntryArgStringScope() {
       validator.allowEntryArgStringUse_ = previous;
+    }
+  };
+  struct OnErrorScope {
+    SemanticsValidator &validator;
+    std::optional<OnErrorHandler> previous;
+    OnErrorScope(SemanticsValidator &validatorIn, std::optional<OnErrorHandler> next)
+        : validator(validatorIn), previous(std::move(validatorIn.currentOnError_)) {
+      validator.currentOnError_ = std::move(next);
+    }
+    ~OnErrorScope() {
+      validator.currentOnError_ = std::move(previous);
     }
   };
 
@@ -110,6 +147,8 @@ private:
   std::string entryArgsName_;
   std::string currentDefinitionPath_;
   bool allowEntryArgStringUse_ = false;
+  std::optional<ResultTypeInfo> currentResultType_;
+  std::optional<OnErrorHandler> currentOnError_;
 };
 
 } // namespace primec::semantics

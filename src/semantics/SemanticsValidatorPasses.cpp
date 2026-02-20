@@ -131,6 +131,9 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
     } else if (transform.name == "return") {
       error_ = "return transform not allowed on executions: " + context;
       return false;
+    } else if (transform.name == "on_error") {
+      error_ = "on_error transform is not allowed on executions: " + context;
+      return false;
     } else if (transform.name == "mut") {
       error_ = "mut transform is not allowed on executions: " + context;
       return false;
@@ -205,6 +208,38 @@ bool SemanticsValidator::validateDefinitions() {
       error_ = "lifecycle helpers must return void: " + def.fullPath;
       return false;
     }
+    currentResultType_.reset();
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        ResultTypeInfo resultInfo;
+        if (resolveResultTypeFromTypeName(transform.templateArgs.front(), resultInfo)) {
+          currentResultType_ = resultInfo;
+          break;
+        }
+      }
+    }
+    std::optional<OnErrorHandler> onErrorHandler;
+    if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, onErrorHandler)) {
+      return false;
+    }
+    if (onErrorHandler.has_value() && (!currentResultType_.has_value() || !currentResultType_->isResult)) {
+      error_ = "on_error requires Result return type on " + def.fullPath;
+      return false;
+    }
+    if (onErrorHandler.has_value() &&
+        !errorTypesMatch(onErrorHandler->errorType, currentResultType_->errorType, def.namespacePrefix)) {
+      error_ = "on_error error type mismatch on " + def.fullPath;
+      return false;
+    }
+    if (onErrorHandler.has_value()) {
+      OnErrorScope onErrorScope(*this, std::nullopt);
+      for (const auto &arg : onErrorHandler->boundArgs) {
+        if (!validateExpr(defParams, locals, arg)) {
+          return false;
+        }
+      }
+    }
+    OnErrorScope onErrorScope(*this, onErrorHandler);
     bool sawReturn = false;
     for (const auto &stmt : def.statements) {
       if (!validateStatement(defParams, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
@@ -229,6 +264,8 @@ bool SemanticsValidator::validateDefinitions() {
 
 bool SemanticsValidator::validateExecutions() {
   currentDefinitionPath_.clear();
+  currentResultType_.reset();
+  currentOnError_.reset();
   for (const auto &exec : program_.executions) {
     activeEffects_ = resolveEffects(exec.transforms, false);
     bool sawEffects = false;

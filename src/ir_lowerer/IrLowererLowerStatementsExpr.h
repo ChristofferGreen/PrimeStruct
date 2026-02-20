@@ -30,6 +30,8 @@
               error = "if branch blocks must produce a value";
               return false;
             }
+            OnErrorScope onErrorScope(currentOnError, std::nullopt);
+            pushFileScope();
             LocalMap branchLocals = localsBase;
             for (size_t i = 0; i < candidate.bodyArguments.size(); ++i) {
               const Expr &bodyStmt = candidate.bodyArguments[i];
@@ -37,9 +39,13 @@
               if (bodyStmt.isBinding) {
                 if (isLast) {
                   error = "if branch blocks must end with an expression";
+                  emitFileScopeCleanup(fileScopeStack.back());
+                  popFileScope();
                   return false;
                 }
                 if (!emitStatement(bodyStmt, branchLocals)) {
+                  emitFileScopeCleanup(fileScopeStack.back());
+                  popFileScope();
                   return false;
                 }
                 continue;
@@ -47,17 +53,29 @@
               if (isReturnCall(bodyStmt)) {
                 if (bodyStmt.args.size() != 1) {
                   error = "return requires a value in if branch";
+                  emitFileScopeCleanup(fileScopeStack.back());
+                  popFileScope();
                   return false;
                 }
-                return emitExpr(bodyStmt.args.front(), branchLocals);
+                bool ok = emitExpr(bodyStmt.args.front(), branchLocals);
+                emitFileScopeCleanup(fileScopeStack.back());
+                popFileScope();
+                return ok;
               }
               if (isLast) {
-                return emitExpr(bodyStmt, branchLocals);
+                bool ok = emitExpr(bodyStmt, branchLocals);
+                emitFileScopeCleanup(fileScopeStack.back());
+                popFileScope();
+                return ok;
               }
               if (!emitStatement(bodyStmt, branchLocals)) {
+                emitFileScopeCleanup(fileScopeStack.back());
+                popFileScope();
                 return false;
               }
             }
+            emitFileScopeCleanup(fileScopeStack.back());
+            popFileScope();
             error = "if branch blocks must produce a value";
             return false;
           };
