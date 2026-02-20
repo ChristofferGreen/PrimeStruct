@@ -41,16 +41,20 @@ inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
 class Arm64Emitter {
  public:
   bool beginFunction(uint64_t frameSize, std::string &error) {
+    (void)error;
     frameSize_ = frameSize;
-    if (frameSize_ > 4095) {
-      error = "native backend frame size too large";
-      return false;
-    }
     if (frameSize_ > 0) {
-      emit(encodeSubSpImm(static_cast<uint16_t>(frameSize_)));
+      emitAdjustSp(frameSize_, false);
     }
     emit(encodeAddRegImm(27, 31, 0));
-    emit(encodeAddRegImm(28, 31, static_cast<uint16_t>(frameSize_)));
+    if (frameSize_ == 0) {
+      emit(encodeAddRegImm(28, 27, 0));
+    } else if (frameSize_ <= 4095) {
+      emit(encodeAddRegImm(28, 27, static_cast<uint16_t>(frameSize_)));
+    } else {
+      emitMovImm64(9, frameSize_);
+      emit(encodeAddReg(28, 27, 9));
+    }
     return true;
   }
 
@@ -360,7 +364,7 @@ class Arm64Emitter {
   void emitReturn() {
     emitPopReg(0);
     if (frameSize_ > 0) {
-      emit(encodeAddSpImm(static_cast<uint16_t>(frameSize_)));
+      emitAdjustSp(frameSize_, true);
     }
     emit(encodeRet());
   }
@@ -368,7 +372,7 @@ class Arm64Emitter {
   void emitReturnVoid() {
     emitMovImm64(0, 0);
     if (frameSize_ > 0) {
-      emit(encodeAddSpImm(static_cast<uint16_t>(frameSize_)));
+      emitAdjustSp(frameSize_, true);
     }
     emit(encodeRet());
   }
@@ -650,6 +654,21 @@ class Arm64Emitter {
     emit(encodeMovk(rd, static_cast<uint16_t>((value >> 16) & 0xFFFF), 16));
     emit(encodeMovk(rd, static_cast<uint16_t>((value >> 32) & 0xFFFF), 32));
     emit(encodeMovk(rd, static_cast<uint16_t>((value >> 48) & 0xFFFF), 48));
+  }
+
+  void emitAdjustSp(uint64_t amount, bool add) {
+    if (amount == 0) {
+      return;
+    }
+    constexpr uint16_t kChunk = 4080;
+    while (amount > 4095) {
+      emit(add ? encodeAddSpImm(kChunk) : encodeSubSpImm(kChunk));
+      amount -= kChunk;
+    }
+    if (amount > 0) {
+      emit(add ? encodeAddSpImm(static_cast<uint16_t>(amount))
+               : encodeSubSpImm(static_cast<uint16_t>(amount)));
+    }
   }
 
   size_t emitAdrPlaceholder(uint8_t rd) {

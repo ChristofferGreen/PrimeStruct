@@ -192,5 +192,22 @@ main() {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("compiles and runs native large frame") {
+  std::ostringstream source;
+  source << "[return<int>]\n";
+  source << "main() {\n";
+  for (int i = 0; i < 300; ++i) {
+    source << "  [i32] v" << i << "{" << i << "i32}\n";
+  }
+  source << "  return(v0)\n";
+  source << "}\n";
+  const std::string srcPath = writeTemp("compile_native_large_frame.prime", source.str());
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_large_frame_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_SUITE_END();
 #endif
