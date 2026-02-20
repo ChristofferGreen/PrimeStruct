@@ -107,6 +107,26 @@ main() {
   CHECK(expr.args[1].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses binding after call without separator") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  helper()
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  helper()
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 3);
+  CHECK(program.definitions[0].statements[0].kind == primec::Expr::Kind::Call);
+  CHECK(program.definitions[0].statements[0].name == "helper");
+  CHECK(program.definitions[0].statements[1].isBinding);
+  CHECK(program.definitions[0].statements[1].name == "values");
+  CHECK(program.definitions[0].statements[2].kind == primec::Expr::Kind::Call);
+  CHECK(program.definitions[0].statements[2].name == "helper");
+}
+
 TEST_CASE("parses if statement sugar") {
   const std::string source = R"(
 [return<int>]

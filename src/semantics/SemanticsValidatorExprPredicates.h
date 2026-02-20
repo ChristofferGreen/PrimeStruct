@@ -228,6 +228,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   };
   auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return ReturnKind::Array;
+        }
+      }
       return returnKindForTypeName(binding.typeTemplateArg);
     }
     return returnKindForTypeName(binding.typeName);
@@ -992,7 +1000,26 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
+        auto resolveReference = [&](const BindingInfo &binding) -> bool {
+          if (binding.typeName != "Reference" || binding.typeTemplateArg.empty()) {
+            return false;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(binding.typeTemplateArg, base, arg) || base != "array") {
+            return false;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            return false;
+          }
+          elemType = args.front();
+          return true;
+        };
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (resolveReference(*paramBinding)) {
+            return true;
+          }
           if ((paramBinding->typeName != "array" && paramBinding->typeName != "vector") ||
               paramBinding->typeTemplateArg.empty()) {
             return false;
@@ -1002,6 +1029,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
         auto it = locals.find(target.name);
         if (it != locals.end()) {
+          if (resolveReference(it->second)) {
+            return true;
+          }
           if ((it->second.typeName != "array" && it->second.typeName != "vector") ||
               it->second.typeTemplateArg.empty()) {
             return false;

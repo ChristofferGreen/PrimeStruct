@@ -227,6 +227,14 @@
     };
     auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
       if (binding.typeName == "Reference") {
+        std::string base;
+        std::string arg;
+        if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+          std::vector<std::string> args;
+          if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+            return ReturnKind::Array;
+          }
+        }
         return returnKindForTypeName(binding.typeTemplateArg);
       }
       return returnKindForTypeName(binding.typeName);
@@ -817,7 +825,15 @@
         }
         if (builtinName == "location") {
           const Expr &target = expr.args.front();
-          if (target.kind != Expr::Kind::Name || locals.count(target.name) == 0 || isParam(params, target.name)) {
+          if (target.kind != Expr::Kind::Name) {
+            error_ = "location requires a local binding";
+            return false;
+          }
+          if (isEntryArgsName(target.name)) {
+            error_ = "location requires a local binding";
+            return false;
+          }
+          if (locals.count(target.name) == 0 && !isParam(params, target.name)) {
             error_ = "location requires a local binding";
             return false;
           }

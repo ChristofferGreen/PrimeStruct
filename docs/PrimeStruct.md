@@ -237,6 +237,9 @@ Statements are separated by whitespace (including newlines). Commas and semicolo
 meaning outside numeric literals (where commas may act as digit separators). PrimeStruct does not distinguish between
 statements and envelopes—any envelope can stand alone as a statement, and unused values are discarded (for example,
 `helper()` or `1i32` can appear as standalone statements).
+When an expression is immediately followed by a binding transform list (`[...] name{...}`), the parser treats the
+binding as a new statement rather than indexing sugar on the previous expression; use `at(value, index)` or a semicolon
+if you intended to index.
 
 ### Slash paths & textual operator transforms
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the Envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
@@ -510,7 +513,8 @@ for(
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
 - **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators` text transform rewrites `&name`/`*name` sugar into those calls.
 - **Reference binding:** `Reference<T>` bindings are initialized from `location(...)` and behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
-- **Core pointer calls:** `location(value)` yields a pointer to a local binding (location only accepts a local binding name); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads through a pointer/reference form; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
+- **Array references:** `Reference<array<T>>` is allowed; treat the reference like an array value for `count`/`at` and other array operations while still using `location(...)` to form the reference.
+- **Core pointer calls:** `location(value)` yields a pointer to a local binding or parameter (entry argument arrays are not addressable); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads through a pointer/reference form; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
 - **Pointer arithmetic:** `plus(ptr, offset)` and `minus(ptr, offset)` treat `offset` as a byte offset. VM/native frames currently space locals in 16-byte slots, so adding or subtracting `16` advances one local slot. Offsets accept `i32`, `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.
   - Pointer + pointer is rejected; only pointer ± integer offsets are allowed.
   - Offsets are interpreted as unsigned byte counts at runtime; negative offsets require signed operands (e.g., `-16i64`).

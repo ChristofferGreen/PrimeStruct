@@ -41,6 +41,7 @@
     enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
     bool argvChecked = true;
+    bool referenceToArray = false;
   };
   using LocalMap = std::unordered_map<std::string, LocalInfo>;
   LocalMap locals;
@@ -285,9 +286,14 @@
     }
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
-      return it != localsIn.end() &&
-             (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
-              it->second.kind == LocalInfo::Kind::Map);
+      if (it == localsIn.end()) {
+        return false;
+      }
+      if (it->second.kind == LocalInfo::Kind::Reference) {
+        return it->second.referenceToArray;
+      }
+      return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
+             it->second.kind == LocalInfo::Kind::Map;
     }
     if (target.kind == Expr::Kind::Call) {
       std::string collection;
@@ -475,6 +481,37 @@
       return LocalInfo::ValueKind::String;
     }
     return LocalInfo::ValueKind::Unknown;
+  };
+  auto trimText = [](const std::string &text) {
+    size_t start = 0;
+    while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
+      ++start;
+    }
+    size_t end = text.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
+      --end;
+    }
+    return text.substr(start, end - start);
+  };
+  auto setReferenceArrayInfo = [&](const Expr &expr, LocalInfo &info) {
+    if (info.kind != LocalInfo::Kind::Reference) {
+      return;
+    }
+    for (const auto &transform : expr.transforms) {
+      if (transform.name != "Reference" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "array") {
+        return;
+      }
+      info.referenceToArray = true;
+      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+        info.valueKind = valueKindFromTypeName(trimText(arg));
+      }
+      return;
+    }
   };
 
   auto bindingKind = [](const Expr &expr) -> LocalInfo::Kind {

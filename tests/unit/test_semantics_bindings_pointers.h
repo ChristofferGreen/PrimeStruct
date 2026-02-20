@@ -131,6 +131,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("reference bindings accept array targets") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Reference<array<i32>>] ref{location(values)}
+  return(at(ref, 0i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reference bindings reject array without element type") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Reference<array>] ref{location(values)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported reference target type") != std::string::npos);
+}
+
 TEST_CASE("pointer bindings reject unknown targets") {
   const std::string source = R"(
 [return<int>]
@@ -171,17 +199,22 @@ main() {
   CHECK(error.find("location requires a local binding") != std::string::npos);
 }
 
-TEST_CASE("location rejects parameters") {
+TEST_CASE("location accepts parameters") {
   const std::string source = R"(
 [return<int>]
-main([i32] x) {
+read([i32] x) {
   [Pointer<i32>] ptr{location(x)}
-  return(1i32)
+  return(dereference(ptr))
+}
+
+[return<int>]
+main() {
+  return(read(3i32))
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("location requires a local binding") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("dereference accepts pointer parameters") {

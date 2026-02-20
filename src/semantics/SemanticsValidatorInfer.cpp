@@ -47,6 +47,24 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     return ReturnKind::Unknown;
   };
+  auto referenceTargetKind = [&](const std::string &templateArg) -> ReturnKind {
+    if (templateArg.empty()) {
+      return ReturnKind::Unknown;
+    }
+    ReturnKind kind = returnKindForTypeName(templateArg);
+    if (kind != ReturnKind::Unknown) {
+      return kind;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(templateArg, base, arg) && base == "array") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        return ReturnKind::Array;
+      }
+    }
+    return ReturnKind::Unknown;
+  };
 
   if (expr.isLambda) {
     return ReturnKind::Unknown;
@@ -76,7 +94,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
-        ReturnKind refKind = returnKindForTypeName(paramBinding->typeTemplateArg);
+        ReturnKind refKind = referenceTargetKind(paramBinding->typeTemplateArg);
         if (refKind != ReturnKind::Unknown) {
           return refKind;
         }
@@ -91,7 +109,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
-      ReturnKind refKind = returnKindForTypeName(it->second.typeTemplateArg);
+      ReturnKind refKind = referenceTargetKind(it->second.typeTemplateArg);
       if (refKind != ReturnKind::Unknown) {
         return refKind;
       }
@@ -225,7 +243,26 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     auto resolveArrayTarget = [&](const Expr &target, std::string &elemType) -> bool {
       if (target.kind == Expr::Kind::Name) {
+        auto resolveReference = [&](const BindingInfo &binding) -> bool {
+          if (binding.typeName != "Reference" || binding.typeTemplateArg.empty()) {
+            return false;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(binding.typeTemplateArg, base, arg) || base != "array") {
+            return false;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            return false;
+          }
+          elemType = args.front();
+          return true;
+        };
         if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (resolveReference(*paramBinding)) {
+            return true;
+          }
           if ((paramBinding->typeName != "array" && paramBinding->typeName != "vector") ||
               paramBinding->typeTemplateArg.empty()) {
             return false;
@@ -235,6 +272,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         auto it = locals.find(target.name);
         if (it != locals.end()) {
+          if (resolveReference(it->second)) {
+            return true;
+          }
           if ((it->second.typeName != "array" && it->second.typeName != "vector") ||
               it->second.typeTemplateArg.empty()) {
             return false;
@@ -348,7 +388,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (const BindingInfo *paramBinding = findParamBinding(params, pointerExpr.name)) {
           if ((paramBinding->typeName == "Pointer" || paramBinding->typeName == "Reference") &&
               !paramBinding->typeTemplateArg.empty()) {
-            return returnKindForTypeName(paramBinding->typeTemplateArg);
+            return referenceTargetKind(paramBinding->typeTemplateArg);
           }
           return ReturnKind::Unknown;
         }
@@ -356,7 +396,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (it != locals.end()) {
           if ((it->second.typeName == "Pointer" || it->second.typeName == "Reference") &&
               !it->second.typeTemplateArg.empty()) {
-            return returnKindForTypeName(it->second.typeTemplateArg);
+            return referenceTargetKind(it->second.typeTemplateArg);
           }
         }
         return ReturnKind::Unknown;
@@ -370,14 +410,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
             if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
-              return returnKindForTypeName(paramBinding->typeTemplateArg);
+              return referenceTargetKind(paramBinding->typeTemplateArg);
             }
             return returnKindForTypeName(paramBinding->typeName);
           }
           auto it = locals.find(target.name);
           if (it != locals.end()) {
             if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
-              return returnKindForTypeName(it->second.typeTemplateArg);
+              return referenceTargetKind(it->second.typeTemplateArg);
             }
             return returnKindForTypeName(it->second.typeName);
           }

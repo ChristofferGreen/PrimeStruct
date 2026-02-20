@@ -140,6 +140,62 @@ main() {
   CHECK(result == 7);
 }
 
+TEST_CASE("ir lowers reference to array bindings") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(4i32, 8i32, 12i32)}
+  [Reference<array<i32>>] ref{location(values)}
+  return(at(ref, 1i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 8);
+}
+
+TEST_CASE("ir lowers location on parameters") {
+  const std::string source = R"(
+[return<int>]
+read([i32] value) {
+  [Pointer<i32>] ptr{location(value)}
+  return(dereference(ptr))
+}
+
+[return<int>]
+main() {
+  return(read(11i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
 TEST_CASE("assign returns value for dereference targets") {
   const std::string source = R"(
 [return<int>]

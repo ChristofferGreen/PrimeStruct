@@ -8,6 +8,14 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::string &namespacePrefix) {
   auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+          return ReturnKind::Array;
+        }
+      }
       return returnKindForTypeName(binding.typeTemplateArg);
     }
     return returnKindForTypeName(binding.typeName);
@@ -18,7 +26,26 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     auto resolveArrayTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
       elemTypeOut.clear();
       if (target.kind == Expr::Kind::Name) {
+        auto resolveReference = [&](const BindingInfo &binding) -> bool {
+          if (binding.typeName != "Reference" || binding.typeTemplateArg.empty()) {
+            return false;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(binding.typeTemplateArg, base, arg) || base != "array") {
+            return false;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            return false;
+          }
+          elemTypeOut = args.front();
+          return true;
+        };
         if (const BindingInfo *paramBinding = findParamBinding(paramsIn, target.name)) {
+          if (resolveReference(*paramBinding)) {
+            return true;
+          }
           if ((paramBinding->typeName != "array" && paramBinding->typeName != "vector") ||
               paramBinding->typeTemplateArg.empty()) {
             return false;
@@ -27,7 +54,13 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
           return true;
         }
         auto it = localsIn.find(target.name);
-        if (it == localsIn.end() || (it->second.typeName != "array" && it->second.typeName != "vector") ||
+        if (it == localsIn.end()) {
+          return false;
+        }
+        if (resolveReference(it->second)) {
+          return true;
+        }
+        if ((it->second.typeName != "array" && it->second.typeName != "vector") ||
             it->second.typeTemplateArg.empty()) {
           return false;
         }

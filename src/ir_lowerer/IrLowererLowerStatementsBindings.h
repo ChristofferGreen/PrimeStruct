@@ -77,6 +77,15 @@
           }
         }
       }
+      LocalInfo info;
+      info.isMutable = isBindingMutable(stmt);
+      info.kind = kind;
+      info.valueKind = valueKind;
+      info.mapKeyKind = mapKeyKind;
+      info.mapValueKind = mapValueKind;
+      setReferenceArrayInfo(stmt, info);
+      valueKind = info.valueKind;
+
       if (valueKind == LocalInfo::ValueKind::String) {
         if (kind != LocalInfo::Kind::Value) {
           error = "native backend does not support string pointers or references";
@@ -186,13 +195,7 @@
       if (!emitExpr(init, localsIn)) {
         return false;
       }
-      LocalInfo info;
       info.index = nextLocal++;
-      info.isMutable = isBindingMutable(stmt);
-      info.kind = kind;
-      info.valueKind = valueKind;
-      info.mapKeyKind = mapKeyKind;
-      info.mapValueKind = mapValueKind;
       if (info.kind == LocalInfo::Kind::Reference) {
         if (init.kind != Expr::Kind::Call || !isSimpleCallName(init, "location") || init.args.size() != 1) {
           error = "reference binding requires location(...) initializer";

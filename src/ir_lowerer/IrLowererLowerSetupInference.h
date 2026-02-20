@@ -76,6 +76,8 @@
         typeName = "vector";
       } else if (it->second.kind == LocalInfo::Kind::Map) {
         typeName = "map";
+      } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+        typeName = "array";
       } else if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
         error = "unknown method target for " + callExpr.name;
         return nullptr;
@@ -139,6 +141,9 @@
         return LocalInfo::ValueKind::Unknown;
       }
       if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
+        if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+          return LocalInfo::ValueKind::Unknown;
+        }
         return it->second.valueKind;
       }
       return LocalInfo::ValueKind::Unknown;
@@ -149,6 +154,9 @@
         if (target.kind == Expr::Kind::Name) {
           auto it = localsIn.find(target.name);
           if (it != localsIn.end()) {
+            if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+              return LocalInfo::ValueKind::Unknown;
+            }
             return it->second.valueKind;
           }
         }
@@ -186,8 +194,13 @@
   inferArrayElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (expr.kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.name);
-      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
-        return it->second.valueKind;
+      if (it != localsIn.end()) {
+        if (it->second.kind == LocalInfo::Kind::Array) {
+          return it->second.valueKind;
+        }
+        if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+          return it->second.valueKind;
+        }
       }
       return LocalInfo::ValueKind::Unknown;
     }
@@ -255,7 +268,13 @@
           }
           return LocalInfo::ValueKind::Unknown;
         }
-        if (it->second.kind == LocalInfo::Kind::Value || it->second.kind == LocalInfo::Kind::Reference) {
+        if (it->second.kind == LocalInfo::Kind::Value) {
+          return it->second.valueKind;
+        }
+        if (it->second.kind == LocalInfo::Kind::Reference) {
+          if (it->second.referenceToArray) {
+            return LocalInfo::ValueKind::Unknown;
+          }
           return it->second.valueKind;
         }
         return LocalInfo::ValueKind::Unknown;
@@ -350,9 +369,12 @@
           LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
           if (target.kind == Expr::Kind::Name) {
             auto it = localsIn.find(target.name);
-            if (it != localsIn.end() &&
-                (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
-              elemKind = it->second.valueKind;
+            if (it != localsIn.end()) {
+              if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
+                elemKind = it->second.valueKind;
+              } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+                elemKind = it->second.valueKind;
+              }
             }
           } else if (target.kind == Expr::Kind::Call) {
             std::string collection;

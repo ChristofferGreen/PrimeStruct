@@ -877,6 +877,44 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     return true;
   }
 
+  auto looksLikeBindingAfterExpr = [&]() -> bool {
+    if (!allowBareBindings_) {
+      return false;
+    }
+    if (!match(TokenKind::LBracket)) {
+      return false;
+    }
+    size_t scan = pos_;
+    int depth = 0;
+    while (scan < tokens_.size()) {
+      TokenKind kind = tokens_[scan].kind;
+      if (kind == TokenKind::LBracket) {
+        ++depth;
+      } else if (kind == TokenKind::RBracket) {
+        --depth;
+        if (depth == 0) {
+          ++scan;
+          break;
+        }
+      }
+      ++scan;
+    }
+    if (depth != 0) {
+      return false;
+    }
+    while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
+      ++scan;
+    }
+    if (scan >= tokens_.size() || tokens_[scan].kind != TokenKind::Identifier) {
+      return false;
+    }
+    ++scan;
+    while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
+      ++scan;
+    }
+    return scan < tokens_.size() && tokens_[scan].kind == TokenKind::LBrace;
+  };
+
   while (true) {
     if (match(TokenKind::Dot)) {
       expect(TokenKind::Dot, "expected '.'");
@@ -924,6 +962,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       continue;
     }
     if (match(TokenKind::LBracket)) {
+      if (looksLikeBindingAfterExpr()) {
+        break;
+      }
       if (allowArgumentLabels_) {
         size_t afterLabel = 0;
         if (looksLikeArgumentLabel(pos_, afterLabel)) {

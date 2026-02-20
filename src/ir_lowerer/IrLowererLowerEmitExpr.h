@@ -434,6 +434,9 @@
                 (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
               elemKind = it->second.valueKind;
               isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
+            } else if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
+                       it->second.referenceToArray) {
+              elemKind = it->second.valueKind;
             }
           } else if (target.kind == Expr::Kind::Call) {
             std::string collection;

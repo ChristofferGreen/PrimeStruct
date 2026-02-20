@@ -123,6 +123,14 @@
     const Expr &cond = stmt.args[1];
     auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
       if (binding.typeName == "Reference") {
+        std::string base;
+        std::string arg;
+        if (splitTemplateTypeName(binding.typeTemplateArg, base, arg) && base == "array") {
+          std::vector<std::string> args;
+          if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+            return ReturnKind::Array;
+          }
+        }
         return returnKindForTypeName(binding.typeTemplateArg);
       }
       return returnKindForTypeName(binding.typeName);

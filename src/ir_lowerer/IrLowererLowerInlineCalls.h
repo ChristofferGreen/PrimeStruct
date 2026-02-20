@@ -72,6 +72,7 @@
           }
         }
       }
+      setReferenceArrayInfo(param, paramInfo);
 
       if (isStringBinding(param)) {
         if (paramInfo.kind != LocalInfo::Kind::Value) {
