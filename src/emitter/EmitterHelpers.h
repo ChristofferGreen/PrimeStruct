@@ -81,6 +81,7 @@ bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, std::string> &importAliases,
                            const std::unordered_map<std::string, std::string> &structTypeMap,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                           const std::unordered_map<std::string, std::string> &returnStructs,
                            std::string &resolvedOut);
 bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap);
 bool getVectorMutatorName(const Expr &expr,

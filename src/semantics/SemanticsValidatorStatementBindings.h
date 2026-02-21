@@ -156,12 +156,20 @@
       }
       if (returnKind != ReturnKind::Unknown) {
         ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
-        if (exprKind != returnKind) {
-          if (returnKind == ReturnKind::Array) {
+        if (returnKind == ReturnKind::Array) {
+          auto structIt = returnStructs_.find(currentDefinitionPath_);
+          if (structIt != returnStructs_.end()) {
+            std::string actualStruct = inferStructReturnPath(stmt.args.front(), params, locals);
+            if (actualStruct.empty() || actualStruct != structIt->second) {
+              error_ = "return type mismatch: expected " + structIt->second;
+              return false;
+            }
+          } else if (exprKind != ReturnKind::Array) {
             error_ = "return type mismatch: expected array";
-          } else {
-            error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
+            return false;
           }
+        } else if (exprKind != returnKind) {
+          error_ = "return type mismatch: expected " + typeNameForReturnKind(returnKind);
           return false;
         }
       }

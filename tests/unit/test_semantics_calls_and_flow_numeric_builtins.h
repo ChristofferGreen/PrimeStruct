@@ -172,6 +172,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pow accepts float operands") {
+  const std::string source = R"(
+import /math/*
+[return<float>]
+main() {
+  return(pow(2.0f32, 3.0f32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pow rejects mixed int/float operands") {
+  const std::string source = R"(
+import /math/*
+[return<float>]
+main() {
+  return(pow(2i32, 3.0f32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pow does not support mixed int/float operands") != std::string::npos);
+}
+
 TEST_CASE("rounding math builtins validate") {
   const std::string source = R"(
 import /math/*

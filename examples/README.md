@@ -25,6 +25,9 @@ From `build-debug/`:
 - `examples/if_expression.prime`: `if` in expression position (both branches yield values).
 - `examples/loop_while_for.prime`: `loop`, `while`, and `for` statement forms.
 - `examples/infer_method_call.prime`: omitted binding type inference feeding a method call.
+- `examples/forward_definition.prime`: call a function before it is defined.
+- `examples/math_pow.prime`: integer + float `pow`.
+- `examples/return_struct.prime`: return a struct from a function.
 - `examples/namespace_call.prime`: namespace blocks + slash-path calls.
 - `examples/pointers_and_references.prime`: `Pointer<T>`, `Reference<T>`, `location`, `dereference`.
 - `examples/features_overview.prime`: high-level tour (imports, namespace, collections, loops, operators, indexing, effects).

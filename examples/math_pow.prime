@@ -1,0 +1,8 @@
+import /math/*
+
+[return<i32>]
+main() {
+  [i32] int_pow{pow(2i32, 6i32)}
+  [i32] float_pow{convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32))}
+  return(plus(int_pow, float_pow))
+}

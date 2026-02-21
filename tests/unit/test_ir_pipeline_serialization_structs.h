@@ -89,6 +89,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowers struct return values") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Point>]
+make_point([i32] x, [i32] y) {
+  return(Point([x] x, [y] y))
+}
+
+[return<int>]
+main() {
+  [Point] value{make_point(3i32, 4i32)}
+  return(1i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir emits struct layout metadata") {
   const std::string source = R"(
 [struct]
@@ -477,4 +507,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 2);
 }
-

@@ -497,7 +497,16 @@
       }
     }
     if (typeName.empty()) {
-      std::string inferred = typeNameForReturnKind(inferExprReturnKind(receiver, params, locals));
+      ReturnKind inferredKind = inferExprReturnKind(receiver, params, locals);
+      std::string inferred;
+      if (inferredKind == ReturnKind::Array) {
+        inferred = inferStructReturnPath(receiver, params, locals);
+        if (inferred.empty()) {
+          inferred = typeNameForReturnKind(inferredKind);
+        }
+      } else {
+        inferred = typeNameForReturnKind(inferredKind);
+      }
       if (!inferred.empty()) {
         typeName = inferred;
       }

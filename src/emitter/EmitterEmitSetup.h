@@ -4,7 +4,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, std::vector<Expr>> paramMap;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_map<std::string, ReturnKind> returnKinds;
+  std::unordered_map<std::string, ResultInfo> resultInfos;
+  std::unordered_map<std::string, std::string> returnStructs;
   std::unordered_map<std::string, std::string> importAliases;
+  struct OnErrorHandler {
+    std::string handlerPath;
+    std::vector<Expr> boundArgs;
+  };
+  std::unordered_map<std::string, std::optional<OnErrorHandler>> onErrorByDef;
   bool hasMathImport = false;
   auto isMathImport = [](const std::string &path) -> bool {
     if (path == "/math/*") {
@@ -154,8 +161,117 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     return param;
   };
 
+  auto parseResultTypeName = [&](const std::string &typeName, ResultInfo &infoOut) -> bool {
+    infoOut = ResultInfo{};
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      return false;
+    }
+    if (args.size() == 1) {
+      infoOut.isResult = true;
+      infoOut.hasValue = false;
+      return true;
+    }
+    if (args.size() == 2) {
+      infoOut.isResult = true;
+      infoOut.hasValue = true;
+      infoOut.valueType = args.front();
+      return true;
+    }
+    return false;
+  };
+
+  auto parseTransformArgumentExpr = [&](const std::string &text,
+                                        const std::string &namespacePrefix,
+                                        Expr &out) -> bool {
+    Lexer lexer(text);
+    Parser parser(lexer.tokenize());
+    std::string parseError;
+    if (!parser.parseExpression(out, namespacePrefix, parseError)) {
+      return false;
+    }
+    return true;
+  };
+
+  auto parseOnErrorTransform = [&](const std::vector<Transform> &transforms,
+                                   const std::string &namespacePrefix,
+                                   const std::string &context,
+                                   std::optional<OnErrorHandler> &out) -> bool {
+    (void)context;
+    out.reset();
+    for (const auto &transform : transforms) {
+      if (transform.name != "on_error") {
+        continue;
+      }
+      if (out.has_value()) {
+        return false;
+      }
+      if (transform.templateArgs.size() != 2) {
+        return false;
+      }
+      Expr handlerExpr;
+      handlerExpr.kind = Expr::Kind::Name;
+      handlerExpr.name = transform.templateArgs[1];
+      handlerExpr.namespacePrefix = namespacePrefix;
+      std::string handlerPath = resolveExprPath(handlerExpr);
+      if (defMap.count(handlerPath) == 0) {
+        auto importIt = importAliases.find(transform.templateArgs[1]);
+        if (importIt != importAliases.end()) {
+          handlerPath = importIt->second;
+        }
+      }
+      auto defIt = defMap.find(handlerPath);
+      if (defIt == defMap.end()) {
+        return false;
+      }
+      OnErrorHandler handler;
+      handler.handlerPath = handlerPath;
+      handler.boundArgs.reserve(transform.arguments.size());
+      for (const auto &argText : transform.arguments) {
+        Expr argExpr;
+        if (!parseTransformArgumentExpr(argText, namespacePrefix, argExpr)) {
+          return false;
+        }
+        handler.boundArgs.push_back(std::move(argExpr));
+      }
+      out = std::move(handler);
+    }
+    return true;
+  };
+
+  std::function<std::string(const std::string &, const std::string &)> resolveStructReturnPath;
+
   auto returnTypeFor = [&](const Definition &def) {
     ReturnKind returnKind = returnKinds[def.fullPath];
+    auto resultIt = resultInfos.find(def.fullPath);
+    if (resultIt != resultInfos.end() && resultIt->second.isResult) {
+      return resultIt->second.hasValue ? std::string("uint64_t") : std::string("uint32_t");
+    }
+    auto structIt = returnStructs.find(def.fullPath);
+    if (structIt != returnStructs.end()) {
+      auto typeIt = structTypeMap.find(structIt->second);
+      if (typeIt != structTypeMap.end()) {
+        return typeIt->second;
+      }
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string structPath = resolveStructReturnPath(transform.templateArgs.front(), def.namespacePrefix);
+      if (!structPath.empty()) {
+        auto typeIt = structTypeMap.find(structPath);
+        if (typeIt != structTypeMap.end()) {
+          return typeIt->second;
+        }
+      }
+      break;
+    }
     if (returnKind == ReturnKind::Void) {
       return std::string("void");
     }
@@ -249,6 +365,20 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     defMap[def.fullPath] = &def;
     returnKinds[def.fullPath] = getReturnKind(def);
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      ResultInfo resultInfo;
+      if (parseResultTypeName(transform.templateArgs.front(), resultInfo)) {
+        resultInfos[def.fullPath] = std::move(resultInfo);
+      }
+      break;
+    }
+    if (isStructDefinition(def)) {
+      returnKinds[def.fullPath] = ReturnKind::Array;
+      returnStructs[def.fullPath] = def.fullPath;
+    }
   }
 
   auto isWildcardImport = [](const std::string &path, std::string &prefixOut) -> bool {
@@ -300,6 +430,77 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     importAliases.emplace(remainder, importPath);
   }
 
+  onErrorByDef.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    std::optional<OnErrorHandler> handler;
+    parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, handler);
+    onErrorByDef.emplace(def.fullPath, std::move(handler));
+  }
+
+  resolveStructReturnPath = [&](const std::string &typeName,
+                                const std::string &namespacePrefix) -> std::string {
+    if (typeName.empty()) {
+      return "";
+    }
+    if (typeName == "Self") {
+      return structTypeMap.count(namespacePrefix) > 0 ? namespacePrefix : "";
+    }
+    if (!typeName.empty() && typeName[0] == '/') {
+      return structTypeMap.count(typeName) > 0 ? typeName : "";
+    }
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string direct = current + "/" + typeName;
+        if (structTypeMap.count(direct) > 0) {
+          return direct;
+        }
+        if (current.size() > typeName.size()) {
+          const size_t start = current.size() - typeName.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, typeName.size(), typeName) == 0 &&
+              structTypeMap.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + typeName;
+        if (structTypeMap.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
+    }
+    auto importIt = importAliases.find(typeName);
+    if (importIt != importAliases.end() && structTypeMap.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return "";
+  };
+
+  for (const auto &def : program.definitions) {
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string &typeName = transform.templateArgs.front();
+      std::string structPath = resolveStructReturnPath(typeName, def.namespacePrefix);
+      if (!structPath.empty()) {
+        returnKinds[def.fullPath] = ReturnKind::Array;
+        returnStructs[def.fullPath] = structPath;
+      }
+      break;
+    }
+  }
+
   auto isParam = [](const std::vector<Expr> &params, const std::string &name) -> bool {
     for (const auto &param : params) {
       if (param.name == name) {
@@ -315,6 +516,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
                            const std::vector<Expr> &,
                            const std::unordered_map<std::string, ReturnKind> &)>
       inferExprReturnKind;
+  std::function<std::string(const Expr &,
+                            const std::vector<Expr> &,
+                            const std::unordered_map<std::string, std::string> &)>
+      inferStructReturnPath;
 
   inferExprReturnKind = [&](const Expr &expr,
                             const std::vector<Expr> &params,
@@ -534,6 +739,121 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     return ReturnKind::Unknown;
   };
 
+  auto resolveParamStructPath = [&](const Expr &param, const std::string &namespacePrefix) -> std::string {
+    BindingInfo info = getBindingInfo(param);
+    if (info.typeName == "Reference" || info.typeName == "Pointer") {
+      return "";
+    }
+    const std::string typeNamespace = param.namespacePrefix.empty() ? namespacePrefix : param.namespacePrefix;
+    return resolveStructReturnPath(info.typeName, typeNamespace);
+  };
+
+  inferStructReturnPath = [&](const Expr &expr,
+                              const std::vector<Expr> &params,
+                              const std::unordered_map<std::string, std::string> &locals) -> std::string {
+    auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
+      if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+        return false;
+      }
+      if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+        return false;
+      }
+      if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+        return false;
+      }
+      return allowAnyName || isBuiltinBlock(candidate, nameMap);
+    };
+    auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
+      if (!isEnvelopeValueExpr(candidate, allowAnyName)) {
+        return nullptr;
+      }
+      const Expr *valueExpr = nullptr;
+      for (const auto &bodyExpr : candidate.bodyArguments) {
+        if (bodyExpr.isBinding) {
+          continue;
+        }
+        valueExpr = &bodyExpr;
+      }
+      return valueExpr;
+    };
+
+    if (expr.isLambda) {
+      return "";
+    }
+
+    if (expr.kind == Expr::Kind::Name) {
+      for (const auto &param : params) {
+        if (param.name == expr.name) {
+          return resolveParamStructPath(param, expr.namespacePrefix);
+        }
+      }
+      auto it = locals.find(expr.name);
+      return it != locals.end() ? it->second : "";
+    }
+
+    if (expr.kind == Expr::Kind::Call) {
+      if (expr.isMethodCall) {
+        if (expr.args.empty()) {
+          return "";
+        }
+        std::string receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
+        if (receiverStruct.empty()) {
+          return "";
+        }
+        const std::string methodPath = receiverStruct + "/" + expr.name;
+        auto defIt = defMap.find(methodPath);
+        if (defIt != defMap.end()) {
+          (void)inferDefinitionReturnKind(*defIt->second);
+          auto it = returnStructs.find(methodPath);
+          return it != returnStructs.end() ? it->second : "";
+        }
+        auto it = returnStructs.find(methodPath);
+        return it != returnStructs.end() ? it->second : "";
+      }
+
+      if (isBuiltinIf(expr, nameMap) && expr.args.size() == 3) {
+        const Expr &thenArg = expr.args[1];
+        const Expr &elseArg = expr.args[2];
+        const Expr *thenValue = getEnvelopeValueExpr(thenArg, true);
+        const Expr *elseValue = getEnvelopeValueExpr(elseArg, true);
+        const Expr &thenExpr = thenValue ? *thenValue : thenArg;
+        const Expr &elseExpr = elseValue ? *elseValue : elseArg;
+        std::string thenPath = inferStructReturnPath(thenExpr, params, locals);
+        if (thenPath.empty()) {
+          return "";
+        }
+        std::string elsePath = inferStructReturnPath(elseExpr, params, locals);
+        return thenPath == elsePath ? thenPath : "";
+      }
+
+      if (const Expr *valueExpr = getEnvelopeValueExpr(expr, false)) {
+        if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
+          return inferStructReturnPath(valueExpr->args.front(), params, locals);
+        }
+        return inferStructReturnPath(*valueExpr, params, locals);
+      }
+
+      std::string resolved = resolveExprPath(expr);
+      if (structTypeMap.count(resolved) == 0) {
+        auto importIt = importAliases.find(expr.name);
+        if (importIt != importAliases.end() && structTypeMap.count(importIt->second) > 0) {
+          return importIt->second;
+        }
+      }
+      if (structTypeMap.count(resolved) > 0) {
+        return resolved;
+      }
+      auto defIt = defMap.find(resolved);
+      if (defIt != defMap.end()) {
+        (void)inferDefinitionReturnKind(*defIt->second);
+        auto it = returnStructs.find(resolved);
+        return it != returnStructs.end() ? it->second : "";
+      }
+    }
+
+    return "";
+  };
+
   inferDefinitionReturnKind = [&](const Definition &def) -> ReturnKind {
     ReturnKind &kind = returnKinds[def.fullPath];
     if (kind != ReturnKind::Unknown) {
@@ -544,10 +864,17 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     const auto &params = paramMap[def.fullPath];
     ReturnKind inferred = ReturnKind::Unknown;
+    std::string inferredStructPath;
     bool sawReturn = false;
     std::unordered_map<std::string, ReturnKind> locals;
-    std::function<void(const Expr &, std::unordered_map<std::string, ReturnKind> &)> visitStmt;
-    visitStmt = [&](const Expr &stmt, std::unordered_map<std::string, ReturnKind> &activeLocals) {
+    std::unordered_map<std::string, std::string> localStructs;
+    std::function<void(const Expr &,
+                       std::unordered_map<std::string, ReturnKind> &,
+                       std::unordered_map<std::string, std::string> &)>
+        visitStmt;
+    visitStmt = [&](const Expr &stmt,
+                    std::unordered_map<std::string, ReturnKind> &activeLocals,
+                    std::unordered_map<std::string, std::string> &activeStructs) {
       if (stmt.isBinding) {
         BindingInfo info = getBindingInfo(stmt);
         ReturnKind bindingKind = returnKindForTypeName(info.typeName);
@@ -558,13 +885,24 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
           }
         }
         activeLocals.emplace(stmt.name, bindingKind);
+        std::string structPath = resolveStructReturnPath(info.typeName, def.namespacePrefix);
+        if (structPath.empty() && stmt.args.size() == 1) {
+          structPath = inferStructReturnPath(stmt.args.front(), params, activeStructs);
+        }
+        if (!structPath.empty()) {
+          activeStructs.emplace(stmt.name, structPath);
+        }
         return;
       }
       if (isReturnCall(stmt)) {
         sawReturn = true;
         ReturnKind exprKind = ReturnKind::Void;
+        std::string exprStructPath;
         if (!stmt.args.empty()) {
           exprKind = inferExprReturnKind(stmt.args.front(), params, activeLocals);
+          if (exprKind == ReturnKind::Array) {
+            exprStructPath = inferStructReturnPath(stmt.args.front(), params, activeStructs);
+          }
         }
         if (exprKind == ReturnKind::Unknown) {
           inferred = ReturnKind::Unknown;
@@ -572,11 +910,25 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         if (inferred == ReturnKind::Unknown) {
           inferred = exprKind;
+          if (!exprStructPath.empty()) {
+            inferredStructPath = exprStructPath;
+          }
           return;
         }
         if (inferred != exprKind) {
           inferred = ReturnKind::Unknown;
           return;
+        }
+        if (inferred == ReturnKind::Array) {
+          if (!exprStructPath.empty()) {
+            if (inferredStructPath.empty()) {
+              inferredStructPath = exprStructPath;
+            } else if (inferredStructPath != exprStructPath) {
+              inferred = ReturnKind::Unknown;
+            }
+          } else if (!inferredStructPath.empty()) {
+            inferred = ReturnKind::Unknown;
+          }
         }
         return;
       }
@@ -585,8 +937,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         const Expr &elseBlock = stmt.args[2];
         auto walkBlock = [&](const Expr &block) {
           std::unordered_map<std::string, ReturnKind> blockLocals = activeLocals;
+          std::unordered_map<std::string, std::string> blockStructs = activeStructs;
           for (const auto &bodyStmt : block.bodyArguments) {
-            visitStmt(bodyStmt, blockLocals);
+            visitStmt(bodyStmt, blockLocals, blockStructs);
           }
         };
         walkBlock(thenBlock);
@@ -595,7 +948,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
     };
     for (const auto &stmt : def.statements) {
-      visitStmt(stmt, locals);
+      visitStmt(stmt, locals, localStructs);
     }
     if (!sawReturn) {
       kind = ReturnKind::Void;
@@ -604,6 +957,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     } else {
       kind = inferred;
     }
+    if (kind == ReturnKind::Array && !inferredStructPath.empty()) {
+      returnStructs[def.fullPath] = inferredStructPath;
+    }
     inferenceStack.erase(def.fullPath);
     return kind;
   };
@@ -611,5 +967,21 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   for (const auto &def : program.definitions) {
     if (returnKinds[def.fullPath] == ReturnKind::Unknown) {
       inferDefinitionReturnKind(def);
+    }
+  }
+
+  for (const auto &def : program.definitions) {
+    if (returnStructs.count(def.fullPath) > 0) {
+      continue;
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string structPath = resolveStructReturnPath(transform.templateArgs.front(), def.namespacePrefix);
+      if (!structPath.empty()) {
+        returnStructs[def.fullPath] = structPath;
+      }
+      break;
     }
   }

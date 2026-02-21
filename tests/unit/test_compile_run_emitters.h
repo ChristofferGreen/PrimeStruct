@@ -93,6 +93,77 @@ main() {
   CHECK(readFile(outPath) == "1\n2\n");
 }
 
+TEST_CASE("C++ emitter returns structs from functions") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Point>]
+make_point([i32] x, [i32] y) {
+  return(Point([x] x, [y] y))
+}
+
+[return<int>]
+sum([Point] value) {
+  return(plus(value.x, value.y))
+}
+
+[return<int>]
+main() {
+  return(sum(make_point(3i32, 4i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_struct_return.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_return_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+}
+
+TEST_CASE("C++ emitter supports file io") {
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_file_io_exe.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [array<i32>] bytes{ array<i32>(65i32, 66i32, 67i32) }\n"
+      "  file.write(\"Hello \"utf8, 123i32, \" world\"utf8)?\n"
+      "  file.write_line(\"\"utf8)?\n"
+      "  file.write_byte(10i32)?\n"
+      "  file.write_bytes(bytes)?\n"
+      "  file.flush()?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_file_io_exe.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_file_io_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
+}
+
 TEST_CASE("C++ emitter renders static fields and visibility") {
   const std::string source = R"(
 [struct]

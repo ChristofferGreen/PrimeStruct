@@ -34,6 +34,9 @@ private:
   bool isParam(const std::vector<ParameterInfo> &params, const std::string &name) const;
   const BindingInfo *findParamBinding(const std::vector<ParameterInfo> &params, const std::string &name) const;
   std::string typeNameForReturnKind(ReturnKind kind) const;
+  std::string inferStructReturnPath(const Expr &expr,
+                                    const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals);
   bool inferBindingTypeFromInitializer(const Expr &initializer,
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
@@ -137,6 +140,7 @@ private:
   std::unordered_set<std::string> entryDefaultEffectSet_;
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
+  std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_set<std::string> structNames_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
   std::unordered_set<std::string> activeEffects_;

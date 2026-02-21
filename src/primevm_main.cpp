@@ -104,38 +104,51 @@ bool appendStdlibSources(const std::vector<std::string> &includePaths,
 }
 
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &includePaths) {
-  if (inputPath.empty()) {
-    return;
-  }
-  std::error_code ec;
-  std::filesystem::path resolved = std::filesystem::absolute(inputPath, ec);
-  if (ec) {
-    resolved = std::filesystem::path(inputPath);
-  }
-  std::filesystem::path dir = resolved;
-  if (!std::filesystem::is_directory(dir, ec)) {
-    dir = dir.parent_path();
-  }
-  for (std::filesystem::path current = dir; !current.empty(); current = current.parent_path()) {
-    std::filesystem::path candidate = current / "stdlib";
-    if (std::filesystem::exists(candidate, ec) && std::filesystem::is_directory(candidate, ec)) {
-      std::filesystem::path absoluteCandidate = std::filesystem::absolute(candidate, ec);
-      std::string candidateText = absoluteCandidate.string();
-      for (const auto &path : includePaths) {
-        std::filesystem::path existing = std::filesystem::absolute(path, ec);
-        if (!ec && std::filesystem::equivalent(existing, absoluteCandidate, ec)) {
-          return;
+  auto addFromBase = [&](const std::filesystem::path &base) -> bool {
+    std::error_code ec;
+    std::filesystem::path dir = base;
+    if (!std::filesystem::is_directory(dir, ec)) {
+      dir = dir.parent_path();
+    }
+    for (std::filesystem::path current = dir; !current.empty(); current = current.parent_path()) {
+      std::filesystem::path candidate = current / "stdlib";
+      if (std::filesystem::exists(candidate, ec) && std::filesystem::is_directory(candidate, ec)) {
+        std::filesystem::path absoluteCandidate = std::filesystem::absolute(candidate, ec);
+        std::string candidateText = absoluteCandidate.string();
+        for (const auto &path : includePaths) {
+          std::filesystem::path existing = std::filesystem::absolute(path, ec);
+          if (!ec && std::filesystem::equivalent(existing, absoluteCandidate, ec)) {
+            return true;
+          }
+          if (path == candidateText) {
+            return true;
+          }
         }
-        if (path == candidateText) {
-          return;
-        }
+        includePaths.push_back(candidateText);
+        return true;
       }
-      includePaths.push_back(candidateText);
+      if (current == current.root_path()) {
+        break;
+      }
+    }
+    return false;
+  };
+
+  if (!inputPath.empty()) {
+    std::error_code ec;
+    std::filesystem::path resolved = std::filesystem::absolute(inputPath, ec);
+    if (ec) {
+      resolved = std::filesystem::path(inputPath);
+    }
+    if (addFromBase(resolved)) {
       return;
     }
-    if (current == current.root_path()) {
-      break;
-    }
+  }
+
+  std::error_code ec;
+  std::filesystem::path cwd = std::filesystem::current_path(ec);
+  if (!ec) {
+    addFromBase(cwd);
   }
 }
 

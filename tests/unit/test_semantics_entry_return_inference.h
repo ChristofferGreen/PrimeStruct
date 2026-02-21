@@ -92,4 +92,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("infers struct return type without transform") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+make_point([i32] x, [i32] y) {
+  return(Point([x] x, [y] y))
+}
+
+[return<int>]
+main() {
+  [Point] value{make_point(1i32, 2i32)}
+  return(plus(value.x, value.y))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("return struct mismatch is diagnostic") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Other() {
+  [i32] z{3i32}
+  [i32] w{4i32}
+}
+
+[return<Point>]
+make_point() {
+  return(Other())
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+}
+
 TEST_SUITE_END();

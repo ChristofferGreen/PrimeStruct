@@ -475,6 +475,7 @@ bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, std::string> &importAliases,
                            const std::unordered_map<std::string, std::string> &structTypeMap,
                            const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                           const std::unordered_map<std::string, std::string> &returnStructs,
                            std::string &resolvedOut) {
   if (!call.isMethodCall || call.args.empty()) {
     return false;
@@ -512,14 +513,26 @@ bool resolveMethodCallPath(const Expr &call,
           const std::string resolved = resolveExprPath(expr);
           auto it = returnKinds.find(resolved);
           if (it != returnKinds.end()) {
+            if (it->second == ReturnKind::Array) {
+              auto structIt = returnStructs.find(resolved);
+              if (structIt != returnStructs.end()) {
+                return structIt->second;
+              }
+            }
             return typeNameForReturnKind(it->second);
           }
           return "";
         }
         std::string methodPath;
-        if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
+        if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
           auto it = returnKinds.find(methodPath);
           if (it != returnKinds.end()) {
+            if (it->second == ReturnKind::Array) {
+              auto structIt = returnStructs.find(methodPath);
+              if (structIt != returnStructs.end()) {
+                return structIt->second;
+              }
+            }
             return typeNameForReturnKind(it->second);
           }
         }
@@ -551,6 +564,14 @@ bool resolveMethodCallPath(const Expr &call,
   }
   if (typeName.empty()) {
     return false;
+  }
+  if (typeName == "File") {
+    resolvedOut = "/file/" + call.name;
+    return true;
+  }
+  if (typeName == "FileError" && call.name == "why") {
+    resolvedOut = "/file_error/why";
+    return true;
   }
   if (typeName == "Pointer" || typeName == "Reference") {
     return false;

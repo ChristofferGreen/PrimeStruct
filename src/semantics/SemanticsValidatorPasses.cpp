@@ -521,8 +521,36 @@ bool SemanticsValidator::validateStructLayouts() {
       return typeName;
     }
     std::string resolved = resolveTypePath(typeName, namespacePrefix);
-    if (structNames_.count(resolved) > 0) {
-      return resolved;
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string direct = current + "/" + typeName;
+        if (structNames_.count(direct) > 0) {
+          return direct;
+        }
+        if (current.size() > typeName.size()) {
+          const size_t start = current.size() - typeName.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, typeName.size(), typeName) == 0 &&
+              structNames_.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + typeName;
+        if (structNames_.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
     }
     auto importIt = importAliases_.find(typeName);
     if (importIt != importAliases_.end()) {

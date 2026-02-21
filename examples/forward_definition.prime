@@ -1,0 +1,9 @@
+[return<i32>]
+main() {
+  return(add(10i32, 32i32))
+}
+
+[return<i32>]
+add([i32] left, [i32] right) {
+  return(plus(left, right))
+}

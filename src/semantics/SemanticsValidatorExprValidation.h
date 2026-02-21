@@ -146,6 +146,51 @@
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
+      auto resolveStructTypePath = [&](const std::string &typeName,
+                                       const std::string &namespacePrefix) -> std::string {
+        if (typeName.empty()) {
+          return "";
+        }
+        if (!typeName.empty() && typeName[0] == '/') {
+          return typeName;
+        }
+        std::string current = namespacePrefix;
+        while (true) {
+          if (!current.empty()) {
+            std::string scoped = current + "/" + typeName;
+            if (structNames_.count(scoped) > 0) {
+              return scoped;
+            }
+            if (current.size() > typeName.size()) {
+              const size_t start = current.size() - typeName.size();
+              if (start > 0 && current[start - 1] == '/' &&
+                  current.compare(start, typeName.size(), typeName) == 0 &&
+                  structNames_.count(current) > 0) {
+                return current;
+              }
+            }
+          } else {
+            std::string root = "/" + typeName;
+            if (structNames_.count(root) > 0) {
+              return root;
+            }
+          }
+          if (current.empty()) {
+            break;
+          }
+          const size_t slash = current.find_last_of('/');
+          if (slash == std::string::npos || slash == 0) {
+            current.clear();
+          } else {
+            current.erase(slash);
+          }
+        }
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end()) {
+          return importIt->second;
+        }
+        return "";
+      };
       if (methodName == "ok" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
         resolvedOut = "/result/ok";
         isBuiltinOut = true;
@@ -203,7 +248,16 @@
         }
       }
       if (typeName.empty()) {
-        std::string inferred = typeNameForReturnKind(inferExprReturnKind(receiver, params, locals));
+        ReturnKind inferredKind = inferExprReturnKind(receiver, params, locals);
+        std::string inferred;
+        if (inferredKind == ReturnKind::Array) {
+          inferred = inferStructReturnPath(receiver, params, locals);
+          if (inferred.empty()) {
+            inferred = typeNameForReturnKind(inferredKind);
+          }
+        } else {
+          inferred = typeNameForReturnKind(inferredKind);
+        }
         if (!inferred.empty()) {
           typeName = inferred;
         }
@@ -233,12 +287,9 @@
         resolvedOut = "/" + normalizeBindingTypeName(typeName) + "/" + methodName;
         return true;
       }
-      std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
-      if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
-        auto importIt = importAliases_.find(typeName);
-        if (importIt != importAliases_.end()) {
-          resolvedType = importIt->second;
-        }
+      std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
+      if (resolvedType.empty()) {
+        resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
       }
       resolvedOut = resolvedType + "/" + methodName;
       return true;
@@ -310,18 +361,53 @@
         if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
           return false;
         }
-        std::string resolved = resolveTypePath(typeName, namespacePrefix);
-        if (structNames_.count(resolved) == 0 && defMap_.count(resolved) == 0) {
-          auto importIt = importAliases_.find(typeName);
-          if (importIt != importAliases_.end()) {
-            resolved = importIt->second;
+        if (!typeName.empty() && typeName[0] == '/') {
+          if (structNames_.count(typeName) > 0) {
+            structPathOut = typeName;
+            return true;
           }
-        }
-        if (structNames_.count(resolved) == 0) {
           return false;
         }
-        structPathOut = resolved;
-        return true;
+        std::string current = namespacePrefix;
+        while (true) {
+          if (!current.empty()) {
+            std::string scoped = current + "/" + typeName;
+            if (structNames_.count(scoped) > 0) {
+              structPathOut = scoped;
+              return true;
+            }
+            if (current.size() > typeName.size()) {
+              const size_t start = current.size() - typeName.size();
+              if (start > 0 && current[start - 1] == '/' &&
+                  current.compare(start, typeName.size(), typeName) == 0 &&
+                  structNames_.count(current) > 0) {
+                structPathOut = current;
+                return true;
+              }
+            }
+          } else {
+            std::string root = "/" + typeName;
+            if (structNames_.count(root) > 0) {
+              structPathOut = root;
+              return true;
+            }
+          }
+          if (current.empty()) {
+            break;
+          }
+          const size_t slash = current.find_last_of('/');
+          if (slash == std::string::npos || slash == 0) {
+            current.clear();
+          } else {
+            current.erase(slash);
+          }
+        }
+        auto importIt = importAliases_.find(typeName);
+        if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+          structPathOut = importIt->second;
+          return true;
+        }
+        return false;
       };
       std::string structPath;
       if (receiver.kind == Expr::Kind::Name) {

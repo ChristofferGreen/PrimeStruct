@@ -272,6 +272,8 @@ Notes:
   - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an implicit empty body.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
 - `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
+- Definition order does not affect name resolution: calls may reference definitions that appear later in the same file or namespace. Resolution runs after includes/imports and namespace expansion; unresolved names are diagnostics.
+- Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred from struct constructor/value returns.
 - Commas and semicolons are treated as whitespace separators in transform lists and item lists; trailing separators are allowed.
 - Example mixed separators:
   - `array<i32; i64  u64>`

@@ -18,6 +18,33 @@
     }
     return it->second.destroy;
   };
+  auto emitOnErrorHandler =
+      [&](const OnErrorHandler &handler,
+          const std::string &namespacePrefix,
+          int indent,
+          const std::unordered_map<std::string, BindingInfo> &localTypes) {
+        (void)namespacePrefix;
+        std::string pad(static_cast<size_t>(indent) * 2, ' ');
+        auto nameIt = nameMap.find(handler.handlerPath);
+        const std::string handlerName = (nameIt == nameMap.end()) ? handler.handlerPath : nameIt->second;
+        out << pad << "auto ps_on_error = [&](uint32_t ps_err) {\n";
+        out << pad << "  " << handlerName << "(ps_err";
+        for (const auto &argExpr : handler.boundArgs) {
+          out << ", "
+              << emitExpr(argExpr,
+                          nameMap,
+                          paramMap,
+                          structTypeMap,
+                          importAliases,
+                          localTypes,
+                          returnKinds,
+                          resultInfos,
+                          returnStructs,
+                          hasMathImport);
+        }
+        out << ");\n";
+        out << pad << "};\n";
+      };
   for (const auto &def : program.definitions) {
     if (!isStructDefinition(def)) {
       continue;
@@ -25,11 +52,13 @@
     out << "struct " << structTypeMap.at(def.fullPath) << ";\n";
   }
   for (const auto &def : program.definitions) {
-    std::string parentPath;
-    if (!isLifecycleHelper(def, parentPath)) {
-      continue;
+    std::string returnType;
+    if (isStructDefinition(def)) {
+      returnType = structTypeMap.at(def.fullPath);
+    } else {
+      returnType = returnTypeFor(def);
     }
-    out << "static " << returnTypeFor(def) << " " << nameMap[def.fullPath] << "(";
+    out << "static " << returnType << " " << nameMap[def.fullPath] << "(";
     const auto &params = paramMap[def.fullPath];
     for (size_t i = 0; i < params.size(); ++i) {
       if (i > 0) {
@@ -64,6 +93,8 @@
                           importAliases,
                           emptyLocals,
                           returnKinds,
+                          resultInfos,
+                          returnStructs,
                           hasMathImport);
         }
         out << ";\n";
@@ -111,6 +142,10 @@
     std::string returnType = returnTypeFor(def);
     const auto &params = paramMap[def.fullPath];
     const bool structDef = isStructDefinition(def);
+    const auto resultIt = resultInfos.find(def.fullPath);
+    const bool resultHasValue = (resultIt != resultInfos.end() && resultIt->second.isResult && resultIt->second.hasValue);
+    auto onErrorIt = onErrorByDef.find(def.fullPath);
+    const bool hasOnError = (onErrorIt != onErrorByDef.end() && onErrorIt->second.has_value());
     out << "static " << returnType << " " << nameMap[def.fullPath] << "(";
     for (size_t i = 0; i < params.size(); ++i) {
       if (i > 0) {
@@ -123,10 +158,19 @@
     int repeatCounter = 0;
     emitStatement = [&](const Expr &stmt, int indent, std::unordered_map<std::string, BindingInfo> &localTypes) {
       std::string pad(static_cast<size_t>(indent) * 2, ' ');
+      auto emitBlockOnError = [&](const Expr &blockExpr,
+                                  int blockIndent,
+                                  std::unordered_map<std::string, BindingInfo> &blockTypes) {
+        std::optional<OnErrorHandler> handler;
+        parseOnErrorTransform(blockExpr.transforms, blockExpr.namespacePrefix, "block", handler);
+        if (handler.has_value()) {
+          emitOnErrorHandler(*handler, blockExpr.namespacePrefix, blockIndent, blockTypes);
+        }
+      };
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
-          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
+          out << " " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
         }
         out << ";\n";
         return;
@@ -137,7 +181,7 @@
           const char *stream = (printBuiltin.target == PrintTarget::Err) ? "stderr" : "stdout";
           std::string argText = "\"\"";
           if (!stmt.args.empty()) {
-            argText = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
+            argText = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
           }
           out << pad << "ps_print_value(" << stream << ", " << argText << ", "
               << (printBuiltin.newline ? "true" : "false") << ");\n";
@@ -187,9 +231,9 @@
         }
         if (!stmt.args.empty()) {
           if (!useAuto && isReference) {
-            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ")";
+            out << " = *(" << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ")";
           } else {
-            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
+            out << " = " << emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
           }
         }
         out << ";\n";
@@ -211,10 +255,11 @@
           }
           return true;
         };
-        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
+        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ") {\n";
         {
           auto blockTypes = localTypes;
           if (isIfBlockEnvelope(thenArg)) {
+            emitBlockOnError(thenArg, indent + 1, blockTypes);
             for (const auto &bodyStmt : thenArg.bodyArguments) {
               emitStatement(bodyStmt, indent + 1, blockTypes);
             }
@@ -226,6 +271,7 @@
         {
           auto blockTypes = localTypes;
           if (isIfBlockEnvelope(elseArg)) {
+            emitBlockOnError(elseArg, indent + 1, blockTypes);
             for (const auto &bodyStmt : elseArg.bodyArguments) {
               emitStatement(bodyStmt, indent + 1, blockTypes);
             }
@@ -255,7 +301,7 @@
         out << pad << "{\n";
         std::string innerPad(static_cast<size_t>(indent + 1) * 2, ' ');
         std::string countExpr =
-            emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
+            emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
         std::unordered_map<std::string, ReturnKind> locals;
         locals.reserve(localTypes.size());
         for (const auto &entry : localTypes) {
@@ -268,6 +314,7 @@
             << "; ++" << indexVar << ") {\n";
         if (isLoopBlockEnvelope(stmt.args[1])) {
           auto blockTypes = localTypes;
+          emitBlockOnError(stmt.args[1], indent + 2, blockTypes);
           for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
             emitStatement(bodyStmt, indent + 2, blockTypes);
           }
@@ -278,8 +325,9 @@
       }
       if (stmt.kind == Expr::Kind::Call && isWhileCall(stmt) && stmt.args.size() == 2 && isLoopBlockEnvelope(stmt.args[1])) {
         out << pad << "while ("
-            << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ") {\n";
+            << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ") {\n";
         auto blockTypes = localTypes;
+        emitBlockOnError(stmt.args[1], indent + 1, blockTypes);
         for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
           emitStatement(bodyStmt, indent + 1, blockTypes);
         }
@@ -299,6 +347,7 @@
           auto blockTypes = loopTypes;
           emitStatement(cond, indent + 2, blockTypes);
           out << innerPad << "  if (!" << cond.name << ") { break; }\n";
+          emitBlockOnError(body, indent + 2, blockTypes);
           for (const auto &bodyStmt : body.bodyArguments) {
             emitStatement(bodyStmt, indent + 2, blockTypes);
           }
@@ -306,8 +355,9 @@
           out << innerPad << "}\n";
         } else {
           out << innerPad << "while ("
-              << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, hasMathImport) << ") {\n";
+              << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ") {\n";
           auto blockTypes = loopTypes;
+          emitBlockOnError(body, indent + 2, blockTypes);
           for (const auto &bodyStmt : body.bodyArguments) {
             emitStatement(bodyStmt, indent + 2, blockTypes);
           }
@@ -326,7 +376,7 @@
         std::string countExpr = "\"\"";
         ReturnKind countKind = ReturnKind::Unknown;
         if (!stmt.args.empty()) {
-          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport);
+          countExpr = emitExpr(stmt.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport);
           std::unordered_map<std::string, ReturnKind> locals;
           locals.reserve(localTypes.size());
           for (const auto &entry : localTypes) {
@@ -339,6 +389,7 @@
         out << innerPad << "for (" << indexType << " " << indexVar << " = 0; " << indexVar << " < " << endVar
             << "; ++" << indexVar << ") {\n";
         auto blockTypes = localTypes;
+        emitBlockOnError(stmt, indent + 2, blockTypes);
         for (const auto &bodyStmt : stmt.bodyArguments) {
           emitStatement(bodyStmt, indent + 2, blockTypes);
         }
@@ -349,6 +400,7 @@
       if (stmt.kind == Expr::Kind::Call && isBuiltinBlock(stmt, nameMap) && (stmt.hasBodyArguments || !stmt.bodyArguments.empty())) {
         out << pad << "{\n";
         auto blockTypes = localTypes;
+        emitBlockOnError(stmt, indent + 1, blockTypes);
         for (const auto &bodyStmt : stmt.bodyArguments) {
           emitStatement(bodyStmt, indent + 1, blockTypes);
         }
@@ -360,10 +412,11 @@
         callExpr.bodyArguments.clear();
         callExpr.hasBodyArguments = false;
         out << pad
-            << emitExpr(callExpr, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+            << emitExpr(callExpr, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
             << ";\n";
         out << pad << "{\n";
         auto blockTypes = localTypes;
+        emitBlockOnError(stmt, indent + 1, blockTypes);
         for (const auto &bodyStmt : stmt.bodyArguments) {
           emitStatement(bodyStmt, indent + 1, blockTypes);
         }
@@ -373,12 +426,12 @@
       if (stmt.kind == Expr::Kind::Call && isBuiltinAssign(stmt, nameMap) && stmt.args.size() == 2 &&
           stmt.args.front().kind == Expr::Kind::Name) {
         out << pad << stmt.args.front().name << " = "
-            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
+            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ";\n";
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isPathSpaceBuiltinName(stmt) && nameMap.find(resolveExprPath(stmt)) == nameMap.end()) {
         for (const auto &arg : stmt.args) {
-          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ");\n";
+          out << pad << "(void)(" << emitExpr(arg, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ");\n";
         }
         return;
       }
@@ -386,62 +439,82 @@
         std::string vectorHelper;
         if (getVectorMutatorName(stmt, nameMap, vectorHelper)) {
           if (vectorHelper == "push") {
-            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ".push_back("
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "pop") {
             out << pad << "ps_vector_pop("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "reserve") {
             out << pad << "ps_vector_reserve("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "clear") {
-            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+            out << pad << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ".clear();\n";
             return;
           }
           if (vectorHelper == "remove_at") {
             out << pad << "ps_vector_remove_at("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
           if (vectorHelper == "remove_swap") {
             out << pad << "ps_vector_remove_swap("
-                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ", "
-                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport)
+                << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport)
                 << ");\n";
             return;
           }
         }
       }
-      out << pad << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, hasMathImport) << ";\n";
+      out << pad << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ";\n";
     };
     std::unordered_map<std::string, BindingInfo> localTypes;
     for (const auto &param : params) {
       localTypes[param.name] = getBindingInfo(param);
     }
-    if (!structDef) {
-      for (const auto &stmt : def.statements) {
-        emitStatement(stmt, 1, localTypes);
+    if (hasOnError) {
+      out << "  try {\n";
+      emitOnErrorHandler(*onErrorIt->second, def.namespacePrefix, 2, localTypes);
+      if (!structDef) {
+        for (const auto &stmt : def.statements) {
+          emitStatement(stmt, 2, localTypes);
+        }
       }
-    }
-    if (returnKind == ReturnKind::Void) {
-      out << "  return;\n";
+      if (returnKind == ReturnKind::Void) {
+        out << "    return;\n";
+      }
+      out << "  } catch (const ps_result_unwind &ps_unwind) {\n";
+      if (resultHasValue) {
+        out << "    return (static_cast<uint64_t>(ps_unwind.error) << 32);\n";
+      } else {
+        out << "    return ps_unwind.error;\n";
+      }
+      out << "  }\n";
+    } else {
+      if (!structDef) {
+        for (const auto &stmt : def.statements) {
+          emitStatement(stmt, 1, localTypes);
+        }
+      }
+      if (returnKind == ReturnKind::Void) {
+        out << "  return;\n";
+      }
     }
     out << "}\n";
   }
@@ -452,6 +525,15 @@
       entryReturn = returnKinds[def.fullPath];
       entryDef = &def;
       break;
+    }
+  }
+  bool entryIsResult = false;
+  bool entryResultHasValue = false;
+  if (entryDef) {
+    auto resultIt = resultInfos.find(entryDef->fullPath);
+    if (resultIt != resultInfos.end() && resultIt->second.isResult) {
+      entryIsResult = true;
+      entryResultHasValue = resultIt->second.hasValue;
     }
   }
   bool entryHasArgs = false;
@@ -468,7 +550,16 @@
     out << "  for (int i = 0; i < argc; ++i) {\n";
     out << "    ps_args.emplace_back(argv[i]);\n";
     out << "  }\n";
-    if (entryReturn == ReturnKind::Void) {
+    if (entryIsResult) {
+      out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "(ps_args);\n";
+      if (entryResultHasValue) {
+        out << "  uint32_t ps_entry_err = ps_result_error(ps_entry_result);\n";
+        out << "  if (ps_entry_err != 0) { return static_cast<int>(ps_entry_err); }\n";
+        out << "  return static_cast<int>(ps_result_value(ps_entry_result));\n";
+      } else {
+        out << "  return static_cast<int>(ps_entry_result);\n";
+      }
+    } else if (entryReturn == ReturnKind::Void) {
       out << "  " << nameMap.at(entryPath) << "(ps_args);\n";
       out << "  return 0;\n";
     } else if (entryReturn == ReturnKind::Int) {
@@ -478,7 +569,18 @@
     }
     out << "}\n";
   } else {
-    if (entryReturn == ReturnKind::Void) {
+    if (entryIsResult) {
+      out << "int main() {\n";
+      out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "();\n";
+      if (entryResultHasValue) {
+        out << "  uint32_t ps_entry_err = ps_result_error(ps_entry_result);\n";
+        out << "  if (ps_entry_err != 0) { return static_cast<int>(ps_entry_err); }\n";
+        out << "  return static_cast<int>(ps_result_value(ps_entry_result));\n";
+      } else {
+        out << "  return static_cast<int>(ps_entry_result);\n";
+      }
+      out << "}\n";
+    } else if (entryReturn == ReturnKind::Void) {
       out << "int main() { " << nameMap.at(entryPath) << "(); return 0; }\n";
     } else if (entryReturn == ReturnKind::Int) {
       out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";

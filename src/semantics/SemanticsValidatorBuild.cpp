@@ -11,6 +11,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   entryDefaultEffectSet_.clear();
   defMap_.clear();
   returnKinds_.clear();
+  returnStructs_.clear();
   structNames_.clear();
   paramsByDef_.clear();
 
@@ -357,6 +358,98 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
   }
 
+  auto resolveStructReturnPath = [&](const std::string &typeName,
+                                     const std::string &namespacePrefix) -> std::string {
+    if (typeName.empty()) {
+      return "";
+    }
+    if (!typeName.empty() && typeName[0] == '/') {
+      return structNames_.count(typeName) > 0 ? typeName : "";
+    }
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string direct = current + "/" + typeName;
+        if (structNames_.count(direct) > 0) {
+          return direct;
+        }
+        if (current.size() > typeName.size()) {
+          const size_t start = current.size() - typeName.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, typeName.size(), typeName) == 0 &&
+              structNames_.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + typeName;
+        if (structNames_.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
+    }
+    auto importIt = importAliases_.find(typeName);
+    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return "";
+  };
+
+  for (const auto &def : program_.definitions) {
+    if (structNames_.count(def.fullPath) > 0) {
+      returnStructs_[def.fullPath] = def.fullPath;
+      continue;
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string &typeName = transform.templateArgs.front();
+      std::string structPath = resolveStructReturnPath(typeName, def.namespacePrefix);
+      if (!structPath.empty()) {
+        returnStructs_[def.fullPath] = structPath;
+      }
+      break;
+    }
+  }
+
+  auto isSupportedReturnType = [&](const std::string &typeName, const std::string &namespacePrefix) -> bool {
+    if (returnKindForTypeName(typeName) != ReturnKind::Unknown) {
+      return true;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+      return false;
+    }
+    return !resolveStructReturnPath(typeName, namespacePrefix).empty();
+  };
+  for (const auto &def : program_.definitions) {
+    if (structNames_.count(def.fullPath) > 0) {
+      continue;
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string &typeName = transform.templateArgs.front();
+      if (!isSupportedReturnType(typeName, def.namespacePrefix)) {
+        error_ = "unsupported return type on " + def.fullPath;
+        return false;
+      }
+      break;
+    }
+  }
+
   struct HelperSuffixInfo {
     std::string_view suffix;
     std::string_view placement;
@@ -601,15 +694,42 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return "/" + expr.name;
   }
   if (!expr.namespacePrefix.empty()) {
-    std::string scoped = expr.namespacePrefix + "/" + expr.name;
-    if (defMap_.count(scoped) > 0) {
-      return scoped;
+    std::string current = expr.namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string scoped = current + "/" + expr.name;
+        if (defMap_.count(scoped) > 0) {
+          return scoped;
+        }
+        if (current.size() > expr.name.size()) {
+          const size_t start = current.size() - expr.name.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, expr.name.size(), expr.name) == 0 &&
+              defMap_.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + expr.name;
+        if (defMap_.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
     }
     auto it = importAliases_.find(expr.name);
     if (it != importAliases_.end()) {
       return it->second;
     }
-    return scoped;
+    return "/" + expr.name;
   }
   std::string root = "/" + expr.name;
   if (defMap_.count(root) > 0) {
@@ -680,6 +800,14 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);
   if (kind == ReturnKind::Unknown || kind == ReturnKind::Void) {
     return false;
+  }
+  if (kind == ReturnKind::Array) {
+    std::string structPath = inferStructReturnPath(initializer, params, locals);
+    if (!structPath.empty()) {
+      bindingOut.typeName = structPath;
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
   }
   std::string inferred = typeNameForReturnKind(kind);
   if (inferred.empty()) {

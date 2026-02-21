@@ -1,0 +1,16 @@
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Point>]
+make_point([i32] x, [i32] y) {
+  return(Point([x] x, [y] y))
+}
+
+[return<int>]
+main() {
+  [Point] value{make_point(3i32, 4i32)}
+  return(plus(value.x, value.y))
+}

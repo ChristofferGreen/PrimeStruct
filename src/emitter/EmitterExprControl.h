@@ -42,14 +42,14 @@
     return expr.name;
   }
   if (expr.kind == Expr::Kind::Call && expr.isFieldAccess && !expr.args.empty()) {
-    return emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, allowMathBare) +
+    return emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) +
            "." + expr.name;
   }
   std::string full = resolveExprPath(expr);
   if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) &&
       !isStringCountCall(expr, localTypes)) {
     std::string methodPath;
-    if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
+    if (resolveMethodCallPath(expr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
       full = methodPath;
     }
   }
@@ -78,7 +78,7 @@
     Expr methodExpr = expr;
     methodExpr.isMethodCall = true;
     std::string methodPath;
-    if (resolveMethodCallPath(methodExpr, localTypes, importAliases, structTypeMap, returnKinds, methodPath)) {
+    if (resolveMethodCallPath(methodExpr, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, methodPath)) {
       full = methodPath;
     }
   }
@@ -105,6 +105,8 @@
                           importAliases,
                           blockTypes,
                           returnKinds,
+                          resultInfos,
+                          returnStructs,
                           allowMathBare)
               << "; ";
         } else {
@@ -134,6 +136,8 @@
                         importAliases,
                         blockTypes,
                         returnKinds,
+                        resultInfos,
+                        returnStructs,
                         allowMathBare)
             << "; ";
         break;
@@ -162,6 +166,8 @@
                                     importAliases,
                                     blockTypes,
                                     returnKinds,
+                                    resultInfos,
+                                    returnStructs,
                                     allowMathBare);
           }
           out << "; ";
@@ -191,6 +197,8 @@
                                          importAliases,
                                          blockTypes,
                                          returnKinds,
+                                         resultInfos,
+                                         returnStructs,
                                          allowMathBare)
                   << ")";
             } else {
@@ -201,6 +209,8 @@
                                       importAliases,
                                       blockTypes,
                                       returnKinds,
+                                      resultInfos,
+                                      returnStructs,
                                       allowMathBare);
             }
           }
@@ -219,6 +229,8 @@
                                     importAliases,
                                     blockTypes,
                                     returnKinds,
+                                    resultInfos,
+                                    returnStructs,
                                     allowMathBare);
           }
           out << "; ";
@@ -226,7 +238,7 @@
         continue;
       }
       out << "(void)"
-          << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, blockTypes, returnKinds, allowMathBare)
+          << emitExpr(stmt, nameMap, paramMap, structTypeMap, importAliases, blockTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
           << "; ";
     }
     out << "}())";
@@ -255,6 +267,8 @@
                     importAliases,
                     localTypes,
                     returnKinds,
+                    resultInfos,
+                    returnStructs,
                     allowMathBare)
         << "; ";
     out << "(void)"
@@ -265,6 +279,8 @@
                     importAliases,
                     localTypes,
                     returnKinds,
+                    resultInfos,
+                    returnStructs,
                     allowMathBare)
         << "; ";
     out << "return ps_call_value; }())";
@@ -293,6 +309,8 @@
                         importAliases,
                         branchTypes,
                         returnKinds,
+                        resultInfos,
+                        returnStructs,
                         allowMathBare);
       }
       if (candidate.bodyArguments.empty()) {
@@ -313,6 +331,8 @@
                             importAliases,
                             branchTypes,
                             returnKinds,
+                            resultInfos,
+                            returnStructs,
                             allowMathBare)
                 << "; ";
           } else {
@@ -342,6 +362,8 @@
                           importAliases,
                           branchTypes,
                           returnKinds,
+                          resultInfos,
+                          returnStructs,
                           allowMathBare)
               << "; ";
           break;
@@ -370,6 +392,8 @@
                                       importAliases,
                                       branchTypes,
                                       returnKinds,
+                                      resultInfos,
+                                      returnStructs,
                                       allowMathBare);
             }
             out << "; ";
@@ -399,6 +423,8 @@
                                          importAliases,
                                          branchTypes,
                                          returnKinds,
+                                         resultInfos,
+                                         returnStructs,
                                          allowMathBare)
                   << ")";
             } else {
@@ -409,6 +435,8 @@
                                       importAliases,
                                       branchTypes,
                                       returnKinds,
+                                      resultInfos,
+                                      returnStructs,
                                       allowMathBare);
             }
           }
@@ -427,6 +455,8 @@
                                     importAliases,
                                     branchTypes,
                                     returnKinds,
+                                    resultInfos,
+                                    returnStructs,
                                     allowMathBare);
           }
           out << "; ";
@@ -441,6 +471,8 @@
                       importAliases,
                       branchTypes,
                       returnKinds,
+                      resultInfos,
+                      returnStructs,
                       allowMathBare)
           << "; ";
     }
@@ -456,6 +488,8 @@
                     importAliases,
                     localTypes,
                     returnKinds,
+                    resultInfos,
+                    returnStructs,
                     allowMathBare)
         << " ? "
         << emitBranchValueExpr(expr.args[1], localTypes) << " : " << emitBranchValueExpr(expr.args[2], localTypes)

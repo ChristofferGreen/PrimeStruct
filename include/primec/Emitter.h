@@ -19,6 +19,11 @@ public:
     bool isStatic = false;
     BindingVisibility visibility = BindingVisibility::Private;
   };
+  struct ResultInfo {
+    bool isResult = false;
+    bool hasValue = false;
+    std::string valueType;
+  };
   enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void, Array };
   std::string emitCpp(const Program &program, const std::string &entryPath) const;
 
@@ -31,6 +36,8 @@ private:
                        const std::unordered_map<std::string, std::string> &importAliases,
                        const std::unordered_map<std::string, BindingInfo> &localTypes,
                        const std::unordered_map<std::string, ReturnKind> &returnKinds,
+                       const std::unordered_map<std::string, ResultInfo> &resultInfos,
+                       const std::unordered_map<std::string, std::string> &returnStructs,
                        bool allowMathBare) const;
 };
 

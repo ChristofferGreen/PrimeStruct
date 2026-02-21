@@ -1,4 +1,6 @@
 #include "primec/Emitter.h"
+#include "primec/Lexer.h"
+#include "primec/Parser.h"
 
 #include "EmitterHelpers.h"
 

@@ -941,15 +941,53 @@ bool parseBindingInfo(const Expr &expr,
     error = "software numeric types are not supported yet: " + *softwareType;
     return false;
   }
-  if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
-    std::string resolved = resolveTypePath(typeName, namespacePrefix);
-    if (structTypes.count(resolved) == 0) {
-      auto importIt = importAliases.find(typeName);
-      if (importIt != importAliases.end() && structTypes.count(importIt->second) > 0) {
-        resolved = importIt->second;
+  auto resolveStructCandidate = [&](const std::string &candidate) -> std::string {
+    if (candidate.empty()) {
+      return "";
+    }
+    if (candidate[0] == '/') {
+      return structTypes.count(candidate) > 0 ? candidate : "";
+    }
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string direct = current + "/" + candidate;
+        if (structTypes.count(direct) > 0) {
+          return direct;
+        }
+        if (current.size() > candidate.size()) {
+          const size_t start = current.size() - candidate.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, candidate.size(), candidate) == 0 &&
+              structTypes.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + candidate;
+        if (structTypes.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
       }
     }
-    if (structTypes.count(resolved) == 0) {
+    auto importIt = importAliases.find(candidate);
+    if (importIt != importAliases.end() && structTypes.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return "";
+  };
+  if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
+    std::string resolved = resolveStructCandidate(typeName);
+    if (resolved.empty()) {
       if (typeName != "FileError") {
         error = "unsupported binding type: " + typeName;
         return false;
@@ -960,15 +998,7 @@ bool parseBindingInfo(const Expr &expr,
     if (candidate.empty() || candidate.find('<') != std::string::npos) {
       return false;
     }
-    std::string resolved = resolveTypePath(candidate, namespacePrefix);
-    if (structTypes.count(resolved) > 0) {
-      return true;
-    }
-    auto importIt = importAliases.find(candidate);
-    if (importIt != importAliases.end()) {
-      return structTypes.count(importIt->second) > 0;
-    }
-    return false;
+    return !resolveStructCandidate(candidate).empty();
   };
   if (typeHasTemplate && typeName == "Pointer") {
     if (info.typeTemplateArg.empty()) {

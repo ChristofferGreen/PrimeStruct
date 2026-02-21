@@ -58,4 +58,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("call resolves to definition declared later") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  return(add(2i32, 3i32))
+}
+
+[return<i32>]
+add([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("execution resolves to definition declared later") {
+  const std::string source = R"(
+run()
+
+[return<void>]
+run() {
+  return()
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

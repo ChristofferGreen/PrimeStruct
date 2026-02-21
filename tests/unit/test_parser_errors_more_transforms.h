@@ -211,7 +211,7 @@ add([i32] left{[value] 1i32}, [i32] right) {
   CHECK(error.find("expected identifier") != std::string::npos);
 }
 
-TEST_CASE("method call requires parameter list") {
+TEST_CASE("field access allows member without parameter list") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -222,8 +222,8 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected '(' after member name") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("template arguments require a call") {

@@ -499,15 +499,42 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     return "/" + expr.name;
   }
   if (!namespacePrefix.empty()) {
-    std::string scoped = namespacePrefix + "/" + expr.name;
-    if (ctx.sourceDefs.count(scoped) > 0) {
-      return scoped;
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string scoped = current + "/" + expr.name;
+        if (ctx.sourceDefs.count(scoped) > 0) {
+          return scoped;
+        }
+        if (current.size() > expr.name.size()) {
+          const size_t start = current.size() - expr.name.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, expr.name.size(), expr.name) == 0 &&
+              ctx.sourceDefs.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + expr.name;
+        if (ctx.sourceDefs.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
     }
     auto aliasIt = ctx.importAliases.find(expr.name);
     if (aliasIt != ctx.importAliases.end()) {
       return aliasIt->second;
     }
-    return scoped;
+    return "/" + expr.name;
   }
   std::string root = "/" + expr.name;
   if (ctx.sourceDefs.count(root) > 0) {
