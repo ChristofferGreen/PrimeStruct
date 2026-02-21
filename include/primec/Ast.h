@@ -36,6 +36,7 @@ struct Expr {
   std::vector<Transform> transforms;
   bool isBinding = false;
   bool isMethodCall = false;
+  bool isFieldAccess = false;
   bool isLambda = false;
   std::vector<std::string> lambdaCaptures;
 };

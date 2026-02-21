@@ -46,6 +46,8 @@ inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
 
 class Arm64Emitter {
  public:
+  static constexpr uint32_t MaxLdrStrOffsetBytes = 0xFFFu * 8u;
+
   bool beginFunction(uint64_t frameSize, std::string &error) {
     (void)error;
     frameSize_ = frameSize;
@@ -85,12 +87,24 @@ class Arm64Emitter {
   }
 
   void emitLoadLocal(uint32_t index) {
-    emit(encodeLdrRegBase(0, 27, localOffset(index)));
+    emitLoadLocalToReg(0, index);
     emitPushReg(0);
   }
 
+  void emitLoadLocalToReg(uint8_t reg, uint32_t index) {
+    uint64_t offset = localOffset(index);
+    if (offset <= MaxLdrStrOffsetBytes) {
+      emit(encodeLdrRegBase(reg, 27, static_cast<uint16_t>(offset)));
+    } else {
+      uint8_t tmp = (reg == 1) ? 2 : 1;
+      emitMovImm64(tmp, offset);
+      emit(encodeAddReg(tmp, 27, tmp));
+      emit(encodeLdrRegBase(reg, tmp, 0));
+    }
+  }
+
   void emitAddressOfLocal(uint32_t index) {
-    uint32_t offset = localOffset(index);
+    uint64_t offset = localOffset(index);
     if (offset <= 4095) {
       emit(encodeAddRegImm(0, 27, static_cast<uint16_t>(offset)));
     } else {
@@ -102,11 +116,19 @@ class Arm64Emitter {
 
   void emitStoreLocal(uint32_t index) {
     emitPopReg(0);
-    emit(encodeStrRegBase(0, 27, localOffset(index)));
+    emitStoreLocalFromReg(index, 0);
   }
 
   void emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
-    emit(encodeStrRegBase(reg, 27, localOffset(index)));
+    uint64_t offset = localOffset(index);
+    if (offset <= MaxLdrStrOffsetBytes) {
+      emit(encodeStrRegBase(reg, 27, static_cast<uint16_t>(offset)));
+    } else {
+      uint8_t tmp = (reg == 1) ? 2 : 1;
+      emitMovImm64(tmp, offset);
+      emit(encodeAddReg(tmp, 27, tmp));
+      emit(encodeStrRegBase(reg, tmp, 0));
+    }
   }
 
   void emitLoadIndirect() {
@@ -350,9 +372,8 @@ class Arm64Emitter {
 
   size_t emitJumpIfZeroPlaceholder() {
     emitPopReg(0);
-    size_t index = currentWordIndex();
-    emit(encodeCbz(0, 0));
-    return index;
+    emitCompareRegZero(0);
+    return emitCondBranchPlaceholder(CondCode::Eq);
   }
 
   void patchJump(size_t index, int32_t offsetWords) {
@@ -360,7 +381,7 @@ class Arm64Emitter {
   }
 
   void patchJumpIfZero(size_t index, int32_t offsetWords) {
-    patchWord(index, encodeCbz(0, offsetWords));
+    patchCondBranch(index, offsetWords, CondCode::Eq);
   }
 
   size_t currentWordIndex() const {
@@ -540,11 +561,11 @@ class Arm64Emitter {
     emitCompareRegZero(0);
     size_t negativeBranch = emitCondBranchPlaceholder(CondCode::Lt);
 
-    emit(encodeLdrRegBase(1, 27, localOffset(argcLocalIndex)));
+    emitLoadLocalToReg(1, argcLocalIndex);
     emitCompareReg(0, 1);
     size_t oobBranch = emitCondBranchPlaceholder(CondCode::Ge);
 
-    emit(encodeLdrRegBase(2, 27, localOffset(argvLocalIndex)));
+    emitLoadLocalToReg(2, argvLocalIndex);
     emitMovImm64(3, 8);
     emitMulReg(3, 0, 3);
     emitAddReg(2, 2, 3);
@@ -576,8 +597,20 @@ class Arm64Emitter {
     patchCondBranch(nullBranch, static_cast<int32_t>(skipIndex - nullBranch), CondCode::Eq);
   }
 
-  void patchAdr(size_t index, uint8_t rd, int32_t imm21) {
-    patchWord(index, encodeAdr(rd, imm21));
+  void patchAdr(size_t index, uint8_t rd, int32_t deltaBytes) {
+    uint64_t instrAddr = codeBaseOffset_ + static_cast<uint64_t>(index) * 4;
+    uint64_t targetAddr = instrAddr + static_cast<int64_t>(deltaBytes);
+    uint64_t instrPage = instrAddr & ~0xFFFull;
+    uint64_t targetPage = targetAddr & ~0xFFFull;
+    int64_t pageDelta = static_cast<int64_t>(targetPage) - static_cast<int64_t>(instrPage);
+    int32_t pageImm = static_cast<int32_t>(pageDelta >> 12);
+    patchWord(index, encodeAdrp(rd, pageImm));
+    uint16_t lo12 = static_cast<uint16_t>(targetAddr & 0xFFFu);
+    patchWord(index + 1, encodeAddRegImm(rd, rd, lo12));
+  }
+
+  void setCodeBaseOffset(uint32_t offsetBytes) {
+    codeBaseOffset_ = offsetBytes;
   }
 
   std::vector<uint8_t> finalize() const {
@@ -605,6 +638,32 @@ class Arm64Emitter {
     Gt = 0xC,
     Le = 0xD,
   };
+
+  static CondCode invertCond(CondCode cond) {
+    switch (cond) {
+      case CondCode::Eq:
+        return CondCode::Ne;
+      case CondCode::Ne:
+        return CondCode::Eq;
+      case CondCode::Hs:
+        return CondCode::Lo;
+      case CondCode::Lo:
+        return CondCode::Hs;
+      case CondCode::Hi:
+        return CondCode::Ls;
+      case CondCode::Ls:
+        return CondCode::Hi;
+      case CondCode::Ge:
+        return CondCode::Lt;
+      case CondCode::Lt:
+        return CondCode::Ge;
+      case CondCode::Gt:
+        return CondCode::Le;
+      case CondCode::Le:
+        return CondCode::Gt;
+    }
+    return CondCode::Ne;
+  }
 
   void emit(uint32_t word) {
     code_.push_back(word);
@@ -725,11 +784,21 @@ class Arm64Emitter {
   size_t emitCondBranchPlaceholder(CondCode cond) {
     size_t index = currentWordIndex();
     emit(encodeBCond(0, static_cast<uint8_t>(cond)));
+    emit(encodeB(0));
     return index;
   }
 
   void patchCondBranch(size_t index, int32_t offsetWords, CondCode cond) {
-    patchWord(index, encodeBCond(offsetWords, static_cast<uint8_t>(cond)));
+    constexpr int32_t kMinCond = -(1 << 18);
+    constexpr int32_t kMaxCond = (1 << 18) - 1;
+    if (offsetWords >= kMinCond && offsetWords <= kMaxCond) {
+      patchWord(index, encodeBCond(offsetWords, static_cast<uint8_t>(cond)));
+      patchWord(index + 1, encodeB(1));
+      return;
+    }
+    CondCode inverted = invertCond(cond);
+    patchWord(index, encodeBCond(2, static_cast<uint8_t>(inverted)));
+    patchWord(index + 1, encodeB(offsetWords - 1));
   }
 
   size_t emitCbzPlaceholder(uint8_t reg) {
@@ -788,7 +857,8 @@ class Arm64Emitter {
 
   size_t emitAdrPlaceholder(uint8_t rd) {
     size_t index = currentWordIndex();
-    emit(encodeAdr(rd, 0));
+    emit(encodeAdrp(rd, 0));
+    emit(encodeAddRegImm(rd, rd, 0));
     return index;
   }
 
@@ -1077,6 +1147,13 @@ class Arm64Emitter {
     return 0x10000000 | (immlo << 29) | (immhi << 5) | static_cast<uint32_t>(rd);
   }
 
+  static uint32_t encodeAdrp(uint8_t rd, int32_t imm21) {
+    uint32_t imm = static_cast<uint32_t>(imm21) & 0x1FFFFFu;
+    uint32_t immlo = imm & 0x3u;
+    uint32_t immhi = (imm >> 2) & 0x7FFFFu;
+    return 0x90000000 | (immlo << 29) | (immhi << 5) | static_cast<uint32_t>(rd);
+  }
+
   static uint32_t encodeB(int32_t imm26) {
     uint32_t imm = static_cast<uint32_t>(imm26) & 0x03FFFFFFu;
     return 0x14000000 | imm;
@@ -1110,12 +1187,13 @@ class Arm64Emitter {
     return 0xD65F03C0;
   }
 
-  static uint16_t localOffset(uint32_t index) {
-    return static_cast<uint16_t>(index * 16 + 8);
+  static uint64_t localOffset(uint32_t index) {
+    return static_cast<uint64_t>(index) * 16u + 8u;
   }
 
   std::vector<uint32_t> code_;
   uint64_t frameSize_ = 0;
+  uint64_t codeBaseOffset_ = 0;
 };
 
 bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);
@@ -1123,5 +1201,9 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
 bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, std::string &error);
 
 bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);
+
+#if defined(__APPLE__)
+uint32_t computeMachOCodeOffset();
+#endif
 
 } // namespace primec::native_emitter

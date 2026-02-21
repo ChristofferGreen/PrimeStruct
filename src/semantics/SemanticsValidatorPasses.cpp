@@ -181,6 +181,14 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
 
 bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
+    auto isStructDefinition = [&](const Definition &candidate) {
+      for (const auto &transform : candidate.transforms) {
+        if (isStructTransformName(transform.name)) {
+          return true;
+        }
+      }
+      return false;
+    };
     currentDefinitionPath_ = def.fullPath;
     activeEffects_ = resolveEffects(def.transforms, def.fullPath == entryPath_);
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
@@ -246,7 +254,7 @@ bool SemanticsValidator::validateDefinitions() {
         return false;
       }
     }
-    if (kind != ReturnKind::Void) {
+    if (kind != ReturnKind::Void && !isStructDefinition(def)) {
       bool allPathsReturn = blockAlwaysReturns(def.statements);
       if (!allPathsReturn) {
         if (sawReturn) {

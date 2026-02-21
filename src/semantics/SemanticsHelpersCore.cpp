@@ -267,18 +267,19 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
       std::string base;
       std::string arg;
       if (!splitTemplateTypeName(typeName, base, arg) || base != "array") {
-        error = "unsupported return type on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-        error = "array return type requires exactly one template argument on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
-      const std::string elem = normalizeBindingTypeName(args.front());
-      if (!isPrimitiveBindingTypeName(elem)) {
-        error = "unsupported return type on " + def.fullPath;
-        return ReturnKind::Unknown;
+        nextKind = ReturnKind::Array;
+      } else {
+        std::vector<std::string> args;
+        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+          error = "array return type requires exactly one template argument on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        const std::string elem = normalizeBindingTypeName(args.front());
+        if (!isPrimitiveBindingTypeName(elem)) {
+          error = "unsupported return type on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        nextKind = ReturnKind::Array;
       }
     }
     if (sawReturn) {

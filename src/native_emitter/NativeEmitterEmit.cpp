@@ -68,10 +68,6 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   uint64_t localsSize = static_cast<uint64_t>(localCount + scratchSlots) * 16;
   uint64_t stackSize = static_cast<uint64_t>(maxStack) * 16;
   uint64_t frameSize = alignTo(localsSize + stackSize, 16);
-  if (localCount > 2047) {
-    error = "native backend supports up to 2048 locals";
-    return false;
-  }
   if (!emitter.beginFunction(frameSize, error)) {
     return false;
   }
@@ -489,8 +485,6 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
 
   instOffsets[fn.instructions.size()] = emitter.currentWordIndex();
 
-  constexpr int64_t kImm19Min = -(1LL << 18);
-  constexpr int64_t kImm19Max = (1LL << 18) - 1;
   constexpr int64_t kImm26Min = -(1LL << 25);
   constexpr int64_t kImm26Max = (1LL << 25) - 1;
   for (const auto &fixup : fixups) {
@@ -502,7 +496,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     int64_t branchOffset = static_cast<int64_t>(fixup.codeIndex);
     int64_t delta = targetOffset - branchOffset;
     if (fixup.isConditional) {
-      if (delta < kImm19Min || delta > kImm19Max) {
+      if (delta < kImm26Min || delta > kImm26Max) {
         error = "native backend jump offset out of range";
         return false;
       }
@@ -516,11 +510,17 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     }
   }
 
+  uint32_t codeBaseOffset = 0;
+#if defined(__APPLE__)
+  codeBaseOffset = computeMachOCodeOffset();
+  emitter.setCodeBaseOffset(codeBaseOffset);
+#endif
+
   if (!stringFixups.empty()) {
     uint64_t codeSizeBytes = static_cast<uint64_t>(emitter.currentWordIndex()) * 4;
     uint64_t stringBaseOffset = codeSizeBytes;
-    constexpr int64_t kAdrMin = -(1LL << 20);
-    constexpr int64_t kAdrMax = (1LL << 20) - 1;
+    constexpr int64_t kAdrpMin = -(1LL << 20);
+    constexpr int64_t kAdrpMax = (1LL << 20) - 1;
     for (const auto &fixup : stringFixups) {
       if (fixup.stringIndex >= module.stringTable.size()) {
         error = "native backend encountered invalid string fixup";
@@ -528,8 +528,13 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       }
       int64_t targetOffset = static_cast<int64_t>(stringBaseOffset + stringOffsets[fixup.stringIndex]);
       int64_t instrOffset = static_cast<int64_t>(fixup.codeIndex) * 4;
+      int64_t instrAddr = static_cast<int64_t>(codeBaseOffset) + instrOffset;
+      int64_t targetAddr = static_cast<int64_t>(codeBaseOffset) + targetOffset;
       int64_t delta = targetOffset - instrOffset;
-      if (delta < kAdrMin || delta > kAdrMax) {
+      int64_t instrPage = instrAddr & ~0xFFFLL;
+      int64_t targetPage = targetAddr & ~0xFFFLL;
+      int64_t pageDelta = (targetPage - instrPage) >> 12;
+      if (pageDelta < kAdrpMin || pageDelta > kAdrpMax) {
         error = "native backend string literal out of range";
         return false;
       }

@@ -160,6 +160,7 @@
             info.valueKind = LocalInfo::ValueKind::Int32;
           }
         }
+        applyStructArrayInfo(binding, info);
         locals.emplace(binding.name, info);
         return true;
       };

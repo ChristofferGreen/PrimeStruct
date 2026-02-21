@@ -1,0 +1,248 @@
+namespace math {
+  [struct]
+  Vec2() {
+    [public f32] x{0.0}
+    [public f32] y{0.0}
+  }
+
+  namespace Vec2 {
+    [return<f32>]
+    lengthSquared([Vec2] self) {
+      return(self.x * self.x + self.y * self.y)
+    }
+
+    [return<f32>]
+    length([Vec2] self) {
+      return(sqrt(self.lengthSquared()))
+    }
+
+    [return<f32>]
+    dot([Vec2] self, [Vec2] other) {
+      return(self.x * other.x + self.y * other.y)
+    }
+
+    [return<Vec2>]
+    add([Vec2] self, [Vec2] other) {
+      return(Vec2(self.x + other.x, self.y + other.y))
+    }
+
+    [return<Vec2>]
+    sub([Vec2] self, [Vec2] other) {
+      return(Vec2(self.x - other.x, self.y - other.y))
+    }
+
+    [return<Vec2>]
+    mulScalar([Vec2] self, [f32] s) {
+      return(Vec2(self.x * s, self.y * s))
+    }
+
+    [return<Vec2>]
+    divScalar([Vec2] self, [f32] s) {
+      return(Vec2(self.x / s, self.y / s))
+    }
+
+    [return<Vec2>]
+    mix([Vec2] self, [Vec2] other, [f32] t) {
+      [f32] inv{1.0 - t}
+      return(Vec2(
+        self.x * inv + other.x * t,
+        self.y * inv + other.y * t
+      ))
+    }
+
+    [return<Vec2>]
+    toNormalized([Vec2] self) {
+      [f32] len{self.length()}
+      if(len <= 0.0) {
+        return(self)
+      } else {
+        return(self.mulScalar(1.0 / len))
+      }
+    }
+
+    [return<Vec2>]
+    normalize([Vec2] self) {
+      return(self.toNormalized())
+    }
+  }
+
+  [struct]
+  Vec3() {
+    [public f32] x{0.0}
+    [public f32] y{0.0}
+    [public f32] z{0.0}
+  }
+
+  namespace Vec3 {
+    [return<f32>]
+    lengthSquared([Vec3] self) {
+      return(self.x * self.x + self.y * self.y + self.z * self.z)
+    }
+
+    [return<f32>]
+    length([Vec3] self) {
+      return(sqrt(self.lengthSquared()))
+    }
+
+    [return<f32>]
+    dot([Vec3] self, [Vec3] other) {
+      return(self.x * other.x + self.y * other.y + self.z * other.z)
+    }
+
+    [return<Vec3>]
+    add([Vec3] self, [Vec3] other) {
+      return(Vec3(self.x + other.x, self.y + other.y, self.z + other.z))
+    }
+
+    [return<Vec3>]
+    sub([Vec3] self, [Vec3] other) {
+      return(Vec3(self.x - other.x, self.y - other.y, self.z - other.z))
+    }
+
+    [return<Vec3>]
+    mulScalar([Vec3] self, [f32] s) {
+      return(Vec3(self.x * s, self.y * s, self.z * s))
+    }
+
+    [return<Vec3>]
+    divScalar([Vec3] self, [f32] s) {
+      return(Vec3(self.x / s, self.y / s, self.z / s))
+    }
+
+    [return<Vec3>]
+    mix([Vec3] self, [Vec3] other, [f32] t) {
+      [f32] inv{1.0 - t}
+      return(Vec3(
+        self.x * inv + other.x * t,
+        self.y * inv + other.y * t,
+        self.z * inv + other.z * t
+      ))
+    }
+
+    [return<Vec3>]
+    toNormalized([Vec3] self) {
+      [f32] len{self.length()}
+      if(len <= 0.0) {
+        return(self)
+      } else {
+        return(self.mulScalar(1.0 / len))
+      }
+    }
+
+    [return<Vec3>]
+    normalize([Vec3] self) {
+      return(self.toNormalized())
+    }
+
+    [return<Vec3>]
+    cross([Vec3] self, [Vec3] other) {
+      return(Vec3(
+        self.y * other.z - self.z * other.y,
+        self.z * other.x - self.x * other.z,
+        self.x * other.y - self.y * other.x
+      ))
+    }
+
+    [return<Vec3>]
+    reflect([Vec3] self, [Vec3] normal) {
+      [f32] scale{2.0 * self.dot(normal)}
+      return(self.sub(normal.mulScalar(scale)))
+    }
+
+    [return<Vec3>]
+    refract([Vec3] self, [Vec3] normal, [f32] ior) {
+      [f32 mut] cosi{clamp(self.dot(normal), -1.0, 1.0)}
+      [f32 mut] etai{1.0}
+      [f32 mut] etat{ior}
+      [Vec3 mut] nn{normal}
+      if(cosi < 0.0) {
+        cosi = -cosi
+      } else {
+        [f32] tmp{etai}
+        etai = etat
+        etat = tmp
+        nn = normal.mulScalar(-1.0)
+      }
+      [f32] eta{etai / etat}
+      [f32] k{1.0 - eta * eta * (1.0 - cosi * cosi)}
+      if(k < 0.0) {
+        return(self.reflect(nn))
+      } else {
+        [Vec3] t1{self.mulScalar(eta)}
+        [Vec3] t2{nn.mulScalar(eta * cosi - sqrt(k))}
+        return(Vec3(t1.x + t2.x, t1.y + t2.y, t1.z + t2.z))
+      }
+    }
+  }
+
+  [struct]
+  Vec4() {
+    [public f32] x{0.0}
+    [public f32] y{0.0}
+    [public f32] z{0.0}
+    [public f32] w{0.0}
+  }
+
+  namespace Vec4 {
+    [return<f32>]
+    lengthSquared([Vec4] self) {
+      return(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
+    }
+
+    [return<f32>]
+    length([Vec4] self) {
+      return(sqrt(self.lengthSquared()))
+    }
+
+    [return<f32>]
+    dot([Vec4] self, [Vec4] other) {
+      return(self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w)
+    }
+
+    [return<Vec4>]
+    add([Vec4] self, [Vec4] other) {
+      return(Vec4(self.x + other.x, self.y + other.y, self.z + other.z, self.w + other.w))
+    }
+
+    [return<Vec4>]
+    sub([Vec4] self, [Vec4] other) {
+      return(Vec4(self.x - other.x, self.y - other.y, self.z - other.z, self.w - other.w))
+    }
+
+    [return<Vec4>]
+    mulScalar([Vec4] self, [f32] s) {
+      return(Vec4(self.x * s, self.y * s, self.z * s, self.w * s))
+    }
+
+    [return<Vec4>]
+    divScalar([Vec4] self, [f32] s) {
+      return(Vec4(self.x / s, self.y / s, self.z / s, self.w / s))
+    }
+
+    [return<Vec4>]
+    mix([Vec4] self, [Vec4] other, [f32] t) {
+      [f32] inv{1.0 - t}
+      return(Vec4(
+        self.x * inv + other.x * t,
+        self.y * inv + other.y * t,
+        self.z * inv + other.z * t,
+        self.w * inv + other.w * t
+      ))
+    }
+
+    [return<Vec4>]
+    toNormalized([Vec4] self) {
+      [f32] len{self.length()}
+      if(len <= 0.0) {
+        return(self)
+      } else {
+        return(self.mulScalar(1.0 / len))
+      }
+    }
+
+    [return<Vec4>]
+    normalize([Vec4] self) {
+      return(self.toNormalized())
+    }
+  }
+}

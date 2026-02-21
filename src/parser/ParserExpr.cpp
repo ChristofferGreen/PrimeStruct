@@ -932,33 +932,46 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           return false;
         }
       }
-      if (!expect(TokenKind::LParen, "expected '(' after member name")) {
-        return false;
-      }
-      Expr call;
-      call.kind = Expr::Kind::Call;
-      call.name = member.text;
-      call.namespacePrefix = namespacePrefix;
-      call.isMethodCall = true;
-      call.templateArgs = std::move(templateArgs);
-      if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
-        return false;
-      }
-      if (!validateNamedArgumentOrdering(call.argNames)) {
-        return false;
-      }
-      if (!expect(TokenKind::RParen, "expected ')' to close call")) {
-        return false;
-      }
-      call.args.insert(call.args.begin(), current);
-      call.argNames.insert(call.argNames.begin(), std::nullopt);
-      if (match(TokenKind::LBrace)) {
-        call.hasBodyArguments = true;
-        if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+      if (match(TokenKind::LParen)) {
+        expect(TokenKind::LParen, "expected '(' after member name");
+        Expr call;
+        call.kind = Expr::Kind::Call;
+        call.name = member.text;
+        call.namespacePrefix = namespacePrefix;
+        call.isMethodCall = true;
+        call.templateArgs = std::move(templateArgs);
+        if (!parseCallArgumentList(call.args, call.argNames, namespacePrefix)) {
           return false;
         }
+        if (!validateNamedArgumentOrdering(call.argNames)) {
+          return false;
+        }
+        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+          return false;
+        }
+        call.args.insert(call.args.begin(), current);
+        call.argNames.insert(call.argNames.begin(), std::nullopt);
+        if (match(TokenKind::LBrace)) {
+          call.hasBodyArguments = true;
+          if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            return false;
+          }
+        }
+        current = std::move(call);
+        continue;
       }
-      current = std::move(call);
+      if (!templateArgs.empty()) {
+        return fail("template arguments require a call");
+      }
+      Expr access;
+      access.kind = Expr::Kind::Call;
+      access.name = member.text;
+      access.namespacePrefix = namespacePrefix;
+      access.isMethodCall = true;
+      access.isFieldAccess = true;
+      access.args.push_back(current);
+      access.argNames.push_back(std::nullopt);
+      current = std::move(access);
       continue;
     }
     if (match(TokenKind::LBracket)) {

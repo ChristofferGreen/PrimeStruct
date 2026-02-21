@@ -340,6 +340,9 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Hyperbolic:** `/math/sinh`, `/math/cosh`, `/math/tanh`, `/math/asinh`, `/math/acosh`, `/math/atanh`.
   - **Float utils:** `/math/fma`, `/math/hypot`, `/math/copysign`.
   - **Predicates:** `/math/is_nan`, `/math/is_inf`, `/math/is_finite`.
+  - **Vector & color types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`. These are distinct types (colors are not aliases of vectors) with their own method surfaces.
+    - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
+    - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.
 - **`assign(target, value)`:** canonical mutation primitive; only valid when `target` carried `mut` at declaration time. The call evaluates to `value`, so it can be nested or returned.
 - **`increment(target)` / `decrement(target)`:** canonical mutation helpers used by `++`/`--` desugaring. Only valid on mutable numeric bindings; they evaluate to the updated value.
 - **`count(value)` / `value.count()` / `at(value, index)` / `at_unsafe(value, index)`:** collection helpers. `value.count()` is canonical; `count(value)` forwards to the method when available. `at` performs bounds checking; `at_unsafe` does not. In the VM/native backends, an out-of-bounds `at` aborts execution (prints a diagnostic to stderr and returns exit code `3`).

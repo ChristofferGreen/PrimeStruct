@@ -40,6 +40,8 @@ Legend:
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
 - ✓ Align default effects behavior: docs say entry defaults include `io_out`, but code applies no default effects unless `--default-effects` is provided.
 - ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
+- ○ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
+- ○ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
 - ○ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
 - ○ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
 - ○ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).

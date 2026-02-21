@@ -37,6 +37,15 @@
         info.returnsVoid = false;
         break;
       }
+      std::string structPath;
+      StructArrayInfo structInfo;
+      if (resolveStructTypeName(typeName, def.namespacePrefix, structPath) &&
+          resolveStructArrayInfoFromPath(structPath, structInfo)) {
+        info.returnsArray = true;
+        info.kind = structInfo.elementKind;
+        info.returnsVoid = false;
+        break;
+      }
       info.returnsArray = false;
       info.kind = valueKindFromTypeName(typeName);
       info.returnsVoid = false;
@@ -80,6 +89,7 @@
           } else {
             paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
           }
+          applyStructArrayInfo(param, paramInfo);
           if (isStringBinding(param)) {
             if (paramInfo.kind != LocalInfo::Kind::Value) {
               error = "native backend does not support string pointers or references";
@@ -117,6 +127,7 @@
             } else {
               bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
             }
+            applyStructArrayInfo(stmt, bindingInfo);
             if (bindingInfo.valueKind == LocalInfo::ValueKind::String && bindingInfo.kind != LocalInfo::Kind::Value) {
               error = "native backend does not support string pointers or references";
               return false;

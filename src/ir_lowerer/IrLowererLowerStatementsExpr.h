@@ -8,6 +8,7 @@
                   }
                 }
                 info.valueKind = valueKind;
+                applyStructArrayInfo(bodyExpr, info);
                 branchLocals.emplace(bodyExpr.name, info);
                 continue;
               }

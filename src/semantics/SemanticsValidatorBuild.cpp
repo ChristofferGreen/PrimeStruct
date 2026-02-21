@@ -251,7 +251,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
       }
     }
-    ReturnKind kind = ReturnKind::Void;
+    ReturnKind kind = isStruct ? ReturnKind::Array : ReturnKind::Void;
     if (!isStruct) {
       kind = getReturnKind(def, error_);
       if (!error_.empty()) {

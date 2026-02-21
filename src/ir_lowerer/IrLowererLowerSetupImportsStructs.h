@@ -261,6 +261,32 @@
     }
     return false;
   };
+  struct StructFieldInfo {
+    std::string name;
+    FieldBinding binding;
+    bool isStatic = false;
+  };
+  std::unordered_map<std::string, std::vector<StructFieldInfo>> structFieldInfoByName;
+  for (const auto &def : program.definitions) {
+    if (!isStructDefinition(def)) {
+      continue;
+    }
+    std::vector<StructFieldInfo> fields;
+    fields.reserve(def.statements.size());
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        continue;
+      }
+      FieldBinding binding;
+      getBindingTypeForLayout(stmt, binding);
+      StructFieldInfo field;
+      field.name = stmt.name;
+      field.binding = std::move(binding);
+      field.isStatic = isStaticField(stmt);
+      fields.push_back(std::move(field));
+    }
+    structFieldInfoByName.emplace(def.fullPath, std::move(fields));
+  }
   struct TypeLayout {
     uint32_t sizeBytes = 0;
     uint32_t alignmentBytes = 1;

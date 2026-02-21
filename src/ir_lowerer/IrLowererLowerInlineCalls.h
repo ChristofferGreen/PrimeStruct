@@ -58,6 +58,61 @@
       return false;
     }
 
+    if (structDef) {
+      StructArrayInfo structInfo;
+      if (resolveStructArrayInfoFromPath(callee.fullPath, structInfo)) {
+        if (static_cast<int32_t>(orderedArgs.size()) != structInfo.fieldCount) {
+          error = "argument count mismatch";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        const int32_t baseLocal = nextLocal;
+        if (requireValue) {
+          nextLocal += static_cast<int32_t>(1 + structInfo.fieldCount);
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(structInfo.fieldCount))});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+        }
+        for (int32_t i = 0; i < structInfo.fieldCount; ++i) {
+          const Expr *arg = orderedArgs[static_cast<size_t>(i)];
+          if (!arg) {
+            error = "argument count mismatch";
+            inlineStack.erase(callee.fullPath);
+            return false;
+          }
+          LocalInfo::ValueKind argKind = inferExprKind(*arg, callerLocals);
+          if (argKind == LocalInfo::ValueKind::Unknown && structInfo.elementKind != LocalInfo::ValueKind::Unknown) {
+            argKind = structInfo.elementKind;
+          }
+          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
+            error = "native backend requires struct field values to be numeric/bool on " + callee.fullPath;
+            inlineStack.erase(callee.fullPath);
+            return false;
+          }
+          if (argKind != structInfo.elementKind) {
+            error = "struct field type mismatch";
+            inlineStack.erase(callee.fullPath);
+            return false;
+          }
+          if (!emitExpr(*arg, callerLocals)) {
+            inlineStack.erase(callee.fullPath);
+            return false;
+          }
+          if (requireValue) {
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1 + i)});
+          } else {
+            function.instructions.push_back({IrOpcode::Pop, 0});
+          }
+        }
+        if (requireValue) {
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        }
+        inlineStack.erase(callee.fullPath);
+        return true;
+      }
+    }
+
     LocalMap calleeLocals;
     for (size_t i = 0; i < callParams.size(); ++i) {
       const Expr &param = callParams[i];
@@ -95,6 +150,7 @@
         }
       }
       setReferenceArrayInfo(param, paramInfo);
+      applyStructArrayInfo(param, paramInfo);
 
       if (isStringBinding(param)) {
         if (paramInfo.kind != LocalInfo::Kind::Value) {

@@ -84,6 +84,7 @@
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
       setReferenceArrayInfo(stmt, info);
+      applyStructArrayInfo(stmt, info);
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "File") {
           info.isFileHandle = true;

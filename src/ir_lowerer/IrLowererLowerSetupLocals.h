@@ -4,6 +4,8 @@
     bool isMutable = false;
     enum class Kind { Value, Pointer, Reference, Array, Vector, Map } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
+    std::string structTypeName;
+    int32_t structFieldCount = 0;
     ValueKind mapKeyKind = ValueKind::Unknown;
     ValueKind mapValueKind = ValueKind::Unknown;
     bool isFileHandle = false;
@@ -746,6 +748,201 @@
       return LocalInfo::ValueKind::Unknown;
     }
     return LocalInfo::ValueKind::Int32;
+  };
+
+  auto joinTemplateArgsLocals = [](const std::vector<std::string> &args) {
+    std::string out;
+    for (size_t i = 0; i < args.size(); ++i) {
+      if (i > 0) {
+        out += ", ";
+      }
+      out += args[i];
+    }
+    return out;
+  };
+
+  auto resolveStructTypeName = [&](const std::string &typeName,
+                                   const std::string &namespacePrefix,
+                                   std::string &resolvedOut) -> bool {
+    if (typeName.empty()) {
+      return false;
+    }
+    if (!typeName.empty() && typeName[0] == '/') {
+      if (structNames.count(typeName) > 0) {
+        resolvedOut = typeName;
+        return true;
+      }
+      return false;
+    }
+    if (!namespacePrefix.empty()) {
+      if (namespacePrefix.size() > typeName.size() &&
+          namespacePrefix.compare(namespacePrefix.size() - typeName.size() - 1, typeName.size() + 1,
+                                  "/" + typeName) == 0) {
+        if (structNames.count(namespacePrefix) > 0) {
+          resolvedOut = namespacePrefix;
+          return true;
+        }
+      }
+      std::string candidate = namespacePrefix + "/" + typeName;
+      if (structNames.count(candidate) > 0) {
+        resolvedOut = candidate;
+        return true;
+      }
+    }
+    auto importIt = importAliases.find(typeName);
+    if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+      resolvedOut = importIt->second;
+      return true;
+    }
+    std::string root = "/" + typeName;
+    if (structNames.count(root) > 0) {
+      resolvedOut = root;
+      return true;
+    }
+    return false;
+  };
+
+  struct StructArrayInfo {
+    std::string structPath;
+    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+    int32_t fieldCount = 0;
+  };
+
+  auto resolveStructArrayInfo = [&](const Expr &expr, StructArrayInfo &out) -> bool {
+    out = StructArrayInfo{};
+    std::string typeName;
+    std::string templateArg;
+    for (const auto &transform : expr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      typeName = transform.name;
+      if (!transform.templateArgs.empty()) {
+        templateArg = joinTemplateArgsLocals(transform.templateArgs);
+      }
+      break;
+    }
+    if (typeName == "Reference" || typeName == "Pointer") {
+      return false;
+    }
+    std::string resolved;
+    if (!resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
+      return false;
+    }
+    auto fieldIt = structFieldInfoByName.find(resolved);
+    if (fieldIt == structFieldInfoByName.end()) {
+      return false;
+    }
+    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+    int32_t fieldCount = 0;
+    for (const auto &field : fieldIt->second) {
+      if (field.isStatic) {
+        continue;
+      }
+      if (!field.binding.typeTemplateArg.empty()) {
+        return false;
+      }
+      LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
+      if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
+        return false;
+      }
+      if (elementKind == LocalInfo::ValueKind::Unknown) {
+        elementKind = kind;
+      } else if (elementKind != kind) {
+        return false;
+      }
+      ++fieldCount;
+    }
+    if (fieldCount == 0 || elementKind == LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    out.structPath = resolved;
+    out.elementKind = elementKind;
+    out.fieldCount = fieldCount;
+    return true;
+  };
+
+  auto resolveStructArrayInfoFromPath = [&](const std::string &structPath, StructArrayInfo &out) -> bool {
+    out = StructArrayInfo{};
+    auto fieldIt = structFieldInfoByName.find(structPath);
+    if (fieldIt == structFieldInfoByName.end()) {
+      return false;
+    }
+    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+    int32_t fieldCount = 0;
+    for (const auto &field : fieldIt->second) {
+      if (field.isStatic) {
+        continue;
+      }
+      if (!field.binding.typeTemplateArg.empty()) {
+        return false;
+      }
+      LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
+      if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
+        return false;
+      }
+      if (elementKind == LocalInfo::ValueKind::Unknown) {
+        elementKind = kind;
+      } else if (elementKind != kind) {
+        return false;
+      }
+      ++fieldCount;
+    }
+    if (fieldCount == 0 || elementKind == LocalInfo::ValueKind::Unknown) {
+      return false;
+    }
+    out.structPath = structPath;
+    out.elementKind = elementKind;
+    out.fieldCount = fieldCount;
+    return true;
+  };
+
+  auto applyStructArrayInfo = [&](const Expr &expr, LocalInfo &info) {
+    StructArrayInfo structInfo;
+    if (resolveStructArrayInfo(expr, structInfo)) {
+      info.kind = LocalInfo::Kind::Array;
+      info.valueKind = structInfo.elementKind;
+      info.structTypeName = structInfo.structPath;
+      info.structFieldCount = structInfo.fieldCount;
+    }
+  };
+
+  auto resolveStructFieldIndex = [&](const std::string &structPath,
+                                     const std::string &fieldName,
+                                     int32_t &indexOut,
+                                     LocalInfo::ValueKind &fieldKindOut) -> bool {
+    indexOut = -1;
+    fieldKindOut = LocalInfo::ValueKind::Unknown;
+    auto it = structFieldInfoByName.find(structPath);
+    if (it == structFieldInfoByName.end()) {
+      return false;
+    }
+    int32_t fieldIndex = 0;
+    for (const auto &field : it->second) {
+      if (field.isStatic) {
+        continue;
+      }
+      if (field.name == fieldName) {
+        if (!field.binding.typeTemplateArg.empty()) {
+          return false;
+        }
+        LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
+        if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
+          return false;
+        }
+        indexOut = fieldIndex;
+        fieldKindOut = kind;
+        return true;
+      }
+      ++fieldIndex;
+    }
+    return false;
   };
 
   auto combineNumericKinds = [&](LocalInfo::ValueKind left,

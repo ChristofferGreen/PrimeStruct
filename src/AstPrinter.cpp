@@ -59,6 +59,9 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     if (expr.isMethodCall && !expr.args.empty()) {
       printExpr(out, expr.args.front());
       out << "." << expr.name;
+      if (expr.isFieldAccess) {
+        break;
+      }
       if (!expr.templateArgs.empty()) {
         out << "<";
         for (size_t i = 0; i < expr.templateArgs.size(); ++i) {

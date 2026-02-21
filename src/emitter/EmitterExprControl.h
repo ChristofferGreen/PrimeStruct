@@ -41,6 +41,10 @@
     }
     return expr.name;
   }
+  if (expr.kind == Expr::Kind::Call && expr.isFieldAccess && !expr.args.empty()) {
+    return emitExpr(expr.args.front(), nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, allowMathBare) +
+           "." + expr.name;
+  }
   std::string full = resolveExprPath(expr);
   if (expr.isMethodCall && !isArrayCountCall(expr, localTypes) && !isMapCountCall(expr, localTypes) &&
       !isStringCountCall(expr, localTypes)) {

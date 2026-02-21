@@ -1,101 +1,317 @@
 import /math/*
 
-[array<f32>]
-vec([f32] x, [f32] y, [f32] z) {
-  return(array<f32>(x, y, z))
-}
-
-[array<f32>]
-add([array<f32>] a, [array<f32>] b) {
-  return(array<f32>(a[0] + b[0], a[1] + b[1], a[2] + b[2]))
-}
-
-[array<f32>]
-sub([array<f32>] a, [array<f32>] b) {
-  return(array<f32>(a[0] - b[0], a[1] - b[1], a[2] - b[2]))
-}
-
-[array<f32>]
-mul_scalar([array<f32>] v, [f32] s) {
-  return(array<f32>(v[0] * s, v[1] * s, v[2] * s))
-}
-
 [f32]
-dot([array<f32>] a, [array<f32>] b) {
-  return(a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
-}
-
-[array<f32>]
-normalize([array<f32>] v) {
-  [f32] len{sqrt(dot(v, v))}
-  if(len <= 0.0) {
-    return(v)
-  } else {
-    [f32] inv{1.0 / len}
-    return(mul_scalar(v, inv))
-  }
-}
-
-[array<f32>]
-mix([array<f32>] a, [array<f32>] b, [f32] t) {
-  [f32] inv{1.0 - t}
-  return(array<f32>(
-    a[0] * inv + b[0] * t,
-    a[1] * inv + b[1] * t,
-    a[2] * inv + b[2] * t
-  ))
-}
-
-[array<f32>]
-reflect([array<f32>] v, [array<f32>] n) {
-  [f32] scale{2.0 * dot(v, n)}
-  return(sub(v, mul_scalar(n, scale)))
-}
-
-[f32]
-hit_sphere([array<f32>] center, [f32] radius, [array<f32>] origin, [array<f32>] dir) {
-  [array<f32>] oc{sub(origin, center)}
-  [f32] a{dot(dir, dir)}
-  [f32] b{2.0 * dot(oc, dir)}
-  [f32] c{dot(oc, oc) - radius * radius}
+hit_sphere([Vec3] center, [f32] radius, [Vec3] origin, [Vec3] dir) {
+  [Vec3] oc{origin.sub(center)}
+  [f32] a{dir.dot(dir)}
+  [f32] b{2.0 * oc.dot(dir)}
+  [f32] c{oc.dot(oc) - radius * radius}
   [f32] disc{b * b - 4.0 * a * c}
 
   if(disc < 0.0) {
     return(-1.0)
   } else {
-    return((-b - sqrt(disc)) / (2.0 * a))
+    [f32] sqrtDisc{sqrt(disc)}
+    [f32] invDenom{1.0 / (2.0 * a)}
+    [f32] t0{(-b - sqrtDisc) * invDenom}
+    [f32] t1{(-b + sqrtDisc) * invDenom}
+    if(t0 > 0.0 && t1 > 0.0) {
+      if(t0 < t1) {
+        return(t0)
+      } else {
+        return(t1)
+      }
+    } else {
+      if(t1 > 0.0) {
+        return(t1)
+      } else {
+        return(-1.0)
+      }
+    }
   }
 }
 
-[array<f32>]
-sky_color([array<f32>] dir) {
-  [f32] t{0.5 * (dir[1] + 1.0)}
-  return(mix(vec(1.0, 1.0, 1.0), vec(0.5, 0.7, 1.0), t))
+[ColorRGB]
+sky_color([Vec3] dir) {
+  [f32] t{0.5 * (dir.y + 1.0)}
+  [ColorRGB] base{ColorRGB(0.2, 0.2, 0.2).mix(ColorRGB(0.5, 0.7, 1.0), t)}
+  [ColorRGB] scaled{base.mulScalar(1.5)}
+  return(scaled.clamp(0.0, 1.0))
 }
 
-[array<f32>]
-shade([array<f32>] base, [array<f32>] normal) {
-  [array<f32>] light{normalize(vec(1.0, 1.0, -0.5))}
-  [f32] diff{max(0.0, dot(normal, light))}
-  [f32] level{0.2 + 0.8 * diff}
-  return(mul_scalar(base, level))
-}
-
-[array<f32>]
-trace([array<f32>] origin, [array<f32>] dir, [int] depth) {
-  [array<f32>] c1{vec(0.0, 0.0, -1.0)}
-  [array<f32>] c2{vec(1.1, 0.0, -1.6)}
+[int]
+occluded([Vec3] origin, [Vec3] dir, [f32] maxDist) {
+  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
+  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
+  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
   [f32] r1{0.5}
   [f32] r2{0.5}
+  [f32] r3{0.4}
   [f32] planeY{-0.6}
 
-  [array<f32> mut] result{vec(0.0, 0.0, 0.0)}
-  [array<f32> mut] currentOrigin{origin}
-  [array<f32> mut] currentDir{dir}
+  [f32] t1{hit_sphere(c1, r1, origin, dir)}
+  if(t1 > 0.001 && t1 < maxDist) {
+    return(1)
+  } else {
+  }
+
+  [f32] t2{hit_sphere(c2, r2, origin, dir)}
+  if(t2 > 0.001 && t2 < maxDist) {
+    return(1)
+  } else {
+  }
+
+  [f32] t3{hit_sphere(c3, r3, origin, dir)}
+  if(t3 > 0.001 && t3 < maxDist) {
+    return(1)
+  } else {
+  }
+
+  [f32] denom{dir.y}
+  if(abs(denom) > 0.0001) {
+    [f32] tPlane{(planeY - origin.y) / denom}
+    if(tPlane > 0.001 && tPlane < maxDist) {
+      return(1)
+    } else {
+    }
+  } else {
+  }
+
+  return(0)
+}
+
+[f32]
+ambient_occlusion([Vec3] point, [Vec3] normal) {
+  [Vec3] up{Vec3(0.0, 1.0, 0.0)}
+  [Vec3] fallbackAxis{Vec3(1.0, 0.0, 0.0)}
+  [Vec3 mut] tangent{/math/Vec3/cross(up, normal)}
+  if(tangent.dot(tangent) <= 0.0001) {
+    assign(tangent, /math/Vec3/cross(fallbackAxis, normal))
+  } else {
+  }
+  tangent = tangent.toNormalized()
+  [Vec3] bitangent{/math/Vec3/cross(normal, tangent)}
+
+  [Vec3] origin{Vec3(
+    point.x + normal.x * 0.001,
+    point.y + normal.y * 0.001,
+    point.z + normal.z * 0.001
+  )}
+  [f32] maxDist{2.0}
+  [f32 mut] visible{0.0}
+
+  [Vec3] d1{Vec3(
+    tangent.x * 0.707 + bitangent.x * 0.0 + normal.x * 0.707,
+    tangent.y * 0.707 + bitangent.y * 0.0 + normal.y * 0.707,
+    tangent.z * 0.707 + bitangent.z * 0.0 + normal.z * 0.707
+  ).toNormalized()}
+  [Vec3] d2{Vec3(
+    tangent.x * -0.707 + bitangent.x * 0.0 + normal.x * 0.707,
+    tangent.y * -0.707 + bitangent.y * 0.0 + normal.y * 0.707,
+    tangent.z * -0.707 + bitangent.z * 0.0 + normal.z * 0.707
+  ).toNormalized()}
+  [Vec3] d3{Vec3(
+    tangent.x * 0.0 + bitangent.x * 0.707 + normal.x * 0.707,
+    tangent.y * 0.0 + bitangent.y * 0.707 + normal.y * 0.707,
+    tangent.z * 0.0 + bitangent.z * 0.707 + normal.z * 0.707
+  ).toNormalized()}
+  [Vec3] d4{Vec3(
+    tangent.x * 0.0 + bitangent.x * -0.707 + normal.x * 0.707,
+    tangent.y * 0.0 + bitangent.y * -0.707 + normal.y * 0.707,
+    tangent.z * 0.0 + bitangent.z * -0.707 + normal.z * 0.707
+  ).toNormalized()}
+
+  if(occluded(origin, d1, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(origin, d2, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(origin, d3, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(origin, d4, maxDist) == 0) { visible = visible + 1.0 } else {}
+
+  return(visible / 4.0)
+}
+
+[ColorRGB]
+shade([ColorRGB] base, [Vec3] normal, [Vec3] point) {
+  [Vec3] light{Vec3(1.0, 1.0, -0.5).toNormalized()}
+  [f32] diff{max(0.0, normal.dot(light))}
+  [f32] level{0.2 + 0.8 * diff}
+  [f32] ao{ambient_occlusion(point, normal)}
+  return(base.mulScalar(level * ao))
+}
+
+[ColorRGB]
+trace_direct([Vec3] origin, [Vec3] dir) {
+  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
+  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
+  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
+  [f32] r1{0.5}
+  [f32] r2{0.5}
+  [f32] r3{0.4}
+  [f32] planeY{-0.6}
+
+  [f32 mut] closest{1.0e9}
+  [int mut] hit{0}
+
+  [f32] t1{hit_sphere(c1, r1, origin, dir)}
+  if(t1 > 0.001 && t1 < closest) {
+    closest = t1
+    hit = 1
+  } else {
+  }
+
+  [f32] t2{hit_sphere(c2, r2, origin, dir)}
+  if(t2 > 0.001 && t2 < closest) {
+    closest = t2
+    hit = 2
+  } else {
+  }
+
+  [f32] t3{hit_sphere(c3, r3, origin, dir)}
+  if(t3 > 0.001 && t3 < closest) {
+    closest = t3
+    hit = 4
+  } else {
+  }
+
+  [f32] denom{dir.y}
+  if(abs(denom) > 0.0001) {
+    [f32] tPlane{(planeY - origin.y) / denom}
+    if(tPlane > 0.001 && tPlane < closest) {
+      closest = tPlane
+      hit = 3
+    } else {
+    }
+  } else {
+  }
+
+  if(hit == 0) {
+    return(sky_color(dir))
+  } else {
+  }
+
+  [Vec3] hitStep{dir.mulScalar(closest)}
+  [Vec3] hitPoint{origin.add(hitStep)}
+  [Vec3 mut] normal{Vec3(0.0, 1.0, 0.0)}
+  [ColorRGB mut] base{ColorRGB(1.0, 1.0, 1.0)}
+
+  if(hit == 1) {
+    [Vec3] normalRaw{hitPoint.sub(c1)}
+    normal = normalRaw.toNormalized()
+    base = ColorRGB(0.8, 0.2, 0.2)
+  } else {
+    if(hit == 2) {
+      [Vec3] normalRaw{hitPoint.sub(c2)}
+      normal = normalRaw.toNormalized()
+      base = ColorRGB(0.2, 0.2, 0.85)
+    } else {
+      if(hit == 4) {
+        [Vec3] normalRaw{hitPoint.sub(c3)}
+        normal = normalRaw.toNormalized()
+        base = ColorRGB(1.0, 1.0, 1.0)
+      } else {
+        [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
+        if(checker < 0.0) {
+          base = ColorRGB(0.1, 0.1, 0.1)
+        } else {
+          base = ColorRGB(0.9, 0.9, 0.9)
+        }
+      }
+    }
+  }
+
+  return(shade(base, normal, hitPoint))
+}
+
+[ColorRGB]
+trace_direct_skip_glass([Vec3] origin, [Vec3] dir) {
+  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
+  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
+  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
+  [f32] r1{0.5}
+  [f32] r2{0.5}
+  [f32] r3{0.4}
+  [f32] planeY{-0.6}
+
+  [f32 mut] closest{1.0e9}
+  [int mut] hit{0}
+
+  [f32] t1{hit_sphere(c1, r1, origin, dir)}
+  if(t1 > 0.001 && t1 < closest) {
+    closest = t1
+    hit = 1
+  } else {
+  }
+
+  [f32] t2{hit_sphere(c2, r2, origin, dir)}
+  if(t2 > 0.001 && t2 < closest) {
+    closest = t2
+    hit = 2
+  } else {
+  }
+
+  [f32] denom{dir.y}
+  if(abs(denom) > 0.0001) {
+    [f32] tPlane{(planeY - origin.y) / denom}
+    if(tPlane > 0.001 && tPlane < closest) {
+      closest = tPlane
+      hit = 3
+    } else {
+    }
+  } else {
+  }
+
+  if(hit == 0) {
+    return(sky_color(dir))
+  } else {
+  }
+
+  [Vec3] hitStep{dir.mulScalar(closest)}
+  [Vec3] hitPoint{origin.add(hitStep)}
+  [Vec3 mut] normal{Vec3(0.0, 1.0, 0.0)}
+  [ColorRGB mut] base{ColorRGB(1.0, 1.0, 1.0)}
+
+  if(hit == 1) {
+    [Vec3] normalRaw{hitPoint.sub(c1)}
+    normal = normalRaw.toNormalized()
+    base = ColorRGB(0.8, 0.2, 0.2)
+  } else {
+    if(hit == 2) {
+      [Vec3] normalRaw{hitPoint.sub(c2)}
+      normal = normalRaw.toNormalized()
+      base = ColorRGB(0.2, 0.2, 0.85)
+    } else {
+      if(hit == 3) {
+        [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
+        if(checker < 0.0) {
+          base = ColorRGB(0.1, 0.1, 0.1)
+        } else {
+          base = ColorRGB(0.9, 0.9, 0.9)
+        }
+      } else {
+      }
+    }
+  }
+
+  return(shade(base, normal, hitPoint))
+}
+
+[ColorRGB]
+trace([Vec3] origin, [Vec3] dir, [int] depth) {
+  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
+  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
+  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
+  [f32] r1{0.5}
+  [f32] r2{0.5}
+  [f32] r3{0.4}
+  [f32] planeY{-0.6}
+
+  [ColorRGB mut] result{ColorRGB(0.0, 0.0, 0.0)}
+  [Vec3 mut] currentOrigin{origin}
+  [Vec3 mut] currentDir{dir}
   [f32 mut] weight{1.0}
+  [ColorRGB mut] filter{ColorRGB(1.0, 1.0, 1.0)}
 
   for([int mut] bounce{0}; bounce < depth; ++bounce) {
-    [array<f32>] sky{sky_color(currentDir)}
+    [ColorRGB] sky{sky_color(currentDir)}
     [f32 mut] closest{1.0e9}
     [int mut] hit{0}
 
@@ -113,9 +329,16 @@ trace([array<f32>] origin, [array<f32>] dir, [int] depth) {
     } else {
     }
 
-    [f32] denom{currentDir[1]}
+    [f32] t3{hit_sphere(c3, r3, currentOrigin, currentDir)}
+    if(t3 > 0.001 && t3 < closest) {
+      closest = t3
+      hit = 4
+    } else {
+    }
+
+    [f32] denom{currentDir.y}
     if(abs(denom) > 0.0001) {
-      [f32] tPlane{(planeY - currentOrigin[1]) / denom}
+      [f32] tPlane{(planeY - currentOrigin.y) / denom}
       if(tPlane > 0.001 && tPlane < closest) {
         closest = tPlane
         hit = 3
@@ -125,51 +348,144 @@ trace([array<f32>] origin, [array<f32>] dir, [int] depth) {
     }
 
     if(hit == 0) {
-      result = add(result, mul_scalar(sky, weight))
+      [ColorRGB] skyScaled{sky.mulScalar(weight)}
+      [ColorRGB] skyFiltered{skyScaled.mul(filter)}
+      result = result.add(skyFiltered)
       return(result)
     } else {
     }
 
-    [array<f32>] hitPoint{add(currentOrigin, mul_scalar(currentDir, closest))}
-    [array<f32> mut] normal{vec(0.0, 1.0, 0.0)}
-    [array<f32> mut] base{vec(1.0, 1.0, 1.0)}
+    [Vec3] hitStep{currentDir.mulScalar(closest)}
+    [Vec3] hitPoint{currentOrigin.add(hitStep)}
+    [Vec3 mut] normal{Vec3(0.0, 1.0, 0.0)}
+    [ColorRGB mut] base{ColorRGB(1.0, 1.0, 1.0)}
     [f32 mut] reflectivity{0.0}
+    [int mut] isGlass{0}
 
     if(hit == 1) {
-      normal = normalize(sub(hitPoint, c1))
-      base = vec(0.8, 0.2, 0.2)
-      reflectivity = 0.5
+      [Vec3] normalRaw{hitPoint.sub(c1)}
+      normal = normalRaw.toNormalized()
+      base = ColorRGB(0.8, 0.2, 0.2)
+      reflectivity = 0.75
     } else {
       if(hit == 2) {
-        normal = normalize(sub(hitPoint, c2))
-        base = vec(0.2, 0.2, 0.85)
-        reflectivity = 0.6
+        [Vec3] normalRaw{hitPoint.sub(c2)}
+        normal = normalRaw.toNormalized()
+        base = ColorRGB(0.2, 0.2, 0.85)
+        reflectivity = 0.85
       } else {
-        [f32] checker{sin(hitPoint[0] * 4.0) * sin(hitPoint[2] * 4.0)}
-        if(checker < 0.0) {
-          base = vec(0.1, 0.1, 0.1)
+        if(hit == 4) {
+          [Vec3] normalRaw{hitPoint.sub(c3)}
+          normal = normalRaw.toNormalized()
+          base = ColorRGB(1.0, 1.0, 1.0)
+          reflectivity = 0.0
+          isGlass = 1
         } else {
-          base = vec(0.9, 0.9, 0.9)
+          [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
+          if(checker < 0.0) {
+            base = ColorRGB(0.1, 0.1, 0.1)
+          } else {
+            base = ColorRGB(0.9, 0.9, 0.9)
+          }
+          reflectivity = 0.1
         }
-        reflectivity = 0.1
       }
     }
 
-    [array<f32>] lit{shade(base, normal)}
-    [array<f32>] litScaled{mul_scalar(lit, weight * (1.0 - reflectivity))}
-    result = add(result, litScaled)
+    if(isGlass == 1) {
+      [f32] ior{1.5}
+      [f32] cosTheta{clamp(abs(currentDir.dot(normal)), 0.0, 1.0)}
+      [f32 mut] r0{(1.0 - ior) / (1.0 + ior)}
+      r0 = r0 * r0
+      [f32] fresnelBase{1.0 - cosTheta}
+      [f32] fresnelSq{fresnelBase * fresnelBase}
+      [f32] fresnelFourth{fresnelSq * fresnelSq}
+      [f32] fresnelPow{fresnelFourth * fresnelBase}
+      [f32 mut] fresnel{r0 + (1.0 - r0) * fresnelPow}
+      fresnel = min(1.0, 0.3 + fresnel * 3.0)
 
-    weight = weight * reflectivity
-    if(weight <= 0.001) {
+      [f32 mut] cosi{clamp(currentDir.dot(normal), -1.0, 1.0)}
+      [f32 mut] etai{1.0}
+      [f32 mut] etat{ior}
+      if(cosi > 0.0) {
+        [f32] tmp{etai}
+        etai = etat
+        etat = tmp
+      } else {
+        cosi = -cosi
+      }
+      [f32] eta{etai / etat}
+      [f32] k{1.0 - eta * eta * (1.0 - cosi * cosi)}
+      if(k < 0.0) {
+        fresnel = 1.0
+      } else {
+      }
+
+      [f32] ndot{currentDir.dot(normal)}
+      [int mut] frontFace{0}
+      if(ndot < 0.0) {
+        frontFace = 1
+      } else {
+      }
+
+      [Vec3] reflectVec{currentDir.reflect(normal)}
+      [Vec3] reflectDir{reflectVec.toNormalized()}
+      [Vec3 mut] reflectOffset{normal.mulScalar(0.001)}
+      if(frontFace == 0) {
+        reflectOffset = normal.mulScalar(-0.001)
+      } else {
+      }
+      [Vec3] reflOrigin{hitPoint.add(reflectOffset)}
+
+      [Vec3] refrVec{currentDir.refract(normal, ior)}
+      [Vec3] refrDir{refrVec.toNormalized()}
+      [Vec3 mut] refractOffset{normal.mulScalar(-0.001)}
+      if(frontFace == 0) {
+        refractOffset = normal.mulScalar(0.001)
+      } else {
+      }
+      [Vec3] refrOrigin{hitPoint.add(refractOffset)}
+
+      [ColorRGB] reflColor{trace_direct_skip_glass(reflOrigin, reflectDir)}
+      [ColorRGB mut] refrColor{ColorRGB(0.0, 0.0, 0.0)}
+      if(fresnel < 1.0) {
+        refrColor = trace_direct_skip_glass(refrOrigin, refrDir)
+      } else {
+      }
+
+      [ColorRGB] reflScaled{reflColor.mulScalar(weight * fresnel)}
+      [ColorRGB] reflFiltered{reflScaled.mul(filter)}
+
+      [ColorRGB] refrScaled{refrColor.mulScalar(weight * (1.0 - fresnel))}
+      [ColorRGB] refrFilteredBase{refrScaled.mul(filter)}
+      [ColorRGB] refrFiltered{refrFilteredBase.mul(base)}
+
+      [ColorRGB] reflSum{reflFiltered.add(refrFiltered)}
+      result = result.add(reflSum)
       return(result)
     } else {
-    }
+      [ColorRGB] lit{shade(base, normal, hitPoint)}
+      [ColorRGB] litScaled{lit.mulScalar(weight * (1.0 - reflectivity))}
+      [ColorRGB] litFiltered{litScaled.mul(filter)}
+      result = result.add(litFiltered)
 
-    currentOrigin = add(hitPoint, mul_scalar(normal, 0.001))
-    currentDir = normalize(reflect(currentDir, normal))
+      weight = weight * reflectivity
+      if(weight <= 0.001) {
+        return(result)
+      } else {
+      }
+
+      [Vec3] reflectOffset{normal.mulScalar(0.001)}
+      currentOrigin = hitPoint.add(reflectOffset)
+      [Vec3] reflectStep{currentDir.reflect(normal)}
+      currentDir = reflectStep.toNormalized()
+    }
   }
 
-  result = add(result, mul_scalar(sky_color(currentDir), weight))
+  [ColorRGB] tailSkyBase{sky_color(currentDir)}
+  [ColorRGB] tailSky{tailSkyBase.mulScalar(weight)}
+  [ColorRGB] tailFiltered{tailSky.mul(filter)}
+  result = result.add(tailFiltered)
   return(result)
 }
 
@@ -179,40 +495,46 @@ to_byte([f32] value) {
   return(convert<int>(clamped * 255.0 + 0.5))
 }
 
-[return<Result<FileError>> effects(file_write, io_err)
- on_error<FileError, /log_file_error>("raytracer.ppm"utf8)]
+[return<int> effects(io_out)]
 main() {
-  [string] path{"raytracer.ppm"utf8}
-  [int] width{800}
-  [int] height{600}
-  [array<f32>] origin{vec(0.0, 0.8, 2.5)}
+  [int] width{1028}
+  [int] height{1028}
+  [int] samples{2}
+  [f32] sampleScale{1.0 / (convert<f32>(samples) * convert<f32>(samples))}
+  [Vec3] origin{Vec3(0.0, 0.8, 2.5)}
 
-  [File<Write>] file{File<Write>(path)?}
-  file.write_line("P3"utf8)?
-  file.write_line(width, " "utf8, height)?
-  file.write_line("255"utf8)?
+  print_line("P3"utf8)
+  print(width)
+  print(" "utf8)
+  print_line(height)
+  print_line("255"utf8)
 
   for([int mut] y{0}; y < height; ++y) {
     for([int mut] x{0}; x < width; ++x) {
-      [f32] u{(convert<f32>(x) / convert<f32>(width - 1)) * 2.0 - 1.0}
-      [f32] v{(convert<f32>(y) / convert<f32>(height - 1)) * 2.0 - 1.0}
-      [array<f32>] dir{normalize(vec(u, -v, -1.5))}
-      [array<f32>] color{trace(origin, dir, 2)}
-      [int] r{to_byte(color[0])}
-      [int] g{to_byte(color[1])}
-      [int] b{to_byte(color[2])}
-
-      [on_error<FileError, /log_file_error>("raytracer.ppm"utf8)] block() {
-        file.write_line(r, " "utf8, g, " "utf8, b)?
+      [ColorRGB mut] accum{ColorRGB(0.0, 0.0, 0.0)}
+      for([int mut] sy{0}; sy < samples; ++sy) {
+        for([int mut] sx{0}; sx < samples; ++sx) {
+          [f32] jitterX{(convert<f32>(sx) + 0.5) / convert<f32>(samples)}
+          [f32] jitterY{(convert<f32>(sy) + 0.5) / convert<f32>(samples)}
+          [f32] u{((convert<f32>(x) + jitterX) / convert<f32>(width - 1)) * 2.0 - 1.0}
+          [f32] v{((convert<f32>(y) + jitterY) / convert<f32>(height - 1)) * 2.0 - 1.0}
+          [Vec3] dir{Vec3(u, -v, -1.5).toNormalized()}
+          [ColorRGB] sample{trace(origin, dir, 4)}
+          accum = accum.add(sample)
+        }
       }
+      [ColorRGB] color{accum.mulScalar(sampleScale)}
+      [int] r{to_byte(color.r)}
+      [int] g{to_byte(color.g)}
+      [int] b{to_byte(color.b)}
+
+      print(r)
+      print(" "utf8)
+      print(g)
+      print(" "utf8)
+      print_line(b)
     }
   }
 
-  return(Result.ok())
-}
-
-[effects(io_err)]
-/log_file_error([FileError] err, [string] path) {
-  print_line_error("failed to write: "utf8)
-  print_line_error(path)
+  return(0i32)
 }

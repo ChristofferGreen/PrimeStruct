@@ -726,15 +726,7 @@ bool buildCodeSignature(const std::vector<uint8_t> &image,
   return true;
 }
 
-bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error) {
-  if (code.empty()) {
-    error = "native backend requires non-empty code";
-    return false;
-  }
-
-  constexpr uint8_t pageSizeLog2 = 14;
-  constexpr uint32_t hashSize = 32;
-  const std::string identifier = "primec.native";
+uint32_t computeMachOCodeOffset() {
   const std::string dyldPath = "/usr/lib/dyld";
   const std::string libSystemPath = "/usr/lib/libSystem.B.dylib";
 
@@ -757,7 +749,40 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
       pageZeroCmdSize + textCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize + dyldInfoCmdSize +
       symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize + codeSigCmdSize;
 
-  const uint32_t codeOffset = static_cast<uint32_t>(alignTo(headerSize + sizeofcmds, 16));
+  return static_cast<uint32_t>(alignTo(headerSize + sizeofcmds, 16));
+}
+
+bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error) {
+  if (code.empty()) {
+    error = "native backend requires non-empty code";
+    return false;
+  }
+
+  constexpr uint8_t pageSizeLog2 = 14;
+  constexpr uint32_t hashSize = 32;
+  const std::string identifier = "primec.native";
+  const std::string dyldPath = "/usr/lib/dyld";
+  const std::string libSystemPath = "/usr/lib/libSystem.B.dylib";
+
+  const uint32_t pageZeroCmdSize = sizeof(segment_command_64);
+  const uint32_t textCmdSize = sizeof(segment_command_64) + sizeof(section_64);
+  const uint32_t linkeditCmdSize = sizeof(segment_command_64);
+  const uint32_t dylinkerCmdSize =
+      static_cast<uint32_t>(alignTo(sizeof(dylinker_command) + dyldPath.size() + 1, 8));
+  const uint32_t dylibCmdSize =
+      static_cast<uint32_t>(alignTo(sizeof(dylib_command) + libSystemPath.size() + 1, 8));
+  const uint32_t dyldInfoCmdSize = sizeof(dyld_info_command);
+  const uint32_t symtabCmdSize = sizeof(symtab_command);
+  const uint32_t dysymtabCmdSize = sizeof(dysymtab_command);
+  const uint32_t funcStartsCmdSize = sizeof(linkedit_data_command);
+  const uint32_t dataInCodeCmdSize = sizeof(linkedit_data_command);
+  const uint32_t entryCmdSize = sizeof(entry_point_command);
+  const uint32_t codeSigCmdSize = sizeof(linkedit_data_command);
+  const uint32_t sizeofcmds =
+      pageZeroCmdSize + textCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize + dyldInfoCmdSize +
+      symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize + codeSigCmdSize;
+
+  const uint32_t codeOffset = computeMachOCodeOffset();
   const uint64_t codeSize = code.size();
   const uint64_t textFileSize = codeOffset + codeSize;
   const uint64_t textVmSize = alignTo(textFileSize, PageSize);

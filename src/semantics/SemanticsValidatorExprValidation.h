@@ -294,8 +294,109 @@
       return true;
     };
 
+    auto resolveStructFieldBinding =
+        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
+      auto isStaticField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
+      auto resolveStructPathFromType = [&](const std::string &typeName,
+                                           const std::string &namespacePrefix,
+                                           std::string &structPathOut) -> bool {
+        if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+          return false;
+        }
+        std::string resolved = resolveTypePath(typeName, namespacePrefix);
+        if (structNames_.count(resolved) == 0 && defMap_.count(resolved) == 0) {
+          auto importIt = importAliases_.find(typeName);
+          if (importIt != importAliases_.end()) {
+            resolved = importIt->second;
+          }
+        }
+        if (structNames_.count(resolved) == 0) {
+          return false;
+        }
+        structPathOut = resolved;
+        return true;
+      };
+      std::string structPath;
+      if (receiver.kind == Expr::Kind::Name) {
+        const BindingInfo *binding = findParamBinding(params, receiver.name);
+        if (!binding) {
+          auto it = locals.find(receiver.name);
+          if (it != locals.end()) {
+            binding = &it->second;
+          }
+        }
+        if (binding) {
+          std::string typeName = binding->typeName;
+          if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
+            typeName = binding->typeTemplateArg;
+          }
+          (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPath);
+        }
+      } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+        std::string resolvedType = resolveCalleePath(receiver);
+        if (structNames_.count(resolvedType) > 0) {
+          structPath = resolvedType;
+        }
+      }
+      if (structPath.empty()) {
+        return false;
+      }
+      auto defIt = defMap_.find(structPath);
+      if (defIt == defMap_.end() || !defIt->second) {
+        return false;
+      }
+      for (const auto &stmt : defIt->second->statements) {
+        if (!stmt.isBinding || isStaticField(stmt)) {
+          continue;
+        }
+        if (stmt.name != fieldName) {
+          continue;
+        }
+        std::optional<std::string> restrictType;
+        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_)) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    };
+
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
+    if (expr.isFieldAccess) {
+      if (expr.args.size() != 1) {
+        error_ = "field access requires a receiver";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "field access does not accept template arguments";
+        return false;
+      }
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "field access does not accept named arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "field access does not accept block arguments";
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      BindingInfo fieldBinding;
+      if (!resolveStructFieldBinding(expr.args.front(), expr.name, fieldBinding)) {
+        error_ = "unknown field: " + expr.name;
+        return false;
+      }
+      return true;
+    }
     if (expr.isMethodCall) {
       if (expr.args.empty()) {
         error_ = "method call missing receiver";
@@ -766,12 +867,12 @@
             return false;
           }
         } else if (leftPointer || rightPointer) {
-          error_ = "arithmetic operators require numeric operands";
+          error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
           return false;
         }
         if (builtinName == "negate") {
           if (!isNumericExpr(expr.args.front())) {
-            error_ = "arithmetic operators require numeric operands";
+            error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
             return false;
           }
           if (isUnsignedExpr(expr.args.front())) {
@@ -781,7 +882,7 @@
         } else {
           if (!leftPointer && !rightPointer) {
             if (!isNumericExpr(expr.args[0]) || !isNumericExpr(expr.args[1])) {
-              error_ = "arithmetic operators require numeric operands";
+              error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
               return false;
             }
             if (hasMixedSignedness(expr.args, false)) {
@@ -794,7 +895,7 @@
             }
           } else if (leftPointer) {
             if (!isNumericExpr(expr.args[1])) {
-              error_ = "arithmetic operators require numeric operands";
+              error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
               return false;
             }
           }

@@ -1,0 +1,165 @@
+namespace math {
+  [return<f32>]
+  srgbToLinearChannel([f32] c) {
+    if(c <= 0.04045) {
+      return(c / 12.92)
+    } else {
+      return(pow((c + 0.055) / 1.055, 2.4))
+    }
+  }
+
+  [return<f32>]
+  linearToSrgbChannel([f32] c) {
+    if(c <= 0.0031308) {
+      return(c * 12.92)
+    } else {
+      return(1.055 * pow(c, 1.0 / 2.4) - 0.055)
+    }
+  }
+
+  [struct]
+  ColorRGB() {
+    [public f32] r{0.0}
+    [public f32] g{0.0}
+    [public f32] b{0.0}
+  }
+
+  namespace ColorRGB {
+    [return<ColorRGB>]
+    add([ColorRGB] self, [ColorRGB] other) {
+      return(ColorRGB(self.r + other.r, self.g + other.g, self.b + other.b))
+    }
+
+    [return<ColorRGB>]
+    sub([ColorRGB] self, [ColorRGB] other) {
+      return(ColorRGB(self.r - other.r, self.g - other.g, self.b - other.b))
+    }
+
+    [return<ColorRGB>]
+    mul([ColorRGB] self, [ColorRGB] other) {
+      return(ColorRGB(self.r * other.r, self.g * other.g, self.b * other.b))
+    }
+
+    [return<ColorRGB>]
+    mulScalar([ColorRGB] self, [f32] s) {
+      return(ColorRGB(self.r * s, self.g * s, self.b * s))
+    }
+
+    [return<ColorRGB>]
+    mix([ColorRGB] self, [ColorRGB] other, [f32] t) {
+      [f32] inv{1.0 - t}
+      return(ColorRGB(
+        self.r * inv + other.r * t,
+        self.g * inv + other.g * t,
+        self.b * inv + other.b * t
+      ))
+    }
+
+    [return<ColorRGB>]
+    clamp([ColorRGB] self, [f32] minValue, [f32] maxValue) {
+      return(ColorRGB(
+        /math/clamp(self.r, minValue, maxValue),
+        /math/clamp(self.g, minValue, maxValue),
+        /math/clamp(self.b, minValue, maxValue)
+      ))
+    }
+
+    [return<ColorSRGB>]
+    toSRGB([ColorRGB] self) {
+      return(ColorSRGB(
+        linearToSrgbChannel(self.r),
+        linearToSrgbChannel(self.g),
+        linearToSrgbChannel(self.b)
+      ))
+    }
+  }
+
+  [struct]
+  ColorRGBA() {
+    [public f32] r{0.0}
+    [public f32] g{0.0}
+    [public f32] b{0.0}
+    [public f32] a{1.0}
+  }
+
+  namespace ColorRGBA {
+    [return<ColorRGBA>]
+    add([ColorRGBA] self, [ColorRGBA] other) {
+      return(ColorRGBA(self.r + other.r, self.g + other.g, self.b + other.b, self.a + other.a))
+    }
+
+    [return<ColorRGBA>]
+    mulScalar([ColorRGBA] self, [f32] s) {
+      return(ColorRGBA(self.r * s, self.g * s, self.b * s, self.a * s))
+    }
+
+    [return<ColorRGBA>]
+    mix([ColorRGBA] self, [ColorRGBA] other, [f32] t) {
+      [f32] inv{1.0 - t}
+      return(ColorRGBA(
+        self.r * inv + other.r * t,
+        self.g * inv + other.g * t,
+        self.b * inv + other.b * t,
+        self.a * inv + other.a * t
+      ))
+    }
+
+    [return<ColorRGBA>]
+    clamp([ColorRGBA] self, [f32] minValue, [f32] maxValue) {
+      return(ColorRGBA(
+        /math/clamp(self.r, minValue, maxValue),
+        /math/clamp(self.g, minValue, maxValue),
+        /math/clamp(self.b, minValue, maxValue),
+        /math/clamp(self.a, minValue, maxValue)
+      ))
+    }
+
+    [return<ColorSRGBA>]
+    toSRGBA([ColorRGBA] self) {
+      return(ColorSRGBA(
+        linearToSrgbChannel(self.r),
+        linearToSrgbChannel(self.g),
+        linearToSrgbChannel(self.b),
+        linearToSrgbChannel(self.a)
+      ))
+    }
+  }
+
+  [struct]
+  ColorSRGB() {
+    [public f32] r{0.0}
+    [public f32] g{0.0}
+    [public f32] b{0.0}
+  }
+
+  namespace ColorSRGB {
+    [return<ColorRGB>]
+    toLinear([ColorSRGB] self) {
+      return(ColorRGB(
+        srgbToLinearChannel(self.r),
+        srgbToLinearChannel(self.g),
+        srgbToLinearChannel(self.b)
+      ))
+    }
+  }
+
+  [struct]
+  ColorSRGBA() {
+    [public f32] r{0.0}
+    [public f32] g{0.0}
+    [public f32] b{0.0}
+    [public f32] a{1.0}
+  }
+
+  namespace ColorSRGBA {
+    [return<ColorRGBA>]
+    toLinear([ColorSRGBA] self) {
+      return(ColorRGBA(
+        srgbToLinearChannel(self.r),
+        srgbToLinearChannel(self.g),
+        srgbToLinearChannel(self.b),
+        srgbToLinearChannel(self.a)
+      ))
+    }
+  }
+}

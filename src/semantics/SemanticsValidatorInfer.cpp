@@ -47,13 +47,30 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     return ReturnKind::Unknown;
   };
-  auto referenceTargetKind = [&](const std::string &templateArg) -> ReturnKind {
+  auto isStructTypeName = [&](const std::string &typeName, const std::string &namespacePrefix) -> bool {
+    if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+      return false;
+    }
+    std::string resolved = resolveTypePath(typeName, namespacePrefix);
+    if (structNames_.count(resolved) > 0) {
+      return true;
+    }
+    auto importIt = importAliases_.find(typeName);
+    if (importIt != importAliases_.end()) {
+      return structNames_.count(importIt->second) > 0;
+    }
+    return false;
+  };
+  auto referenceTargetKind = [&](const std::string &templateArg, const std::string &namespacePrefix) -> ReturnKind {
     if (templateArg.empty()) {
       return ReturnKind::Unknown;
     }
     ReturnKind kind = returnKindForTypeName(templateArg);
     if (kind != ReturnKind::Unknown) {
       return kind;
+    }
+    if (isStructTypeName(templateArg, namespacePrefix)) {
+      return ReturnKind::Array;
     }
     std::string base;
     std::string arg;
@@ -94,12 +111,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
-        ReturnKind refKind = referenceTargetKind(paramBinding->typeTemplateArg);
+        ReturnKind refKind = referenceTargetKind(paramBinding->typeTemplateArg, expr.namespacePrefix);
         if (refKind != ReturnKind::Unknown) {
           return refKind;
         }
       }
       if (paramBinding->typeName == "array" && !paramBinding->typeTemplateArg.empty()) {
+        return ReturnKind::Array;
+      }
+      if (isStructTypeName(paramBinding->typeName, expr.namespacePrefix)) {
         return ReturnKind::Array;
       }
       return returnKindForTypeName(paramBinding->typeName);
@@ -109,7 +129,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       return ReturnKind::Unknown;
     }
     if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
-      ReturnKind refKind = referenceTargetKind(it->second.typeTemplateArg);
+      ReturnKind refKind = referenceTargetKind(it->second.typeTemplateArg, expr.namespacePrefix);
       if (refKind != ReturnKind::Unknown) {
         return refKind;
       }
@@ -117,9 +137,96 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (it->second.typeName == "array" && !it->second.typeTemplateArg.empty()) {
       return ReturnKind::Array;
     }
+    if (isStructTypeName(it->second.typeName, expr.namespacePrefix)) {
+      return ReturnKind::Array;
+    }
     return returnKindForTypeName(it->second.typeName);
   }
   if (expr.kind == Expr::Kind::Call) {
+    if (expr.isFieldAccess) {
+      auto resolveStructFieldKind = [&](const Expr &receiver, const std::string &fieldName) -> ReturnKind {
+        auto isStaticField = [](const Expr &stmt) -> bool {
+          for (const auto &transform : stmt.transforms) {
+            if (transform.name == "static") {
+              return true;
+            }
+          }
+          return false;
+        };
+        auto resolveStructPathFromType = [&](const std::string &typeName,
+                                             const std::string &namespacePrefix,
+                                             std::string &structPathOut) -> bool {
+          if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+            return false;
+          }
+          std::string resolved = resolveTypePath(typeName, namespacePrefix);
+          if (structNames_.count(resolved) == 0 && defMap_.count(resolved) == 0) {
+            auto importIt = importAliases_.find(typeName);
+            if (importIt != importAliases_.end()) {
+              resolved = importIt->second;
+            }
+          }
+          if (structNames_.count(resolved) == 0) {
+            return false;
+          }
+          structPathOut = resolved;
+          return true;
+        };
+        std::string structPath;
+        if (receiver.kind == Expr::Kind::Name) {
+          const BindingInfo *binding = findParamBinding(params, receiver.name);
+          if (!binding) {
+            auto it = locals.find(receiver.name);
+            if (it != locals.end()) {
+              binding = &it->second;
+            }
+          }
+          if (binding) {
+            std::string typeName = binding->typeName;
+            if ((typeName == "Reference" || typeName == "Pointer") && !binding->typeTemplateArg.empty()) {
+              typeName = binding->typeTemplateArg;
+            }
+            (void)resolveStructPathFromType(typeName, receiver.namespacePrefix, structPath);
+          }
+        } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+          std::string resolvedType = resolveCalleePath(receiver);
+          if (structNames_.count(resolvedType) > 0) {
+            structPath = resolvedType;
+          }
+        }
+        if (structPath.empty()) {
+          return ReturnKind::Unknown;
+        }
+        auto defIt = defMap_.find(structPath);
+        if (defIt == defMap_.end() || !defIt->second) {
+          return ReturnKind::Unknown;
+        }
+        for (const auto &stmt : defIt->second->statements) {
+          if (!stmt.isBinding || isStaticField(stmt)) {
+            continue;
+          }
+          if (stmt.name != fieldName) {
+            continue;
+          }
+          BindingInfo fieldBinding;
+          std::optional<std::string> restrictType;
+          std::string error;
+          if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, fieldBinding, restrictType, error)) {
+            return ReturnKind::Unknown;
+          }
+          std::string typeName = fieldBinding.typeName;
+          if (typeName == "Reference" && !fieldBinding.typeTemplateArg.empty()) {
+            typeName = fieldBinding.typeTemplateArg;
+          }
+          return returnKindForTypeName(typeName);
+        }
+        return ReturnKind::Unknown;
+      };
+      if (expr.args.size() != 1) {
+        return ReturnKind::Unknown;
+      }
+      return resolveStructFieldKind(expr.args.front(), expr.name);
+    }
     if (isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) || isRepeatCall(expr)) {
       return ReturnKind::Void;
     }
@@ -388,7 +495,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (const BindingInfo *paramBinding = findParamBinding(params, pointerExpr.name)) {
           if ((paramBinding->typeName == "Pointer" || paramBinding->typeName == "Reference") &&
               !paramBinding->typeTemplateArg.empty()) {
-            return referenceTargetKind(paramBinding->typeTemplateArg);
+            return referenceTargetKind(paramBinding->typeTemplateArg, pointerExpr.namespacePrefix);
           }
           return ReturnKind::Unknown;
         }
@@ -396,7 +503,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         if (it != locals.end()) {
           if ((it->second.typeName == "Pointer" || it->second.typeName == "Reference") &&
               !it->second.typeTemplateArg.empty()) {
-            return referenceTargetKind(it->second.typeTemplateArg);
+            return referenceTargetKind(it->second.typeTemplateArg, pointerExpr.namespacePrefix);
           }
         }
         return ReturnKind::Unknown;
@@ -410,14 +517,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
           }
           if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
             if (paramBinding->typeName == "Reference" && !paramBinding->typeTemplateArg.empty()) {
-              return referenceTargetKind(paramBinding->typeTemplateArg);
+              return referenceTargetKind(paramBinding->typeTemplateArg, target.namespacePrefix);
             }
             return returnKindForTypeName(paramBinding->typeName);
           }
           auto it = locals.find(target.name);
           if (it != locals.end()) {
             if (it->second.typeName == "Reference" && !it->second.typeTemplateArg.empty()) {
-              return referenceTargetKind(it->second.typeTemplateArg);
+              return referenceTargetKind(it->second.typeTemplateArg, target.namespacePrefix);
             }
             return returnKindForTypeName(it->second.typeName);
           }

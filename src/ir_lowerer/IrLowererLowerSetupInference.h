@@ -73,13 +73,21 @@
         return nullptr;
       }
       if (it->second.kind == LocalInfo::Kind::Array) {
-        typeName = "array";
+        if (!it->second.structTypeName.empty()) {
+          resolvedTypePath = it->second.structTypeName;
+        } else {
+          typeName = "array";
+        }
       } else if (it->second.kind == LocalInfo::Kind::Vector) {
         typeName = "vector";
       } else if (it->second.kind == LocalInfo::Kind::Map) {
         typeName = "map";
       } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-        typeName = "array";
+        if (!it->second.structTypeName.empty()) {
+          resolvedTypePath = it->second.structTypeName;
+        } else {
+          typeName = "array";
+        }
       } else if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
         error = "unknown method target for " + callExpr.name;
         return nullptr;
@@ -212,6 +220,12 @@
         return valueKindFromTypeName(expr.templateArgs.front());
       }
       if (!expr.isMethodCall) {
+        StructArrayInfo structInfo;
+        if (resolveStructArrayInfoFromPath(resolveExprPath(expr), structInfo)) {
+          return structInfo.elementKind;
+        }
+      }
+      if (!expr.isMethodCall) {
         const std::string resolved = resolveExprPath(expr);
         auto defIt = defMap.find(resolved);
         if (defIt != defMap.end()) {
@@ -282,6 +296,30 @@
         return LocalInfo::ValueKind::Unknown;
       }
       case Expr::Kind::Call: {
+        if (expr.isFieldAccess) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          const Expr &receiver = expr.args.front();
+          std::string structPath;
+          if (receiver.kind == Expr::Kind::Name) {
+            auto it = localsIn.find(receiver.name);
+            if (it != localsIn.end()) {
+              structPath = it->second.structTypeName;
+            }
+          } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+            structPath = resolveExprPath(receiver);
+          }
+          if (structPath.empty()) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          int32_t fieldIndex = -1;
+          LocalInfo::ValueKind fieldKind = LocalInfo::ValueKind::Unknown;
+          if (!resolveStructFieldIndex(structPath, expr.name, fieldIndex, fieldKind)) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return fieldKind;
+        }
         if (expr.isMethodCall) {
           if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
               expr.args.front().name == "Result" && expr.name == "ok") {
@@ -664,6 +702,7 @@
                   }
                 }
                 info.valueKind = valueKind;
+                applyStructArrayInfo(bodyExpr, info);
                 branchLocals.emplace(bodyExpr.name, info);
                 continue;
               }
@@ -714,6 +753,7 @@
                   }
                 }
                 info.valueKind = valueKind;
+                applyStructArrayInfo(bodyExpr, info);
                 blockLocals.emplace(bodyExpr.name, info);
                 continue;
               }
