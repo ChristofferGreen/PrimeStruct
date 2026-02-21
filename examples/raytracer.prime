@@ -1,5 +1,148 @@
 import /math/*
 
+[struct]
+Scene() {
+  [public f32] s1CenterX{0.0}
+  [public f32] s1CenterY{0.0}
+  [public f32] s1CenterZ{0.0}
+  [public f32] s1Radius{0.0}
+  [public f32] s1BaseR{1.0}
+  [public f32] s1BaseG{1.0}
+  [public f32] s1BaseB{1.0}
+  [public f32] s1Reflectivity{0.0}
+  [public f32] s1IsGlass{0.0}
+
+  [public f32] s2CenterX{0.0}
+  [public f32] s2CenterY{0.0}
+  [public f32] s2CenterZ{0.0}
+  [public f32] s2Radius{0.0}
+  [public f32] s2BaseR{1.0}
+  [public f32] s2BaseG{1.0}
+  [public f32] s2BaseB{1.0}
+  [public f32] s2Reflectivity{0.0}
+  [public f32] s2IsGlass{0.0}
+
+  [public f32] s3CenterX{0.0}
+  [public f32] s3CenterY{0.0}
+  [public f32] s3CenterZ{0.0}
+  [public f32] s3Radius{0.0}
+  [public f32] s3BaseR{1.0}
+  [public f32] s3BaseG{1.0}
+  [public f32] s3BaseB{1.0}
+  [public f32] s3Reflectivity{0.0}
+  [public f32] s3IsGlass{0.0}
+
+  [public f32] planeY{-0.6}
+}
+
+[struct]
+Hit() {
+  [public f32] hit{0.0}
+  [public f32] t{-1.0}
+  [public f32] id{0.0}
+}
+
+[struct]
+Surface() {
+  [public f32] normalX{0.0}
+  [public f32] normalY{1.0}
+  [public f32] normalZ{0.0}
+  [public f32] baseR{1.0}
+  [public f32] baseG{1.0}
+  [public f32] baseB{1.0}
+  [public f32] reflectivity{0.0}
+  [public f32] isGlass{0.0}
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Scene] scene{Scene(
+    [s1CenterX] 0.0,
+    [s1CenterY] -0.1,
+    [s1CenterZ] -1.0,
+    [s1Radius] 0.5,
+    [s1BaseR] 0.8,
+    [s1BaseG] 0.2,
+    [s1BaseB] 0.2,
+    [s1Reflectivity] 0.75,
+    [s1IsGlass] 0.0,
+
+    [s2CenterX] 1.1,
+    [s2CenterY] -0.1,
+    [s2CenterZ] -1.6,
+    [s2Radius] 0.5,
+    [s2BaseR] 0.2,
+    [s2BaseG] 0.2,
+    [s2BaseB] 0.85,
+    [s2Reflectivity] 0.85,
+    [s2IsGlass] 0.0,
+
+    [s3CenterX] -1.2,
+    [s3CenterY] -0.2,
+    [s3CenterZ] -1.4,
+    [s3Radius] 0.4,
+    [s3BaseR] 1.0,
+    [s3BaseG] 1.0,
+    [s3BaseB] 1.0,
+    [s3Reflectivity] 0.0,
+    [s3IsGlass] 1.0,
+
+    [planeY] -0.6
+  )}
+  [int] width{1028}
+  [int] height{1028}
+  [int] samples{2}
+  [f32] sampleScale{1.0 / (convert<f32>(samples) * convert<f32>(samples))}
+  [Vec3] origin{Vec3(0.0, 0.8, 2.5)}
+
+  print_line("P3"utf8)
+  print(width)
+  print(" "utf8)
+  print_line(height)
+  print_line("255"utf8)
+
+  for([int mut] y{0}; y < height; ++y) {
+    for([int mut] x{0}; x < width; ++x) {
+      [ColorRGB] color{pixel_color(scene, origin, x, y, width, height, samples, sampleScale)}
+      [int] r{to_byte(color.r)}
+      [int] g{to_byte(color.g)}
+      [int] b{to_byte(color.b)}
+
+      print(r)
+      print(" "utf8)
+      print(g)
+      print(" "utf8)
+      print_line(b)
+    }
+  }
+
+  return(0i32)
+}
+
+[ColorRGB]
+pixel_color([Scene] scene,
+            [Vec3] origin,
+            [int] x,
+            [int] y,
+            [int] width,
+            [int] height,
+            [int] samples,
+            [f32] sampleScale) {
+  [ColorRGB mut] accum{ColorRGB(0.0, 0.0, 0.0)}
+  for([int mut] sy{0}; sy < samples; ++sy) {
+    for([int mut] sx{0}; sx < samples; ++sx) {
+      [f32] jitterX{(convert<f32>(sx) + 0.5) / convert<f32>(samples)}
+      [f32] jitterY{(convert<f32>(sy) + 0.5) / convert<f32>(samples)}
+      [f32] u{((convert<f32>(x) + jitterX) / convert<f32>(width - 1)) * 2.0 - 1.0}
+      [f32] v{((convert<f32>(y) + jitterY) / convert<f32>(height - 1)) * 2.0 - 1.0}
+      [Vec3] dir{Vec3(u, -v, -1.5).toNormalized()}
+      [ColorRGB] sample{trace(scene, origin, dir, 4)}
+      accum = accum.add(sample)
+    }
+  }
+  return(accum.mulScalar(sampleScale))
+}
+
 [f32]
 hit_sphere([Vec3] center, [f32] radius, [Vec3] origin, [Vec3] dir) {
   [Vec3] oc{origin.sub(center)}
@@ -31,57 +174,139 @@ hit_sphere([Vec3] center, [f32] radius, [Vec3] origin, [Vec3] dir) {
   }
 }
 
-[ColorRGB]
-sky_color([Vec3] dir) {
-  [f32] t{0.5 * (dir.y + 1.0)}
-  [ColorRGB] base{ColorRGB(0.2, 0.2, 0.2).mix(ColorRGB(0.5, 0.7, 1.0), t)}
-  [ColorRGB] scaled{base.mulScalar(1.5)}
-  return(scaled.clamp(0.0, 1.0))
-}
-
-[int]
-occluded([Vec3] origin, [Vec3] dir, [f32] maxDist) {
-  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
-  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
-  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
-  [f32] r1{0.5}
-  [f32] r2{0.5}
-  [f32] r3{0.4}
-  [f32] planeY{-0.6}
+[Hit]
+scene_hit([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist, [int] includeGlass) {
+  [f32 mut] closest{maxDist}
+  [f32 mut] hit{0.0}
+  [f32 mut] hitId{0.0}
+  [Vec3] c1{Vec3(scene.s1CenterX, scene.s1CenterY, scene.s1CenterZ)}
+  [Vec3] c2{Vec3(scene.s2CenterX, scene.s2CenterY, scene.s2CenterZ)}
+  [Vec3] c3{Vec3(scene.s3CenterX, scene.s3CenterY, scene.s3CenterZ)}
+  [f32] r1{scene.s1Radius}
+  [f32] r2{scene.s2Radius}
+  [f32] r3{scene.s3Radius}
 
   [f32] t1{hit_sphere(c1, r1, origin, dir)}
-  if(t1 > 0.001 && t1 < maxDist) {
-    return(1)
+  if(t1 > 0.001 && t1 < closest) {
+    closest = t1
+    hit = 1.0
+    hitId = 1.0
   } else {
   }
 
   [f32] t2{hit_sphere(c2, r2, origin, dir)}
-  if(t2 > 0.001 && t2 < maxDist) {
-    return(1)
+  if(t2 > 0.001 && t2 < closest) {
+    closest = t2
+    hit = 1.0
+    hitId = 2.0
   } else {
   }
 
-  [f32] t3{hit_sphere(c3, r3, origin, dir)}
-  if(t3 > 0.001 && t3 < maxDist) {
-    return(1)
-  } else {
-  }
-
-  [f32] denom{dir.y}
-  if(abs(denom) > 0.0001) {
-    [f32] tPlane{(planeY - origin.y) / denom}
-    if(tPlane > 0.001 && tPlane < maxDist) {
-      return(1)
+  if(includeGlass == 1) {
+    [f32] t3{hit_sphere(c3, r3, origin, dir)}
+    if(t3 > 0.001 && t3 < closest) {
+      closest = t3
+      hit = 1.0
+      hitId = 4.0
     } else {
     }
   } else {
   }
 
-  return(0)
+  [f32] denom{dir.y}
+  if(abs(denom) > 0.0001) {
+    [f32] tPlane{(scene.planeY - origin.y) / denom}
+    if(tPlane > 0.001 && tPlane < closest) {
+      closest = tPlane
+      hit = 1.0
+      hitId = 3.0
+    } else {
+    }
+  } else {
+  }
+
+  if(hit == 0.0) {
+    return(Hit(0.0, -1.0, 0.0))
+  } else {
+    return(Hit(1.0, closest, hitId))
+  }
+}
+
+[Surface]
+scene_surface([Scene] scene, [f32] hitId, [Vec3] hitPoint) {
+  [Vec3] c1{Vec3(scene.s1CenterX, scene.s1CenterY, scene.s1CenterZ)}
+  [Vec3] c2{Vec3(scene.s2CenterX, scene.s2CenterY, scene.s2CenterZ)}
+  [Vec3] c3{Vec3(scene.s3CenterX, scene.s3CenterY, scene.s3CenterZ)}
+  [ColorRGB] b1{ColorRGB(scene.s1BaseR, scene.s1BaseG, scene.s1BaseB)}
+  [ColorRGB] b2{ColorRGB(scene.s2BaseR, scene.s2BaseG, scene.s2BaseB)}
+  [ColorRGB] b3{ColorRGB(scene.s3BaseR, scene.s3BaseG, scene.s3BaseB)}
+  [f32] r1{scene.s1Reflectivity}
+  [f32] r2{scene.s2Reflectivity}
+  [f32] r3{scene.s3Reflectivity}
+  [f32] g1{scene.s1IsGlass}
+  [f32] g2{scene.s2IsGlass}
+  [f32] g3{scene.s3IsGlass}
+  if(hitId == 1.0) {
+    [Vec3] normalRaw{hitPoint.sub(c1)}
+    [Vec3] normal{normalRaw.toNormalized()}
+    return(Surface(
+      normal.x,
+      normal.y,
+      normal.z,
+      b1.r,
+      b1.g,
+      b1.b,
+      r1,
+      g1
+    ))
+  } else {
+    if(hitId == 2.0) {
+      [Vec3] normalRaw{hitPoint.sub(c2)}
+      [Vec3] normal{normalRaw.toNormalized()}
+      return(Surface(
+        normal.x,
+        normal.y,
+        normal.z,
+        b2.r,
+        b2.g,
+        b2.b,
+        r2,
+        g2
+      ))
+    } else {
+      if(hitId == 4.0) {
+        [Vec3] normalRaw{hitPoint.sub(c3)}
+        [Vec3] normal{normalRaw.toNormalized()}
+        return(Surface(
+          normal.x,
+          normal.y,
+          normal.z,
+          b3.r,
+          b3.g,
+          b3.b,
+          r3,
+          g3
+        ))
+      } else {
+        [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
+        if(checker < 0.0) {
+          return(Surface(0.0, 1.0, 0.0, 0.1, 0.1, 0.1, 0.1, 0.0))
+        } else {
+          return(Surface(0.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.1, 0.0))
+        }
+      }
+    }
+  }
+}
+
+[int]
+occluded([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist) {
+  [Hit] hit{scene_hit(scene, origin, dir, maxDist, 1)}
+  return(convert<int>(hit.hit))
 }
 
 [f32]
-ambient_occlusion([Vec3] point, [Vec3] normal) {
+ambient_occlusion([Scene] scene, [Vec3] point, [Vec3] normal) {
   [Vec3] up{Vec3(0.0, 1.0, 0.0)}
   [Vec3] fallbackAxis{Vec3(1.0, 0.0, 0.0)}
   [Vec3 mut] tangent{/math/Vec3/cross(up, normal)}
@@ -121,189 +346,65 @@ ambient_occlusion([Vec3] point, [Vec3] normal) {
     tangent.z * 0.0 + bitangent.z * -0.707 + normal.z * 0.707
   ).toNormalized()}
 
-  if(occluded(origin, d1, maxDist) == 0) { visible = visible + 1.0 } else {}
-  if(occluded(origin, d2, maxDist) == 0) { visible = visible + 1.0 } else {}
-  if(occluded(origin, d3, maxDist) == 0) { visible = visible + 1.0 } else {}
-  if(occluded(origin, d4, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(scene, origin, d1, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(scene, origin, d2, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(scene, origin, d3, maxDist) == 0) { visible = visible + 1.0 } else {}
+  if(occluded(scene, origin, d4, maxDist) == 0) { visible = visible + 1.0 } else {}
 
   return(visible / 4.0)
 }
 
 [ColorRGB]
-shade([ColorRGB] base, [Vec3] normal, [Vec3] point) {
+shade([Scene] scene, [ColorRGB] base, [Vec3] normal, [Vec3] point) {
   [Vec3] light{Vec3(1.0, 1.0, -0.5).toNormalized()}
   [f32] diff{max(0.0, normal.dot(light))}
   [f32] level{0.2 + 0.8 * diff}
-  [f32] ao{ambient_occlusion(point, normal)}
+  [f32] ao{ambient_occlusion(scene, point, normal)}
   return(base.mulScalar(level * ao))
 }
 
 [ColorRGB]
-trace_direct([Vec3] origin, [Vec3] dir) {
-  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
-  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
-  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
-  [f32] r1{0.5}
-  [f32] r2{0.5}
-  [f32] r3{0.4}
-  [f32] planeY{-0.6}
+sky_color([Vec3] dir) {
+  [f32] t{0.5 * (dir.y + 1.0)}
+  [ColorRGB] base{ColorRGB(0.2, 0.2, 0.2).mix(ColorRGB(0.5, 0.7, 1.0), t)}
+  [ColorRGB] scaled{base.mulScalar(1.5)}
+  return(scaled.clamp(0.0, 1.0))
+}
 
-  [f32 mut] closest{1.0e9}
-  [int mut] hit{0}
-
-  [f32] t1{hit_sphere(c1, r1, origin, dir)}
-  if(t1 > 0.001 && t1 < closest) {
-    closest = t1
-    hit = 1
-  } else {
-  }
-
-  [f32] t2{hit_sphere(c2, r2, origin, dir)}
-  if(t2 > 0.001 && t2 < closest) {
-    closest = t2
-    hit = 2
-  } else {
-  }
-
-  [f32] t3{hit_sphere(c3, r3, origin, dir)}
-  if(t3 > 0.001 && t3 < closest) {
-    closest = t3
-    hit = 4
-  } else {
-  }
-
-  [f32] denom{dir.y}
-  if(abs(denom) > 0.0001) {
-    [f32] tPlane{(planeY - origin.y) / denom}
-    if(tPlane > 0.001 && tPlane < closest) {
-      closest = tPlane
-      hit = 3
-    } else {
-    }
-  } else {
-  }
-
-  if(hit == 0) {
+[ColorRGB]
+trace_direct([Scene] scene, [Vec3] origin, [Vec3] dir) {
+  [Hit] hit{scene_hit(scene, origin, dir, 1.0e9, 1)}
+  if(hit.hit == 0.0) {
     return(sky_color(dir))
   } else {
   }
 
-  [Vec3] hitStep{dir.mulScalar(closest)}
+  [Vec3] hitStep{dir.mulScalar(hit.t)}
   [Vec3] hitPoint{origin.add(hitStep)}
-  [Vec3 mut] normal{Vec3(0.0, 1.0, 0.0)}
-  [ColorRGB mut] base{ColorRGB(1.0, 1.0, 1.0)}
-
-  if(hit == 1) {
-    [Vec3] normalRaw{hitPoint.sub(c1)}
-    normal = normalRaw.toNormalized()
-    base = ColorRGB(0.8, 0.2, 0.2)
-  } else {
-    if(hit == 2) {
-      [Vec3] normalRaw{hitPoint.sub(c2)}
-      normal = normalRaw.toNormalized()
-      base = ColorRGB(0.2, 0.2, 0.85)
-    } else {
-      if(hit == 4) {
-        [Vec3] normalRaw{hitPoint.sub(c3)}
-        normal = normalRaw.toNormalized()
-        base = ColorRGB(1.0, 1.0, 1.0)
-      } else {
-        [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
-        if(checker < 0.0) {
-          base = ColorRGB(0.1, 0.1, 0.1)
-        } else {
-          base = ColorRGB(0.9, 0.9, 0.9)
-        }
-      }
-    }
-  }
-
-  return(shade(base, normal, hitPoint))
+  [Surface] surface{scene_surface(scene, hit.id, hitPoint)}
+  [Vec3] normal{Vec3(surface.normalX, surface.normalY, surface.normalZ)}
+  [ColorRGB] base{ColorRGB(surface.baseR, surface.baseG, surface.baseB)}
+  return(shade(scene, base, normal, hitPoint))
 }
 
 [ColorRGB]
-trace_direct_skip_glass([Vec3] origin, [Vec3] dir) {
-  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
-  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
-  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
-  [f32] r1{0.5}
-  [f32] r2{0.5}
-  [f32] r3{0.4}
-  [f32] planeY{-0.6}
-
-  [f32 mut] closest{1.0e9}
-  [int mut] hit{0}
-
-  [f32] t1{hit_sphere(c1, r1, origin, dir)}
-  if(t1 > 0.001 && t1 < closest) {
-    closest = t1
-    hit = 1
-  } else {
-  }
-
-  [f32] t2{hit_sphere(c2, r2, origin, dir)}
-  if(t2 > 0.001 && t2 < closest) {
-    closest = t2
-    hit = 2
-  } else {
-  }
-
-  [f32] denom{dir.y}
-  if(abs(denom) > 0.0001) {
-    [f32] tPlane{(planeY - origin.y) / denom}
-    if(tPlane > 0.001 && tPlane < closest) {
-      closest = tPlane
-      hit = 3
-    } else {
-    }
-  } else {
-  }
-
-  if(hit == 0) {
+trace_direct_skip_glass([Scene] scene, [Vec3] origin, [Vec3] dir) {
+  [Hit] hit{scene_hit(scene, origin, dir, 1.0e9, 0)}
+  if(hit.hit == 0.0) {
     return(sky_color(dir))
   } else {
   }
 
-  [Vec3] hitStep{dir.mulScalar(closest)}
+  [Vec3] hitStep{dir.mulScalar(hit.t)}
   [Vec3] hitPoint{origin.add(hitStep)}
-  [Vec3 mut] normal{Vec3(0.0, 1.0, 0.0)}
-  [ColorRGB mut] base{ColorRGB(1.0, 1.0, 1.0)}
-
-  if(hit == 1) {
-    [Vec3] normalRaw{hitPoint.sub(c1)}
-    normal = normalRaw.toNormalized()
-    base = ColorRGB(0.8, 0.2, 0.2)
-  } else {
-    if(hit == 2) {
-      [Vec3] normalRaw{hitPoint.sub(c2)}
-      normal = normalRaw.toNormalized()
-      base = ColorRGB(0.2, 0.2, 0.85)
-    } else {
-      if(hit == 3) {
-        [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
-        if(checker < 0.0) {
-          base = ColorRGB(0.1, 0.1, 0.1)
-        } else {
-          base = ColorRGB(0.9, 0.9, 0.9)
-        }
-      } else {
-      }
-    }
-  }
-
-  return(shade(base, normal, hitPoint))
+  [Surface] surface{scene_surface(scene, hit.id, hitPoint)}
+  [Vec3] normal{Vec3(surface.normalX, surface.normalY, surface.normalZ)}
+  [ColorRGB] base{ColorRGB(surface.baseR, surface.baseG, surface.baseB)}
+  return(shade(scene, base, normal, hitPoint))
 }
 
 [ColorRGB]
-trace([Vec3] origin, [Vec3] dir, [int] depth) {
-  [Vec3] c1{Vec3(0.0, -0.1, -1.0)}
-  [Vec3] c2{Vec3(1.1, -0.1, -1.6)}
-  [Vec3] c3{Vec3(-1.2, -0.2, -1.4)}
-  [f32] r1{0.5}
-  [f32] r2{0.5}
-  [f32] r3{0.4}
-  [f32] planeY{-0.6}
-
+trace([Scene] scene, [Vec3] origin, [Vec3] dir, [int] depth) {
   [ColorRGB mut] result{ColorRGB(0.0, 0.0, 0.0)}
   [Vec3 mut] currentOrigin{origin}
   [Vec3 mut] currentDir{dir}
@@ -312,42 +413,8 @@ trace([Vec3] origin, [Vec3] dir, [int] depth) {
 
   for([int mut] bounce{0}; bounce < depth; ++bounce) {
     [ColorRGB] sky{sky_color(currentDir)}
-    [f32 mut] closest{1.0e9}
-    [int mut] hit{0}
-
-    [f32] t1{hit_sphere(c1, r1, currentOrigin, currentDir)}
-    if(t1 > 0.001 && t1 < closest) {
-      closest = t1
-      hit = 1
-    } else {
-    }
-
-    [f32] t2{hit_sphere(c2, r2, currentOrigin, currentDir)}
-    if(t2 > 0.001 && t2 < closest) {
-      closest = t2
-      hit = 2
-    } else {
-    }
-
-    [f32] t3{hit_sphere(c3, r3, currentOrigin, currentDir)}
-    if(t3 > 0.001 && t3 < closest) {
-      closest = t3
-      hit = 4
-    } else {
-    }
-
-    [f32] denom{currentDir.y}
-    if(abs(denom) > 0.0001) {
-      [f32] tPlane{(planeY - currentOrigin.y) / denom}
-      if(tPlane > 0.001 && tPlane < closest) {
-        closest = tPlane
-        hit = 3
-      } else {
-      }
-    } else {
-    }
-
-    if(hit == 0) {
+    [Hit] hit{scene_hit(scene, currentOrigin, currentDir, 1.0e9, 1)}
+    if(hit.hit == 0.0) {
       [ColorRGB] skyScaled{sky.mulScalar(weight)}
       [ColorRGB] skyFiltered{skyScaled.mul(filter)}
       result = result.add(skyFiltered)
@@ -355,56 +422,23 @@ trace([Vec3] origin, [Vec3] dir, [int] depth) {
     } else {
     }
 
-    [Vec3] hitStep{currentDir.mulScalar(closest)}
+    [Vec3] hitStep{currentDir.mulScalar(hit.t)}
     [Vec3] hitPoint{currentOrigin.add(hitStep)}
-    [Vec3 mut] normal{Vec3(0.0, 1.0, 0.0)}
-    [ColorRGB mut] base{ColorRGB(1.0, 1.0, 1.0)}
-    [f32 mut] reflectivity{0.0}
-    [int mut] isGlass{0}
+    [Surface] surface{scene_surface(scene, hit.id, hitPoint)}
+    [Vec3] hitNormal{Vec3(surface.normalX, surface.normalY, surface.normalZ)}
+    [ColorRGB] hitBase{ColorRGB(surface.baseR, surface.baseG, surface.baseB)}
+    [f32] reflectivity{surface.reflectivity}
+    [f32] isGlass{surface.isGlass}
 
-    if(hit == 1) {
-      [Vec3] normalRaw{hitPoint.sub(c1)}
-      normal = normalRaw.toNormalized()
-      base = ColorRGB(0.8, 0.2, 0.2)
-      reflectivity = 0.75
-    } else {
-      if(hit == 2) {
-        [Vec3] normalRaw{hitPoint.sub(c2)}
-        normal = normalRaw.toNormalized()
-        base = ColorRGB(0.2, 0.2, 0.85)
-        reflectivity = 0.85
-      } else {
-        if(hit == 4) {
-          [Vec3] normalRaw{hitPoint.sub(c3)}
-          normal = normalRaw.toNormalized()
-          base = ColorRGB(1.0, 1.0, 1.0)
-          reflectivity = 0.0
-          isGlass = 1
-        } else {
-          [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
-          if(checker < 0.0) {
-            base = ColorRGB(0.1, 0.1, 0.1)
-          } else {
-            base = ColorRGB(0.9, 0.9, 0.9)
-          }
-          reflectivity = 0.1
-        }
-      }
-    }
-
-    if(isGlass == 1) {
+    if(isGlass == 1.0) {
       [f32] ior{1.5}
-      [f32] cosTheta{clamp(abs(currentDir.dot(normal)), 0.0, 1.0)}
+      [f32] cosTheta{clamp(abs(currentDir.dot(hitNormal)), 0.0, 1.0)}
       [f32 mut] r0{(1.0 - ior) / (1.0 + ior)}
       r0 = r0 * r0
-      [f32] fresnelBase{1.0 - cosTheta}
-      [f32] fresnelSq{fresnelBase * fresnelBase}
-      [f32] fresnelFourth{fresnelSq * fresnelSq}
-      [f32] fresnelPow{fresnelFourth * fresnelBase}
-      [f32 mut] fresnel{r0 + (1.0 - r0) * fresnelPow}
+      [f32 mut] fresnel{r0 + (1.0 - r0) * pow(1.0 - cosTheta, 5.0)}
       fresnel = min(1.0, 0.3 + fresnel * 3.0)
 
-      [f32 mut] cosi{clamp(currentDir.dot(normal), -1.0, 1.0)}
+      [f32 mut] cosi{clamp(currentDir.dot(hitNormal), -1.0, 1.0)}
       [f32 mut] etai{1.0}
       [f32 mut] etat{ior}
       if(cosi > 0.0) {
@@ -421,35 +455,35 @@ trace([Vec3] origin, [Vec3] dir, [int] depth) {
       } else {
       }
 
-      [f32] ndot{currentDir.dot(normal)}
+      [f32] ndot{currentDir.dot(hitNormal)}
       [int mut] frontFace{0}
       if(ndot < 0.0) {
         frontFace = 1
       } else {
       }
 
-      [Vec3] reflectVec{currentDir.reflect(normal)}
+      [Vec3] reflectVec{currentDir.reflect(hitNormal)}
       [Vec3] reflectDir{reflectVec.toNormalized()}
-      [Vec3 mut] reflectOffset{normal.mulScalar(0.001)}
+      [Vec3 mut] reflectOffset{hitNormal.mulScalar(0.001)}
       if(frontFace == 0) {
-        reflectOffset = normal.mulScalar(-0.001)
+        reflectOffset = hitNormal.mulScalar(-0.001)
       } else {
       }
       [Vec3] reflOrigin{hitPoint.add(reflectOffset)}
 
-      [Vec3] refrVec{currentDir.refract(normal, ior)}
+      [Vec3] refrVec{currentDir.refract(hitNormal, ior)}
       [Vec3] refrDir{refrVec.toNormalized()}
-      [Vec3 mut] refractOffset{normal.mulScalar(-0.001)}
+      [Vec3 mut] refractOffset{hitNormal.mulScalar(-0.001)}
       if(frontFace == 0) {
-        refractOffset = normal.mulScalar(0.001)
+        refractOffset = hitNormal.mulScalar(0.001)
       } else {
       }
       [Vec3] refrOrigin{hitPoint.add(refractOffset)}
 
-      [ColorRGB] reflColor{trace_direct_skip_glass(reflOrigin, reflectDir)}
+      [ColorRGB] reflColor{trace_direct_skip_glass(scene, reflOrigin, reflectDir)}
       [ColorRGB mut] refrColor{ColorRGB(0.0, 0.0, 0.0)}
       if(fresnel < 1.0) {
-        refrColor = trace_direct_skip_glass(refrOrigin, refrDir)
+        refrColor = trace_direct_skip_glass(scene, refrOrigin, refrDir)
       } else {
       }
 
@@ -458,13 +492,13 @@ trace([Vec3] origin, [Vec3] dir, [int] depth) {
 
       [ColorRGB] refrScaled{refrColor.mulScalar(weight * (1.0 - fresnel))}
       [ColorRGB] refrFilteredBase{refrScaled.mul(filter)}
-      [ColorRGB] refrFiltered{refrFilteredBase.mul(base)}
+      [ColorRGB] refrFiltered{refrFilteredBase.mul(hitBase)}
 
       [ColorRGB] reflSum{reflFiltered.add(refrFiltered)}
       result = result.add(reflSum)
       return(result)
     } else {
-      [ColorRGB] lit{shade(base, normal, hitPoint)}
+      [ColorRGB] lit{shade(scene, hitBase, hitNormal, hitPoint)}
       [ColorRGB] litScaled{lit.mulScalar(weight * (1.0 - reflectivity))}
       [ColorRGB] litFiltered{litScaled.mul(filter)}
       result = result.add(litFiltered)
@@ -475,9 +509,9 @@ trace([Vec3] origin, [Vec3] dir, [int] depth) {
       } else {
       }
 
-      [Vec3] reflectOffset{normal.mulScalar(0.001)}
+      [Vec3] reflectOffset{hitNormal.mulScalar(0.001)}
       currentOrigin = hitPoint.add(reflectOffset)
-      [Vec3] reflectStep{currentDir.reflect(normal)}
+      [Vec3] reflectStep{currentDir.reflect(hitNormal)}
       currentDir = reflectStep.toNormalized()
     }
   }
@@ -493,48 +527,4 @@ trace([Vec3] origin, [Vec3] dir, [int] depth) {
 to_byte([f32] value) {
   [f32] clamped{clamp(value, 0.0, 1.0)}
   return(convert<int>(clamped * 255.0 + 0.5))
-}
-
-[return<int> effects(io_out)]
-main() {
-  [int] width{1028}
-  [int] height{1028}
-  [int] samples{2}
-  [f32] sampleScale{1.0 / (convert<f32>(samples) * convert<f32>(samples))}
-  [Vec3] origin{Vec3(0.0, 0.8, 2.5)}
-
-  print_line("P3"utf8)
-  print(width)
-  print(" "utf8)
-  print_line(height)
-  print_line("255"utf8)
-
-  for([int mut] y{0}; y < height; ++y) {
-    for([int mut] x{0}; x < width; ++x) {
-      [ColorRGB mut] accum{ColorRGB(0.0, 0.0, 0.0)}
-      for([int mut] sy{0}; sy < samples; ++sy) {
-        for([int mut] sx{0}; sx < samples; ++sx) {
-          [f32] jitterX{(convert<f32>(sx) + 0.5) / convert<f32>(samples)}
-          [f32] jitterY{(convert<f32>(sy) + 0.5) / convert<f32>(samples)}
-          [f32] u{((convert<f32>(x) + jitterX) / convert<f32>(width - 1)) * 2.0 - 1.0}
-          [f32] v{((convert<f32>(y) + jitterY) / convert<f32>(height - 1)) * 2.0 - 1.0}
-          [Vec3] dir{Vec3(u, -v, -1.5).toNormalized()}
-          [ColorRGB] sample{trace(origin, dir, 4)}
-          accum = accum.add(sample)
-        }
-      }
-      [ColorRGB] color{accum.mulScalar(sampleScale)}
-      [int] r{to_byte(color.r)}
-      [int] g{to_byte(color.g)}
-      [int] b{to_byte(color.b)}
-
-      print(r)
-      print(" "utf8)
-      print(g)
-      print(" "utf8)
-      print_line(b)
-    }
-  }
-
-  return(0i32)
 }
