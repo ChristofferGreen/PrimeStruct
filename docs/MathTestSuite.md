@@ -22,9 +22,9 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Decide when to use exact comparisons vs tolerance-based checks per function.
 
 ## Constants
-- [ ] `pi`, `tau`, `e` emit correct values (float32/float64 conversion checks).
-- [ ] `pi`, `tau`, `e` round-trip through `f32{...}` and `f64{...}`.
-- [ ] Check that `tau == 2 * pi` within tight tolerance.
+- [x] `pi`, `tau`, `e` emit correct values (float32/float64 conversion checks).
+- [x] `pi`, `tau`, `e` round-trip through `convert<f32>` and `convert<f64>`.
+- [x] Check that `tau == 2 * pi` within tight tolerance.
 
 ## Trig: sin/cos/tan
 - [ ] Quadrant correctness for `sin`, `cos`, `tan` at `0`, `pi/2`, `pi`, `3pi/2`, `2pi`.
@@ -61,8 +61,8 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Round-trip: `sinh(asinh(x)) ~= x`, `cosh(acosh(x)) ~= x`, `tanh(atanh(x)) ~= x`.
 
 ## Exp/Log
-- [ ] `exp(0) = 1`, `exp2(0) = 1`.
-- [ ] `log(1) = 0`, `log2(1) = 0`, `log10(1) = 0`.
+- [x] `exp(0) = 1`, `exp2(0) = 1`.
+- [x] `log(1) = 0`, `log2(1) = 0`, `log10(1) = 0`.
 - [ ] `exp(log(x)) ~= x` for `x = 0.5, 1, 2, 10`.
 - [ ] `log(exp(x)) ~= x` for `x = -2, -1, 0, 1, 2`.
 - [ ] Base relations: `log2(8) = 3`, `log10(1000) = 3`.

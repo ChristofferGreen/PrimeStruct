@@ -360,6 +360,113 @@ main() {
   checkMathConformance(source, "math_conformance_batch_emit");
 }
 
+TEST_CASE("math conformance constants") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[bool]
+near32([f32] a, [f32] b, [f32] eps) {
+  return(abs(a - b) <= eps)
+}
+
+[bool]
+near64([f64] a, [f64] b, [f64] eps) {
+  return(abs(a - b) <= eps)
+}
+
+[return<int>]
+main() {
+  [f32] pi_f32_expected{3.1415927f32}
+  [f32] tau_f32_expected{6.2831855f32}
+  [f32] e_f32_expected{2.7182817f32}
+  [f32] pi_f32{convert<f32>(pi)}
+  [f32] tau_f32{convert<f32>(tau)}
+  [f32] e_f32{convert<f32>(e)}
+  emit("pi_f32_value"utf8, near32(pi_f32, pi_f32_expected, 0.00005f32))
+  emit("tau_f32_twopi"utf8, near32(tau_f32, 2.0f32 * pi_f32, 0.0005f32))
+  emit("e_f32_value"utf8, near32(e_f32, e_f32_expected, 0.00005f32))
+  emit("tau_f32_value"utf8, near32(tau_f32, tau_f32_expected, 0.0001f32))
+
+  [f64] pi_f64_expected{3.141592653589793f64}
+  [f64] tau_f64_expected{6.283185307179586f64}
+  [f64] e_f64_expected{2.718281828459045f64}
+  [f64] pi_f64{convert<f64>(pi)}
+  [f64] tau_f64{convert<f64>(tau)}
+  [f64] e_f64{convert<f64>(e)}
+  emit("tau_f64_twopi"utf8, near64(tau_f64, 2.0f64 * pi_f64, 0.0000005f64))
+  emit("pi_f64_value"utf8, near64(pi_f64, pi_f64_expected, 0.0000000005f64))
+  emit("tau_f64_value"utf8, near64(tau_f64, tau_f64_expected, 0.0000000005f64))
+  emit("e_f64_value"utf8, near64(e_f64, e_f64_expected, 0.0000000005f64))
+
+  [f64] pi_round{convert<f64>(pi_f32)}
+  [f64] tau_round{convert<f64>(tau_f32)}
+  [f64] e_round{convert<f64>(e_f32)}
+  emit("pi_round_trip"utf8, near64(pi_round, pi_f64, 0.00001f64))
+  emit("tau_round_trip"utf8, near64(tau_round, tau_f64, 0.00001f64))
+  emit("e_round_trip"utf8, near64(e_round, e_f64, 0.00001f64))
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_constants");
+}
+
+TEST_CASE("math conformance exp log basics") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[bool]
+near([f32] a, [f32] b, [f32] eps) {
+  return(abs(a - b) <= eps)
+}
+
+[return<int>]
+main() {
+  emit("exp_zero"utf8, near(exp(0.0f32), 1.0f32, 0.0002f32))
+  emit("exp2_zero"utf8, near(exp2(0.0f32), 1.0f32, 0.0002f32))
+  emit("log_one"utf8, near(log(1.0f32), 0.0f32, 0.0002f32))
+  emit("log2_one"utf8, near(log2(1.0f32), 0.0f32, 0.0002f32))
+  emit("log10_one"utf8, near(log10(1.0f32), 0.0f32, 0.0002f32))
+  emit("log2_eight"utf8, near(log2(8.0f32), 3.0f32, 0.2f32))
+  emit("exp_log_roundtrip"utf8, near(exp(log(2.0f32)), 2.0f32, 0.002f32))
+  emit("log_exp_roundtrip"utf8, near(log(exp(1.0f32)), 1.0f32, 0.002f32))
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_exp_log_basics");
+}
+
 TEST_CASE("math conformance float helpers parse tokens") {
   const std::string output = "sin 0.5\ncos 0.6\nnan nan\ninf inf\nneg -inf\n";
   const std::vector<FloatSample> samples = parseFloatOutput(output, "float helper test");
