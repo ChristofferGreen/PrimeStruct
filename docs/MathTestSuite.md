@@ -10,7 +10,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Add helpers for sign-only and range-only checks (avoid overfitting accuracy).
 - [ ] Add helpers for batch cases to keep test sources compact.
 - [ ] Add a way to mark expected native deviations (temporary allowlist).
-- [ ] Add a `--math-conformance` CTest label for the new suite.
+- [x] Add a `--math-conformance` CTest label for the new suite.
 
 ## Source Of Truth For Expected Values
 - [ ] Define reference values using C++/exe as the canonical baseline in tests.

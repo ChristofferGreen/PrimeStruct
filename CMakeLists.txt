@@ -161,6 +161,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.vm.core
     primestruct.compile.run.vm.collections
     primestruct.compile.run.emitters.cpp
+    primestruct.compile.run.math_conformance
     primestruct.compile.run.glsl
     primestruct.compile.run.native_backend.core
     primestruct.compile.run.native_backend.argv
@@ -179,5 +180,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_tests> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES RUN_SERIAL TRUE TIMEOUT 1800)
+    if (suite STREQUAL "primestruct.compile.run.math_conformance")
+      set_tests_properties("${testName}" PROPERTIES LABELS "math-conformance")
+    endif()
   endforeach()
 endif()
