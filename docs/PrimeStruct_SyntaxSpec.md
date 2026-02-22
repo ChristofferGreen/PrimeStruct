@@ -1,8 +1,11 @@
-# PrimeStruct Syntax Spec (Draft)
+# PrimeStruct Syntax Spec (Stable)
 
 This document defines the surface syntax and immediate semantics of PrimeStruct source files. It complements
 `docs/PrimeStruct.md` by focusing on grammar, parsing rules, and the canonical core produced after text
 transforms and desugaring.
+
+Status: Stable as of February 22, 2026. Changes require synchronized updates to the design doc and conformance
+tests.
 
 ## 1. Overview
 
@@ -423,6 +426,9 @@ execute_task([count] 2i32)
   arguments (e.g., `[T] name{ T(arg1, arg2) }`). Commas and semicolons are treated as whitespace separators.
   A brace constructor form (`Type{...}`) is allowed in value positions (e.g., `bool{35}` in arguments
   or returns) and passes the block’s resulting value to the constructor.
+- Struct constructor calls treat non-static field bindings as parameters. Positional and labeled arguments map to
+  fields; any field not supplied by the call uses its field initializer expression. Missing fields without
+  initializers are a semantic error (struct fields require initializers).
 - If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
   initializer form; if inference fails, the envelope defaults to `int`. Parameters are handled separately.
 - An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to `int`.

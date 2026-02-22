@@ -124,6 +124,28 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
+TEST_CASE("C++ emitter uses struct field defaults") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<int>]
+main() {
+  [Point] value{Point([x] 9i32)}
+  return(plus(value.x, value.y))
+}
+)";
+  const std::string srcPath = writeTemp("compile_struct_defaults.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_struct_defaults_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 11);
+}
+
 TEST_CASE("C++ emitter supports file io") {
   const std::string outPath = (std::filesystem::temp_directory_path() / "primec_file_io_exe.txt").string();
   auto escape = [](const std::string &text) {

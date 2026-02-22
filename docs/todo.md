@@ -84,11 +84,11 @@ Legend:
 - ✓ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
 - ✓ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
 - ✓ Document transform applicability limits (e.g., alignment/layout/placement not allowed on executions).
-- ○ Close the SyntaxSpec draft: review feedback, reconcile grammar, and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
+- ✓ Close the SyntaxSpec draft: reconcile grammar and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
 - ✓ Decide on Unicode identifier support and update lexer/parser/docs accordingly.
 - ✓ Finalize the literal suffix catalog, including canonical raw string behavior across backends.
 - ✓ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
-- ○ Finalize literals & composite construction semantics beyond suffix rules.
+- ✓ Finalize literals & composite construction semantics beyond suffix rules.
 - ✓ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
 - ✓ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.
 - ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
