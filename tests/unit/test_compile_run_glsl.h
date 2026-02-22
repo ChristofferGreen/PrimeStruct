@@ -510,6 +510,40 @@ main() {
   CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter rejects static bindings") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [static i32] value{1i32}
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_static_binding.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_static_binding_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not support static bindings") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter rejects non-scalar bindings") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [array<i32>] values{array<i32>(1i32)}
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_array_binding.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_array_binding_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not support builtin: array") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects string literals") {
   const std::string source = R"(
 [return<void>]
