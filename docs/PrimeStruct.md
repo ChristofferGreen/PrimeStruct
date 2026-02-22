@@ -429,7 +429,7 @@ for(
 - **Versioning (planned):**
   - Each package declares a semantic version (e.g., `1.2.0`).
   - `include<..., version="1.2.0">` selects a specific package revision.
-  - The compiler will expose `--stdlib-version` to pin the default package set.
+  - There is no compiler flag to pin the default package set yet; use explicit versions in `include` declarations.
 - **Namespaces:**
   - `/std/math/*` is imported via `import /std/math/*` (or explicit names like `import /std/math/sin /std/math/pi`).
   - Core builtins (`assign`, `count`, `print*`, etc.) live in the root namespace.

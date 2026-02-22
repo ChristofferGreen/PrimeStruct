@@ -172,6 +172,23 @@ main() {
   CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
 }
 
+TEST_CASE("rejects stdlib version flag") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_stdlib_version_invalid.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_stdlib_version_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --stdlib-version=1.2.0 " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]
