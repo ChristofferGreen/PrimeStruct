@@ -509,6 +509,8 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
   - Recognized v1 capabilities: `io_out`, `io_err`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
     `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `gpu_dispatch`.
+  - VM/native backends allow `io_out`, `io_err`, `heap_alloc`, `file_write`, `pathspace_notify`, `pathspace_insert`,
+    `pathspace_take`, and `gpu_dispatch`. GLSL allows only `io_out`, `io_err`, and `pathspace_*` effects/capabilities.
 
 ## 10. Error Handling (Draft)
 

@@ -117,8 +117,8 @@ Legend:
 - ○ Define reference counting / heap value lifetime model for VM/native backends.
 - ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
 - ○ Define a per-backend type support matrix (allowed binding/return/local types by backend).
-- ○ Specify allowed binding/return/conversion target types and keep diagnostics in sync with the spec.
-- ○ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
+- ○ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
+- ✓ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
 - ○ Define the supported IR opcode subset per backend (native/VM/GLSL) and align validation to reject unsupported cases earlier.
 - ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
 - ○ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
