@@ -361,6 +361,9 @@ main() {
 }
 
 TEST_CASE("math conformance constants") {
+  // Golden constants verified with Python 3.12.12 (math.pi/math.tau/math.e).
+  // float32 rounding (IEEE-754) from Python 3.12.12:
+  // pi -> 3.1415927410125732, tau -> 6.2831854820251465, e -> 2.7182817459106445.
   const std::string source = R"(
 import /std/math/*
 
@@ -1514,6 +1517,80 @@ main() {
 }
 )";
   checkMathConformance(source, "math_conformance_grid");
+}
+
+TEST_CASE("math conformance heavy trig workload") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[return<int>]
+main() {
+  [int mut] i{0}
+  [f32 mut] acc{0.0f32}
+  while(i < 20000) {
+    [f32] x{convert<f32>(i) * 0.001f32}
+    acc = acc + sin(x) * cos(x) + tanh(x)
+    i = i + 1
+  }
+  emit("heavy_trig_finite"utf8, is_finite(acc))
+  emit("heavy_trig_range"utf8, abs(acc) < 50000.0f32)
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_heavy_trig");
+}
+
+TEST_CASE("math conformance heavy exp log workload") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[return<int>]
+main() {
+  [int mut] i{0}
+  [f32 mut] acc{0.0f32}
+  while(i < 15000) {
+    [f32] x{1.0001f32 + convert<f32>(i) * 0.0001f32}
+    acc = acc + exp(log(x))
+    i = i + 1
+  }
+  emit("heavy_exp_log_finite"utf8, is_finite(acc))
+  emit("heavy_exp_log_range"utf8, acc > 10000.0f32 && acc < 60000.0f32)
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_heavy_exp_log");
 }
 
 TEST_CASE("math conformance array math usage") {

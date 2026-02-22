@@ -14,12 +14,14 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 
 ## Source Of Truth For Expected Values
 - [x] Define reference values using C++/exe as the canonical baseline in tests.
-- [ ] For numeric literals used as “golden” constants, verify with an external tool:
-  - [ ] C++ (e.g. `std::sin`, `std::cos`) or Python `math` module.
-  - [ ] Record the tool and version used for each golden value (comment or doc).
+- [x] For numeric literals used as “golden” constants, verify with an external tool:
+  - [x] C++ (e.g. `std::sin`, `std::cos`) or Python `math` module.
+  - [x] Record the tool and version used for each golden value (comment or doc).
 - [x] Keep a small `tools/` helper script to print reference values for a list of inputs.
   - [x] Seed with `tools/print_math_refs.py` and record Python version in output.
-- [ ] Decide when to use exact comparisons vs tolerance-based checks per function.
+- [x] Decide when to use exact comparisons vs tolerance-based checks per function.
+  - Use exact comparisons for integer/bool outputs and label ordering.
+  - Use tolerances for float outputs unless testing sign/range predicates.
 
 ## Constants
 - [x] `pi`, `tau`, `e` emit correct values (float32/float64 conversion checks).
@@ -149,5 +151,6 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Stress tests with a grid of values per function (small sample).
 
 ## Performance Guardrails
-- [ ] Add a couple of “heavy math” tests to ensure runtime does not regress badly.
-- [ ] Bound execution time for the math suite (keep CI stable).
+- [x] Add a couple of “heavy math” tests to ensure runtime does not regress badly.
+- [x] Bound execution time for the math suite (keep CI stable).
+  - CTest timeout for `primestruct.compile.run.math_conformance` set to 600s.
