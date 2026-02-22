@@ -366,6 +366,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`, `/std/math/atanh`.
   - **Float utils:** `/std/math/fma`, `/std/math/hypot`, `/std/math/copysign`.
   - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
+  - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range bounds (e.g., `|sin(x)| <= 1`), and may diverge from the C++/exe baseline. Conformance tests use tolerance or range checks for these cases.
   - **Vector & color types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`. These are distinct types (colors are not aliases of vectors) with their own method surfaces.
     - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
     - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.

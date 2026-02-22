@@ -1646,6 +1646,12 @@ main() {
   emit("cos_large_1e4_range"utf8, abs(cos_1e4) <= 1.0f32)
   emit("sin_large_1e5_range"utf8, abs(sin_1e5) <= 1.0f32)
   emit("cos_large_1e5_range"utf8, abs(cos_1e5) <= 1.0f32)
+  emit("sin_large_1e4_finite"utf8, is_finite(sin_1e4))
+  emit("cos_large_1e4_finite"utf8, is_finite(cos_1e4))
+  emit("sin_large_1e5_finite"utf8, is_finite(sin_1e5))
+  emit("cos_large_1e5_finite"utf8, is_finite(cos_1e5))
+  [f32] norm_1e4{sin_1e4 * sin_1e4 + cos_1e4 * cos_1e4}
+  emit("sin_cos_norm_1e4"utf8, abs(norm_1e4 - 1.0f32) < 0.25f32)
 
   [f32] exp_10{exp(10.0f32)}
   emit("exp_10_finite"utf8, is_finite(exp_10))

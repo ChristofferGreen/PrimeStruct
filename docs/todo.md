@@ -101,7 +101,7 @@ Legend:
 - ✓ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
 - ✓ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
 - ✓ Define move semantics (`Create`/`Move`/`Copy`/`Destroy`), `move(value)` helper, and use-after-move diagnostics.
-- ○ Finalize core library surface/standard math spec and document backend-specific limits.
+- ✓ Finalize core library surface/standard math spec and document backend-specific limits.
 - ✓ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
 - ✓ Define math builtin operand type rules and backend-specific restrictions (e.g., integer pow errors).
 - ✓ Finalize and version the Standard Library Reference (currently draft v0).
