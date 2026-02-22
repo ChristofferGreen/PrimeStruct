@@ -49,7 +49,6 @@ open question is unresolved.
 - Full capability taxonomy and policy-driven capability enforcement (beyond documented effects).
 - PathSpace integration beyond `notify`/`insert`/`take` helpers and basic runtime hooks.
 - Full software numeric envelopes (`integer`/`decimal`/`complex`) and mixed-mode numeric ops.
-- `class<Name>(...)` surface syntax and composition/extends semantics.
 - Placement transforms (`stack`/`heap`/`buffer`) and placement-driven layout guarantees.
 - Recursive struct layouts and cross-module layout stability guarantees.
 - Metal backend and LLVM backend support.
@@ -522,12 +521,8 @@ for(
 - **Instrumentation:** executions carry metadata (source file/line plus effect/capability masks) for diagnostics and tracing.
 - **Open design items:** finalise the capability taxonomy and determine which instrumentation fields flow into inspector tooling vs. runtime-only logs.
 
-## Type & Class Semantics (draft)
-- **Structural classes:** `[return<void>] class<Name>(members{…})` desugars into namespace `Name::` plus constructors/metadata. Instances are produced via constructor executions.
-- **Composition over inheritance:** “extends” rewrites replicate members and install delegation logic; no hidden virtual dispatch unless a transform adds it.
-- **Generics:** classes accept template parameters (`class<Vector<T>>(…)`) and specialise through the transform pipeline.
+## Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser preserves the nested envelope string for later lowering.
-- **Interop:** generated code treats classes as structs plus free functions (`Name::method(instance, …)`); VM closures follow the same convention.
 - **Field visibility:** stack-value declarations accept `[public]`, `[package]`, or `[private]` transforms (default: private); they are mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules consistently. `[package]` exposes the field to any module compiled into the same package; `[public]` emits accessors in the generated namespace surface.
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
 - **Example:**
