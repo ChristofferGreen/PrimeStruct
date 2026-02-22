@@ -123,7 +123,7 @@ Legend:
 - ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
 - ○ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
 - ○ Enumerate VM backend unsupported opcodes/runtime errors and add tests/allowlist documentation.
-- ○ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
+- ✓ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
 - ○ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
 - ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
 - ○ Implement Metal backend output or remove it from the backend roadmap.

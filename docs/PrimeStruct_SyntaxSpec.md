@@ -521,6 +521,8 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
   - Bound arguments are evaluated when the error is raised.
   - `on_error` does not apply to nested blocks; any block containing `?` must declare its own `on_error`.
   - Missing `on_error` for a `?` usage is a compile-time error.
+- VM/native runtime errors (bounds checks, missing map keys, vector capacity, invalid integer `pow`, etc.) abort
+  execution, print a diagnostic to stderr, and return exit code `3`. Parse/semantic/lowering errors remain exit code `2`.
 
 ## 11. Return Semantics
 
