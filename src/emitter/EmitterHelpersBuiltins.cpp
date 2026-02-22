@@ -380,7 +380,20 @@ std::string resolveExprPath(const Expr &expr) {
 bool isArrayValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
-    return it != localTypes.end() && (it->second.typeName == "array" || it->second.typeName == "vector");
+    if (it == localTypes.end()) {
+      return false;
+    }
+    if (it->second.typeName == "array" || it->second.typeName == "vector") {
+      return true;
+    }
+    if (it->second.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
+        return base == "array" || base == "vector";
+      }
+    }
+    return false;
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
@@ -393,7 +406,20 @@ bool isArrayValue(const Expr &target, const std::unordered_map<std::string, Bind
 bool isVectorValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
-    return it != localTypes.end() && it->second.typeName == "vector";
+    if (it == localTypes.end()) {
+      return false;
+    }
+    if (it->second.typeName == "vector") {
+      return true;
+    }
+    if (it->second.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
+        return base == "vector";
+      }
+    }
+    return false;
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;
@@ -405,7 +431,20 @@ bool isVectorValue(const Expr &target, const std::unordered_map<std::string, Bin
 bool isMapValue(const Expr &target, const std::unordered_map<std::string, BindingInfo> &localTypes) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localTypes.find(target.name);
-    return it != localTypes.end() && it->second.typeName == "map";
+    if (it == localTypes.end()) {
+      return false;
+    }
+    if (it->second.typeName == "map") {
+      return true;
+    }
+    if (it->second.typeName == "Reference") {
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(it->second.typeTemplateArg, base, arg)) {
+        return base == "map";
+      }
+    }
+    return false;
   }
   if (target.kind == Expr::Kind::Call) {
     std::string collection;

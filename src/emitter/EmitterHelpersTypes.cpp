@@ -384,6 +384,27 @@ std::string bindingTypeToCpp(const std::string &typeName,
                              const std::string &namespacePrefix,
                              const std::unordered_map<std::string, std::string> &importAliases,
                              const std::unordered_map<std::string, std::string> &structTypeMap) {
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(typeName, base, arg)) {
+    if (base == "array" || base == "vector") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        std::string elemType = bindingTypeToCpp(args[0], namespacePrefix, importAliases, structTypeMap);
+        return "std::vector<" + elemType + ">";
+      }
+      return "std::vector<int>";
+    }
+    if (base == "map") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 2) {
+        std::string keyType = bindingTypeToCpp(args[0], namespacePrefix, importAliases, structTypeMap);
+        std::string valueType = bindingTypeToCpp(args[1], namespacePrefix, importAliases, structTypeMap);
+        return "std::unordered_map<" + keyType + ", " + valueType + ">";
+      }
+      return "std::unordered_map<int, int>";
+    }
+  }
   if (typeName == "i32" || typeName == "int") {
     return "int";
   }

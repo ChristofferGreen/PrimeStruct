@@ -6,7 +6,7 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 1. **Include resolver:** first pass walks the raw text and expands every `include<...>` inline (C-style) so the compiler always works on a single flattened source stream.
 2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same rule applies. Text transforms may append additional text transforms to the same node.
 3. **AST builder:** once text transforms finish, the parser builds the canonical AST.
-4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (borrow checks, effects) so the tree is fully resolved.
+4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects) so the tree is fully resolved.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
 
 Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text transforms are configured via `--text-transforms=<list>`; the default list enables `collections`, `operators`, `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are rewritten as key/value arguments rather than assignment expressions. Semantic transforms are configured via `--semantic-transforms=<list>`. `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic); ambiguous names are errors. Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require canonical syntax.
@@ -35,7 +35,7 @@ open question is unresolved.
 
 | Risk | Impact | Mitigation | Fallback |
 | --- | --- | --- | --- |
-| Borrow checker design remains unclear. | Resource safety rules vary by backend, leading to unsound or inconsistent behavior. | Scope borrow checking to opt-in transforms only; document minimal safety checks first. | Remove borrow-checking claims from v1 and gate on explicit transforms only. |
+| Borrow checker deferred in v1. | Resource safety rules vary by backend, leading to unsound or inconsistent behavior. | Document explicit resource rules and keep borrow checks out of v1. | Keep borrow-checking claims removed until a design lands. |
 | Capability taxonomy is not finalized. | Effects/capabilities drift between docs, diagnostics, and runtime logging. | Define a minimal capability list (IO + memory + GPU) and lock it for v1. | Treat capabilities as diagnostic-only metadata until taxonomy stabilizes. |
 | GPU backend constraints are underspecified. | GLSL/SPIR-V output may accept unsupported effects or types. | Publish an explicit GPU support matrix and reject unsupported effects/types early. | Mark GPU backend as experimental and limit to math-only + POD structs. |
 | IR/PSIR versioning slips. | Backends diverge on opcode interpretation or serialized layouts. | Freeze v1 opcode set, add migration notes, and version the serialized header. | Reject unknown IR versions and require recompile in tooling. |
@@ -113,7 +113,7 @@ module {
 - Share a consistent standard library (math, texture IO, resource bindings, PathSpace helpers) across backends while preserving determinism for replay/testing.
 
 ## Proposed Architecture
-- **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and borrow-checked resource usage.
+- **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and explicit resource usage.
 - **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation happens once; backends never see syntactic sugar.
 - **IR definition (draft):**
@@ -310,15 +310,15 @@ if you intended to index.
   }
   ```
 - **IR layout manifest:** `[struct]` extends the IR descriptor with `layout.total_size_bytes`, `layout.alignment_bytes`, and ordered `layout.fields`. Each field record stores `{ name, envelope, offset_bytes, size_bytes, padding_kind, category }`. Placement transforms consume this manifest verbatim, ensuring C++, VM, and GPU backends share one source of truth.
-- **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for borrow/resource rules. Handles remain opaque tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
+- **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for resource rules. Handles remain opaque tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
 - **Category mapping (draft):**
-  - `pod`: stored inline; treated as trivially-copyable for layout and borrow checks.
+  - `pod`: stored inline; treated as trivially-copyable for layout.
   - `handle`: stored as an opaque reference token; lifetime is managed by the owning subsystem.
   - `gpu_lane`: stored as a GPU-only handle; CPU access requires explicit staging transforms.
   - Conflicts are rejected (`pod` with `handle` or `gpu_lane`, and `handle` with `gpu_lane`).
 
 ### Transforms (draft)
-- **Purpose:** transforms are metafunctions that rewrite tokens (text transforms) or stamp semantic flags on the AST (semantic transforms). Later passes (borrow checker, backend filters) consume the semantic flags; transforms do not emit code directly.
+- **Purpose:** transforms are metafunctions that rewrite tokens (text transforms) or stamp semantic flags on the AST (semantic transforms). Later passes (backend filters) consume the semantic flags; transforms do not emit code directly.
 - **Evaluation mode:** when the compiler sees `[transform ...]`, it routes through the metafunction's declared signature—pure token rewrites operate on the raw stream, while semantic transforms receive the AST node and in-place metadata writers.
 - **Registry note:** only registered text transforms can appear in `text(...)` groups or `--text-transforms`; only registered semantic transforms can appear in `semantic(...)` groups or `--semantic-transforms`. Other transform names are treated as semantic directives and validated by the semantics pass (they cannot be forced into `text(...)`).
 
@@ -547,7 +547,7 @@ for(
     }
   }
   ```
-- **Open design items:** decide constructor semantics (beyond the `Create`/`Destroy` helpers) and constant member behaviour once the package/effect designs settle.
+- **Constructor semantics:** struct constructors use field initializers as defaults; `Create`/`Destroy` remain optional hooks. Constant member behavior follows the normal `mut` rules (immutable unless declared `mut`).
 
 ## Move/Copy/Destroy (draft)
 - **Lifecycle set:** structured types can define `Create`, `Move`, `Copy`, and `Destroy` helpers. `Create` and `Destroy` are already established; `Move`/`Copy` follow C++-style semantics.
@@ -564,7 +564,7 @@ for(
 - **Inlining transforms:** standard transforms may inline pure lambdas; async/task-oriented lambdas stay as closures.
 - **PathSpace interop:** captured handles respect frame lifetimes; transforms force reference-count or move semantics as required.
 
-## Literals & Composite Construction (draft)
+## Literals & Composite Construction
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
 - Integer literals require explicit width suffixes (`42i32`, `42i64`, `42u64`) unless `implicit-i32` is enabled (on by default). Omit it from `--text-transforms` (or use `--no-text-transforms`) to require explicit suffixes.
 - Float literals accept `f32` or `f64` suffixes; when omitted in surface syntax they default to `f32`. Canonical form requires `f32`/`f64`. Exponent notation (`1e-3`, `1.0e6f32`) is supported.
@@ -597,7 +597,7 @@ for(
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).
 - **Open design:** raw string semantics across backends.
 
-## Pointers & References (draft)
+## Pointers & References
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
 - **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including template args) and serves as an aliasing promise within the binding’s scope. There is no `readonly` qualifier yet; use `mut` to opt into mutation and `restrict<T>` to constrain aliasing.
 - **Target whitelist:** `Pointer<T>` targets must be primitive or struct types. `Reference<T>` targets may be primitive, struct, or `array<T>` (array references are allowed). `Pointer<array<T>>` and other template types are rejected by the front-end.
