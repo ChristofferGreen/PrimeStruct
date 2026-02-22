@@ -1385,6 +1385,8 @@ main() {
   emit("lerp_f_start"utf8, near(lerp(-2.0f32, 6.0f32, 0.0f32), -2.0f32, 0.001f32))
   emit("lerp_f_end"utf8, near(lerp(-2.0f32, 6.0f32, 1.0f32), 6.0f32, 0.001f32))
   emit("lerp_f_neg"utf8, near(lerp(-4.0f32, 6.0f32, 0.5f32), 1.0f32, 0.01f32))
+  emit("lerp_oob_low"utf8, near(lerp(0.0f32, 10.0f32, -0.5f32), -5.0f32, 0.02f32))
+  emit("lerp_oob_high"utf8, near(lerp(0.0f32, 10.0f32, 1.5f32), 15.0f32, 0.02f32))
   emit("fma_f"utf8, near(fma(2.0f32, 3.0f32, 4.0f32), 10.0f32, 0.01f32))
   emit("hypot_f"utf8, near(hypot(3.0f32, 4.0f32), 5.0f32, 0.05f32))
   emit("hypot_5_12"utf8, near(hypot(5.0f32, 12.0f32), 13.0f32, 0.1f32))
@@ -1392,6 +1394,9 @@ main() {
   emit("hypot_scale"utf8, abs(hypot(6.0f32, 8.0f32) - 10.0f32) < 0.1f32)
   emit("copysign_f"utf8, near(copysign(2.5f32, -1.0f32), -2.5f32, 0.001f32))
   emit("copysign_pos"utf8, near(copysign(-2.5f32, 1.0f32), 2.5f32, 0.001f32))
+  [f32] neg_zero{copysign(0.0f32, -1.0f32)}
+  [f32] neg_zero_inv{1.0f32 / neg_zero}
+  emit("copysign_neg_zero"utf8, is_inf(neg_zero_inv) && neg_zero_inv < 0.0f32)
 
   emit("abs_f"utf8, near(abs(-2.5f32), 2.5f32, 0.001f32))
   emit("abs_i"utf8, abs(-12345i32) == 12345i32)
@@ -1488,6 +1493,47 @@ main() {
 }
 )";
   checkMathConformance(source, "math_conformance_grid");
+}
+
+TEST_CASE("math conformance array math usage") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[return<int>]
+main() {
+  [array<f32>] values{array<f32>(-1.5f32, -0.5f32, 0.0f32, 0.5f32, 1.5f32)}
+  [int mut] idx{0}
+  [int mut] ok{1}
+  while(idx < values.count()) {
+    [f32] x{values[idx]}
+    if(abs(sin(x) * sin(x) + cos(x) * cos(x) - 1.0f32) > 0.05f32) {
+      ok = 0
+    } else {
+    }
+    idx = idx + 1
+  }
+  emit("array_trig_identity"utf8, ok == 1)
+
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_array_math");
 }
 
 TEST_CASE("math conformance dense grids") {

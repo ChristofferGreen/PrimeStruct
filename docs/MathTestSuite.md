@@ -99,7 +99,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Lerp
 - [x] `lerp(a, b, 0) = a`, `lerp(a, b, 1) = b`.
 - [ ] `lerp(a, b, 0.5)` midpoint check for int and float.
-- [ ] Out-of-range `t` behavior (if allowed).
+- [x] Out-of-range `t` behavior (if allowed).
 - [x] `lerp` with negative values.
 
 ## FMA
@@ -114,7 +114,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 
 ## Copysign
 - [x] Sign transfer with positive/negative magnitudes.
-- [ ] `copysign(0, -1)` behavior (negative zero policy if supported).
+- [x] `copysign(0, -1)` behavior (negative zero policy if supported).
 - [x] `copysign` with NaN magnitude policy.
 
 ## Abs/Sign
@@ -139,8 +139,8 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Conversion of NaN/Inf to int policy (error or truncation).
 
 ## Vector/Array Math Usage
-- [ ] Spot checks where math builtins are used inside vector ops (no ABI surprises).
-- [ ] Ensure math ops on indexed array values behave identically across backends.
+- [x] Spot checks where math builtins are used inside vector ops (no ABI surprises).
+- [x] Ensure math ops on indexed array values behave identically across backends.
 
 ## Cross-Backend Compliance
 - [ ] Each category above has a C++/exe baseline test.
