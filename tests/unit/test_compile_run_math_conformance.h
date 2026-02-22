@@ -285,6 +285,25 @@ bool inRange(const ParsedFloat &value, double minValue, double maxValue) {
 
 TEST_SUITE_BEGIN("primestruct.compile.run.math_conformance");
 
+TEST_CASE("math conformance reference printer script") {
+  if (!hasPython3()) {
+    return;
+  }
+  std::filesystem::path scriptPath = std::filesystem::current_path() / "tools" / "print_math_refs.py";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path().parent_path() / "tools" / "print_math_refs.py";
+  }
+  CHECK(std::filesystem::exists(scriptPath));
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_math_refs.txt").string();
+  const std::string command = "python3 " + quoteShellArg(scriptPath.string()) +
+                              " --values sin=0.5 > " + quoteShellArg(outPath);
+  CHECK(runCommand(command) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("# Python") != std::string::npos);
+  CHECK(output.find("sin:") != std::string::npos);
+  CHECK(output.find("0.5") != std::string::npos);
+}
+
 TEST_CASE("math conformance labeled output allowlist") {
   const std::string baselineText = "ok 1\nskip 0\n";
   const std::string candidateText = "ok 1\nskip 1\n";

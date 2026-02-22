@@ -13,12 +13,12 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Add a `--math-conformance` CTest label for the new suite.
 
 ## Source Of Truth For Expected Values
-- [ ] Define reference values using C++/exe as the canonical baseline in tests.
+- [x] Define reference values using C++/exe as the canonical baseline in tests.
 - [ ] For numeric literals used as “golden” constants, verify with an external tool:
   - [ ] C++ (e.g. `std::sin`, `std::cos`) or Python `math` module.
   - [ ] Record the tool and version used for each golden value (comment or doc).
-- [ ] Keep a small `tools/` helper script to print reference values for a list of inputs.
-  - [ ] Seed with `tools/print_math_refs.py` and record Python version in output.
+- [x] Keep a small `tools/` helper script to print reference values for a list of inputs.
+  - [x] Seed with `tools/print_math_refs.py` and record Python version in output.
 - [ ] Decide when to use exact comparisons vs tolerance-based checks per function.
 
 ## Constants

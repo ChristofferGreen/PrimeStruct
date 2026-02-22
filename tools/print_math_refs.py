@@ -63,8 +63,10 @@ BINARY_FUNCS: Dict[str, Callable[[float, float], float]] = {
     "hypot": math.hypot,
     "pow": math.pow,
     "copysign": math.copysign,
-    "fma": math.fma,
 }
+
+if hasattr(math, "fma"):
+    BINARY_FUNCS["fma"] = math.fma
 
 
 def parse_values_arg(raw: str) -> Dict[str, List[float]]:
