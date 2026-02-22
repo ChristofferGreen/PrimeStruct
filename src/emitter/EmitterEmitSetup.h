@@ -53,7 +53,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     return true;
   };
-  enum class HelperKind { Create, Destroy, Copy };
+  enum class HelperKind { Create, Destroy, Copy, Move };
   struct HelperSuffixInfo {
     std::string_view suffix;
     HelperKind kind;
@@ -61,10 +61,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   };
   auto matchLifecycleHelper =
       [](const std::string &fullPath, std::string &parentOut, HelperKind &kindOut, std::string &placementOut) -> bool {
-    static const std::array<HelperSuffixInfo, 9> suffixes = {{
+    static const std::array<HelperSuffixInfo, 10> suffixes = {{
         {"Create", HelperKind::Create, ""},
         {"Destroy", HelperKind::Destroy, ""},
         {"Copy", HelperKind::Copy, ""},
+        {"Move", HelperKind::Move, ""},
         {"CreateStack", HelperKind::Create, "stack"},
         {"DestroyStack", HelperKind::Destroy, "stack"},
         {"CreateHeap", HelperKind::Create, "heap"},
@@ -124,7 +125,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     HelperKind kind = HelperKind::Create;
     std::string placement;
     if (matchLifecycleHelper(def.fullPath, parentPath, kind, placement)) {
-      if (kind == HelperKind::Copy) {
+      if (kind == HelperKind::Copy || kind == HelperKind::Move) {
         continue;
       }
       auto &helpers = helpersByStruct[parentPath];

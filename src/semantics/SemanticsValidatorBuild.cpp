@@ -486,10 +486,11 @@ bool SemanticsValidator::buildDefinitionMaps() {
 
   auto isLifecycleHelper =
       [](const std::string &fullPath, std::string &parentOut, std::string &placementOut) -> bool {
-    static const std::array<HelperSuffixInfo, 9> suffixes = {{
+    static const std::array<HelperSuffixInfo, 10> suffixes = {{
         {"Create", ""},
         {"Destroy", ""},
         {"Copy", ""},
+        {"Move", ""},
         {"CreateStack", "stack"},
         {"DestroyStack", "stack"},
         {"CreateHeap", "heap"},
@@ -516,11 +517,24 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return false;
   };
   auto isCopyHelperName = [](const std::string &fullPath) -> bool {
-    static constexpr std::string_view suffix = "/Copy";
-    if (fullPath.size() <= suffix.size()) {
+    static constexpr std::string_view copySuffix = "/Copy";
+    static constexpr std::string_view moveSuffix = "/Move";
+    if (fullPath.size() <= copySuffix.size()) {
       return false;
     }
-    return fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix.data(), suffix.size()) == 0;
+    if (fullPath.compare(fullPath.size() - copySuffix.size(),
+                         copySuffix.size(),
+                         copySuffix.data(),
+                         copySuffix.size()) == 0) {
+      return true;
+    }
+    if (fullPath.size() <= moveSuffix.size()) {
+      return false;
+    }
+    return fullPath.compare(fullPath.size() - moveSuffix.size(),
+                            moveSuffix.size(),
+                            moveSuffix.data(),
+                            moveSuffix.size()) == 0;
   };
   auto isStructDefinition = [&](const std::string &path) -> bool {
     return structNames_.count(path) > 0;
@@ -538,7 +552,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     if (isCopyHelperName(def.fullPath)) {
       if (def.parameters.size() != 1) {
-        error_ = "Copy helper requires exactly one parameter: " + def.fullPath;
+        error_ = "Copy/Move helpers require exactly one parameter: " + def.fullPath;
         return false;
       }
     } else if (!def.parameters.empty()) {
@@ -558,10 +572,11 @@ bool SemanticsValidator::buildParameters() {
   };
   auto isLifecycleHelper =
       [](const std::string &fullPath, std::string &parentOut, std::string &placementOut) -> bool {
-    static const std::array<HelperSuffixInfo, 9> suffixes = {{
+    static const std::array<HelperSuffixInfo, 10> suffixes = {{
         {"Create", ""},
         {"Destroy", ""},
         {"Copy", ""},
+        {"Move", ""},
         {"CreateStack", "stack"},
         {"DestroyStack", "stack"},
         {"CreateHeap", "heap"},
@@ -588,11 +603,24 @@ bool SemanticsValidator::buildParameters() {
     return false;
   };
   auto isCopyHelperName = [](const std::string &fullPath) -> bool {
-    static constexpr std::string_view suffix = "/Copy";
-    if (fullPath.size() <= suffix.size()) {
+    static constexpr std::string_view copySuffix = "/Copy";
+    static constexpr std::string_view moveSuffix = "/Move";
+    if (fullPath.size() <= copySuffix.size()) {
       return false;
     }
-    return fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix.data(), suffix.size()) == 0;
+    if (fullPath.compare(fullPath.size() - copySuffix.size(),
+                         copySuffix.size(),
+                         copySuffix.data(),
+                         copySuffix.size()) == 0) {
+      return true;
+    }
+    if (fullPath.size() <= moveSuffix.size()) {
+      return false;
+    }
+    return fullPath.compare(fullPath.size() - moveSuffix.size(),
+                            moveSuffix.size(),
+                            moveSuffix.data(),
+                            moveSuffix.size()) == 0;
   };
 
   for (const auto &def : program_.definitions) {
@@ -656,12 +684,12 @@ bool SemanticsValidator::buildParameters() {
     if (isLifecycleHelper(def.fullPath, parentPath, placement)) {
       if (isCopyHelperName(def.fullPath)) {
         if (params.size() != 1) {
-          error_ = "Copy helper requires exactly one parameter: " + def.fullPath;
+          error_ = "Copy/Move helpers require exactly one parameter: " + def.fullPath;
           return false;
         }
         const auto &copyParam = params.front();
         if (copyParam.binding.typeName != "Reference" || copyParam.binding.typeTemplateArg != parentPath) {
-          error_ = "Copy helper requires [Reference<Self>] parameter: " + def.fullPath;
+          error_ = "Copy/Move helpers require [Reference<Self>] parameter: " + def.fullPath;
           return false;
         }
       }

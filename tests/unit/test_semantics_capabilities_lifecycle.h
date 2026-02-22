@@ -292,7 +292,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Copy helper requires [Reference<Self>] parameter") != std::string::npos);
+  CHECK(error.find("Copy/Move helpers require [Reference<Self>] parameter") != std::string::npos);
 }
 
 TEST_CASE("mut transform is rejected on non-helpers") {

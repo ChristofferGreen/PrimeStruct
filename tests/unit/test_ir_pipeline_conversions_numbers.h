@@ -100,6 +100,25 @@ main() {
   CHECK(error.find("IR backends do not support lambdas") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer accepts move builtin") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  return(move(value))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer rejects non-literal string bindings") {
   const std::string source = R"(
 [return<int>]

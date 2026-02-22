@@ -1790,12 +1790,61 @@
         }
         return true;
       }
+      if (isSimpleCallName(expr, "move")) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (expr.isMethodCall) {
+          error_ = "move does not support method-call syntax";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "move does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "move does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 1) {
+          error_ = "move requires exactly one argument";
+          return false;
+        }
+        const Expr &target = expr.args.front();
+        if (target.kind != Expr::Kind::Name) {
+          error_ = "move requires a binding name";
+          return false;
+        }
+        const BindingInfo *binding = findParamBinding(params, target.name);
+        if (!binding) {
+          auto it = locals.find(target.name);
+          if (it != locals.end()) {
+            binding = &it->second;
+          }
+        }
+        if (!binding) {
+          error_ = "move requires a local binding or parameter: " + target.name;
+          return false;
+        }
+        if (binding->typeName == "Reference") {
+          error_ = "move does not support Reference bindings: " + target.name;
+          return false;
+        }
+        if (movedBindings_.count(target.name) > 0) {
+          error_ = "use-after-move: " + target.name;
+          return false;
+        }
+        movedBindings_.insert(target.name);
+        return true;
+      }
       if (isAssignCall(expr)) {
         if (expr.args.size() != 2) {
           error_ = "assign requires exactly two arguments";
           return false;
         }
         const Expr &target = expr.args.front();
+        const bool targetIsName = target.kind == Expr::Kind::Name;
         if (target.kind == Expr::Kind::Name) {
           if (!isMutableBinding(params, locals, target.name)) {
             error_ = "assign target must be a mutable binding: " + target.name;
@@ -1825,6 +1874,9 @@
         }
         if (!validateExpr(params, locals, expr.args[1])) {
           return false;
+        }
+        if (targetIsName) {
+          movedBindings_.erase(target.name);
         }
         return true;
       }

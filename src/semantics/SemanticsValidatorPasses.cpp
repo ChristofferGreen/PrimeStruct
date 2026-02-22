@@ -16,10 +16,11 @@ struct HelperSuffixInfo {
 };
 
 bool isLifecycleHelperName(const std::string &fullPath) {
-  static const std::array<HelperSuffixInfo, 9> suffixes = {{
+  static const std::array<HelperSuffixInfo, 10> suffixes = {{
       {"Create", ""},
       {"Destroy", ""},
       {"Copy", ""},
+      {"Move", ""},
       {"CreateStack", "stack"},
       {"DestroyStack", "stack"},
       {"CreateHeap", "heap"},
@@ -255,6 +256,7 @@ bool SemanticsValidator::validateDefinitions() {
       }
     }
     OnErrorScope onErrorScope(*this, onErrorHandler);
+    movedBindings_.clear();
     bool sawReturn = false;
     for (const auto &stmt : def.statements) {
       if (!validateStatement(defParams, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
@@ -283,6 +285,7 @@ bool SemanticsValidator::validateExecutions() {
   currentOnError_.reset();
   for (const auto &exec : program_.executions) {
     activeEffects_ = resolveEffects(exec.transforms, false);
+    movedBindings_.clear();
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {

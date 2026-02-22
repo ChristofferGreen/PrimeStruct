@@ -558,13 +558,15 @@ for(
   ```
 - **Constructor semantics:** struct constructors use field initializers as defaults; `Create`/`Destroy` remain optional hooks. Constant member behavior follows the normal `mut` rules (immutable unless declared `mut`).
 
-## Move/Copy/Destroy (draft)
-- **Lifecycle set:** structured types can define `Create`, `Move`, `Copy`, and `Destroy` helpers. `Create` and `Destroy` are already established; `Move`/`Copy` follow C++-style semantics.
+## Move/Copy/Destroy
+- **Lifecycle set:** structured types can define `Create`, `Move`, `Copy`, and `Destroy` helpers. `Create`/`Destroy` are optional hooks; `Move`/`Copy` must be nested inside the struct, return `void`, and accept exactly one parameter.
 - **Copy signature:** the canonical copy constructor is `Copy([Reference<Self>] other) { ... }`. A shorthand `Copy(other) { ... }` desugars to the reference form.
-- **Explicit move:** `move(value)` is the explicit consume helper; it transfers ownership and marks the source binding as moved-from.
-- **Use-after-move:** any use of a moved-from binding is a compile error unless it is re-initialized (e.g., `assign(value, ...)`) or shadowed.
+- **Move signature:** the canonical move constructor is `Move([Reference<Self>] other) { ... }`. A shorthand `Move(other) { ... }` desugars to the reference form.
+- **Explicit move:** `move(value)` is the explicit consume helper. It requires a local binding or parameter name (no arbitrary expressions) and marks the source binding as moved-from while returning its value.
+- **Use-after-move:** any use of a moved-from binding is a compile error until it is re-initialized (e.g., `assign(value, ...)`). The analysis is conservative across control flow.
 - **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no implicit `null` literal; `0x0` is just a numeric value).
-- **References:** `Reference<T>` bindings are not implicitly movable; move semantics for references must be explicit if enabled.
+- **References:** `move(...)` rejects `Reference<T>` bindings; references do not participate in move semantics.
+- **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter emits `std::move`.
 
 ## Lambdas & Higher-Order Functions
 - **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is required but may be empty (`[]`). Template arguments are optional.

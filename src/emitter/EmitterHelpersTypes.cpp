@@ -710,6 +710,9 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   if (isSimpleCallName(expr, "assign") && expr.args.size() == 2) {
     return inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare);
   }
+  if (isSimpleCallName(expr, "move") && expr.args.size() == 1) {
+    return inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
+  }
   std::string mutateName;
   if (getBuiltinMutationName(expr, mutateName) && expr.args.size() == 1) {
     return inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);

@@ -129,6 +129,17 @@ private:
       validator.currentOnError_ = std::move(previous);
     }
   };
+  struct MovedScope {
+    SemanticsValidator &validator;
+    std::unordered_set<std::string> previous;
+    MovedScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> next)
+        : validator(validatorIn), previous(std::move(validatorIn.movedBindings_)) {
+      validator.movedBindings_ = std::move(next);
+    }
+    ~MovedScope() {
+      validator.movedBindings_ = std::move(previous);
+    }
+  };
 
   const Program &program_;
   const std::string &entryPath_;
@@ -144,6 +155,7 @@ private:
   std::unordered_set<std::string> structNames_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
   std::unordered_set<std::string> activeEffects_;
+  std::unordered_set<std::string> movedBindings_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_map<std::string, std::string> importAliases_;
   bool mathImportAll_ = false;

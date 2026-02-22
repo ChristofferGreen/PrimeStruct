@@ -921,6 +921,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return inferExprReturnKind(expr.args.front(), params, locals);
     }
+    if (isSimpleCallName(expr, "move")) {
+      if (expr.args.size() != 1) {
+        return ReturnKind::Unknown;
+      }
+      return inferExprReturnKind(expr.args.front(), params, locals);
+    }
     if (isAssignCall(expr)) {
       if (expr.args.size() != 2) {
         return ReturnKind::Unknown;

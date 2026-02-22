@@ -674,6 +674,12 @@
           }
           return inferExprKind(expr.args.front(), localsIn);
         }
+        if (isSimpleCallName(expr, "move")) {
+          if (expr.args.size() != 1) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expr.args.front(), localsIn);
+        }
         if (isSimpleCallName(expr, "assign")) {
           if (expr.args.size() != 2) {
             return LocalInfo::ValueKind::Unknown;

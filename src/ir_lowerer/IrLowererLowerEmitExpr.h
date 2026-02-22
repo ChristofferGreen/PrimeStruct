@@ -3,6 +3,13 @@
       error = "IR backends do not support lambdas";
       return false;
     }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "move")) {
+      if (expr.args.size() != 1) {
+        error = "move requires exactly one argument";
+        return false;
+      }
+      return emitExpr(expr.args.front(), localsIn);
+    }
     switch (expr.kind) {
       case Expr::Kind::Literal: {
         if (expr.intWidth == 64 || expr.isUnsigned) {

@@ -29,6 +29,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         error_ = "duplicate lambda capture: " + name;
         return false;
       }
+      if (movedBindings_.count(name) > 0) {
+        error_ = "use-after-move: " + name;
+        return false;
+      }
       if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
         lambdaLocals.emplace(name, *paramBinding);
         return true;
@@ -127,6 +131,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
 
+    MovedScope movedScope(*this, {});
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> lambdaParams;
     lambdaParams.reserve(expr.args.size());
@@ -705,6 +710,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isParam(params, expr.name) || locals.count(expr.name) > 0) {
+      if (movedBindings_.count(expr.name) > 0) {
+        error_ = "use-after-move: " + expr.name;
+        return false;
+      }
       return true;
     }
     if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos &&

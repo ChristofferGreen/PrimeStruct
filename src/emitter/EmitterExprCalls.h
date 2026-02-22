@@ -298,6 +298,13 @@
           << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
       return out.str();
     }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "move") && expr.args.size() == 1) {
+      std::ostringstream out;
+      out << "std::move("
+          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
+          << ")";
+      return out.str();
+    }
     std::string mutateName;
     if (getBuiltinMutationName(expr, mutateName) && expr.args.size() == 1) {
       std::ostringstream out;

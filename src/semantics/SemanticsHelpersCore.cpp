@@ -457,7 +457,8 @@ bool isRootBuiltinName(const std::string &name) {
   if (normalized == "increment" || normalized == "decrement") {
     return true;
   }
-  return normalized == "assign" || normalized == "if" || normalized == "then" || normalized == "else" ||
+  return normalized == "assign" || normalized == "move" || normalized == "if" || normalized == "then" ||
+         normalized == "else" ||
          normalized == "loop" || normalized == "while" || normalized == "for" || normalized == "repeat" ||
          normalized == "return" || normalized == "array" || normalized == "vector" || normalized == "map" ||
          normalized == "File" || normalized == "try" || normalized == "count" || normalized == "capacity" ||
