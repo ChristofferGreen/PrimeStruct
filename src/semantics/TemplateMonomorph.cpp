@@ -147,7 +147,7 @@ std::string replacePathPrefix(const std::string &path, const std::string &prefix
 
 bool hasMathImport(const Context &ctx) {
   for (const auto &importPath : ctx.program.imports) {
-    if (importPath.rfind("/math/", 0) == 0 && importPath.size() > 6) {
+    if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
       return true;
     }
   }

@@ -148,7 +148,7 @@ main() {
 
 TEST_CASE("parses separators as whitespace") {
   const std::string source = R"(
-import /util/*; /math/*,
+import /util/*; /std/math/*,
 
 [return<int>; effects(io_out);]
 main([i32] a{1i32;}; [i32] b{2i32,};) {
@@ -159,7 +159,7 @@ main([i32] a{1i32;}; [i32] b{2i32,};) {
   const auto program = parseProgram(source);
   REQUIRE(program.imports.size() == 2);
   CHECK(program.imports[0] == "/util/*");
-  CHECK(program.imports[1] == "/math/*");
+  CHECK(program.imports[1] == "/std/math/*");
   REQUIRE(program.definitions.size() == 1);
   REQUIRE(program.definitions[0].transforms.size() == 2);
   CHECK(program.definitions[0].parameters.size() == 2);

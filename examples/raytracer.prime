@@ -1,4 +1,4 @@
-import /math/*
+import /std/math/*
 
 [struct]
 Scene() {
@@ -309,13 +309,13 @@ occluded([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist) {
 ambient_occlusion([Scene] scene, [Vec3] point, [Vec3] normal) {
   [Vec3] up{Vec3(0.0, 1.0, 0.0)}
   [Vec3] fallbackAxis{Vec3(1.0, 0.0, 0.0)}
-  [Vec3 mut] tangent{/math/Vec3/cross(up, normal)}
+  [Vec3 mut] tangent{/std/math/Vec3/cross(up, normal)}
   if(tangent.dot(tangent) <= 0.0001) {
-    assign(tangent, /math/Vec3/cross(fallbackAxis, normal))
+    assign(tangent, /std/math/Vec3/cross(fallbackAxis, normal))
   } else {
   }
   tangent = tangent.toNormalized()
-  [Vec3] bitangent{/math/Vec3/cross(normal, tangent)}
+  [Vec3] bitangent{/std/math/Vec3/cross(normal, tangent)}
 
   [Vec3] origin{Vec3(
     point.x + normal.x * 0.001,

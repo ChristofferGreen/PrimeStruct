@@ -267,8 +267,8 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
-  if (normalized.rfind("math/", 0) == 0) {
-    out = normalized.substr(5);
+  if (normalized.rfind("std/math/", 0) == 0) {
+    out = normalized.substr(9);
     return true;
   }
   if (normalized.find('/') != std::string::npos) {

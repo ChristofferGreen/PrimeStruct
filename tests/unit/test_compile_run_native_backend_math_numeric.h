@@ -3,7 +3,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.math_numeric");
 
 TEST_CASE("compiles and runs native clamp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(clamp(9i32, 2i32, 6i32))
@@ -19,7 +19,7 @@ main() {
 
 TEST_CASE("compiles and runs native clamp i64") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<bool>]
 main() {
   return(equal(clamp(9i64, 2i64, 6i64), 6i64))
@@ -35,7 +35,7 @@ main() {
 
 TEST_CASE("compiles and runs native math abs/sign/min/max") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [i32] a{abs(-5i32)}
@@ -57,11 +57,11 @@ TEST_CASE("compiles and runs native qualified math names") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] a{/math/abs(-5i32)}
-  [i32] b{/math/sign(-5i32)}
-  [i32] c{/math/min(7i32, 2i32)}
-  [i32] d{/math/max(7i32, 2i32)}
-  [i32] e{convert<int>(/math/pi)}
+  [i32] a{/std/math/abs(-5i32)}
+  [i32] b{/std/math/sign(-5i32)}
+  [i32] c{/std/math/min(7i32, 2i32)}
+  [i32] d{/std/math/max(7i32, 2i32)}
+  [i32] e{convert<int>(/std/math/pi)}
   return(plus(plus(plus(a, b), plus(c, d)), e))
 }
 )";
@@ -76,7 +76,7 @@ main() {
 
 TEST_CASE("compiles and runs native math saturate/lerp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [i32] a{saturate(-2i32)}
@@ -96,7 +96,7 @@ main() {
 
 TEST_CASE("compiles and runs native math clamp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{clamp(2.5f32, 0.0f32, 1.0f32)}
@@ -115,7 +115,7 @@ main() {
 
 TEST_CASE("compiles and runs native math pow") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(pow(2i32, 6i32))
@@ -132,7 +132,7 @@ main() {
 
 TEST_CASE("compiles and runs native math pow rejects negative exponent") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(pow(2i32, -1i32))
@@ -153,7 +153,7 @@ main() {
 
 TEST_CASE("compiles and runs native math constant conversions") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
@@ -170,7 +170,7 @@ main() {
 
 TEST_CASE("compiles and runs native math constants") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f64] sum{plus(pi, plus(tau, e))}
@@ -188,7 +188,7 @@ main() {
 
 TEST_CASE("compiles and runs native math predicates") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] nan{divide(0.0f32, 0.0f32)}
@@ -210,7 +210,7 @@ main() {
 
 TEST_CASE("compiles and runs native math rounding") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{floor(1.9f32)}
@@ -235,7 +235,7 @@ main() {
 
 TEST_CASE("compiles and runs native math roots") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sqrt(9.0f32)}
@@ -254,7 +254,7 @@ main() {
 
 TEST_CASE("compiles and runs native math fma/hypot") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{fma(2.0f32, 3.0f32, 4.0f32)}
@@ -273,7 +273,7 @@ main() {
 
 TEST_CASE("compiles and runs native math copysign") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{copysign(3.0f32, -1.0f32)}
@@ -292,7 +292,7 @@ main() {
 
 TEST_CASE("compiles and runs native math angle helpers") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{radians(90.0f32)}
@@ -311,7 +311,7 @@ main() {
 
 TEST_CASE("compiles and runs native math trig helpers") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sin(0.0f32)}
@@ -333,7 +333,7 @@ main() {
 
 TEST_CASE("compiles and runs native sin range reduction") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] value{sin(20.0f32)}
@@ -355,7 +355,7 @@ main() {
 
 TEST_CASE("compiles and runs native sin pi accuracy") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] value{abs(sin(pi))}
@@ -377,7 +377,7 @@ main() {
 
 TEST_CASE("compiles and runs native math arc trig helpers") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{asin(0.0f32)}
@@ -397,7 +397,7 @@ main() {
 
 TEST_CASE("compiles and runs native math exp/log") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{exp(0.0f32)}
@@ -420,7 +420,7 @@ main() {
 
 TEST_CASE("compiles and runs native math hyperbolic") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sinh(0.0f32)}
@@ -444,7 +444,7 @@ main() {
 
 TEST_CASE("compiles and runs native explicit math imports") {
   const std::string source = R"(
-import /math/min /math/pi
+import /std/math/min /std/math/pi
 [return<int>]
 main() {
   return(plus(convert<int>(pi), min(7i32, 3i32)))
@@ -461,7 +461,7 @@ main() {
 
 TEST_CASE("compiles and runs native float pow") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32)))

@@ -14,10 +14,10 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
   std::unordered_map<std::string, std::optional<OnErrorHandler>> onErrorByDef;
   bool hasMathImport = false;
   auto isMathImport = [](const std::string &path) -> bool {
-    if (path == "/math/*") {
+    if (path == "/std/math/*") {
       return true;
     }
-    return path.rfind("/math/", 0) == 0 && path.size() > 6;
+    return path.rfind("/std/math/", 0) == 0 && path.size() > 10;
   };
   for (const auto &importPath : program.imports) {
     if (isMathImport(importPath)) {

@@ -411,7 +411,7 @@ TEST_CASE("ir lowerer supports math-qualified min/max") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(/math/max(1i32, /math/min(4i32, 2i32)))
+  return(/std/math/max(1i32, /std/math/min(4i32, 2i32)))
 }
 )";
   primec::Program program;
@@ -433,7 +433,7 @@ main() {
 
 TEST_CASE("ir lowerer supports math lerp with import") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(lerp(2i32, 5i32, 2i32))
@@ -458,7 +458,7 @@ main() {
 
 TEST_CASE("ir lowerer supports math pow with import") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(pow(2i32, 5i32))
@@ -539,7 +539,7 @@ main() {
 
 TEST_CASE("ir lowerer supports hyperbolic math") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sinh(0.0f32)}
@@ -571,7 +571,7 @@ main() {
 
 TEST_CASE("ir lowerer supports float pow in native backend") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32)))
@@ -598,7 +598,7 @@ TEST_CASE("ir lowerer supports math constant conversions") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(convert<int>(/math/pi))
+  return(convert<int>(/std/math/pi))
 }
 )";
   primec::Program program;
@@ -622,7 +622,7 @@ TEST_CASE("ir lowerer supports math-qualified abs/sign/saturate") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(plus(/math/abs(-5i32), plus(/math/sign(-2i32), /math/saturate(2i32))))
+  return(plus(/std/math/abs(-5i32), plus(/std/math/sign(-2i32), /std/math/saturate(2i32))))
 }
 )";
   primec::Program program;

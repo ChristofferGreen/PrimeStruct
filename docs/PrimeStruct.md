@@ -116,7 +116,7 @@ module {
 
 ## Proposed Architecture
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and borrow-checked resource usage.
-- **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
+- **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
 - **IR definition (draft):**
   - **Module:** `{ string_table, struct_layouts, functions, entry_index, version }`.
@@ -200,7 +200,7 @@ module {
 - **Tooling vs runtime visibility:**
   - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist violations (diagnostics).
   - **Runtime-only logs:** resolved effect/capability masks and execution identifiers (path hashes) for tracing; source spans are optional/debug-only.
-- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. Include paths are parsed before text transforms, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private. `import /foo/*` is a lightweight alias that brings the immediate children of `/foo` into the root namespace, while `import /foo/bar` aliases a single definition (or builtin) by its final segment; imports do not inline source (use `include` for that), and unknown import paths are errors. `import /foo` is shorthand for `import /foo/*` (except `/math`, which is unsupported without `/*` or an explicit name). `import /math/*` brings all math builtins into the root namespace, or import a subset via `import /math/sin /math/pi`; `import /math` without a wildcard or explicit name is not supported. Imports are resolved after includes and can be listed as `import /math/*, /util/*` or whitespace-separated paths.
+- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active. Include paths are parsed before text transforms, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private. `import /foo/*` is a lightweight alias that brings the immediate children of `/foo` into the root namespace, while `import /foo/bar` aliases a single definition (or builtin) by its final segment; imports do not inline source (use `include` for that), and unknown import paths are errors. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not supported. Imports are resolved after includes and can be listed as `import /std/math/*, /util/*` or whitespace-separated paths.
 - **Transform-driven control flow:** control structures desugar into prefix calls that accept envelope arguments. A surface form like `if(condition) { … } else { … }` rewrites into `if(condition, then() { … }, else() { … })`. `loop(count) { … }`, `while(condition) { … }`, and `for(init cond step) { … }` rewrite into `loop(count, do() { … })`, `while(condition, do() { … })`, and `for(init, cond, step, do() { … })`. The envelope names (`do`, `then`, `else`) are for readability only; any name is accepted and ignored by the compiler. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
@@ -228,7 +228,7 @@ module {
 
 ### Example function syntax
 ```
-import /math/*
+import /std/math/*
 namespace demo {
   [return<void> effects(io_out)]
   hello_values() {
@@ -281,7 +281,7 @@ if you intended to index.
     ```
 - **Lifecycle helpers (Create/Destroy):** Within a struct-tagged or field-only struct definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. `this` is implicitly available inside helpers. Add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable); omit it for pure helpers. Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
   ```
-  import /math/*
+  import /std/math/*
   namespace demo {
     [struct pod]
     color_grade() {
@@ -344,16 +344,16 @@ if you intended to index.
 The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them here.
 
 ### Core library surface (draft)
-- **Standard math (draft):** the core math set lives under `/math/*` (e.g., `/math/sin`, `/math/pi`). `import /math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.
-  - **Constants:** `/math/pi`, `/math/tau`, `/math/e`.
-  - **Basic:** `/math/abs`, `/math/sign`, `/math/min`, `/math/max`, `/math/clamp`, `/math/lerp`, `/math/saturate`.
-  - **Rounding:** `/math/floor`, `/math/ceil`, `/math/round`, `/math/trunc`, `/math/fract`.
-  - **Power/log:** `/math/sqrt`, `/math/cbrt`, `/math/pow`, `/math/exp`, `/math/exp2`, `/math/log`, `/math/log2`, `/math/log10`.
+- **Standard math (draft):** the core math set lives under `/std/math/*` (e.g., `/std/math/sin`, `/std/math/pi`). `import /std/math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Fixed-width integers (`i32`, `i64`, `u64`) and `integer` use exact arithmetic; `f32`/`f64` follow their IEEE-754 behavior; `decimal` and `complex` use the 256-bit `decimal` precision and round-to-nearest-even rules.
+  - **Constants:** `/std/math/pi`, `/std/math/tau`, `/std/math/e`.
+  - **Basic:** `/std/math/abs`, `/std/math/sign`, `/std/math/min`, `/std/math/max`, `/std/math/clamp`, `/std/math/lerp`, `/std/math/saturate`.
+  - **Rounding:** `/std/math/floor`, `/std/math/ceil`, `/std/math/round`, `/std/math/trunc`, `/std/math/fract`.
+  - **Power/log:** `/std/math/sqrt`, `/std/math/cbrt`, `/std/math/pow`, `/std/math/exp`, `/std/math/exp2`, `/std/math/log`, `/std/math/log2`, `/std/math/log10`.
   - **Integer pow:** for integer operands, `pow` requires a non-negative exponent; negative exponents abort in VM/native (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
-  - **Trig:** `/math/sin`, `/math/cos`, `/math/tan`, `/math/asin`, `/math/acos`, `/math/atan`, `/math/atan2`, `/math/radians`, `/math/degrees`.
-  - **Hyperbolic:** `/math/sinh`, `/math/cosh`, `/math/tanh`, `/math/asinh`, `/math/acosh`, `/math/atanh`.
-  - **Float utils:** `/math/fma`, `/math/hypot`, `/math/copysign`.
-  - **Predicates:** `/math/is_nan`, `/math/is_inf`, `/math/is_finite`.
+  - **Trig:** `/std/math/sin`, `/std/math/cos`, `/std/math/tan`, `/std/math/asin`, `/std/math/acos`, `/std/math/atan`, `/std/math/atan2`, `/std/math/radians`, `/std/math/degrees`.
+  - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`, `/std/math/atanh`.
+  - **Float utils:** `/std/math/fma`, `/std/math/hypot`, `/std/math/copysign`.
+  - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
   - **Vector & color types (draft):** stdlib ships `.prime` definitions for `Vec2`, `Vec3`, `Vec4`, `ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`. These are distinct types (colors are not aliases of vectors) with their own method surfaces.
     - **Vectors:** constructors, component accessors, and member methods like `length()`, `normalize()` (in-place), and `toNormalized()` (returns a new value).
     - **Colors:** constructors plus color-space helpers (e.g., sRGB/linear conversions) and per-channel ops. sRGB types remain distinct from linear `ColorRGB`/`ColorRGBA`.
@@ -363,7 +363,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
 - **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require `io_err`. VM/native backends support integer/bool values plus string literals/bindings; other string operations still require the C++ emitter.
 - **`plus`, `minus`, `multiply`, `divide`, `negate`:** arithmetic wrappers used after operator desugaring. Operands must be numeric (`i32`, `i64`, `u64`, `f32`, `f64`); bool/string/pointer operands are rejected. Mixed signed/unsigned integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see Pointer arithmetic below).
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`, `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned ordering; `i32`/`i64` use signed ordering), and mixed signed/unsigned comparisons are rejected in the current IR/native subset; `bool` participates as a signed `0/1`, so `bool` with `u64` is rejected as mixed signedness. Boolean combinators accept `bool` inputs only. Control-flow conditions (`if`/`while`/`for`) require `bool` results; use comparisons or `bool{value}` / `convert<bool>(value)` when needed. The current IR/native subset accepts integer/bool/float operands for comparisons; string comparisons still require the C++ emitter.
-- **`/math/clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and float clamps (`f32`, `f64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected.
+- **`/std/math/clamp(value, min, max)`:** numeric helper used heavily in rendering scripts. VM/native lowering supports integer clamps (`i32`, `i64`, `u64`) and float clamps (`f32`, `f64`) and follows the usual integer promotion rules (`i32` mixed with `i64` yields `i64`, while `u64` requires all operands to be `u64`). Mixed signed/unsigned clamps are rejected.
 - **`if(condition, then() { ... }, else() { ... })`:** canonical conditional form after control-flow desugaring.
   - Signature: `if(Envelope, Envelope, Envelope)`
   - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
@@ -419,7 +419,7 @@ for(
   - `include<..., version="1.2.0">` selects a specific package revision.
   - The compiler will expose `--stdlib-version` to pin the default package set.
 - **Namespaces:**
-  - `/math/*` is imported via `import /math/*` (or explicit names like `import /math/sin /math/pi`).
+  - `/std/math/*` is imported via `import /std/math/*` (or explicit names like `import /std/math/sin /std/math/pi`).
   - Core builtins (`assign`, `count`, `print*`, `convert`, etc.) live in the root namespace.
 - **Conformance note:** the VM/native subset may reject functions that the C++ emitter supports (e.g., float-heavy math); the reference will mark such cases explicitly.
 - **Core builtins (root namespace):**
@@ -525,7 +525,7 @@ for(
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
 - **Example:**
   ```
-  import /math/*
+  import /std/math/*
   namespace demo {
     [struct]
     brush_settings() {
@@ -581,7 +581,7 @@ for(
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals; other string key expressions require the C++ emitter (which uses `std::string_view` keys).
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)` or `bool{value}`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `int/i32/i64/u64/bool/f32/f64` in the minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native.
-- **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/math/*` helpers.
+- **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/std/math/*` helpers.
 - **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
   - `convert<bool>` and `bool{...}` are valid for integer operands (including `u64`) and treat any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).
@@ -677,7 +677,7 @@ main() {
 // Pull std::io at version 1.2.0
 include<"/std/io", version="1.2.0">
 
-import /math/*
+import /std/math/*
 
 [operators return<int>] add<int>(a, b) { return(plus(a, b)) }
 

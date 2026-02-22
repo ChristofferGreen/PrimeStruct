@@ -110,7 +110,7 @@ main() {
 
 TEST_CASE("compiles and runs min") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(min(5i32, 2i32))
@@ -126,7 +126,7 @@ main() {
 
 TEST_CASE("compiles and runs max f32") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(max(1.25f, 2.5f)))
@@ -142,7 +142,7 @@ main() {
 
 TEST_CASE("compiles and runs abs") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(abs(negate(7i32)))
@@ -158,7 +158,7 @@ main() {
 
 TEST_CASE("compiles and runs sign f32") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(plus(sign(1.5f), sign(negate(2.0f)))))
@@ -174,7 +174,7 @@ main() {
 
 TEST_CASE("compiles and runs saturate f32") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(saturate(2.5f)))
@@ -190,7 +190,7 @@ main() {
 
 TEST_CASE("compiles and runs clamp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(clamp(5i32, 1i32, 4i32))
@@ -206,7 +206,7 @@ main() {
 
 TEST_CASE("compiles and runs clamp i64") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<i64>]
 main() {
   return(clamp(9i64, 2i64, 6i64))
@@ -222,7 +222,7 @@ main() {
 
 TEST_CASE("compiles and runs clamp mixed i32/i64") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<i64>]
 main() {
   return(clamp(9i32, 2i64, 6i32))
@@ -238,7 +238,7 @@ main() {
 
 TEST_CASE("compiles and runs clamp u64") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<u64>]
 main() {
   return(clamp(9u64, 2u64, 6u64))
@@ -254,7 +254,7 @@ main() {
 
 TEST_CASE("compiles and runs clamp f32") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(clamp(1.5f, 0.5f, 1.2f)))
@@ -270,7 +270,7 @@ main() {
 
 TEST_CASE("compiles and runs clamp f64") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(clamp(2.5f64, 1.0f64, 2.0f64)))

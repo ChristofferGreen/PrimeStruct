@@ -207,7 +207,7 @@ main() {
 
 TEST_CASE("named arguments rejected for math builtin") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(sin([angle] 0.5f))
@@ -222,7 +222,7 @@ TEST_CASE("named arguments rejected for slash math builtin") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(/math/sin([angle] 0.5f))
+  return(/std/math/sin([angle] 0.5f))
 }
 )";
   std::string error;
@@ -236,16 +236,16 @@ TEST_CASE("named arguments rejected for math builtin after import") {
 main() {
   return(sin([angle] 0.5f))
 }
-import /math/*
+import /std/math/*
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
-TEST_CASE("import /math rejected") {
+TEST_CASE("import /std/math rejected") {
   const std::string source = R"(
-import /math
+import /std/math
 [return<int>]
 main() {
   return(0i32)
@@ -256,7 +256,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("import /math is not supported") != std::string::npos);
+  CHECK(error.find("import /std/math is not supported") != std::string::npos);
 }
 
 TEST_CASE("named arguments rejected for vector helper") {

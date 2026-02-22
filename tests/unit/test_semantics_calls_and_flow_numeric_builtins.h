@@ -122,7 +122,7 @@ main() {
 
 TEST_CASE("abs rejects non-numeric operand") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(abs("hi"utf8))
@@ -135,7 +135,7 @@ main() {
 
 TEST_CASE("sign rejects non-numeric operand") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(sign("hi"utf8))
@@ -148,7 +148,7 @@ main() {
 
 TEST_CASE("saturate rejects non-numeric operand") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(saturate("hi"utf8))
@@ -161,7 +161,7 @@ main() {
 
 TEST_CASE("pow accepts integer operands") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(pow(2i32, 3i32))
@@ -174,7 +174,7 @@ main() {
 
 TEST_CASE("pow accepts float operands") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<float>]
 main() {
   return(pow(2.0f32, 3.0f32))
@@ -187,7 +187,7 @@ main() {
 
 TEST_CASE("pow rejects mixed int/float operands") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<float>]
 main() {
   return(pow(2i32, 3.0f32))
@@ -200,7 +200,7 @@ main() {
 
 TEST_CASE("rounding math builtins validate") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<float>]
 main() {
   return(floor(1.25f))
@@ -213,7 +213,7 @@ main() {
 
 TEST_CASE("float predicate math builtins validate") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<bool>]
 main() {
   return(is_finite(1.0f))
@@ -226,7 +226,7 @@ main() {
 
 TEST_CASE("min rejects non-numeric operand") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(min("hi"utf8, 1i32))
@@ -239,7 +239,7 @@ main() {
 
 TEST_CASE("max rejects non-numeric operand") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(max(1i32, "hi"utf8))
@@ -252,7 +252,7 @@ main() {
 
 TEST_CASE("clamp rejects non-numeric operand") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(clamp("hi"utf8, 0i32, 2i32))
@@ -265,7 +265,7 @@ main() {
 
 TEST_CASE("clamp rejects mixed signed/unsigned operands") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(clamp(1i32, 0u64, 2u64))

@@ -1,4 +1,5 @@
-namespace math {
+namespace std {
+  namespace math {
   [return<f32>]
   srgbToLinearChannel([f32] c) {
     if(c <= 0.04045) {
@@ -58,9 +59,9 @@ namespace math {
     [return<ColorRGB>]
     clamp([ColorRGB] self, [f32] minValue, [f32] maxValue) {
       return(ColorRGB(
-        /math/clamp(self.r, minValue, maxValue),
-        /math/clamp(self.g, minValue, maxValue),
-        /math/clamp(self.b, minValue, maxValue)
+        /std/math/clamp(self.r, minValue, maxValue),
+        /std/math/clamp(self.g, minValue, maxValue),
+        /std/math/clamp(self.b, minValue, maxValue)
       ))
     }
 
@@ -107,10 +108,10 @@ namespace math {
     [return<ColorRGBA>]
     clamp([ColorRGBA] self, [f32] minValue, [f32] maxValue) {
       return(ColorRGBA(
-        /math/clamp(self.r, minValue, maxValue),
-        /math/clamp(self.g, minValue, maxValue),
-        /math/clamp(self.b, minValue, maxValue),
-        /math/clamp(self.a, minValue, maxValue)
+        /std/math/clamp(self.r, minValue, maxValue),
+        /std/math/clamp(self.g, minValue, maxValue),
+        /std/math/clamp(self.b, minValue, maxValue),
+        /std/math/clamp(self.a, minValue, maxValue)
       ))
     }
 
@@ -161,5 +162,6 @@ namespace math {
         srgbToLinearChannel(self.a)
       ))
     }
+  }
   }
 }

@@ -15,14 +15,14 @@ TEST_CASE("rewrites divide operator without spaces") {
 }
 
 TEST_CASE("does not rewrite slash paths") {
-  const std::string source = "main(){ return(/math/sin(0.0f)) }\n";
+  const std::string source = "main(){ return(/std/math/sin(0.0f)) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("/math/sin(0.0f)") != std::string::npos);
-  CHECK(output.find("divide(/math") == std::string::npos);
+  CHECK(output.find("/std/math/sin(0.0f)") != std::string::npos);
+  CHECK(output.find("divide(/std/math") == std::string::npos);
 }
 
 TEST_CASE("rewrites plus operator without spaces") {

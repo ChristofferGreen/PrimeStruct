@@ -308,8 +308,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
 
   importAliases_.clear();
   for (const auto &importPath : program_.imports) {
-    if (importPath == "/math") {
-      error_ = "import /math is not supported; use import /math/* or /math/<name>";
+    if (importPath == "/std/math") {
+      error_ = "import /std/math is not supported; use import /std/math/* or /std/math/<name>";
       return false;
     }
     if (importPath.empty() || importPath[0] != '/') {
@@ -356,15 +356,15 @@ bool SemanticsValidator::buildDefinitionMaps() {
           return false;
         }
       }
-      if (!sawImmediateDefinition && prefix != "/math") {
+      if (!sawImmediateDefinition && prefix != "/std/math") {
         error_ = "unknown import path: " + importPath;
         return false;
       }
       continue;
     }
     bool isMathBuiltinImport = false;
-    if (importPath.rfind("/math/", 0) == 0 && importPath.size() > 6) {
-      std::string name = importPath.substr(6);
+    if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
+      std::string name = importPath.substr(10);
       if (name.find('/') == std::string::npos && name != "*" && isMathBuiltinName(name)) {
         isMathBuiltinImport = true;
       }

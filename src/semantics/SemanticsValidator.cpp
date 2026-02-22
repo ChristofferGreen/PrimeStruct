@@ -18,12 +18,12 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       defaultEffects_(defaultEffects),
       entryDefaultEffects_(entryDefaultEffects) {
   for (const auto &importPath : program_.imports) {
-    if (importPath == "/math/*") {
+    if (importPath == "/std/math/*") {
       mathImportAll_ = true;
       continue;
     }
-    if (importPath.rfind("/math/", 0) == 0 && importPath.size() > 6) {
-      std::string name = importPath.substr(6);
+    if (importPath.rfind("/std/math/", 0) == 0 && importPath.size() > 10) {
+      std::string name = importPath.substr(10);
       if (name.find('/') == std::string::npos && name != "*") {
         mathImports_.insert(std::move(name));
       }
@@ -54,8 +54,10 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
   if (name.empty() || name.find('/') != std::string::npos) {
     return false;
   }
-  if (currentDefinitionPath_ == "/math" || currentDefinitionPath_.rfind("/math/", 0) == 0) {
-    return true;
+  if (!currentDefinitionPath_.empty()) {
+    if (currentDefinitionPath_ == "/std/math" || currentDefinitionPath_.rfind("/std/math/", 0) == 0) {
+      return true;
+    }
   }
   return mathImportAll_ || mathImports_.count(name) > 0;
 }

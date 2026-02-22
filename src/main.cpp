@@ -611,7 +611,7 @@ std::string quotePath(const std::filesystem::path &path) {
 }
 
 bool shouldAutoIncludeStdlib(const std::string &source) {
-  return source.find("import /math") != std::string::npos;
+  return source.find("import /std/math") != std::string::npos;
 }
 
 bool appendStdlibSources(const std::vector<std::string> &includePaths,

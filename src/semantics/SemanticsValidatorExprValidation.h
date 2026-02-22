@@ -1823,7 +1823,7 @@
         if (getBuiltinClampName(expr, builtinName, true) || getBuiltinMinMaxName(expr, builtinName, true) ||
             getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
             getBuiltinMathName(expr, builtinName, true)) {
-          error_ = "math builtin requires import /math/* or /math/<name>: " + expr.name;
+          error_ = "math builtin requires import /std/math/* or /std/math/<name>: " + expr.name;
           return false;
         }
       }

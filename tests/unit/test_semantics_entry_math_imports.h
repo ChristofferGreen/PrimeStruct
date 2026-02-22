@@ -9,12 +9,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math builtin requires import /math/* or /math/<name>: clamp") != std::string::npos);
+  CHECK(error.find("math builtin requires import /std/math/* or /std/math/<name>: clamp") != std::string::npos);
 }
 
 TEST_CASE("math builtin resolves with import") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(clamp(2i32, 1i32, 5i32))
@@ -34,12 +34,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math builtin requires import /math/* or /math/<name>: sin") != std::string::npos);
+  CHECK(error.find("math builtin requires import /std/math/* or /std/math/<name>: sin") != std::string::npos);
 }
 
 TEST_CASE("math trig builtin resolves with import") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<f32>]
 main() {
   return(sin(0.5f32))
@@ -52,7 +52,7 @@ main() {
 
 TEST_CASE("math trig builtin resolves with explicit import") {
   const std::string source = R"(
-import /math/sin
+import /std/math/sin
 [return<f32>]
 main() {
   return(sin(0.5f32))
@@ -65,7 +65,7 @@ main() {
 
 TEST_CASE("math trig builtin rejects non-imported name") {
   const std::string source = R"(
-import /math/sin
+import /std/math/sin
 [return<f32>]
 main() {
   return(cos(0.5f32))
@@ -73,14 +73,14 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math builtin requires import /math/* or /math/<name>: cos") != std::string::npos);
+  CHECK(error.find("math builtin requires import /std/math/* or /std/math/<name>: cos") != std::string::npos);
 }
 
 TEST_CASE("math-qualified builtin works without import") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(/math/clamp(2i32, 1i32, 5i32))
+  return(/std/math/clamp(2i32, 1i32, 5i32))
 }
 )";
   std::string error;
@@ -97,12 +97,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math constant requires import /math/* or /math/<name>: pi") != std::string::npos);
+  CHECK(error.find("math constant requires import /std/math/* or /std/math/<name>: pi") != std::string::npos);
 }
 
 TEST_CASE("math constants resolve with import") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<f64>]
 main() {
   return(plus(plus(pi, tau), e))
@@ -115,7 +115,7 @@ main() {
 
 TEST_CASE("math constant resolves with explicit import") {
   const std::string source = R"(
-import /math/pi
+import /std/math/pi
 [return<f64>]
 main() {
   return(pi)
@@ -128,7 +128,7 @@ main() {
 
 TEST_CASE("math constant explicit import does not allow others") {
   const std::string source = R"(
-import /math/pi
+import /std/math/pi
 [return<f64>]
 main() {
   return(plus(pi, tau))
@@ -136,12 +136,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("math constant requires import /math/* or /math/<name>: tau") != std::string::npos);
+  CHECK(error.find("math constant requires import /std/math/* or /std/math/<name>: tau") != std::string::npos);
 }
 
 TEST_CASE("math import rejects root definition conflicts") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<f32>]
 sin([f32] value) {
   return(value)
@@ -158,7 +158,7 @@ main() {
 
 TEST_CASE("explicit math import rejects root definition conflicts") {
   const std::string source = R"(
-import /math/pi
+import /std/math/pi
 [return<f64>]
 pi() {
   return(3.14f64)
@@ -179,7 +179,7 @@ TEST_CASE("math import rejects root conflicts after definitions") {
 sin([f32] value) {
   return(value)
 }
-import /math/*
+import /std/math/*
 [return<f32>]
 main() {
   return(sin(0.5f32))
@@ -196,7 +196,7 @@ TEST_CASE("explicit math import rejects root conflicts after definitions") {
 pi() {
   return(3.14f64)
 }
-import /math/pi
+import /std/math/pi
 [return<f64>]
 main() {
   return(pi())
@@ -211,7 +211,7 @@ TEST_CASE("math-qualified constant works without import") {
   const std::string source = R"(
 [return<f64>]
 main() {
-  return(/math/pi)
+  return(/std/math/pi)
 }
 )";
   std::string error;
@@ -223,17 +223,17 @@ TEST_CASE("math-qualified non-math builtin fails") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(/math/plus(1i32, 2i32))
+  return(/std/math/plus(1i32, 2i32))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /math/plus") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/math/plus") != std::string::npos);
 }
 
 TEST_CASE("import rejects unknown math builtin") {
   const std::string source = R"(
-import /math/nope
+import /std/math/nope
 [return<int>]
 main() {
   return(1i32)
@@ -241,12 +241,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown import path: /math/nope") != std::string::npos);
+  CHECK(error.find("unknown import path: /std/math/nope") != std::string::npos);
 }
 
 TEST_CASE("import rejects math builtin conflicts") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 import /util
 namespace util {
   [return<f32>]

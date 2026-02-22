@@ -37,7 +37,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.math_conformance");
 
 TEST_CASE("math conformance trig basics") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -89,7 +89,7 @@ main() {
 
 TEST_CASE("math conformance inverse trig and atan2") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -152,7 +152,7 @@ main() {
 
 TEST_CASE("math conformance hyperbolic") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -197,7 +197,7 @@ main() {
 
 TEST_CASE("math conformance inverse hyperbolic") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -237,7 +237,7 @@ main() {
 
 TEST_CASE("math conformance exp and log") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -280,7 +280,7 @@ main() {
 
 TEST_CASE("math conformance exp/log domains") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -329,7 +329,7 @@ main() {
 
 TEST_CASE("math conformance float64 basics") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -385,7 +385,7 @@ main() {
 
 TEST_CASE("math conformance float64 inverse trig and logs") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -435,7 +435,7 @@ main() {
 
 TEST_CASE("math conformance float64 hyperbolic") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -484,7 +484,7 @@ main() {
 
 TEST_CASE("math conformance float64 grids") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -548,7 +548,7 @@ main() {
 
 TEST_CASE("math conformance float64 rounding") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -591,7 +591,7 @@ main() {
 
 TEST_CASE("math conformance roots and pow") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -638,7 +638,7 @@ main() {
 
 TEST_CASE("math conformance rounding") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -683,7 +683,7 @@ main() {
 
 TEST_CASE("math conformance misc ops") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -754,7 +754,7 @@ main() {
 
 TEST_CASE("math conformance stress grid") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -815,7 +815,7 @@ main() {
 
 TEST_CASE("math conformance dense grids") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -921,7 +921,7 @@ main() {
 
 TEST_CASE("math conformance deterministic samples") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -986,7 +986,7 @@ main() {
 
 TEST_CASE("math conformance deterministic exp/log samples") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -1053,7 +1053,7 @@ main() {
 
 TEST_CASE("math conformance fixed seed samples") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -1103,7 +1103,7 @@ main() {
 
 TEST_CASE("math conformance conversions and comparisons") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -1143,7 +1143,7 @@ main() {
 
 TEST_CASE("math conformance policy behavior") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -1184,7 +1184,7 @@ main() {
 
 TEST_CASE("math conformance integer edge cases") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {
@@ -1223,7 +1223,7 @@ main() {
 
 TEST_CASE("math conformance atan2 edges") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 
 [int]
 pass([bool] ok) {

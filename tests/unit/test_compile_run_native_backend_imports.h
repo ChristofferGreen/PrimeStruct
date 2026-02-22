@@ -169,7 +169,7 @@ main() {
 
 TEST_CASE("compiles and runs native with multiple imports") {
   const std::string source = R"(
-import /util, /math/*
+import /util, /std/math/*
 namespace util {
   [return<int>]
   add([i32] a, [i32] b) {

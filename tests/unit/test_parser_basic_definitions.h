@@ -291,9 +291,9 @@ execute_repeat(3i32)
 
 TEST_CASE("parses import paths with comments") {
   const std::string source = R"(
-import /util /* inline comment */ , /* gap */ /math/ /* star gap */ *
-import /math/sin // trailing comment
-import /math/pi /* block comment */
+import /util /* inline comment */ , /* gap */ /std/math/ /* star gap */ *
+import /std/math/sin // trailing comment
+import /std/math/pi /* block comment */
 
 [return<int>]
 main() {
@@ -303,14 +303,14 @@ main() {
   const auto program = parseProgram(source);
   REQUIRE(program.imports.size() == 4);
   CHECK(program.imports[0] == "/util/*");
-  CHECK(program.imports[1] == "/math/*");
-  CHECK(program.imports[2] == "/math/sin");
-  CHECK(program.imports[3] == "/math/pi");
+  CHECK(program.imports[1] == "/std/math/*");
+  CHECK(program.imports[2] == "/std/math/sin");
+  CHECK(program.imports[3] == "/std/math/pi");
 }
 
 TEST_CASE("parses semicolon separators") {
   const std::string source = R"(
-import /math/sin; /math/cos
+import /std/math/sin; /std/math/cos
 
 [return<int>; effects(io_out)]
 main([i32] left; [i32] right) {
@@ -328,8 +328,8 @@ execute_repeat(1i32; 2i32);
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.imports.size() == 2);
-  CHECK(program.imports[0] == "/math/sin");
-  CHECK(program.imports[1] == "/math/cos");
+  CHECK(program.imports[0] == "/std/math/sin");
+  CHECK(program.imports[1] == "/std/math/cos");
   REQUIRE(program.definitions.size() == 2);
   CHECK(program.definitions[0].parameters.size() == 2);
   REQUIRE(program.definitions[0].transforms.size() == 2);

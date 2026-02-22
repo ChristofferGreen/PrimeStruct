@@ -94,8 +94,8 @@ bool getMathBuiltinName(const Expr &expr, std::string &out) {
     return false;
   }
   std::string normalized = normalizeName(expr);
-  if (normalized.rfind("math/", 0) == 0) {
-    out = normalized.substr(5);
+  if (normalized.rfind("std/math/", 0) == 0) {
+    out = normalized.substr(9);
   } else {
     if (normalized.find('/') != std::string::npos) {
       return false;
@@ -117,8 +117,8 @@ bool getMathConstantName(const Expr &expr, std::string &out) {
     return false;
   }
   std::string normalized = normalizeName(expr);
-  if (normalized.rfind("math/", 0) == 0) {
-    normalized = normalized.substr(5);
+  if (normalized.rfind("std/math/", 0) == 0) {
+    normalized = normalized.substr(9);
   }
   if (normalized.find('/') != std::string::npos) {
     return false;

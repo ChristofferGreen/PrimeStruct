@@ -110,10 +110,10 @@ bool Parser::parse(Program &program, std::string &error) {
           path += "/*";
           scan = next;
         }
-        if (path == "/math/*") {
+        if (path == "/std/math/*") {
           mathImportAll_ = true;
-        } else if (path.rfind("/math/", 0) == 0 && path.size() > 6) {
-          std::string name = path.substr(6);
+        } else if (path.rfind("/std/math/", 0) == 0 && path.size() > 10) {
+          std::string name = path.substr(10);
           if (name.find('/') == std::string::npos && name != "*") {
             mathImports_.insert(std::move(name));
           }
@@ -189,8 +189,8 @@ bool Parser::parseImport(Program &program) {
         return fail(nameError);
       }
     }
-    if (pathText == "/math") {
-      return fail("import /math is not supported; use import /math/* or /math/<name>");
+    if (pathText == "/std/math") {
+      return fail("import /std/math is not supported; use import /std/math/* or /std/math/<name>");
     }
     if (pathText.find('/', 1) == std::string::npos) {
       pathText += "/*";
@@ -198,10 +198,10 @@ bool Parser::parseImport(Program &program) {
     if (std::find(program.imports.begin(), program.imports.end(), pathText) == program.imports.end()) {
       program.imports.push_back(pathText);
     }
-    if (pathText == "/math/*") {
+    if (pathText == "/std/math/*") {
       mathImportAll_ = true;
-    } else if (pathText.rfind("/math/", 0) == 0 && pathText.size() > 6) {
-      std::string name = pathText.substr(6);
+    } else if (pathText.rfind("/std/math/", 0) == 0 && pathText.size() > 10) {
+      std::string name = pathText.substr(10);
       if (name.find('/') == std::string::npos && name != "*") {
         mathImports_.insert(std::move(name));
       }

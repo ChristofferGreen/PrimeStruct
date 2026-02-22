@@ -124,10 +124,10 @@
 
   bool hasMathImport = false;
   auto isMathImport = [](const std::string &path) -> bool {
-    if (path == "/math/*") {
+    if (path == "/std/math/*") {
       return true;
     }
-    return path.rfind("/math/", 0) == 0 && path.size() > 6;
+    return path.rfind("/std/math/", 0) == 0 && path.size() > 10;
   };
   for (const auto &importPath : program.imports) {
     if (isMathImport(importPath)) {
@@ -605,8 +605,8 @@
     if (!normalized.empty() && normalized[0] == '/') {
       normalized.erase(0, 1);
     }
-    if (normalized.rfind("math/", 0) == 0) {
-      out = normalized.substr(5);
+    if (normalized.rfind("std/math/", 0) == 0) {
+      out = normalized.substr(9);
       return true;
     }
     if (normalized.find('/') != std::string::npos) {

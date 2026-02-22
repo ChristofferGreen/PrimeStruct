@@ -48,7 +48,7 @@ std::string trimWhitespace(const std::string &text) {
 }
 
 bool shouldAutoIncludeStdlib(const std::string &source) {
-  return source.find("import /math") != std::string::npos;
+  return source.find("import /std/math") != std::string::npos;
 }
 
 bool appendStdlibSources(const std::vector<std::string> &includePaths,

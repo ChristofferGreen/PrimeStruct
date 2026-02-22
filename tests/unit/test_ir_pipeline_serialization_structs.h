@@ -41,7 +41,7 @@ main() {
 
 TEST_CASE("ir lowers semicolon-separated imports") {
   const std::string source = R"(
-import /util; /math/*
+import /util; /std/math/*
 namespace util {
   [return<int>]
   inc([i32] value) {

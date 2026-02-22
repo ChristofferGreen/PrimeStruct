@@ -356,9 +356,9 @@ TEST_CASE("glsl emitter handles math constants") {
   const std::string source = R"(
 [return<void>]
 main() {
-  [f64] pi_val{/math/pi}
-  [f64] tau_val{/math/tau}
-  [f64] e_val{/math/e}
+  [f64] pi_val{/std/math/pi}
+  [f64] tau_val{/std/math/tau}
+  [f64] e_val{/std/math/e}
   return()
 }
 )";
@@ -376,7 +376,7 @@ main() {
 
 TEST_CASE("glsl emitter writes integer pow helper") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<void>]
 main() {
   [i32] value{pow(2i32, 3i32)}
@@ -473,7 +473,7 @@ main() {
 
 TEST_CASE("glsl emitter writes math builtins") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<void>]
 main() {
   [f32] value{floor(1.9f32)}

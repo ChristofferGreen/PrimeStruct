@@ -1,6 +1,6 @@
 TEST_CASE("runs vm with math abs/sign/min/max") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [i32] a{abs(-5i32)}
@@ -19,11 +19,11 @@ TEST_CASE("runs vm with qualified math names") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [i32] a{/math/abs(-5i32)}
-  [i32] b{/math/sign(-5i32)}
-  [i32] c{/math/min(7i32, 2i32)}
-  [i32] d{/math/max(7i32, 2i32)}
-  [i32] e{convert<int>(/math/pi)}
+  [i32] a{/std/math/abs(-5i32)}
+  [i32] b{/std/math/sign(-5i32)}
+  [i32] c{/std/math/min(7i32, 2i32)}
+  [i32] d{/std/math/max(7i32, 2i32)}
+  [i32] e{convert<int>(/std/math/pi)}
   return(plus(plus(plus(a, b), plus(c, d)), e))
 }
 )";
@@ -34,7 +34,7 @@ main() {
 
 TEST_CASE("runs vm with math saturate/lerp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [i32] a{saturate(-2i32)}
@@ -50,7 +50,7 @@ main() {
 
 TEST_CASE("runs vm with math clamp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{clamp(2.5f32, 0.0f32, 1.0f32)}
@@ -65,7 +65,7 @@ main() {
 
 TEST_CASE("runs vm with math pow") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(pow(2i32, 6i32))
@@ -78,7 +78,7 @@ main() {
 
 TEST_CASE("runs vm with math pow rejects negative exponent") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(pow(2i32, -1i32))
@@ -93,7 +93,7 @@ main() {
 
 TEST_CASE("runs vm with math constant conversions") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
@@ -106,7 +106,7 @@ main() {
 
 TEST_CASE("runs vm with math constants") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f64] sum{plus(pi, plus(tau, e))}
@@ -120,7 +120,7 @@ main() {
 
 TEST_CASE("runs vm with math predicates") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] nan{divide(0.0f32, 0.0f32)}
@@ -138,7 +138,7 @@ main() {
 
 TEST_CASE("runs vm with math rounding") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{floor(1.9f32)}
@@ -159,7 +159,7 @@ main() {
 
 TEST_CASE("runs vm with math roots") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sqrt(9.0f32)}
@@ -174,7 +174,7 @@ main() {
 
 TEST_CASE("runs vm with math fma/hypot") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{fma(2.0f32, 3.0f32, 4.0f32)}
@@ -189,7 +189,7 @@ main() {
 
 TEST_CASE("runs vm with math copysign") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{copysign(3.0f32, -1.0f32)}
@@ -204,7 +204,7 @@ main() {
 
 TEST_CASE("runs vm with math angle helpers") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{radians(90.0f32)}
@@ -219,7 +219,7 @@ main() {
 
 TEST_CASE("runs vm with math trig helpers") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sin(0.0f32)}
@@ -237,7 +237,7 @@ main() {
 
 TEST_CASE("runs vm with math arc trig helpers") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{asin(0.0f32)}
@@ -253,7 +253,7 @@ main() {
 
 TEST_CASE("runs vm with math exp/log") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{exp(0.0f32)}
@@ -272,7 +272,7 @@ main() {
 
 TEST_CASE("runs vm with math hyperbolic") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   [f32] a{sinh(0.0f32)}
@@ -292,7 +292,7 @@ main() {
 
 TEST_CASE("runs vm with float pow") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 [return<int>]
 main() {
   return(convert<int>(plus(pow(2.0f32, 3.0f32), 0.5f32)))

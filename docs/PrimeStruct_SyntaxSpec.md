@@ -133,23 +133,23 @@ prefixed with `_` are private and rejected by the include resolver.
 ### 3.2 Imports
 
 ```
-import /math/*
-import /math/sin /math/pi
+import /std/math/*
+import /std/math/sin /std/math/pi
 import /ui/*, /util/*
 ```
 
 Imports are compile-time namespace aliases. `import /foo/*` contributes the immediate children of `/foo`
-to the root namespace (e.g., `import /math/*` allows `sin(...)` as shorthand for `/math/sin(...)`), while
+to the root namespace (e.g., `import /std/math/*` allows `sin(...)` as shorthand for `/std/math/sin(...)`), while
 `import /foo/bar` aliases a single definition or builtin by its final segment. Imports must appear at the
 top level (not inside `namespace` blocks).
 
-`import /foo` is shorthand for `import /foo/*` (except `/math`, which is unsupported without a wildcard or
+`import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without a wildcard or
 explicit name).
 
 Import paths must resolve to a definition or builtin; unknown import paths are errors.
 
-`import /math` (without a wildcard or explicit name) is not supported; use `import /math/*` or
-`import /math/<name>` instead.
+`import /std/math` (without a wildcard or explicit name) is not supported; use `import /std/math/*` or
+`import /std/math/<name>` instead.
 
 Imports are resolved after includes expand, and the same syntax is accepted by `primec` and `primevm`.
 
@@ -341,7 +341,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`
   - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
   - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` -> `map<i32, i32>(1i32, 2i32)`).
-- `/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
+- `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
 - PathSpace builtins (`notify(path, payload)`, `insert(path, payload)`, `take(path)`) live in the root namespace and act as PathSpace integration hooks.
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form

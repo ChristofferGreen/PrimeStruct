@@ -457,7 +457,7 @@ main() {
 
 TEST_CASE("ir dump infers return type from builtin clamp") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 main() {
   return(clamp(2i32, 1i32, 5i32))
 }
@@ -476,7 +476,7 @@ main() {
 
 TEST_CASE("ir dump infers return type from builtin min") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 main() {
   return(min(2i32, 5i32))
 }
@@ -495,7 +495,7 @@ main() {
 
 TEST_CASE("ir dump infers return type from builtin abs") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 main() {
   return(abs(negate(2i32)))
 }
@@ -514,7 +514,7 @@ main() {
 
 TEST_CASE("ir dump infers return type from builtin saturate") {
   const std::string source = R"(
-import /math/*
+import /std/math/*
 main() {
   return(saturate(2i32))
 }

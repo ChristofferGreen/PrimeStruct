@@ -8,7 +8,7 @@ Legend:
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.
 - ✓ Make per-envelope transform lists drive text/semantic transforms (today text filters are global and ignore `[operators]`, `[collections]`, etc).
-- ✓ Add auto-injected transform rules and path filters (`/math/*`, recurse flags) described in docs; currently only a global text filter list exists.
+- ✓ Add auto-injected transform rules and path filters (`/std/math/*`, recurse flags) described in docs; currently only a global text filter list exists.
 - ✓ Support text transforms appending additional text transforms to the same node (self-expansion in the transform pipeline).
 - ✓ Align CLI naming and behavior with docs: support `--text-transforms`, `--no-text-transforms`, and true auto-deduction in `--transform-list` (currently `--text-filters` only).
 - ✓ Apply `single_type_to_return` via semantic transforms or per-definition markers (it is currently toggled via the text filter list).
@@ -50,7 +50,7 @@ Legend:
 - ✓ Add GLSL backend (docs mention GPU lowering, but there is no backend in `src/`).
 - ✓ Add SPIR-V output for the GLSL backend.
 - ✓ Expand VM/native float support (parser/semantics/C++ emitter accept floats; VM/native reject float literals/types).
-- ✓ Expand VM/native `/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
+- ✓ Expand VM/native `/std/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (native lowerer rejects string indexing).
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
 
@@ -64,7 +64,7 @@ Legend:
 - ✓ Fix string literal rules: single-quoted strings are raw and canonical strings use `utf8`/`ascii` escapes.
 - ✓ Document canonical string normalization: parser emits `raw_utf8` / `raw_ascii` with unescaped content, not the escaped `"..."utf8/ascii` form described in the spec.
 - ✓ Document vector helper calls (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) as statement-only or allow them in expression contexts.
-- ✓ Add missing `/math/*` builtins present in code: `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, `is_finite`.
+- ✓ Add missing `/std/math/*` builtins present in code: `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, `is_finite`.
 - ✓ Add PathSpace builtins (`notify`, `insert`, `take`) to `docs/PrimeStruct_SyntaxSpec.md` (currently only in the design doc).
 
 **Spec Completion & Open Design**

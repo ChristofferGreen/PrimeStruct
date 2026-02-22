@@ -34,8 +34,8 @@
       if (!constantName.empty() && constantName[0] == '/') {
         constantName.erase(0, 1);
       }
-      if (constantName.rfind("math/", 0) == 0) {
-        constantName.erase(0, 5);
+      if (constantName.rfind("std/math/", 0) == 0) {
+        constantName.erase(0, 9);
       }
       return "ps_const_" + constantName;
     }

@@ -1,4 +1,5 @@
-namespace math {
+namespace std {
+  namespace math {
   [struct]
   Vec2() {
     [public f32] x{0.0}
@@ -244,5 +245,6 @@ namespace math {
     normalize([Vec4] self) {
       return(self.toNormalized())
     }
+  }
   }
 }

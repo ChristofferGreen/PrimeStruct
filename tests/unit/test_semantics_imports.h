@@ -194,9 +194,9 @@ main() {
   CHECK(error.find("unknown import path: /util/*") != std::string::npos);
 }
 
-TEST_CASE("import rejects /math without wildcard after semicolon") {
+TEST_CASE("import rejects /std/math without wildcard after semicolon") {
   const std::string source = R"(
-import /util; /math
+import /util; /std/math
 namespace util {
   [return<int>]
   inc([i32] value) {
@@ -210,12 +210,12 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(parseProgramWithError(source, error));
-  CHECK(error.find("import /math is not supported; use import /math/* or /math/<name>") != std::string::npos);
+  CHECK(error.find("import /std/math is not supported; use import /std/math/* or /std/math/<name>") != std::string::npos);
 }
 
 TEST_CASE("import accepts whitespace-separated paths") {
   const std::string source = R"(
-import /util /math/*
+import /util /std/math/*
 namespace util {
   [return<int>]
   inc([i32] value) {
@@ -234,7 +234,7 @@ main() {
 
 TEST_CASE("import accepts semicolon-separated paths") {
   const std::string source = R"(
-import /util; /math/*
+import /util; /std/math/*
 namespace util {
   [return<int>]
   inc([i32] value) {
@@ -253,7 +253,7 @@ main() {
 
 TEST_CASE("import accepts wildcard math and util paths") {
   const std::string source = R"(
-import /math/* /util/*
+import /std/math/* /util/*
 namespace util {
   [return<int>]
   inc([i32] value) {
@@ -273,7 +273,7 @@ main() {
 
 TEST_CASE("import accepts multiple explicit math paths") {
   const std::string source = R"(
-import /math/sin /math/pi
+import /std/math/sin /std/math/pi
 [return<f64>]
 main() {
   return(plus(pi, sin(0.0f64)))
@@ -286,7 +286,7 @@ main() {
 
 TEST_CASE("import accepts explicit math min and max") {
   const std::string source = R"(
-import /math/min /math/max
+import /std/math/min /std/math/max
 [return<i32>]
 main() {
   return(max(min(1i32, 4i32), 3i32))
@@ -444,7 +444,7 @@ run(1i32)
 
 TEST_CASE("import accepts multiple paths in one statement") {
   const std::string source = R"(
-import /util, /math/*
+import /util, /std/math/*
 namespace util {
   [return<int>]
   inc([i32] value) {
@@ -463,7 +463,7 @@ main() {
 
 TEST_CASE("import accepts comma-separated wildcards") {
   const std::string source = R"(
-import /math/*, /util/*
+import /std/math/*, /util/*
 namespace util {
   [return<int>]
   inc([i32] value) {

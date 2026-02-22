@@ -127,8 +127,8 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   }
   bool isMathQualified = false;
   bool isGpuQualified = false;
-  if (candidate.rfind("math/", 0) == 0) {
-    candidate.erase(0, 5);
+  if (candidate.rfind("std/math/", 0) == 0) {
+    candidate.erase(0, 9);
     isMathQualified = true;
   } else if (candidate.rfind("gpu/", 0) == 0) {
     candidate.erase(0, 4);

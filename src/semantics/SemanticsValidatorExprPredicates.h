@@ -588,7 +588,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     if (!allowMathBareName(expr.name) && expr.name.find('/') == std::string::npos &&
         isBuiltinMathConstant(expr.name, true)) {
-      error_ = "math constant requires import /math/* or /math/<name>: " + expr.name;
+      error_ = "math constant requires import /std/math/* or /std/math/<name>: " + expr.name;
       return false;
     }
     if (isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {

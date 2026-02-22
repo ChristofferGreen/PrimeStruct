@@ -671,16 +671,18 @@ main() {
 
 TEST_CASE("text transform rules apply to namespace paths") {
   const std::string source = R"(
-namespace math {
-  [return<int>]
-  add() {
-    return(1i32+2i32)
+namespace std {
+  namespace math {
+    [return<int>]
+    add() {
+      return(1i32+2i32)
+    }
   }
 }
 
 [return<int>]
 main() {
-  return(/math/add())
+  return(/std/math/add())
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_namespace.prime", source);
@@ -688,7 +690,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/math/*=operators";
+      " --entry /main --text-transforms=none --text-transform-rules=/std/math/*=operators";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 }
@@ -752,18 +754,20 @@ main() {
 
 TEST_CASE("text transform rules recurse when requested") {
   const std::string source = R"(
-namespace math {
-  namespace ops {
-    [return<int>]
-    add() {
-      return(1i32+2i32)
+namespace std {
+  namespace math {
+    namespace ops {
+      [return<int>]
+      add() {
+        return(1i32+2i32)
+      }
     }
   }
 }
 
 [return<int>]
 main() {
-  return(/math/ops/add())
+  return(/std/math/ops/add())
 }
 )";
   const std::string srcPath = writeTemp("compile_text_rule_recurse.prime", source);
@@ -773,14 +777,14 @@ main() {
 
   const std::string noRecurseCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
-      "--text-transform-rules=/math/*=operators 2> " +
+      "--text-transform-rules=/std/math/*=operators 2> " +
       quoteShellArg(errPath);
   CHECK(runCommand(noRecurseCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 
   const std::string recurseCmd =
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
-      " --entry /main --text-transforms=none --text-transform-rules=/math/*:recurse=operators";
+      " --entry /main --text-transforms=none --text-transform-rules=/std/math/*:recurse=operators";
   CHECK(runCommand(recurseCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 }
