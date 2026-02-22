@@ -459,6 +459,7 @@ main() {
   emit("log2_one"utf8, near(log2(1.0f32), 0.0f32, 0.0002f32))
   emit("log10_one"utf8, near(log10(1.0f32), 0.0f32, 0.0002f32))
   emit("log2_eight"utf8, near(log2(8.0f32), 3.0f32, 0.2f32))
+  emit("log10_thousand"utf8, near(log10(1000.0f32), 3.0f32, 0.3f32))
   emit("exp_log_roundtrip"utf8, near(exp(log(2.0f32)), 2.0f32, 0.002f32))
   emit("log_exp_roundtrip"utf8, near(log(exp(1.0f32)), 1.0f32, 0.002f32))
   [array<f32>] exp_log_values{array<f32>(0.5f32, 1.0f32, 2.0f32, 10.0f32)}

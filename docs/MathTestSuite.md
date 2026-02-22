@@ -65,7 +65,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] `log(1) = 0`, `log2(1) = 0`, `log10(1) = 0`.
 - [x] `exp(log(x)) ~= x` for `x = 0.5, 1, 2, 10`.
 - [x] `log(exp(x)) ~= x` for `x = -2, -1, 0, 1, 2`.
-- [ ] Base relations: `log2(8) = 3`, `log10(1000) = 3`.
+- [x] Base relations: `log2(8) = 3`, `log10(1000) = 3`.
 
 ## Roots: sqrt/cbrt
 - [x] Perfect squares/cubes: `4`, `9`, `27`, `64`.

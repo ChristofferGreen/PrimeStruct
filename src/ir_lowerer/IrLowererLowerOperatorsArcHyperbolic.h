@@ -216,6 +216,7 @@
           int32_t tempTerm = allocTempLocal();
           int32_t tempSum = allocTempLocal();
           int32_t tempOut = allocTempLocal();
+          int32_t tempK = allocTempLocal();
 
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
@@ -251,6 +252,45 @@
 
           size_t positiveIndex = function.instructions.size();
           function.instructions[jumpIfNotZero].imm = static_cast<int32_t>(positiveIndex);
+
+          pushFloatConst(0.0);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempK)});
+
+          const size_t reduceHighStart = function.instructions.size();
+          pushFloatConst(2.0);
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t jumpAfterHigh = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(2.0);
+          function.instructions.push_back({divOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempK)});
+          pushFloatConst(1.0);
+          function.instructions.push_back({addOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempK)});
+          function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(reduceHighStart)});
+          size_t reduceHighEnd = function.instructions.size();
+          function.instructions[jumpAfterHigh].imm = static_cast<int32_t>(reduceHighEnd);
+
+          const size_t reduceLowStart = function.instructions.size();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(0.5);
+          function.instructions.push_back({cmpLtOp, 0});
+          size_t jumpAfterLow = function.instructions.size();
+          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+          pushFloatConst(2.0);
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempK)});
+          pushFloatConst(1.0);
+          function.instructions.push_back({subOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempK)});
+          function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(reduceLowStart)});
+          size_t reduceLowEnd = function.instructions.size();
+          function.instructions[jumpAfterLow].imm = static_cast<int32_t>(reduceLowEnd);
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
           pushFloatConst(1.0);
@@ -292,6 +332,13 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSum)});
           pushFloatConst(2.0);
           function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempK)});
+          pushFloatConst(0.69314718055994530942);
+          function.instructions.push_back({mulOp, 0});
+          function.instructions.push_back({addOp, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
 
           if (logName == "log2") {
