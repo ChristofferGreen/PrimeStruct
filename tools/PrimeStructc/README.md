@@ -1,6 +1,7 @@
 # primec (minimal)
 
 This is a tiny proof-of-life compiler that accepts a small PrimeStruct subset and emits a native executable via C++.
+It is intentionally minimal and does not track full compiler feature parity.
 
 ## Build
 
@@ -25,8 +26,9 @@ clang++ -std=c++23 -O2 src/*.cpp -Iinclude -o primec
 - Call statements are allowed before `return(...)` inside a definition body.
 - Definitions with zero or more parameters (all `int` for now).
 - Calls to other definitions with matching argument counts.
-- Template lists (`<...>`) are parsed and preserved but ignored by codegen.
+- Template lists (`<...>`) are parsed and preserved but ignored by codegen (no template codegen support).
 - Executions parse argument expressions and `{...}` body argument lists (ignored by codegen).
 - `--dump-stage ast` prints a simple AST dump and exits.
 - `--dump-stage ir` prints a minimal IR-style dump and exits.
-- `include<"path">` expands files inline (multiple paths allowed; duplicates ignored). `version="..."` is parsed and ignored.
+- `include<"path">` expands files inline (multiple paths allowed; duplicates ignored). `version="..."` is parsed and ignored
+  (no include version selection support).

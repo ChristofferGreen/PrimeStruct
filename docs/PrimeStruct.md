@@ -54,7 +54,7 @@ open question is unresolved.
 - JIT, chunk caching, or dynamic recompilation tooling.
 - IDE/LSP integration and PathSpace-native editor tooling.
 - Standard library packaging/version negotiation beyond a single in-tree reference set.
-- `tools/PrimeStructc` feature parity with the main compiler and template codegen.
+- `tools/PrimeStructc` feature parity with the main compiler and template codegen (PrimeStructc stays a minimal subset; template codegen and include version selection are explicitly out of scope for v1).
 - Tail-call or tail-execution optimization guarantees across all backends.
 
 ## Phase 1 — Minimal Compiler That Emits an Executable

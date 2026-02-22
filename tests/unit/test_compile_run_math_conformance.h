@@ -304,6 +304,18 @@ TEST_CASE("math conformance reference printer script") {
   CHECK(output.find("0.5") != std::string::npos);
 }
 
+TEST_CASE("math conformance PrimeStructc policy docs") {
+  std::filesystem::path readmePath = std::filesystem::current_path() / "tools" / "PrimeStructc" / "README.md";
+  if (!std::filesystem::exists(readmePath)) {
+    readmePath = std::filesystem::current_path().parent_path() / "tools" / "PrimeStructc" / "README.md";
+  }
+  CHECK(std::filesystem::exists(readmePath));
+  const std::string contents = readFile(readmePath.string());
+  CHECK(contents.find("intentionally minimal") != std::string::npos);
+  CHECK(contents.find("template codegen") != std::string::npos);
+  CHECK(contents.find("version") != std::string::npos);
+}
+
 TEST_CASE("math conformance labeled output allowlist") {
   const std::string baselineText = "ok 1\nskip 0\n";
   const std::string candidateText = "ok 1\nskip 1\n";
