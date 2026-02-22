@@ -110,8 +110,8 @@ Legend:
 - ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
 - ✓ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
 - ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
-- ○ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
-- ○ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
+- ✓ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
+- ✓ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
 - ○ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.
 - ○ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
 - ○ Define reference counting / heap value lifetime model for VM/native backends.

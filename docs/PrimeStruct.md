@@ -116,16 +116,27 @@ module {
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and explicit resource usage.
 - **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation happens once; backends never see syntactic sugar.
-- **IR definition (draft):**
+- **IR definition (stable, PSIR v14):**
   - **Module:** `{ string_table, struct_layouts, functions, entry_index, version }`.
   - **Function:** `{ name, instructions }` where instructions are linear, stack-based ops with immediates.
   - **Instruction:** `{ op, imm }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning depends on `op`.
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
   - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR versioning).
   - **Entry:** `entry_index` points to the entry function in `functions`; its signature is enforced by the front-end.
+  - **PSIR binary layout (little-endian):**
+    - `u32 magic` (`0x50534952` = `"PSIR"`), `u32 version`, `u32 function_count`, `u32 entry_index`, `u32 string_count`.
+    - `string_count` entries: `u32 byte_len` + raw bytes.
+    - `u32 struct_count`.
+    - `struct_count` entries: `u32 name_len` + name bytes, `u32 total_size`, `u32 alignment`, `u32 field_count`, then `field_count` entries:
+      `u32 field_name_len` + bytes, `u32 envelope_len` + bytes, `u32 offset`, `u32 size`, `u32 alignment`,
+      `u32 padding_kind`, `u32 category`, `u32 visibility`, `u32 is_static`.
+    - `function_count` entries: `u32 name_len` + name bytes, `u32 instruction_count`, then `instruction_count` entries:
+      `u8 opcode` + `u64 imm`.
+  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v14, VM/native)” section below.
 - **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`).
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
+  - **Versioning policy:** the `version` field is a single, monotonically increasing integer for incompatible changes. There is no forward/backward compatibility guarantee today; tools reject unknown versions and require recompilation. Migration tooling may be added later, but no automatic migrations exist yet.
 - **Backends:**
   - **C++ emitter** – generates host code for native binaries.
   - **GLSL emitter** – produces shader code; SPIR-V output is available via `--emit=spirv`.

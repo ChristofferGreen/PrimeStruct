@@ -220,6 +220,35 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   CHECK(error == "unsupported IR opcode");
 }
 
+TEST_CASE("ir deserialization rejects unsupported version") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+  REQUIRE(data.size() >= 8);
+
+  auto writeU32 = [&](size_t offset, uint32_t value) {
+    data[offset] = static_cast<uint8_t>(value & 0xFF);
+    data[offset + 1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+    data[offset + 2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+    data[offset + 3] = static_cast<uint8_t>((value >> 24) & 0xFF);
+  };
+
+  writeU32(4, 0xFFFFFFFFu);
+
+  primec::IrModule decoded;
+  CHECK_FALSE(primec::deserializeIr(data, decoded, error));
+  CHECK(error == "unsupported IR version");
+}
+
 TEST_CASE("ir lowers pointer helper calls") {
   const std::string source = R"(
 [return<int>]
