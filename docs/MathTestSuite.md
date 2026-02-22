@@ -115,7 +115,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Copysign
 - [x] Sign transfer with positive/negative magnitudes.
 - [ ] `copysign(0, -1)` behavior (negative zero policy if supported).
-- [ ] `copysign` with NaN magnitude policy.
+- [x] `copysign` with NaN magnitude policy.
 
 ## Abs/Sign
 - [x] Positive, negative, zero for ints and floats.

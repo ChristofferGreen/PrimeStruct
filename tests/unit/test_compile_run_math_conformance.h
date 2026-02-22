@@ -1408,6 +1408,7 @@ main() {
 
   [f32] nan{0.0f32 / 0.0f32}
   [f32] inf{1.0f32 / 0.0f32}
+  emit("copysign_nan"utf8, is_nan(copysign(nan, -1.0f32)))
   emit("is_nan"utf8, is_nan(nan))
   emit("is_inf"utf8, is_inf(inf))
   emit("is_finite"utf8, is_finite(1.0f32))
