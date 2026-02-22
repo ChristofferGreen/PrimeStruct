@@ -365,6 +365,11 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
   - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` -> `map<i32, i32>(1i32, 2i32)`).
 - `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
+- Math builtin operand rules:
+  - `abs`, `sign`, and `saturate` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`).
+  - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed int/float operands.
+  - Integer `pow` requires a non-negative exponent; VM/native backends abort on negative exponents (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
+  - All remaining `/std/math/*` builtins require float operands. `atan2`, `hypot`, and `copysign` take two float operands, while `fma` takes three float operands.
 - PathSpace builtins (`notify(path, payload)`, `insert(path, payload)`, `take(path)`) live in the root namespace and act as PathSpace integration hooks.
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form

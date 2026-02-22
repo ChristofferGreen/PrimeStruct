@@ -356,6 +356,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Basic:** `/std/math/abs`, `/std/math/sign`, `/std/math/min`, `/std/math/max`, `/std/math/clamp`, `/std/math/lerp`, `/std/math/saturate`.
   - **Rounding:** `/std/math/floor`, `/std/math/ceil`, `/std/math/round`, `/std/math/trunc`, `/std/math/fract`.
   - **Power/log:** `/std/math/sqrt`, `/std/math/cbrt`, `/std/math/pow`, `/std/math/exp`, `/std/math/exp2`, `/std/math/log`, `/std/math/log2`, `/std/math/log10`.
+  - **Operand rules (current):** `abs`, `sign`, `saturate`, `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`). `min`, `max`, `clamp`, `lerp`, and `pow` reject mixed signed/unsigned or mixed int/float operands. All remaining `/std/math/*` builtins require float operands (`atan2`, `hypot`, `copysign` are binary; `fma` is ternary).
   - **Integer pow:** for integer operands, `pow` requires a non-negative exponent; negative exponents abort in VM/native (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
   - **Trig:** `/std/math/sin`, `/std/math/cos`, `/std/math/tan`, `/std/math/asin`, `/std/math/acos`, `/std/math/atan`, `/std/math/atan2`, `/std/math/radians`, `/std/math/degrees`.
   - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`, `/std/math/atanh`.

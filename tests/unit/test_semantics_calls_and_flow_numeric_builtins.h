@@ -198,6 +198,32 @@ main() {
   CHECK(error.find("pow does not support mixed int/float operands") != std::string::npos);
 }
 
+TEST_CASE("pow rejects mixed signed/unsigned operands") {
+  const std::string source = R"(
+import /std/math/*
+[return<int>]
+main() {
+  return(pow(2i32, 3u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pow does not support mixed signed/unsigned operands") != std::string::npos);
+}
+
+TEST_CASE("sin rejects integer operand") {
+  const std::string source = R"(
+import /std/math/*
+[return<float>]
+main() {
+  return(sin(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("sin requires float operands") != std::string::npos);
+}
+
 TEST_CASE("rounding math builtins validate") {
   const std::string source = R"(
 import /std/math/*
