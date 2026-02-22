@@ -12,6 +12,9 @@
           IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
           IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
           IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
+          IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
+          IrOpcode negOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::NegF64 : IrOpcode::NegF32;
+          IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
 
           auto pushFloatConst = [&](double value) {
             if (argKind == LocalInfo::ValueKind::Float64) {
@@ -39,6 +42,91 @@
           }
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
 
+          if (arcName == "atan") {
+            auto emitAtanSeriesForLocal = [&](int32_t inputLocal, int32_t outLocal) {
+              int32_t tempX2 = allocTempLocal();
+              int32_t tempX3 = allocTempLocal();
+              int32_t tempX5 = allocTempLocal();
+              int32_t tempX7 = allocTempLocal();
+              emitMulLocal(inputLocal, inputLocal, tempX2);
+              emitMulLocal(tempX2, inputLocal, tempX3);
+              emitMulLocal(tempX3, tempX2, tempX5);
+              emitMulLocal(tempX5, tempX2, tempX7);
+
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(inputLocal)});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
+              pushFloatConst(0.3333333333333333);
+              function.instructions.push_back({mulOp, 0});
+              function.instructions.push_back({subOp, 0});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
+              pushFloatConst(0.2);
+              function.instructions.push_back({mulOp, 0});
+              function.instructions.push_back({addOp, 0});
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
+              pushFloatConst(0.14285714285714285);
+              function.instructions.push_back({mulOp, 0});
+              function.instructions.push_back({subOp, 0});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+            };
+
+            int32_t tempAbs = allocTempLocal();
+            int32_t tempSign = allocTempLocal();
+            int32_t tempInv = allocTempLocal();
+            int32_t tempOut = allocTempLocal();
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+            pushFloatConst(0.0);
+            function.instructions.push_back({cmpLtOp, 0});
+            size_t jumpIfNotNeg = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+            function.instructions.push_back({negOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAbs)});
+            pushFloatConst(-1.0);
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSign)});
+            size_t jumpAfterSign = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+
+            size_t nonNegIndex = function.instructions.size();
+            function.instructions[jumpIfNotNeg].imm = static_cast<int32_t>(nonNegIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAbs)});
+            pushFloatConst(1.0);
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSign)});
+            size_t afterSignIndex = function.instructions.size();
+            function.instructions[jumpAfterSign].imm = static_cast<int32_t>(afterSignIndex);
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAbs)});
+            pushFloatConst(1.0);
+            function.instructions.push_back({cmpLtOp, 0});
+            size_t jumpIfNotSmall = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+            emitAtanSeriesForLocal(tempAbs, tempOut);
+            size_t jumpAfterAtan = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+
+            size_t notSmallIndex = function.instructions.size();
+            function.instructions[jumpIfNotSmall].imm = static_cast<int32_t>(notSmallIndex);
+            pushFloatConst(1.0);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAbs)});
+            function.instructions.push_back({divOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempInv)});
+            emitAtanSeriesForLocal(tempInv, tempOut);
+            pushFloatConst(1.5707963267948966);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            function.instructions.push_back({subOp, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+
+            size_t afterAtanIndex = function.instructions.size();
+            function.instructions[jumpAfterAtan].imm = static_cast<int32_t>(afterAtanIndex);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSign)});
+            function.instructions.push_back({mulOp, 0});
+            return true;
+          }
+
           int32_t tempX2 = allocTempLocal();
           int32_t tempX3 = allocTempLocal();
           int32_t tempX5 = allocTempLocal();
@@ -47,23 +135,6 @@
           emitMulLocal(tempX2, tempX, tempX3);
           emitMulLocal(tempX3, tempX2, tempX5);
           emitMulLocal(tempX5, tempX2, tempX7);
-
-          if (arcName == "atan") {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
-            pushFloatConst(0.3333333333333333);
-            function.instructions.push_back({mulOp, 0});
-            function.instructions.push_back({subOp, 0});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
-            pushFloatConst(0.2);
-            function.instructions.push_back({mulOp, 0});
-            function.instructions.push_back({addOp, 0});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
-            pushFloatConst(0.14285714285714285);
-            function.instructions.push_back({mulOp, 0});
-            function.instructions.push_back({subOp, 0});
-            return true;
-          }
 
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});

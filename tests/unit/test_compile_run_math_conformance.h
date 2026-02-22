@@ -767,6 +767,20 @@ main() {
   emit("atan_1_near"utf8, abs(atan(1.0f32) - quarter_pi) < 0.2f32)
   emit("atan_neg1_near"utf8, abs(atan(-1.0f32) + quarter_pi) < 0.2f32)
   emit("atan_mono_zero"utf8, atan(-1.0f32) < atan(0.0f32) && atan(0.0f32) < atan(1.0f32))
+  [array<f32>] atan_values{array<f32>(-10.0f32, -5.0f32, -1.0f32, 0.0f32, 1.0f32, 5.0f32, 10.0f32)}
+  [int mut] atan_idx{1}
+  [int mut] atan_ok{1}
+  [f32 mut] atan_prev{atan(atan_values[0])}
+  while(atan_idx < atan_values.count()) {
+    [f32] atan_curr{atan(atan_values[atan_idx])}
+    if(atan_curr + 0.0005f32 < atan_prev) {
+      atan_ok = 0
+    } else {
+    }
+    atan_prev = atan_curr
+    atan_idx = atan_idx + 1
+  }
+  emit("atan_monotonic"utf8, atan_ok == 1)
   emit("asin_roundtrip_neg"utf8, abs(sin(asin(-0.7f32)) + 0.7f32) < 0.05f32)
   emit("asin_roundtrip_pos"utf8, abs(sin(asin(0.7f32)) - 0.7f32) < 0.05f32)
   emit("acos_roundtrip_neg"utf8, abs(cos(acos(-0.7f32)) + 0.7f32) < 0.05f32)
