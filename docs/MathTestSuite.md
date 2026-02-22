@@ -77,7 +77,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Pow
 - [x] Integer powers: `pow(2, 0)`, `pow(2, 3)`, `pow(10, 2)`.
 - [x] Float powers: `pow(2.0, 0.5) ~= sqrt(2)`.
-- [ ] Edge cases: `pow(0, 0)` policy, `pow(1, x)`.
+- [x] Edge cases: `pow(0, 0)` policy, `pow(1, x)`.
 - [ ] Negative exponent policy for ints (error or result).
 - [x] Sign behavior: `pow(-2, 3) = -8`, `pow(-2, 2) = 4`.
 
@@ -120,7 +120,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Abs/Sign
 - [x] Positive, negative, zero for ints and floats.
 - [x] `sign(0)` behavior (0 or 1 policy).
-- [ ] `abs` on minimum int values (overflow policy).
+- [x] `abs` on minimum int values (overflow policy).
 
 ## Math Predicates: is_nan/is_inf/is_finite
 - [x] `0/0` is NaN.

@@ -1283,6 +1283,7 @@ main() {
   emit("sqrt_nan"utf8, is_nan(sqrt(-1.0f32)))
   emit("pow_zero_exp"utf8, pow(2i32, 0i32) == 1i32)
   emit("pow_zero_base"utf8, pow(0i32, 3i32) == 0i32)
+  emit("pow_zero_zero"utf8, pow(0i32, 0i32) == 1i32)
   emit("pow_two_three"utf8, pow(2i32, 3i32) == 8i32)
   emit("pow_ten_two"utf8, pow(10i32, 2i32) == 100i32)
   emit("pow_one_any"utf8, pow(1i32, 5i32) == 1i32)
