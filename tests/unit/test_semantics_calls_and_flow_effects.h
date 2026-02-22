@@ -276,6 +276,187 @@ main() {
   CHECK(error.find("unknown call target") != std::string::npos);
 }
 
+TEST_CASE("std gpu dispatch requires kernel name") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop() {
+  return()
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  /std/gpu/dispatch(1i32, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("dispatch requires kernel name as first argument") != std::string::npos);
+}
+
+TEST_CASE("std gpu dispatch argument count mismatch") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] output) {
+  return()
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("dispatch argument count mismatch") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer size requires integer expression") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{ /std/gpu/buffer<i32>(1.5f32) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer size requires integer expression") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer requires numeric element type") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<string>] data{ /std/gpu/buffer<string>(1i32) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer requires numeric/bool element type") != std::string::npos);
+}
+
+TEST_CASE("std gpu upload rejects template arguments") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32)}
+  [Buffer<i32>] data{ /std/gpu/upload<i32>(values) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("upload does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("std gpu readback rejects template arguments") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{ /std/gpu/buffer<i32>(1i32) }
+  [array<i32>] out{ /std/gpu/readback<i32>(data) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("readback does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer_load rejects template arguments") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] input) {
+  [i32] value{ /std/gpu/buffer_load<i32>(input, 0i32) }
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_load does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer_store rejects template arguments") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] output) {
+  /std/gpu/buffer_store<i32>(output, 0i32, 1i32)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_store does not accept template arguments") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer_load requires integer index") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] input) {
+  [i32] value{ /std/gpu/buffer_load(input, 1.5f32) }
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_load requires integer index") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer_store rejects mismatched value type") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] output) {
+  /std/gpu/buffer_store(output, 0i32, 1.5f32)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_store value type mismatch") != std::string::npos);
+}
+
+TEST_CASE("std gpu compute builtins validate") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop([Buffer<i32>] output) {
+  [i32] x{ /std/gpu/global_id_x() }
+  /std/gpu/buffer_store(output, x, 1i32)
+  return()
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("execution effects must be subset of definition effects") {
   const std::string source = R"(
 [return<void>]
