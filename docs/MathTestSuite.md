@@ -32,7 +32,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Range reduction for large inputs: `x = 10, 20, 100, 1e3, 1e4`.
 - [x] Pythagorean identity: `sin(x)^2 + cos(x)^2 ~= 1` for a grid of values.
 - [x] `tan(x) ~= sin(x) / cos(x)` where `cos(x)` not near zero.
-- [ ] Continuity checks across quadrant boundaries (avoid extra zero crossings).
+- [x] Continuity checks across quadrant boundaries (avoid extra zero crossings).
 - [x] Small-angle behavior: `sin(x) ~= x` for `x in [-1e-4, 1e-4]`.
 
 ## Inverse Trig: asin/acos/atan
@@ -49,9 +49,9 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Known values: `atan2(1, 1) ~= pi/4`, `atan2(1, 0) ~= pi/2`.
 
 ## Hyperbolic: sinh/cosh/tanh
-- [ ] Symmetry: `sinh(-x) = -sinh(x)`, `cosh(-x) = cosh(x)`, `tanh(-x) = -tanh(x)`.
-- [ ] Identity: `cosh(x)^2 - sinh(x)^2 ~= 1` for moderate `x`.
-- [ ] `tanh(0) = 0`, `cosh(0) = 1`.
+- [x] Symmetry: `sinh(-x) = -sinh(x)`, `cosh(-x) = cosh(x)`, `tanh(-x) = -tanh(x)`.
+- [x] Identity: `cosh(x)^2 - sinh(x)^2 ~= 1` for moderate `x`.
+- [x] `tanh(0) = 0`, `cosh(0) = 1`.
 - [ ] Range sanity for `x = 1, 2, 5` (avoid overflow but test growth).
 
 ## Inverse Hyperbolic: asinh/acosh/atanh
@@ -75,68 +75,68 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] `cbrt` for negative values: `cbrt(-8) = -2`.
 
 ## Pow
-- [ ] Integer powers: `pow(2, 0)`, `pow(2, 3)`, `pow(10, 2)`.
-- [ ] Float powers: `pow(2.0, 0.5) ~= sqrt(2)`.
+- [x] Integer powers: `pow(2, 0)`, `pow(2, 3)`, `pow(10, 2)`.
+- [x] Float powers: `pow(2.0, 0.5) ~= sqrt(2)`.
 - [ ] Edge cases: `pow(0, 0)` policy, `pow(1, x)`.
 - [ ] Negative exponent policy for ints (error or result).
-- [ ] Sign behavior: `pow(-2, 3) = -8`, `pow(-2, 2) = 4`.
+- [x] Sign behavior: `pow(-2, 3) = -8`, `pow(-2, 2) = 4`.
 
 ## Rounding: floor/ceil/round/trunc/fract
-- [ ] Positive values: `1.1`, `1.5`, `1.9`.
-- [ ] Negative values: `-1.1`, `-1.5`, `-1.9`.
-- [ ] Boundary values near integers: `2.0 - 1e-6`, `2.0 + 1e-6`.
-- [ ] `round` tie-breaking policy for `.5` values.
-- [ ] `fract(x)` consistency with `x - floor(x)`.
-- [ ] `trunc` consistency with dropping fractional part toward zero.
+- [x] Positive values: `1.1`, `1.5`, `1.9`.
+- [x] Negative values: `-1.1`, `-1.5`, `-1.9`.
+- [x] Boundary values near integers: `2.0 - 1e-6`, `2.0 + 1e-6`.
+- [x] `round` tie-breaking policy for `.5` values.
+- [x] `fract(x)` consistency with `x - floor(x)`.
+- [x] `trunc` consistency with dropping fractional part toward zero.
 
 ## Min/Max/Clamp/Saturate
-- [ ] Int and float variants for `min` and `max`.
-- [ ] `clamp` with normal ordering.
-- [ ] `clamp` with inverted bounds (`min > max`) policy.
-- [ ] `saturate` for values below `0` and above `1`.
-- [ ] `saturate` for integer and float inputs.
+- [x] Int and float variants for `min` and `max`.
+- [x] `clamp` with normal ordering.
+- [x] `clamp` with inverted bounds (`min > max`) policy.
+- [x] `saturate` for values below `0` and above `1`.
+- [x] `saturate` for integer and float inputs.
 
 ## Lerp
-- [ ] `lerp(a, b, 0) = a`, `lerp(a, b, 1) = b`.
+- [x] `lerp(a, b, 0) = a`, `lerp(a, b, 1) = b`.
 - [ ] `lerp(a, b, 0.5)` midpoint check for int and float.
 - [ ] Out-of-range `t` behavior (if allowed).
-- [ ] `lerp` with negative values.
+- [x] `lerp` with negative values.
 
 ## FMA
-- [ ] `fma(a, b, c)` vs `a*b + c` for representative values.
+- [x] `fma(a, b, c)` vs `a*b + c` for representative values.
 - [ ] Small values to check loss of precision (float32).
 - [ ] Large values to check overflow behavior.
 
 ## Hypot
-- [ ] Pythagorean triples: `(3,4) -> 5`, `(5,12) -> 13`.
-- [ ] Symmetry: `hypot(x, y) = hypot(y, x)`.
-- [ ] Scale invariance: `hypot(kx, ky) = |k| * hypot(x, y)`.
+- [x] Pythagorean triples: `(3,4) -> 5`, `(5,12) -> 13`.
+- [x] Symmetry: `hypot(x, y) = hypot(y, x)`.
+- [x] Scale invariance: `hypot(kx, ky) = |k| * hypot(x, y)`.
 
 ## Copysign
-- [ ] Sign transfer with positive/negative magnitudes.
+- [x] Sign transfer with positive/negative magnitudes.
 - [ ] `copysign(0, -1)` behavior (negative zero policy if supported).
 - [ ] `copysign` with NaN magnitude policy.
 
 ## Abs/Sign
-- [ ] Positive, negative, zero for ints and floats.
-- [ ] `sign(0)` behavior (0 or 1 policy).
+- [x] Positive, negative, zero for ints and floats.
+- [x] `sign(0)` behavior (0 or 1 policy).
 - [ ] `abs` on minimum int values (overflow policy).
 
 ## Math Predicates: is_nan/is_inf/is_finite
-- [ ] `0/0` is NaN.
-- [ ] `1/0` is Inf.
-- [ ] `is_finite` for normal values.
+- [x] `0/0` is NaN.
+- [x] `1/0` is Inf.
+- [x] `is_finite` for normal values.
 - [ ] NaN propagation through arithmetic operators (if defined).
 
 ## Angle Conversions
-- [ ] `radians(degrees(x)) ~= x` for multiple values.
-- [ ] `degrees(radians(x)) ~= x` for multiple values.
+- [x] `radians(degrees(x)) ~= x` for multiple values.
+- [x] `degrees(radians(x)) ~= x` for multiple values.
 - [ ] Large angle conversions sanity checks.
 
 ## Mixed-Type Conversions
-- [ ] `f32{...}` and `f64{...}` from ints for key values.
-- [ ] `i32{...}` and `i64{...}` from floats around boundaries.
-- [ ] NaN -> int yields `0`; +Inf/-Inf clamp to max/min.
+- [x] `convert<f32>` and `convert<f64>` from ints for key values.
+- [x] `convert<int>` and `convert<i64>` from floats around boundaries.
+- [ ] Conversion of NaN/Inf to int policy (error or truncation).
 
 ## Vector/Array Math Usage
 - [ ] Spot checks where math builtins are used inside vector ops (no ABI surprises).

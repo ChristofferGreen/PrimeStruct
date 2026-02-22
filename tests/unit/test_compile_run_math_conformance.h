@@ -603,6 +603,11 @@ main() {
   [f32] small{0.0001f32}
   emit("sin_small_angle"utf8, abs(sin(small) - small) < 0.0002f32)
   emit("tan_identity"utf8, abs(tan(0.3f32) - sin(0.3f32) / cos(0.3f32)) < 0.02f32)
+  [f32] eps{0.001f32}
+  emit("sin_cross_zero"utf8, sin(eps) > 0.0f32 && sin(-eps) < 0.0f32)
+  emit("cos_cross_half_pi"utf8, cos(half_pi - eps) > 0.0f32 && cos(half_pi + eps) < 0.0f32)
+  emit("sin_cross_pi"utf8, sin(pi_f - eps) > 0.0f32 && sin(pi_f + eps) < 0.0f32)
+  emit("cos_cross_three_half_pi"utf8, cos(three_half_pi - eps) < 0.0f32 && cos(three_half_pi + eps) > 0.0f32)
   return(0i32)
 }
 )";
@@ -1264,6 +1269,9 @@ main() {
   emit("sqrt_nan"utf8, is_nan(sqrt(-1.0f32)))
   emit("pow_zero_exp"utf8, pow(2i32, 0i32) == 1i32)
   emit("pow_zero_base"utf8, pow(0i32, 3i32) == 0i32)
+  emit("pow_two_three"utf8, pow(2i32, 3i32) == 8i32)
+  emit("pow_ten_two"utf8, pow(10i32, 2i32) == 100i32)
+  emit("pow_one_any"utf8, pow(1i32, 5i32) == 1i32)
   emit("pow_neg_odd"utf8, pow(-2i32, 3i32) == -8i32)
   emit("pow_neg_even"utf8, pow(-2i32, 2i32) == 4i32)
   emit("pow_int"utf8, pow(2i32, 6i32) == 64i32)
@@ -1312,6 +1320,10 @@ main() {
 
   emit("fract_pos"utf8, abs(fract(1.75f32) - 0.75f32) < 0.01f32)
   emit("fract_neg"utf8, abs(fract(-1.25f32) - 0.75f32) < 0.02f32)
+  [f32] fx{1.75f32}
+  [f32] fxn{-1.25f32}
+  emit("fract_consistency_pos"utf8, abs(fract(fx) - (fx - floor(fx))) < 0.01f32)
+  emit("fract_consistency_neg"utf8, abs(fract(fxn) - (fxn - floor(fxn))) < 0.01f32)
   emit("floor_edge"utf8, convert<int>(floor(2.0f32 - 0.0001f32)) == 1i32)
   emit("ceil_edge"utf8, convert<int>(ceil(2.0f32 + 0.0001f32)) == 3i32)
 
@@ -1355,8 +1367,12 @@ main() {
   emit("saturate_i_hi"utf8, saturate(2i32) == 1i32)
 
   emit("lerp_f"utf8, near(lerp(0.0f32, 10.0f32, 0.5f32), 5.0f32, 0.01f32))
+  emit("lerp_f_start"utf8, near(lerp(-2.0f32, 6.0f32, 0.0f32), -2.0f32, 0.001f32))
+  emit("lerp_f_end"utf8, near(lerp(-2.0f32, 6.0f32, 1.0f32), 6.0f32, 0.001f32))
+  emit("lerp_f_neg"utf8, near(lerp(-4.0f32, 6.0f32, 0.5f32), 1.0f32, 0.01f32))
   emit("fma_f"utf8, near(fma(2.0f32, 3.0f32, 4.0f32), 10.0f32, 0.01f32))
   emit("hypot_f"utf8, near(hypot(3.0f32, 4.0f32), 5.0f32, 0.05f32))
+  emit("hypot_5_12"utf8, near(hypot(5.0f32, 12.0f32), 13.0f32, 0.1f32))
   emit("hypot_swap"utf8, abs(hypot(3.0f32, 4.0f32) - hypot(4.0f32, 3.0f32)) < 0.01f32)
   emit("hypot_scale"utf8, abs(hypot(6.0f32, 8.0f32) - 10.0f32) < 0.1f32)
   emit("copysign_f"utf8, near(copysign(2.5f32, -1.0f32), -2.5f32, 0.001f32))
