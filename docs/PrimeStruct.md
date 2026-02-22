@@ -189,7 +189,7 @@ module {
 
 ### Backend Type Support (v1)
 - **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64` (plus `int`/`float` aliases). `array`/`vector`/`map` support numeric/bool values; map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed bindings for print/map contexts; string returns and string pointers/references are rejected. `convert<T>` supports `int`, `i32`, `i64`, `u64`, `bool`, `float`, `f32`, `f64`.
-- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected; string comparisons are rejected and string literals are limited to print/count/index/map contexts; string return types, string array returns, and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` only accepts `i32`/`bool` payloads; unsupported math or GPU builtins fail.
+- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string return types, string array returns, and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` only accepts `i32`/`bool` payloads; unsupported math or GPU builtins fail.
 - **GLSL:** numeric/bool scalar locals only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`); string literals and non-scalar bindings are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
 - **GPU compute (draft):**
@@ -566,12 +566,13 @@ for(
 - **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no implicit `null` literal; `0x0` is just a numeric value).
 - **References:** `Reference<T>` bindings are not implicitly movable; move semantics for references must be explicit if enabled.
 
-## Lambdas & Higher-Order Functions (draft)
-- **Syntax mirrors definitions:** lambdas omit the identifier (`[capture] <T>(params){ body }`). Captures rewrite into explicit parameters/structs.
-- **Capture semantics:** support `[]`, `[=]`, `[&]`, and explicit notations (`[value x, ref y]`). Captures compile to generated structs with `invoke` methods.
-- **First-class values:** closures are storable, passable, and returnable. Backends emit them as struct + function pointer (C++), inline function objects (GLSL, where legal), or closure objects (VM).
-- **Inlining transforms:** standard transforms may inline pure lambdas; async/task-oriented lambdas stay as closures.
-- **PathSpace interop:** captured handles respect frame lifetimes; transforms force reference-count or move semantics as required.
+## Lambdas & Higher-Order Functions
+- **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is required but may be empty (`[]`). Template arguments are optional.
+- **Capture semantics:** supported forms are `[]`, `[=]`, `[&]`, and explicit entries (`[name]`, `[value name]`, `[ref name]`). Entries are comma/semicolon separated. Explicit names must resolve to parameters or locals in the enclosing scope; duplicates are diagnostics. `=` or `&` capture-all tokens cannot be repeated. `ref` marks a by-reference capture; otherwise captures are by value.
+- **Parameters:** lambda parameters must use binding syntax. Defaults are allowed but must be literal/pure expressions and may not use named arguments.
+- **Backend support (current):** lambdas are supported only by the C++ emitter, which lowers them to native C++ lambdas with the same capture list. IR/VM/GLSL backends reject lambdas; use named definitions when targeting those backends.
+- **Inlining transforms:** standard transforms may inline pure lambdas in C++ emission paths; non-pure lambdas remain as closures.
+- **PathSpace interop:** captured handles follow normal lifetime rules; lambdas do not extend handle lifetimes automatically.
 
 ## Literals & Composite Construction
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).

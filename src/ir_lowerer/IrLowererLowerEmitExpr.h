@@ -1,6 +1,6 @@
   emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (expr.isLambda) {
-      error = "native backend does not support lambdas";
+      error = "IR backends do not support lambdas";
       return false;
     }
     switch (expr.kind) {

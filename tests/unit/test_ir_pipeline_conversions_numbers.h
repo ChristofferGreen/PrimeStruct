@@ -97,7 +97,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, "/main", {}, {}, module, error));
-  CHECK(error.find("native backend does not support lambdas") != std::string::npos);
+  CHECK(error.find("IR backends do not support lambdas") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects non-literal string bindings") {

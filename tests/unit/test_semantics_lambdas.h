@@ -23,6 +23,18 @@ main() {
   CHECK(validateProgram(source, "/main", error));
 }
 
+TEST_CASE("lambda captures accept ref qualifier") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] base{1i32}
+  [ref base]([i32] offset) { return(plus(base, offset)) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
 TEST_CASE("lambda without capture rejects outer binding") {
   const std::string source = R"(
 [return<void>]

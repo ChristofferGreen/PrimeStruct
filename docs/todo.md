@@ -98,7 +98,7 @@ Legend:
 - ✓ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.
 - ✓ Support recursive struct layouts or document them as explicitly unsupported.
 - ✓ Implement the `class<Name>(...)` surface (composition/extends semantics) or remove it from docs.
-- ○ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
+- ✓ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
 - ✓ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
 - ○ Define move semantics (`Create`/`Move`/`Copy`/`Destroy`), `move(value)` helper, and use-after-move diagnostics.
 - ○ Finalize core library surface/standard math spec and document backend-specific limits.
