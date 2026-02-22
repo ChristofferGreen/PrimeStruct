@@ -268,10 +268,10 @@ if you intended to index.
 - Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary operators respect standard precedence and associativity: `*`/`/` bind tighter than `+`/`-`, comparisons (`<`, `>`, `<=`, `>=`, `==`, `!=`) bind tighter than `&&`/`||`, and assignment (`=`) is lowest precedence and right-associative. Operators follow the same operand-based rule (`a > b` → `greater_than(a, b)`, `a < b` → `less_than(a, b)`, `a >= b` → `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b` → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` → `increment(a)`, `--a` / `a--` → `decrement(a)`).
 - Because includes expand first, slash paths survive every transform untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
 
-### Struct & envelope categories (draft)
-- **Struct tag as transform:** `[struct ...]` in the envelope is purely declarative. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
-- **Placement policy (draft):** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities.
-- **POD tag as validation:** `[pod]` asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
+### Struct & envelope categories
+- **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
+- **Placement policy:** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities. The `stack`/`heap`/`buffer` transforms remain reserved and rejected in v1.
+- **POD tag as validation:** `[pod]` on a struct-style definition asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
 - **Member syntax:** every field is just a stack-value execution (`[float mut] exposure{1.0f32}`, `[handle<PathNode>] target{get_default()}`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
 - **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
 - **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
@@ -311,11 +311,12 @@ if you intended to index.
   ```
 - **IR layout manifest:** `[struct]` extends the IR descriptor with `layout.total_size_bytes`, `layout.alignment_bytes`, and ordered `layout.fields`. Each field record stores `{ name, envelope, offset_bytes, size_bytes, padding_kind, category }`. Placement transforms consume this manifest verbatim, ensuring C++, VM, and GPU backends share one source of truth.
 - **Categories:** `[pod]`, `[handle]`, `[gpu_lane]` tags classify members for resource rules. Handles remain opaque tokens with subsystem-managed lifetimes; GPU lanes require staging transforms before CPU inspection.
-- **Category mapping (draft):**
+- **Category mapping:**
   - `pod`: stored inline; treated as trivially-copyable for layout.
   - `handle`: stored as an opaque reference token; lifetime is managed by the owning subsystem.
   - `gpu_lane`: stored as a GPU-only handle; CPU access requires explicit staging transforms.
-  - Conflicts are rejected (`pod` with `handle` or `gpu_lane`, and `handle` with `gpu_lane`).
+  - Un-tagged fields default to `default`.
+  - Conflicts are rejected (`pod` with `handle` or `gpu_lane`, `handle` with `gpu_lane`, and `pod` definitions containing `handle`/`gpu_lane` fields).
 
 ### Transforms (draft)
 - **Purpose:** transforms are metafunctions that rewrite tokens (text transforms) or stamp semantic flags on the AST (semantic transforms). Later passes (backend filters) consume the semantic flags; transforms do not emit code directly.

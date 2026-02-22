@@ -239,6 +239,74 @@ main() {
   CHECK(decodedCounter->isStatic == true);
 }
 
+TEST_CASE("ir emits struct field categories") {
+  const std::string source = R"(
+[struct]
+Payload() {
+  [pod i32] count{1i32}
+  [handle i64] file{2i64}
+  [gpu_lane i32] lane{3i32}
+  [i32] plain{4i32}
+}
+
+[return<void>]
+main() {
+  Payload()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  auto layoutIt = std::find_if(module.structLayouts.begin(),
+                               module.structLayouts.end(),
+                               [](const primec::IrStructLayout &layout) { return layout.name == "/Payload"; });
+  REQUIRE(layoutIt != module.structLayouts.end());
+  REQUIRE(layoutIt->fields.size() == 4u);
+  auto fieldByName = [&](const std::string &name) -> const primec::IrStructField * {
+    auto it = std::find_if(layoutIt->fields.begin(),
+                           layoutIt->fields.end(),
+                           [&](const primec::IrStructField &field) { return field.name == name; });
+    if (it == layoutIt->fields.end()) {
+      return nullptr;
+    }
+    return &(*it);
+  };
+  const primec::IrStructField *countField = fieldByName("count");
+  const primec::IrStructField *fileField = fieldByName("file");
+  const primec::IrStructField *laneField = fieldByName("lane");
+  const primec::IrStructField *plainField = fieldByName("plain");
+  REQUIRE(countField != nullptr);
+  REQUIRE(fileField != nullptr);
+  REQUIRE(laneField != nullptr);
+  REQUIRE(plainField != nullptr);
+  CHECK(countField->category == primec::IrStructFieldCategory::Pod);
+  CHECK(fileField->category == primec::IrStructFieldCategory::Handle);
+  CHECK(laneField->category == primec::IrStructFieldCategory::GpuLane);
+  CHECK(plainField->category == primec::IrStructFieldCategory::Default);
+
+  std::vector<uint8_t> data;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  auto decodedIt = std::find_if(decoded.structLayouts.begin(),
+                                decoded.structLayouts.end(),
+                                [](const primec::IrStructLayout &layout) { return layout.name == "/Payload"; });
+  REQUIRE(decodedIt != decoded.structLayouts.end());
+  auto decodedLane = std::find_if(decodedIt->fields.begin(),
+                                  decodedIt->fields.end(),
+                                  [](const primec::IrStructField &field) { return field.name == "lane"; });
+  REQUIRE(decodedLane != decodedIt->fields.end());
+  CHECK(decodedLane->category == primec::IrStructFieldCategory::GpuLane);
+}
+
 TEST_CASE("ir serialize roundtrip with implicit void return") {
   const std::string source = R"(
 [return<void>]
