@@ -79,7 +79,7 @@ Legend:
 - ✓ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
 - ✓ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ✓ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
-- ○ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
+- ✓ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
 - ○ (Low) Investigate multithreaded semantics pass (task pool per root function) with deterministic diagnostics.
 - ✓ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
 - ✓ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
@@ -87,7 +87,7 @@ Legend:
 - ○ Close the SyntaxSpec draft: review feedback, reconcile grammar, and mark `docs/PrimeStruct_SyntaxSpec.md` as stable.
 - ✓ Decide on Unicode identifier support and update lexer/parser/docs accordingly.
 - ✓ Finalize the literal suffix catalog, including canonical raw string behavior across backends.
-- ○ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
+- ✓ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
 - ○ Finalize literals & composite construction semantics beyond suffix rules.
 - ✓ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
 - ○ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.

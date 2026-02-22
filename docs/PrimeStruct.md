@@ -571,7 +571,9 @@ for(
 - **Strings:** double-quoted strings process escapes unless a raw suffix is used; single-quoted strings are raw and do not process escapes. `raw_utf8` / `raw_ascii` force raw mode on either quote style. Surface literals accept `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the canonical/bottom-level form uses double-quoted strings with normalized escapes and an explicit `utf8`/`ascii` suffix. `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
 - **Composite constructors:** structured values are introduced through standard envelope executions (`ColorGrade([hue_shift] 0.1f32 [exposure] 0.95f32)`) or brace constructor forms (`ColorGrade{ ... }`) in value positions; brace constructors evaluate the block and pass its resulting value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. Binding initializers are value blocks; to pass multiple constructor arguments use an explicit call (e.g., `[ColorGrade] grade{ ColorGrade([hue_shift] 0.1f32 [exposure] 0.95f32) }`). Labeled arguments map to fields, and every field must have either an explicit argument or an envelope-provided default before validation. Labeled arguments may only be used on user-defined calls.
-- **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries. Builtin calls (operators, comparisons, clamp, pointer helpers, collections) do not accept labeled arguments.
+  - **Defaults & validation:** struct constructors accept positional and labeled arguments. Missing fields are filled from their field initializers (struct fields always declare an initializer). Extra arguments are a semantic error (`argument count mismatch`).
+  - **Multi-expression blocks:** `{ ... }` is a value block, not an argument list. If you need to pass multiple constructor arguments, use `Type(arg1, arg2)` (or labeled arguments). A brace block with multiple expressions still produces a single value via `return(value)` or the final expression.
+- **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries. Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.
   - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
   - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
   - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
@@ -592,7 +594,7 @@ for(
   - **Struct note:** VM/native lowering supports struct values when fields are numeric/bool or other struct values (nested structs). Struct fields with strings or templated envelopes still require the C++ emitter.
   - `bool{...}` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).
-- **Open design:** raw string semantics across backends, and the composite-constructor defaults/validation rules.
+- **Open design:** raw string semantics across backends.
 
 ## Pointers & References (draft)
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
@@ -778,6 +780,13 @@ module {
 - **Testing:** unit/looped regression suites verify backend parity (C++, VM, GLSL).
 - **Diagnostics:** metrics/logs land under `diagnostics/PrimeStruct/*`. Effect annotations drive error messaging.
 - **PathSpace runtime wiring:** generated code uses PathSpace helper APIs (`insert`, `take`, `notify`). Transforms wrap high-level IO primitives so emitted C++/VM code interacts through envelope-tagged handles; GLSL outputs map onto renderer inputs. Lifetimes/ownership align with PathSpace nodes.
+
+### Diagnostics & Tooling Roadmap
+- **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export (`--emit-diagnostics`) for tooling/tests.
+- **Phase 1 (source maps):** attach token spans to AST, keep span provenance through text/semantic transforms, and emit IR-to-source maps for VM/native/GLSL. Require every diagnostic to carry at least one source span.
+- **Phase 2 (incremental):** content-addressed caches for AST/IR, dependency graph tracking for includes/imports, and invalidation rules per transform phase. Add `--watch` to reuse caches and stream diagnostics.
+- **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus a PathSpace-native editor adapter.
+- **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
 
 ## Dependencies & Related Work
 - Stable IR definition & serialization (std::serialization once available).

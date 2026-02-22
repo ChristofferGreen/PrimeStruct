@@ -395,6 +395,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct constructor rejects extra arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  thing(1i32, 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
 TEST_CASE("struct brace constructor works in arguments") {
   const std::string source = R"(
 [struct]
