@@ -1,5 +1,45 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
+TEST_CASE("compiles and runs native file io") {
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_file_io.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [array<i32>] bytes{ array<i32>(65i32, 66i32, 67i32) }\n"
+      "  file.write(\"Hello \"utf8, 123i32, \" world\"utf8)?\n"
+      "  file.write_line(\"\"utf8)?\n"
+      "  file.write_byte(10i32)?\n"
+      "  file.write_bytes(bytes)?\n"
+      "  file.flush()?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("native_file_io.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_file_io_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+  CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
+}
+
 TEST_CASE("compiles and runs native executable") {
   const std::string source = R"(
 [return<int>]

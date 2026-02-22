@@ -71,6 +71,43 @@ main() {
   CHECK(std::filesystem::exists(expectedPath));
 }
 
+TEST_CASE("runs vm file io") {
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_file_io.txt").string();
+  auto escape = [](const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+      if (c == '\\' || c == '"') {
+        out.push_back('\\');
+      }
+      out.push_back(c);
+    }
+    return out;
+  };
+  const std::string escapedPath = escape(outPath);
+  const std::string source =
+      "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
+      "main() {\n"
+      "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
+      "  [array<i32>] bytes{ array<i32>(65i32, 66i32, 67i32) }\n"
+      "  file.write(\"Hello \"utf8, 123i32, \" world\"utf8)?\n"
+      "  file.write_line(\"\"utf8)?\n"
+      "  file.write_byte(10i32)?\n"
+      "  file.write_bytes(bytes)?\n"
+      "  file.flush()?\n"
+      "  file.close()?\n"
+      "  return(Result.ok())\n"
+      "}\n"
+      "[effects(io_err)]\n"
+      "log_file_error([FileError] err) {\n"
+      "  print_line_error(\"file error\"utf8)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("vm_file_io.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
+}
+
 TEST_CASE("defaults to cpp extension for emit=cpp") {
   const std::string source = R"(
 [return<int>]

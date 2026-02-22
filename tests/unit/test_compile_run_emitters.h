@@ -368,6 +368,36 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("compiles and runs std math vector and color types") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] v2{Vec2(1.0f32, 2.0f32)}
+  [Vec3] v3{Vec3(3.0f32, 4.0f32, 0.0f32)}
+  [Vec4] v4{Vec4(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [f32] len2{v3.lengthSquared()}
+
+  [ColorRGB] base{ColorRGB(0.5f32, 0.5f32, 0.5f32)}
+  [ColorRGB] mixed{base.add(ColorRGB(0.5f32, 0.5f32, 0.5f32))}
+  [ColorRGBA] rgba{ColorRGBA(0.5f32, 0.5f32, 0.5f32, 1.0f32)}
+  [ColorRGBA] mixedA{rgba.mulScalar(2.0f32)}
+  [ColorSRGB] srgb{ColorSRGB(0.0f32, 0.0f32, 0.0f32)}
+  [ColorSRGBA] srgba{ColorSRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+
+  [f32] total{len2 + mixed.r + mixed.g + mixed.b + mixedA.a + v2.x + v4.w + srgb.r + srgba.a}
+  return(convert<int>(total))
+}
+)";
+  const std::string srcPath = writeTemp("compile_std_math_vec_color.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_std_math_vec_color_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 36);
+}
+
 TEST_CASE("compiles and runs string-keyed map literal in C++ emitter") {
   const std::string source = R"(
 [return<int>]

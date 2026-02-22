@@ -1181,4 +1181,112 @@ main() {
   CHECK(error.find("invalid default effect: bad-effect") != std::string::npos);
 }
 
+TEST_CASE("File constructor requires file_write effect") {
+  const std::string source = R"(
+[return<Result<FileError>> on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{ File<Write>("file.txt"utf8)? }
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("File requires file_write effect") != std::string::npos);
+}
+
+TEST_CASE("file methods require file_write effect") {
+  const std::string source = R"(
+[return<void>]
+write_out([File<Write>] file) {
+  file.write_line("hello"utf8)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("file operations require file_write effect") != std::string::npos);
+}
+
+TEST_CASE("file_write effect allows file operations") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+main() {
+  [File<Write>] file{ File<Write>("file.txt"utf8)? }
+  file.write_line("hello"utf8)?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("try requires on_error") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(file_write)]
+main() {
+  [File<Write>] file{ File<Write>("file.txt"utf8)? }
+  return(Result.ok())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("missing on_error for ? usage") != std::string::npos);
+}
+
+TEST_CASE("on_error requires Result return type") {
+  const std::string source = R"(
+[return<int> on_error<FileError, /log_file_error>]
+main() {
+  return(0i32)
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("on_error requires Result return type") != std::string::npos);
+}
+
+TEST_CASE("try rejects mismatched error type") {
+  const std::string source = R"(
+[struct]
+MyError() {
+  [public i32] code{0i32}
+}
+
+[return<Result<FileError>> on_error<FileError, /log_file_error>]
+main() {
+  [Result<MyError>] bad{Result.ok()}
+  bad?
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("try error type mismatch") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -48,11 +48,11 @@ Legend:
 - ○ Implement whole-program `auto` inference for parameters and returns (fixpoint over the expanded call graph after includes).
 - ○ Require explicit `auto` on bindings/returns to resolve to a concrete envelope (no fallback to `int`); emit diagnostics on unresolved or conflicting inference.
 - ○ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
-- ○ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
-- ○ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
-- ○ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
-- ○ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
-- ○ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
+- ✓ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
+- ✓ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
+- ✓ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
+- ✓ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
+- ✓ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
 
 **Backends & IR**
 - ✓ Add GLSL backend (docs mention GPU lowering, but there is no backend in `src/`).
