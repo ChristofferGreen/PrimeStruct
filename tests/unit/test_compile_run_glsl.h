@@ -544,6 +544,42 @@ main() {
   CHECK(readFile(errPath).find("glsl backend does not support builtin: array") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter rejects mixed signed/unsigned math") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] left{1i32}
+  [u64] right{1u64}
+  [i32] value{plus(left, right)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_mixed_signed.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_signed_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("mixed signed/unsigned") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter rejects mixed boolean comparisons") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [bool] flag{greater_than(true, 1i32)}
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_mixed_bool.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_glsl_mixed_bool_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not allow mixed boolean/numeric comparisons") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects string literals") {
   const std::string source = R"(
 [return<void>]
