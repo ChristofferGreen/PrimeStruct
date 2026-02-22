@@ -95,8 +95,8 @@ Legend:
 - ○ Define pointer/reference target envelope whitelist and conversion rules per backend.
 - ○ Define constructor semantics beyond `Create`/`Destroy`, including constant member behavior and default initialization rules.
 - ○ Finalize struct/envelope category rules, placement policy, and category mapping.
-- ○ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.
-- ○ Support recursive struct layouts or document them as explicitly unsupported.
+- ✓ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.
+- ✓ Support recursive struct layouts or document them as explicitly unsupported.
 - ○ Implement the `class<Name>(...)` surface (composition/extends semantics) or remove it from docs.
 - ○ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
 - ○ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.

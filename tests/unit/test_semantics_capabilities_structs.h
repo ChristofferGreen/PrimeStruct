@@ -661,3 +661,20 @@ main() {
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
+
+TEST_CASE("recursive struct layouts are rejected") {
+  const std::string source = R"(
+[struct]
+Node() {
+  [Node] next{Node()}
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("recursive struct layout not supported") != std::string::npos);
+}

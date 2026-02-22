@@ -299,6 +299,8 @@ Notes:
 - `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In statement position, `name{...}` is parsed as a binding.
 - `block()` with a trailing body block is allowed in any form position; `block{...}` is invalid and parsed as a binding or brace constructor.
 - `quoted_string` in include declarations is a raw quoted string without suffixes.
+- Placement transforms `[stack]`, `[heap]`, and `[buffer]` are reserved and rejected by the compiler.
+- Recursive struct layouts (structs containing themselves by value, directly or indirectly) are rejected.
 
 ## 5. Desugaring and Canonical Core
 
