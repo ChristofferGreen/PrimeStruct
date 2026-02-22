@@ -37,8 +37,8 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 
 ## Inverse Trig: asin/acos/atan
 - [x] Domain edges at `-1`, `0`, `1`.
-- [ ] Near-edge values: `-0.999`, `0.999`.
-- [ ] Round-trip: `sin(asin(x)) ~= x` and `cos(acos(x)) ~= x` for `x in [-0.9, 0.9]`.
+- [x] Near-edge values: `-0.999`, `0.999`.
+- [x] Round-trip: `sin(asin(x)) ~= x` and `cos(acos(x)) ~= x` for `x in [-0.9, 0.9]`.
 - [x] `atan(1) ~= pi/4`, `atan(-1) ~= -pi/4`.
 - [ ] Monotonicity samples for `atan` over `[-10, 10]`.
 
