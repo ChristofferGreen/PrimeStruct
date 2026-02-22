@@ -567,7 +567,7 @@ for(
 ## Literals & Composite Construction (draft)
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
 - Integer literals require explicit width suffixes (`42i32`, `42i64`, `42u64`) unless `implicit-i32` is enabled (on by default). Omit it from `--text-transforms` (or use `--no-text-transforms`) to require explicit suffixes.
-- Float literals accept `f32` or `f64` suffixes; when omitted, they default to `f32`. Exponent notation (`1e-3`, `1.0e6f32`) is supported.
+- Float literals accept `f32` or `f64` suffixes; when omitted in surface syntax they default to `f32`. Canonical form requires `f32`/`f64`. Exponent notation (`1e-3`, `1.0e6f32`) is supported.
 - Commas may appear between digits in the integer part as digit separators and are ignored for value (e.g., `1,000i32`, `12,345.0f32`). Commas are not allowed in the fractional or exponent parts, and `.` is the only decimal separator.
 - **Strings:** double-quoted strings process escapes unless a raw suffix is used; single-quoted strings are raw and do not process escapes. `raw_utf8` / `raw_ascii` force raw mode on either quote style. Surface literals accept `utf8`/`ascii`/`raw_utf8`/`raw_ascii` suffixes; the canonical/bottom-level form uses double-quoted strings with normalized escapes and an explicit `utf8`/`ascii` suffix. `implicit-utf8` (enabled by default) appends `utf8` when omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
@@ -593,7 +593,7 @@ for(
   - **Struct note:** VM/native lowering supports struct values when fields are numeric/bool or other struct values (nested structs). Struct fields with strings or templated envelopes still require the C++ emitter.
   - `bool{...}` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
 - **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).
-- **Open design:** finalise literal suffix catalogue, raw string semantics across backends, and the composite-constructor defaults/validation rules.
+- **Open design:** raw string semantics across backends, and the composite-constructor defaults/validation rules.
 
 ## Pointers & References (draft)
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.

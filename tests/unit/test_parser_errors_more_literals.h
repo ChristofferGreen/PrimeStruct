@@ -582,6 +582,21 @@ main() {
   CHECK(error.find("integer literal requires i32/i64/u64 suffix") != std::string::npos);
 }
 
+TEST_CASE("float literal requires suffix in canonical mode") {
+  const std::string source = R"(
+[return<f32>]
+main() {
+  return(1.25)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("float literal requires f32/f64 suffix in canonical mode") != std::string::npos);
+}
+
 TEST_CASE("negative unsigned literal is rejected") {
   const std::string source = R"(
 [return<int>]
