@@ -104,9 +104,9 @@ Legend:
 - ○ Finalize core library surface/standard math spec and document backend-specific limits.
 - ✓ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
 - ✓ Define math builtin operand type rules and backend-specific restrictions (e.g., integer pow errors).
-- ○ Finalize and version the Standard Library Reference (currently draft v0).
+- ✓ Finalize and version the Standard Library Reference (currently draft v0).
 - ✓ Decide on standard library package versioning and remove the planned `--stdlib-version` flag.
-- ○ Define and implement stdlib conformance markers for VM/native subset differences.
+- ✓ Define and implement stdlib conformance markers for VM/native subset differences.
 - ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
 - ○ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
 - ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.

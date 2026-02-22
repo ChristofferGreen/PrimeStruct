@@ -424,16 +424,24 @@ for(
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers / brace constructors), `return(value)` returns from the block and yields its value.
 - **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or bindings backed by literals (string table entries). VM/native vectors use fixed capacity; `push`/`reserve` succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`, `remove_swap`) continue to work against the fixed capacity.
 
-### Standard Library Reference (draft, v0)
-- **Status:** this reference is a snapshot of the current builtin surface. It will be versioned once the standard library is split into packages.
+### Standard Library Reference (v0)
+- **Status:** stable snapshot of the current builtin surface (v0).
 - **Versioning (planned):**
   - Each package declares a semantic version (e.g., `1.2.0`).
   - `include<..., version="1.2.0">` selects a specific package revision.
   - There is no compiler flag to pin the default package set yet; use explicit versions in `include` declarations.
 - **Namespaces:**
   - `/std/math/*` is imported via `import /std/math/*` (or explicit names like `import /std/math/sin /std/math/pi`).
-  - Core builtins (`assign`, `count`, `print*`, etc.) live in the root namespace.
-- **Conformance note:** the VM/native subset may reject functions that the C++ emitter supports (e.g., float-heavy math); the reference will mark such cases explicitly.
+  - Core builtins (`assign`, `count`, `print*`, `convert`, etc.) live in the root namespace.
+- **Conformance markers:**
+  - **`C++`**: supported only by the C++ emitter (VM/native reject).
+  - **`VM/native`**: supported by the VM + native backends.
+  - **`VM/native (limited)`**: supported with the listed restrictions.
+- **Conformance notes:**
+  - String comparisons are **`C++`** only; VM/native reject them.
+  - `map<K, V>` values must be numeric/bool for **`VM/native`**; string values are **`C++`** only.
+  - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
+  - VM/native vectors are fixed-capacity; `push`/`reserve` beyond capacity is a runtime error.
 - **Core builtins (root namespace):**
   - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
   - **`increment(target)` / `decrement(target)`** (statement): mutation helpers used by `++`/`--` desugaring.

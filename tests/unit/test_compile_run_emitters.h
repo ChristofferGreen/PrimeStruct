@@ -580,6 +580,25 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
+TEST_CASE("compiles and runs string map values in C++ emitter") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [map<string, string>] values{
+    map<string, string>("a"raw_utf8, "alpha"raw_utf8, "b"raw_utf8, "beta"raw_utf8)
+  }
+  [string] value{at(values, "b"raw_utf8)}
+  return(convert<int>(equal(value, "beta"raw_utf8)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_string_map_values.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_string_map_values_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("compiles and runs power/log builtins in C++ emitter") {
   const std::string source = R"(
 import /std/math/*
