@@ -27,26 +27,26 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Check that `tau == 2 * pi` within tight tolerance.
 
 ## Trig: sin/cos/tan
-- [ ] Quadrant correctness for `sin`, `cos`, `tan` at `0`, `pi/2`, `pi`, `3pi/2`, `2pi`.
-- [ ] Symmetry: `sin(-x) = -sin(x)`, `cos(-x) = cos(x)`, `tan(-x) = -tan(x)`.
-- [ ] Range reduction for large inputs: `x = 10, 20, 100, 1e3, 1e4`.
-- [ ] Pythagorean identity: `sin(x)^2 + cos(x)^2 ~= 1` for a grid of values.
-- [ ] `tan(x) ~= sin(x) / cos(x)` where `cos(x)` not near zero.
+- [x] Quadrant correctness for `sin`, `cos`, `tan` at `0`, `pi/2`, `pi`, `3pi/2`, `2pi`.
+- [x] Symmetry: `sin(-x) = -sin(x)`, `cos(-x) = cos(x)`, `tan(-x) = -tan(x)`.
+- [x] Range reduction for large inputs: `x = 10, 20, 100, 1e3, 1e4`.
+- [x] Pythagorean identity: `sin(x)^2 + cos(x)^2 ~= 1` for a grid of values.
+- [x] `tan(x) ~= sin(x) / cos(x)` where `cos(x)` not near zero.
 - [ ] Continuity checks across quadrant boundaries (avoid extra zero crossings).
-- [ ] Small-angle behavior: `sin(x) ~= x` for `x in [-1e-4, 1e-4]`.
+- [x] Small-angle behavior: `sin(x) ~= x` for `x in [-1e-4, 1e-4]`.
 
 ## Inverse Trig: asin/acos/atan
-- [ ] Domain edges at `-1`, `0`, `1`.
+- [x] Domain edges at `-1`, `0`, `1`.
 - [ ] Near-edge values: `-0.999`, `0.999`.
 - [ ] Round-trip: `sin(asin(x)) ~= x` and `cos(acos(x)) ~= x` for `x in [-0.9, 0.9]`.
-- [ ] `atan(1) ~= pi/4`, `atan(-1) ~= -pi/4`.
+- [x] `atan(1) ~= pi/4`, `atan(-1) ~= -pi/4`.
 - [ ] Monotonicity samples for `atan` over `[-10, 10]`.
 
 ## atan2
-- [ ] Quadrant correctness for all four quadrants.
-- [ ] Axis cases: `atan2(0, x)` and `atan2(y, 0)` with sign checks.
-- [ ] Symmetry: `atan2(-y, -x) ~= atan2(y, x) +/- pi` where applicable.
-- [ ] Known values: `atan2(1, 1) ~= pi/4`, `atan2(1, 0) ~= pi/2`.
+- [x] Quadrant correctness for all four quadrants.
+- [x] Axis cases: `atan2(0, x)` and `atan2(y, 0)` with sign checks.
+- [x] Symmetry: `atan2(-y, -x) ~= atan2(y, x) +/- pi` where applicable.
+- [x] Known values: `atan2(1, 1) ~= pi/4`, `atan2(1, 0) ~= pi/2`.
 
 ## Hyperbolic: sinh/cosh/tanh
 - [ ] Symmetry: `sinh(-x) = -sinh(x)`, `cosh(-x) = cosh(x)`, `tanh(-x) = -tanh(x)`.
