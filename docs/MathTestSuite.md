@@ -68,11 +68,11 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Base relations: `log2(8) = 3`, `log10(1000) = 3`.
 
 ## Roots: sqrt/cbrt
-- [ ] Perfect squares/cubes: `4`, `9`, `27`, `64`.
+- [x] Perfect squares/cubes: `4`, `9`, `27`, `64`.
 - [ ] Non-perfect values: `2`, `3`, `5`, `10`.
-- [ ] Negative input handling for `sqrt` (expected policy: error, NaN, or clamp).
-- [ ] Round-trip: `sqrt(x) * sqrt(x) ~= x` for `x > 0`.
-- [ ] `cbrt` for negative values: `cbrt(-8) = -2`.
+- [x] Negative input handling for `sqrt` (expected policy: error, NaN, or clamp).
+- [x] Round-trip: `sqrt(x) * sqrt(x) ~= x` for `x > 0`.
+- [x] `cbrt` for negative values: `cbrt(-8) = -2`.
 
 ## Pow
 - [ ] Integer powers: `pow(2, 0)`, `pow(2, 3)`, `pow(10, 2)`.

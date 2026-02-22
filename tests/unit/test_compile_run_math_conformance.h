@@ -467,6 +467,49 @@ main() {
   checkMathConformance(source, "math_conformance_exp_log_basics");
 }
 
+TEST_CASE("math conformance roots") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[bool]
+near([f32] a, [f32] b, [f32] eps) {
+  return(abs(a - b) <= eps)
+}
+
+[return<int>]
+main() {
+  emit("sqrt_4"utf8, near(sqrt(4.0f32), 2.0f32, 0.01f32))
+  emit("sqrt_9"utf8, near(sqrt(9.0f32), 3.0f32, 0.01f32))
+  emit("sqrt_64"utf8, near(sqrt(64.0f32), 8.0f32, 0.01f32))
+
+  emit("cbrt_27"utf8, near(cbrt(27.0f32), 3.0f32, 0.01f32))
+  emit("cbrt_64"utf8, near(cbrt(64.0f32), 4.0f32, 0.2f32))
+  emit("cbrt_neg"utf8, near(cbrt(-8.0f32), -2.0f32, 0.01f32))
+
+  [f32] root2{sqrt(2.0f32)}
+  emit("sqrt_roundtrip"utf8, abs(root2 * root2 - 2.0f32) < 0.02f32)
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_roots");
+}
+
 TEST_CASE("math conformance float helpers parse tokens") {
   const std::string output = "sin 0.5\ncos 0.6\nnan nan\ninf inf\nneg -inf\n";
   const std::vector<FloatSample> samples = parseFloatOutput(output, "float helper test");
