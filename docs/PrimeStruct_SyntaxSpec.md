@@ -349,6 +349,16 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `!a` -> `not(a)`
   - `&a` -> `location(a)`
   - `*a` -> `dereference(a)`
+- Operator compatibility rules (validated after desugaring):
+  - Arithmetic operators (`plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`) require numeric
+    operands (`i32`, `i64`, `u64`, `f32`, `f64`). `negate` rejects unsigned operands. Mixed signed/unsigned operands
+    are rejected, as are mixed int/float operands.
+  - Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset on the
+    right (`i32`, `i64`, `u64`). Pointer + pointer is rejected, and a pointer on the right is rejected.
+  - Comparisons (`greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`) accept
+    numeric/bool/string operands. String comparisons require both operands to be strings. Numeric/bool comparisons
+    reject mixed signed/unsigned operands and mixed int/float operands. `bool` participates as signed `0/1`, so
+    `bool` with `u64` is rejected as mixed signedness while `bool` with signed ints is allowed.
 - Collection literals (via the `collections` text transform) rewrite to constructor calls:
   - `array<T>{...}` / `array<T>[...]` -> `array<T>(...)`
   - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`

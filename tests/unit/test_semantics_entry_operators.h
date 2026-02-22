@@ -77,6 +77,18 @@ main() {
   CHECK(error.find("mixed signed/unsigned") != std::string::npos);
 }
 
+TEST_CASE("arithmetic multiply rejects mixed signed/unsigned operands") {
+  const std::string source = R"(
+[return<i64>]
+main() {
+  return(multiply(3i64, 4u64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed signed/unsigned") != std::string::npos);
+}
+
 TEST_CASE("arithmetic rejects mixed int/float operands") {
   const std::string source = R"(
 [return<int>]
