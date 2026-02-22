@@ -145,10 +145,12 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Ensure math ops on indexed array values behave identically across backends.
 
 ## Cross-Backend Compliance
-- [ ] Each category above has a C++/exe baseline test.
-- [ ] VM and native outputs match baseline within tolerance.
-- [ ] Dedicated tests for known native approximation limits.
-- [ ] Stress tests with a grid of values per function (small sample).
+- [x] Each category above has a C++/exe baseline test.
+- [x] VM and native outputs match baseline within tolerance.
+- [x] Dedicated tests for known native approximation limits.
+- [x] Stress tests with a grid of values per function (small sample).
+  - See `math_conformance_float_samples`, `math_conformance_float_grid`,
+    and `math_conformance_native_limits` in the conformance suite.
 
 ## Performance Guardrails
 - [x] Add a couple of “heavy math” tests to ensure runtime does not regress badly.

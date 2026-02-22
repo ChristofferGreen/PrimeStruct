@@ -1519,6 +1519,150 @@ main() {
   checkMathConformance(source, "math_conformance_grid");
 }
 
+TEST_CASE("math conformance float baseline samples") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
+  emit("sin_0_5"utf8, sin(0.5f32))
+  emit("cos_0_5"utf8, cos(0.5f32))
+  emit("tan_0_5"utf8, tan(0.5f32))
+  emit("asin_0_5"utf8, asin(0.5f32))
+  emit("acos_0_5"utf8, acos(0.5f32))
+  emit("atan_0_5"utf8, atan(0.5f32))
+  emit("sinh_1"utf8, sinh(1.0f32))
+  emit("cosh_1"utf8, cosh(1.0f32))
+  emit("tanh_1"utf8, tanh(1.0f32))
+  emit("exp_1"utf8, exp(1.0f32))
+  emit("log_2"utf8, log(2.0f32))
+  emit("exp2_3"utf8, exp2(3.0f32))
+  emit("log2_8"utf8, log2(8.0f32))
+  emit("sqrt_2"utf8, sqrt(2.0f32))
+  emit("cbrt_27"utf8, cbrt(27.0f32))
+  emit("hypot_3_4"utf8, hypot(3.0f32, 4.0f32))
+  emit("pow_2_3"utf8, pow(2.0f32, 3.0f32))
+  emit("fma_basic"utf8, fma(1.25f32, 2.5f32, -0.5f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_samples", 25.0, 5e-4);
+}
+
+TEST_CASE("math conformance float grids") {
+  const std::string source = R"(
+import /std/math/*
+
+[effects(io_out)]
+emit([string] label, [f32] value) {
+  print(label)
+  print(" "utf8)
+  print_line(scaled(value))
+}
+
+[i64]
+scaled([f32] value) {
+  return(convert<i64>(round(value * 10000.0f32)))
+}
+
+[return<int>]
+main() {
+  emit("sin_-3"utf8, sin(-3.0f32))
+  emit("sin_-1"utf8, sin(-1.0f32))
+  emit("sin_-0_5"utf8, sin(-0.5f32))
+  emit("sin_0"utf8, sin(0.0f32))
+  emit("sin_0_5"utf8, sin(0.5f32))
+  emit("sin_1"utf8, sin(1.0f32))
+  emit("sin_3"utf8, sin(3.0f32))
+
+  emit("cos_-3"utf8, cos(-3.0f32))
+  emit("cos_-1"utf8, cos(-1.0f32))
+  emit("cos_-0_5"utf8, cos(-0.5f32))
+  emit("cos_0"utf8, cos(0.0f32))
+  emit("cos_0_5"utf8, cos(0.5f32))
+  emit("cos_1"utf8, cos(1.0f32))
+  emit("cos_3"utf8, cos(3.0f32))
+
+  emit("exp_-2"utf8, exp(-2.0f32))
+  emit("exp_-1"utf8, exp(-1.0f32))
+  emit("exp_0"utf8, exp(0.0f32))
+  emit("exp_1"utf8, exp(1.0f32))
+  emit("exp_2"utf8, exp(2.0f32))
+
+  emit("log_0_25"utf8, log(0.25f32))
+  emit("log_0_5"utf8, log(0.5f32))
+  emit("log_1"utf8, log(1.0f32))
+  emit("log_2"utf8, log(2.0f32))
+  emit("log_4"utf8, log(4.0f32))
+
+  emit("hypot_3_4"utf8, hypot(3.0f32, 4.0f32))
+  emit("hypot_5_12"utf8, hypot(5.0f32, 12.0f32))
+  emit("hypot_1_2"utf8, hypot(1.0f32, 2.0f32))
+  return(0i32)
+}
+)";
+  checkMathConformanceFloats(source, "math_conformance_float_grid", 25.0, 5e-4);
+}
+
+TEST_CASE("math conformance native approximation limits") {
+  const std::string source = R"(
+import /std/math/*
+
+[int]
+pass([bool] ok) {
+  if(ok) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[effects(io_out)]
+emit([string] label, [bool] ok) {
+  print(label)
+  print(" "utf8)
+  print_line(pass(ok))
+}
+
+[return<int>]
+main() {
+  [f32] sin_1e4{sin(10000.0f32)}
+  [f32] cos_1e4{cos(10000.0f32)}
+  [f32] sin_1e5{sin(100000.0f32)}
+  [f32] cos_1e5{cos(100000.0f32)}
+  emit("sin_large_1e4_range"utf8, abs(sin_1e4) <= 1.0f32)
+  emit("cos_large_1e4_range"utf8, abs(cos_1e4) <= 1.0f32)
+  emit("sin_large_1e5_range"utf8, abs(sin_1e5) <= 1.0f32)
+  emit("cos_large_1e5_range"utf8, abs(cos_1e5) <= 1.0f32)
+
+  [f32] exp_10{exp(10.0f32)}
+  emit("exp_10_finite"utf8, is_finite(exp_10))
+  emit("exp_10_positive"utf8, exp_10 > 0.0f32)
+
+  [f32] log_small{log(0.000001f32)}
+  emit("log_small_finite"utf8, is_finite(log_small))
+  emit("log_small_negative"utf8, log_small < 0.0f32)
+
+  [f32] atan_large{atan(100000.0f32)}
+  emit("atan_large_range"utf8, atan_large > 1.5f32 && atan_large < 1.7f32)
+  return(0i32)
+}
+)";
+  checkMathConformance(source, "math_conformance_native_limits");
+}
+
 TEST_CASE("math conformance heavy trig workload") {
   const std::string source = R"(
 import /std/math/*
