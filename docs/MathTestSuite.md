@@ -63,13 +63,13 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Exp/Log
 - [x] `exp(0) = 1`, `exp2(0) = 1`.
 - [x] `log(1) = 0`, `log2(1) = 0`, `log10(1) = 0`.
-- [ ] `exp(log(x)) ~= x` for `x = 0.5, 1, 2, 10`.
-- [ ] `log(exp(x)) ~= x` for `x = -2, -1, 0, 1, 2`.
+- [x] `exp(log(x)) ~= x` for `x = 0.5, 1, 2, 10`.
+- [x] `log(exp(x)) ~= x` for `x = -2, -1, 0, 1, 2`.
 - [ ] Base relations: `log2(8) = 3`, `log10(1000) = 3`.
 
 ## Roots: sqrt/cbrt
 - [x] Perfect squares/cubes: `4`, `9`, `27`, `64`.
-- [ ] Non-perfect values: `2`, `3`, `5`, `10`.
+- [x] Non-perfect values: `2`, `3`, `5`, `10`.
 - [x] Negative input handling for `sqrt` (expected policy: error, NaN, or clamp).
 - [x] Round-trip: `sqrt(x) * sqrt(x) ~= x` for `x > 0`.
 - [x] `cbrt` for negative values: `cbrt(-8) = -2`.

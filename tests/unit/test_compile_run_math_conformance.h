@@ -461,6 +461,31 @@ main() {
   emit("log2_eight"utf8, near(log2(8.0f32), 3.0f32, 0.2f32))
   emit("exp_log_roundtrip"utf8, near(exp(log(2.0f32)), 2.0f32, 0.002f32))
   emit("log_exp_roundtrip"utf8, near(log(exp(1.0f32)), 1.0f32, 0.002f32))
+  [array<f32>] exp_log_values{array<f32>(0.5f32, 1.0f32, 2.0f32, 10.0f32)}
+  [int mut] exp_log_idx{0}
+  [int mut] exp_log_ok{1}
+  while(exp_log_idx < exp_log_values.count()) {
+    [f32] x{exp_log_values[exp_log_idx]}
+    [f32] ratio{exp(log(x)) / x}
+    if(ratio < 0.5f32 || ratio > 2.0f32) {
+      exp_log_ok = 0
+    } else {
+    }
+    exp_log_idx = exp_log_idx + 1
+  }
+  emit("exp_log_grid"utf8, exp_log_ok == 1)
+  [array<f32>] log_exp_values{array<f32>(-2.0f32, -1.0f32, 0.0f32, 1.0f32, 2.0f32)}
+  [int mut] log_exp_idx{0}
+  [int mut] log_exp_ok{1}
+  while(log_exp_idx < log_exp_values.count()) {
+    [f32] x{log_exp_values[log_exp_idx]}
+    if(abs(log(exp(x)) - x) > 0.05f32) {
+      log_exp_ok = 0
+    } else {
+    }
+    log_exp_idx = log_exp_idx + 1
+  }
+  emit("log_exp_grid"utf8, log_exp_ok == 1)
   return(0i32)
 }
 )";
@@ -502,8 +527,19 @@ main() {
   emit("cbrt_64"utf8, near(cbrt(64.0f32), 4.0f32, 0.2f32))
   emit("cbrt_neg"utf8, near(cbrt(-8.0f32), -2.0f32, 0.01f32))
 
-  [f32] root2{sqrt(2.0f32)}
-  emit("sqrt_roundtrip"utf8, abs(root2 * root2 - 2.0f32) < 0.02f32)
+  [array<f32>] roots{array<f32>(2.0f32, 3.0f32, 5.0f32, 10.0f32)}
+  [int mut] root_idx{0}
+  [int mut] root_ok{1}
+  while(root_idx < roots.count()) {
+    [f32] x{roots[root_idx]}
+    [f32] r{sqrt(x)}
+    if(abs(r * r - x) > 0.03f32) {
+      root_ok = 0
+    } else {
+    }
+    root_idx = root_idx + 1
+  }
+  emit("sqrt_roundtrip"utf8, root_ok == 1)
   return(0i32)
 }
 )";
