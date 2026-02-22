@@ -574,6 +574,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
   - `Result.ok(value)` only accepts `i32`/`bool` payloads.
   - Unsupported math or GPU builtins fail during lowering.
 - Executions are parsed/validated but are not emitted by VM/native/GLSL/C++ backends; only definitions reachable from the entry definition are lowered.
+- VM/native consume the PSIR v14 opcode set (see design doc) and deserialization rejects unknown opcodes.
 - GLSL emitter restrictions (current):
   - Entry definitions must return `void` and may contain at most one `return()` statement.
   - Bindings must be numeric/bool scalars; non-scalar bindings (arrays, vectors, maps, structs) and string literals are rejected.

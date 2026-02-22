@@ -287,7 +287,14 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
         return false;
       }
       IrInstruction inst;
-      inst.op = static_cast<IrOpcode>(data[offset]);
+      const uint8_t opcodeValue = data[offset];
+      const uint8_t minOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
+      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::ReturnF64);
+      if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
+        error = "unsupported IR opcode";
+        return false;
+      }
+      inst.op = static_cast<IrOpcode>(opcodeValue);
       offset += 1;
       if (!readU64(data, offset, inst.imm)) {
         error = "truncated IR instruction data";

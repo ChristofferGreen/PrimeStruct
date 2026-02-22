@@ -191,6 +191,35 @@ main() {
   CHECK(result == 7);
 }
 
+TEST_CASE("ir deserialization rejects unknown opcode") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+
+  const uint32_t nameLen = static_cast<uint32_t>(fn.name.size());
+  size_t offset = 0;
+  offset += 4 * 5; // magic, version, function count, entry index, string count
+  offset += 4;     // struct count
+  offset += 4 + nameLen; // function name length + bytes
+  offset += 4;          // instruction count
+  REQUIRE(offset < data.size());
+
+  data[offset] = 0xFF;
+
+  primec::IrModule decoded;
+  CHECK_FALSE(primec::deserializeIr(data, decoded, error));
+  CHECK(error == "unsupported IR opcode");
+}
+
 TEST_CASE("ir lowers pointer helper calls") {
   const std::string source = R"(
 [return<int>]
@@ -232,4 +261,3 @@ main() {
   CHECK(error.empty());
   CHECK(result == 9);
 }
-
