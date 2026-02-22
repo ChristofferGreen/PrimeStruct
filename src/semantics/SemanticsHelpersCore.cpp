@@ -362,6 +362,9 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  if (name.rfind("std/gpu/", 0) == 0) {
+    name.erase(0, 8);
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -379,6 +382,9 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("std/gpu/", 0) == 0) {
+    name.erase(0, 8);
   }
   if (name.find('/') != std::string::npos) {
     return false;
@@ -428,6 +434,11 @@ bool isRootBuiltinName(const std::string &name) {
   if (parseGpuName(normalized, gpuName)) {
     return gpuName == "global_id_x" || gpuName == "global_id_y" || gpuName == "global_id_z";
   }
+  bool isStdGpuQualified = false;
+  if (normalized.rfind("std/gpu/", 0) == 0) {
+    normalized = normalized.substr(8);
+    isStdGpuQualified = true;
+  }
   if (normalized.find('/') != std::string::npos) {
     return false;
   }
@@ -450,9 +461,10 @@ bool isRootBuiltinName(const std::string &name) {
          normalized == "location" || normalized == "dereference" ||
          normalized == "block" || normalized == "print" || normalized == "print_line" ||
          normalized == "print_error" || normalized == "print_line_error" || normalized == "notify" ||
-         normalized == "insert" || normalized == "take" || normalized == "dispatch" ||
-         normalized == "gpu_buffer" || normalized == "gpu_upload" || normalized == "gpu_readback" ||
-         normalized == "buffer_load" || normalized == "buffer_store";
+         normalized == "insert" || normalized == "take" ||
+         (isStdGpuQualified &&
+          (normalized == "dispatch" || normalized == "buffer" || normalized == "upload" || normalized == "readback" ||
+           normalized == "buffer_load" || normalized == "buffer_store"));
 }
 
 bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare) {
@@ -515,8 +527,8 @@ bool parseGpuName(const std::string &name, std::string &out) {
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
-  if (normalized.rfind("gpu/", 0) == 0) {
-    out = normalized.substr(4);
+  if (normalized.rfind("std/gpu/", 0) == 0) {
+    out = normalized.substr(8);
     return true;
   }
   if (normalized.find('/') != std::string::npos) {
@@ -707,6 +719,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("std/gpu/", 0) == 0) {
+    name.erase(0, 8);
   }
   if (name.find('/') != std::string::npos) {
     return false;

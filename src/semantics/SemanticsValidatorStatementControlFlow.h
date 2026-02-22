@@ -327,11 +327,11 @@
       }
     }
     if (arg.kind == Expr::Kind::Call) {
-      if (isSimpleCallName(arg, "gpu_buffer") && arg.templateArgs.size() == 1) {
+      if (isSimpleCallName(arg, "buffer") && arg.templateArgs.size() == 1) {
         elemType = arg.templateArgs.front();
         return true;
       }
-      if (isSimpleCallName(arg, "gpu_upload") && arg.args.size() == 1) {
+      if (isSimpleCallName(arg, "upload") && arg.args.size() == 1) {
         return resolveArrayElemType(arg.args.front(), elemType);
       }
     }

@@ -10,7 +10,7 @@
           elemKind = it->second.valueKind;
         }
       } else if (stmt.args[0].kind == Expr::Kind::Call) {
-        if (isSimpleCallName(stmt.args[0], "gpu_buffer") && stmt.args[0].templateArgs.size() == 1) {
+        if (isSimpleCallName(stmt.args[0], "buffer") && stmt.args[0].templateArgs.size() == 1) {
           elemKind = valueKindFromTypeName(stmt.args[0].templateArgs.front());
         }
       }

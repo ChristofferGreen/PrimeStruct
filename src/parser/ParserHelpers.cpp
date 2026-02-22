@@ -130,8 +130,8 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   if (candidate.rfind("std/math/", 0) == 0) {
     candidate.erase(0, 9);
     isMathQualified = true;
-  } else if (candidate.rfind("gpu/", 0) == 0) {
-    candidate.erase(0, 4);
+  } else if (candidate.rfind("std/gpu/", 0) == 0) {
+    candidate.erase(0, 8);
     isGpuQualified = true;
   } else if (candidate.find('/') != std::string::npos) {
     return false;
@@ -150,7 +150,9 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
   if (isMathQualified && !isMathBuiltin) {
     return false;
   }
-  bool isGpuBuiltin = candidate == "global_id_x" || candidate == "global_id_y" || candidate == "global_id_z";
+  bool isGpuBuiltin = candidate == "global_id_x" || candidate == "global_id_y" || candidate == "global_id_z" ||
+                      candidate == "dispatch" || candidate == "buffer" || candidate == "upload" ||
+                      candidate == "readback" || candidate == "buffer_load" || candidate == "buffer_store";
   if (isGpuQualified && !isGpuBuiltin) {
     return false;
   }
@@ -167,9 +169,7 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          candidate == "remove_swap" || candidate == "at" || candidate == "at_unsafe" || candidate == "convert" ||
          candidate == "location" || candidate == "dereference" || candidate == "block" || candidate == "print" ||
          candidate == "print_line" || candidate == "print_error" || candidate == "print_line_error" ||
-         candidate == "notify" || candidate == "insert" || candidate == "take" || candidate == "dispatch" ||
-         candidate == "gpu_buffer" || candidate == "gpu_upload" || candidate == "gpu_readback" ||
-         candidate == "buffer_load" || candidate == "buffer_store" ||
+         candidate == "notify" || candidate == "insert" || candidate == "take" ||
          (isGpuBuiltin && isGpuQualified);
 }
 

@@ -482,11 +482,11 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return false;
       }
       if (target.kind == Expr::Kind::Call) {
-        if (isSimpleCallName(target, "gpu_buffer") && target.templateArgs.size() == 1) {
+        if (isSimpleCallName(target, "buffer") && target.templateArgs.size() == 1) {
           elemType = target.templateArgs.front();
           return true;
         }
-        if (isSimpleCallName(target, "gpu_upload") && target.args.size() == 1) {
+        if (isSimpleCallName(target, "upload") && target.args.size() == 1) {
           return resolveArrayTarget(target.args.front(), elemType);
         }
       }
@@ -811,8 +811,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return ReturnKind::Unknown;
     }
-    if (!expr.isMethodCall && (isSimpleCallName(expr, "gpu_buffer") || isSimpleCallName(expr, "gpu_upload") ||
-                               isSimpleCallName(expr, "gpu_readback"))) {
+    if (!expr.isMethodCall && (isSimpleCallName(expr, "buffer") || isSimpleCallName(expr, "upload") ||
+                               isSimpleCallName(expr, "readback"))) {
       return ReturnKind::Array;
     }
     if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {

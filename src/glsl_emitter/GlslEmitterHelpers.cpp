@@ -83,6 +83,9 @@ bool isSimpleCallName(const Expr &expr, const char *name) {
     return false;
   }
   std::string normalized = normalizeName(expr);
+  if (normalized.rfind("std/gpu/", 0) == 0) {
+    normalized.erase(0, 8);
+  }
   if (normalized.find('/') != std::string::npos) {
     return false;
   }

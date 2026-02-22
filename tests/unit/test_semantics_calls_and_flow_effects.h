@@ -151,13 +151,129 @@ TEST_CASE("dispatch requires gpu_dispatch effect") {
 
 [return<int>]
 main() {
-  dispatch(/noop, 1i32, 1i32, 1i32)
+  /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
   return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("gpu_dispatch") != std::string::npos);
+}
+
+TEST_CASE("std gpu dispatch validates with effect") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop() {
+  return()
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("std gpu buffer requires gpu_dispatch effect") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [Buffer<i32>] data{ /std/gpu/buffer<i32>(4i32) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer requires gpu_dispatch effect") != std::string::npos);
+}
+
+TEST_CASE("std gpu upload requires array input") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [i32] value{1i32}
+  [Buffer<i32>] data{ /std/gpu/upload(value) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("upload requires array input") != std::string::npos);
+}
+
+TEST_CASE("std gpu readback requires buffer input") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32)}
+  [array<i32>] out{ /std/gpu/readback(values) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("readback requires Buffer input") != std::string::npos);
+}
+
+TEST_CASE("std gpu buffer_load requires compute definition") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<i32>]
+main() {
+  [Buffer<i32>] data{ /std/gpu/buffer<i32>(4i32) }
+  return(/std/gpu/buffer_load(data, 0i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("buffer_load requires a compute definition") != std::string::npos);
+}
+
+TEST_CASE("std gpu global_id requires compute definition") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  return(/std/gpu/global_id_x())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("gpu builtins require a compute definition") != std::string::npos);
+}
+
+TEST_CASE("legacy gpu_buffer name is rejected") {
+  const std::string source = R"(
+[effects(gpu_dispatch) return<int>]
+main() {
+  [Buffer<i32>] data{ gpu_buffer<i32>(4i32) }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
+}
+
+TEST_CASE("legacy /gpu/global_id_x path is rejected") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop() {
+  [i32] x{ /gpu/global_id_x() }
+  return()
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target") != std::string::npos);
 }
 
 TEST_CASE("execution effects must be subset of definition effects") {

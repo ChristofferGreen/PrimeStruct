@@ -10,6 +10,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  if (name.rfind("std/gpu/", 0) == 0) {
+    name.erase(0, 8);
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -416,10 +419,10 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out) {
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
-  if (normalized.rfind("gpu/", 0) != 0) {
+  if (normalized.rfind("std/gpu/", 0) != 0) {
     return false;
   }
-  normalized = normalized.substr(4);
+  normalized = normalized.substr(8);
   if (normalized.find('/') != std::string::npos) {
     return false;
   }

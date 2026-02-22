@@ -211,10 +211,10 @@
       return LocalInfo::ValueKind::Unknown;
     }
     if (expr.kind == Expr::Kind::Call) {
-      if (isSimpleCallName(expr, "gpu_buffer") && expr.templateArgs.size() == 1) {
+      if (isSimpleCallName(expr, "buffer") && expr.templateArgs.size() == 1) {
         return valueKindFromTypeName(expr.templateArgs.front());
       }
-      if (isSimpleCallName(expr, "gpu_upload") && expr.args.size() == 1) {
+      if (isSimpleCallName(expr, "upload") && expr.args.size() == 1) {
         return inferArrayElementKind(expr.args.front(), localsIn);
       }
     }
@@ -238,7 +238,7 @@
       return LocalInfo::ValueKind::Unknown;
     }
     if (expr.kind == Expr::Kind::Call) {
-      if (!expr.isMethodCall && isSimpleCallName(expr, "gpu_readback") && expr.args.size() == 1) {
+      if (!expr.isMethodCall && isSimpleCallName(expr, "readback") && expr.args.size() == 1) {
         LocalInfo::ValueKind bufferKind = inferBufferElementKind(expr.args.front(), localsIn);
         if (bufferKind != LocalInfo::ValueKind::Unknown && bufferKind != LocalInfo::ValueKind::String) {
           return bufferKind;

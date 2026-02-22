@@ -16,6 +16,9 @@ bool getBuiltinOperator(const Expr &expr, char &out) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  if (name.rfind("std/gpu/", 0) == 0) {
+    name.erase(0, 8);
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }

@@ -528,7 +528,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 
 - `[compute]` marks a definition as a GPU kernel. Kernels are `void` and write outputs via buffer parameters.
 - `workgroup_size(x, y, z)` fixes the kernel's local workgroup size and must appear alongside `[compute]`.
-- Host-side submission uses `dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
-- GPU builtins live under `/gpu/*`, starting with `/gpu/global_id_x()`, `/gpu/global_id_y()`, `/gpu/global_id_z()`.
+- Host-side submission uses `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
+- GPU builtins live under `/std/gpu/*`, starting with `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`, `/std/gpu/global_id_z()`.
 - GPU ID helpers are scalar (`i32`) per axis.
-- Storage buffers use `Buffer<T>` plus `buffer_load` / `buffer_store` helpers.
+- Storage buffers use `Buffer<T>` plus `/std/gpu/buffer_load` / `/std/gpu/buffer_store` helpers.

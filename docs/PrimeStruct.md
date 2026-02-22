@@ -186,10 +186,10 @@ module {
   - A definition tagged with `[compute]` is lowered as a GPU kernel. Kernels are `void` and write outputs via buffer parameters rather than return values.
   - `workgroup_size(x, y, z)` fixes the local group size for the kernel; only valid alongside `[compute]`.
   - Kernel bodies are restricted to the GPU-safe subset (POD/`gpu_lane` types, fixed-width numeric envelopes, no IO, no heap, no strings, no recursion). Backends reject unsupported features early with diagnostics.
-  - Host-side submission uses `dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
-  - VM/native fallback currently requires `gpu_buffer<T>(count)` to use a constant `i32` literal size.
-  - GPU builtins live under `/gpu/*` (see Core library surface).
-  - GPU ID helpers are scalar: `/gpu/global_id_x()`, `/gpu/global_id_y()`, `/gpu/global_id_z()` return `i32`.
+  - Host-side submission uses `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
+  - VM/native fallback currently requires `/std/gpu/buffer<T>(count)` to use a constant `i32` literal size.
+  - GPU builtins live under `/std/gpu/*` (see Core library surface).
+  - GPU ID helpers are scalar: `/std/gpu/global_id_x()`, `/std/gpu/global_id_y()`, `/std/gpu/global_id_z()` return `i32`.
 - **Capability taxonomy (v1):**
   - **IO:** `io_out` (stdout), `io_err` (stderr), `file_write` (filesystem output).
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
@@ -438,12 +438,12 @@ for(
   - **Pointer helpers:** `location`, `dereference`.
   - **PathSpace helpers:** `notify`, `insert`, `take`.
   - **GPU builtins (draft):**
-    - `/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
-    - `/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).
-    - `/gpu/global_id_z()` → `i32` (kernel invocation z coordinate).
-    - `buffer_load(Buffer<T>, index)` / `buffer_store(Buffer<T>, index, value)` for storage buffers.
-    - `gpu_buffer<T>(count)` / `gpu_upload(array<T>)` / `gpu_readback(Buffer<T>)` for host-side resource management.
-    - `dispatch(kernel, gx, gy, gz, args...)` submits a compute kernel and requires `effects(gpu_dispatch)`. For determinism in v1, dispatch is blocking and `gpu_readback` returns only after completion.
+    - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
+    - `/std/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).
+    - `/std/gpu/global_id_z()` → `i32` (kernel invocation z coordinate).
+    - `/std/gpu/buffer_load(Buffer<T>, index)` / `/std/gpu/buffer_store(Buffer<T>, index, value)` for storage buffers.
+    - `/std/gpu/buffer<T>(count)` / `/std/gpu/upload(array<T>)` / `/std/gpu/readback(Buffer<T>)` for host-side resource management.
+    - `/std/gpu/dispatch(kernel, gx, gy, gz, args...)` submits a compute kernel and requires `effects(gpu_dispatch)`. For determinism in v1, dispatch is blocking and `/std/gpu/readback` returns only after completion.
   - **Operators (desugared forms):** `plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`.
   - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
   - **Result helpers (draft):**
@@ -724,22 +724,22 @@ blend([float] a, [float] b) {
   [Buffer<i32>] output,
   [i32] count
 ) {
-  [i32] x{ /gpu/global_id_x() }
+  [i32] x{ /std/gpu/global_id_x() }
   if (x >= count) {
     return()
   } else {
   }
-  [i32] value{ buffer_load(input, x) }
-  buffer_store(output, x, plus(value, 1i32))
+  [i32] value{ /std/gpu/buffer_load(input, x) }
+  /std/gpu/buffer_store(output, x, plus(value, 1i32))
 }
 
 [effects(gpu_dispatch) return<int>]
 main() {
   [array<i32>] values{array<i32>(1i32, 2i32, 3i32, 4i32)}
-  [Buffer<i32>] input{ gpu_upload(values) }
-  [Buffer<i32>] output{ gpu_buffer<i32>(4i32) }
-  dispatch(/add_one, 4i32, 1i32, 1i32, input, output, 4i32)
-  [array<i32>] result{ gpu_readback(output) }
+  [Buffer<i32>] input{ /std/gpu/upload(values) }
+  [Buffer<i32>] output{ /std/gpu/buffer<i32>(4i32) }
+  /std/gpu/dispatch(/add_one, 4i32, 1i32, 1i32, input, output, 4i32)
+  [array<i32>] result{ /std/gpu/readback(output) }
   return(plus(plus(result[0i32], result[1i32]), plus(result[2i32], result[3i32])))
 }
 

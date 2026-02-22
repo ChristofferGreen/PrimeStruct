@@ -506,43 +506,43 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
           return true;
         }
-        if (isSimpleCallName(expr, "gpu_upload")) {
+        if (isSimpleCallName(expr, "upload")) {
           if (expr.args.size() != 1) {
-            error = "gpu_upload requires exactly one argument";
+            error = "upload requires exactly one argument";
             return false;
           }
           return emitExpr(expr.args.front(), localsIn);
         }
-        if (isSimpleCallName(expr, "gpu_readback")) {
+        if (isSimpleCallName(expr, "readback")) {
           if (expr.args.size() != 1) {
-            error = "gpu_readback requires exactly one argument";
+            error = "readback requires exactly one argument";
             return false;
           }
           return emitExpr(expr.args.front(), localsIn);
         }
-        if (isSimpleCallName(expr, "gpu_buffer")) {
+        if (isSimpleCallName(expr, "buffer")) {
           if (expr.templateArgs.size() != 1) {
-            error = "gpu_buffer requires exactly one template argument";
+            error = "buffer requires exactly one template argument";
             return false;
           }
           if (expr.args.size() != 1) {
-            error = "gpu_buffer requires exactly one argument";
+            error = "buffer requires exactly one argument";
             return false;
           }
           if (expr.args.front().kind != Expr::Kind::Literal || expr.args.front().isUnsigned ||
               expr.args.front().intWidth == 64) {
-            error = "gpu_buffer requires constant i32 size";
+            error = "buffer requires constant i32 size";
             return false;
           }
           const int64_t count64 = static_cast<int64_t>(expr.args.front().literalValue);
           if (count64 < 0 || count64 > std::numeric_limits<int32_t>::max()) {
-            error = "gpu_buffer size out of range";
+            error = "buffer size out of range";
             return false;
           }
           const int32_t count = static_cast<int32_t>(count64);
           LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
           if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-            error = "gpu_buffer requires numeric/bool element type";
+            error = "buffer requires numeric/bool element type";
             return false;
           }
           const int32_t baseLocal = nextLocal;
@@ -578,7 +578,7 @@
               elemKind = it->second.valueKind;
             }
           } else if (expr.args[0].kind == Expr::Kind::Call) {
-            if (isSimpleCallName(expr.args[0], "gpu_buffer") && expr.args[0].templateArgs.size() == 1) {
+            if (isSimpleCallName(expr.args[0], "buffer") && expr.args[0].templateArgs.size() == 1) {
               elemKind = valueKindFromTypeName(expr.args[0].templateArgs.front());
             }
           }

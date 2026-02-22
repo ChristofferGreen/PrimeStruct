@@ -857,8 +857,8 @@
             expr.name == "capacity" || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
             isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
             isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
-            isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "gpu_buffer") ||
-            isSimpleCallName(expr, "gpu_upload") || isSimpleCallName(expr, "gpu_readback") ||
+            isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "buffer") ||
+            isSimpleCallName(expr, "upload") || isSimpleCallName(expr, "readback") ||
             isSimpleCallName(expr, "buffer_load") || isSimpleCallName(expr, "buffer_store")) {
           isBuiltin = true;
         }
@@ -916,11 +916,11 @@
         }
       }
       if (arg.kind == Expr::Kind::Call) {
-        if (isSimpleCallName(arg, "gpu_buffer") && arg.templateArgs.size() == 1) {
+        if (isSimpleCallName(arg, "buffer") && arg.templateArgs.size() == 1) {
           elemType = arg.templateArgs.front();
           return true;
         }
-        if (isSimpleCallName(arg, "gpu_upload") && arg.args.size() == 1) {
+        if (isSimpleCallName(arg, "upload") && arg.args.size() == 1) {
           return resolveArrayElemType(arg.args.front(), elemType);
         }
       }
@@ -991,25 +991,25 @@
       }
       return true;
     }
-    if (isSimpleCallName(expr, "gpu_buffer")) {
+    if (isSimpleCallName(expr, "buffer")) {
       if (currentDefinitionIsCompute_) {
-        error_ = "gpu_buffer is not allowed in compute definitions";
+        error_ = "buffer is not allowed in compute definitions";
         return false;
       }
       if (activeEffects_.count("gpu_dispatch") == 0) {
-        error_ = "gpu_buffer requires gpu_dispatch effect";
+        error_ = "buffer requires gpu_dispatch effect";
         return false;
       }
       if (expr.templateArgs.size() != 1) {
-        error_ = "gpu_buffer requires exactly one template argument";
+        error_ = "buffer requires exactly one template argument";
         return false;
       }
       if (expr.args.size() != 1) {
-        error_ = "gpu_buffer requires exactly one argument";
+        error_ = "buffer requires exactly one argument";
         return false;
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "gpu_buffer does not accept block arguments";
+        error_ = "buffer does not accept block arguments";
         return false;
       }
       if (!validateExpr(params, locals, expr.args.front())) {
@@ -1017,35 +1017,35 @@
       }
       ReturnKind countKind = inferExprReturnKind(expr.args.front(), params, locals);
       if (!isIntegerKind(countKind)) {
-        error_ = "gpu_buffer size requires integer expression";
+        error_ = "buffer size requires integer expression";
         return false;
       }
       ReturnKind elemKind = returnKindForTypeName(expr.templateArgs.front());
       if (!isNumericOrBoolKind(elemKind)) {
-        error_ = "gpu_buffer requires numeric/bool element type";
+        error_ = "buffer requires numeric/bool element type";
         return false;
       }
       return true;
     }
-    if (isSimpleCallName(expr, "gpu_upload")) {
+    if (isSimpleCallName(expr, "upload")) {
       if (currentDefinitionIsCompute_) {
-        error_ = "gpu_upload is not allowed in compute definitions";
+        error_ = "upload is not allowed in compute definitions";
         return false;
       }
       if (activeEffects_.count("gpu_dispatch") == 0) {
-        error_ = "gpu_upload requires gpu_dispatch effect";
+        error_ = "upload requires gpu_dispatch effect";
         return false;
       }
       if (!expr.templateArgs.empty()) {
-        error_ = "gpu_upload does not accept template arguments";
+        error_ = "upload does not accept template arguments";
         return false;
       }
       if (expr.args.size() != 1) {
-        error_ = "gpu_upload requires exactly one argument";
+        error_ = "upload requires exactly one argument";
         return false;
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "gpu_upload does not accept block arguments";
+        error_ = "upload does not accept block arguments";
         return false;
       }
       if (!validateExpr(params, locals, expr.args.front())) {
@@ -1053,35 +1053,35 @@
       }
       std::string elemType;
       if (!resolveArrayElemType(expr.args.front(), elemType)) {
-        error_ = "gpu_upload requires array input";
+        error_ = "upload requires array input";
         return false;
       }
       ReturnKind elemKind = returnKindForTypeName(elemType);
       if (!isNumericOrBoolKind(elemKind)) {
-        error_ = "gpu_upload requires numeric/bool element type";
+        error_ = "upload requires numeric/bool element type";
         return false;
       }
       return true;
     }
-    if (isSimpleCallName(expr, "gpu_readback")) {
+    if (isSimpleCallName(expr, "readback")) {
       if (currentDefinitionIsCompute_) {
-        error_ = "gpu_readback is not allowed in compute definitions";
+        error_ = "readback is not allowed in compute definitions";
         return false;
       }
       if (activeEffects_.count("gpu_dispatch") == 0) {
-        error_ = "gpu_readback requires gpu_dispatch effect";
+        error_ = "readback requires gpu_dispatch effect";
         return false;
       }
       if (!expr.templateArgs.empty()) {
-        error_ = "gpu_readback does not accept template arguments";
+        error_ = "readback does not accept template arguments";
         return false;
       }
       if (expr.args.size() != 1) {
-        error_ = "gpu_readback requires exactly one argument";
+        error_ = "readback requires exactly one argument";
         return false;
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "gpu_readback does not accept block arguments";
+        error_ = "readback does not accept block arguments";
         return false;
       }
       if (!validateExpr(params, locals, expr.args.front())) {
@@ -1089,12 +1089,12 @@
       }
       std::string elemType;
       if (!resolveBufferElemType(expr.args.front(), elemType)) {
-        error_ = "gpu_readback requires Buffer input";
+        error_ = "readback requires Buffer input";
         return false;
       }
       ReturnKind elemKind = returnKindForTypeName(elemType);
       if (!isNumericOrBoolKind(elemKind)) {
-        error_ = "gpu_readback requires numeric/bool element type";
+        error_ = "readback requires numeric/bool element type";
         return false;
       }
       return true;
