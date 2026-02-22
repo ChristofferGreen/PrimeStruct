@@ -96,7 +96,7 @@
           const int32_t ptrLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset * 16);
+          const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset) * IrSlotBytes;
           function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           if (fieldInfo.structPath.empty()) {
@@ -447,7 +447,7 @@
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
               function.instructions.push_back({IrOpcode::PushI32, 1});
               function.instructions.push_back({IrOpcode::AddI32, 0});
-              function.instructions.push_back({IrOpcode::PushI32, 16});
+              function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
               function.instructions.push_back({IrOpcode::MulI32, 0});
               function.instructions.push_back({IrOpcode::AddI64, 0});
               function.instructions.push_back({IrOpcode::LoadIndirect, 0});
@@ -604,7 +604,7 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
           function.instructions.push_back({pushOneForIndex(indexKind), 1});
           function.instructions.push_back({addForIndex(indexKind), 0});
-          function.instructions.push_back({pushOneForIndex(indexKind), 16});
+          function.instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
           function.instructions.push_back({mulForIndex(indexKind), 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
@@ -689,7 +689,7 @@
           if (!emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
-          function.instructions.push_back({IrOpcode::PushI64, 16});
+          function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
@@ -896,7 +896,7 @@
             function.instructions.push_back({IrOpcode::MulI32, 0});
             function.instructions.push_back({IrOpcode::PushI32, 1});
             function.instructions.push_back({IrOpcode::AddI32, 0});
-            function.instructions.push_back({IrOpcode::PushI32, 16});
+            function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
             function.instructions.push_back({IrOpcode::MulI32, 0});
             function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
@@ -944,7 +944,7 @@
             function.instructions.push_back({IrOpcode::MulI32, 0});
             function.instructions.push_back({IrOpcode::PushI32, 2});
             function.instructions.push_back({IrOpcode::AddI32, 0});
-            function.instructions.push_back({IrOpcode::PushI32, 16});
+            function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
             function.instructions.push_back({IrOpcode::MulI32, 0});
             function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
@@ -1026,7 +1026,7 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
           function.instructions.push_back({pushOneForIndex(indexKind), headerSlots});
           function.instructions.push_back({addForIndex(indexKind), 0});
-          function.instructions.push_back({pushOneForIndex(indexKind), 16});
+          function.instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
           function.instructions.push_back({mulForIndex(indexKind), 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});

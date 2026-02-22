@@ -450,7 +450,7 @@
         if (vectorHelper == "push" || vectorHelper == "reserve") {
           capacityLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 16});
+          function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
@@ -513,7 +513,7 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
           function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(elementOffset)});
           function.instructions.push_back({IrOpcode::AddI32, 0});
-          function.instructions.push_back({IrOpcode::PushI32, 16});
+          function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
           function.instructions.push_back({IrOpcode::MulI32, 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
@@ -620,7 +620,7 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
           pushIndexConst(indexKind, elementOffset);
           function.instructions.push_back({addOp, 0});
-          pushIndexConst(indexKind, 16);
+          pushIndexConst(indexKind, IrSlotBytesI32);
           function.instructions.push_back({mulOp, 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
@@ -629,7 +629,7 @@
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
           pushIndexConst(indexKind, elementOffset);
           function.instructions.push_back({addOp, 0});
-          pushIndexConst(indexKind, 16);
+          pushIndexConst(indexKind, IrSlotBytesI32);
           function.instructions.push_back({mulOp, 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
@@ -670,7 +670,7 @@
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
         pushIndexConst(indexKind, elementOffset);
         function.instructions.push_back({addOp, 0});
-        pushIndexConst(indexKind, 16);
+        pushIndexConst(indexKind, IrSlotBytesI32);
         function.instructions.push_back({mulOp, 0});
         function.instructions.push_back({IrOpcode::AddI64, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
@@ -679,7 +679,7 @@
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
         pushIndexConst(indexKind, elementOffset + 1);
         function.instructions.push_back({addOp, 0});
-        pushIndexConst(indexKind, 16);
+        pushIndexConst(indexKind, IrSlotBytesI32);
         function.instructions.push_back({mulOp, 0});
         function.instructions.push_back({IrOpcode::AddI64, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});

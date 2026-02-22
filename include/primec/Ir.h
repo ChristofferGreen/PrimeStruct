@@ -150,6 +150,8 @@ constexpr uint64_t PrintFlagNewline = 1ull << 0;
 constexpr uint64_t PrintFlagStderr = 1ull << 1;
 constexpr uint64_t PrintFlagMask = PrintFlagNewline | PrintFlagStderr;
 constexpr uint64_t PrintStringIndexShift = 2;
+constexpr uint64_t IrSlotBytes = 16;
+constexpr int32_t IrSlotBytesI32 = static_cast<int32_t>(IrSlotBytes);
 
 inline uint64_t encodePrintFlags(bool newline, bool stderrOut) {
   return (newline ? PrintFlagNewline : 0) | (stderrOut ? PrintFlagStderr : 0);

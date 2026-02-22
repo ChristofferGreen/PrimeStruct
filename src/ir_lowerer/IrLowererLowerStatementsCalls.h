@@ -42,7 +42,7 @@
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
       function.instructions.push_back({pushOneForIndex(indexKind), 1});
       function.instructions.push_back({addForIndex(indexKind), 0});
-      function.instructions.push_back({pushOneForIndex(indexKind), 16});
+      function.instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
       function.instructions.push_back({mulForIndex(indexKind), 0});
       function.instructions.push_back({IrOpcode::AddI64, 0});
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});

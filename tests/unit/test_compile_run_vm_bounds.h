@@ -71,6 +71,21 @@ main() {
   CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
+TEST_CASE("vm rejects misaligned pointer dereference") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{5i32}
+  return(dereference(plus(location(value), 8i32)))
+}
+)";
+  const std::string srcPath = writeTemp("vm_pointer_misaligned.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_pointer_misaligned_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "VM error: unaligned indirect address in IR: 8\n");
+}
+
 TEST_CASE("vm array unsafe access reads element") {
   const std::string source = R"(
 [return<int> effects(io_out)]

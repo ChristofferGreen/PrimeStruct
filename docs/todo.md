@@ -112,9 +112,9 @@ Legend:
 - ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
 - ✓ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
 - ✓ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
-- ○ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.
-- ○ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
-- ○ Define reference counting / heap value lifetime model for VM/native backends.
+- ✓ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.
+- ✓ Finalize VM design section (bytecode model, execution semantics, memory/GC strategy).
+- ✓ Define reference counting / heap value lifetime model for VM/native backends.
 - ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
 - ✓ Define a per-backend type support matrix (allowed binding/return/local types by backend).
 - ✓ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.

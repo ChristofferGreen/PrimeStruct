@@ -42,7 +42,7 @@ bool executeImpl(const IrModule &module,
                  std::string &error,
                  uint64_t argCount,
                  const std::vector<std::string_view> *args) {
-  constexpr uint64_t kSlotBytes = 16;
+  constexpr uint64_t kSlotBytes = IrSlotBytes;
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
     return false;

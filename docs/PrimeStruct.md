@@ -536,13 +536,14 @@ for(
   }
   ```
 
-## Runtime Stack Model (draft)
-- **Frames:** each execution pushes a frame recording the instruction pointer, constants, locals, captures, and effect mask. Frames are immutable from the caller’s perspective; `assign` creates new bindings.
+## Runtime Stack Model
+- **Frames:** VM/native lowering currently emits a single entry frame; user-defined calls are inlined, so there is no runtime call stack or captures in PSIR v14. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
 - **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit `return(void)` fires if a definition body reaches the end.
-- **Transform boundaries:** rewrites annotate frame entry/exit so the VM, C++, and GLSL backends share a consistent calling convention.
-- **Resource handles:** PathSpace references/handles live inside frames as opaque values; lifetimes follow lexical scope.
+- **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
+- **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the single frame.
+- **Resource handles:** PathSpace references/handles live inside frame slots as opaque values; lifetimes follow lexical scope.
 - **Tail execution (planned):** future optimisation collapses tail executions to reuse frames (VM optional, GPU required).
-- **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Standard library defaults to stdout-only effects (stderr requires `io_err`).
+- **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering; runtime enforcement is limited to builtin checks.
 
 ### Execution Metadata (draft)
 - **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement.
@@ -695,7 +696,7 @@ for(
 - **Layout control:** attributes like `[packed]` guarantee interop-friendly layouts for C++/GLSL.
 - **Open design:** pointer qualifier syntax, aliasing rules (restrict/readonly), and GPU backend constraints remain TBD.
 
-## VM Design (draft)
+## VM Design
 - **Instruction set:** stack-based ops covering control flow, stack manipulation, memory/pointer access, IO, and explicit conversions. No implicit conversions; opcodes mirror the canonical language surface.
 - **PSIR opcode set (v14, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`, `StoreLocal`,
   `AddressOfLocal`, `LoadIndirect`, `StoreIndirect`, `Dup`, `Pop`, `AddI32`, `SubI32`, `MulI32`, `DivI32`, `NegI32`,
@@ -712,11 +713,11 @@ for(
   `FileWriteByte`, `FileWriteNewline`.
 - **GLSL note:** GLSL emission bypasses PSIR and lowers from the canonical AST directly; PSIR opcode validation only applies to VM/native consumers.
 - **PSIR versioning:** current portable IR is PSIR v14 (adds float return opcodes on top of v13’s float arithmetic/compare/convert opcodes and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
-- **Frames & stack:** per-call frame with IP, constants, locals, capture refs, effect mask; tail calls reuse frames. Data stack stores tagged `Value` union (primitives, structs, closures, buffers).
-- **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
-- **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.
-- **Closures:** compile to closure structs (chunk pointer + capture data). Captured handles obey lifetime/ownership rules.
-- **Optimisation:** reference counting for heap values; JIT or chunk caching is deferred until a stable VM/runtime design exists.
+- **Frames & stack:** a single entry frame stores locals in 16-byte slots; the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the local slot space and must be 16-byte aligned.
+- **Module layout:** `IrModule` bundles functions, string table, and struct layouts; the VM executes only the `entryIndex` function because user-defined calls are inlined during lowering (recursion is rejected).
+- **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it. File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via lowering.
+- **Memory/GC:** there is no heap or GC in the VM today. Arrays/vectors are inline locals with fixed-capacity headers (count/capacity) plus element slots; native output mirrors this with stack storage and OS handles. No reference counting is performed.
+- **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 
 ## Examples (sketch)
