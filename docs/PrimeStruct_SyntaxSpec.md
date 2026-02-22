@@ -563,6 +563,16 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Struct values are supported in VM/native backends when fields are numeric/bool or other struct values; string or templated struct fields are rejected.
 - The C++ emitter supports broader operations and full string handling.
 - GPU backends accept only GPU-safe envelopes/operations; kernel bodies are validated against a GPU-safe allowlist.
+- VM/native emitter restrictions (current):
+  - Recursive calls are rejected.
+  - Lambdas are rejected.
+  - String comparisons are rejected; string literals are limited to print/count/index/map contexts.
+  - String return types, string array returns, and string pointer/reference bindings are rejected.
+  - Block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected.
+  - `print*` and vector helper calls are statement-only; expression usage is rejected.
+  - `File<Mode>(path)` requires a string literal or literal-backed binding.
+  - `Result.ok(value)` only accepts `i32`/`bool` payloads.
+  - Unsupported math or GPU builtins fail during lowering.
 - GLSL emitter restrictions (current):
   - Entry definitions must return `void` and may contain at most one `return()` statement.
   - Bindings must be numeric/bool scalars; non-scalar bindings (arrays, vectors, maps, structs) and string literals are rejected.

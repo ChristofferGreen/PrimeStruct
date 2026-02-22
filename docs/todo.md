@@ -120,9 +120,9 @@ Legend:
 - ✓ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
 - ✓ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
 - ○ Define the supported IR opcode subset per backend (native/VM/GLSL) and align validation to reject unsupported cases earlier.
-- ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
+- ✓ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.
 - ✓ Enumerate GLSL emitter unsupported statement/expression cases and add tests/allowlist documentation.
-- ○ Enumerate VM backend unsupported opcodes/runtime errors and add tests/allowlist documentation.
+- ✓ Enumerate VM backend unsupported opcodes/runtime errors and add tests/allowlist documentation.
 - ✓ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
 - ✓ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
 - ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).

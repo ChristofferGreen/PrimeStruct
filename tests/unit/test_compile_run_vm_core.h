@@ -293,6 +293,35 @@ main() {
   CHECK(readFile(errPath) == "Semantic error: unsupported return type on /main\n");
 }
 
+TEST_CASE("vm rejects recursive calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(main())
+}
+)";
+  const std::string srcPath = writeTemp("vm_recursive_call.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_recursive_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support recursive calls: /main\n");
+}
+
+TEST_CASE("vm rejects string pointers") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [string] name{"hi"utf8}
+  [Pointer<string>] ptr{location(name)}
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_pointer.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_pointer_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support string pointers or references\n");
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");

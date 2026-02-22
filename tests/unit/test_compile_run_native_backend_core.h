@@ -249,5 +249,36 @@ TEST_CASE("compiles and runs native large frame") {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("rejects native recursive calls") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(main())
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_recursive.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_recursive_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) == "Native lowering error: native backend does not support recursive calls: /main\n");
+}
+
+TEST_CASE("rejects native string pointers") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [string] name{"hi"utf8}
+  [Pointer<string>] ptr{location(name)}
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_ptr.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_native_string_ptr_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) == "Native lowering error: native backend does not support string pointers or references\n");
+}
+
 TEST_SUITE_END();
 #endif
