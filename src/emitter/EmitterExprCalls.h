@@ -382,8 +382,22 @@
       std::string targetType =
           bindingTypeToCpp(expr.templateArgs[0], expr.namespacePrefix, importAliases, structTypeMap);
       std::ostringstream out;
-      out << "static_cast<" << targetType << ">("
-          << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, allowMathBare) << ")";
+      ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
+      ReturnKind targetKind = returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
+      const bool argIsFloat = argKind == ReturnKind::Float32 || argKind == ReturnKind::Float64;
+      const bool targetIsInt = targetKind == ReturnKind::Int || targetKind == ReturnKind::Int64 ||
+                               targetKind == ReturnKind::UInt64;
+      if (argIsFloat && targetIsInt) {
+        out << "ps_convert_float_to_int<" << targetType << ">("
+            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                        resultInfos, returnStructs, allowMathBare)
+            << ")";
+      } else {
+        out << "static_cast<" << targetType << ">("
+            << emitExpr(expr.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                        resultInfos, returnStructs, allowMathBare)
+            << ")";
+      }
       return out.str();
     }
     char pointerOp = '\0';

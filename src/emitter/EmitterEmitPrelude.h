@@ -156,6 +156,14 @@
   out << "  }\n";
   out << "  return static_cast<R>(std::pow(static_cast<long double>(base), static_cast<long double>(exponent)));\n";
   out << "}\n";
+  out << "template <typename T, typename F>\n";
+  out << "static inline T ps_convert_float_to_int(F value) {\n";
+  out << "  if (!std::isfinite(value)) {\n";
+  out << "    std::fprintf(stderr, \"float to int conversion requires finite value\\n\");\n";
+  out << "    std::exit(3);\n";
+  out << "  }\n";
+  out << "  return static_cast<T>(value);\n";
+  out << "}\n";
   out << "template <typename T>\n";
   out << "static inline T ps_builtin_exp(T value) {\n";
   out << "  return static_cast<T>(std::exp(static_cast<long double>(value)));\n";

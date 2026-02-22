@@ -1885,6 +1885,54 @@ main() {
   checkMathConformance(source, "math_conformance_conversions");
 }
 
+TEST_CASE("math conformance convert non-finite float to int") {
+  auto runCase = [&](const std::string &name, const std::string &valueExpr) {
+    const std::string source = std::string(R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [f32] value{)") + valueExpr + R"(}
+  return(convert<i32>(value))
+}
+)";
+    const std::string srcPath = writeTemp("math_conformance_convert_nonfinite_" + name + ".prime", source);
+    const std::string exePath =
+        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_exe")).string();
+    const std::string exeErrPath =
+        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_exe.err")).string();
+    const std::string vmErrPath =
+        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_vm.err")).string();
+
+    const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                   quoteShellArg(exePath) + " --entry /main";
+    CHECK(runCommand(compileCmd) == 0);
+    CHECK(runCommand(quoteShellArg(exePath) + " 2> " + quoteShellArg(exeErrPath)) == 3);
+    CHECK(readFile(exeErrPath) == "float to int conversion requires finite value\n");
+
+    const std::string vmCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
+    CHECK(runCommand(vmCmd) == 3);
+    CHECK(readFile(vmErrPath) == "float to int conversion requires finite value\n");
+
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+    const std::string nativePath =
+        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_native")).string();
+    const std::string nativeErrPath =
+        (std::filesystem::temp_directory_path() / ("math_conformance_convert_nonfinite_" + name + "_native.err")).string();
+    const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
+                                         quoteShellArg(nativePath) + " --entry /main";
+    CHECK(runCommand(nativeCompileCmd) == 0);
+    CHECK(runCommand(quoteShellArg(nativePath) + " 2> " + quoteShellArg(nativeErrPath)) == 3);
+    CHECK(readFile(nativeErrPath) == "float to int conversion requires finite value\n");
+#endif
+  };
+
+  runCase("nan", "0.0f32 / 0.0f32");
+  runCase("pos_inf", "1.0f32 / 0.0f32");
+  runCase("neg_inf", "-1.0f32 / 0.0f32");
+}
+
 TEST_CASE("math conformance policy behavior") {
   const std::string source = R"(
 import /std/math/*

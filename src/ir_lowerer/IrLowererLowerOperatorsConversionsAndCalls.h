@@ -81,8 +81,69 @@
             error = "convert requires numeric argument";
             return false;
           }
+          bool needsFloatToIntGuard = false;
+          LocalInfo::ValueKind floatKind = LocalInfo::ValueKind::Unknown;
+          if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
+            if (targetKind == LocalInfo::ValueKind::Int32 || targetKind == LocalInfo::ValueKind::Int64 ||
+                targetKind == LocalInfo::ValueKind::UInt64) {
+              needsFloatToIntGuard = true;
+              floatKind = argKind;
+            }
+          }
           if (argKind == targetKind) {
             return true;
+          }
+          if (needsFloatToIntGuard) {
+            int32_t tempValue = allocTempLocal();
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+            IrOpcode cmpNeOp = (floatKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpNeF64 : IrOpcode::CmpNeF32;
+            IrOpcode cmpGtOp = (floatKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpGtF64 : IrOpcode::CmpGtF32;
+            IrOpcode cmpLtOp = (floatKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
+
+            auto pushFloatConst = [&](double value) {
+              if (floatKind == LocalInfo::ValueKind::Float64) {
+                uint64_t bits = 0;
+                std::memcpy(&bits, &value, sizeof(bits));
+                function.instructions.push_back({IrOpcode::PushF64, bits});
+                return;
+              }
+              float f32 = static_cast<float>(value);
+              uint32_t bits = 0;
+              std::memcpy(&bits, &f32, sizeof(bits));
+              function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+            };
+
+            const double maxFinite = (floatKind == LocalInfo::ValueKind::Float64) ? 1.7976931348623157e308
+                                                                                  : 3.4028234663852886e38;
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            function.instructions.push_back({cmpNeOp, 0});
+            size_t jumpIfNotNaN = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitFloatToIntNonFinite();
+            size_t nanOkIndex = function.instructions.size();
+            function.instructions[jumpIfNotNaN].imm = static_cast<int32_t>(nanOkIndex);
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            pushFloatConst(maxFinite);
+            function.instructions.push_back({cmpGtOp, 0});
+            size_t jumpIfNotPosInf = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitFloatToIntNonFinite();
+            size_t posOkIndex = function.instructions.size();
+            function.instructions[jumpIfNotPosInf].imm = static_cast<int32_t>(posOkIndex);
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
+            pushFloatConst(-maxFinite);
+            function.instructions.push_back({cmpLtOp, 0});
+            size_t jumpIfNotNegInf = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitFloatToIntNonFinite();
+            size_t negOkIndex = function.instructions.size();
+            function.instructions[jumpIfNotNegInf].imm = static_cast<int32_t>(negOkIndex);
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
           }
           IrOpcode convertOp = IrOpcode::ConvertI32ToF32;
           bool needsConvert = true;

@@ -274,6 +274,15 @@
     function.instructions.push_back({IrOpcode::ReturnI32, 0});
   };
 
+  auto emitFloatToIntNonFinite = [&]() {
+    uint64_t flags = encodePrintFlags(true, true);
+    int32_t msgIndex = internString("float to int conversion requires finite value");
+    function.instructions.push_back(
+        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+    function.instructions.push_back({IrOpcode::PushI32, 3});
+    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+  };
+
   auto normalizeIndexKind = [](LocalInfo::ValueKind kind) {
     return (kind == LocalInfo::ValueKind::Bool) ? LocalInfo::ValueKind::Int32 : kind;
   };

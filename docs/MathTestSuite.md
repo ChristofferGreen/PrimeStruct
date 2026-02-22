@@ -136,7 +136,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Mixed-Type Conversions
 - [x] `convert<f32>` and `convert<f64>` from ints for key values.
 - [x] `convert<int>` and `convert<i64>` from floats around boundaries.
-- [ ] Conversion of NaN/Inf to int policy (error or truncation).
+- [x] Conversion of NaN/Inf to int policy (runtime error).
 
 ## Vector/Array Math Usage
 - [x] Spot checks where math builtins are used inside vector ops (no ABI surprises).
