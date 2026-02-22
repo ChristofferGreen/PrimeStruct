@@ -116,9 +116,10 @@ module {
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and explicit resource usage.
 - **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
 - **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation happens once; backends never see syntactic sugar.
-- **IR definition (stable, PSIR v14):**
+- **IR definition (stable, PSIR v15):**
   - **Module:** `{ string_table, struct_layouts, functions, entry_index, version }`.
-  - **Function:** `{ name, instructions }` where instructions are linear, stack-based ops with immediates.
+  - **Function:** `{ name, metadata, instructions }` where instructions are linear, stack-based ops with immediates.
+  - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
   - **Instruction:** `{ op, imm }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning depends on `op`.
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
   - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR versioning).
@@ -130,10 +131,11 @@ module {
     - `struct_count` entries: `u32 name_len` + name bytes, `u32 total_size`, `u32 alignment`, `u32 field_count`, then `field_count` entries:
       `u32 field_name_len` + bytes, `u32 envelope_len` + bytes, `u32 offset`, `u32 size`, `u32 alignment`,
       `u32 padding_kind`, `u32 category`, `u32 visibility`, `u32 is_static`.
-    - `function_count` entries: `u32 name_len` + name bytes, `u32 instruction_count`, then `instruction_count` entries:
+    - `function_count` entries: `u32 name_len` + name bytes, `u64 effect_mask`, `u64 capability_mask`,
+      `u32 scheduling_scope`, `u32 instrumentation_flags`, `u32 instruction_count`, then `instruction_count` entries:
       `u8 opcode` + `u64 imm`.
-  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v14, VM/native)” section below.
-- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`).
+  - **PSIR opcode set:** see the `IrOpcode` enum and the “PSIR opcode set (v15, VM/native)” section below.
+- **PSIR versioning:** serialized IR includes a version tag; v2 introduces `AddressOfLocal`, `LoadIndirect`, and `StoreIndirect` for pointer/reference lowering; v4 adds `ReturnVoid` to model implicit void returns in the VM/native backends; v5 adds a string table + print opcodes for stdout/stderr output; v6 extends print opcodes with newline/stdout/stderr flags to support `print`/`print_line`/`print_error`/`print_line_error`; v7 adds `PushArgc` for entry argument counts in VM/native execution; v8 adds `PrintArgv` for printing entry argument strings; v9 adds `PrintArgvUnsafe` to emit unchecked entry-arg prints for `at_unsafe`; v10 adds `LoadStringByte` for string indexing in VM/native backends; v11 adds struct layout manifests; v12 adds struct field visibility/static metadata; v13 adds float arithmetic/compare/convert opcodes; v14 adds float return opcodes (`ReturnF32`, `ReturnF64`); v15 adds per-function execution metadata (effect/capability masks plus scheduling/instrumentation fields).
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
   - **Versioning policy:** the `version` field is a single, monotonically increasing integer for incompatible changes. There is no forward/backward compatibility guarantee today; tools reject unknown versions and require recompilation. Migration tooling may be added later, but no automatic migrations exist yet.
@@ -537,7 +539,7 @@ for(
   ```
 
 ## Runtime Stack Model
-- **Frames:** VM/native lowering currently emits a single entry frame; user-defined calls are inlined, so there is no runtime call stack or captures in PSIR v14. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
+- **Frames:** VM/native lowering currently emits a single entry frame; user-defined calls are inlined, so there is no runtime call stack or captures in PSIR v15. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
 - **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit `return(void)` fires if a definition body reaches the end.
 - **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
 - **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the single frame.
@@ -545,11 +547,10 @@ for(
 - **Tail execution (planned):** future optimisation collapses tail executions to reuse frames (VM optional, GPU required).
 - **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering; runtime enforcement is limited to builtin checks.
 
-### Execution Metadata (draft)
-- **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement.
-- **Capabilities:** effect masks double as capability descriptors (IO, global write, GPU access, etc.). Additional attributes can narrow capabilities (`[capabilities(io_out, pathspace_insert)]`).
-- **Instrumentation:** executions carry metadata (source file/line plus effect/capability masks) for diagnostics and tracing.
-- **Open design items:** finalise the capability taxonomy and determine which instrumentation fields flow into inspector tooling vs. runtime-only logs.
+### Execution Metadata
+- **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement. Lowering writes `scheduling_scope = 0` in PSIR metadata until explicit scheduling transforms exist.
+- **Effects & capabilities:** lowering records `effect_mask` and `capability_mask` in PSIR metadata. If no `capabilities` transform is supplied, `capability_mask` mirrors the active effects for the definition; explicit capability lists narrow the mask.
+- **Instrumentation:** `instrumentation_flags` are reserved for future tracing/source-map hooks; they are currently zero.
 
 ## Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser preserves the nested envelope string for later lowering.
@@ -698,7 +699,7 @@ for(
 
 ## VM Design
 - **Instruction set:** stack-based ops covering control flow, stack manipulation, memory/pointer access, IO, and explicit conversions. No implicit conversions; opcodes mirror the canonical language surface.
-- **PSIR opcode set (v14, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`, `StoreLocal`,
+- **PSIR opcode set (v15, VM/native):** `PushI32`, `PushI64`, `PushF32`, `PushF64`, `PushArgc`, `LoadLocal`, `StoreLocal`,
   `AddressOfLocal`, `LoadIndirect`, `StoreIndirect`, `Dup`, `Pop`, `AddI32`, `SubI32`, `MulI32`, `DivI32`, `NegI32`,
   `AddI64`, `SubI64`, `MulI64`, `DivI64`, `DivU64`, `NegI64`, `AddF32`, `SubF32`, `MulF32`, `DivF32`, `NegF32`,
   `AddF64`, `SubF64`, `MulF64`, `DivF64`, `NegF64`, `CmpEqI32`, `CmpNeI32`, `CmpLtI32`, `CmpLeI32`, `CmpGtI32`,
@@ -712,7 +713,7 @@ for(
   `FileOpenAppend`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`, `FileWriteString`,
   `FileWriteByte`, `FileWriteNewline`.
 - **GLSL note:** GLSL emission bypasses PSIR and lowers from the canonical AST directly; PSIR opcode validation only applies to VM/native consumers.
-- **PSIR versioning:** current portable IR is PSIR v14 (adds float return opcodes on top of v13’s float arithmetic/compare/convert opcodes and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
+- **PSIR versioning:** current portable IR is PSIR v15 (adds execution metadata on top of v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** a single entry frame stores locals in 16-byte slots; the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the local slot space and must be 16-byte aligned.
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; the VM executes only the `entryIndex` function because user-defined calls are inlined during lowering (recursion is rejected).
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it. File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via lowering.

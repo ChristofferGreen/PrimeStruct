@@ -210,6 +210,7 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   offset += 4 * 5; // magic, version, function count, entry index, string count
   offset += 4;     // struct count
   offset += 4 + nameLen; // function name length + bytes
+  offset += 8 + 8 + 4 + 4; // effect mask, capability mask, scheduling, instrumentation
   offset += 4;          // instruction count
   REQUIRE(offset < data.size());
 
@@ -218,6 +219,35 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));
   CHECK(error == "unsupported IR opcode");
+}
+
+TEST_CASE("ir serializes execution metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.metadata.effectMask = primec::EffectIoOut | primec::EffectFileWrite;
+  fn.metadata.capabilityMask = primec::EffectIoOut;
+  fn.metadata.schedulingScope = primec::IrSchedulingScope::Default;
+  fn.metadata.instrumentationFlags = 3;
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.functions.size() == 1);
+  const auto &decodedFn = decoded.functions.front();
+  CHECK(decodedFn.metadata.effectMask == fn.metadata.effectMask);
+  CHECK(decodedFn.metadata.capabilityMask == fn.metadata.capabilityMask);
+  CHECK(decodedFn.metadata.schedulingScope == fn.metadata.schedulingScope);
+  CHECK(decodedFn.metadata.instrumentationFlags == fn.metadata.instrumentationFlags);
 }
 
 TEST_CASE("ir deserialization rejects unsupported version") {

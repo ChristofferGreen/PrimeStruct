@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 14;
+constexpr uint32_t IrVersion = 15;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -127,6 +127,10 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     }
     appendU32(out, static_cast<uint32_t>(fn.name.size()));
     out.insert(out.end(), fn.name.begin(), fn.name.end());
+    appendU64(out, fn.metadata.effectMask);
+    appendU64(out, fn.metadata.capabilityMask);
+    appendU32(out, static_cast<uint32_t>(fn.metadata.schedulingScope));
+    appendU32(out, fn.metadata.instrumentationFlags);
     if (fn.instructions.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
       error = "too many IR instructions";
       return false;
@@ -273,6 +277,15 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     }
     std::string name(reinterpret_cast<const char *>(data.data() + offset), nameLen);
     offset += nameLen;
+    uint64_t effectMask = 0;
+    uint64_t capabilityMask = 0;
+    uint32_t schedulingScope = 0;
+    uint32_t instrumentationFlags = 0;
+    if (!readU64(data, offset, effectMask) || !readU64(data, offset, capabilityMask) ||
+        !readU32(data, offset, schedulingScope) || !readU32(data, offset, instrumentationFlags)) {
+      error = "truncated IR function metadata";
+      return false;
+    }
     uint32_t instCount = 0;
     if (!readU32(data, offset, instCount)) {
       error = "truncated IR instruction count";
@@ -280,6 +293,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     }
     IrFunction fn;
     fn.name = std::move(name);
+    fn.metadata.effectMask = effectMask;
+    fn.metadata.capabilityMask = capabilityMask;
+    fn.metadata.schedulingScope = static_cast<IrSchedulingScope>(schedulingScope);
+    fn.metadata.instrumentationFlags = instrumentationFlags;
     fn.instructions.reserve(instCount);
     for (uint32_t instIndex = 0; instIndex < instCount; ++instIndex) {
       if (offset >= data.size()) {

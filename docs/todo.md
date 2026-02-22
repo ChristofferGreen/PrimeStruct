@@ -109,7 +109,7 @@ Legend:
 - ✓ Define and implement stdlib conformance markers for VM/native subset differences.
 - ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
 - ✓ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
-- ○ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
+- ✓ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
 - ✓ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
 - ✓ Add PSIR versioning policy/migrations (forward/backward compatibility) beyond “unsupported IR version.”
 - ✓ Finalize the runtime stack model doc and align VM/emitters with the specified frame semantics.

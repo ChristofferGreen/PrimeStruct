@@ -127,6 +127,19 @@ enum class IrStructVisibility : uint8_t {
   Public,
 };
 
+enum class IrSchedulingScope : uint32_t {
+  Default = 0,
+};
+
+constexpr uint64_t EffectIoOut = 1ull << 0;
+constexpr uint64_t EffectIoErr = 1ull << 1;
+constexpr uint64_t EffectHeapAlloc = 1ull << 2;
+constexpr uint64_t EffectPathSpaceNotify = 1ull << 3;
+constexpr uint64_t EffectPathSpaceInsert = 1ull << 4;
+constexpr uint64_t EffectPathSpaceTake = 1ull << 5;
+constexpr uint64_t EffectFileWrite = 1ull << 6;
+constexpr uint64_t EffectGpuDispatch = 1ull << 7;
+
 struct IrStructField {
   std::string name;
   std::string envelope;
@@ -144,6 +157,13 @@ struct IrStructLayout {
   uint32_t totalSizeBytes = 0;
   uint32_t alignmentBytes = 1;
   std::vector<IrStructField> fields;
+};
+
+struct IrExecutionMetadata {
+  uint64_t effectMask = 0;
+  uint64_t capabilityMask = 0;
+  IrSchedulingScope schedulingScope = IrSchedulingScope::Default;
+  uint32_t instrumentationFlags = 0;
 };
 
 constexpr uint64_t PrintFlagNewline = 1ull << 0;
@@ -176,6 +196,7 @@ struct IrInstruction {
 
 struct IrFunction {
   std::string name;
+  IrExecutionMetadata metadata;
   std::vector<IrInstruction> instructions;
 };
 

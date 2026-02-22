@@ -164,6 +164,10 @@
 
   IrFunction function;
   function.name = entryPath;
+  function.metadata.effectMask = entryEffectMask;
+  function.metadata.capabilityMask = entryCapabilityMask;
+  function.metadata.schedulingScope = IrSchedulingScope::Default;
+  function.metadata.instrumentationFlags = 0;
   bool sawReturn = false;
   using LocalMap = std::unordered_map<std::string, LocalInfo>;
   LocalMap locals;

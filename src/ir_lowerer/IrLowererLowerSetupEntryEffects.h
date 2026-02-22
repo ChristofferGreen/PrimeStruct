@@ -176,6 +176,41 @@ bool IrLowerer::lower(const Program &program,
     error = "native backend does not support software numeric types: " + found;
     return false;
   }
+  auto effectBitForName = [&](const std::string &name, uint64_t &outBit) -> bool {
+    if (name == "io_out") {
+      outBit = EffectIoOut;
+      return true;
+    }
+    if (name == "io_err") {
+      outBit = EffectIoErr;
+      return true;
+    }
+    if (name == "heap_alloc") {
+      outBit = EffectHeapAlloc;
+      return true;
+    }
+    if (name == "pathspace_notify") {
+      outBit = EffectPathSpaceNotify;
+      return true;
+    }
+    if (name == "pathspace_insert") {
+      outBit = EffectPathSpaceInsert;
+      return true;
+    }
+    if (name == "pathspace_take") {
+      outBit = EffectPathSpaceTake;
+      return true;
+    }
+    if (name == "file_write") {
+      outBit = EffectFileWrite;
+      return true;
+    }
+    if (name == "gpu_dispatch") {
+      outBit = EffectGpuDispatch;
+      return true;
+    }
+    return false;
+  };
 
   auto isSupportedEffect = [](const std::string &name) {
     return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
@@ -229,6 +264,55 @@ bool IrLowerer::lower(const Program &program,
     }
     return true;
   };
+  auto resolveEffectMask =
+      [&](const std::vector<Transform> &transforms, bool isEntry, uint64_t &maskOut) -> bool {
+    const auto effects = resolveActiveEffects(transforms, isEntry);
+    maskOut = 0;
+    for (const auto &effect : effects) {
+      uint64_t bit = 0;
+      if (!effectBitForName(effect, bit)) {
+        error = "unsupported effect in metadata: " + effect;
+        return false;
+      }
+      maskOut |= bit;
+    }
+    return true;
+  };
+  auto resolveCapabilityMask =
+      [&](const std::vector<Transform> &transforms, const std::unordered_set<std::string> &effects, uint64_t &maskOut)
+      -> bool {
+    bool sawCapabilities = false;
+    std::unordered_set<std::string> capabilities;
+    for (const auto &transform : transforms) {
+      if (transform.name != "capabilities") {
+        continue;
+      }
+      if (sawCapabilities) {
+        error = "duplicate capabilities transform on " + entryPath;
+        return false;
+      }
+      sawCapabilities = true;
+      capabilities.clear();
+      for (const auto &arg : transform.arguments) {
+        capabilities.insert(arg);
+      }
+    }
+    if (!sawCapabilities) {
+      capabilities = effects;
+    }
+    maskOut = 0;
+    for (const auto &capability : capabilities) {
+      uint64_t bit = 0;
+      if (!effectBitForName(capability, bit)) {
+        error = "unsupported capability in metadata: " + capability;
+        return false;
+      }
+      maskOut |= bit;
+    }
+    return true;
+  };
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
   auto validateExprEffects = [&](const auto &self, const Expr &expr, const std::string &context) -> bool {
     if (!validateEffectsTransforms(expr.transforms, context)) {
       return false;
@@ -279,4 +363,11 @@ bool IrLowerer::lower(const Program &program,
         return false;
       }
     }
+  }
+  if (!resolveEffectMask(entryDef->transforms, true, entryEffectMask)) {
+    return false;
+  }
+  if (!resolveCapabilityMask(entryDef->transforms, resolveActiveEffects(entryDef->transforms, true),
+                             entryCapabilityMask)) {
+    return false;
   }
