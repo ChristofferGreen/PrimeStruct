@@ -78,7 +78,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Integer powers: `pow(2, 0)`, `pow(2, 3)`, `pow(10, 2)`.
 - [x] Float powers: `pow(2.0, 0.5) ~= sqrt(2)`.
 - [x] Edge cases: `pow(0, 0)` policy, `pow(1, x)`.
-- [ ] Negative exponent policy for ints (error or result).
+- [x] Negative exponent policy for ints (error or result).
 - [x] Sign behavior: `pow(-2, 3) = -8`, `pow(-2, 2) = 4`.
 
 ## Rounding: floor/ceil/round/trunc/fract
@@ -98,7 +98,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 
 ## Lerp
 - [x] `lerp(a, b, 0) = a`, `lerp(a, b, 1) = b`.
-- [ ] `lerp(a, b, 0.5)` midpoint check for int and float.
+- [x] `lerp(a, b, 0.5)` midpoint check for float; int lerp uses integer `t`.
 - [x] Out-of-range `t` behavior (if allowed).
 - [x] `lerp` with negative values.
 

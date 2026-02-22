@@ -1388,6 +1388,8 @@ main() {
   emit("lerp_f_neg"utf8, near(lerp(-4.0f32, 6.0f32, 0.5f32), 1.0f32, 0.01f32))
   emit("lerp_oob_low"utf8, near(lerp(0.0f32, 10.0f32, -0.5f32), -5.0f32, 0.02f32))
   emit("lerp_oob_high"utf8, near(lerp(0.0f32, 10.0f32, 1.5f32), 15.0f32, 0.02f32))
+  emit("lerp_i_end"utf8, lerp(0i32, 10i32, 1i32) == 10i32)
+  emit("lerp_i_extrap"utf8, lerp(0i32, 10i32, 2i32) == 20i32)
   emit("fma_f"utf8, near(fma(2.0f32, 3.0f32, 4.0f32), 10.0f32, 0.01f32))
   [f32] fma_small{fma(0.0001f32, 0.0001f32, 0.0001f32)}
   emit("fma_small"utf8, abs(fma_small - (0.0001f32 * 0.0001f32 + 0.0001f32)) < 0.000001f32)
@@ -1908,6 +1910,47 @@ main() {
 }
 )";
   checkMathConformance(source, "math_conformance_policy");
+}
+
+TEST_CASE("math conformance integer pow negative exponent") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  return(pow(2i32, -1i32))
+}
+)";
+  const std::string srcPath = writeTemp("math_conformance_pow_negative.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_exe").string();
+  const std::string exeErrPath =
+      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_exe.err").string();
+  const std::string vmErrPath =
+      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_vm.err").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath) + " 2> " + quoteShellArg(exeErrPath)) == 3);
+  CHECK(readFile(exeErrPath) == "pow exponent must be non-negative\n");
+
+  const std::string vmCmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
+  CHECK(runCommand(vmCmd) == 3);
+  CHECK(readFile(vmErrPath) == "pow exponent must be non-negative\n");
+
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_native").string();
+  const std::string nativeErrPath =
+      (std::filesystem::temp_directory_path() / "math_conformance_pow_negative_native.err").string();
+  const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
+                                       quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCompileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(nativePath) + " 2> " + quoteShellArg(nativeErrPath)) == 3);
+  CHECK(readFile(nativeErrPath) == "pow exponent must be non-negative\n");
+#endif
 }
 
 TEST_CASE("math conformance integer edge cases") {
