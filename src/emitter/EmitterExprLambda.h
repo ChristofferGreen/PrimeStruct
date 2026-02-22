@@ -205,6 +205,23 @@ std::string Emitter::emitExpr(const Expr &expr,
     int repeatCounter = 0;
     std::function<void(const Expr &, std::unordered_map<std::string, BindingInfo> &)> emitLambdaStatement;
     emitLambdaStatement = [&](const Expr &stmt, std::unordered_map<std::string, BindingInfo> &activeTypes) {
+      auto emitConditionText = [&](const Expr &condExpr,
+                                   const std::unordered_map<std::string, BindingInfo> &condTypes) -> std::string {
+        std::string text = emitExpr(condExpr,
+                                    nameMap,
+                                    paramMap,
+                                    structTypeMap,
+                                    importAliases,
+                                    condTypes,
+                                    returnKinds,
+                                    resultInfos,
+                                    returnStructs,
+                                    allowMathBare);
+        if (text.size() >= 2 && text.front() == '(' && text.back() == ')') {
+          return text;
+        }
+        return "(" + text + ")";
+      };
       if (isReturnCall(stmt)) {
         out << "return";
         if (!stmt.args.empty()) {
@@ -356,18 +373,7 @@ std::string Emitter::emitExpr(const Expr &expr,
           }
           return true;
         };
-        out << "if ("
-            << emitExpr(cond,
-                        nameMap,
-                        paramMap,
-                        structTypeMap,
-                        importAliases,
-                        activeTypes,
-                        returnKinds,
-                        resultInfos,
-                        returnStructs,
-                        allowMathBare)
-            << ") { ";
+        out << "if " << emitConditionText(cond, activeTypes) << " { ";
         {
           auto blockTypes = activeTypes;
           if (isIfBlockEnvelope(thenArg)) {
@@ -427,9 +433,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isWhileCall(stmt) && stmt.args.size() == 2 && isLoopBlockEnvelope(stmt.args[1])) {
-        out << "while ("
-            << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, activeTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
-            << ") { ";
+        out << "while " << emitConditionText(stmt.args[0], activeTypes) << " { ";
         auto blockTypes = activeTypes;
         for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
           emitLambdaStatement(bodyStmt, blockTypes);
@@ -441,9 +445,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         out << "{ ";
         auto loopTypes = activeTypes;
         emitLambdaStatement(stmt.args[0], loopTypes);
-        out << "while ("
-            << emitExpr(stmt.args[1], nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, resultInfos, returnStructs, allowMathBare)
-            << ") { ";
+        out << "while " << emitConditionText(stmt.args[1], loopTypes) << " { ";
         auto blockTypes = loopTypes;
         for (const auto &bodyStmt : stmt.args[3].bodyArguments) {
           emitLambdaStatement(bodyStmt, blockTypes);

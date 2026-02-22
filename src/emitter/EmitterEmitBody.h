@@ -167,6 +167,23 @@
           emitOnErrorHandler(*handler, blockExpr.namespacePrefix, blockIndent, blockTypes);
         }
       };
+      auto emitConditionText = [&](const Expr &condExpr,
+                                   const std::unordered_map<std::string, BindingInfo> &condTypes) -> std::string {
+        std::string text = emitExpr(condExpr,
+                                    nameMap,
+                                    paramMap,
+                                    structTypeMap,
+                                    importAliases,
+                                    condTypes,
+                                    returnKinds,
+                                    resultInfos,
+                                    returnStructs,
+                                    hasMathImport);
+        if (text.size() >= 2 && text.front() == '(' && text.back() == ')') {
+          return text;
+        }
+        return "(" + text + ")";
+      };
       if (isReturnCall(stmt)) {
         out << pad << "return";
         if (!stmt.args.empty()) {
@@ -255,7 +272,7 @@
           }
           return true;
         };
-        out << pad << "if (" << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ") {\n";
+        out << pad << "if " << emitConditionText(cond, localTypes) << " {\n";
         {
           auto blockTypes = localTypes;
           if (isIfBlockEnvelope(thenArg)) {
@@ -324,8 +341,7 @@
         return;
       }
       if (stmt.kind == Expr::Kind::Call && isWhileCall(stmt) && stmt.args.size() == 2 && isLoopBlockEnvelope(stmt.args[1])) {
-        out << pad << "while ("
-            << emitExpr(stmt.args[0], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ") {\n";
+        out << pad << "while " << emitConditionText(stmt.args[0], localTypes) << " {\n";
         auto blockTypes = localTypes;
         emitBlockOnError(stmt.args[1], indent + 1, blockTypes);
         for (const auto &bodyStmt : stmt.args[1].bodyArguments) {
@@ -354,8 +370,7 @@
           emitStatement(step, indent + 2, blockTypes);
           out << innerPad << "}\n";
         } else {
-          out << innerPad << "while ("
-              << emitExpr(cond, nameMap, paramMap, structTypeMap, importAliases, loopTypes, returnKinds, resultInfos, returnStructs, hasMathImport) << ") {\n";
+          out << innerPad << "while " << emitConditionText(cond, loopTypes) << " {\n";
           auto blockTypes = loopTypes;
           emitBlockOnError(body, indent + 2, blockTypes);
           for (const auto &bodyStmt : body.bodyArguments) {
