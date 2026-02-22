@@ -1412,6 +1412,10 @@ main() {
   emit("is_inf"utf8, is_inf(inf))
   emit("is_finite"utf8, is_finite(1.0f32))
   emit("is_finite_inf"utf8, is_finite(inf) == false)
+  emit("nan_add"utf8, is_nan(nan + 1.0f32))
+  emit("nan_sub"utf8, is_nan(1.0f32 - nan))
+  emit("nan_mul"utf8, is_nan(nan * 0.0f32))
+  emit("nan_div"utf8, is_nan(nan / 2.0f32))
 
   emit("radians_degrees"utf8, abs(radians(degrees(1.25f32)) - 1.25f32) < 0.0005f32)
   emit("degrees_radians"utf8, abs(degrees(radians(45.0f32)) - 45.0f32) < 0.01f32)

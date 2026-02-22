@@ -126,7 +126,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] `0/0` is NaN.
 - [x] `1/0` is Inf.
 - [x] `is_finite` for normal values.
-- [ ] NaN propagation through arithmetic operators (if defined).
+- [x] NaN propagation through arithmetic operators (if defined).
 
 ## Angle Conversions
 - [x] `radians(degrees(x)) ~= x` for multiple values.
