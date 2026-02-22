@@ -322,6 +322,25 @@ main() {
   CHECK(readFile(errPath) == "VM lowering error: vm backend does not support string pointers or references\n");
 }
 
+TEST_CASE("vm ignores top-level executions") {
+  const std::string source = R"(
+[return<bool>]
+unused() {
+  return(equal("a"utf8, "b"utf8))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+
+unused()
+)";
+  const std::string srcPath = writeTemp("vm_exec_ignored.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");

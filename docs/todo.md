@@ -125,7 +125,7 @@ Legend:
 - ✓ Enumerate VM backend unsupported opcodes/runtime errors and add tests/allowlist documentation.
 - ✓ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
 - ✓ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
-- ○ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
+- ✓ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
 - ○ Implement Metal backend output or remove it from the backend roadmap.
 - ○ Decide on LLVM backend support (implement or remove future-LLVM references).
 - ○ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.

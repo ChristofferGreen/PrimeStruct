@@ -163,7 +163,7 @@ module {
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
   - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after includes/imports and namespace expansion; unresolved names remain diagnostics.
-  - Note: the current C++ emitter only generates code for definitions; executions are parsed/validated but not emitted.
+  - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are parsed/validated but not emitted (tooling-only for now).
 - **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
   - **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<int>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
 - **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list). If the bare envelope is `auto`, the transform yields `return<auto>` and inference resolves it later.

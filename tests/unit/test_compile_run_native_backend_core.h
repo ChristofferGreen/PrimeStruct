@@ -280,5 +280,27 @@ main() {
   CHECK(readFile(errPath) == "Native lowering error: native backend does not support string pointers or references\n");
 }
 
+TEST_CASE("native ignores top-level executions") {
+  const std::string source = R"(
+[return<bool>]
+unused() {
+  return(equal("a"utf8, "b"utf8))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+
+unused()
+)";
+  const std::string srcPath = writeTemp("compile_native_exec_ignored.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_exec_ignored_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_SUITE_END();
 #endif
