@@ -89,7 +89,7 @@ Legend:
 - ✓ Finalize the literal suffix catalog, including canonical raw string behavior across backends.
 - ○ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
 - ○ Finalize literals & composite construction semantics beyond suffix rules.
-- ○ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
+- ✓ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
 - ○ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.
 - ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
 - ○ Define pointer/reference target envelope whitelist and conversion rules per backend.

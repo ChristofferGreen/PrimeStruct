@@ -51,6 +51,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("parameter rejects software numeric type") {
+  const std::string source = R"(
+[return<int>]
+add([complex] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(add(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+}
+
 TEST_CASE("parameter default vector literal requires heap_alloc effect") {
   const std::string source = R"(
 [return<int>]
