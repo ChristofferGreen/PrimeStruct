@@ -1388,6 +1388,10 @@ main() {
   emit("lerp_oob_low"utf8, near(lerp(0.0f32, 10.0f32, -0.5f32), -5.0f32, 0.02f32))
   emit("lerp_oob_high"utf8, near(lerp(0.0f32, 10.0f32, 1.5f32), 15.0f32, 0.02f32))
   emit("fma_f"utf8, near(fma(2.0f32, 3.0f32, 4.0f32), 10.0f32, 0.01f32))
+  [f32] fma_small{fma(0.0001f32, 0.0001f32, 0.0001f32)}
+  emit("fma_small"utf8, abs(fma_small - (0.0001f32 * 0.0001f32 + 0.0001f32)) < 0.000001f32)
+  [f32] fma_large{fma(10000000000.0f32, 10000000000.0f32, 100000.0f32)}
+  emit("fma_large"utf8, is_finite(fma_large) && fma_large > 1.0e19f32)
   emit("hypot_f"utf8, near(hypot(3.0f32, 4.0f32), 5.0f32, 0.05f32))
   emit("hypot_5_12"utf8, near(hypot(5.0f32, 12.0f32), 13.0f32, 0.1f32))
   emit("hypot_swap"utf8, abs(hypot(3.0f32, 4.0f32) - hypot(4.0f32, 3.0f32)) < 0.01f32)

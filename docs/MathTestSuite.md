@@ -104,8 +104,8 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 
 ## FMA
 - [x] `fma(a, b, c)` vs `a*b + c` for representative values.
-- [ ] Small values to check loss of precision (float32).
-- [ ] Large values to check overflow behavior.
+- [x] Small values to check loss of precision (float32).
+- [x] Large values to check overflow behavior.
 
 ## Hypot
 - [x] Pythagorean triples: `(3,4) -> 5`, `(5,12) -> 13`.
