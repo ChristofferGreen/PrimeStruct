@@ -52,13 +52,13 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Symmetry: `sinh(-x) = -sinh(x)`, `cosh(-x) = cosh(x)`, `tanh(-x) = -tanh(x)`.
 - [x] Identity: `cosh(x)^2 - sinh(x)^2 ~= 1` for moderate `x`.
 - [x] `tanh(0) = 0`, `cosh(0) = 1`.
-- [ ] Range sanity for `x = 1, 2, 5` (avoid overflow but test growth).
+- [x] Range sanity for `x = 1, 2, 5` (avoid overflow but test growth).
 
 ## Inverse Hyperbolic: asinh/acosh/atanh
-- [ ] Domain checks for `asinh` (all reals).
-- [ ] Domain checks for `acosh` (`x >= 1`) including `1` and `1.5`.
-- [ ] Domain checks for `atanh` (`-1 < x < 1`) and near-edge values `0.99`.
-- [ ] Round-trip: `sinh(asinh(x)) ~= x`, `cosh(acosh(x)) ~= x`, `tanh(atanh(x)) ~= x`.
+- [x] Domain checks for `asinh` (all reals).
+- [x] Domain checks for `acosh` (`x >= 1`) including `1` and `1.5`.
+- [x] Domain checks for `atanh` (`-1 < x < 1`) and near-edge values `0.99`.
+- [x] Round-trip: `sinh(asinh(x)) ~= x`, `cosh(acosh(x)) ~= x`, `tanh(atanh(x)) ~= x`.
 
 ## Exp/Log
 - [x] `exp(0) = 1`, `exp2(0) = 1`.
@@ -131,7 +131,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 ## Angle Conversions
 - [x] `radians(degrees(x)) ~= x` for multiple values.
 - [x] `degrees(radians(x)) ~= x` for multiple values.
-- [ ] Large angle conversions sanity checks.
+- [x] Large angle conversions sanity checks.
 
 ## Mixed-Type Conversions
 - [x] `convert<f32>` and `convert<f64>` from ints for key values.

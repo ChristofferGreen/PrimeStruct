@@ -833,6 +833,15 @@ main() {
   emit("cosh_neg"utf8, abs(cosh(-0.7f32) - cosh(0.7f32)) < 0.002f32)
   emit("tanh_neg"utf8, abs(tanh(-0.7f32) + tanh(0.7f32)) < 0.002f32)
   emit("cosh_sinh_identity"utf8, abs(c * c - s * s - 1.0f32) < 0.02f32)
+  emit("sinh_range_1"utf8, sinh(1.0f32) > 0.0f32)
+  emit("sinh_range_2"utf8, sinh(2.0f32) > sinh(1.0f32))
+  emit("sinh_range_5"utf8, sinh(5.0f32) > sinh(2.0f32))
+  emit("cosh_range_1"utf8, cosh(1.0f32) > 1.0f32)
+  emit("cosh_range_2"utf8, cosh(2.0f32) > cosh(1.0f32))
+  emit("cosh_range_5"utf8, cosh(5.0f32) > cosh(2.0f32))
+  emit("tanh_range_1"utf8, tanh(1.0f32) > 0.0f32 && tanh(1.0f32) < 1.0f32)
+  emit("tanh_range_2"utf8, tanh(2.0f32) > 0.0f32 && tanh(2.0f32) < 1.0f32)
+  emit("tanh_range_5"utf8, tanh(5.0f32) > 0.0f32 && tanh(5.0f32) < 1.0f32)
 
   return(0i32)
 }
@@ -868,8 +877,13 @@ near([f32] a, [f32] b, [f32] eps) {
 [return<int>]
 main() {
   emit("asinh_0"utf8, abs(asinh(0.0f32)) < 0.001f32)
+  emit("asinh_pos"utf8, asinh(2.0f32) > 0.0f32)
+  emit("asinh_neg"utf8, asinh(-2.0f32) < 0.0f32)
   emit("atanh_0"utf8, abs(atanh(0.0f32)) < 0.001f32)
+  emit("atanh_edge_pos"utf8, atanh(0.99f32) > 0.0f32 && is_finite(atanh(0.99f32)))
+  emit("atanh_edge_neg"utf8, atanh(-0.99f32) < 0.0f32 && is_finite(atanh(-0.99f32)))
   emit("acosh_1"utf8, abs(acosh(1.0f32)) < 0.001f32)
+  emit("acosh_mid"utf8, acosh(1.5f32) > 0.0f32 && is_finite(acosh(1.5f32)))
   emit("tanh_atanh"utf8, abs(tanh(atanh(0.3f32)) - 0.3f32) < 0.01f32)
   emit("sinh_asinh"utf8, abs(sinh(asinh(1.2f32)) - 1.2f32) < 0.01f32)
   emit("cosh_acosh"utf8, abs(cosh(acosh(2.0f32)) - 2.0f32) < 0.02f32)
@@ -1401,6 +1415,7 @@ main() {
   emit("radians_degrees"utf8, abs(radians(degrees(1.25f32)) - 1.25f32) < 0.0005f32)
   emit("degrees_radians"utf8, abs(degrees(radians(45.0f32)) - 45.0f32) < 0.01f32)
   emit("degrees_pi"utf8, abs(degrees(convert<f32>(pi)) - 180.0f32) < 1.0f32)
+  emit("degrees_large"utf8, abs(degrees(radians(720.0f32)) - 720.0f32) < 0.5f32)
 
   return(0i32)
 }
