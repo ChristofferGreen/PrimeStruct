@@ -1,0 +1,97 @@
+TEST_SUITE_BEGIN("primestruct.semantics.software_numeric");
+
+TEST_CASE("accepts integer binding and return") {
+  const std::string source = R"(
+[return<integer>]
+main() {
+  [integer] value{convert<integer>(1i32)}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("accepts decimal binding and return") {
+  const std::string source = R"(
+[return<decimal>]
+main() {
+  [decimal] value{convert<decimal>(1.5f32)}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("accepts complex binding and return") {
+  const std::string source = R"(
+[return<complex>]
+main() {
+  [complex] value{convert<complex>(convert<decimal>(2.0f32))}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("rejects mixed software and fixed arithmetic") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [integer] value{convert<integer>(1i32)}
+  return(plus(value, 2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed software/fixed") != std::string::npos);
+}
+
+TEST_CASE("rejects mixed software numeric categories") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [integer] a{convert<integer>(1i32)}
+  [decimal] b{convert<decimal>(1.0f32)}
+  return(convert<int>(plus(a, b)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed int/float") != std::string::npos);
+}
+
+TEST_CASE("rejects ordered comparisons on complex") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [complex] a{convert<complex>(convert<decimal>(1.0f32))}
+  [complex] b{convert<complex>(convert<decimal>(2.0f32))}
+  return(less_than(a, b))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ordered complex") != std::string::npos);
+}
+
+TEST_CASE("rejects mixed complex and real comparisons") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  [complex] a{convert<complex>(convert<decimal>(1.0f32))}
+  [decimal] b{convert<decimal>(2.0f32)}
+  return(equal(a, b))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mixed complex/real") != std::string::npos);
+}
+
+TEST_SUITE_END();

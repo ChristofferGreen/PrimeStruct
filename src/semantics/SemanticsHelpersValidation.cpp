@@ -293,6 +293,12 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         return "f32";
       case ReturnKind::Float64:
         return "f64";
+      case ReturnKind::Integer:
+        return "integer";
+      case ReturnKind::Decimal:
+        return "decimal";
+      case ReturnKind::Complex:
+        return "complex";
       case ReturnKind::Array:
         return "array";
       default:
@@ -305,6 +311,16 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
     }
     if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void ||
         left == ReturnKind::Array || right == ReturnKind::Array) {
+      return ReturnKind::Unknown;
+    }
+    const bool leftSoftware =
+        left == ReturnKind::Integer || left == ReturnKind::Decimal || left == ReturnKind::Complex;
+    const bool rightSoftware =
+        right == ReturnKind::Integer || right == ReturnKind::Decimal || right == ReturnKind::Complex;
+    if (leftSoftware || rightSoftware) {
+      if (left == right) {
+        return left;
+      }
       return ReturnKind::Unknown;
     }
     if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
@@ -394,6 +410,12 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         }
         if (argKind == ReturnKind::Float32) {
           return ReturnKind::Float32;
+        }
+        if (argKind == ReturnKind::Decimal) {
+          return ReturnKind::Decimal;
+        }
+        if (argKind == ReturnKind::Complex) {
+          return ReturnKind::Complex;
         }
         return ReturnKind::Unknown;
       }

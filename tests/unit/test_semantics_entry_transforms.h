@@ -24,16 +24,17 @@ main() {
   CHECK(error.find("array return type requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("software numeric return type fails") {
+TEST_CASE("software numeric return type is accepted") {
   const std::string source = R"(
 [return<complex>]
 main() {
-  return(1i32)
+  [complex] value{convert<complex>(convert<decimal>(1.0f32))}
+  return(value)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("duplicate return transform fails") {

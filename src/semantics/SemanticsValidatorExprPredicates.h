@@ -310,8 +310,10 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   };
   auto isNumericExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    const bool isSoftware =
+        kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex;
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
-        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || isSoftware) {
       return true;
     }
     if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Array) {
@@ -328,13 +330,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
-                 paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+                 paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 ||
+                 paramKind == ReturnKind::Integer || paramKind == ReturnKind::Decimal || paramKind == ReturnKind::Complex;
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
           return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
-                 localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
+                 localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 ||
+                 localKind == ReturnKind::Integer || localKind == ReturnKind::Decimal || localKind == ReturnKind::Complex;
         }
       }
       return true;
@@ -343,11 +347,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
   };
   auto isFloatExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Decimal) {
       return true;
     }
     if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Array || kind == ReturnKind::Int ||
-        kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+        kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Integer ||
+        kind == ReturnKind::Complex) {
       return false;
     }
     if (kind == ReturnKind::Unknown) {
@@ -363,29 +368,68 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (arg.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
-          return paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+          return paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Decimal;
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
-          return localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
+          return localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 || localKind == ReturnKind::Decimal;
         }
       }
       return true;
     }
     return false;
   };
-  enum class NumericCategory { Unknown, Integer, Float };
+  enum class NumericDomain { Unknown, Fixed, Software };
+  enum class NumericCategory { Unknown, Integer, Float, Complex };
+  struct NumericInfo {
+    NumericDomain domain = NumericDomain::Unknown;
+    NumericCategory category = NumericCategory::Unknown;
+  };
+  auto numericInfoForKind = [&](ReturnKind kind) -> NumericInfo {
+    switch (kind) {
+      case ReturnKind::Int:
+      case ReturnKind::Int64:
+      case ReturnKind::UInt64:
+        return {NumericDomain::Fixed, NumericCategory::Integer};
+      case ReturnKind::Float32:
+      case ReturnKind::Float64:
+        return {NumericDomain::Fixed, NumericCategory::Float};
+      case ReturnKind::Integer:
+        return {NumericDomain::Software, NumericCategory::Integer};
+      case ReturnKind::Decimal:
+        return {NumericDomain::Software, NumericCategory::Float};
+      case ReturnKind::Complex:
+        return {NumericDomain::Software, NumericCategory::Complex};
+      case ReturnKind::Bool:
+        return {NumericDomain::Fixed, NumericCategory::Integer};
+      default:
+        return {NumericDomain::Unknown, NumericCategory::Unknown};
+    }
+  };
+  auto numericInfoForTypeName = [&](const std::string &typeName) -> NumericInfo {
+    if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" || typeName == "bool") {
+      return {NumericDomain::Fixed, NumericCategory::Integer};
+    }
+    if (typeName == "float" || typeName == "f32" || typeName == "f64") {
+      return {NumericDomain::Fixed, NumericCategory::Float};
+    }
+    if (typeName == "integer") {
+      return {NumericDomain::Software, NumericCategory::Integer};
+    }
+    if (typeName == "decimal") {
+      return {NumericDomain::Software, NumericCategory::Float};
+    }
+    if (typeName == "complex") {
+      return {NumericDomain::Software, NumericCategory::Complex};
+    }
+    return {NumericDomain::Unknown, NumericCategory::Unknown};
+  };
   auto numericCategoryForExpr = [&](const Expr &arg) -> NumericCategory {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
-      return NumericCategory::Float;
-    }
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
-      return NumericCategory::Integer;
-    }
-    if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
-      return NumericCategory::Unknown;
+    NumericInfo info = numericInfoForKind(kind);
+    if (info.category != NumericCategory::Unknown) {
+      return info.category;
     }
     if (kind == ReturnKind::Unknown) {
       if (arg.kind == Expr::Kind::FloatLiteral) {
@@ -400,42 +444,30 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       if (arg.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           const std::string &typeName = paramBinding->typeName;
-          if (typeName == "float" || typeName == "f32" || typeName == "f64") {
-            return NumericCategory::Float;
-          }
-          if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" ||
-              typeName == "bool") {
-            return NumericCategory::Integer;
+          NumericInfo typeInfo = numericInfoForTypeName(typeName);
+          if (typeInfo.category != NumericCategory::Unknown) {
+            return typeInfo.category;
           }
           if (typeName == "Reference") {
             const std::string &refType = paramBinding->typeTemplateArg;
-            if (refType == "float" || refType == "f32" || refType == "f64") {
-              return NumericCategory::Float;
-            }
-            if (refType == "int" || refType == "i32" || refType == "i64" || refType == "u64" ||
-                refType == "bool") {
-              return NumericCategory::Integer;
+            NumericInfo refInfo = numericInfoForTypeName(refType);
+            if (refInfo.category != NumericCategory::Unknown) {
+              return refInfo.category;
             }
           }
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           const std::string &typeName = it->second.typeName;
-          if (typeName == "float" || typeName == "f32" || typeName == "f64") {
-            return NumericCategory::Float;
-          }
-          if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" ||
-              typeName == "bool") {
-            return NumericCategory::Integer;
+          NumericInfo typeInfo = numericInfoForTypeName(typeName);
+          if (typeInfo.category != NumericCategory::Unknown) {
+            return typeInfo.category;
           }
           if (typeName == "Reference") {
             const std::string &refType = it->second.typeTemplateArg;
-            if (refType == "float" || refType == "f32" || refType == "f64") {
-              return NumericCategory::Float;
-            }
-            if (refType == "int" || refType == "i32" || refType == "i64" || refType == "u64" ||
-                refType == "bool") {
-              return NumericCategory::Integer;
+            NumericInfo refInfo = numericInfoForTypeName(refType);
+            if (refInfo.category != NumericCategory::Unknown) {
+              return refInfo.category;
             }
           }
         }
@@ -444,23 +476,107 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     return NumericCategory::Unknown;
   };
+  auto numericDomainForExpr = [&](const Expr &arg) -> NumericDomain {
+    ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    NumericInfo info = numericInfoForKind(kind);
+    if (info.domain != NumericDomain::Unknown) {
+      return info.domain;
+    }
+    if (kind == ReturnKind::Unknown) {
+      if (arg.kind == Expr::Kind::StringLiteral) {
+        return NumericDomain::Unknown;
+      }
+      if (isPointerExpr(arg, params, locals)) {
+        return NumericDomain::Unknown;
+      }
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          NumericInfo typeInfo = numericInfoForTypeName(paramBinding->typeName);
+          if (typeInfo.domain != NumericDomain::Unknown) {
+            return typeInfo.domain;
+          }
+          if (paramBinding->typeName == "Reference") {
+            NumericInfo refInfo = numericInfoForTypeName(paramBinding->typeTemplateArg);
+            if (refInfo.domain != NumericDomain::Unknown) {
+              return refInfo.domain;
+            }
+          }
+        }
+        auto it = locals.find(arg.name);
+        if (it != locals.end()) {
+          NumericInfo typeInfo = numericInfoForTypeName(it->second.typeName);
+          if (typeInfo.domain != NumericDomain::Unknown) {
+            return typeInfo.domain;
+          }
+          if (it->second.typeName == "Reference") {
+            NumericInfo refInfo = numericInfoForTypeName(it->second.typeTemplateArg);
+            if (refInfo.domain != NumericDomain::Unknown) {
+              return refInfo.domain;
+            }
+          }
+        }
+      }
+    }
+    return NumericDomain::Unknown;
+  };
+  auto hasMixedNumericDomain = [&](const std::vector<Expr> &args) -> bool {
+    bool sawFixed = false;
+    bool sawSoftware = false;
+    for (const auto &arg : args) {
+      NumericDomain domain = numericDomainForExpr(arg);
+      if (domain == NumericDomain::Fixed) {
+        sawFixed = true;
+      } else if (domain == NumericDomain::Software) {
+        sawSoftware = true;
+      }
+    }
+    return sawFixed && sawSoftware;
+  };
   auto hasMixedNumericCategory = [&](const std::vector<Expr> &args) -> bool {
     bool sawFloat = false;
     bool sawInteger = false;
+    bool sawComplex = false;
     for (const auto &arg : args) {
       NumericCategory category = numericCategoryForExpr(arg);
       if (category == NumericCategory::Float) {
         sawFloat = true;
       } else if (category == NumericCategory::Integer) {
         sawInteger = true;
+      } else if (category == NumericCategory::Complex) {
+        sawComplex = true;
       }
     }
+    if (sawComplex && (sawFloat || sawInteger)) {
+      return true;
+    }
     return sawFloat && sawInteger;
+  };
+  auto hasComplexNumeric = [&](const std::vector<Expr> &args) -> bool {
+    for (const auto &arg : args) {
+      if (numericCategoryForExpr(arg) == NumericCategory::Complex) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto hasMixedComplexNumeric = [&](const std::vector<Expr> &args) -> bool {
+    bool sawComplex = false;
+    bool sawOther = false;
+    for (const auto &arg : args) {
+      NumericCategory category = numericCategoryForExpr(arg);
+      if (category == NumericCategory::Complex) {
+        sawComplex = true;
+      } else if (category == NumericCategory::Integer || category == NumericCategory::Float) {
+        sawOther = true;
+      }
+    }
+    return sawComplex && sawOther;
   };
   auto isComparisonOperand = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
     if (kind == ReturnKind::Bool || kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
-        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+        kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Integer ||
+        kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
       return true;
     }
     if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
@@ -477,13 +593,15 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Bool || paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-                 paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64;
+                 paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 ||
+                 paramKind == ReturnKind::Integer || paramKind == ReturnKind::Decimal || paramKind == ReturnKind::Complex;
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
           return localKind == ReturnKind::Bool || localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-                 localKind == ReturnKind::UInt64 || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64;
+                 localKind == ReturnKind::UInt64 || localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 ||
+                 localKind == ReturnKind::Integer || localKind == ReturnKind::Decimal || localKind == ReturnKind::Complex;
         }
       }
       return true;
@@ -499,6 +617,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     bool sawSigned = false;
     for (const auto &arg : args) {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
+      if (kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
+        continue;
+      }
       if (kind == ReturnKind::UInt64) {
         sawUnsigned = true;
         continue;

@@ -18,6 +18,165 @@ bool IrLowerer::lower(const Program &program,
     return false;
   }
 
+  auto isSoftwareNumericName = [](const std::string &name) {
+    return name == "integer" || name == "decimal" || name == "complex";
+  };
+  auto splitTopLevelTemplateArgs = [](const std::string &text, std::vector<std::string> &out) -> bool {
+    out.clear();
+    int depth = 0;
+    size_t start = 0;
+    auto pushSegment = [&](size_t end) {
+      size_t segStart = start;
+      while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
+        ++segStart;
+      }
+      size_t segEnd = end;
+      while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+        --segEnd;
+      }
+      out.push_back(text.substr(segStart, segEnd - segStart));
+    };
+    for (size_t i = 0; i < text.size(); ++i) {
+      char c = text[i];
+      if (c == '<') {
+        ++depth;
+        continue;
+      }
+      if (c == '>') {
+        if (depth > 0) {
+          --depth;
+        }
+        continue;
+      }
+      if (c == ',' && depth == 0) {
+        pushSegment(i);
+        start = i + 1;
+      }
+    }
+    pushSegment(text.size());
+    for (const auto &seg : out) {
+      if (seg.empty()) {
+        return false;
+      }
+    }
+    return !out.empty();
+  };
+  std::function<std::string(const std::string &)> findSoftwareNumericType;
+  findSoftwareNumericType = [&](const std::string &typeName) -> std::string {
+    if (typeName.empty()) {
+      return {};
+    }
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(typeName, base, arg)) {
+      return isSoftwareNumericName(typeName) ? typeName : std::string{};
+    }
+    if (isSoftwareNumericName(base)) {
+      return base;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(arg, args)) {
+      return {};
+    }
+    for (const auto &nested : args) {
+      std::string found = findSoftwareNumericType(nested);
+      if (!found.empty()) {
+        return found;
+      }
+    }
+    return {};
+  };
+  auto scanTransforms = [&](const std::vector<Transform> &transforms) -> std::string {
+    for (const auto &transform : transforms) {
+      std::string found = findSoftwareNumericType(transform.name);
+      if (!found.empty()) {
+        return found;
+      }
+      for (const auto &arg : transform.templateArgs) {
+        found = findSoftwareNumericType(arg);
+        if (!found.empty()) {
+          return found;
+        }
+      }
+    }
+    return {};
+  };
+  std::function<std::string(const Expr &)> scanExpr;
+  scanExpr = [&](const Expr &expr) -> std::string {
+    std::string found = scanTransforms(expr.transforms);
+    if (!found.empty()) {
+      return found;
+    }
+    for (const auto &arg : expr.templateArgs) {
+      found = findSoftwareNumericType(arg);
+      if (!found.empty()) {
+        return found;
+      }
+    }
+    for (const auto &arg : expr.args) {
+      found = scanExpr(arg);
+      if (!found.empty()) {
+        return found;
+      }
+    }
+    for (const auto &arg : expr.bodyArguments) {
+      found = scanExpr(arg);
+      if (!found.empty()) {
+        return found;
+      }
+    }
+    return {};
+  };
+  auto scanProgram = [&]() -> std::string {
+    for (const auto &def : program.definitions) {
+      std::string found = scanTransforms(def.transforms);
+      if (!found.empty()) {
+        return found;
+      }
+      for (const auto &param : def.parameters) {
+        found = scanExpr(param);
+        if (!found.empty()) {
+          return found;
+        }
+      }
+      for (const auto &stmt : def.statements) {
+        found = scanExpr(stmt);
+        if (!found.empty()) {
+          return found;
+        }
+      }
+      if (def.returnExpr.has_value()) {
+        found = scanExpr(*def.returnExpr);
+        if (!found.empty()) {
+          return found;
+        }
+      }
+    }
+    for (const auto &exec : program.executions) {
+      std::string found = scanTransforms(exec.transforms);
+      if (!found.empty()) {
+        return found;
+      }
+      for (const auto &arg : exec.arguments) {
+        found = scanExpr(arg);
+        if (!found.empty()) {
+          return found;
+        }
+      }
+      for (const auto &arg : exec.bodyArguments) {
+        found = scanExpr(arg);
+        if (!found.empty()) {
+          return found;
+        }
+      }
+    }
+    return {};
+  };
+  if (std::string found = scanProgram(); !found.empty()) {
+    error = "native backend does not support software numeric types: " + found;
+    return false;
+  }
+
   auto isSupportedEffect = [](const std::string &name) {
     return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
            name == "pathspace_insert" || name == "pathspace_take" || name == "file_write" ||

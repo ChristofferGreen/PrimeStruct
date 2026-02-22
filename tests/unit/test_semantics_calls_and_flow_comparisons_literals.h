@@ -187,30 +187,30 @@ main() {
   CHECK(error.find("vector literal requires element type i32") != std::string::npos);
 }
 
-TEST_CASE("array literal rejects software numeric type") {
+TEST_CASE("array literal accepts software numeric type") {
   const std::string source = R"(
 [return<int>]
 main() {
-  array<decimal>(1.0f)
+  array<decimal>(convert<decimal>(1.0f32))
   return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("vector literal rejects software numeric type") {
+TEST_CASE("vector literal accepts software numeric type") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
-  vector<decimal>(1.0f)
+  vector<decimal>(convert<decimal>(1.0f32))
   return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map literal missing template args fails") {
@@ -230,17 +230,17 @@ main() {
   CHECK(error.find("map literal requires exactly two template arguments") != std::string::npos);
 }
 
-TEST_CASE("map literal rejects software numeric types") {
+TEST_CASE("map literal accepts software numeric types") {
   const std::string source = R"(
 [return<int>]
 main() {
-  map<integer, i32>(1i32, 2i32)
+  map<integer, i32>(convert<integer>(1i32), 2i32)
   return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map literal key type mismatch fails") {

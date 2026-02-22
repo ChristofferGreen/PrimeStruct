@@ -88,7 +88,13 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 
 Type aliases:
 - `int` and `float` are currently fixed to `i32` and `f32` in the compiler. Prefer explicit widths for deterministic behavior; future backends may widen these aliases.
-- Software numeric envelopes `integer`, `decimal`, and `complex` are reserved but not supported yet. Using them as binding/return types, template arguments, or `convert<T>` targets is a semantic error (`software numeric types are not supported yet`).
+- Software numeric envelopes `integer`, `decimal`, and `complex` are supported in the language spec:
+  - `integer` is arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping).
+  - `decimal` is arbitrary-precision floating with fixed 256-bit precision and deterministic round-to-nearest-even semantics.
+  - `complex` is a pair of `decimal` values (`real`, `imag`) using the same 256-bit precision and rounding rules.
+  - These envelopes are software-only; GPU backends reject them, and the current VM/native subset excludes them.
+  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use `convert<T>(value)` explicitly, and conversions that would overflow or lose information fail with diagnostics.
+  - Naming rationale: `integer`/`decimal`/`complex` model mathematical numbers and deterministic software arithmetic. Fixed-width envelopes (`i32`, `i64`, `u64`, `f32`, `f64`) model hardware behavior (modular integer arithmetic and IEEE-754 rounding), so they intentionally do not use the math-aligned names. The `int`/`float` aliases remain machine-native and map to `i32`/`f32`.
 - Bool literals: `true`, `false`.
 - String literals:
   - Double-quoted strings process escapes unless a raw suffix is used.

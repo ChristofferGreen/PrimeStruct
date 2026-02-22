@@ -118,6 +118,19 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
+TEST_CASE("rejects vm software numeric types") {
+  const std::string source = R"(
+[return<decimal>]
+main() {
+  [decimal] value{convert<decimal>(1.5f32)}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("vm_software_numeric.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 2);
+}
+
 TEST_CASE("runs vm with math predicates") {
   const std::string source = R"(
 import /std/math/*

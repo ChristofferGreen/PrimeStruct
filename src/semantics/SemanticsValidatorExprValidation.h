@@ -311,7 +311,8 @@
     auto isConvertibleExpr = [&](const Expr &arg) -> bool {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
       if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
-          kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool) {
+          kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool ||
+          kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
         return true;
       }
       if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
@@ -333,13 +334,15 @@
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
-                 paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Bool;
+                 paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Bool ||
+                 paramKind == ReturnKind::Integer || paramKind == ReturnKind::Decimal || paramKind == ReturnKind::Complex;
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
           return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
-                 localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 || localKind == ReturnKind::Bool;
+                 localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 || localKind == ReturnKind::Bool ||
+                 localKind == ReturnKind::Integer || localKind == ReturnKind::Decimal || localKind == ReturnKind::Complex;
         }
       }
       return true;
@@ -1311,6 +1314,14 @@
               error_ = "arithmetic operators require numeric operands in " + currentDefinitionPath_;
               return false;
             }
+            if (hasMixedNumericDomain(expr.args)) {
+              error_ = "arithmetic operators do not support mixed software/fixed numeric operands";
+              return false;
+            }
+            if (hasMixedComplexNumeric(expr.args)) {
+              error_ = "arithmetic operators do not support mixed complex/real operands";
+              return false;
+            }
             if (hasMixedSignedness(expr.args, false)) {
               error_ = "arithmetic operators do not support mixed signed/unsigned operands";
               return false;
@@ -1369,6 +1380,20 @@
                 return false;
               }
             }
+            if (hasMixedNumericDomain(expr.args)) {
+              error_ = "comparisons do not support mixed software/fixed numeric operands";
+              return false;
+            }
+            if (hasMixedComplexNumeric(expr.args)) {
+              error_ = "comparisons do not support mixed complex/real operands";
+              return false;
+            }
+            if (builtinName != "equal" && builtinName != "not_equal") {
+              if (hasComplexNumeric(expr.args)) {
+                error_ = "comparisons do not support ordered complex operands";
+                return false;
+              }
+            }
             if (hasMixedSignedness(expr.args, true)) {
               error_ = "comparisons do not support mixed signed/unsigned operands";
               return false;
@@ -1397,6 +1422,14 @@
             return false;
           }
         }
+        if (hasMixedNumericDomain(expr.args)) {
+          error_ = "clamp does not support mixed software/fixed numeric operands";
+          return false;
+        }
+        if (hasComplexNumeric(expr.args)) {
+          error_ = "clamp does not support complex operands";
+          return false;
+        }
         if (hasMixedSignedness(expr.args, false)) {
           error_ = "clamp does not support mixed signed/unsigned operands";
           return false;
@@ -1423,6 +1456,14 @@
             return false;
           }
         }
+        if (hasMixedNumericDomain(expr.args)) {
+          error_ = builtinName + " does not support mixed software/fixed numeric operands";
+          return false;
+        }
+        if (hasComplexNumeric(expr.args)) {
+          error_ = builtinName + " does not support complex operands";
+          return false;
+        }
         if (hasMixedSignedness(expr.args, false)) {
           error_ = builtinName + " does not support mixed signed/unsigned operands";
           return false;
@@ -1447,6 +1488,10 @@
           error_ = builtinName + " requires numeric operand";
           return false;
         }
+        if (builtinName == "sign" && hasComplexNumeric(expr.args)) {
+          error_ = "sign does not support complex operands";
+          return false;
+        }
         if (!validateExpr(params, locals, expr.args.front())) {
           return false;
         }
@@ -1459,6 +1504,10 @@
         }
         if (!isNumericExpr(expr.args.front())) {
           error_ = builtinName + " requires numeric operand";
+          return false;
+        }
+        if (hasComplexNumeric(expr.args)) {
+          error_ = builtinName + " does not support complex operands";
           return false;
         }
         if (!validateExpr(params, locals, expr.args.front())) {
@@ -1502,6 +1551,14 @@
               return false;
             }
           }
+          if (hasMixedNumericDomain(expr.args)) {
+            error_ = builtinName + " does not support mixed software/fixed numeric operands";
+            return false;
+          }
+          if (hasMixedComplexNumeric(expr.args)) {
+            error_ = builtinName + " does not support mixed complex/real operands";
+            return false;
+          }
           if (hasMixedSignedness(expr.args, false)) {
             error_ = builtinName + " does not support mixed signed/unsigned operands";
             return false;
@@ -1516,6 +1573,14 @@
               error_ = builtinName + " requires numeric operands";
               return false;
             }
+          }
+          if (hasMixedNumericDomain(expr.args)) {
+            error_ = builtinName + " does not support mixed software/fixed numeric operands";
+            return false;
+          }
+          if (hasMixedComplexNumeric(expr.args)) {
+            error_ = builtinName + " does not support mixed complex/real operands";
+            return false;
           }
           if (hasMixedSignedness(expr.args, false)) {
             error_ = builtinName + " does not support mixed signed/unsigned operands";
@@ -1609,12 +1674,9 @@
           return false;
         }
         const std::string &typeName = expr.templateArgs[0];
-        if (auto softwareType = findSoftwareNumericType(typeName)) {
-          error_ = "software numeric types are not supported yet: " + *softwareType;
-          return false;
-        }
         if (typeName != "int" && typeName != "i32" && typeName != "i64" && typeName != "u64" &&
-            typeName != "bool" && typeName != "float" && typeName != "f32" && typeName != "f64") {
+            typeName != "bool" && typeName != "float" && typeName != "f32" && typeName != "f64" &&
+            typeName != "integer" && typeName != "decimal" && typeName != "complex") {
           error_ = "unsupported convert target type: " + typeName;
           return false;
         }
@@ -1691,21 +1753,9 @@
             error_ = builtinName + " literal requires exactly one template argument";
             return false;
           }
-          if (auto softwareType = findSoftwareNumericType(expr.templateArgs.front())) {
-            error_ = "software numeric types are not supported yet: " + *softwareType;
-            return false;
-          }
         } else {
           if (expr.templateArgs.size() != 2) {
             error_ = "map literal requires exactly two template arguments";
-            return false;
-          }
-          if (auto softwareType = findSoftwareNumericType(expr.templateArgs[0])) {
-            error_ = "software numeric types are not supported yet: " + *softwareType;
-            return false;
-          }
-          if (auto softwareType = findSoftwareNumericType(expr.templateArgs[1])) {
-            error_ = "software numeric types are not supported yet: " + *softwareType;
             return false;
           }
           if (expr.args.size() % 2 != 0) {

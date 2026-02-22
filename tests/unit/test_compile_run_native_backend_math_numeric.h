@@ -772,5 +772,20 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+TEST_CASE("rejects native software numeric types") {
+  const std::string source = R"(
+[return<integer>]
+main() {
+  [integer] value{convert<integer>(1i32)}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_software_numeric.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_software_numeric_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 2);
+}
+
 TEST_SUITE_END();
 #endif

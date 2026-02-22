@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -49,6 +50,181 @@ std::string trimWhitespace(const std::string &text) {
     --end;
   }
   return text.substr(start, end - start);
+}
+
+bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
+  base.clear();
+  arg.clear();
+  const size_t open = text.find('<');
+  if (open == std::string::npos || open == 0 || text.back() != '>') {
+    return false;
+  }
+  base = text.substr(0, open);
+  int depth = 0;
+  size_t start = open + 1;
+  for (size_t i = start; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth == 0) {
+        if (i + 1 != text.size()) {
+          return false;
+        }
+        arg = text.substr(start, i - start);
+        return true;
+      }
+      --depth;
+    }
+  }
+  return false;
+}
+
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+  out.clear();
+  int depth = 0;
+  size_t start = 0;
+  auto pushSegment = [&](size_t end) {
+    size_t segStart = start;
+    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
+      ++segStart;
+    }
+    size_t segEnd = end;
+    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+      --segEnd;
+    }
+    out.push_back(text.substr(segStart, segEnd - segStart));
+  };
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+      }
+      continue;
+    }
+    if (c == ',' && depth == 0) {
+      pushSegment(i);
+      start = i + 1;
+    }
+  }
+  pushSegment(text.size());
+  for (const auto &seg : out) {
+    if (seg.empty()) {
+      return false;
+    }
+  }
+  return !out.empty();
+}
+
+std::optional<std::string> findSoftwareNumericType(const std::string &typeName) {
+  auto isSoftwareNumericName = [](const std::string &name) {
+    return name == "integer" || name == "decimal" || name == "complex";
+  };
+  if (typeName.empty()) {
+    return std::nullopt;
+  }
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(typeName, base, arg)) {
+    if (isSoftwareNumericName(typeName)) {
+      return typeName;
+    }
+    return std::nullopt;
+  }
+  if (isSoftwareNumericName(base)) {
+    return base;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(arg, args)) {
+    return std::nullopt;
+  }
+  for (const auto &nested : args) {
+    if (auto found = findSoftwareNumericType(nested)) {
+      return found;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> scanSoftwareNumericTypes(const primec::Program &program) {
+  auto scanTransforms = [&](const std::vector<primec::Transform> &transforms) -> std::optional<std::string> {
+    for (const auto &transform : transforms) {
+      if (auto found = findSoftwareNumericType(transform.name)) {
+        return found;
+      }
+      for (const auto &arg : transform.templateArgs) {
+        if (auto found = findSoftwareNumericType(arg)) {
+          return found;
+        }
+      }
+    }
+    return std::nullopt;
+  };
+  std::function<std::optional<std::string>(const primec::Expr &)> scanExpr;
+  scanExpr = [&](const primec::Expr &expr) -> std::optional<std::string> {
+    if (auto found = scanTransforms(expr.transforms)) {
+      return found;
+    }
+    for (const auto &arg : expr.templateArgs) {
+      if (auto found = findSoftwareNumericType(arg)) {
+        return found;
+      }
+    }
+    for (const auto &arg : expr.args) {
+      if (auto found = scanExpr(arg)) {
+        return found;
+      }
+    }
+    for (const auto &arg : expr.bodyArguments) {
+      if (auto found = scanExpr(arg)) {
+        return found;
+      }
+    }
+    return std::nullopt;
+  };
+  for (const auto &def : program.definitions) {
+    if (auto found = scanTransforms(def.transforms)) {
+      return found;
+    }
+    for (const auto &param : def.parameters) {
+      if (auto found = scanExpr(param)) {
+        return found;
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      if (auto found = scanExpr(stmt)) {
+        return found;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      if (auto found = scanExpr(*def.returnExpr)) {
+        return found;
+      }
+    }
+  }
+  for (const auto &exec : program.executions) {
+    if (auto found = scanTransforms(exec.transforms)) {
+      return found;
+    }
+    for (const auto &arg : exec.arguments) {
+      if (auto found = scanExpr(arg)) {
+        return found;
+      }
+    }
+    for (const auto &arg : exec.bodyArguments) {
+      if (auto found = scanExpr(arg)) {
+        return found;
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 void replaceAll(std::string &text, std::string_view from, std::string_view to) {
@@ -935,6 +1111,11 @@ int main(int argc, char **argv) {
       return 2;
     }
     return 0;
+  }
+
+  if (auto softwareType = scanSoftwareNumericTypes(program)) {
+    std::cerr << "C++ emit error: software numeric types are not supported: " << *softwareType << "\n";
+    return 2;
   }
 
   primec::Emitter emitter;

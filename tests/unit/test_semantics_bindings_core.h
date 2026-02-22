@@ -109,30 +109,30 @@ main() {
   CHECK(error.find("unsupported binding type") != std::string::npos);
 }
 
-TEST_CASE("software numeric bindings are rejected") {
+TEST_CASE("software numeric bindings are accepted") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [integer] value{1i32}
+  [integer] value{convert<integer>(1i32)}
   return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("software numeric collection bindings are rejected") {
+TEST_CASE("software numeric collection bindings are accepted") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [array<decimal>] values{array<decimal>(1.0f)}
+  [array<decimal>] values{array<decimal>(convert<decimal>(1.0f32))}
   return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("field-only definition can be used as a type") {
@@ -396,17 +396,17 @@ main() {
   CHECK(error.find("restrict type does not match binding type") != std::string::npos);
 }
 
-TEST_CASE("restrict rejects software numeric types") {
+TEST_CASE("restrict accepts software numeric types") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [restrict<decimal> i32] value{1i32}
-  return(value)
+  [restrict<decimal> decimal] value{convert<decimal>(1.0f32)}
+  return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("binding align_bytes validates") {
