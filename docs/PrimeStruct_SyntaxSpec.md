@@ -473,7 +473,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Backends reject unsupported effects.
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
   - Recognized v1 capabilities: `io_out`, `io_err`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
-    `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `render_graph`.
+    `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `gpu_dispatch`.
 
 ## 10. Error Handling (Draft)
 
@@ -507,6 +507,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - VM/native backends accept a restricted subset of envelopes/operations (see design doc).
 - Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
 - The C++ emitter supports broader operations and full string handling.
+- GPU backends accept only GPU-safe envelopes/operations; kernel bodies are validated against a GPU-safe allowlist.
 
 ## 14. Error Rules (Selected)
 
@@ -522,3 +523,12 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - `loop` counts must be integer envelopes; negative counts are errors.
 - `loop` / `while` / `for` require a body envelope (e.g., `do() { ... }`).
 - `and` / `or` / `not` accept only `bool` operands; use `bool{value}` or `convert<bool>(value)` to coerce integers.
+
+## 15. GPU Compute (Draft)
+
+- `[compute]` marks a definition as a GPU kernel. Kernels are `void` and write outputs via buffer parameters.
+- `workgroup_size(x, y, z)` fixes the kernel's local workgroup size and must appear alongside `[compute]`.
+- Host-side submission uses `dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
+- GPU builtins live under `/gpu/*`, starting with `/gpu/global_id_x()`, `/gpu/global_id_y()`, `/gpu/global_id_z()`.
+- GPU ID helpers are scalar (`i32`) per axis.
+- Storage buffers use `Buffer<T>` plus `buffer_load` / `buffer_store` helpers.

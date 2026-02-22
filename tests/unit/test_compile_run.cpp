@@ -16,7 +16,7 @@
 
 namespace {
 std::string writeTemp(const std::string &name, const std::string &contents) {
-  auto dir = std::filesystem::temp_directory_path() / "primec_tests";
+  auto dir = std::filesystem::current_path() / "primec_tests";
   std::filesystem::create_directories(dir);
   auto path = dir / name;
   std::ofstream file(path);
@@ -84,6 +84,7 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 #include "test_compile_run_vm_maps.h"
 #include "test_compile_run_vm_bounds.h"
 #include "test_compile_run_vm_outputs.h"
+#include "test_compile_run_vm_gpu.h"
 #include "test_compile_run_emitters.h"
 #include "test_compile_run_glsl.h"
 #include "test_compile_run_native_backend_core.h"

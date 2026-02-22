@@ -524,6 +524,30 @@
         }
       }
     }
+    std::string gpuBuiltin;
+    if (getBuiltinGpuName(expr, gpuBuiltin)) {
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "gpu builtins do not accept template arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "gpu builtins do not accept block arguments";
+        return false;
+      }
+      if (!expr.args.empty()) {
+        error_ = "gpu builtins do not accept arguments";
+        return false;
+      }
+      if (!currentDefinitionIsCompute_) {
+        error_ = "gpu builtins require a compute definition";
+        return false;
+      }
+      return true;
+    }
     PathSpaceBuiltin pathSpaceBuiltin;
     if (getPathSpaceBuiltin(expr, pathSpaceBuiltin) && defMap_.find(resolved) == defMap_.end()) {
       error_ = pathSpaceBuiltin.name + " is statement-only";
@@ -825,20 +849,336 @@
             getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name)) ||
             getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
+            getBuiltinGpuName(expr, builtinName) ||
             getBuiltinPointerName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
             getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
             isAssignCall(expr) || isIfCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
             isRepeatCall(expr) || expr.name == "count" || expr.name == "File" || expr.name == "try" ||
             expr.name == "capacity" || isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
             isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
-            isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap")) {
+            isSimpleCallName(expr, "remove_at") || isSimpleCallName(expr, "remove_swap") ||
+            isSimpleCallName(expr, "dispatch") || isSimpleCallName(expr, "gpu_buffer") ||
+            isSimpleCallName(expr, "gpu_upload") || isSimpleCallName(expr, "gpu_readback") ||
+            isSimpleCallName(expr, "buffer_load") || isSimpleCallName(expr, "buffer_store")) {
           isBuiltin = true;
         }
-        if (isBuiltin) {
-          error_ = "named arguments not supported for builtin calls";
+      if (isBuiltin) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+    }
+    auto isIntegerKind = [&](ReturnKind kind) -> bool {
+      return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
+    };
+    auto isNumericOrBoolKind = [&](ReturnKind kind) -> bool {
+      return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+             kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool;
+    };
+    auto resolveArrayElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          if (paramBinding->typeName == "array" && !paramBinding->typeTemplateArg.empty()) {
+            elemType = paramBinding->typeTemplateArg;
+            return true;
+          }
+        }
+        auto itLocal = locals.find(arg.name);
+        if (itLocal != locals.end()) {
+          if (itLocal->second.typeName == "array" && !itLocal->second.typeTemplateArg.empty()) {
+            elemType = itLocal->second.typeTemplateArg;
+            return true;
+          }
+        }
+      }
+      if (arg.kind == Expr::Kind::Call) {
+        std::string collection;
+        if (getBuiltinCollectionName(arg, collection) && collection == "array" && arg.templateArgs.size() == 1) {
+          elemType = arg.templateArgs.front();
+          return true;
+        }
+      }
+      return false;
+    };
+    auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+      if (arg.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+          if (paramBinding->typeName == "Buffer" && !paramBinding->typeTemplateArg.empty()) {
+            elemType = paramBinding->typeTemplateArg;
+            return true;
+          }
+        }
+        auto itLocal = locals.find(arg.name);
+        if (itLocal != locals.end()) {
+          if (itLocal->second.typeName == "Buffer" && !itLocal->second.typeTemplateArg.empty()) {
+            elemType = itLocal->second.typeTemplateArg;
+            return true;
+          }
+        }
+      }
+      if (arg.kind == Expr::Kind::Call) {
+        if (isSimpleCallName(arg, "gpu_buffer") && arg.templateArgs.size() == 1) {
+          elemType = arg.templateArgs.front();
+          return true;
+        }
+        if (isSimpleCallName(arg, "gpu_upload") && arg.args.size() == 1) {
+          return resolveArrayElemType(arg.args.front(), elemType);
+        }
+      }
+      return false;
+    };
+    if (isSimpleCallName(expr, "dispatch")) {
+      if (currentDefinitionIsCompute_) {
+        error_ = "dispatch is not allowed in compute definitions";
+        return false;
+      }
+      if (activeEffects_.count("gpu_dispatch") == 0) {
+        error_ = "dispatch requires gpu_dispatch effect";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "dispatch does not accept template arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "dispatch does not accept block arguments";
+        return false;
+      }
+      if (expr.args.size() < 4) {
+        error_ = "dispatch requires kernel and three dimension arguments";
+        return false;
+      }
+      if (expr.args.front().kind != Expr::Kind::Name) {
+        error_ = "dispatch requires kernel name as first argument";
+        return false;
+      }
+      const Expr &kernelExpr = expr.args.front();
+      const std::string kernelPath = resolveCalleePath(kernelExpr);
+      auto defIt = defMap_.find(kernelPath);
+      if (defIt == defMap_.end()) {
+        error_ = "unknown kernel: " + kernelPath;
+        return false;
+      }
+      bool isCompute = false;
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name == "compute") {
+          isCompute = true;
+          break;
+        }
+      }
+      if (!isCompute) {
+        error_ = "dispatch requires compute definition: " + kernelPath;
+        return false;
+      }
+      for (size_t i = 1; i <= 3; ++i) {
+        if (!validateExpr(params, locals, expr.args[i])) {
+          return false;
+        }
+        ReturnKind dimKind = inferExprReturnKind(expr.args[i], params, locals);
+        if (!isIntegerKind(dimKind)) {
+          error_ = "dispatch dimensions require integer expressions";
           return false;
         }
       }
+      const auto &kernelParams = paramsByDef_[kernelPath];
+      if (expr.args.size() != kernelParams.size() + 4) {
+        error_ = "dispatch argument count mismatch for " + kernelPath;
+        return false;
+      }
+      for (size_t i = 4; i < expr.args.size(); ++i) {
+        if (!validateExpr(params, locals, expr.args[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (isSimpleCallName(expr, "gpu_buffer")) {
+      if (currentDefinitionIsCompute_) {
+        error_ = "gpu_buffer is not allowed in compute definitions";
+        return false;
+      }
+      if (activeEffects_.count("gpu_dispatch") == 0) {
+        error_ = "gpu_buffer requires gpu_dispatch effect";
+        return false;
+      }
+      if (expr.templateArgs.size() != 1) {
+        error_ = "gpu_buffer requires exactly one template argument";
+        return false;
+      }
+      if (expr.args.size() != 1) {
+        error_ = "gpu_buffer requires exactly one argument";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "gpu_buffer does not accept block arguments";
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      ReturnKind countKind = inferExprReturnKind(expr.args.front(), params, locals);
+      if (!isIntegerKind(countKind)) {
+        error_ = "gpu_buffer size requires integer expression";
+        return false;
+      }
+      ReturnKind elemKind = returnKindForTypeName(expr.templateArgs.front());
+      if (!isNumericOrBoolKind(elemKind)) {
+        error_ = "gpu_buffer requires numeric/bool element type";
+        return false;
+      }
+      return true;
+    }
+    if (isSimpleCallName(expr, "gpu_upload")) {
+      if (currentDefinitionIsCompute_) {
+        error_ = "gpu_upload is not allowed in compute definitions";
+        return false;
+      }
+      if (activeEffects_.count("gpu_dispatch") == 0) {
+        error_ = "gpu_upload requires gpu_dispatch effect";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "gpu_upload does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 1) {
+        error_ = "gpu_upload requires exactly one argument";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "gpu_upload does not accept block arguments";
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveArrayElemType(expr.args.front(), elemType)) {
+        error_ = "gpu_upload requires array input";
+        return false;
+      }
+      ReturnKind elemKind = returnKindForTypeName(elemType);
+      if (!isNumericOrBoolKind(elemKind)) {
+        error_ = "gpu_upload requires numeric/bool element type";
+        return false;
+      }
+      return true;
+    }
+    if (isSimpleCallName(expr, "gpu_readback")) {
+      if (currentDefinitionIsCompute_) {
+        error_ = "gpu_readback is not allowed in compute definitions";
+        return false;
+      }
+      if (activeEffects_.count("gpu_dispatch") == 0) {
+        error_ = "gpu_readback requires gpu_dispatch effect";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "gpu_readback does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 1) {
+        error_ = "gpu_readback requires exactly one argument";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "gpu_readback does not accept block arguments";
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args.front())) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveBufferElemType(expr.args.front(), elemType)) {
+        error_ = "gpu_readback requires Buffer input";
+        return false;
+      }
+      ReturnKind elemKind = returnKindForTypeName(elemType);
+      if (!isNumericOrBoolKind(elemKind)) {
+        error_ = "gpu_readback requires numeric/bool element type";
+        return false;
+      }
+      return true;
+    }
+    if (isSimpleCallName(expr, "buffer_load")) {
+      if (!currentDefinitionIsCompute_) {
+        error_ = "buffer_load requires a compute definition";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "buffer_load does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 2) {
+        error_ = "buffer_load requires buffer and index arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "buffer_load does not accept block arguments";
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args[0]) || !validateExpr(params, locals, expr.args[1])) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveBufferElemType(expr.args[0], elemType)) {
+        error_ = "buffer_load requires Buffer input";
+        return false;
+      }
+      ReturnKind elemKind = returnKindForTypeName(elemType);
+      if (!isNumericOrBoolKind(elemKind)) {
+        error_ = "buffer_load requires numeric/bool element type";
+        return false;
+      }
+      ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
+      if (!isIntegerKind(indexKind)) {
+        error_ = "buffer_load requires integer index";
+        return false;
+      }
+      return true;
+    }
+    if (isSimpleCallName(expr, "buffer_store")) {
+      if (!currentDefinitionIsCompute_) {
+        error_ = "buffer_store requires a compute definition";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = "buffer_store does not accept template arguments";
+        return false;
+      }
+      if (expr.args.size() != 3) {
+        error_ = "buffer_store requires buffer, index, and value arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "buffer_store does not accept block arguments";
+        return false;
+      }
+      if (!validateExpr(params, locals, expr.args[0]) || !validateExpr(params, locals, expr.args[1]) ||
+          !validateExpr(params, locals, expr.args[2])) {
+        return false;
+      }
+      std::string elemType;
+      if (!resolveBufferElemType(expr.args[0], elemType)) {
+        error_ = "buffer_store requires Buffer input";
+        return false;
+      }
+      ReturnKind elemKind = returnKindForTypeName(elemType);
+      if (!isNumericOrBoolKind(elemKind)) {
+        error_ = "buffer_store requires numeric/bool element type";
+        return false;
+      }
+      ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
+      if (!isIntegerKind(indexKind)) {
+        error_ = "buffer_store requires integer index";
+        return false;
+      }
+      ReturnKind valueKind = inferExprReturnKind(expr.args[2], params, locals);
+      if (valueKind != ReturnKind::Unknown && valueKind != elemKind) {
+        error_ = "buffer_store value type mismatch";
+        return false;
+      }
+      return true;
+    }
       if (resolvedMethod && (resolved == "/array/count" || resolved == "/vector/count" || resolved == "/string/count" ||
                              resolved == "/map/count")) {
         if (!expr.templateArgs.empty()) {

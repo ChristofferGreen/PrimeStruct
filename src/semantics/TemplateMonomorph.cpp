@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -499,42 +500,30 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     return "/" + expr.name;
   }
   if (!namespacePrefix.empty()) {
-    std::string current = namespacePrefix;
-    while (true) {
-      if (!current.empty()) {
-        std::string scoped = current + "/" + expr.name;
-        if (ctx.sourceDefs.count(scoped) > 0) {
-          return scoped;
-        }
-        if (current.size() > expr.name.size()) {
-          const size_t start = current.size() - expr.name.size();
-          if (start > 0 && current[start - 1] == '/' &&
-              current.compare(start, expr.name.size(), expr.name) == 0 &&
-              ctx.sourceDefs.count(current) > 0) {
-            return current;
-          }
-        }
-      } else {
-        std::string root = "/" + expr.name;
-        if (ctx.sourceDefs.count(root) > 0) {
-          return root;
-        }
+    const size_t lastSlash = namespacePrefix.find_last_of('/');
+    const std::string_view suffix = lastSlash == std::string::npos
+                                        ? std::string_view(namespacePrefix)
+                                        : std::string_view(namespacePrefix).substr(lastSlash + 1);
+    if (suffix == expr.name && ctx.sourceDefs.count(namespacePrefix) > 0) {
+      return namespacePrefix;
+    }
+    std::string prefix = namespacePrefix;
+    while (!prefix.empty()) {
+      std::string candidate = prefix + "/" + expr.name;
+      if (ctx.sourceDefs.count(candidate) > 0) {
+        return candidate;
       }
-      if (current.empty()) {
+      const size_t slash = prefix.find_last_of('/');
+      if (slash == std::string::npos) {
         break;
       }
-      const size_t slash = current.find_last_of('/');
-      if (slash == std::string::npos || slash == 0) {
-        current.clear();
-      } else {
-        current.erase(slash);
-      }
+      prefix = prefix.substr(0, slash);
     }
     auto aliasIt = ctx.importAliases.find(expr.name);
     if (aliasIt != ctx.importAliases.end()) {
       return aliasIt->second;
     }
-    return "/" + expr.name;
+    return namespacePrefix + "/" + expr.name;
   }
   std::string root = "/" + expr.name;
   if (ctx.sourceDefs.count(root) > 0) {

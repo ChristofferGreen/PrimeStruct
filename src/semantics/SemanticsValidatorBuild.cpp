@@ -11,7 +11,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
   entryDefaultEffectSet_.clear();
   defMap_.clear();
   returnKinds_.clear();
-  returnStructs_.clear();
   structNames_.clear();
   paramsByDef_.clear();
 
@@ -39,6 +38,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     entryDefaultEffectSet_.insert(effect);
   }
 
+  std::unordered_set<std::string> explicitStructs;
   for (const auto &def : program_.definitions) {
     if (defMap_.count(def.fullPath) > 0) {
       error_ = "duplicate definition: " + def.fullPath;
@@ -54,6 +54,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawEffects = false;
     bool sawCapabilities = false;
     bool sawOnError = false;
+    bool sawCompute = false;
+    bool sawWorkgroupSize = false;
     bool sawNoPadding = false;
     bool sawPlatformPadding = false;
     for (const auto &transform : def.transforms) {
@@ -108,6 +110,41 @@ bool SemanticsValidator::buildDefinitionMaps() {
           error_ = "on_error requires exactly two template arguments on " + def.fullPath;
           return false;
         }
+      } else if (transform.name == "compute") {
+        if (sawCompute) {
+          error_ = "duplicate compute transform on " + def.fullPath;
+          return false;
+        }
+        sawCompute = true;
+        if (!transform.templateArgs.empty()) {
+          error_ = "compute does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error_ = "compute does not accept arguments on " + def.fullPath;
+          return false;
+        }
+      } else if (transform.name == "workgroup_size") {
+        if (sawWorkgroupSize) {
+          error_ = "duplicate workgroup_size transform on " + def.fullPath;
+          return false;
+        }
+        sawWorkgroupSize = true;
+        if (!transform.templateArgs.empty()) {
+          error_ = "workgroup_size does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (transform.arguments.size() != 3) {
+          error_ = "workgroup_size requires three arguments on " + def.fullPath;
+          return false;
+        }
+        int value = 0;
+        for (const auto &arg : transform.arguments) {
+          if (!parsePositiveIntArg(arg, value)) {
+            error_ = "workgroup_size requires positive integer arguments on " + def.fullPath;
+            return false;
+          }
+        }
       } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
         error_ = "placement transforms are not supported: " + def.fullPath;
         return false;
@@ -142,6 +179,19 @@ bool SemanticsValidator::buildDefinitionMaps() {
           error_ = "struct transform does not accept arguments on " + def.fullPath;
           return false;
         }
+      }
+    }
+    if (sawWorkgroupSize && !sawCompute) {
+      bool hasCompute = false;
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "compute") {
+          hasCompute = true;
+          break;
+        }
+      }
+      if (!hasCompute) {
+        error_ = "workgroup_size is only valid on compute definitions: " + def.fullPath;
+        return false;
       }
     }
     if (sawNoPadding && sawPlatformPadding) {
@@ -191,6 +241,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
       structNames_.insert(def.fullPath);
     }
     if (isStruct) {
+      explicitStructs.insert(def.fullPath);
       if (hasReturnTransform) {
         error_ = "struct definitions cannot declare return types: " + def.fullPath;
         return false;
@@ -252,14 +303,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
       }
     }
-    ReturnKind kind = isStruct ? ReturnKind::Array : ReturnKind::Void;
-    if (!isStruct) {
-      kind = getReturnKind(def, error_);
-      if (!error_.empty()) {
-        return false;
-      }
-    }
-    returnKinds_[def.fullPath] = kind;
     defMap_[def.fullPath] = &def;
   }
 
@@ -358,96 +401,17 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
   }
 
-  auto resolveStructReturnPath = [&](const std::string &typeName,
-                                     const std::string &namespacePrefix) -> std::string {
-    if (typeName.empty()) {
-      return "";
-    }
-    if (!typeName.empty() && typeName[0] == '/') {
-      return structNames_.count(typeName) > 0 ? typeName : "";
-    }
-    std::string current = namespacePrefix;
-    while (true) {
-      if (!current.empty()) {
-        std::string direct = current + "/" + typeName;
-        if (structNames_.count(direct) > 0) {
-          return direct;
-        }
-        if (current.size() > typeName.size()) {
-          const size_t start = current.size() - typeName.size();
-          if (start > 0 && current[start - 1] == '/' &&
-              current.compare(start, typeName.size(), typeName) == 0 &&
-              structNames_.count(current) > 0) {
-            return current;
-          }
-        }
-      } else {
-        std::string root = "/" + typeName;
-        if (structNames_.count(root) > 0) {
-          return root;
-        }
-      }
-      if (current.empty()) {
-        break;
-      }
-      const size_t slash = current.find_last_of('/');
-      if (slash == std::string::npos || slash == 0) {
-        current.clear();
-      } else {
-        current.erase(slash);
-      }
-    }
-    auto importIt = importAliases_.find(typeName);
-    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
-      return importIt->second;
-    }
-    return "";
-  };
-
   for (const auto &def : program_.definitions) {
-    if (structNames_.count(def.fullPath) > 0) {
-      returnStructs_[def.fullPath] = def.fullPath;
-      continue;
-    }
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      const std::string &typeName = transform.templateArgs.front();
-      std::string structPath = resolveStructReturnPath(typeName, def.namespacePrefix);
-      if (!structPath.empty()) {
-        returnStructs_[def.fullPath] = structPath;
-      }
-      break;
-    }
-  }
-
-  auto isSupportedReturnType = [&](const std::string &typeName, const std::string &namespacePrefix) -> bool {
-    if (returnKindForTypeName(typeName) != ReturnKind::Unknown) {
-      return true;
-    }
-    std::string base;
-    std::string arg;
-    if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
-      return false;
-    }
-    return !resolveStructReturnPath(typeName, namespacePrefix).empty();
-  };
-  for (const auto &def : program_.definitions) {
-    if (structNames_.count(def.fullPath) > 0) {
-      continue;
-    }
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      const std::string &typeName = transform.templateArgs.front();
-      if (!isSupportedReturnType(typeName, def.namespacePrefix)) {
-        error_ = "unsupported return type on " + def.fullPath;
+    ReturnKind kind = ReturnKind::Void;
+    if (explicitStructs.count(def.fullPath) > 0) {
+      kind = ReturnKind::Array;
+    } else {
+      kind = getReturnKind(def, structNames_, importAliases_, error_);
+      if (!error_.empty()) {
         return false;
       }
-      break;
     }
+    returnKinds_[def.fullPath] = kind;
   }
 
   struct HelperSuffixInfo {
@@ -694,42 +658,30 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return "/" + expr.name;
   }
   if (!expr.namespacePrefix.empty()) {
-    std::string current = expr.namespacePrefix;
-    while (true) {
-      if (!current.empty()) {
-        std::string scoped = current + "/" + expr.name;
-        if (defMap_.count(scoped) > 0) {
-          return scoped;
-        }
-        if (current.size() > expr.name.size()) {
-          const size_t start = current.size() - expr.name.size();
-          if (start > 0 && current[start - 1] == '/' &&
-              current.compare(start, expr.name.size(), expr.name) == 0 &&
-              defMap_.count(current) > 0) {
-            return current;
-          }
-        }
-      } else {
-        std::string root = "/" + expr.name;
-        if (defMap_.count(root) > 0) {
-          return root;
-        }
+    const size_t lastSlash = expr.namespacePrefix.find_last_of('/');
+    const std::string_view suffix = lastSlash == std::string::npos
+                                        ? std::string_view(expr.namespacePrefix)
+                                        : std::string_view(expr.namespacePrefix).substr(lastSlash + 1);
+    if (suffix == expr.name && defMap_.count(expr.namespacePrefix) > 0) {
+      return expr.namespacePrefix;
+    }
+    std::string prefix = expr.namespacePrefix;
+    while (!prefix.empty()) {
+      std::string candidate = prefix + "/" + expr.name;
+      if (defMap_.count(candidate) > 0) {
+        return candidate;
       }
-      if (current.empty()) {
+      const size_t slash = prefix.find_last_of('/');
+      if (slash == std::string::npos) {
         break;
       }
-      const size_t slash = current.find_last_of('/');
-      if (slash == std::string::npos || slash == 0) {
-        current.clear();
-      } else {
-        current.erase(slash);
-      }
+      prefix = prefix.substr(0, slash);
     }
     auto it = importAliases_.find(expr.name);
     if (it != importAliases_.end()) {
       return it->second;
     }
-    return "/" + expr.name;
+    return expr.namespacePrefix + "/" + expr.name;
   }
   std::string root = "/" + expr.name;
   if (defMap_.count(root) > 0) {
@@ -800,14 +752,6 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);
   if (kind == ReturnKind::Unknown || kind == ReturnKind::Void) {
     return false;
-  }
-  if (kind == ReturnKind::Array) {
-    std::string structPath = inferStructReturnPath(initializer, params, locals);
-    if (!structPath.empty()) {
-      bindingOut.typeName = structPath;
-      bindingOut.typeTemplateArg.clear();
-      return true;
-    }
   }
   std::string inferred = typeNameForReturnKind(kind);
   if (inferred.empty()) {

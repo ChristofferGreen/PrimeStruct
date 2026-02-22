@@ -309,6 +309,18 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       }
       return bindingTypeToCpp(info, def.namespacePrefix, importAliases, structTypeMap);
     }
+    if (returnKind == ReturnKind::Unknown) {
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "return" && !transform.templateArgs.empty()) {
+          std::string resolved =
+              bindingTypeToCpp(transform.templateArgs.front(), def.namespacePrefix, importAliases, structTypeMap);
+          if (resolved != "int") {
+            return resolved;
+          }
+          break;
+        }
+      }
+    }
     return std::string("int");
   };
   auto appendParam = [&](std::ostringstream &out,
@@ -862,6 +874,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (!inferenceStack.insert(def.fullPath).second) {
       return ReturnKind::Unknown;
     }
+    bool hasExplicitReturnTransform = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return") {
+        hasExplicitReturnTransform = true;
+        break;
+      }
+    }
     const auto &params = paramMap[def.fullPath];
     ReturnKind inferred = ReturnKind::Unknown;
     std::string inferredStructPath;
@@ -953,7 +972,11 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (!sawReturn) {
       kind = ReturnKind::Void;
     } else if (inferred == ReturnKind::Unknown) {
+      if (hasExplicitReturnTransform) {
+        kind = ReturnKind::Unknown;
+      } else {
       kind = ReturnKind::Int;
+      }
     } else {
       kind = inferred;
     }

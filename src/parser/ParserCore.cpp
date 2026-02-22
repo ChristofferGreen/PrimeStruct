@@ -976,6 +976,10 @@ bool Parser::allowMathBareName(const std::string &name) const {
   if (name.empty() || name.find('/') != std::string::npos) {
     return false;
   }
+  const std::string prefix = currentNamespacePrefix();
+  if (prefix == "/math" || prefix.rfind("/math/", 0) == 0) {
+    return true;
+  }
   return mathImportAll_ || mathImports_.count(name) > 0;
 }
 

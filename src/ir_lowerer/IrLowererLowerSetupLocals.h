@@ -2,7 +2,7 @@
   struct LocalInfo {
     int32_t index = 0;
     bool isMutable = false;
-    enum class Kind { Value, Pointer, Reference, Array, Vector, Map } kind = Kind::Value;
+    enum class Kind { Value, Pointer, Reference, Array, Vector, Map, Buffer } kind = Kind::Value;
     enum class ValueKind { Unknown, Int32, Int64, UInt64, Float32, Float64, Bool, String } valueKind = ValueKind::Unknown;
     std::string structTypeName;
     int32_t structFieldCount = 0;
@@ -684,6 +684,9 @@
       if (transform.name == "map") {
         return LocalInfo::Kind::Map;
       }
+      if (transform.name == "Buffer") {
+        return LocalInfo::Kind::Buffer;
+      }
     }
     return LocalInfo::Kind::Value;
   };
@@ -715,7 +718,7 @@
         }
         return LocalInfo::ValueKind::Unknown;
       }
-      if (transform.name == "array" || transform.name == "vector") {
+      if (transform.name == "array" || transform.name == "vector" || transform.name == "Buffer") {
         if (transform.templateArgs.size() == 1) {
           return valueKindFromTypeName(transform.templateArgs.front());
         }

@@ -464,6 +464,34 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       }
       return false;
     };
+    auto resolveBufferTarget = [&](const Expr &target, std::string &elemType) -> bool {
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
+          if (paramBinding->typeName == "Buffer" && !paramBinding->typeTemplateArg.empty()) {
+            elemType = paramBinding->typeTemplateArg;
+            return true;
+          }
+        }
+        auto it = locals.find(target.name);
+        if (it != locals.end()) {
+          if (it->second.typeName == "Buffer" && !it->second.typeTemplateArg.empty()) {
+            elemType = it->second.typeTemplateArg;
+            return true;
+          }
+        }
+        return false;
+      }
+      if (target.kind == Expr::Kind::Call) {
+        if (isSimpleCallName(target, "gpu_buffer") && target.templateArgs.size() == 1) {
+          elemType = target.templateArgs.front();
+          return true;
+        }
+        if (isSimpleCallName(target, "gpu_upload") && target.args.size() == 1) {
+          return resolveArrayTarget(target.args.front(), elemType);
+        }
+      }
+      return false;
+    };
     auto resolveStringTarget = [&](const Expr &target) -> bool {
       if (target.kind == Expr::Kind::StringLiteral) {
         return true;
@@ -628,6 +656,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       const Expr &receiver = expr.args.front();
       std::string typeName;
       std::string typeTemplateArg;
+      if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+        const std::string resolvedType = resolveCalleePath(receiver);
+        if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
+          resolvedOut = resolvedType + "/" + expr.name;
+          return true;
+        }
+      }
       if (receiver.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
           typeName = paramBinding->typeName;
@@ -653,13 +688,6 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
         if (!inferred.empty()) {
           typeName = inferred;
-        }
-      }
-      if (typeName.empty() && receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
-        const std::string resolvedType = resolveCalleePath(receiver);
-        if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
-          resolvedOut = resolvedType + "/" + expr.name;
-          return true;
         }
       }
       if (typeName.empty()) {
@@ -771,6 +799,21 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         }
       }
       return ReturnKind::Unknown;
+    }
+    if (getBuiltinGpuName(expr, builtinName)) {
+      return ReturnKind::Int;
+    }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "buffer_load") && expr.args.size() == 2) {
+      std::string elemType;
+      if (resolveBufferTarget(expr.args.front(), elemType)) {
+        ReturnKind kind = returnKindForTypeName(elemType);
+        return kind == ReturnKind::Unknown ? ReturnKind::Unknown : kind;
+      }
+      return ReturnKind::Unknown;
+    }
+    if (!expr.isMethodCall && (isSimpleCallName(expr, "gpu_buffer") || isSimpleCallName(expr, "gpu_upload") ||
+                               isSimpleCallName(expr, "gpu_readback"))) {
+      return ReturnKind::Array;
     }
     if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
       if (builtinName == "dereference") {

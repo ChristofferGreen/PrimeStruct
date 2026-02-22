@@ -8,6 +8,10 @@
 
 namespace primec::ir_lowerer {
 
+constexpr const char *kGpuGlobalIdXName = "__gpu_global_id_x";
+constexpr const char *kGpuGlobalIdYName = "__gpu_global_id_y";
+constexpr const char *kGpuGlobalIdZName = "__gpu_global_id_z";
+
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isReturnCall(const Expr &expr);
 bool isIfCall(const Expr &expr);
@@ -58,6 +62,7 @@ bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowB
 bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinConvertName(const Expr &expr);
+bool getBuiltinGpuName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);

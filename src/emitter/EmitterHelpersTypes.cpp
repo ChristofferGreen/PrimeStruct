@@ -334,20 +334,48 @@ std::string resolveStructTypeName(const std::string &typeName,
       return it->second;
     }
   }
-  std::string resolved = typeName;
-  if (!resolved.empty() && resolved[0] != '/') {
-    resolved = resolveTypePath(typeName, namespacePrefix);
+  auto resolveFromMap = [&](const std::string &candidate) -> std::string {
+    auto it = structTypeMap.find(candidate);
+    if (it != structTypeMap.end()) {
+      return it->second;
+    }
+    return "";
+  };
+  if (!typeName.empty() && typeName[0] == '/') {
+    return resolveFromMap(typeName);
   }
-  auto it = structTypeMap.find(resolved);
-  if (it != structTypeMap.end()) {
-    return it->second;
+  if (!namespacePrefix.empty()) {
+    const size_t lastSlash = namespacePrefix.find_last_of('/');
+    const std::string_view suffix = lastSlash == std::string::npos
+                                        ? std::string_view(namespacePrefix)
+                                        : std::string_view(namespacePrefix).substr(lastSlash + 1);
+    if (suffix == typeName) {
+      std::string direct = resolveFromMap(namespacePrefix);
+      if (!direct.empty()) {
+        return direct;
+      }
+    }
+    std::string prefix = namespacePrefix;
+    while (!prefix.empty()) {
+      std::string candidate = prefix + "/" + typeName;
+      std::string resolved = resolveFromMap(candidate);
+      if (!resolved.empty()) {
+        return resolved;
+      }
+      const size_t slash = prefix.find_last_of('/');
+      if (slash == std::string::npos) {
+        break;
+      }
+      prefix = prefix.substr(0, slash);
+    }
+  }
+  std::string rootResolved = resolveFromMap("/" + typeName);
+  if (!rootResolved.empty()) {
+    return rootResolved;
   }
   auto importIt = importAliases.find(typeName);
   if (importIt != importAliases.end()) {
-    auto importStruct = structTypeMap.find(importIt->second);
-    if (importStruct != structTypeMap.end()) {
-      return importStruct->second;
-    }
+    return resolveFromMap(importIt->second);
   }
   return "";
 }

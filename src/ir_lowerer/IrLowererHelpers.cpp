@@ -408,6 +408,28 @@ bool getBuiltinConvertName(const Expr &expr) {
   return name == "convert";
 }
 
+bool getBuiltinGpuName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.rfind("gpu/", 0) != 0) {
+    return false;
+  }
+  normalized = normalized.substr(4);
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  if (normalized == "global_id_x" || normalized == "global_id_y" || normalized == "global_id_z") {
+    out = normalized;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;

@@ -943,6 +943,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       error_ = "repeat is only supported as a statement";
       return false;
     }
+    if (isSimpleCallName(expr, "dispatch")) {
+      error_ = "dispatch is only supported as a statement";
+      return false;
+    }
+    if (isSimpleCallName(expr, "buffer_store")) {
+      error_ = "buffer_store is only supported as a statement";
+      return false;
+    }
     auto getVectorStatementHelperName = [&](const Expr &candidate, std::string &nameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call) {
         return false;

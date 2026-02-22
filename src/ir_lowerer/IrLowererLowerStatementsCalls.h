@@ -1,3 +1,199 @@
+    if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "buffer_store")) {
+      if (stmt.args.size() != 3) {
+        error = "buffer_store requires buffer, index, and value";
+        return false;
+      }
+      LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+      if (stmt.args[0].kind == Expr::Kind::Name) {
+        auto it = localsIn.find(stmt.args[0].name);
+        if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
+          elemKind = it->second.valueKind;
+        }
+      } else if (stmt.args[0].kind == Expr::Kind::Call) {
+        if (isSimpleCallName(stmt.args[0], "gpu_buffer") && stmt.args[0].templateArgs.size() == 1) {
+          elemKind = valueKindFromTypeName(stmt.args[0].templateArgs.front());
+        }
+      }
+      if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+        error = "buffer_store requires numeric/bool buffer";
+        return false;
+      }
+      LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+      if (!isSupportedIndexKind(indexKind)) {
+        error = "buffer_store requires integer index";
+        return false;
+      }
+      const int32_t ptrLocal = allocTempLocal();
+      if (!emitExpr(stmt.args[0], localsIn)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+      const int32_t indexLocal = allocTempLocal();
+      if (!emitExpr(stmt.args[1], localsIn)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+      const int32_t valueLocal = allocTempLocal();
+      if (!emitExpr(stmt.args[2], localsIn)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      function.instructions.push_back({pushOneForIndex(indexKind), 1});
+      function.instructions.push_back({addForIndex(indexKind), 0});
+      function.instructions.push_back({pushOneForIndex(indexKind), 16});
+      function.instructions.push_back({mulForIndex(indexKind), 0});
+      function.instructions.push_back({IrOpcode::AddI64, 0});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+      function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+      function.instructions.push_back({IrOpcode::Pop, 0});
+      return true;
+    }
+    if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "dispatch")) {
+      if (stmt.args.size() < 4) {
+        error = "dispatch requires kernel and three dimension arguments";
+        return false;
+      }
+      if (stmt.args.front().kind != Expr::Kind::Name) {
+        error = "dispatch requires kernel name as first argument";
+        return false;
+      }
+      const Expr &kernelExpr = stmt.args.front();
+      const std::string kernelPath = resolveExprPath(kernelExpr);
+      auto defIt = defMap.find(kernelPath);
+      if (defIt == defMap.end() || !defIt->second) {
+        error = "dispatch requires known kernel: " + kernelPath;
+        return false;
+      }
+      bool isCompute = false;
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name == "compute") {
+          isCompute = true;
+          break;
+        }
+      }
+      if (!isCompute) {
+        error = "dispatch requires compute definition: " + kernelPath;
+        return false;
+      }
+      for (size_t i = 1; i <= 3; ++i) {
+        LocalInfo::ValueKind dimKind = inferExprKind(stmt.args[i], localsIn);
+        if (dimKind != LocalInfo::ValueKind::Int32) {
+          error = "dispatch requires i32 dimensions";
+          return false;
+        }
+      }
+      const auto &kernelParams = defIt->second->parameters;
+      if (stmt.args.size() != kernelParams.size() + 4) {
+        error = "dispatch argument count mismatch for " + kernelPath;
+        return false;
+      }
+      const int32_t gxLocal = allocTempLocal();
+      if (!emitExpr(stmt.args[1], localsIn)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gxLocal)});
+      const int32_t gyLocal = allocTempLocal();
+      if (!emitExpr(stmt.args[2], localsIn)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gyLocal)});
+      const int32_t gzLocal = allocTempLocal();
+      if (!emitExpr(stmt.args[3], localsIn)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gzLocal)});
+
+      const int32_t xLocal = allocTempLocal();
+      const int32_t yLocal = allocTempLocal();
+      const int32_t zLocal = allocTempLocal();
+      const int32_t gidXLocal = allocTempLocal();
+      const int32_t gidYLocal = allocTempLocal();
+      const int32_t gidZLocal = allocTempLocal();
+
+      LocalMap dispatchLocals = localsIn;
+      LocalInfo gidInfo;
+      gidInfo.index = gidXLocal;
+      gidInfo.kind = LocalInfo::Kind::Value;
+      gidInfo.valueKind = LocalInfo::ValueKind::Int32;
+      dispatchLocals.emplace(kGpuGlobalIdXName, gidInfo);
+      gidInfo.index = gidYLocal;
+      dispatchLocals.emplace(kGpuGlobalIdYName, gidInfo);
+      gidInfo.index = gidZLocal;
+      dispatchLocals.emplace(kGpuGlobalIdZName, gidInfo);
+
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(zLocal)});
+      const size_t zCheck = function.instructions.size();
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gzLocal)});
+      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+      const size_t zJumpEnd = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(yLocal)});
+      const size_t yCheck = function.instructions.size();
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gyLocal)});
+      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+      const size_t yJumpEnd = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(xLocal)});
+      const size_t xCheck = function.instructions.size();
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gxLocal)});
+      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+      const size_t xJumpEnd = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidXLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidYLocal)});
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidZLocal)});
+
+      Expr kernelCall;
+      kernelCall.kind = Expr::Kind::Call;
+      kernelCall.name = kernelPath;
+      kernelCall.namespacePrefix = kernelExpr.namespacePrefix;
+      for (size_t i = 4; i < stmt.args.size(); ++i) {
+        kernelCall.args.push_back(stmt.args[i]);
+        kernelCall.argNames.push_back(std::nullopt);
+      }
+      if (!emitInlineDefinitionCall(kernelCall, *defIt->second, dispatchLocals, false)) {
+        return false;
+      }
+
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
+      function.instructions.push_back({IrOpcode::PushI32, 1});
+      function.instructions.push_back({IrOpcode::AddI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(xLocal)});
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(xCheck)});
+      const size_t xEnd = function.instructions.size();
+      function.instructions[xJumpEnd].imm = static_cast<int32_t>(xEnd);
+
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
+      function.instructions.push_back({IrOpcode::PushI32, 1});
+      function.instructions.push_back({IrOpcode::AddI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(yLocal)});
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(yCheck)});
+      const size_t yEnd = function.instructions.size();
+      function.instructions[yJumpEnd].imm = static_cast<int32_t>(yEnd);
+
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
+      function.instructions.push_back({IrOpcode::PushI32, 1});
+      function.instructions.push_back({IrOpcode::AddI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(zLocal)});
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(zCheck)});
+      const size_t zEnd = function.instructions.size();
+      function.instructions[zJumpEnd].imm = static_cast<int32_t>(zEnd);
+      return true;
+    }
     if (stmt.kind == Expr::Kind::Call) {
       if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn) && !isStringCountCall(stmt, localsIn) &&
           !isVectorCapacityCall(stmt, localsIn)) {

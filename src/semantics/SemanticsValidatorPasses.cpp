@@ -190,6 +190,13 @@ bool SemanticsValidator::validateDefinitions() {
       return false;
     };
     currentDefinitionPath_ = def.fullPath;
+    currentDefinitionIsCompute_ = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "compute") {
+        currentDefinitionIsCompute_ = true;
+        break;
+      }
+    }
     activeEffects_ = resolveEffects(def.transforms, def.fullPath == entryPath_);
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
       return false;

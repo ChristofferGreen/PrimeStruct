@@ -111,7 +111,7 @@ module {
 
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
-- Emit high-performance C++ for engine integration, GLSL for GPU shading, SPIR-V via external toolchains, and bytecode for an embedded VM without diverging semantics.
+- Emit high-performance C++ for engine integration, Metal (MSL) for GPU compute on macOS/arm, optional GLSL/SPIR-V targets via external toolchains, and bytecode for an embedded VM without diverging semantics.
 - Share a consistent standard library (math, texture IO, resource bindings, PathSpace helpers) across backends while preserving determinism for replay/testing.
 
 ## Proposed Architecture
@@ -130,7 +130,8 @@ module {
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
   - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
-  - **GLSL emitter** – produces shader code; SPIR-V output is available via `--emit=spirv`, while Metal output remains future work.
+  - **Metal (MSL) emitter** – produces compute shaders for macOS/arm; initial GPU target.
+  - **GLSL emitter** – produces shader code; SPIR-V output is available via `--emit=spirv`.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
 - **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). Entry definitions currently accept either no parameters or a single `[array<string>]` parameter for command-line arguments; `args.count()` and `count(args)` are supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only). The C++ emitter maps the array argument to `argv` and otherwise uses the same restriction. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists so tooling can capture scheduling intent in snapshots.
@@ -181,12 +182,20 @@ module {
 ```
 - **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default).
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
+- **GPU compute (draft):**
+  - A definition tagged with `[compute]` is lowered as a GPU kernel. Kernels are `void` and write outputs via buffer parameters rather than return values.
+  - `workgroup_size(x, y, z)` fixes the local group size for the kernel; only valid alongside `[compute]`.
+  - Kernel bodies are restricted to the GPU-safe subset (POD/`gpu_lane` types, fixed-width numeric envelopes, no IO, no heap, no strings, no recursion). Backends reject unsupported features early with diagnostics.
+  - Host-side submission uses `dispatch(kernel, gx, gy, gz, args...)` and requires `effects(gpu_dispatch)`.
+  - VM/native fallback currently requires `gpu_buffer<T>(count)` to use a constant `i32` literal size.
+  - GPU builtins live under `/gpu/*` (see Core library surface).
+  - GPU ID helpers are scalar: `/gpu/global_id_x()`, `/gpu/global_id_y()`, `/gpu/global_id_z()` return `i32`.
 - **Capability taxonomy (v1):**
   - **IO:** `io_out` (stdout), `io_err` (stderr), `file_write` (filesystem output).
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
   - **PathSpace:** `pathspace_notify`, `pathspace_insert`, `pathspace_take`.
-  - **GPU/Render:** `render_graph` (GPU scheduling/pipeline access).
+  - **GPU:** `gpu_dispatch` (host-side GPU submission/dispatch).
   - Unknown capability names are errors; capability identifiers are `lower_snake_case`.
 - **Tooling vs runtime visibility:**
   - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist violations (diagnostics).
@@ -211,6 +220,7 @@ module {
 - **Self-expansion:** text transforms may append additional text transforms to the same node; appended transforms run after the current transform.
 - **Applicability limits (v1):**
   - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`, `single_type_to_return`.
+  - **Definitions only:** `compute`, `workgroup_size(x, y, z)`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
   - **Bindings only:** access/visibility markers (`public`, `private`, `package`, `static`).
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
@@ -324,6 +334,8 @@ if you intended to index.
 - **`align_bytes(n)`, `align_kbytes(n)`:** encode alignment requirements for struct members and buffers. `align_kbytes` applies `n * 1024` bytes before emitting the metadata.
 - **`no_padding`, `platform_independent_padding`:** layout constraints for struct definitions; they reject backend-added padding or non-deterministic padding respectively.
 - **`capabilities(...)`:** reuse the transform plumbing to describe opt-in privileges without encoding backend-specific scheduling hints.
+- **`compute`:** marks a definition as a GPU kernel; kernel bodies are validated against the GPU-safe subset.
+- **`workgroup_size(x, y, z)`:** fixes the kernel's local workgroup size (must appear with `compute`).
 - **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
 - **`public`, `private`, `package`:** field visibility tags; mutually exclusive.
 - **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
@@ -425,6 +437,13 @@ for(
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
   - **PathSpace helpers:** `notify`, `insert`, `take`.
+  - **GPU builtins (draft):**
+    - `/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
+    - `/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).
+    - `/gpu/global_id_z()` → `i32` (kernel invocation z coordinate).
+    - `buffer_load(Buffer<T>, index)` / `buffer_store(Buffer<T>, index, value)` for storage buffers.
+    - `gpu_buffer<T>(count)` / `gpu_upload(array<T>)` / `gpu_readback(Buffer<T>)` for host-side resource management.
+    - `dispatch(kernel, gx, gy, gz, args...)` submits a compute kernel and requires `effects(gpu_dispatch)`. For determinism in v1, dispatch is blocking and `gpu_readback` returns only after completion.
   - **Operators (desugared forms):** `plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`.
   - **Comparisons/booleans:** `greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`, `and`, `or`, `not`.
   - **Result helpers (draft):**
@@ -696,6 +715,32 @@ blend([float] a, [float] b) {
   } else {
   }
   return(result)
+}
+
+// Compute shader sketch (Metal-first GPU backend)
+[compute workgroup_size(64, 1, 1)]
+/add_one(
+  [Buffer<i32>] input,
+  [Buffer<i32>] output,
+  [i32] count
+) {
+  [i32] x{ /gpu/global_id_x() }
+  if (x >= count) {
+    return()
+  } else {
+  }
+  [i32] value{ buffer_load(input, x) }
+  buffer_store(output, x, plus(value, 1i32))
+}
+
+[effects(gpu_dispatch) return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32, 4i32)}
+  [Buffer<i32>] input{ gpu_upload(values) }
+  [Buffer<i32>] output{ gpu_buffer<i32>(4i32) }
+  dispatch(/add_one, 4i32, 1i32, 1i32, input, output, 4i32)
+  [array<i32>] result{ gpu_readback(output) }
+  return(plus(plus(result[0i32], result[1i32]), plus(result[2i32], result[3i32])))
 }
 
 // Canonical, post-transform form

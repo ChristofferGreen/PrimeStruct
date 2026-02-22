@@ -38,3 +38,4 @@ bool parseAndValidate(const std::string &source,
 #include "test_ir_pipeline_pointers.h"
 #include "test_ir_pipeline_conversions.h"
 #include "test_ir_pipeline_entry_args.h"
+#include "test_ir_pipeline_gpu.h"

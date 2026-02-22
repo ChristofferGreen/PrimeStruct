@@ -201,6 +201,16 @@
       }
     }
 
+    auto inheritGpuLocal = [&](const char *name) {
+      auto it = callerLocals.find(name);
+      if (it != callerLocals.end()) {
+        calleeLocals.emplace(name, it->second);
+      }
+    };
+    inheritGpuLocal(kGpuGlobalIdXName);
+    inheritGpuLocal(kGpuGlobalIdYName);
+    inheritGpuLocal(kGpuGlobalIdZName);
+
     InlineContext context;
     context.defPath = callee.fullPath;
     context.returnsVoid = returnInfo.returnsVoid;

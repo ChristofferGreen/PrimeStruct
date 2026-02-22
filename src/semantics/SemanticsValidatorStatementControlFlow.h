@@ -278,6 +278,181 @@
     }
     return true;
   }
+  auto isIntegerKind = [&](ReturnKind kind) -> bool {
+    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
+  };
+  auto isNumericOrBoolKind = [&](ReturnKind kind) -> bool {
+    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+           kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool;
+  };
+  auto resolveArrayElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+    if (arg.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+        if (paramBinding->typeName == "array" && !paramBinding->typeTemplateArg.empty()) {
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+      }
+      auto itLocal = locals.find(arg.name);
+      if (itLocal != locals.end()) {
+        if (itLocal->second.typeName == "array" && !itLocal->second.typeTemplateArg.empty()) {
+          elemType = itLocal->second.typeTemplateArg;
+          return true;
+        }
+      }
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      std::string collection;
+      if (getBuiltinCollectionName(arg, collection) && collection == "array" && arg.templateArgs.size() == 1) {
+        elemType = arg.templateArgs.front();
+        return true;
+      }
+    }
+    return false;
+  };
+  auto resolveBufferElemType = [&](const Expr &arg, std::string &elemType) -> bool {
+    if (arg.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
+        if (paramBinding->typeName == "Buffer" && !paramBinding->typeTemplateArg.empty()) {
+          elemType = paramBinding->typeTemplateArg;
+          return true;
+        }
+      }
+      auto itLocal = locals.find(arg.name);
+      if (itLocal != locals.end()) {
+        if (itLocal->second.typeName == "Buffer" && !itLocal->second.typeTemplateArg.empty()) {
+          elemType = itLocal->second.typeTemplateArg;
+          return true;
+        }
+      }
+    }
+    if (arg.kind == Expr::Kind::Call) {
+      if (isSimpleCallName(arg, "gpu_buffer") && arg.templateArgs.size() == 1) {
+        elemType = arg.templateArgs.front();
+        return true;
+      }
+      if (isSimpleCallName(arg, "gpu_upload") && arg.args.size() == 1) {
+        return resolveArrayElemType(arg.args.front(), elemType);
+      }
+    }
+    return false;
+  };
+  if (isSimpleCallName(stmt, "dispatch")) {
+    if (currentDefinitionIsCompute_) {
+      error_ = "dispatch is not allowed in compute definitions";
+      return false;
+    }
+    if (activeEffects_.count("gpu_dispatch") == 0) {
+      error_ = "dispatch requires gpu_dispatch effect";
+      return false;
+    }
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = "dispatch does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "dispatch does not accept block arguments";
+      return false;
+    }
+    if (stmt.args.size() < 4) {
+      error_ = "dispatch requires kernel and three dimension arguments";
+      return false;
+    }
+    if (stmt.args.front().kind != Expr::Kind::Name) {
+      error_ = "dispatch requires kernel name as first argument";
+      return false;
+    }
+    const Expr &kernelExpr = stmt.args.front();
+    const std::string kernelPath = resolveCalleePath(kernelExpr);
+    auto defIt = defMap_.find(kernelPath);
+    if (defIt == defMap_.end()) {
+      error_ = "unknown kernel: " + kernelPath;
+      return false;
+    }
+    bool isCompute = false;
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "compute") {
+        isCompute = true;
+        break;
+      }
+    }
+    if (!isCompute) {
+      error_ = "dispatch requires compute definition: " + kernelPath;
+      return false;
+    }
+    for (size_t i = 1; i <= 3; ++i) {
+      if (!validateExpr(params, locals, stmt.args[i])) {
+        return false;
+      }
+      ReturnKind dimKind = inferExprReturnKind(stmt.args[i], params, locals);
+      if (!isIntegerKind(dimKind)) {
+        error_ = "dispatch dimensions require integer expressions";
+        return false;
+      }
+    }
+    const auto &kernelParams = paramsByDef_[kernelPath];
+    if (stmt.args.size() != kernelParams.size() + 4) {
+      error_ = "dispatch argument count mismatch for " + kernelPath;
+      return false;
+    }
+    for (size_t i = 4; i < stmt.args.size(); ++i) {
+      if (!validateExpr(params, locals, stmt.args[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (isSimpleCallName(stmt, "buffer_store")) {
+    if (!currentDefinitionIsCompute_) {
+      error_ = "buffer_store requires a compute definition";
+      return false;
+    }
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = "buffer_store does not accept template arguments";
+      return false;
+    }
+    if (stmt.args.size() != 3) {
+      error_ = "buffer_store requires buffer, index, and value arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = "buffer_store does not accept block arguments";
+      return false;
+    }
+    if (!validateExpr(params, locals, stmt.args[0]) || !validateExpr(params, locals, stmt.args[1]) ||
+        !validateExpr(params, locals, stmt.args[2])) {
+      return false;
+    }
+    std::string elemType;
+    if (!resolveBufferElemType(stmt.args[0], elemType)) {
+      error_ = "buffer_store requires Buffer input";
+      return false;
+    }
+    ReturnKind elemKind = returnKindForTypeName(elemType);
+    if (!isNumericOrBoolKind(elemKind)) {
+      error_ = "buffer_store requires numeric/bool element type";
+      return false;
+    }
+    ReturnKind indexKind = inferExprReturnKind(stmt.args[1], params, locals);
+    if (!isIntegerKind(indexKind)) {
+      error_ = "buffer_store requires integer index";
+      return false;
+    }
+    ReturnKind valueKind = inferExprReturnKind(stmt.args[2], params, locals);
+    if (valueKind != ReturnKind::Unknown && valueKind != elemKind) {
+      error_ = "buffer_store value type mismatch";
+      return false;
+    }
+    return true;
+  }
   PathSpaceBuiltin pathSpaceBuiltin;
   if (getPathSpaceBuiltin(stmt, pathSpaceBuiltin) && defMap_.find(resolveCalleePath(stmt)) == defMap_.end()) {
     if (hasNamedArguments(stmt.argNames)) {

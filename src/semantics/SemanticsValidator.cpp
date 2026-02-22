@@ -54,10 +54,8 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
   if (name.empty() || name.find('/') != std::string::npos) {
     return false;
   }
-  if (!currentDefinitionPath_.empty()) {
-    if (currentDefinitionPath_ == "/math" || currentDefinitionPath_.rfind("/math/", 0) == 0) {
-      return true;
-    }
+  if (currentDefinitionPath_ == "/math" || currentDefinitionPath_.rfind("/math/", 0) == 0) {
+    return true;
   }
   return mathImportAll_ || mathImports_.count(name) > 0;
 }

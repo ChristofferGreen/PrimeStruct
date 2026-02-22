@@ -150,6 +150,7 @@ private:
   std::unordered_set<std::string> mathImports_;
   std::string entryArgsName_;
   std::string currentDefinitionPath_;
+  bool currentDefinitionIsCompute_ = false;
   bool allowEntryArgStringUse_ = false;
   std::optional<ResultTypeInfo> currentResultType_;
   std::optional<OnErrorHandler> currentOnError_;

@@ -3,6 +3,7 @@
 #include <cctype>
 #include <functional>
 #include <limits>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -151,7 +152,7 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
 }
 
 bool isBuiltinTemplateTypeName(const std::string &name) {
-  return name == "Pointer" || name == "Reference";
+  return name == "Pointer" || name == "Reference" || name == "Buffer";
 }
 
 bool restrictMatchesBinding(const std::string &restrictType,
@@ -239,10 +240,56 @@ ReturnKind returnKindForTypeName(const std::string &name) {
       return ReturnKind::Array;
     }
   }
+  if (splitTemplateTypeName(name, base, arg) && base == "Buffer") {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+      return ReturnKind::Array;
+    }
+  }
   return ReturnKind::Unknown;
 }
 
-ReturnKind getReturnKind(const Definition &def, std::string &error) {
+std::string resolveStructTypePath(const std::string &name,
+                                  const std::string &namespacePrefix,
+                                  const std::unordered_set<std::string> &structTypes) {
+  if (name.empty()) {
+    return {};
+  }
+  if (!name.empty() && name[0] == '/') {
+    return structTypes.count(name) > 0 ? name : std::string{};
+  }
+  if (!namespacePrefix.empty()) {
+    const size_t lastSlash = namespacePrefix.find_last_of('/');
+    const std::string_view suffix = lastSlash == std::string::npos
+                                        ? std::string_view(namespacePrefix)
+                                        : std::string_view(namespacePrefix).substr(lastSlash + 1);
+    if (suffix == name && structTypes.count(namespacePrefix) > 0) {
+      return namespacePrefix;
+    }
+    std::string prefix = namespacePrefix;
+    while (!prefix.empty()) {
+      std::string candidate = prefix + "/" + name;
+      if (structTypes.count(candidate) > 0) {
+        return candidate;
+      }
+      const size_t slash = prefix.find_last_of('/');
+      if (slash == std::string::npos) {
+        break;
+      }
+      prefix = prefix.substr(0, slash);
+    }
+  }
+  const std::string rootCandidate = "/" + name;
+  if (structTypes.count(rootCandidate) > 0) {
+    return rootCandidate;
+  }
+  return {};
+}
+
+ReturnKind getReturnKind(const Definition &def,
+                         const std::unordered_set<std::string> &structNames,
+                         const std::unordered_map<std::string, std::string> &importAliases,
+                         std::string &error) {
   ReturnKind kind = ReturnKind::Unknown;
   bool sawReturn = false;
   for (const auto &transform : def.transforms) {
@@ -267,6 +314,17 @@ ReturnKind getReturnKind(const Definition &def, std::string &error) {
       std::string base;
       std::string arg;
       if (!splitTemplateTypeName(typeName, base, arg) || base != "array") {
+        std::string resolvedType = resolveStructTypePath(typeName, def.namespacePrefix, structNames);
+        if (resolvedType.empty()) {
+          auto importIt = importAliases.find(typeName);
+          if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+            resolvedType = importIt->second;
+          }
+        }
+        if (resolvedType.empty()) {
+          error = "unsupported return type on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
         nextKind = ReturnKind::Array;
       } else {
         std::vector<std::string> args;
@@ -333,6 +391,13 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   return false;
 }
 
+namespace {
+
+bool parseMathName(const std::string &name, std::string &out, bool allowBare);
+bool parseGpuName(const std::string &name, std::string &out);
+
+} // namespace
+
 bool getBuiltinMutationName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -359,6 +424,10 @@ bool isRootBuiltinName(const std::string &name) {
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
+  std::string gpuName;
+  if (parseGpuName(normalized, gpuName)) {
+    return gpuName == "global_id_x" || gpuName == "global_id_y" || gpuName == "global_id_z";
+  }
   if (normalized.find('/') != std::string::npos) {
     return false;
   }
@@ -381,14 +450,10 @@ bool isRootBuiltinName(const std::string &name) {
          normalized == "location" || normalized == "dereference" ||
          normalized == "block" || normalized == "print" || normalized == "print_line" ||
          normalized == "print_error" || normalized == "print_line_error" || normalized == "notify" ||
-         normalized == "insert" || normalized == "take";
+         normalized == "insert" || normalized == "take" || normalized == "dispatch" ||
+         normalized == "gpu_buffer" || normalized == "gpu_upload" || normalized == "gpu_readback" ||
+         normalized == "buffer_load" || normalized == "buffer_store";
 }
-
-namespace {
-
-bool parseMathName(const std::string &name, std::string &out, bool allowBare);
-
-} // namespace
 
 bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare) {
   if (!parseMathName(expr.name, out, allowBare)) {
@@ -442,6 +507,24 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   return true;
 }
 
+bool parseGpuName(const std::string &name, std::string &out) {
+  if (name.empty()) {
+    return false;
+  }
+  std::string normalized = name;
+  if (!normalized.empty() && normalized[0] == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.rfind("gpu/", 0) == 0) {
+    out = normalized.substr(4);
+    return true;
+  }
+  if (normalized.find('/') != std::string::npos) {
+    return false;
+  }
+  return false;
+}
+
 } // namespace
 
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare) {
@@ -465,6 +548,13 @@ bool isBuiltinMathConstant(const std::string &name, bool allowBare) {
     return false;
   }
   return candidate == "pi" || candidate == "tau" || candidate == "e";
+}
+
+bool getBuiltinGpuName(const Expr &expr, std::string &out) {
+  if (!parseGpuName(expr.name, out)) {
+    return false;
+  }
+  return out == "global_id_x" || out == "global_id_y" || out == "global_id_z";
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
@@ -710,6 +800,13 @@ std::string resolveTypePath(const std::string &name, const std::string &namespac
     return name;
   }
   if (!namespacePrefix.empty()) {
+    const size_t lastSlash = namespacePrefix.find_last_of('/');
+    const std::string_view suffix = lastSlash == std::string::npos
+                                        ? std::string_view(namespacePrefix)
+                                        : std::string_view(namespacePrefix).substr(lastSlash + 1);
+    if (suffix == name) {
+      return namespacePrefix;
+    }
     return namespacePrefix + "/" + name;
   }
   return "/" + name;
@@ -886,7 +983,8 @@ bool parseBindingInfo(const Expr &expr,
         error = "binding requires exactly one type";
         return false;
       }
-      if ((transform.name == "array" || transform.name == "vector") && transform.templateArgs.size() != 1) {
+      if ((transform.name == "array" || transform.name == "vector" || transform.name == "Buffer") &&
+          transform.templateArgs.size() != 1) {
         error = transform.name + " requires exactly one template argument";
         return false;
       }
@@ -941,52 +1039,14 @@ bool parseBindingInfo(const Expr &expr,
     error = "software numeric types are not supported yet: " + *softwareType;
     return false;
   }
-  auto resolveStructCandidate = [&](const std::string &candidate) -> std::string {
-    if (candidate.empty()) {
-      return "";
-    }
-    if (candidate[0] == '/') {
-      return structTypes.count(candidate) > 0 ? candidate : "";
-    }
-    std::string current = namespacePrefix;
-    while (true) {
-      if (!current.empty()) {
-        std::string direct = current + "/" + candidate;
-        if (structTypes.count(direct) > 0) {
-          return direct;
-        }
-        if (current.size() > candidate.size()) {
-          const size_t start = current.size() - candidate.size();
-          if (start > 0 && current[start - 1] == '/' &&
-              current.compare(start, candidate.size(), candidate) == 0 &&
-              structTypes.count(current) > 0) {
-            return current;
-          }
-        }
-      } else {
-        std::string root = "/" + candidate;
-        if (structTypes.count(root) > 0) {
-          return root;
-        }
-      }
-      if (current.empty()) {
-        break;
-      }
-      const size_t slash = current.find_last_of('/');
-      if (slash == std::string::npos || slash == 0) {
-        current.clear();
-      } else {
-        current.erase(slash);
-      }
-    }
-    auto importIt = importAliases.find(candidate);
-    if (importIt != importAliases.end() && structTypes.count(importIt->second) > 0) {
-      return importIt->second;
-    }
-    return "";
-  };
   if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
-    std::string resolved = resolveStructCandidate(typeName);
+    std::string resolved = resolveStructTypePath(typeName, namespacePrefix, structTypes);
+    if (resolved.empty()) {
+      auto importIt = importAliases.find(typeName);
+      if (importIt != importAliases.end() && structTypes.count(importIt->second) > 0) {
+        resolved = importIt->second;
+      }
+    }
     if (resolved.empty()) {
       if (typeName != "FileError") {
         error = "unsupported binding type: " + typeName;
@@ -998,7 +1058,15 @@ bool parseBindingInfo(const Expr &expr,
     if (candidate.empty() || candidate.find('<') != std::string::npos) {
       return false;
     }
-    return !resolveStructCandidate(candidate).empty();
+    std::string resolved = resolveStructTypePath(candidate, namespacePrefix, structTypes);
+    if (!resolved.empty()) {
+      return true;
+    }
+    auto importIt = importAliases.find(candidate);
+    if (importIt != importAliases.end()) {
+      return structTypes.count(importIt->second) > 0;
+    }
+    return false;
   };
   if (typeHasTemplate && typeName == "Pointer") {
     if (info.typeTemplateArg.empty()) {

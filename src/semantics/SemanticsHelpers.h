@@ -62,7 +62,10 @@ bool restrictMatchesBinding(const std::string &restrictType,
                             bool typeHasTemplate,
                             const std::string &namespacePrefix);
 ReturnKind returnKindForTypeName(const std::string &name);
-ReturnKind getReturnKind(const Definition &def, std::string &error);
+ReturnKind getReturnKind(const Definition &def,
+                         const std::unordered_set<std::string> &structNames,
+                         const std::unordered_map<std::string, std::string> &importAliases,
+                         std::string &error);
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out);
 bool getBuiltinComparisonName(const Expr &expr, std::string &out);
@@ -74,6 +77,7 @@ bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstant(const std::string &name, bool allowBare);
+bool getBuiltinGpuName(const Expr &expr, std::string &out);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
@@ -110,6 +114,7 @@ bool parseBindingInfo(const Expr &expr,
 bool isEffectName(const std::string &text);
 bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error);
 bool validateCapabilitiesTransform(const Transform &transform, const std::string &context, std::string &error);
+bool parsePositiveIntArg(const std::string &text, int &value);
 
 bool isStructTransformName(const std::string &name);
 bool validateNamedArguments(const std::vector<Expr> &args,

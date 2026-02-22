@@ -484,6 +484,133 @@
             }
           }
         }
+        std::string gpuBuiltin;
+        if (getBuiltinGpuName(expr, gpuBuiltin)) {
+          const char *localName = nullptr;
+          if (gpuBuiltin == "global_id_x") {
+            localName = kGpuGlobalIdXName;
+          } else if (gpuBuiltin == "global_id_y") {
+            localName = kGpuGlobalIdYName;
+          } else if (gpuBuiltin == "global_id_z") {
+            localName = kGpuGlobalIdZName;
+          }
+          if (!localName) {
+            error = "native backend does not support gpu builtin: " + gpuBuiltin;
+            return false;
+          }
+          auto it = localsIn.find(localName);
+          if (it == localsIn.end()) {
+            error = "gpu builtin requires dispatch context: " + gpuBuiltin;
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          return true;
+        }
+        if (isSimpleCallName(expr, "gpu_upload")) {
+          if (expr.args.size() != 1) {
+            error = "gpu_upload requires exactly one argument";
+            return false;
+          }
+          return emitExpr(expr.args.front(), localsIn);
+        }
+        if (isSimpleCallName(expr, "gpu_readback")) {
+          if (expr.args.size() != 1) {
+            error = "gpu_readback requires exactly one argument";
+            return false;
+          }
+          return emitExpr(expr.args.front(), localsIn);
+        }
+        if (isSimpleCallName(expr, "gpu_buffer")) {
+          if (expr.templateArgs.size() != 1) {
+            error = "gpu_buffer requires exactly one template argument";
+            return false;
+          }
+          if (expr.args.size() != 1) {
+            error = "gpu_buffer requires exactly one argument";
+            return false;
+          }
+          if (expr.args.front().kind != Expr::Kind::Literal || expr.args.front().isUnsigned ||
+              expr.args.front().intWidth == 64) {
+            error = "gpu_buffer requires constant i32 size";
+            return false;
+          }
+          const int64_t count64 = static_cast<int64_t>(expr.args.front().literalValue);
+          if (count64 < 0 || count64 > std::numeric_limits<int32_t>::max()) {
+            error = "gpu_buffer size out of range";
+            return false;
+          }
+          const int32_t count = static_cast<int32_t>(count64);
+          LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
+          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+            error = "gpu_buffer requires numeric/bool element type";
+            return false;
+          }
+          const int32_t baseLocal = nextLocal;
+          const int32_t headerSlots = 1;
+          nextLocal += headerSlots + count;
+          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(count)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+          IrOpcode zeroOp = IrOpcode::PushI32;
+          if (elemKind == LocalInfo::ValueKind::Int64 || elemKind == LocalInfo::ValueKind::UInt64) {
+            zeroOp = IrOpcode::PushI64;
+          } else if (elemKind == LocalInfo::ValueKind::Float64) {
+            zeroOp = IrOpcode::PushF64;
+          } else if (elemKind == LocalInfo::ValueKind::Float32) {
+            zeroOp = IrOpcode::PushF32;
+          }
+          for (int32_t i = 0; i < count; ++i) {
+            function.instructions.push_back({zeroOp, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + headerSlots + i)});
+          }
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          return true;
+        }
+        if (isSimpleCallName(expr, "buffer_load")) {
+          if (expr.args.size() != 2) {
+            error = "buffer_load requires buffer and index";
+            return false;
+          }
+          LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+          if (expr.args[0].kind == Expr::Kind::Name) {
+            auto it = localsIn.find(expr.args[0].name);
+            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
+              elemKind = it->second.valueKind;
+            }
+          } else if (expr.args[0].kind == Expr::Kind::Call) {
+            if (isSimpleCallName(expr.args[0], "gpu_buffer") && expr.args[0].templateArgs.size() == 1) {
+              elemKind = valueKindFromTypeName(expr.args[0].templateArgs.front());
+            }
+          }
+          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+            error = "buffer_load requires numeric/bool buffer";
+            return false;
+          }
+          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
+          if (!isSupportedIndexKind(indexKind)) {
+            error = "buffer_load requires integer index";
+            return false;
+          }
+          const int32_t ptrLocal = allocTempLocal();
+          if (!emitExpr(expr.args[0], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          const int32_t indexLocal = allocTempLocal();
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+          function.instructions.push_back({pushOneForIndex(indexKind), 1});
+          function.instructions.push_back({addForIndex(indexKind), 0});
+          function.instructions.push_back({pushOneForIndex(indexKind), 16});
+          function.instructions.push_back({mulForIndex(indexKind), 0});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          return true;
+        }
         if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
             !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
           Expr methodExpr = expr;

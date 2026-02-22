@@ -23,6 +23,7 @@
 
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
+  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
 
   auto typeNameForValueKind = [](LocalInfo::ValueKind kind) -> std::string {
     switch (kind) {
@@ -201,11 +202,33 @@
     return LocalInfo::ValueKind::Unknown;
   };
 
+  inferBufferElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.name);
+      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
+        return it->second.valueKind;
+      }
+      return LocalInfo::ValueKind::Unknown;
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      if (isSimpleCallName(expr, "gpu_buffer") && expr.templateArgs.size() == 1) {
+        return valueKindFromTypeName(expr.templateArgs.front());
+      }
+      if (isSimpleCallName(expr, "gpu_upload") && expr.args.size() == 1) {
+        return inferArrayElementKind(expr.args.front(), localsIn);
+      }
+    }
+    return LocalInfo::ValueKind::Unknown;
+  };
+
   inferArrayElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
     if (expr.kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.name);
       if (it != localsIn.end()) {
         if (it->second.kind == LocalInfo::Kind::Array) {
+          return it->second.valueKind;
+        }
+        if (it->second.kind == LocalInfo::Kind::Buffer) {
           return it->second.valueKind;
         }
         if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
@@ -215,6 +238,12 @@
       return LocalInfo::ValueKind::Unknown;
     }
     if (expr.kind == Expr::Kind::Call) {
+      if (!expr.isMethodCall && isSimpleCallName(expr, "gpu_readback") && expr.args.size() == 1) {
+        LocalInfo::ValueKind bufferKind = inferBufferElementKind(expr.args.front(), localsIn);
+        if (bufferKind != LocalInfo::ValueKind::Unknown && bufferKind != LocalInfo::ValueKind::String) {
+          return bufferKind;
+        }
+      }
       std::string collection;
       if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
         return valueKindFromTypeName(expr.templateArgs.front());
@@ -472,6 +501,17 @@
             return LocalInfo::ValueKind::Unknown;
           }
           return elemKind;
+        }
+        std::string gpuBuiltin;
+        if (getBuiltinGpuName(expr, gpuBuiltin)) {
+          return LocalInfo::ValueKind::Int32;
+        }
+        if (!expr.isMethodCall && isSimpleCallName(expr, "buffer_load") && expr.args.size() == 2) {
+          LocalInfo::ValueKind elemKind = inferBufferElementKind(expr.args.front(), localsIn);
+          if (elemKind != LocalInfo::ValueKind::Unknown && elemKind != LocalInfo::ValueKind::String) {
+            return elemKind;
+          }
+          return LocalInfo::ValueKind::Unknown;
         }
         std::string builtin;
         if (getBuiltinComparisonName(expr, builtin)) {

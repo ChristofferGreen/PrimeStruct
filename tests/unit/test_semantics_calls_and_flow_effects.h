@@ -142,6 +142,24 @@ main() {
   CHECK(error.find("io_out") != std::string::npos);
 }
 
+TEST_CASE("dispatch requires gpu_dispatch effect") {
+  const std::string source = R"(
+[compute workgroup_size(1, 1, 1)]
+/noop() {
+  return()
+}
+
+[return<int>]
+main() {
+  dispatch(/noop, 1i32, 1i32, 1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("gpu_dispatch") != std::string::npos);
+}
+
 TEST_CASE("execution effects must be subset of definition effects") {
   const std::string source = R"(
 [return<void>]
