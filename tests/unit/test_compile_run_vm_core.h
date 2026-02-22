@@ -279,7 +279,20 @@ main() {
   CHECK(readFile(outPath) == "line\\nnext\n");
 }
 
+TEST_CASE("vm rejects string return types") {
+  const std::string source = R"(
+[return<string>]
+main() {
+  return("hi"utf8)
+}
+)";
+  const std::string srcPath = writeTemp("vm_string_return.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_return_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath) == "Semantic error: unsupported return type on /main\n");
+}
+
 TEST_SUITE_END();
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
-

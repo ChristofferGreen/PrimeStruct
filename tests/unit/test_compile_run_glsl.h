@@ -510,6 +510,23 @@ main() {
   CHECK(readFile(errPath).find("glsl backend does not support effect") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter rejects string literals") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [string] name{"hi"utf8}
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_string_literal.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_string_literal_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=glsl " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(errPath).find("glsl backend does not support string literals") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter rejects unsupported capabilities") {
   const std::string source = R"(
 [return<void> capabilities(render_graph) effects(render_graph)]

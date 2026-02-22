@@ -512,6 +512,20 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
   - VM/native backends allow `io_out`, `io_err`, `heap_alloc`, `file_write`, `pathspace_notify`, `pathspace_insert`,
     `pathspace_take`, and `gpu_dispatch`. GLSL allows only `io_out`, `io_err`, and `pathspace_*` effects/capabilities.
 
+### 9.1 Backend Type Support (v1)
+
+- VM/native:
+  - Scalar values: `i32`, `i64`, `u64`, `bool`, `f32`, `f64` (plus `int`/`float` aliases).
+  - Collections: `array`, `vector`, and `map` of numeric/bool values; map string keys are limited to string literals or
+    literal-backed bindings.
+  - Strings: supported for literals and literal-backed bindings used in print/map contexts; string return types and string
+    pointers/references are rejected.
+  - `convert<T>` targets: `int`, `i32`, `i64`, `u64`, `bool`, `float`, `f32`, `f64` (software numeric envelopes are rejected).
+- GLSL:
+  - Scalar values: numeric/bool only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`).
+  - Non-scalar bindings and string literals are rejected; entry definitions must return `void`.
+  - `convert<T>` targets match the numeric/bool list above.
+
 ## 10. Error Handling (Draft)
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
