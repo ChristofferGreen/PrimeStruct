@@ -51,7 +51,6 @@ open question is unresolved.
 - Full software numeric envelopes (`integer`/`decimal`/`complex`) and mixed-mode numeric ops.
 - Placement transforms (`stack`/`heap`/`buffer`) and placement-driven layout guarantees.
 - Recursive struct layouts and cross-module layout stability guarantees.
-- Metal backend and LLVM backend support.
 - JIT, chunk caching, or dynamic recompilation tooling.
 - IDE/LSP integration and PathSpace-native editor tooling.
 - Standard library packaging/version negotiation beyond a single in-tree reference set.
@@ -110,13 +109,13 @@ module {
 
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
-- Emit high-performance C++ for engine integration, Metal (MSL) for GPU compute on macOS/arm, optional GLSL/SPIR-V targets via external toolchains, and bytecode for an embedded VM without diverging semantics.
+- Emit high-performance C++ for engine integration, optional GLSL/SPIR-V targets via external toolchains, and bytecode for an embedded VM without diverging semantics.
 - Share a consistent standard library (math, texture IO, resource bindings, PathSpace helpers) across backends while preserving determinism for replay/testing.
 
 ## Proposed Architecture
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and borrow-checked resource usage.
 - **Transform pipeline:** ordered text transforms rewrite raw tokens before the AST exists; semantic transforms annotate the parsed AST before lowering. The compiler can auto-inject transforms per definition/execution (e.g., attach `operators` to every function) with optional path filters (`/std/math/*`, recurse or not) so common rewrites don’t have to be annotated manually. Transforms may also rewrite a definition’s own transform list (for example, `single_type_to_return`). The default text chain desugars infix operators, control-flow, assignment, etc.; the default semantic chain enables `single_type_to_return`. Projects can override via `--text-transforms` / `--semantic-transforms` or the auto-deducing `--transform-list`.
-- **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM, future LLVM). Normalisation happens once; backends never see syntactic sugar.
+- **Intermediate representation:** envelope-tagged SSA-style IR shared by every backend (C++, GLSL, VM). Normalisation happens once; backends never see syntactic sugar.
 - **IR definition (draft):**
   - **Module:** `{ string_table, struct_layouts, functions, entry_index, version }`.
   - **Function:** `{ name, instructions }` where instructions are linear, stack-based ops with immediates.
@@ -128,8 +127,7 @@ module {
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.
 - **Backends:**
-  - **C++ emitter** – generates host code or LLVM IR for native binaries/JITs.
-  - **Metal (MSL) emitter** – produces compute shaders for macOS/arm; initial GPU target.
+  - **C++ emitter** – generates host code for native binaries.
   - **GLSL emitter** – produces shader code; SPIR-V output is available via `--emit=spirv`.
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
 - **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry /path` to select the entry definition (default: `/main`). Entry definitions currently accept either no parameters or a single `[array<string>]` parameter for command-line arguments; `args.count()` and `count(args)` are supported, `print*` calls accept `args[index]` (checked) or `at_unsafe(args, index)` (unchecked), and string bindings may be initialised from `args[index]` or `at_unsafe(args, index)` (print-only). The C++ emitter maps the array argument to `argv` and otherwise uses the same restriction. The definition/execution split maps cleanly to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
@@ -691,7 +689,7 @@ for(
 - **Bytecode chunks:** compiler emits a chunk (bytecode + const pool) per definition. Executions reference chunks by index; constant pools hold literals, handles, metadata.
 - **Native interop:** `CALL_NATIVE` bridges to host/PathSpace helpers via a function table. Effect masks gate what natives can do.
 - **Closures:** compile to closure structs (chunk pointer + capture data). Captured handles obey lifetime/ownership rules.
-- **Optimisation:** reference counting for heap values; optional chunk caching; future LLVM-backed JIT can feed on the same bytecode when needed.
+- **Optimisation:** reference counting for heap values; JIT or chunk caching is deferred until a stable VM/runtime design exists.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 
 ## Examples (sketch)
@@ -746,7 +744,7 @@ blend([float] a, [float] b) {
   return(result)
 }
 
-// Compute shader sketch (Metal-first GPU backend)
+// Compute shader sketch (GPU backend)
 [compute workgroup_size(64, 1, 1)]
 /add_one(
   [Buffer<i32>] input,
@@ -837,6 +835,6 @@ module {
 5. Define library/versioning strategy so include resolution enforces compatibility.
 6. Flesh out stack/class specifications (calling convention, class sugar transforms, dispatch strategy) across backends.
 7. Lock down composite literal syntax across backends and add conformance tests.
-8. Decide machine-code strategy (C++ emission, direct LLVM IR, third-party JIT) and prototype.
+8. Decide machine-code strategy (C++ emission, third-party JIT) and prototype.
 9. Define diagnostics/tooling plan (source maps, error reporting pipeline, incremental tooling, future PathSpace-native editor).
 10. Document staffing/time requirements before promoting PrimeStruct onto the active PathSpace roadmap.

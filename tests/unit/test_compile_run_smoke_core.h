@@ -151,6 +151,27 @@ main([i32] value) {
   CHECK(readFile(errPath).find("entry definition must take a single array<string> parameter") != std::string::npos);
 }
 
+TEST_CASE("rejects unsupported emit kinds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_invalid.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_invalid_err.txt").string();
+
+  const std::string emitMetalCmd =
+      "./primec --emit=metal " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(emitMetalCmd) == 2);
+  CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
+
+  const std::string emitLlvmCmd =
+      "./primec --emit=llvm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(emitLlvmCmd) == 2);
+  CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]
@@ -589,4 +610,3 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 0);
 }
-

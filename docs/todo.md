@@ -126,9 +126,9 @@ Legend:
 - ✓ Document runtime error reporting/exit codes for VM/native backends (e.g., vector capacity, invalid pow exponent).
 - ✓ Expand GLSL emitter coverage (statements/expressions) or document explicit GLSL backend restrictions.
 - ✓ Decide whether executions should be emitted by the C++ emitter (implement or document as permanently ignored).
-- ○ Implement Metal backend output or remove it from the backend roadmap.
-- ○ Decide on LLVM backend support (implement or remove future-LLVM references).
-- ○ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
+- ✓ Implement Metal backend output or remove it from the backend roadmap.
+- ✓ Decide on LLVM backend support (implement or remove future-LLVM references).
+- ✓ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
 - ○ Scope and plan IDE/LSP integration once the compiler stabilizes.
 - ○ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
 - ○ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
