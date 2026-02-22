@@ -51,6 +51,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("parameter restrict matches binding type") {
+  const std::string source = R"(
+[return<int>]
+add([restrict<i32> i32] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(add(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("parameter restrict rejects mismatched type") {
+  const std::string source = R"(
+[return<int>]
+add([restrict<i32> i64] value) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(add(2i64))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("restrict type does not match binding type") != std::string::npos);
+}
+
 TEST_CASE("parameter rejects software numeric type") {
   const std::string source = R"(
 [return<int>]

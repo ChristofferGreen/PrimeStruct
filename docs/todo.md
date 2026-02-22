@@ -90,9 +90,9 @@ Legend:
 - ✓ Define composite-constructor defaults and validation rules for multi-argument initialization blocks.
 - ○ Finalize literals & composite construction semantics beyond suffix rules.
 - ✓ Decide on software numeric envelope support (`integer`/`decimal`/`complex`) in the main design doc and align with implementation.
-- ○ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.
+- ✓ Specify pointer qualifier syntax and aliasing rules (e.g., restrict/readonly) in the core language.
 - ○ Finalize pointers & references semantics (beyond qualifiers/aliasing).
-- ○ Define pointer/reference target envelope whitelist and conversion rules per backend.
+- ✓ Define pointer/reference target envelope whitelist and conversion rules per backend.
 - ○ Define constructor semantics beyond `Create`/`Destroy`, including constant member behavior and default initialization rules.
 - ○ Finalize struct/envelope category rules, placement policy, and category mapping.
 - ✓ Implement `stack`/`heap`/`buffer` placement transforms or remove them from the supported transform list.

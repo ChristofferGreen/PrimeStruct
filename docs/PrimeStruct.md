@@ -598,6 +598,9 @@ for(
 
 ## Pointers & References (draft)
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
+- **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including template args) and serves as an aliasing promise within the binding’s scope. There is no `readonly` qualifier yet; use `mut` to opt into mutation and `restrict<T>` to constrain aliasing.
+- **Target whitelist:** `Pointer<T>` targets must be primitive or struct types. `Reference<T>` targets may be primitive, struct, or `array<T>` (array references are allowed). `Pointer<array<T>>` and other template types are rejected by the front-end.
+- **Backend limits:** VM/native lowering rejects `Pointer<string>` / `Reference<string>` (string pointers are not supported). Entry-argument arrays are not addressable (`location(args)` is invalid).
 - **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators` text transform rewrites `&name`/`*name` sugar into those calls.
 - **Reference binding:** `Reference<T>` bindings are initialized from `location(...)` and behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
 - **Array references:** `Reference<array<T>>` is allowed; treat the reference like an array value for `count`/`at` and other array operations while still using `location(...)` to form the reference.
