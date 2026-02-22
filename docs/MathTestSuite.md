@@ -7,9 +7,9 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [x] Add stdout comparison with per-test tolerances for float outputs.
 - [x] Add a small float parser that can handle `nan`, `inf`, `-inf` tokens.
 - [x] Add helpers for `abs_diff <= epsilon` and `relative_error <= epsilon`.
-- [ ] Add helpers for sign-only and range-only checks (avoid overfitting accuracy).
-- [ ] Add helpers for batch cases to keep test sources compact.
-- [ ] Add a way to mark expected native deviations (temporary allowlist).
+- [x] Add helpers for sign-only and range-only checks (avoid overfitting accuracy).
+- [x] Add helpers for batch cases to keep test sources compact.
+- [x] Add a way to mark expected native deviations (temporary allowlist).
 - [x] Add a `--math-conformance` CTest label for the new suite.
 
 ## Source Of Truth For Expected Values
