@@ -456,6 +456,30 @@
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
               return true;
             }
+            if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
+              std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+              if (rhsStruct.empty() || rhsStruct != it->second.structTypeName) {
+                error = "assign requires matching struct value";
+                return false;
+              }
+              StructSlotLayout layout;
+              if (!resolveStructSlotLayout(it->second.structTypeName, layout)) {
+                return false;
+              }
+              const int32_t destPtrLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+              if (!emitExpr(expr.args[1], localsIn)) {
+                return false;
+              }
+              const int32_t srcPtrLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+              if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, layout.totalSlots)) {
+                return false;
+              }
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+              return true;
+            }
             if (!emitExpr(expr.args[1], localsIn)) {
               return false;
             }

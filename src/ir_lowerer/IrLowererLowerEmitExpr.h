@@ -73,36 +73,28 @@
             return false;
           }
           const Expr &receiver = expr.args.front();
-          std::string structPath;
-          if (receiver.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(receiver.name);
-            if (it != localsIn.end()) {
-              structPath = it->second.structTypeName;
-            }
-          } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
-            structPath = resolveExprPath(receiver);
-          }
+          std::string structPath = inferStructExprPath(receiver, localsIn);
           if (structPath.empty()) {
             error = "field access requires struct receiver";
             return false;
           }
-          int32_t fieldIndex = -1;
-          LocalInfo::ValueKind fieldKind = LocalInfo::ValueKind::Unknown;
-          if (!resolveStructFieldIndex(structPath, expr.name, fieldIndex, fieldKind)) {
+          StructSlotFieldInfo fieldInfo;
+          if (!resolveStructFieldSlot(structPath, expr.name, fieldInfo)) {
             error = "unknown struct field: " + expr.name;
             return false;
           }
-          (void)fieldKind;
           if (!emitExpr(receiver, localsIn)) {
             return false;
           }
           const int32_t ptrLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          const uint64_t offsetBytes = static_cast<uint64_t>((1 + fieldIndex) * 16);
+          const uint64_t offsetBytes = static_cast<uint64_t>(fieldInfo.slotOffset * 16);
           function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
           function.instructions.push_back({IrOpcode::AddI64, 0});
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          if (fieldInfo.structPath.empty()) {
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          }
           return true;
         }
         if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBlockCall(expr)) {

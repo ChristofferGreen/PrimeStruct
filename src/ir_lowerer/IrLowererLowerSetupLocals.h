@@ -810,6 +810,18 @@
     LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
     int32_t fieldCount = 0;
   };
+  struct StructSlotFieldInfo {
+    std::string name;
+    int32_t slotOffset = -1;
+    int32_t slotCount = 0;
+    LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+    std::string structPath;
+  };
+  struct StructSlotLayout {
+    std::string structPath;
+    int32_t totalSlots = 0;
+    std::vector<StructSlotFieldInfo> fields;
+  };
 
   auto resolveStructArrayInfo = [&](const Expr &expr, StructArrayInfo &out) -> bool {
     out = StructArrayInfo{};
@@ -916,37 +928,152 @@
     }
   };
 
-  auto resolveStructFieldIndex = [&](const std::string &structPath,
-                                     const std::string &fieldName,
-                                     int32_t &indexOut,
-                                     LocalInfo::ValueKind &fieldKindOut) -> bool {
-    indexOut = -1;
-    fieldKindOut = LocalInfo::ValueKind::Unknown;
-    auto it = structFieldInfoByName.find(structPath);
-    if (it == structFieldInfoByName.end()) {
+  std::unordered_map<std::string, StructSlotLayout> structSlotLayoutCache;
+  std::unordered_set<std::string> structSlotLayoutStack;
+  std::function<bool(const std::string &, StructSlotLayout &)> resolveStructSlotLayout;
+  resolveStructSlotLayout = [&](const std::string &structPath, StructSlotLayout &out) -> bool {
+    auto cached = structSlotLayoutCache.find(structPath);
+    if (cached != structSlotLayoutCache.end()) {
+      out = cached->second;
+      return true;
+    }
+    if (!structSlotLayoutStack.insert(structPath).second) {
+      error = "recursive struct layout not supported: " + structPath;
       return false;
     }
-    int32_t fieldIndex = 0;
-    for (const auto &field : it->second) {
+    auto defIt = defMap.find(structPath);
+    if (defIt == defMap.end() || !defIt->second) {
+      error = "native backend cannot resolve struct layout: " + structPath;
+      structSlotLayoutStack.erase(structPath);
+      return false;
+    }
+    auto fieldIt = structFieldInfoByName.find(structPath);
+    if (fieldIt == structFieldInfoByName.end()) {
+      error = "native backend cannot resolve struct fields: " + structPath;
+      structSlotLayoutStack.erase(structPath);
+      return false;
+    }
+    StructSlotLayout layout;
+    layout.structPath = structPath;
+    int32_t offset = 1;
+    layout.fields.reserve(fieldIt->second.size());
+    const std::string &namespacePrefix = defIt->second->namespacePrefix;
+    for (const auto &field : fieldIt->second) {
       if (field.isStatic) {
         continue;
       }
+      if (!field.binding.typeTemplateArg.empty()) {
+        error = "native backend does not support templated struct fields on " + structPath;
+        structSlotLayoutStack.erase(structPath);
+        return false;
+      }
+      StructSlotFieldInfo info;
+      info.name = field.name;
+      info.slotOffset = offset;
+      LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
+      if (kind != LocalInfo::ValueKind::Unknown && kind != LocalInfo::ValueKind::String) {
+        info.valueKind = kind;
+        info.slotCount = 1;
+      } else {
+        std::string nestedStruct;
+        if (!resolveStructTypeName(field.binding.typeName, namespacePrefix, nestedStruct)) {
+          error = "native backend does not support struct field type: " + field.binding.typeName + " on " +
+                  structPath;
+          structSlotLayoutStack.erase(structPath);
+          return false;
+        }
+        StructSlotLayout nestedLayout;
+        if (!resolveStructSlotLayout(nestedStruct, nestedLayout)) {
+          structSlotLayoutStack.erase(structPath);
+          return false;
+        }
+        info.structPath = nestedStruct;
+        info.slotCount = nestedLayout.totalSlots;
+      }
+      layout.fields.push_back(info);
+      offset += info.slotCount;
+    }
+    layout.totalSlots = offset;
+    structSlotLayoutStack.erase(structPath);
+    structSlotLayoutCache.emplace(structPath, layout);
+    out = std::move(layout);
+    return true;
+  };
+
+  auto resolveStructFieldSlot = [&](const std::string &structPath,
+                                    const std::string &fieldName,
+                                    StructSlotFieldInfo &out) -> bool {
+    StructSlotLayout layout;
+    if (!resolveStructSlotLayout(structPath, layout)) {
+      return false;
+    }
+    for (const auto &field : layout.fields) {
       if (field.name == fieldName) {
-        if (!field.binding.typeTemplateArg.empty()) {
-          return false;
-        }
-        LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
-        if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
-          return false;
-        }
-        indexOut = fieldIndex;
-        fieldKindOut = kind;
+        out = field;
         return true;
       }
-      ++fieldIndex;
     }
     return false;
   };
+
+  auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
+    if (info.kind != LocalInfo::Kind::Value || !info.structTypeName.empty()) {
+      return;
+    }
+    std::string typeName;
+    for (const auto &transform : expr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      typeName = transform.name;
+      break;
+    }
+    if (typeName.empty() || typeName == "Reference" || typeName == "Pointer") {
+      return;
+    }
+    std::string resolved;
+    if (resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
+      info.structTypeName = resolved;
+    }
+  };
+
+  std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
+  inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
+    if (expr.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.name);
+      if (it != localsIn.end()) {
+        return it->second.structTypeName;
+      }
+      return "";
+    }
+    if (expr.kind == Expr::Kind::Call) {
+      if (expr.isFieldAccess && expr.args.size() == 1) {
+        std::string receiverStruct = inferStructExprPath(expr.args.front(), localsIn);
+        if (receiverStruct.empty()) {
+          return "";
+        }
+        StructSlotFieldInfo fieldInfo;
+        if (!resolveStructFieldSlot(receiverStruct, expr.name, fieldInfo)) {
+          return "";
+        }
+        return fieldInfo.structPath;
+      }
+      if (!expr.isMethodCall && !expr.isBinding) {
+        std::string resolved = resolveExprPath(expr);
+        if (structFieldInfoByName.count(resolved) > 0) {
+          return resolved;
+        }
+      }
+    }
+    return "";
+  };
+
 
   auto combineNumericKinds = [&](LocalInfo::ValueKind left,
                                  LocalInfo::ValueKind right) -> LocalInfo::ValueKind {

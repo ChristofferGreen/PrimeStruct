@@ -23,7 +23,7 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 
 ## Constants
 - [ ] `pi`, `tau`, `e` emit correct values (float32/float64 conversion checks).
-- [ ] `pi`, `tau`, `e` round-trip through `convert<f32>` and `convert<f64>`.
+- [ ] `pi`, `tau`, `e` round-trip through `f32{...}` and `f64{...}`.
 - [ ] Check that `tau == 2 * pi` within tight tolerance.
 
 ## Trig: sin/cos/tan
@@ -134,9 +134,9 @@ This is an expanded checklist of math doctests to add across C++/exe (reference)
 - [ ] Large angle conversions sanity checks.
 
 ## Mixed-Type Conversions
-- [ ] `convert<f32>` and `convert<f64>` from ints for key values.
-- [ ] `convert<int>` and `convert<i64>` from floats around boundaries.
-- [ ] Conversion of NaN/Inf to int policy (error or truncation).
+- [ ] `f32{...}` and `f64{...}` from ints for key values.
+- [ ] `i32{...}` and `i64{...}` from floats around boundaries.
+- [ ] NaN -> int yields `0`; +Inf/-Inf clamp to max/min.
 
 ## Vector/Array Math Usage
 - [ ] Spot checks where math builtins are used inside vector ops (no ABI surprises).

@@ -35,8 +35,13 @@ The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ..
 indexing `value[index]`), then rewrites them into a small canonical core before semantic analysis
 and IR lowering.
 Canonical/bottom-level syntax requires explicit return transforms and literal suffixes; surface syntax may omit
-them and rely on inference/transforms to insert the canonical forms. When `--no-transforms` is active, source is
-expected to already be in canonical form.
+them and rely on inference/transforms to insert the canonical forms. `auto` is permitted in surface return
+transforms but must resolve to a concrete envelope before canonicalization. When `--no-transforms` is active,
+source is expected to already be in canonical form.
+
+Include expansion runs before type inference. All definitions/executions live in a single compilation unit after
+includes are expanded, so inference may use call sites anywhere in the expanded source; there are no module
+boundaries.
 
 Transform template lists accept one or more envelope entries, so generic binding envelopes can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
@@ -59,7 +64,7 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 - Base identifier: `[A-Za-z_][A-Za-z0-9_]*`
 - Slash path: `/segment/segment/...` where each segment is a base identifier.
 - Identifiers are ASCII only; non-ASCII characters are rejected by the parser.
-- Reserved keywords: `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, `for`.
+- Reserved keywords: `auto`, `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, `for`.
 - Reserved keywords may not appear as identifier segments in slash paths.
 
 ### 2.2 Whitespace and Comments
@@ -87,13 +92,13 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
   - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`, `1f`, `1.5f`.
 
 Type aliases:
-- `int` and `float` are currently fixed to `i32` and `f32` in the compiler. Prefer explicit widths for deterministic behavior; future backends may widen these aliases.
+- `int` and `float` are surface aliases that resolve to fixed-width envelopes during semantic analysis (current defaults: `i32`, `f32`). Targets may choose different defaults, but unresolved aliases are a diagnostic. Prefer explicit widths for deterministic behavior.
 - Software numeric envelopes `integer`, `decimal`, and `complex` are supported in the language spec:
   - `integer` is arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping).
   - `decimal` is arbitrary-precision floating with fixed 256-bit precision and deterministic round-to-nearest-even semantics.
   - `complex` is a pair of `decimal` values (`real`, `imag`) using the same 256-bit precision and rounding rules.
   - These envelopes are software-only; GPU backends reject them, and the current VM/native subset excludes them.
-  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use `convert<T>(value)` explicitly, and conversions that would overflow or lose information fail with diagnostics.
+  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use explicit conversion syntax (`T{value}`). Conversions are total and deterministic: float -> int truncates toward zero then clamps to the target range (NaN -> 0, +Inf -> max, -Inf -> min), and integer width changes use sign/zero extension on widening and two's-complement truncation on narrowing.
   - Naming rationale: `integer`/`decimal`/`complex` model mathematical numbers and deterministic software arithmetic. Fixed-width envelopes (`i32`, `i64`, `u64`, `f32`, `f64`) model hardware behavior (modular integer arithmetic and IEEE-754 rounding), so they intentionally do not use the math-aligned names. The `int`/`float` aliases remain machine-native and map to `i32`/`f32`.
 - Bool literals: `true`, `false`.
 - String literals:
@@ -279,7 +284,7 @@ Notes:
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
 - `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
 - Definition order does not affect name resolution: calls may reference definitions that appear later in the same file or namespace. Resolution runs after includes/imports and namespace expansion; unresolved names are diagnostics.
-- Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred from struct constructor/value returns.
+- Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred from struct constructor/value returns or `return<auto>`.
 - Commas and semicolons are treated as whitespace separators in transform lists and item lists; trailing separators are allowed.
 - Example mixed separators:
   - `array<i32; i64  u64>`
@@ -372,6 +377,9 @@ main() {
 
 - Definitions may have a body block with statements.
 - Transform list on the definition declares return envelope and effects.
+- A definition may omit a return transform or use `return<auto>`; the compiler infers the return envelope from
+  all return paths. If all return paths yield no value, `return<auto>` resolves to `return<void>`. Conflicting
+  return types are a diagnostic.
 
 ### 6.2 Executions
 
@@ -399,18 +407,22 @@ execute_task([count] 2i32)
   A brace constructor form (`Type{...}`) is allowed in value positions (e.g., `bool{35}` in arguments
   or returns) and passes the block’s resulting value to the constructor.
 - If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
-  initializer form; if inference fails, the envelope defaults to `int`.
+  initializer form; if inference fails, the envelope defaults to `int`. Parameters are handled separately.
+- An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to `int`.
 - `mut` marks the binding as writable; otherwise immutable.
 
 ### 7.2 Parameters
 
-Parameters use the same binding envelope as locals:
+Parameters use the same binding envelope as locals and may omit the envelope:
 
 ```
 main([array<string>] args, [i32] limit{10i32}) { ... }
+function1(param1 param2) { ... }
 ```
 
-Defaults are limited to literal/pure forms (no name references).
+Omitted parameter envelopes are treated as `auto` and inferred from call sites across the expanded compilation
+unit. Inference may propagate transitively through call graphs until a fixed point. Unresolved or conflicting
+parameter inference is a diagnostic. Defaults are limited to literal/pure forms (no name references).
 
 ### 7.3 Labeled Arguments
 
@@ -503,7 +515,8 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 
 - The compiler entry point is selected with `--entry /path` (default `/main`).
 - The entry definition may take either zero parameters or a single `array<string>` parameter.
-  - If a parameter is present, it must be exactly one `array<string>` parameter.
+  - If a parameter is present, it must be exactly one `array<string>` parameter. An omitted envelope or `auto`
+    on the entry parameter resolves to `array<string>`.
   - The entry parameter does not allow a default value.
 - `args.count()` and `count(args)` are supported; indexing `args[index]` is bounds-checked unless
   `at_unsafe` is used.
@@ -512,6 +525,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 
 - VM/native backends accept a restricted subset of envelopes/operations (see design doc).
 - Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
+- Struct values are supported in VM/native backends when fields are numeric/bool or other struct values; string or templated struct fields are rejected.
 - The C++ emitter supports broader operations and full string handling.
 - GPU backends accept only GPU-safe envelopes/operations; kernel bodies are validated against a GPU-safe allowlist.
 
@@ -528,7 +542,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - `if` / `while` / `for` conditions must evaluate to `bool` (or a function returning `bool`).
 - `loop` counts must be integer envelopes; negative counts are errors.
 - `loop` / `while` / `for` require a body envelope (e.g., `do() { ... }`).
-- `and` / `or` / `not` accept only `bool` operands; use `bool{value}` or `convert<bool>(value)` to coerce integers.
+- `and` / `or` / `not` accept only `bool` operands; use `bool{value}` to coerce integers.
 
 ## 15. GPU Compute (Draft)
 

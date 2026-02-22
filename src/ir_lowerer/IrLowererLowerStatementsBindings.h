@@ -85,6 +85,16 @@
       info.mapValueKind = mapValueKind;
       setReferenceArrayInfo(stmt, info);
       applyStructArrayInfo(stmt, info);
+      applyStructValueInfo(stmt, info);
+      if (info.kind == LocalInfo::Kind::Value && info.valueKind == LocalInfo::ValueKind::Unknown &&
+          info.structTypeName.empty()) {
+        std::string inferredStruct = inferStructExprPath(init, localsIn);
+        if (!inferredStruct.empty()) {
+          info.structTypeName = inferredStruct;
+        } else {
+          info.valueKind = LocalInfo::ValueKind::Int32;
+        }
+      }
       for (const auto &transform : stmt.transforms) {
         if (transform.name == "File") {
           info.isFileHandle = true;
@@ -96,6 +106,36 @@
         }
       }
       valueKind = info.valueKind;
+
+      if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+        std::string initStruct = inferStructExprPath(init, localsIn);
+        if (initStruct.empty() || initStruct != info.structTypeName) {
+          error = "struct binding initializer type mismatch on " + stmt.name;
+          return false;
+        }
+        StructSlotLayout layout;
+        if (!resolveStructSlotLayout(info.structTypeName, layout)) {
+          return false;
+        }
+        const int32_t baseLocal = nextLocal;
+        nextLocal += layout.totalSlots;
+        info.index = nextLocal++;
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+        const int32_t srcPtrLocal = allocTempLocal();
+        if (!emitExpr(init, localsIn)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+          return false;
+        }
+        localsIn.emplace(stmt.name, info);
+        return true;
+      }
 
       if (valueKind == LocalInfo::ValueKind::String) {
         if (kind != LocalInfo::Kind::Value) {

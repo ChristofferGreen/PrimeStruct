@@ -330,24 +330,15 @@
             return LocalInfo::ValueKind::Unknown;
           }
           const Expr &receiver = expr.args.front();
-          std::string structPath;
-          if (receiver.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(receiver.name);
-            if (it != localsIn.end()) {
-              structPath = it->second.structTypeName;
-            }
-          } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
-            structPath = resolveExprPath(receiver);
-          }
+          std::string structPath = inferStructExprPath(receiver, localsIn);
           if (structPath.empty()) {
             return LocalInfo::ValueKind::Unknown;
           }
-          int32_t fieldIndex = -1;
-          LocalInfo::ValueKind fieldKind = LocalInfo::ValueKind::Unknown;
-          if (!resolveStructFieldIndex(structPath, expr.name, fieldIndex, fieldKind)) {
+          StructSlotFieldInfo fieldInfo;
+          if (!resolveStructFieldSlot(structPath, expr.name, fieldInfo)) {
             return LocalInfo::ValueKind::Unknown;
           }
-          return fieldKind;
+          return fieldInfo.structPath.empty() ? fieldInfo.valueKind : LocalInfo::ValueKind::Unknown;
         }
         if (expr.isMethodCall) {
           if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
@@ -743,6 +734,14 @@
                 }
                 info.valueKind = valueKind;
                 applyStructArrayInfo(bodyExpr, info);
+                applyStructValueInfo(bodyExpr, info);
+                if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
+                    info.valueKind == LocalInfo::ValueKind::Unknown) {
+                  std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), branchLocals);
+                  if (!inferredStruct.empty()) {
+                    info.structTypeName = inferredStruct;
+                  }
+                }
                 branchLocals.emplace(bodyExpr.name, info);
                 continue;
               }
@@ -794,6 +793,14 @@
                 }
                 info.valueKind = valueKind;
                 applyStructArrayInfo(bodyExpr, info);
+                applyStructValueInfo(bodyExpr, info);
+                if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
+                    info.valueKind == LocalInfo::ValueKind::Unknown) {
+                  std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), blockLocals);
+                  if (!inferredStruct.empty()) {
+                    info.structTypeName = inferredStruct;
+                  }
+                }
                 blockLocals.emplace(bodyExpr.name, info);
                 continue;
               }

@@ -462,14 +462,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     afterLabel = scan + 1;
     return true;
   };
+  auto isPrimitiveBraceType = [&](const std::string &name) -> bool {
+    if (name.empty() || name.find('/') != std::string::npos) {
+      return false;
+    }
+    return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "bool" ||
+           name == "float" || name == "f32" || name == "f64";
+  };
   auto parseBraceConstructor = [&](Expr &call, Expr &out) -> bool {
-    auto isPrimitiveBraceType = [&](const std::string &name) -> bool {
-      if (name.empty() || name.find('/') != std::string::npos) {
-        return false;
-      }
-      return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "bool" ||
-             name == "float" || name == "f32" || name == "f64";
-    };
     if (call.templateArgs.empty() && isPrimitiveBraceType(call.name)) {
       call.templateArgs.push_back(call.name);
       call.name = "convert";
@@ -488,6 +488,21 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     return true;
   };
   auto parsePrimary = [&](Expr &out) -> bool {
+    if (match(TokenKind::LParen)) {
+      expect(TokenKind::LParen, "expected '('");
+      Expr inner;
+      {
+        BareBindingGuard bindingGuard(*this, false);
+        if (!parseExpr(inner, namespacePrefix)) {
+          return false;
+        }
+      }
+      if (!expect(TokenKind::RParen, "expected ')' to close expression")) {
+        return false;
+      }
+      out = std::move(inner);
+      return true;
+    }
     if (allowSurfaceSyntax_ && match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
       bool parsed = false;
       if (!tryParseIfStatementSugar(out, namespacePrefix, parsed)) {
@@ -576,7 +591,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (match(TokenKind::LBrace)) {
-        if (!bindingTransforms && !allowBareBindings_) {
+        if (!bindingTransforms && (!allowBareBindings_ || isPrimitiveBraceType(call.name))) {
           return parseBraceConstructor(call, out);
         }
         if (!call.templateArgs.empty()) {
@@ -817,7 +832,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
-          if (!allowBareBindings_) {
+          if (!allowBareBindings_ || isPrimitiveBraceType(call.name)) {
             return parseBraceConstructor(call, out);
           } else if (allowBareBindings_) {
             if (!call.templateArgs.empty()) {

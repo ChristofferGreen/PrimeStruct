@@ -90,6 +90,7 @@
             paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
           }
           applyStructArrayInfo(param, paramInfo);
+          applyStructValueInfo(param, paramInfo);
           if (isStringBinding(param)) {
             if (paramInfo.kind != LocalInfo::Kind::Value) {
               error = "native backend does not support string pointers or references";
@@ -97,7 +98,7 @@
               return false;
             }
           }
-          if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+          if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown && paramInfo.structTypeName.empty()) {
             error = "native backend requires typed parameters on " + def.fullPath;
             returnInferenceStack.erase(path);
             return false;
@@ -128,11 +129,19 @@
               bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
             }
             applyStructArrayInfo(stmt, bindingInfo);
+            applyStructValueInfo(stmt, bindingInfo);
+            if (bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
+                bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && stmt.args.size() == 1) {
+              std::string inferredStruct = inferStructExprPath(stmt.args.front(), activeLocals);
+              if (!inferredStruct.empty()) {
+                bindingInfo.structTypeName = inferredStruct;
+              }
+            }
             if (bindingInfo.valueKind == LocalInfo::ValueKind::String && bindingInfo.kind != LocalInfo::Kind::Value) {
               error = "native backend does not support string pointers or references";
               return false;
             }
-            if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+            if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingInfo.structTypeName.empty()) {
               error = "native backend requires typed bindings on " + def.fullPath;
               return false;
             }
@@ -269,6 +278,34 @@
   std::function<bool(const Expr &, LocalMap &)> emitStatement;
   auto allocTempLocal = [&]() -> int32_t {
     return nextLocal++;
+  };
+  auto emitStructCopyFromPtrs = [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
+    if (slotCount <= 0) {
+      return true;
+    }
+    for (int32_t i = 0; i < slotCount; ++i) {
+      const uint64_t offsetBytes = static_cast<uint64_t>(i * 16);
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+      if (offsetBytes != 0) {
+        function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+      }
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+      if (offsetBytes != 0) {
+        function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+      }
+      function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+      function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+      function.instructions.push_back({IrOpcode::Pop, 0});
+    }
+    return true;
+  };
+  auto emitStructCopySlots = [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
+    const int32_t destPtrLocal = allocTempLocal();
+    function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal)});
+    function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+    return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
   };
   struct OnErrorScope {
     std::optional<OnErrorHandler> &target;

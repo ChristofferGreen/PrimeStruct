@@ -21,6 +21,7 @@ Legend:
 - ✓ Allow trailing separators (comma/semicolon) in lists where the SyntaxSpec permits them; parser rejects trailing commas and semicolons entirely.
 - ✓ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
 - ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/include resolver currently allow them).
+- ○ Enforce reserved keyword `auto` in identifiers and slash paths (parser/include resolver currently allow it).
 - ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ✓ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ✓ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
@@ -40,6 +41,13 @@ Legend:
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
 - ✓ Align default effects behavior: docs say entry defaults include `io_out`, but code applies no default effects unless `--default-effects` is provided.
 - ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
+- ○ Implement deterministic conversion semantics for `T{value}` (float -> int trunc+clamp, NaN -> 0, +/-Inf -> min/max; integer width sign/zero-extend or truncate) across VM/native/C++ backends.
+- ○ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
+- ○ Enforce the core type set in semantic validation and backend filters (reject non-core envelopes unless the backend explicitly supports them).
+- ○ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
+- ○ Implement whole-program `auto` inference for parameters and returns (fixpoint over the expanded call graph after includes).
+- ○ Require explicit `auto` on bindings/returns to resolve to a concrete envelope (no fallback to `int`); emit diagnostics on unresolved or conflicting inference.
+- ○ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
 - ○ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
 - ○ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
 - ○ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
@@ -109,7 +117,7 @@ Legend:
 - ○ Define reference counting / heap value lifetime model for VM/native backends.
 - ○ Specify tail execution optimization semantics and when backends are allowed/required to apply it.
 - ○ Define a per-backend type support matrix (allowed binding/return/local types by backend).
-- ○ Specify allowed binding/return/convert target types and keep diagnostics in sync with the spec.
+- ○ Specify allowed binding/return/conversion target types and keep diagnostics in sync with the spec.
 - ○ Document backend effect/capability allowlists and align diagnostics for unsupported effects.
 - ○ Define the supported IR opcode subset per backend (native/VM/GLSL) and align validation to reject unsupported cases earlier.
 - ○ Enumerate native emitter unsupported IR opcodes and add tests/allowlist documentation.

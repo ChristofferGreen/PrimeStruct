@@ -4,11 +4,26 @@
                 } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
                   valueKind = inferExprKind(bodyExpr.args.front(), branchLocals);
                   if (valueKind == LocalInfo::ValueKind::Unknown) {
-                    valueKind = LocalInfo::ValueKind::Int32;
+                    std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), branchLocals);
+                    if (!inferredStruct.empty()) {
+                      info.structTypeName = inferredStruct;
+                    } else {
+                      valueKind = LocalInfo::ValueKind::Int32;
+                    }
                   }
                 }
                 info.valueKind = valueKind;
                 applyStructArrayInfo(bodyExpr, info);
+                applyStructValueInfo(bodyExpr, info);
+                if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
+                    info.valueKind == LocalInfo::ValueKind::Unknown && bodyExpr.args.size() == 1) {
+                  std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), branchLocals);
+                  if (!inferredStruct.empty()) {
+                    info.structTypeName = inferredStruct;
+                  } else {
+                    info.valueKind = LocalInfo::ValueKind::Int32;
+                  }
+                }
                 branchLocals.emplace(bodyExpr.name, info);
                 continue;
               }

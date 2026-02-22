@@ -157,10 +157,16 @@
         } else if (info.kind == LocalInfo::Kind::Value) {
           info.valueKind = inferExprKind(binding.args.front(), locals);
           if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-            info.valueKind = LocalInfo::ValueKind::Int32;
+            std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
+            if (!inferredStruct.empty()) {
+              info.structTypeName = inferredStruct;
+            } else {
+              info.valueKind = LocalInfo::ValueKind::Int32;
+            }
           }
         }
         applyStructArrayInfo(binding, info);
+        applyStructValueInfo(binding, info);
         locals.emplace(binding.name, info);
         return true;
       };
