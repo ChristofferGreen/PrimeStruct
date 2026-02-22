@@ -3,10 +3,10 @@
 This is an expanded checklist of math doctests to add across C++/exe (reference), VM, and native.
 
 ## Harness + Infrastructure
-- [ ] Add a shared helper that runs the same source under `--emit=exe`, `--emit=vm`, and `--emit=native`.
-- [ ] Add stdout comparison with per-test tolerances for float outputs.
-- [ ] Add a small float parser that can handle `nan`, `inf`, `-inf` tokens.
-- [ ] Add helpers for `abs_diff <= epsilon` and `relative_error <= epsilon`.
+- [x] Add a shared helper that runs the same source under `--emit=exe`, `--emit=vm`, and `--emit=native`.
+- [x] Add stdout comparison with per-test tolerances for float outputs.
+- [x] Add a small float parser that can handle `nan`, `inf`, `-inf` tokens.
+- [x] Add helpers for `abs_diff <= epsilon` and `relative_error <= epsilon`.
 - [ ] Add helpers for sign-only and range-only checks (avoid overfitting accuracy).
 - [ ] Add helpers for batch cases to keep test sources compact.
 - [ ] Add a way to mark expected native deviations (temporary allowlist).
