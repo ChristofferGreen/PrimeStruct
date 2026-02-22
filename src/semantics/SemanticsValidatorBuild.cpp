@@ -11,6 +11,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   entryDefaultEffectSet_.clear();
   defMap_.clear();
   returnKinds_.clear();
+  returnStructs_.clear();
   structNames_.clear();
   paramsByDef_.clear();
 
@@ -398,6 +399,70 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (!inserted && it->second != importPath) {
       error_ = "import creates name conflict: " + remainder;
       return false;
+    }
+  }
+
+  auto resolveStructReturnPath = [&](const std::string &typeName,
+                                     const std::string &namespacePrefix) -> std::string {
+    if (typeName.empty()) {
+      return "";
+    }
+    if (!typeName.empty() && typeName[0] == '/') {
+      return structNames_.count(typeName) > 0 ? typeName : "";
+    }
+    std::string current = namespacePrefix;
+    while (true) {
+      if (!current.empty()) {
+        std::string direct = current + "/" + typeName;
+        if (structNames_.count(direct) > 0) {
+          return direct;
+        }
+        if (current.size() > typeName.size()) {
+          const size_t start = current.size() - typeName.size();
+          if (start > 0 && current[start - 1] == '/' &&
+              current.compare(start, typeName.size(), typeName) == 0 &&
+              structNames_.count(current) > 0) {
+            return current;
+          }
+        }
+      } else {
+        std::string root = "/" + typeName;
+        if (structNames_.count(root) > 0) {
+          return root;
+        }
+      }
+      if (current.empty()) {
+        break;
+      }
+      const size_t slash = current.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        current.clear();
+      } else {
+        current.erase(slash);
+      }
+    }
+    auto importIt = importAliases_.find(typeName);
+    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return "";
+  };
+
+  for (const auto &def : program_.definitions) {
+    if (structNames_.count(def.fullPath) > 0) {
+      returnStructs_[def.fullPath] = def.fullPath;
+      continue;
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string &typeName = transform.templateArgs.front();
+      std::string structPath = resolveStructReturnPath(typeName, def.namespacePrefix);
+      if (!structPath.empty()) {
+        returnStructs_[def.fullPath] = structPath;
+      }
+      break;
     }
   }
 
