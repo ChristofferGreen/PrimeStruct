@@ -103,6 +103,20 @@ TEST_CASE("non-ascii identifier rejected") {
   CHECK(error.find("invalid character") != std::string::npos);
 }
 
+TEST_CASE("non-ascii slash path rejected") {
+  const std::string source = std::string("import /m") + "\xC3\xB6" + "th\n"
+                             "[return<int>]\n"
+                             "main() {\n"
+                             "  return(0i32)\n"
+                             "}\n";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("invalid character") != std::string::npos);
+}
+
 TEST_CASE("non-ascii type identifier rejected") {
   const std::string source = std::string(R"(
 [return<int>]
