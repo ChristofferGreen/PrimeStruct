@@ -84,7 +84,7 @@ Goal: a tiny end-to-end compiler path that turns a single PrimeStruct source fil
 ### Example source and expected IR (sketch)
 PrimeStruct:
 ```
-[return<int>]
+[return<i32>]
 main() {
   return(42i32)
 }
@@ -107,7 +107,7 @@ module {
 - `primec --emit=native input.prime -o hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.
-  - Current subset: fixed-width integer/bool/float literals (`i32`, `i64`, `u64`, `f32`, `f64`), locals + assign, basic arithmetic/comparisons (signed/unsigned integers plus floats), boolean ops (`and`/`or`/`not`), explicit conversions via `T{value}` for `int/i32/i64/u64/bool/f32/f64`, abs/sign/min/max/clamp/saturate, `if`, `print`, `print_line`, `print_error`, and `print_line_error` for integer/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
+  - Current subset: fixed-width integer/bool/float literals (`i32`, `i64`, `u64`, `f32`, `f64`), locals + assign, basic arithmetic/comparisons (signed/unsigned integers plus floats), boolean ops (`and`/`or`/`not`), explicit conversions via `T{value}` for `i32/i64/u64/bool/f32/f64`, abs/sign/min/max/clamp/saturate, `if`, `print`, `print_line`, `print_error`, and `print_line_error` for integer/bool or string literals/bindings, and pointer/reference helpers (`location`, `dereference`, `Reference`) in a single entry definition.
 - `primec --emit=ir input.prime -o module.psir`
   - Emits serialized PSIR bytecode after semantic validation (no execution).
   - Output is written as `.psir` and includes a PSIR header/version tag.
@@ -170,10 +170,10 @@ module {
   - `Pointer<T>`, `Reference<T>`
   - User-defined struct types (including `[struct]`-tagged definitions)
   Backends may accept additional types, but any type outside this core set is backend-specific and must be rejected by backends that do not explicitly support it. For collections, element/key/value types must themselves be in the core set unless a backend explicitly documents wider support.
-- **Aliases:** `int` and `float` currently map to `i32` and `f32`. Targets may choose different defaults, but the compiler must resolve the alias to a concrete width before IR emission; leaving `int`/`float` unresolved is a diagnostic. For deterministic cross-target behavior, prefer explicit widths (`i32`, `i64`, `f32`, `f64`).
-- **`auto` (inference placeholder):** `auto` may appear as a binding envelope or return envelope to request inference. Parameters that omit an explicit envelope are treated as `auto`. Inference is whole-program across the expanded source and may propagate transitively through call graphs until a fixed point; `auto` must resolve to a concrete envelope before IR lowering, or it is a diagnostic. Explicit `auto` does not fall back to the `int` default used for omitted local envelopes.
+- **Aliases:** none for numeric widths; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
+- **`auto` (inference placeholder):** `auto` may appear as a binding envelope or return envelope to request inference. Parameters that omit an explicit envelope are treated as `auto`. Inference is whole-program across the expanded source and may propagate transitively through call graphs until a fixed point; `auto` must resolve to a concrete envelope before IR lowering, or it is a diagnostic. Omitted local envelopes must also resolve via inference or emit a diagnostic.
   - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`, `1.e2`).
-- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body; surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. Local bindings use the form `[Envelope qualifiers…] name{initializer}` and may omit the envelope transform when the initializer lets the compiler infer it (defaulting to `int` if inference fails; `int` currently maps to `i32`). Parameters that omit an explicit envelope are treated as `auto` and inferred from call sites. Lists recursively reuse whitespace-separated tokens.
+- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body; surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. Local bindings use the form `[Envelope qualifiers…] name{initializer}` and may omit the envelope transform when the initializer lets the compiler infer it; failures to infer are diagnostics. Parameters that omit an explicit envelope are treated as `auto` and inferred from call sites. Lists recursively reuse whitespace-separated tokens.
   - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code (definition bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time envelopes/templates—primarily for transforms or when inference must be overridden.
@@ -187,9 +187,9 @@ module {
   - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are parsed/validated but not emitted (tooling-only for now).
-- **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
-  - **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<int>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
-- **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list). If the bare envelope is `auto`, the transform yields `return<auto>` and inference resolves it later.
+- **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<f32>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
+- **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<i32>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
+- **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list). If the bare envelope is `auto`, the transform yields `return<auto>` and inference resolves it later.
 Array returns use `return<array<T>>` (or `[array<T>]` with `single_type_to_return`) and surface as `array` in the IR.
 Struct returns use `return<StructName>` (or inference when the body returns a struct constructor/value); they surface as `array` in the IR with the struct layout manifest attached.
 
@@ -213,7 +213,7 @@ module {
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 
 ### Backend Type Support (v1)
-- **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64` (plus `int`/`float` aliases). `array`/`vector`/`map` support numeric/bool values; map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed bindings for print/map contexts; string returns and string pointers/references are rejected. `convert<T>` supports `int`, `i32`, `i64`, `u64`, `bool`, `float`, `f32`, `f64`.
+- **VM/native:** scalar `i32`, `i64`, `u64`, `bool`, `f32`, `f64`. `array`/`vector`/`map` support numeric/bool values; map string keys must be string literals or literal-backed bindings. Strings are limited to literals/literal-backed bindings for print/map contexts; string returns and string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
 - **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++ emitter); string comparisons are rejected and string literals are limited to print/count/index/map contexts; string return types, string array returns, and string pointer/reference bindings are rejected; block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected; `print*` and vector helper calls are statement-only; `File<Mode>(path)` requires a string literal or literal-backed binding; `Result.ok(value)` only accepts `i32`/`bool` payloads; unsupported math or GPU builtins fail.
 - **GLSL:** numeric/bool scalar locals only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`); string literals and non-scalar bindings are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
@@ -261,7 +261,7 @@ module {
 - **Self-expansion:** text transforms may append additional text transforms to the same node; appended transforms run after the current transform.
 - **Applicability limits (v1):**
   - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`, `single_type_to_return`.
-  - **Definitions only:** `compute`, `workgroup_size(x, y, z)`.
+  - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
   - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is bindings-only.
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
@@ -275,7 +275,7 @@ namespace demo {
   hello_values() {
     [string] message{"Hello PrimeStruct"utf8}
     [i32] iterations{3i32}
-    [float mut] exposure{1.25f32}
+    [f32 mut] exposure{1.25f32}
     [float3] tone_curve{float3(0.8f32, 0.9f32, 1.1f32)}
 
     print_line(message)
@@ -303,17 +303,17 @@ if you intended to index.
 - **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
 - **Placement policy:** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities. The `stack`/`heap`/`buffer` transforms remain reserved and rejected in v1.
 - **POD tag as validation:** `[pod]` on a struct-style definition asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
-- **Member syntax:** every field is just a stack-value execution (`[float mut] exposure{1.0f32}`, `[handle<PathNode>] target{get_default()}`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
+- **Member syntax:** every field is just a stack-value execution (`[f32 mut] exposure{1.0f32}`, `[handle<PathNode>] target{get_default()}`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
 - **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
 - **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
 - **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations again produce diagnostics instead of silent adjustments.
-- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[float mut] exposure{1.0f32}`). Default initializers are mandatory to keep frames fully initialized.
+- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[f32 mut] exposure{1.0f32}`). Default initializers are mandatory to keep frames fully initialized.
   - Multi-step initializer example:
     ```
-    [return<float>]
+    [return<f32>]
     main() {
-    [float] x{
-      [float mut] tmp{1.0f32}
+    [f32] x{
+      [f32 mut] tmp{1.0f32}
       tmp = tmp + 2.0f32
       tmp
     }
@@ -326,7 +326,7 @@ if you intended to index.
   namespace demo {
     [struct pod]
     color_grade() {
-      [float mut] exposure{1.0f32}
+      [f32 mut] exposure{1.0f32}
 
       [mut]
       Create() {
@@ -364,12 +364,13 @@ if you intended to index.
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
 
 **Semantic transforms (AST-level, registered)**
-- **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[int] main()` → `[return<int>] main()`); enabled by default, but can be disabled or overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
+- **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`); enabled by default, but can be disabled or overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
 
 **Semantic directives (AST-level, validated)**
 - **`copy`:** force copy-on-entry for a parameter or binding, even when references are the default. Often paired with `mut`.
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is only valid on lifecycle helpers to make `this` mutable; executions do not accept `mut`.
-- **`restrict<T>`:** constrain the accepted envelope to `T` (or satisfy concept-like predicates once defined). Applied alongside `copy`/`mut` when needed.
+- **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
+- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules and pointer-to-reference conversions are relaxed within the body, but references created there must not escape the unsafe scope.
 - **`return<T>`:** optional contract that pins the inferred return envelope. `return<auto>` requests inference; unresolved or conflicting returns are diagnostics.
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
@@ -391,7 +392,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - **Basic:** `/std/math/abs`, `/std/math/sign`, `/std/math/min`, `/std/math/max`, `/std/math/clamp`, `/std/math/lerp`, `/std/math/saturate`.
   - **Rounding:** `/std/math/floor`, `/std/math/ceil`, `/std/math/round`, `/std/math/trunc`, `/std/math/fract`.
   - **Power/log:** `/std/math/sqrt`, `/std/math/cbrt`, `/std/math/pow`, `/std/math/exp`, `/std/math/exp2`, `/std/math/log`, `/std/math/log2`, `/std/math/log10`.
-  - **Operand rules (current):** `abs`, `sign`, `saturate`, `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`). `min`, `max`, `clamp`, `lerp`, and `pow` reject mixed signed/unsigned or mixed int/float operands. All remaining `/std/math/*` builtins require float operands (`atan2`, `hypot`, `copysign` are binary; `fma` is ternary).
+  - **Operand rules (current):** `abs`, `sign`, `saturate`, `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`). `min`, `max`, `clamp`, `lerp`, and `pow` reject mixed signed/unsigned or mixed integer/float operands. All remaining `/std/math/*` builtins require float operands (`atan2`, `hypot`, `copysign` are binary; `fma` is ternary).
   - **Integer pow:** for integer operands, `pow` requires a non-negative exponent; negative exponents abort in VM/native (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
   - **Trig:** `/std/math/sin`, `/std/math/cos`, `/std/math/tan`, `/std/math/asin`, `/std/math/acos`, `/std/math/atan`, `/std/math/atan2`, `/std/math/radians`, `/std/math/degrees`.
   - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`, `/std/math/atanh`.
@@ -415,7 +416,7 @@ The lists above reflect the built-in transforms recognized by the compiler today
   - 2) must be a definition envelope; its body yields the `if` result when the condition is `true`
   - 3) must be a definition envelope; its body yields the `if` result when the condition is `false`
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two definition bodies is evaluated.
-- **`loop(count) { ... }`:** statement-only loop helper. `count` must be an integer envelope (`i32`, `i64`, `u64`, or `int` alias), and the body is required. Negative counts are errors.
+- **`loop(count) { ... }`:** statement-only loop helper. `count` must be an integer envelope (`i32`, `i64`, `u64`), and the body is required. Negative counts are errors.
 - **`while(condition) { ... }`:** statement-only loop helper. `condition` must evaluate to `bool` (or a function returning `bool`).
 - **`for(init cond step) { ... }`:** statement-only loop helper. `init`, `cond`, and `step` are evaluated in order; `cond` must evaluate to `bool`. Bindings are allowed in any slot. Semicolons and commas are optional separators (e.g., `for(init; cond; step)`).
 - **Loop scope:** loop bodies default to per-iteration scope. Add `[shared_scope]` before the loop to share one scope across all iterations.
@@ -435,7 +436,7 @@ loop(5i32) { work() }
 
 while(i < 10i32) { work(i) }
 
-for([int mut] i{0i32}; i < 10; ++i) {
+for([i32 mut] i{0i32}; i < 10; ++i) {
   work(i)
 }
 ```
@@ -447,7 +448,7 @@ loop(5i32, do() { work() })
 while(less_than(i, 10i32), do() { work(i) })
 
 for(
-  [int mut] i{0i32},
+  [i32 mut] i{0i32},
   less_than(i, 10i32),
   increment(i),
   do() { work(i) }
@@ -668,9 +669,15 @@ Colors() {
 - `mut` marks writeable bindings.
 - `move(x)` consumes a binding and forbids use until reinitialized.
 - References cannot be moved.
-- Aliasing rules:
-  - `mut` bindings cannot be aliased by `Reference<T>` in the same scope.
-  - `restrict<T>` is an aliasing promise that must match the binding type.
+- **Borrow rules (safe scope):**
+  - A `Reference<T>` is a borrow of a storage location.
+  - Many immutable borrows are allowed, or one mutable borrow; they may not overlap.
+  - Borrows end at last use (non-lexical lifetimes), not necessarily at block end.
+  - Borrowing a field borrows the whole struct value (no field-splitting in v1).
+  - Borrowed bindings cannot be reassigned or moved until all borrows end.
+  - `Reference<T>` values cannot escape the lifetime of their source; returning a reference is only allowed when it is exactly a parameter reference (no locals/derived references).
+- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing and pointer-to-reference conversions within that body, but references created there must not escape the unsafe scope. Unsafe scopes are aliasing barriers for optimization.
+- **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as unsafe-created references do not escape.
 
 ### Layout and Struct Semantics
 - Structs record layout manifests in IR.
@@ -697,8 +704,8 @@ Colors() {
   namespace demo {
     [struct]
     brush_settings() {
-      [float] size{12.0f32}
-      [private float] jitter{0.1f32}
+      [f32] size{12.0f32}
+      [private f32] jitter{0.1f32}
       [private static handle<Texture>] palette{load_default_palette()}
 
       [public]
@@ -753,17 +760,17 @@ Colors() {
   - Mutation helpers (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) are statement-only.
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals; other string key expressions require the C++ emitter (which uses `std::string_view` keys).
-- **Conversions:** no implicit coercions. Use explicit executions (`convert<float>(value)` or `bool{value}`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `int/i32/i64/u64/bool/f32/f64` in the minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
+- **Conversions:** no implicit coercions. Use explicit executions (`convert<f32>(value)` or `bool{value}`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
 - **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/std/math/*` helpers.
 - **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
   - **Struct note:** VM/native lowering supports struct values when fields are numeric/bool or other struct values (nested structs). Struct fields with strings or templated envelopes still require the C++ emitter.
   - `bool{...}` is valid for integer operands (including `u64`) and treats any non-zero value as `true`.
-- **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[float mut] value{...}`).
+- **Mutability:** values immutable by default; include `mut` in the stack-value execution to opt-in (`[f32 mut] value{...}`).
 - **Open design:** raw string semantics across backends.
 
 ## Pointers & References
 - **Explicit envelopes:** `Pointer<T>`, `Reference<T>` mirror C++ semantics; no implicit conversions.
-- **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including template args) and serves as an aliasing promise within the binding’s scope. There is no `readonly` qualifier yet; use `mut` to opt into mutation and `restrict<T>` to constrain aliasing.
+- **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including template args) and acts as an explicit type constraint. There is no `readonly` qualifier yet; use `mut` to opt into mutation.
 - **Target whitelist:** `Pointer<T>` targets must be primitive or struct types. `Reference<T>` targets may be primitive, struct, or `array<T>` (array references are allowed). `Pointer<array<T>>` and other template types are rejected by the front-end.
 - **Backend limits:** VM/native lowering rejects `Pointer<string>` / `Reference<string>` (string pointers are not supported). Entry-argument arrays are not addressable (`location(args)` is invalid).
 - **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators` text transform rewrites `&name`/`*name` sugar into those calls.
@@ -779,7 +786,7 @@ Colors() {
   - The C++ emitter performs raw pointer arithmetic on actual addresses; offsets are only well-defined within the same allocated object.
   - Minimal runnable example:
     ```
-    [return<int>]
+    [return<i32>]
     main() {
       [i32 mut] value{2i32}
       [Pointer<i32> mut] ptr{location(value)}
@@ -803,7 +810,7 @@ Colors() {
 - **Reference example:** `Reference<T>` behaves like a dereferenced pointer in value positions while still storing the address.
   - Minimal runnable example:
     ```
-    [return<int>]
+    [return<i32>]
     main() {
       [i32 mut] value{2i32}
       [Reference<i32> mut] ref{location(value)}
@@ -859,7 +866,7 @@ Colors() {
 ## Examples (sketch)
 ```
 // Hello world (native/VM-friendly)
-[return<int> effects(io_out)]
+[return<i32> effects(io_out)]
 main() {
   print_line("Hello, world!"utf8)
   return(0i32)
@@ -870,9 +877,9 @@ import<"/std/io", version="1.2.0">
 
 import /std/math/*
 
-[operators return<int>] add<int>(a, b) { return(plus(a, b)) }
+[operators return<i32>] add<i32>(a, b) { return(plus(a, b)) }
 
-[operators] execute_add<int>(x, y)
+[operators] execute_add<i32>(x, y)
 
 clamp_exposure(img) {
   if(
@@ -888,19 +895,28 @@ tweak_color([copy mut restrict<Image>] img) {
   apply_grade(img)
 }
 
-[return<int>]
+restrict_demo() {
+  [restrict<array<i32>>] ok{array<i32>(1i32, 2i32)}
+  [restrict<array<i32>>] bad{array<u64>(1u64, 2u64)} // diagnostic: expected array<i32>
+}
+
+// Canonicalization example for parameters:
+// Surface: f1([i32] a [f32] b) { ... }
+// Canonical: f1([restrict<i32>] a [restrict<f32>] b) { ... }
+
+[return<i32>]
 convert_demo() {
   return(i32{1.5f32})
 }
 
-[return<int>]
+[return<i32>]
 labeled_args_demo() {
   return(sum3(1i32 [c] 3i32 [b] 2i32))
 }
 
-[operators return<float>]
-blend([float] a, [float] b) {
-  [float mut] result{(a + b) * 0.5f32}
+[operators return<f32>]
+blend([f32] a, [f32] b) {
+  [f32 mut] result{(a + b) * 0.5f32}
   if (result > 1.0f32) {
     result = 1.0f32
   } else {
@@ -924,7 +940,7 @@ blend([float] a, [float] b) {
   /std/gpu/buffer_store(output, x, plus(value, 1i32))
 }
 
-[effects(gpu_dispatch) return<int>]
+[effects(gpu_dispatch) return<i32>]
 main() {
   [array<i32>] values{array<i32>(1i32, 2i32, 3i32, 4i32)}
   [Buffer<i32>] input{ /std/gpu/upload(values) }
@@ -935,8 +951,8 @@ main() {
 }
 
 // Canonical, post-transform form
-[return<float>] blend([float] a, [float] b) {
-  [float mut] result{multiply(plus(a, b), 0.5f32)}
+[return<f32>] blend([f32] a, [f32] b) {
+  [f32 mut] result{multiply(plus(a, b), 0.5f32)}
   if(
     greater_than(result, 1.0f32),
     then() { assign(result, 1.0f32) },

@@ -95,14 +95,14 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
   - Examples: `0.5f32`, `1.0f32`, `2.0f64`, `1e-3f64`, `1f`, `1.5f`.
 
 Type aliases:
-- `int` and `float` are surface aliases that resolve to fixed-width envelopes during semantic analysis (current defaults: `i32`, `f32`). Targets may choose different defaults, but unresolved aliases are a diagnostic. Prefer explicit widths for deterministic behavior.
+- No implicit width aliases; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
 - Software numeric envelopes `integer`, `decimal`, and `complex` are supported in the language spec:
   - `integer` is arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping).
   - `decimal` is arbitrary-precision floating with fixed 256-bit precision and deterministic round-to-nearest-even semantics.
   - `complex` is a pair of `decimal` values (`real`, `imag`) using the same 256-bit precision and rounding rules.
   - These envelopes are software-only; GPU backends reject them, and the current VM/native subset excludes them.
-  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use explicit conversion syntax (`T{value}`). Conversions are total and deterministic: float -> int truncates toward zero then clamps to the target range (NaN -> 0, +Inf -> max, -Inf -> min), and integer width changes use sign/zero extension on widening and two's-complement truncation on narrowing.
-  - Naming rationale: `integer`/`decimal`/`complex` model mathematical numbers and deterministic software arithmetic. Fixed-width envelopes (`i32`, `i64`, `u64`, `f32`, `f64`) model hardware behavior (modular integer arithmetic and IEEE-754 rounding), so they intentionally do not use the math-aligned names. The `int`/`float` aliases remain machine-native and map to `i32`/`f32`.
+  - Mixed ops between software envelopes and fixed-width envelopes are rejected; use explicit conversion syntax (`T{value}`). Conversions are total and deterministic: float -> integer truncates toward zero then clamps to the target range (NaN -> 0, +Inf -> max, -Inf -> min), and integer width changes use sign/zero extension on widening and two's-complement truncation on narrowing.
+  - Naming rationale: `integer`/`decimal`/`complex` model mathematical numbers and deterministic software arithmetic. Fixed-width envelopes (`i32`, `i64`, `u64`, `f32`, `f64`) model hardware behavior (modular integer arithmetic and IEEE-754 rounding), so they intentionally do not use the math-aligned names.
 - Bool literals: `true`, `false`.
 - String literals:
   - Double-quoted strings process escapes unless a raw suffix is used.
@@ -345,12 +345,12 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - Operator compatibility rules (validated after desugaring):
   - Arithmetic operators (`plus`, `minus`, `multiply`, `divide`, `negate`, `increment`, `decrement`) require numeric
     operands (`i32`, `i64`, `u64`, `f32`, `f64`). `negate` rejects unsigned operands. Mixed signed/unsigned operands
-    are rejected, as are mixed int/float operands.
+    are rejected, as are mixed integer/float operands.
   - Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset on the
     right (`i32`, `i64`, `u64`). Pointer + pointer is rejected, and a pointer on the right is rejected.
   - Comparisons (`greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`) accept
     numeric/bool/string operands. String comparisons require both operands to be strings. Numeric/bool comparisons
-    reject mixed signed/unsigned operands and mixed int/float operands. `bool` participates as signed `0/1`, so
+    reject mixed signed/unsigned operands and mixed integer/float operands. `bool` participates as signed `0/1`, so
     `bool` with `u64` is rejected as mixed signedness while `bool` with signed ints is allowed.
 - Collection literals (via the `collections` text transform) rewrite to constructor calls:
   - `array<T>{...}` / `array<T>[...]` -> `array<T>(...)`
@@ -360,7 +360,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
 - `/std/math/*` builtins include the core set (`abs`, `sign`, `min`, `max`, `clamp`, `saturate`, `lerp`, `pow`, `sqrt`, `sin`, `cos`, etc.) plus `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, and `is_finite`.
 - Math builtin operand rules:
   - `abs`, `sign`, and `saturate` accept numeric operands (`i32`, `i64`, `u64`, `f32`, `f64`).
-  - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed int/float operands.
+  - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed integer/float operands.
   - Integer `pow` requires a non-negative exponent; VM/native backends abort on negative exponents (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
   - All remaining `/std/math/*` builtins require float operands. `atan2`, `hypot`, and `copysign` take two float operands, while `fma` takes three float operands.
 - PathSpace builtins (`notify(path, payload)`, `insert(path, payload)`, `take(path)`, `bind(path, payload)`, `unbind(path)`, `schedule(path, payload)`) live in the root namespace and act as PathSpace integration hooks.
@@ -379,7 +379,7 @@ The canonical core is what semantic validation and IR lowering consume.
 ### 6.1 Definitions
 
 ```
-[return<int> effects(io_out)]
+[return<i32> effects(io_out)]
 main() {
   return(0i32)
 }
@@ -401,6 +401,22 @@ execute_task([count] 2i32)
 - Executions may be prefixed with a transform list (e.g., `[effects(io_out)] log()`).
 - Executions are parsed and validated but not emitted by the current C++ emitter.
 
+### 6.3 Unsafe Scopes
+
+```
+[unsafe] block {
+  [Reference<i32> mut] b{location(value)}
+  assign(b, 3i32)
+}
+block()
+```
+
+- `[unsafe]` is a semantic transform on a definition; the body is an unsafe scope.
+- Unsafe scopes may violate `Reference<T>` aliasing rules and allow pointer-to-reference conversions.
+- References created inside an unsafe scope must not escape that scope (return, assign to outer bindings, or store into aggregates that outlive the scope).
+- `[unsafe] block { ... }` defines a local definition; it executes only when called (`block()`).
+- Unsafe definitions may be called from safe code; unsafe does not propagate to the caller when escape rules are satisfied.
+
 ## 7. Parameters, Arguments, and Bindings
 
 ### 7.1 Bindings
@@ -420,8 +436,8 @@ execute_task([count] 2i32)
   fields; any field not supplied by the call uses its field initializer expression. Missing fields without
   initializers are a semantic error (struct fields require initializers).
 - If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
-  initializer form; if inference fails, the envelope defaults to `int`. Parameters are handled separately.
-- An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to `int`.
+  initializer form; if inference fails, it is a diagnostic. Parameters are handled separately.
+- An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to any width.
 - `mut` marks the binding as writable; otherwise immutable.
 
 ### 7.2 Parameters
@@ -512,12 +528,12 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 ### 9.1 Backend Type Support (v1)
 
 - VM/native:
-  - Scalar values: `i32`, `i64`, `u64`, `bool`, `f32`, `f64` (plus `int`/`float` aliases).
+  - Scalar values: `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
   - Collections: `array`, `vector`, and `map` of numeric/bool values; map string keys are limited to string literals or
     literal-backed bindings.
   - Strings: supported for literals and literal-backed bindings used in print/map contexts; string return types and string
     pointers/references are rejected.
-  - `convert<T>` targets: `int`, `i32`, `i64`, `u64`, `bool`, `float`, `f32`, `f64` (software numeric envelopes are rejected).
+  - `convert<T>` targets: `i32`, `i64`, `u64`, `bool`, `f32`, `f64` (software numeric envelopes are rejected).
 - GLSL:
   - Scalar values: numeric/bool only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`).
   - Non-scalar bindings and string literals are rejected; entry definitions must return `void`.

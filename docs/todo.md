@@ -36,7 +36,7 @@ Legend:
 
 **Types & Semantics**
 - ✓ Implement software numeric envelopes (`integer`, `decimal`, `complex`) or document their explicit rejection in the syntax spec.
-- ✓ Align `int`/`float` aliases with the spec’s target-chosen widths (code currently fixes them to `i32`/`f32`) or update the docs to match.
+- ✓ Remove `int`/`float` aliases; require explicit widths (`i32`, `i64`, `u64`, `f32`, `f64`).
 - ✓ Add template monomorphization for user-defined definitions (templates are parsed but only builtins/collections use them today).
 - ✓ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission).
 - ✓ Implement `copy`/`public`/`private`/`static` binding semantics and metadata (currently validated but unused).
@@ -45,6 +45,7 @@ Legend:
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
+- ○ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch.
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
@@ -55,7 +56,7 @@ Legend:
 - ○ Enforce the core type set in semantic validation and backend filters (reject non-core envelopes unless the backend explicitly supports them).
 - ○ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
 - ○ Implement whole-program `auto` inference for parameters and returns (fixpoint over the expanded call graph after import expansion).
-- ○ Require explicit `auto` on bindings/returns to resolve to a concrete envelope (no fallback to `int`); emit diagnostics on unresolved or conflicting inference.
+- ○ Enforce diagnostics for unresolved inference on omitted binding envelopes and `auto` bindings/returns (no fallback); emit diagnostics on unresolved or conflicting inference.
 - ○ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
 - ✓ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
 - ✓ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
