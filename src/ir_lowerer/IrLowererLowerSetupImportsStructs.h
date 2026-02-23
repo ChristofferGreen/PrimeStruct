@@ -181,8 +181,8 @@
     std::string typeTemplateArg;
   };
   auto isLayoutQualifierName = [](const std::string &name) {
-    return name == "public" || name == "private" || name == "package" || name == "static" || name == "mut" ||
-           name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "pod" ||
+    return name == "public" || name == "private" || name == "static" || name == "mut" || name == "copy" ||
+           name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "pod" ||
            name == "handle" || name == "gpu_lane";
   };
   auto getBindingTypeForLayout = [&](const Expr &expr, FieldBinding &bindingOut) {
@@ -241,12 +241,10 @@
     return IrStructFieldCategory::Default;
   };
   auto fieldVisibility = [&](const Expr &expr) -> IrStructVisibility {
-    IrStructVisibility visibility = IrStructVisibility::Private;
+    IrStructVisibility visibility = IrStructVisibility::Public;
     for (const auto &transform : expr.transforms) {
       if (transform.name == "public") {
         visibility = IrStructVisibility::Public;
-      } else if (transform.name == "package") {
-        visibility = IrStructVisibility::Package;
       } else if (transform.name == "private") {
         visibility = IrStructVisibility::Private;
       }

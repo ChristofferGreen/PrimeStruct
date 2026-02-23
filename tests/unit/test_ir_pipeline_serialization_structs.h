@@ -173,9 +173,9 @@ TEST_CASE("ir emits struct field visibility and static metadata") {
   const std::string source = R"(
 [struct]
 Widget() {
-  [public i32] size{1i32}
+  [i32] size{1i32}
   [private static i32] counter{2i32}
-  [package i32] weight{3i32}
+  [public i32] weight{3i32}
 }
 
 [return<void>]
@@ -217,7 +217,7 @@ main() {
   CHECK(sizeField->isStatic == false);
   CHECK(counterField->visibility == primec::IrStructVisibility::Private);
   CHECK(counterField->isStatic == true);
-  CHECK(weightField->visibility == primec::IrStructVisibility::Package);
+  CHECK(weightField->visibility == primec::IrStructVisibility::Public);
   CHECK(weightField->isStatic == false);
 
   std::vector<uint8_t> data;

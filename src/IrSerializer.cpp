@@ -258,6 +258,9 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       field.alignmentBytes = alignmentBytes;
       field.paddingKind = static_cast<IrStructPaddingKind>(paddingKind);
       field.category = static_cast<IrStructFieldCategory>(category);
+      if (visibility == 1u) {
+        visibility = static_cast<uint32_t>(IrStructVisibility::Public);
+      }
       field.visibility = static_cast<IrStructVisibility>(visibility);
       field.isStatic = (isStatic != 0u);
       layout.fields.push_back(std::move(field));

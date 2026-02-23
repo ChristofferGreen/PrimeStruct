@@ -164,7 +164,7 @@ bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string>
 }
 
 bool isBindingQualifierName(const std::string &name) {
-  return name == "public" || name == "private" || name == "package" || name == "static";
+  return name == "public" || name == "private" || name == "static";
 }
 
 bool isBindingAuxTransformName(const std::string &name) {
@@ -205,10 +205,6 @@ BindingInfo getBindingInfo(const Expr &expr) {
     }
     if (transform.name == "public" && transform.templateArgs.empty() && transform.arguments.empty()) {
       info.visibility = BindingVisibility::Public;
-      continue;
-    }
-    if (transform.name == "package" && transform.templateArgs.empty() && transform.arguments.empty()) {
-      info.visibility = BindingVisibility::Package;
       continue;
     }
     if (transform.name == "private" && transform.templateArgs.empty() && transform.arguments.empty()) {

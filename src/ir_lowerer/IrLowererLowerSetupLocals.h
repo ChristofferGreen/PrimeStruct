@@ -349,8 +349,8 @@
   };
 
   auto isBindingQualifierName = [](const std::string &name) -> bool {
-    return name == "public" || name == "private" || name == "package" || name == "static" || name == "mut" ||
-           name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes";
+    return name == "public" || name == "private" || name == "static" || name == "mut" || name == "copy" ||
+           name == "restrict" || name == "align_bytes" || name == "align_kbytes";
   };
 
   auto hasExplicitBindingTypeTransform = [&](const Expr &expr) -> bool {

@@ -123,8 +123,7 @@ enum class IrStructPaddingKind : uint8_t {
 
 enum class IrStructVisibility : uint8_t {
   Private = 0,
-  Package,
-  Public,
+  Public = 2,
 };
 
 enum class IrSchedulingScope : uint32_t {
@@ -150,7 +149,7 @@ struct IrStructField {
   uint32_t alignmentBytes = 1;
   IrStructPaddingKind paddingKind = IrStructPaddingKind::None;
   IrStructFieldCategory category = IrStructFieldCategory::Default;
-  IrStructVisibility visibility = IrStructVisibility::Private;
+  IrStructVisibility visibility = IrStructVisibility::Public;
   bool isStatic = false;
 };
 

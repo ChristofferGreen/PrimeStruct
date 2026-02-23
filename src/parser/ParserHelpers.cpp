@@ -226,7 +226,7 @@ bool isValidFloatLiteral(const std::string &text) {
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" ||
          name == "align_kbytes" || name == "pod" || name == "handle" || name == "gpu_lane" ||
-         name == "public" || name == "private" || name == "package" || name == "static";
+         name == "public" || name == "private" || name == "static";
 }
 
 bool hasExplicitBindingTypeTransform(const std::vector<Transform> &transforms) {

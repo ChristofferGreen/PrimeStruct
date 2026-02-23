@@ -45,7 +45,7 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
          name == "struct" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
-         name == "platform_independent_padding" || name == "public" || name == "private" || name == "package" ||
+         name == "platform_independent_padding" || name == "public" || name == "private" ||
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" || name == "buffer";
 }
 

@@ -3,7 +3,7 @@
 PrimeStruct is built around a simple idea: program meaning comes from two primitives—**definitions** (potential) and **executions** (actual). Both map to a single canonical **Envelope** in the AST; executions are envelopes with an implicit empty body. Compile-time transforms rewrite the surface into a small canonical core. That core is what we target to C++, GLSL, and the PrimeStruct VM. It also keeps semantics deterministic and leaves room for future tooling (PathSpace integration, visual editors).
 
 ### Source-processing pipeline
-1. **Include resolver:** first pass walks the raw text and expands every `include<...>` inline (C-style) so the compiler always works on a single flattened source stream.
+1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler always works on a single flattened source stream.
 2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same rule applies. Text transforms may append additional text transforms to the same node.
 3. **AST builder:** once text transforms finish, the parser builds the canonical AST.
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects) so the tree is fully resolved.
@@ -12,7 +12,7 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text transforms are configured via `--text-transforms=<list>`; the default list enables `collections`, `operators`, `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are rewritten as key/value arguments rather than assignment expressions. Semantic transforms are configured via `--semantic-transforms=<list>`. `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic); ambiguous names are errors. Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require canonical syntax.
 
 ### Compilation model (v1)
-- **Whole-program by default:** `include` expansion produces a single compilation unit, and semantic resolution/inference runs over that full unit. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
+- **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution/inference runs over that full unit. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
 - **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.
 - **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
 
@@ -32,7 +32,7 @@ Each stage halts on error (reporting diagnostics immediately) and exposes `--dum
 - **Exit:** only after this phase is reviewed/approved do parser/IR/backend implementations begin; the conformance suite derives from the frozen charter instead of chasing a moving target.
 
 ## Project Charter (v1 target)
-- Language core: envelope syntax (definitions + executions), slash paths, namespaces, includes/imports, binding initializers, return annotations, effects annotations, and deterministic canonicalization rules.
+- Language core: envelope syntax (definitions + executions), slash paths, namespaces, imports (source + namespace exposure), binding initializers, return annotations, effects annotations, and deterministic canonicalization rules.
 - Transform pipeline: ordered text transforms, ordered semantic transforms, explicit `text(...)` / `semantic(...)` grouping, and auto-deduction for registered transforms.
 - Determinism: stable diagnostics, fixed evaluation order, stable IR emission, and canonical string normalization across backends.
 - IR: PSIR serialization with versioning, explicit opcode list, and a stable module layout shared by all backends.
@@ -66,7 +66,7 @@ open question is unresolved.
 - JIT, chunk caching, or dynamic recompilation tooling.
 - IDE/LSP integration and PathSpace-native editor tooling.
 - Standard library packaging/version negotiation beyond a single in-tree reference set.
-- `tools/PrimeStructc` feature parity with the main compiler and template codegen (PrimeStructc stays a minimal subset; template codegen and include version selection are explicitly out of scope for v1).
+- `tools/PrimeStructc` feature parity with the main compiler and template codegen (PrimeStructc stays a minimal subset; template codegen and import version selection are explicitly out of scope for v1).
 - Tail-call or tail-execution optimization guarantees across all backends.
 
 ## Phase 1 — Minimal Compiler That Emits an Executable
@@ -161,7 +161,7 @@ module {
   - Labeled execution arguments appear inline (e.g., `exec /execute_task([count] 2)`).
 
 ## Language Design Highlights
-- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `auto`, `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, and `for` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
+- **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `auto`, `mut`, `return`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, and `for` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
 -- **String literals:** surface forms accept `"..."utf8` / `"..."ascii` with escape processing, or raw `'...'utf8` / `'...'ascii` with no escape processing. The `implicit-utf8` text transform (enabled by default) appends `utf8` when omitted in surface syntax. **Canonical/bottom-level form uses double-quoted strings with escapes normalized and an explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface: `"hello"utf8`, `'moo'ascii`. Example canonical: `"hello"utf8`. Raw example: `'C:\temp'ascii` keeps backslashes verbatim.
 - **Numeric envelopes:** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are the only numeric envelopes supported across all backends today. Software numeric envelopes `integer`, `decimal`, and `complex` are accepted by the parser/semantic validator (bindings, returns, collections, and `convert<T>` targets), but current backends reject them at lowering/emission time. Mixed software/fixed arithmetic is rejected, and mixed software categories or ordered comparisons on `complex` are also diagnostics today.
 - **Core type set (v1):** the closed set of envelopes that every backend must understand and that the type system treats as cross-backend portable is:
@@ -185,7 +185,7 @@ module {
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
   - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
   - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
-  - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after includes/imports and namespace expansion; unresolved names remain diagnostics.
+  - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are parsed/validated but not emitted (tooling-only for now).
 - **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<float>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
   - **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<int>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
@@ -238,7 +238,10 @@ module {
 - **Tooling vs runtime visibility:**
   - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist violations (diagnostics).
   - **Runtime-only logs:** resolved effect/capability masks and execution identifiers (path hashes) for tracing; source spans are optional/debug-only.
-- **Paths & includes:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically; includes simply splice text, so they inherit whatever path context is active and produce a single compilation unit. Type inference runs after include expansion across the entire unit; there are no module boundaries. Include paths are parsed before text transforms, so they remain quoted without literal suffixes. `include<"/std/io", version="1.2.0">` searches the include path for a zipped archive or plain directory whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`include<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is inline-expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate includes are ignored. Folders prefixed with `_` remain private. `import /foo/*` is a lightweight alias that brings the immediate children of `/foo` into the root namespace, while `import /foo/bar` aliases a single definition (or builtin) by its final segment; imports do not inline source (use `include` for that), and unknown import paths are errors. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not supported. Imports are resolved after includes and can be listed as `import /std/math/*, /util/*` or whitespace-separated paths.
+- **Paths & imports:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically. Import expansion produces a single compilation unit; type inference runs after import expansion across the entire unit; there are no module boundaries. Import paths are parsed before text transforms, so they remain quoted without literal suffixes.
+  - **Source imports:** `import<"/std/io", version="1.2.0">` resolves packages from the import path (zipped archive or plain directory) whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`import<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate imports are ignored. Folders prefixed with `_` remain private.
+  - **Namespace imports:** `import /foo/*` brings the immediate **public** children of `/foo` into the root namespace. `import /foo/bar` brings a single **public** definition (or builtin) by its final segment; importing a non-public definition is a diagnostic. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or whitespace-separated paths.
+  - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make it importable. `[private]` explicitly marks it as non-exported.
 - **Transform-driven control flow:** control structures desugar into prefix calls that accept envelope arguments. A surface form like `if(condition) { … } else { … }` rewrites into `if(condition, then() { … }, else() { … })`. `loop(count) { … }`, `while(condition) { … }`, and `for(init cond step) { … }` rewrite into `loop(count, do() { … })`, `while(condition, do() { … })`, and `for(init, cond, step, do() { … })`. The envelope names (`do`, `then`, `else`) are for readability only; any name is accepted and ignored by the compiler. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
@@ -260,7 +263,7 @@ module {
   - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`, `single_type_to_return`.
   - **Definitions only:** `compute`, `workgroup_size(x, y, z)`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
-  - **Bindings only:** access/visibility markers (`public`, `private`, `package`, `static`).
+  - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is bindings-only.
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
   - Any transform outside its allowed scope is a compile-time error with a diagnostic naming the enclosing path.
 
@@ -294,7 +297,7 @@ if you intended to index.
 ### Slash paths & textual operator transforms
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the Envelope expects a name; `namespace foo { ... }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
 - Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary operators respect standard precedence and associativity: `*`/`/` bind tighter than `+`/`-`, comparisons (`<`, `>`, `<=`, `>=`, `==`, `!=`) bind tighter than `&&`/`||`, and assignment (`=`) is lowest precedence and right-associative. Operators follow the same operand-based rule (`a > b` → `greater_than(a, b)`, `a < b` → `less_than(a, b)`, `a >= b` → `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b` → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` → `increment(a)`, `--a` / `a--` → `decrement(a)`).
-- Because includes expand first, slash paths survive every transform untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
+- Because imports expand first, slash paths survive every transform untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
 
 ### Struct & envelope categories
 - **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
@@ -376,7 +379,7 @@ if you intended to index.
 - **`compute`:** marks a definition as a GPU kernel; kernel bodies are validated against the GPU-safe subset.
 - **`workgroup_size(x, y, z)`:** fixes the kernel's local workgroup size (must appear with `compute`).
 - **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
-- **`public`, `private`, `package`:** field visibility tags; mutually exclusive.
+- **`public`, `private`:** visibility tags. On definitions, they control export visibility for imports (default: private). On bindings, they control field visibility (default: public). Mutually exclusive.
 - **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
 - **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only. Bindings declared in the loop body are initialized once before the loop body runs and persist for the duration of the loop without escaping the surrounding scope.
@@ -458,8 +461,8 @@ for(
 - **Status:** stable snapshot of the current builtin surface (v0).
 - **Versioning (planned):**
   - Each package declares a semantic version (e.g., `1.2.0`).
-  - `include<..., version="1.2.0">` selects a specific package revision.
-  - There is no compiler flag to pin the default package set yet; use explicit versions in `include` declarations.
+  - `import<..., version="1.2.0">` selects a specific package revision.
+  - There is no compiler flag to pin the default package set yet; use explicit versions in `import` declarations.
 - **Namespaces:**
   - `/std/math/*` is imported via `import /std/math/*` (or explicit names like `import /std/math/sin /std/math/pi`).
   - Core builtins (`assign`, `count`, `print*`, `convert`, etc.) live in the root namespace.
@@ -564,9 +567,89 @@ for(
 - **Effects & capabilities:** lowering records `effect_mask` and `capability_mask` in PSIR metadata. If no `capabilities` transform is supplied, `capability_mask` mirrors the active effects for the definition; explicit capability lists narrow the mask.
 - **Instrumentation:** `instrumentation_flags` are reserved for tracing/source-map hooks. Bit 0 (`tail_execution`) is set when the final statement is `return(def_call(...))` or (for `void` definitions) a final `def_call(...)`. Backends may treat this as a tail-call hint; no backend currently requires it.
 
-## Type Semantics (draft)
+## Type System (draft)
+- **Type forms:** the type system recognizes `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `array<T>`, `vector<T>`,
+  `map<K, V>`, `Pointer<T>`, `Reference<T>`, and user-defined struct types. Any other type form is a diagnostic unless a
+  backend explicitly documents it.
+- **Typing context:** type checking runs after import expansion and namespace resolution. The compiler keeps a context that
+  maps local bindings, parameter names, definition signatures, struct layouts, and import aliases to their resolved types.
+- **Backend profiles:** type checking is performed against a specific backend profile (VM/native, GLSL, C++). A definition
+  is only considered well-typed if its types, effects, and constructs are supported by the selected backend; unsupported
+  types or effects are reported during type checking rather than later in lowering.
+- **Expression rules (English):**
+  - **Literals:** each literal has a fixed type determined by its suffix (`1i32`, `2u64`, `1.0f32`, `"hi"utf8`, `true`).
+  - **Bindings:** a binding has the type declared in its transform list, or `auto` if omitted.
+  - **Calls:** a call is well-typed if the callee resolves to a definition or builtin, and every argument matches the
+    corresponding parameter type (no implicit conversions). Labeled arguments must still match the declared parameter type.
+  - **Constructors:** struct constructors follow the same rules as calls; all fields must be provided or defaulted.
+  - **`convert<T>` and `T{...}`:** conversions are explicit; the target type must be one of the supported conversion targets.
+  - **`assign(target, value)`:** only allowed when `target` is mutable and `value` has the exact same type as `target`.
+  - **Control flow:** `if`, `while`, and `for` conditions must be `bool`. `loop(count)` requires an integer type.
+  - **Pointers/references:** `Pointer<T>` and `Reference<T>` targets are restricted as described in the pointer rules; no
+    implicit conversions between pointer/reference/value forms.
+- **Definition rules (English):**
+  - Parameters use the same binding syntax as locals, and must resolve to concrete types before lowering.
+  - Return types must be explicit (`return<T>`) or inferred from `return(value)` sites when `return<auto>` is used.
+  - All `return(value)` statements in a definition must agree on the same type.
+- **Inference rules (English):**
+  - `auto` is allowed on bindings, parameters, and return transforms.
+  - Inference runs after import expansion, across the whole compilation unit, using all call sites to resolve `auto`.
+  - The compiler repeats inference until no new information is produced (fixed point).
+  - Errors are emitted when `auto` cannot be resolved or resolves to conflicting types.
+- **Traits (draft, EoP‑style direction):**
+  - Traits are explicit requirements over named functions, not operators. The type checker never reasons about `+`, `*`,
+    or other surface operators; it only checks whether required functions like `plus`, `multiply`, or `count` are defined.
+  - A trait is a named set of required signatures. A type satisfies a trait if all required functions resolve for that
+    type in the current program and backend profile.
+  - Trait constraints are explicit in signatures (no inference). If a required function is missing, the definition is
+    ill‑typed.
+  - Initial built‑in traits (minimal set): `Additive`, `Multiplicative`, `Comparable`, `Indexable`.
+  - Example shape (non‑binding syntax):
+    - `Additive<T>` requires `plus(T, T) -> T` (optional: `zero() -> T` later).
+    - `Multiplicative<T>` requires `multiply(T, T) -> T` (optional: `one() -> T` later).
+    - `Comparable<T>` requires `equal(T, T) -> bool` and `less_than(T, T) -> bool`.
+    - `Indexable<T, Elem>` requires `count(T) -> i32` and `at(T, i32) -> Elem`.
+  - EoP‑style algebraic laws (associativity, identity) are documented expectations at first; formal enforcement can be
+    added later via tests or tooling.
+
+**Error examples (shape only)**
+- **Return type mismatch**
+  ```
+  [return<i32>]
+  main() { return(1.0f32) }
+  ```
+  Diagnostic: `return type mismatch: expected i32, got f32`.
+- **Assign type mismatch**
+  ```
+  main() {
+    [i32 mut] value{1i32}
+    assign(value, 1.0f32)
+  }
+  ```
+  Diagnostic: `assign requires exact type match: i32 vs f32`.
+- **Invalid pointer target**
+  ```
+  main() {
+    [Pointer<array<i32>>] ptr{location(foo)}
+  }
+  ```
+  Diagnostic: `Pointer<T> targets must be primitive or struct types`.
+- **Unresolved auto**
+  ```
+  main() {
+    [auto] value{some_call()}
+  }
+  ```
+  Diagnostic: `auto did not resolve to a concrete type`.
+
+**Conformance tests (required set)**
+- **Positive typing:** literals, calls, struct construction, pointers/references.
+- **Negative typing:** return mismatch, invalid assign, invalid convert, invalid pointer target.
+- **Inference:** single call-site inference, multi-call-site consistent inference, conflicting inference, and unresolved `auto`.
+
+### Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser preserves the nested envelope string for later lowering.
-- **Field visibility:** stack-value declarations accept `[public]`, `[package]`, or `[private]` transforms (default: private); they are mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules consistently. `[package]` exposes the field to any module compiled into the same package; `[public]` emits accessors in the generated namespace surface.
+- **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules consistently. `[public]` emits accessors in the generated namespace surface.
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform. Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one storage slot exists per struct definition.
 - **Example:**
   ```
@@ -574,9 +657,9 @@ for(
   namespace demo {
     [struct]
     brush_settings() {
-      [public float] size{12.0f32}
+      [float] size{12.0f32}
       [private float] jitter{0.1f32}
-      [package static handle<Texture>] palette{load_default_palette()}
+      [private static handle<Texture>] palette{load_default_palette()}
 
       [public]
       Create() {
@@ -743,7 +826,7 @@ main() {
 }
 
 // Pull std::io at version 1.2.0
-include<"/std/io", version="1.2.0">
+import<"/std/io", version="1.2.0">
 
 import /std/math/*
 
@@ -843,7 +926,7 @@ module {
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export (`--emit-diagnostics`) for tooling/tests.
 - **Phase 1 (source maps):** attach token spans to AST, keep span provenance through text/semantic transforms, and emit IR-to-source maps for VM/native/GLSL. Require every diagnostic to carry at least one source span.
-- **Phase 2 (incremental):** content-addressed caches for AST/IR, dependency graph tracking for includes/imports, and invalidation rules per transform phase. Add `--watch` to reuse caches and stream diagnostics.
+- **Phase 2 (incremental):** content-addressed caches for AST/IR, dependency graph tracking for imports, and invalidation rules per transform phase. Add `--watch` to reuse caches and stream diagnostics.
 - **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus a PathSpace-native editor adapter.
 - **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
 
@@ -862,7 +945,7 @@ Scope (MVP):
 - `primec-lsp` process that reuses the parser, transform pipeline, and semantic resolver.
 - Diagnostics wired through the JSON export (`--emit-diagnostics`) for identical output.
 - Core language intelligence: hover, go-to-definition, signature help, and completion.
-- Workspace symbol search driven by include/import dependency graphs.
+- Workspace symbol search driven by import dependency graphs.
 
 Architecture:
 - Maintain a long-lived compiler service with per-file token/AST caches.
@@ -906,7 +989,7 @@ Out of scope (initial):
 2. Prototype parser + IR builder (Phase 0).
 3. Evaluate reuse of existing shader toolchains (glslang, SPIRV-Cross) vs bespoke emitters.
 4. Design import/package system (module syntax, search paths, visibility rules, transform distribution).
-5. Define library/versioning strategy so include resolution enforces compatibility.
+5. Define library/versioning strategy so import resolution enforces compatibility.
 6. Flesh out stack/class specifications (calling convention, class sugar transforms, dispatch strategy) across backends.
 7. Lock down composite literal syntax across backends and add conformance tests.
 8. Decide machine-code strategy (C++ emission, third-party JIT) and prototype.

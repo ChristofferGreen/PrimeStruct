@@ -11,7 +11,7 @@ bool validateAlignTransform(const Transform &transform, const std::string &conte
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
 
 bool isBindingQualifierName(const std::string &name) {
-  return name == "public" || name == "private" || name == "package" || name == "static";
+  return name == "public" || name == "private" || name == "static";
 }
 
 bool isBindingAuxTransformName(const std::string &name) {

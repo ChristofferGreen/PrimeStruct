@@ -14,14 +14,18 @@ Legend:
 - ✓ Apply `single_type_to_return` via semantic transforms or per-definition markers (it is currently toggled via the text filter list).
 - ✓ Document `--emit=ir` (PSIR bytecode output) in the docs or remove it from the CLI.
 - ✓ Enforce canonical-only parsing when `--no-transforms` is active (disable parser sugar like `if(...) {}` / `value[index]` and require explicit return transforms); currently still accepts surface forms.
+- ○ Replace `include` with unified `import` in the parser (support `import<...>` for source expansion and `import /path/*` for namespace exposure).
+- ○ Rework include resolver into an import resolver (expand `import<...>` before transforms/inference).
+- ○ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
 
 **Syntax & Surface Features**
-- ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, include/import lists); currently hard errors.
+- ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.
 - ✓ Treat commas as optional separators everywhere the SyntaxSpec treats them as whitespace (statement lists and binding initializers, not just argument/template lists).
 - ✓ Allow trailing separators (comma/semicolon) in lists where the SyntaxSpec permits them; parser rejects trailing commas and semicolons entirely.
-- ✓ Allow whitespace-separated include entries (grammar allows separators to be optional; include lists currently require commas).
-- ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/include resolver currently allow them).
-- ○ Enforce reserved keyword `auto` in identifiers and slash paths (parser/include resolver currently allow it).
+- ✓ Allow whitespace-separated import source entries (grammar allows separators to be optional; import lists currently require commas).
+- ○ Remove `include` syntax and unify `import` to cover source expansion (`import<...>`) plus namespace exposure (`import /path/*`).
+- ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/import resolver currently allow them).
+- ○ Enforce reserved keyword `auto` in identifiers and slash paths (parser/import resolver currently allow it).
 - ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ✓ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ✓ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
@@ -35,7 +39,11 @@ Legend:
 - ✓ Align `int`/`float` aliases with the spec’s target-chosen widths (code currently fixes them to `i32`/`f32`) or update the docs to match.
 - ✓ Add template monomorphization for user-defined definitions (templates are parsed but only builtins/collections use them today).
 - ✓ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission).
-- ✓ Implement `copy`/`public`/`private`/`package`/`static` binding semantics and metadata (currently validated but unused).
+- ✓ Implement `copy`/`public`/`private`/`static` binding semantics and metadata (currently validated but unused).
+- ○ Enforce definition export visibility: definitions are private by default and only `[public]` definitions are importable.
+- ○ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
+- ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
+- ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
@@ -45,7 +53,7 @@ Legend:
 - ○ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
 - ○ Enforce the core type set in semantic validation and backend filters (reject non-core envelopes unless the backend explicitly supports them).
 - ○ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
-- ○ Implement whole-program `auto` inference for parameters and returns (fixpoint over the expanded call graph after includes).
+- ○ Implement whole-program `auto` inference for parameters and returns (fixpoint over the expanded call graph after import expansion).
 - ○ Require explicit `auto` on bindings/returns to resolve to a concrete envelope (no fallback to `int`); emit diagnostics on unresolved or conflicting inference.
 - ○ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
 - ✓ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
@@ -132,5 +140,5 @@ Legend:
 - ✓ Scope and plan IDE/LSP integration once the compiler stabilizes.
 - ✓ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
 - ✓ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
-- ✓ For `tools/PrimeStructc`, decide whether to honor include `version="..."` (or document that it is ignored).
+- ✓ For `tools/PrimeStructc`, decide whether to honor import `version="..."` (or document that it is ignored).
 - ✓ Refresh README once the spec stabilizes (current status, backend support, and roadmap).

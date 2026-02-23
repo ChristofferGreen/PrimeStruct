@@ -42,14 +42,14 @@ them and rely on inference/transforms to insert the canonical forms. `auto` is p
 transforms but must resolve to a concrete envelope before canonicalization. When `--no-transforms` is active,
 source is expected to already be in canonical form.
 
-Include expansion runs before type inference. All definitions/executions live in a single compilation unit after
-includes are expanded, so inference may use call sites anywhere in the expanded source; there are no module
+Import expansion runs before type inference. All definitions/executions live in a single compilation unit after
+imports are expanded, so inference may use call sites anywhere in the expanded source; there are no module
 boundaries.
 
 Transform template lists accept one or more envelope entries, so generic binding envelopes can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
 
-The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after include expansion/text transforms,
+The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after import expansion/text transforms,
 the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
 transforms are configured via `--text-transforms=<list>` (the default list is `collections`, `operators`,
 `implicit-utf8`), semantic transforms via `--semantic-transforms=<list>` (default: `single_type_to_return`), and
@@ -67,7 +67,7 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 - Base identifier: `[A-Za-z_][A-Za-z0-9_]*`
 - Slash path: `/segment/segment/...` where each segment is a base identifier.
 - Identifiers are ASCII only; non-ASCII characters are rejected by the parser.
-- Reserved keywords: `auto`, `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, `for`.
+- Reserved keywords: `auto`, `mut`, `return`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, `for`.
 - Reserved keywords may not appear as identifier segments in slash paths.
 
 ### 2.2 Whitespace and Comments
@@ -125,49 +125,41 @@ separators by the parser outside numeric literals.
 A source file is a list of top-level items:
 
 ```
-file = { include | import | namespace | definition | execution }
+file = { import | namespace | definition | execution }
 ```
 
-### 3.1 Includes
+### 3.1 Imports
 
 ```
-include<"/path", version="1.2.0">
-```
-
-Includes expand inline before text transforms run. Include paths are raw quoted strings without suffixes
-and are parsed before the string-literal rules in this spec; treat them as literal paths. Multiple
-paths may be listed in a single include. Version selection follows the rules in `docs/PrimeStruct.md`.
-Whitespace is allowed between `include` and `<` and around `=` in the `version` attribute. Include paths
-and version strings may use either single-quoted or double-quoted string literals.
-
-Include paths may also be written as unquoted slash paths (e.g. `include</std/io>`), which are treated
-as logical include paths resolved via the configured include roots. Paths (or any parent folders)
-prefixed with `_` are private and rejected by the include resolver.
-
-### 3.2 Imports
-
-```
+import<"/path", version="1.2.0">
 import /std/math/*
 import /std/math/sin /std/math/pi
 import /ui/*, /util/*
 ```
 
-Imports are compile-time namespace aliases. `import /foo/*` contributes the immediate children of `/foo`
-to the root namespace (e.g., `import /std/math/*` allows `sin(...)` as shorthand for `/std/math/sin(...)`), while
-`import /foo/bar` aliases a single definition or builtin by its final segment. Imports must appear at the
-top level (not inside `namespace` blocks).
+`import` brings the public symbols of the referenced path(s) into the current namespace. It also ensures
+the referenced sources are loaded into the compilation unit before transforms and inference.
+Imports must appear at the top level (not inside `namespace` blocks).
 
-`import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without a wildcard or
-explicit name).
+- `import<...>` loads source packages from the import path. Entries may be quoted strings or slash paths.
+  Multiple paths may be listed in a single import; version selection follows `docs/PrimeStruct.md` and is optional.
+  Whitespace is allowed between `import` and `<` and around `=` in the `version` attribute. Paths (or any parent
+  folders) prefixed with `_` are private and rejected by the import resolver.
+- `import /foo/*` brings the immediate **public** children of `/foo` into the root namespace (e.g., `import /std/math/*`
+  allows `sin(...)` as shorthand for `/std/math/sin(...)`).
+- `import /foo/bar` brings a single **public** definition or builtin by its final segment; importing a non-public
+  definition is a diagnostic.
+- `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without a wildcard or
+  explicit name).
+- `import /std/math` (without a wildcard or explicit name) is not supported; use `import /std/math/*` or
+  `import /std/math/<name>` instead.
 
-Import paths must resolve to a definition or builtin; unknown import paths are errors.
+Definitions are private by default; add `[public]` to a definition to make it importable.
 
-`import /std/math` (without a wildcard or explicit name) is not supported; use `import /std/math/*` or
-`import /std/math/<name>` instead.
+Unknown import paths are errors. Imports are resolved after import expansion, and the same syntax is accepted by `primec`
+and `primevm`.
 
-Imports are resolved after includes expand, and the same syntax is accepted by `primec` and `primevm`.
-
-### 3.3 Namespace Blocks
+### 3.2 Namespace Blocks
 
 ```
 namespace foo {
@@ -184,17 +176,15 @@ This grammar describes surface syntax before text-transform rewriting.
 ```
 file           = { top_item } ;
 
-top_item       = include_decl | import_decl | namespace_decl | definition | execution ;
+top_item       = import_decl | namespace_decl | definition | execution ;
 
-include_decl   = "include" "<" include_list ">" ;
-include_list   = include_entry { [ "," | ";" ] include_entry } ;
-include_entry  = include_path | "version" "=" include_string ;
-include_string = quoted_string ;
-include_path   = quoted_string | slash_path ;
-
-import_decl    = "import" import_list ;
-import_list    = import_path { [ "," | ";" ] import_path } ;
-import_path    = slash_path [ "/*" ] ;
+import_decl          = "import" ( import_source_list | import_path_list ) ;
+import_source_list   = "<" import_source_entry { [ "," | ";" ] import_source_entry } ">" ;
+import_source_entry  = import_source_path | "version" "=" import_source_string ;
+import_source_string = quoted_string ;
+import_source_path   = quoted_string | slash_path ;
+import_path_list     = import_path { [ "," | ";" ] import_path } ;
+import_path          = slash_path [ "/*" ] ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 
@@ -286,7 +276,7 @@ Notes:
   - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an implicit empty body.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
 - `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
-- Definition order does not affect name resolution: calls may reference definitions that appear later in the same file or namespace. Resolution runs after includes/imports and namespace expansion; unresolved names are diagnostics.
+- Definition order does not affect name resolution: calls may reference definitions that appear later in the same file or namespace. Resolution runs after import expansion and namespace expansion; unresolved names are diagnostics.
 - Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred from struct constructor/value returns or `return<auto>`.
 - Commas and semicolons are treated as whitespace separators in transform lists and item lists; trailing separators are allowed.
 - Example mixed separators:
@@ -301,7 +291,7 @@ Notes:
 - Text transforms accept only identifier/literal arguments; semantic transforms may accept full forms. If a text transform is given a non-simple argument, it is a diagnostic.
 - `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In statement position, `name{...}` is parsed as a binding.
 - `block()` with a trailing body block is allowed in any form position; `block{...}` is invalid and parsed as a binding or brace constructor.
-- `quoted_string` in include declarations is a raw quoted string without suffixes.
+- `quoted_string` in `import<...>` declarations is a raw quoted string without suffixes.
 - Placement transforms `[stack]`, `[heap]`, and `[buffer]` are reserved and rejected by the compiler.
 - Recursive struct layouts (structs containing themselves by value, directly or indirectly) are rejected.
 

@@ -10,14 +10,14 @@ namespace primec {
 
 class Emitter {
 public:
-  enum class BindingVisibility { Private, Package, Public };
+  enum class BindingVisibility { Private, Public };
   struct BindingInfo {
     std::string typeName;
     std::string typeTemplateArg;
     bool isMutable = false;
     bool isCopy = false;
     bool isStatic = false;
-    BindingVisibility visibility = BindingVisibility::Private;
+    BindingVisibility visibility = BindingVisibility::Public;
   };
   struct ResultInfo {
     bool isResult = false;
