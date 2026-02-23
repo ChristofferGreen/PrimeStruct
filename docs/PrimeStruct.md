@@ -835,6 +835,34 @@ module {
 - **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus a PathSpace-native editor adapter.
 - **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
 
+### IDE/LSP Integration Plan
+Goals:
+- Deliver a first-class IDE/LSP experience powered by the compiler front end.
+- Keep diagnostics and symbol resolution deterministic across CLI and LSP.
+- Preserve transform provenance so hovers and completions map to source.
+
+Scope (MVP):
+- `primec-lsp` process that reuses the parser, transform pipeline, and semantic resolver.
+- Diagnostics wired through the JSON export (`--emit-diagnostics`) for identical output.
+- Core language intelligence: hover, go-to-definition, signature help, and completion.
+- Workspace symbol search driven by include/import dependency graphs.
+
+Architecture:
+- Maintain a long-lived compiler service with per-file token/AST caches.
+- Track a dependency graph keyed by canonical paths; invalidate in topological order.
+- Store per-definition symbol tables and a reverse reference index for navigation.
+- Use source maps (Phase 1) to map transformed diagnostics back to surface text.
+
+Milestones:
+- M1: LSP diagnostics and document symbols (requires Phase 0).
+- M2: go-to-definition/hover/signature help with stable symbol tables.
+- M3: completion and workspace symbols with incremental cache invalidation (Phase 2).
+- M4: rename/code actions backed by reference indexing and stable IDs.
+
+Out of scope (initial):
+- Runtime debugging or VM execution control (await Phase 4 tooling).
+- GPU-specific editor features beyond diagnostics and symbol navigation.
+
 ## Dependencies & Related Work
 - Stable IR definition & serialization (std::serialization once available).
 - Scene graph/rendering plans (`docs/finished/Plan_SceneGraph_Renderer_Finished.md`).

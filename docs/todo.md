@@ -129,8 +129,8 @@ Legend:
 - ✓ Implement Metal backend output or remove it from the backend roadmap.
 - ✓ Decide on LLVM backend support (implement or remove future-LLVM references).
 - ✓ Add optional chunk caching and/or LLVM-backed JIT or remove from the optimization roadmap.
-- ○ Scope and plan IDE/LSP integration once the compiler stabilizes.
+- ✓ Scope and plan IDE/LSP integration once the compiler stabilizes.
 - ✓ Decide whether `tools/PrimeStructc` stays a minimal subset or is brought in sync with the main spec.
 - ✓ For `tools/PrimeStructc`, decide whether to support template codegen or explicitly lock it to a minimal subset.
 - ✓ For `tools/PrimeStructc`, decide whether to honor include `version="..."` (or document that it is ignored).
-- ○ Refresh README once the spec stabilizes (current status, backend support, and roadmap).
+- ✓ Refresh README once the spec stabilizes (current status, backend support, and roadmap).

@@ -231,11 +231,22 @@ definition must take a single `array<string>` parameter.
 
 - Compiler: `primec`
 - VM runner: `primevm` (PrimeScript VM)
-- IR inspection: dump canonical IR and diagnostics
+- IR inspection: `primec --emit=ir` (PSIR) and diagnostics exports
 - Backends:
   - C++ / native
   - GPU shading (GLSL / SPIR-V)
   - VM bytecode
+
+------------------------------------------------------------------------
+
+## Backend Support
+
+- Native (C++ emitter): primary target, full language surface.
+- VM (PrimeScript): canonical IR execution for scripting/tests, aligns with native semantics.
+- GPU (GLSL/SPIR-V): GPU-safe subset only (POD types, fixed-width numerics, no IO,
+  strings, heap, or recursion).
+
+See `docs/PrimeStruct.md` for detailed backend constraints and effect allowlists.
 
 ------------------------------------------------------------------------
 
@@ -263,11 +274,21 @@ guidelines.
 
 ------------------------------------------------------------------------
 
+## Roadmap
+
+- Source maps and stable JSON diagnostics for tooling and tests.
+- Incremental compilation caches with `--watch`.
+- IDE/LSP integration (go-to-definition, completion, PathSpace editor adapter).
+- Runtime tracing and stack traces mapped via source maps.
+
+------------------------------------------------------------------------
+
 ## Status
 
-PrimeStruct is experimental and under active design. Syntax, IR, and
-execution semantics are still evolving, and backward compatibility is
-not yet guaranteed.
+PrimeStruct is experimental and under active design. The syntax spec and
+canonical IR are now stable enough for conformance testing, but execution
+semantics and backend coverage are still evolving. Backward compatibility
+is not yet guaranteed.
 
 ------------------------------------------------------------------------
 
