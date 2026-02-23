@@ -835,6 +835,11 @@ module {
 - **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus a PathSpace-native editor adapter.
 - **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
 
+### Semantics Parallelism (Investigation)
+We plan to parallelize semantic validation across root functions using a
+deterministic diagnostics pipeline. See `docs/Semantics_Multithreaded_Pass.md`
+for the proposed phases, refactors, and test plan.
+
 ### IDE/LSP Integration Plan
 Goals:
 - Deliver a first-class IDE/LSP experience powered by the compiler front end.
