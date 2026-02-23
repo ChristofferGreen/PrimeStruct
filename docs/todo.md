@@ -107,7 +107,7 @@ Legend:
 - ✓ Finalize and version the Standard Library Reference (currently draft v0).
 - ✓ Decide on standard library package versioning and remove the planned `--stdlib-version` flag.
 - ✓ Define and implement stdlib conformance markers for VM/native subset differences.
-- ○ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
+- ✓ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
 - ✓ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
 - ✓ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
 - ✓ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).

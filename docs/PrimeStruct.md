@@ -197,7 +197,7 @@ module {
   }
 }
 ```
-- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_write`, `pathspace_notify`, `pathspace_insert`, `pathspace_take`, and `gpu_dispatch`; GLSL only accepts `io_out`, `io_err`, and `pathspace_*`.
+- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_write`, `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`, and `gpu_dispatch`; GLSL only accepts `io_out`, `io_err`, and `pathspace_*`.
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 
 ### Backend Type Support (v1)
@@ -220,7 +220,7 @@ module {
   - **IO:** `io_out` (stdout), `io_err` (stderr), `file_write` (filesystem output).
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
-  - **PathSpace:** `pathspace_notify`, `pathspace_insert`, `pathspace_take`.
+  - **PathSpace:** `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`.
   - **GPU:** `gpu_dispatch` (host-side GPU submission/dispatch).
   - Unknown capability names are errors; capability identifiers are `lower_snake_case`.
 - **Tooling vs runtime visibility:**
@@ -438,7 +438,7 @@ for(
   do() { work(i) }
 )
 ```
-- **`notify(path, payload)`, `insert`, `take`:** PathSpace integration hooks for signaling and data movement.
+- **`notify(path, payload)`, `insert`, `take`, `bind`, `unbind`, `schedule`:** PathSpace integration hooks for signaling, data movement, and runtime wiring.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers / brace constructors), `return(value)` returns from the block and yields its value.
 - **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or bindings backed by literals (string table entries). VM/native vectors use fixed capacity; `push`/`reserve` succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`, `remove_swap`) continue to work against the fixed capacity.
 
@@ -473,7 +473,7 @@ for(
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
-  - **PathSpace helpers:** `notify`, `insert`, `take`.
+  - **PathSpace helpers:** `notify`, `insert`, `take`, `bind`, `unbind`, `schedule`.
   - **GPU builtins (draft):**
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
     - `/std/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).

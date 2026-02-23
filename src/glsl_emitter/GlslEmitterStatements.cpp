@@ -229,9 +229,11 @@ bool emitStatement(const Expr &stmt, EmitState &state, std::string &out, std::st
       out += indent + "}\n";
       return true;
     }
-    if (isSimpleCallName(stmt, "notify") || isSimpleCallName(stmt, "insert") || isSimpleCallName(stmt, "take")) {
+    if (isSimpleCallName(stmt, "notify") || isSimpleCallName(stmt, "insert") || isSimpleCallName(stmt, "take") ||
+        isSimpleCallName(stmt, "bind") || isSimpleCallName(stmt, "unbind") || isSimpleCallName(stmt, "schedule")) {
       const char *name = stmt.name.c_str();
-      const size_t expectedArgs = isSimpleCallName(stmt, "take") ? 1 : 2;
+      const bool oneArg = isSimpleCallName(stmt, "take") || isSimpleCallName(stmt, "unbind");
+      const size_t expectedArgs = oneArg ? 1 : 2;
       if (hasNamedArguments(stmt.argNames)) {
         error = "glsl backend requires " + std::string(name) + " to use positional arguments";
         return false;

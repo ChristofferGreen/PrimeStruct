@@ -195,13 +195,18 @@ main() {
 
 TEST_CASE("compiles and runs pathspace builtins as no-ops") {
   const std::string source = R"(
-[return<int> effects(pathspace_notify, pathspace_insert, pathspace_take)]
+[return<int> effects(pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)]
 main() {
   [string] path{"/events/test"utf8}
   [string] storePath{"/store/value"utf8}
+  [string] bindPath{"/bindings/slot"utf8}
+  [string] schedulePath{"/jobs/run"utf8}
   notify(path, 1i32)
   insert(storePath, 2i32)
   take(storePath)
+  bind(bindPath, 3i32)
+  unbind(bindPath)
+  schedule(schedulePath, 4i32)
   return(0i32)
 }
 )";
@@ -579,4 +584,3 @@ main() {
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 4);
 }
-

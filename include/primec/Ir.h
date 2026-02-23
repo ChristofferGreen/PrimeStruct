@@ -139,6 +139,8 @@ constexpr uint64_t EffectPathSpaceInsert = 1ull << 4;
 constexpr uint64_t EffectPathSpaceTake = 1ull << 5;
 constexpr uint64_t EffectFileWrite = 1ull << 6;
 constexpr uint64_t EffectGpuDispatch = 1ull << 7;
+constexpr uint64_t EffectPathSpaceBind = 1ull << 8;
+constexpr uint64_t EffectPathSpaceSchedule = 1ull << 9;
 
 struct IrStructField {
   std::string name;

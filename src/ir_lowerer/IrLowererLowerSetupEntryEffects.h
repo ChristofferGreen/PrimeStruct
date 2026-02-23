@@ -201,6 +201,14 @@ bool IrLowerer::lower(const Program &program,
       outBit = EffectPathSpaceTake;
       return true;
     }
+    if (name == "pathspace_bind") {
+      outBit = EffectPathSpaceBind;
+      return true;
+    }
+    if (name == "pathspace_schedule") {
+      outBit = EffectPathSpaceSchedule;
+      return true;
+    }
     if (name == "file_write") {
       outBit = EffectFileWrite;
       return true;
@@ -214,8 +222,8 @@ bool IrLowerer::lower(const Program &program,
 
   auto isSupportedEffect = [](const std::string &name) {
     return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
-           name == "pathspace_insert" || name == "pathspace_take" || name == "file_write" ||
-           name == "gpu_dispatch";
+           name == "pathspace_insert" || name == "pathspace_take" || name == "pathspace_bind" ||
+           name == "pathspace_schedule" || name == "file_write" || name == "gpu_dispatch";
   };
   auto resolveActiveEffects = [&](const std::vector<Transform> &transforms, bool isEntry) {
     std::unordered_set<std::string> effects;

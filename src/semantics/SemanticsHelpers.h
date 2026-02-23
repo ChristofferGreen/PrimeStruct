@@ -33,7 +33,7 @@ struct PrintBuiltin {
   std::string name;
 };
 
-enum class PathSpaceTarget { Notify, Insert, Take };
+enum class PathSpaceTarget { Notify, Insert, Take, Bind, Unbind, Schedule };
 
 struct PathSpaceBuiltin {
   PathSpaceTarget target = PathSpaceTarget::Notify;

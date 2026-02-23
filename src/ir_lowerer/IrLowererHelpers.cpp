@@ -130,6 +130,21 @@ bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out) {
     out.argumentCount = 1;
     return true;
   }
+  if (isSimpleCallName(expr, "bind")) {
+    out.name = "bind";
+    out.argumentCount = 2;
+    return true;
+  }
+  if (isSimpleCallName(expr, "unbind")) {
+    out.name = "unbind";
+    out.argumentCount = 1;
+    return true;
+  }
+  if (isSimpleCallName(expr, "schedule")) {
+    out.name = "schedule";
+    out.argumentCount = 2;
+    return true;
+  }
   return false;
 }
 

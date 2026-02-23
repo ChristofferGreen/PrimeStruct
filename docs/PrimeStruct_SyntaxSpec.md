@@ -373,7 +373,7 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `min`, `max`, `clamp`, `lerp`, and `pow` accept numeric operands but reject mixed signed/unsigned or mixed int/float operands.
   - Integer `pow` requires a non-negative exponent; VM/native backends abort on negative exponents (stderr + exit code `3`), and the C++ emitter mirrors this behavior.
   - All remaining `/std/math/*` builtins require float operands. `atan2`, `hypot`, and `copysign` take two float operands, while `fma` takes three float operands.
-- PathSpace builtins (`notify(path, payload)`, `insert(path, payload)`, `take(path)`) live in the root namespace and act as PathSpace integration hooks.
+- PathSpace builtins (`notify(path, payload)`, `insert(path, payload)`, `take(path)`, `bind(path, payload)`, `unbind(path)`, `schedule(path, payload)`) live in the root namespace and act as PathSpace integration hooks.
 - Method calls:
   - `value.method(args...)` is parsed as a method call and later rewritten to the method namespace form
     `/<envelope>/method(value, args...)`, where `<envelope>` is the envelope name associated with `value`.
@@ -514,9 +514,10 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Backends reject unsupported effects.
   - Execution effects must be a subset of the enclosing definition’s active effects; otherwise the compiler emits a diagnostic.
   - Recognized v1 capabilities: `io_out`, `io_err`, `file_write`, `heap_alloc`, `global_write`, `asset_read`, `asset_write`,
-    `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `gpu_dispatch`.
+    `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`, `gpu_dispatch`.
   - VM/native backends allow `io_out`, `io_err`, `heap_alloc`, `file_write`, `pathspace_notify`, `pathspace_insert`,
-    `pathspace_take`, and `gpu_dispatch`. GLSL allows only `io_out`, `io_err`, and `pathspace_*` effects/capabilities.
+    `pathspace_take`, `pathspace_bind`, `pathspace_schedule`, and `gpu_dispatch`. GLSL allows only `io_out`, `io_err`,
+    and `pathspace_*` effects/capabilities.
 
 ### 9.1 Backend Type Support (v1)
 

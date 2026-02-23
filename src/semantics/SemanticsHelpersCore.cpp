@@ -814,6 +814,27 @@ bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out) {
     out.argumentCount = 1;
     return true;
   }
+  if (isSimpleCallName(expr, "bind")) {
+    out.target = PathSpaceTarget::Bind;
+    out.name = "bind";
+    out.requiredEffect = "pathspace_bind";
+    out.argumentCount = 2;
+    return true;
+  }
+  if (isSimpleCallName(expr, "unbind")) {
+    out.target = PathSpaceTarget::Unbind;
+    out.name = "unbind";
+    out.requiredEffect = "pathspace_bind";
+    out.argumentCount = 1;
+    return true;
+  }
+  if (isSimpleCallName(expr, "schedule")) {
+    out.target = PathSpaceTarget::Schedule;
+    out.name = "schedule";
+    out.requiredEffect = "pathspace_schedule";
+    out.argumentCount = 2;
+    return true;
+  }
   return false;
 }
 

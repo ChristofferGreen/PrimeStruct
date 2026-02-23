@@ -793,6 +793,51 @@ main() {
   CHECK(error.find("statement-only") != std::string::npos);
 }
 
+TEST_CASE("bind requires pathspace_bind effect") {
+  const std::string source = R"(
+main() {
+  bind("/events/test"utf8, 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pathspace_bind") != std::string::npos);
+}
+
+TEST_CASE("unbind requires pathspace_bind effect") {
+  const std::string source = R"(
+main() {
+  unbind("/events/test"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pathspace_bind") != std::string::npos);
+}
+
+TEST_CASE("schedule requires pathspace_schedule effect") {
+  const std::string source = R"(
+main() {
+  schedule("/events/test"utf8, 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("pathspace_schedule") != std::string::npos);
+}
+
+TEST_CASE("schedule rejects non-string path argument") {
+  const std::string source = R"(
+[effects(pathspace_schedule)]
+main() {
+  schedule(1i32, 2i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("requires string path argument") != std::string::npos);
+}
+
 TEST_CASE("notify not allowed in expression context") {
   const std::string source = R"(
 [return<int> effects(pathspace_notify)]
