@@ -547,6 +547,25 @@
     }
     return "/" + expr.name;
   };
+  auto isTailCallCandidate = [&](const Expr &expr) -> bool {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+      return false;
+    }
+    const std::string targetPath = resolveExprPath(expr);
+    return defMap.find(targetPath) != defMap.end();
+  };
+  bool sawTailExecution = false;
+  if (!entryDef->statements.empty()) {
+    const Expr &lastStmt = entryDef->statements.back();
+    if (isReturnCall(lastStmt) && lastStmt.args.size() == 1) {
+      sawTailExecution = isTailCallCandidate(lastStmt.args.front());
+    } else if (returnsVoid && isTailCallCandidate(lastStmt)) {
+      sawTailExecution = true;
+    }
+  }
+  if (sawTailExecution) {
+    function.metadata.instrumentationFlags |= InstrumentationTailExecution;
+  }
   auto parseTransformArgumentExpr = [&](const std::string &text,
                                         const std::string &namespacePrefix,
                                         Expr &out) -> bool {

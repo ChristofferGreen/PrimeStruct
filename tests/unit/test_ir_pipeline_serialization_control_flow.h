@@ -279,6 +279,51 @@ TEST_CASE("ir deserialization rejects unsupported version") {
   CHECK(error == "unsupported IR version");
 }
 
+TEST_CASE("ir marks tail execution metadata") {
+  const std::string source = R"(
+[return<int>]
+callee() {
+  return(7i32)
+}
+
+[return<int>]
+main() {
+  return(callee())
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
+}
+
+TEST_CASE("ir leaves tail metadata unset for builtin return") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(plus(1i32, 2i32))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) == 0u);
+}
+
 TEST_CASE("ir lowers pointer helper calls") {
   const std::string source = R"(
 [return<int>]

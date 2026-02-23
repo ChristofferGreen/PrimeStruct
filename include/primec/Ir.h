@@ -168,6 +168,8 @@ struct IrExecutionMetadata {
   uint32_t instrumentationFlags = 0;
 };
 
+constexpr uint32_t InstrumentationTailExecution = 1u << 0;
+
 constexpr uint64_t PrintFlagNewline = 1ull << 0;
 constexpr uint64_t PrintFlagStderr = 1ull << 1;
 constexpr uint64_t PrintFlagMask = PrintFlagNewline | PrintFlagStderr;

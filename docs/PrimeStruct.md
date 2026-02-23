@@ -544,13 +544,13 @@ for(
 - **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
 - **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the single frame.
 - **Resource handles:** PathSpace references/handles live inside frame slots as opaque values; lifetimes follow lexical scope.
-- **Tail execution (planned):** future optimisation collapses tail executions to reuse frames (VM optional, GPU required).
+- **Tail execution:** lowering marks tail-position calls in metadata; backends may reuse frames when the tail flag is set. VM/native currently ignore the hint; GPU backends may require tail-safe forms for determinism.
 - **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering; runtime enforcement is limited to builtin checks.
 
 ### Execution Metadata
 - **Scheduling scope:** queue/thread selection stays host-driven; there are no stack- or runner-specific annotations yet, so executions inherit the embedding runtime’s default placement. Lowering writes `scheduling_scope = 0` in PSIR metadata until explicit scheduling transforms exist.
 - **Effects & capabilities:** lowering records `effect_mask` and `capability_mask` in PSIR metadata. If no `capabilities` transform is supplied, `capability_mask` mirrors the active effects for the definition; explicit capability lists narrow the mask.
-- **Instrumentation:** `instrumentation_flags` are reserved for future tracing/source-map hooks; they are currently zero.
+- **Instrumentation:** `instrumentation_flags` are reserved for tracing/source-map hooks. Bit 0 (`tail_execution`) is set when the final statement is `return(def_call(...))` or (for `void` definitions) a final `def_call(...)`. Backends may treat this as a tail-call hint; no backend currently requires it.
 
 ## Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser preserves the nested envelope string for later lowering.
