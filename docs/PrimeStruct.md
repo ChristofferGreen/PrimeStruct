@@ -11,6 +11,18 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 
 Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text transforms are configured via `--text-transforms=<list>`; the default list enables `collections`, `operators`, `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are rewritten as key/value arguments rather than assignment expressions. Semantic transforms are configured via `--semantic-transforms=<list>`. `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic); ambiguous names are errors. Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require canonical syntax.
 
+### Compilation model (v1)
+- **Whole-program by default:** `include` expansion produces a single compilation unit, and semantic resolution/inference runs over that full unit. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
+- **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.
+- **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
+
+### Language ethos (v1)
+- **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
+- **Sane subset of C++:** keep value types, structs, and explicit control flow, but avoid implicit conversions, surprising overload rules, or hidden allocations.
+- **Python spirit for ergonomics:** readable defaults and small conveniences (e.g., optional separators, concise literals), without sacrificing determinism or making meaning depend on tooling.
+- **Ease of understanding first:** prefer features that are easy to explain and reason about, and reject features that add power without clarity.
+- **Concrete rules:** explicit envelopes, explicit conversions, explicit effects, immutable-by-default bindings, and deterministic evaluation order.
+
 ## Phase 0 — Scope & Acceptance Gates (must precede implementation)
 - **Charter:** capture exactly which language primitives, transforms, and effect rules belong in PrimeStruct, and list anything explicitly deferred to later phases.
 - **Success criteria:** define measurable gates (parser coverage, IR validation, backend round-trips, sample programs)
