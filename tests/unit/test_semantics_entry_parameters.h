@@ -85,7 +85,7 @@ main() {
   CHECK(error.find("restrict type does not match binding type") != std::string::npos);
 }
 
-TEST_CASE("parameter rejects software numeric type") {
+TEST_CASE("parameter accepts software numeric type") {
   const std::string source = R"(
 [return<int>]
 add([complex] value) {
@@ -98,8 +98,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("software numeric types are not supported yet") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("parameter default vector literal requires heap_alloc effect") {

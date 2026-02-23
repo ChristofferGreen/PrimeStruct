@@ -60,7 +60,7 @@ open question is unresolved.
 - Borrow checker and lifetime enforcement beyond basic effects gating.
 - Full capability taxonomy and policy-driven capability enforcement (beyond documented effects).
 - PathSpace integration beyond `notify`/`insert`/`take` helpers and basic runtime hooks.
-- Full software numeric envelopes (`integer`/`decimal`/`complex`) and mixed-mode numeric ops.
+- Backend support for software numeric envelopes (`integer`/`decimal`/`complex`) and mixed-mode numeric ops.
 - Placement transforms (`stack`/`heap`/`buffer`) and placement-driven layout guarantees.
 - Recursive struct layouts and cross-module layout stability guarantees.
 - JIT, chunk caching, or dynamic recompilation tooling.
@@ -163,7 +163,7 @@ module {
 ## Language Design Highlights
 - **Identifiers:** `[A-Za-z_][A-Za-z0-9_]*` plus the slash-prefixed form `/segment/segment/...` for fully-qualified paths. Unicode may arrive later, but identifiers are constrained to ASCII for predictable tooling and hashing. `auto`, `mut`, `return`, `include`, `import`, `namespace`, `true`, `false`, `if`, `else`, `loop`, `while`, and `for` are reserved keywords; any other identifier (including slash paths) can serve as a transform, path segment, parameter, or binding.
 -- **String literals:** surface forms accept `"..."utf8` / `"..."ascii` with escape processing, or raw `'...'utf8` / `'...'ascii` with no escape processing. The `implicit-utf8` text transform (enabled by default) appends `utf8` when omitted in surface syntax. **Canonical/bottom-level form uses double-quoted strings with escapes normalized and an explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rejects non-ASCII bytes). Example surface: `"hello"utf8`, `'moo'ascii`. Example canonical: `"hello"utf8`. Raw example: `'C:\temp'ascii` keeps backslashes verbatim.
-- **Numeric envelopes:** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are the only numeric envelopes supported today. Software numeric envelopes `integer`, `decimal`, and `complex` are reserved but currently rejected by the compiler (using them in bindings, returns, templates, or `convert<T>` targets is a semantic error).
+- **Numeric envelopes:** fixed-width `i32`, `i64`, `u64`, `f32`, and `f64` map directly to hardware instructions and are the only numeric envelopes supported across all backends today. Software numeric envelopes `integer`, `decimal`, and `complex` are accepted by the parser/semantic validator (bindings, returns, collections, and `convert<T>` targets), but current backends reject them at lowering/emission time. Mixed software/fixed arithmetic is rejected, and mixed software categories or ordered comparisons on `complex` are also diagnostics today.
 - **Core type set (v1):** the closed set of envelopes that every backend must understand and that the type system treats as cross-backend portable is:
   - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`
   - `array<T>`, `vector<T>`, `map<K, V>`
@@ -383,7 +383,7 @@ if you intended to index.
 The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them here.
 
 ### Core library surface (draft)
-- **Standard math (draft):** the core math set lives under `/std/math/*` (e.g., `/std/math/sin`, `/std/math/pi`). `import /std/math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Only fixed-width numeric envelopes are supported today; software numeric envelopes remain reserved.
+- **Standard math (draft):** the core math set lives under `/std/math/*` (e.g., `/std/math/sin`, `/std/math/pi`). `import /std/math/*` brings these names into the root namespace so `sin(...)`/`pi` resolve without qualification. Unsupported envelope/operation pairs produce diagnostics. Only fixed-width numeric envelopes are supported today; software numeric envelopes are parsed/typed but are rejected by current backends.
   - **Constants:** `/std/math/pi`, `/std/math/tau`, `/std/math/e`.
   - **Basic:** `/std/math/abs`, `/std/math/sign`, `/std/math/min`, `/std/math/max`, `/std/math/clamp`, `/std/math/lerp`, `/std/math/saturate`.
   - **Rounding:** `/std/math/floor`, `/std/math/ceil`, `/std/math/round`, `/std/math/trunc`, `/std/math/fract`.
