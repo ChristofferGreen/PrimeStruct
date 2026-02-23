@@ -567,85 +567,125 @@ for(
 - **Effects & capabilities:** lowering records `effect_mask` and `capability_mask` in PSIR metadata. If no `capabilities` transform is supplied, `capability_mask` mirrors the active effects for the definition; explicit capability lists narrow the mask.
 - **Instrumentation:** `instrumentation_flags` are reserved for tracing/source-map hooks. Bit 0 (`tail_execution`) is set when the final statement is `return(def_call(...))` or (for `void` definitions) a final `def_call(...)`. Backends may treat this as a tail-call hint; no backend currently requires it.
 
-## Type System (draft)
-- **Type forms:** the type system recognizes `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `array<T>`, `vector<T>`,
-  `map<K, V>`, `Pointer<T>`, `Reference<T>`, and user-defined struct types. Any other type form is a diagnostic unless a
-  backend explicitly documents it.
-- **Typing context:** type checking runs after import expansion and namespace resolution. The compiler keeps a context that
-  maps local bindings, parameter names, definition signatures, struct layouts, and import aliases to their resolved types.
-- **Backend profiles:** type checking is performed against a specific backend profile (VM/native, GLSL, C++). A definition
-  is only considered well-typed if its types, effects, and constructs are supported by the selected backend; unsupported
-  types or effects are reported during type checking rather than later in lowering.
-- **Expression rules (English):**
-  - **Literals:** each literal has a fixed type determined by its suffix (`1i32`, `2u64`, `1.0f32`, `"hi"utf8`, `true`).
-  - **Bindings:** a binding has the type declared in its transform list, or `auto` if omitted.
-  - **Calls:** a call is well-typed if the callee resolves to a definition or builtin, and every argument matches the
-    corresponding parameter type (no implicit conversions). Labeled arguments must still match the declared parameter type.
-  - **Constructors:** struct constructors follow the same rules as calls; all fields must be provided or defaulted.
-  - **`convert<T>` and `T{...}`:** conversions are explicit; the target type must be one of the supported conversion targets.
-  - **`assign(target, value)`:** only allowed when `target` is mutable and `value` has the exact same type as `target`.
-  - **Control flow:** `if`, `while`, and `for` conditions must be `bool`. `loop(count)` requires an integer type.
-  - **Pointers/references:** `Pointer<T>` and `Reference<T>` targets are restricted as described in the pointer rules; no
-    implicit conversions between pointer/reference/value forms.
-- **Definition rules (English):**
-  - Parameters use the same binding syntax as locals, and must resolve to concrete types before lowering.
-  - Return types must be explicit (`return<T>`) or inferred from `return(value)` sites when `return<auto>` is used.
-  - All `return(value)` statements in a definition must agree on the same type.
-- **Inference rules (English):**
-  - `auto` is allowed on bindings, parameters, and return transforms.
-  - Inference runs after import expansion, across the whole compilation unit, using all call sites to resolve `auto`.
-  - The compiler repeats inference until no new information is produced (fixed point).
-  - Errors are emitted when `auto` cannot be resolved or resolves to conflicting types.
-- **Traits (draft, EoP‑style direction):**
-  - Traits are explicit requirements over named functions, not operators. The type checker never reasons about `+`, `*`,
-    or other surface operators; it only checks whether required functions like `plus`, `multiply`, or `count` are defined.
-  - A trait is a named set of required signatures. A type satisfies a trait if all required functions resolve for that
-    type in the current program and backend profile.
-  - Trait constraints are explicit in signatures (no inference). If a required function is missing, the definition is
-    ill‑typed.
-  - Initial built‑in traits (minimal set): `Additive`, `Multiplicative`, `Comparable`, `Indexable`.
-  - Example shape (non‑binding syntax):
-    - `Additive<T>` requires `plus(T, T) -> T` (optional: `zero() -> T` later).
-    - `Multiplicative<T>` requires `multiply(T, T) -> T` (optional: `one() -> T` later).
-    - `Comparable<T>` requires `equal(T, T) -> bool` and `less_than(T, T) -> bool`.
-    - `Indexable<T, Elem>` requires `count(T) -> i32` and `at(T, i32) -> Elem`.
-  - EoP‑style algebraic laws (associativity, identity) are documented expectations at first; formal enforcement can be
-    added later via tests or tooling.
+## Type System v1 (draft)
 
-**Error examples (shape only)**
-- **Return type mismatch**
-  ```
-  [return<i32>]
-  main() { return(1.0f32) }
-  ```
-  Diagnostic: `return type mismatch: expected i32, got f32`.
-- **Assign type mismatch**
-  ```
-  main() {
-    [i32 mut] value{1i32}
-    assign(value, 1.0f32)
-  }
-  ```
-  Diagnostic: `assign requires exact type match: i32 vs f32`.
-- **Invalid pointer target**
-  ```
-  main() {
-    [Pointer<array<i32>>] ptr{location(foo)}
-  }
-  ```
-  Diagnostic: `Pointer<T> targets must be primitive or struct types`.
-- **Unresolved auto**
-  ```
-  main() {
-    [auto] value{some_call()}
-  }
-  ```
-  Diagnostic: `auto did not resolve to a concrete type`.
+### Goals
+- Deterministic, explicit typing across backends.
+- Minimal implicit behavior; no hidden conversions.
+- Portable core type set with explicit backend extensions.
+- Whole-program checks remain supported, but local reasoning is preferred.
 
-**Conformance tests (required set)**
+### Type Grammar (canonical)
+- **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`.
+- **User types:** struct definitions and named aliases.
+- **Template applications:** `Name<T1, T2, ...>`.
+
+### Core Type Set (portable)
+- `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
+- `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
+- `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
+- User-defined structs with layout manifests.
+- Types outside this set are backend-specific and must be rejected by backends that do not support them.
+
+### Backend Profiles
+- A definition is well-typed only with respect to a backend profile.
+- Profiles include: `vm_native`, `glsl`, `cpp`.
+- Each profile declares supported types, effects, and constructs.
+- A definition may declare `[profile(vm_native, cpp)]`. If omitted, the compiler target profile is used.
+
+### Typing Context
+- Type checking runs after import expansion and namespace resolution.
+- The typing context maps local bindings, parameters, signatures, struct layouts, and import aliases to resolved types.
+
+### Expression Rules
+- **Literals:** fixed type determined by suffix (`1i32`, `2u64`, `1.0f32`, `"hi"utf8`, `true`).
+- **Bindings:** declared type in the transform list, or `auto` if omitted.
+- **Calls:** well-typed if the callee resolves to a definition or builtin, and every argument matches the parameter type.
+- **Constructors:** struct constructors follow call rules; all fields must be provided or defaulted.
+- **`convert<T>` and `T{...}`:** explicit conversions; `T` must be a supported conversion target.
+- **`assign(target, value)`:** allowed only when `target` is mutable and `value` has the exact same type.
+- **Control flow:** `if`, `while`, and `for` conditions must be `bool`. `loop(count)` requires an integer type.
+- **Pointers/references:** targets are restricted as described in pointer rules; no implicit conversions.
+
+### Definition Rules
+- Parameters use binding syntax and must resolve to concrete types before lowering.
+- Return types are explicit (`return<T>`) or inferred from `return(value)` sites when `return<auto>` is used.
+- All `return(value)` statements in a definition must agree on the same type.
+- `return()` is only valid for `void`.
+
+### Inference Rules
+- `auto` is allowed on bindings, parameters, and return transforms.
+- Inference is fixed-point and runs after import expansion.
+- Unresolved or conflicting `auto` is a diagnostic.
+- Recommendation: require explicit `return<T>` in public APIs and exported definitions.
+
+### Traits and Constraints
+- Traits are explicit requirements over named functions (not operators).
+- Trait constraints are explicit in signatures; no inference of trait bounds.
+- A type satisfies a trait if all required functions resolve in the current program and backend profile.
+- Minimal built-in traits:
+  - `Additive<T>` requires `plus(T, T) -> T`.
+  - `Multiplicative<T>` requires `multiply(T, T) -> T`.
+  - `Comparable<T>` requires `equal(T, T) -> bool` and `less_than(T, T) -> bool`.
+  - `Indexable<T, Elem>` requires `count(T) -> i32` and `at(T, i32) -> Elem`.
+
+### Parametric Types
+- Type parameters are explicit in signatures.
+- Type arguments must be fully concrete before lowering.
+- Template argument inference is limited to local call sites.
+
+### Algebraic Data Types (v1.1 target)
+- `enum` introduces tagged union types.
+- Enum syntax follows the standard envelope rules; the `enum` transform rewrites the declaration to an ordinary struct
+  plus static bindings so the base language never needs a dedicated enum form.
+- Pattern matching must be exhaustive and type-checked.
+- `match` expressions have a single result type.
+
+Enum example (surface):
+```
+[enum]
+Colors {
+  Blue = 5
+  Red
+  Green
+}
+```
+
+Enum example (desugared shape):
+```
+[struct]
+Colors() {
+  [i32] value{0i32}
+
+  [public static Colors] Blue{Colors(5i32)}
+  [public static Colors] Red{Colors(6i32)}
+  [public static Colors] Green{Colors(7i32)}
+}
+```
+
+### Ownership and Mutability
+- `mut` marks writeable bindings.
+- `move(x)` consumes a binding and forbids use until reinitialized.
+- References cannot be moved.
+- Aliasing rules:
+  - `mut` bindings cannot be aliased by `Reference<T>` in the same scope.
+  - `restrict<T>` is an aliasing promise that must match the binding type.
+
+### Layout and Struct Semantics
+- Structs record layout manifests in IR.
+- Recursive-by-value struct layouts are rejected.
+- `[pod]` asserts trivially-copyable semantics and is validated.
+
+### Diagnostics
+- Diagnostics include expected type, actual type, source span, and backend profile.
+- Diagnostic messages must be stable for snapshot testing.
+
+### Conformance Tests (required)
 - **Positive typing:** literals, calls, struct construction, pointers/references.
 - **Negative typing:** return mismatch, invalid assign, invalid convert, invalid pointer target.
-- **Inference:** single call-site inference, multi-call-site consistent inference, conflicting inference, and unresolved `auto`.
+- **Inference:** single call-site inference, multi-call-site inference, unresolved `auto`.
+- **Traits:** satisfied, missing requirement, incorrect signature.
 
 ### Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser preserves the nested envelope string for later lowering.

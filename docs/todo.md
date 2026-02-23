@@ -44,6 +44,7 @@ Legend:
 - ○ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
+- ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
