@@ -38,13 +38,14 @@ The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ..
 indexing `value[index]`), then rewrites them into a small canonical core before semantic analysis
 and IR lowering.
 Canonical/bottom-level syntax requires explicit return transforms and literal suffixes; surface syntax may omit
-them and rely on inference/transforms to insert the canonical forms. `auto` is permitted in surface return
-transforms but must resolve to a concrete envelope before canonicalization. When `--no-transforms` is active,
-source is expected to already be in canonical form.
+them and rely on inference/transforms to insert the canonical forms. `auto` is permitted in signatures; in
+parameter/return positions it introduces implicit template parameters that are resolved per instantiation, and
+canonical form after monomorphisation carries explicit envelopes. The base-level core passed to lowering contains
+no templates or `auto`. When `--no-transforms` is active, source is expected to already be in canonical form.
 
-Import expansion runs before type inference. All definitions/executions live in a single compilation unit after
-imports are expanded, so inference may use call sites anywhere in the expanded source; there are no module
-boundaries.
+Import expansion runs before type checking and template inference. All definitions/executions live in a single
+compilation unit after imports are expanded, so implicit-template inference may use call sites anywhere in the
+expanded source; there are no module boundaries.
 
 Transform template lists accept one or more envelope entries, so generic binding envelopes can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
@@ -389,6 +390,8 @@ main() {
 - A definition may omit a return transform or use `return<auto>`; the compiler infers the return envelope from
   all return paths. If all return paths yield no value, `return<auto>` resolves to `return<void>`. Conflicting
   return types are a diagnostic.
+  Return `auto` participates in implicit-template inference; if constraints resolve to a concrete envelope the
+  definition becomes monomorphic.
 
 ### 6.2 Executions
 
@@ -448,9 +451,9 @@ main([array<string>] args, [i32] limit{10i32}) { ... }
 function1(param1 param2) { ... }
 ```
 
-Omitted parameter envelopes are treated as `auto` and inferred from call sites across the expanded compilation
-unit. Inference may propagate transitively through call graphs until a fixed point. Unresolved or conflicting
-parameter inference is a diagnostic. Defaults are limited to literal/pure forms (no name references).
+Omitted parameter envelopes are treated as `auto` and become implicit template parameters. Template arguments
+are inferred per call site from argument types and return constraints. Unresolved or conflicting parameter
+inference is a diagnostic. Defaults are limited to literal/pure forms (no name references).
 
 ### 7.3 Labeled Arguments
 

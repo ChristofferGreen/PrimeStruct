@@ -6,13 +6,13 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler always works on a single flattened source stream.
 2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same rule applies. Text transforms may append additional text transforms to the same node.
 3. **AST builder:** once text transforms finish, the parser builds the canonical AST.
-4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects) so the tree is fully resolved.
-5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved, ensuring every backend consumes an identical canonical form.
+4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects) so the tree is fully resolved and contains only concrete envelopes.
+5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved; the base-level tree contains no templates or `auto`, and every backend consumes an identical canonical form.
 
 Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text transforms are configured via `--text-transforms=<list>`; the default list enables `collections`, `operators`, `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are rewritten as key/value arguments rather than assignment expressions. Semantic transforms are configured via `--semantic-transforms=<list>`. `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic); ambiguous names are errors. Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require canonical syntax.
 
 ### Compilation model (v1)
-- **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution/inference runs over that full unit. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
+- **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
 - **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.
 - **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same fully-resolved envelopes and produce consistent results.
 
@@ -171,9 +171,9 @@ module {
   - User-defined struct types (including `[struct]`-tagged definitions)
   Backends may accept additional types, but any type outside this core set is backend-specific and must be rejected by backends that do not explicitly support it. For collections, element/key/value types must themselves be in the core set unless a backend explicitly documents wider support.
 - **Aliases:** none for numeric widths; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
-- **`auto` (inference placeholder):** `auto` may appear as a binding envelope or return envelope to request inference. Parameters that omit an explicit envelope are treated as `auto`. Inference is whole-program across the expanded source and may propagate transitively through call graphs until a fixed point; `auto` must resolve to a concrete envelope before IR lowering, or it is a diagnostic. Omitted local envelopes must also resolve via inference or emit a diagnostic.
+- **`auto` (implicit templates + local inference):** `auto` may appear on binding envelopes, parameters, or return transforms. In parameter/return positions it introduces an implicit template parameter (equivalent to adding a fresh type parameter) and is inferred per call site; omitted parameter envelopes are treated as `auto`. In bindings, `auto` requests local inference from the initializer and must resolve to a concrete envelope; unresolved or conflicting local inference is a diagnostic. Return `auto` is constrained by return statements; if all constraints resolve to a concrete envelope the definition becomes monomorphic.
   - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`, `1.e2`).
-- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body; surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. Local bindings use the form `[Envelope qualifiers…] name{initializer}` and may omit the envelope transform when the initializer lets the compiler infer it; failures to infer are diagnostics. Parameters that omit an explicit envelope are treated as `auto` and inferred from call sites. Lists recursively reuse whitespace-separated tokens.
+- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body; surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. Local bindings use the form `[Envelope qualifiers…] name{initializer}` and may omit the envelope transform when the initializer lets the compiler infer it; failures to infer are diagnostics. Parameters that omit an explicit envelope are treated as `auto` and become implicit template parameters inferred per call site. Lists recursively reuse whitespace-separated tokens.
   - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code (definition bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time envelopes/templates—primarily for transforms or when inference must be overridden.
@@ -188,7 +188,7 @@ module {
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - Note: current VM/native/GLSL/C++ emitters only generate code for definitions; top-level executions are parsed/validated but not emitted (tooling-only for now).
 - **Return annotation:** definitions declare return envelopes via transforms (e.g., `[return<f32>] blend<…>(…) { … }`). Definitions return values explicitly (`return(value)`); the desugared form is always canonical.
-- **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>`. Example surface: `main() { return(0) }` → canonical: `[return<i32>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
+- **Surface vs canonical:** surface syntax may omit the return transform or use `return<auto>` (or `[auto]` with `single_type_to_return`) and rely on inference; canonical/bottom-level syntax always carries an explicit concrete `return<T>` after monomorphisation, and the base-level tree contains no templates or `auto`. Example surface: `main() { return(0) }` → canonical: `[return<i32>] main() { return(0i32) }`. If all return paths yield no value, `return<auto>` resolves to `return<void>`.
 - **Default convenience:** the `single_type_to_return` transform rewrites a single bare envelope in the transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`), and it is enabled by default (disable via `--no-semantic-transforms` or override the semantic transform list). If the bare envelope is `auto`, the transform yields `return<auto>` and inference resolves it later.
 Array returns use `return<array<T>>` (or `[array<T>]` with `single_type_to_return`) and surface as `array` in the IR.
 Struct returns use `return<StructName>` (or inference when the body returns a struct constructor/value); they surface as `array` in the IR with the struct layout manifest attached.
@@ -237,7 +237,7 @@ module {
 - **Tooling vs runtime visibility:**
   - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist violations (diagnostics).
   - **Runtime-only logs:** resolved effect/capability masks and execution identifiers (path hashes) for tracing; source spans are optional/debug-only.
-- **Paths & imports:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically. Import expansion produces a single compilation unit; type inference runs after import expansion across the entire unit; there are no module boundaries. Import paths are parsed before text transforms, so they remain quoted without literal suffixes.
+- **Paths & imports:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically. Import expansion produces a single compilation unit; implicit-template inference may use call sites anywhere in that unit; there are no module boundaries. Import paths are parsed before text transforms, so they remain quoted without literal suffixes.
   - **Source imports:** `import<"/std/io", version="1.2.0">` resolves packages from the import path (zipped archive or plain directory) whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`import<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate imports are ignored. Folders prefixed with `_` remain private.
   - **Namespace imports:** `import /foo/*` brings the immediate **public** children of `/foo` into the root namespace. `import /foo/bar` brings a single **public** definition (or builtin) by its final segment; importing a non-public definition is a diagnostic. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or whitespace-separated paths.
   - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make it importable. `[private]` explicitly marks it as non-exported.
@@ -636,16 +636,17 @@ sum_two_files([string] a, [string] b) {
 - **Pointers/references:** targets are restricted as described in pointer rules; no implicit conversions.
 
 ### Definition Rules
-- Parameters use binding syntax and must resolve to concrete types before lowering.
+- Parameters use binding syntax and must resolve to concrete types before lowering (per instantiation).
 - Return types are explicit (`return<T>`) or inferred from `return(value)` sites when `return<auto>` is used.
 - All `return(value)` statements in a definition must agree on the same type.
 - `return()` is only valid for `void`.
 
 ### Inference Rules
 - `auto` is allowed on bindings, parameters, and return transforms.
-- Inference is fixed-point and runs after import expansion.
+- Signature `auto` introduces implicit template parameters; template arguments are inferred per call site from
+  parameter and return constraints.
+- Binding `auto` is inferred from the initializer within the definition.
 - Unresolved or conflicting `auto` is a diagnostic.
-- Recommendation: require explicit `return<T>` in public APIs and exported definitions.
 
 ### Traits and Constraints
 - Traits are explicit requirements over named functions (not operators).
@@ -658,7 +659,7 @@ sum_two_files([string] a, [string] b) {
   - `Indexable<T, Elem>` requires `count(T) -> i32` and `at(T, i32) -> Elem`.
 
 ### Parametric Types
-- Type parameters are explicit in signatures.
+- Type parameters are explicit in signatures or implicit via `auto` in signatures.
 - Type arguments must be fully concrete before lowering.
 - Template argument inference is limited to local call sites.
 
@@ -717,7 +718,7 @@ Colors() {
 ### Conformance Tests (required)
 - **Positive typing:** literals, calls, struct construction, pointers/references.
 - **Negative typing:** return mismatch, invalid assign, invalid convert, invalid pointer target.
-- **Inference:** single call-site inference, multi-call-site inference, unresolved `auto`.
+- **Inference:** binding inference, implicit-template inference, unresolved `auto`.
 - **Traits:** satisfied, missing requirement, incorrect signature.
 
 ### Type Semantics (draft)
@@ -779,6 +780,7 @@ Colors() {
 
 ## Optional Values (Maybe) (draft)
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
+- **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
 - **Ergonomic constructor surface:** `Maybe()` yields empty; `Maybe(value)` yields present.
