@@ -487,6 +487,7 @@ for(
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
+  - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
   - **GPU builtins (draft):**
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
