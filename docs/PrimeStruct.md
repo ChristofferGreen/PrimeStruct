@@ -489,7 +489,7 @@ for(
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
-  - **Storage helpers (draft):** `init`, `drop`, `take`, `borrow`.
+  - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
   - **PathSpace helpers:** `notify`, `insert`, `take`, `bind`, `unbind`, `schedule`.
   - **GPU builtins (draft):**
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
@@ -762,7 +762,7 @@ Colors() {
 - **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter emits `std::move`.
 
 ## Uninitialized Storage (draft)
-- **Purpose:** model explicit, inline storage without implicit construction (C-style tagged storage and optional values).
+- **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and optional values).
 - **Envelope:** `uninitialized<T>` allocates space for `T` but does not construct a `T` value.
 - **Allowed locations:** local bindings and struct fields only. `uninitialized<T>` is rejected for parameters, return types,
   collection elements, pointer/reference targets, or template arguments to user-defined types.
