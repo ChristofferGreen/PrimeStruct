@@ -45,6 +45,8 @@ Legend:
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
+- ○ Define `uninitialized<T>` storage plus `init`/`drop` helpers (required for `Maybe<T>` and other explicit storage patterns).
+- ○ Define `Maybe<T>` (optional value) using uninitialized storage + tag; add docs and tests.
 - ○ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch.
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
@@ -110,7 +112,7 @@ Legend:
 - ✓ Implement the `class<Name>(...)` surface (composition/extends semantics) or remove it from docs.
 - ✓ Finalize lambdas & higher-order function semantics (captures, purity, backend support).
 - ✓ Define borrow-checker/resource rules (pod/handle/gpu_lane lifetimes) or remove borrow-checking claims.
-- ✓ Define move semantics (`Create`/`Move`/`Copy`/`Destroy`), `move(value)` helper, and use-after-move diagnostics.
+- ✓ Define move semantics (`Create`/`Move`/`Clone`/`Destroy`), `move(value)` helper, and use-after-move diagnostics.
 - ✓ Finalize core library surface/standard math spec and document backend-specific limits.
 - ✓ Define numeric operator type-compatibility rules (signed/unsigned mixing, pointer arithmetic) per backend.
 - ✓ Define math builtin operand type rules and backend-specific restrictions (e.g., integer pow errors).

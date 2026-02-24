@@ -367,7 +367,7 @@ if you intended to index.
 - **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`); enabled by default, but can be disabled or overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
 
 **Semantic directives (AST-level, validated)**
-- **`copy`:** force copy-on-entry for a parameter or binding, even when references are the default. Often paired with `mut`.
+- **`copy`:** force copy-on-entry for a parameter or binding, even when references are the default. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is only valid on lifecycle helpers to make `this` mutable; executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
 - **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules and pointer-to-reference conversions are relaxed within the body, but references created there must not escape the unsafe scope.
@@ -505,10 +505,37 @@ for(
     - `Result.error()` returns `true` when the result is an error.
     - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
     - The postfix `?` operator unwraps a `Result` or propagates the error (see Error Handling).
+    - `Result.map(result, fn)` applies `fn` to the success value (if any) and returns a new `Result`.
+    - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
+    - `Result.map2(a, b, fn)` applies `fn` if both results are ok; otherwise returns the first error.
+
+Signature sketches (not surface syntax):
+```
+Result.map      : Result<T, Error> x (T -> U) -> Result<U, Error>
+Result.and_then : Result<T, Error> x (T -> Result<U, Error>) -> Result<U, Error>
+Result.map2     : Result<A, Error> x Result<B, Error> x (A, B -> C) -> Result<C, Error>
+```
+
+Example (surface):
+```
+[return<Result<i32, ParseError>>]
+parse_and_double([string] text) {
+  return(Result.map(parse_i32(text), []([i32] v) { return(multiply(v, 2i32)) }))
+}
+
+[return<Result<i32, FileError>>]
+sum_two_files([string] a, [string] b) {
+  return(Result.map2(read_i32(a), read_i32(b), []([i32] x, [i32] y) {
+    return(plus(x, y))
+  }))
+}
+```
 
 ### Error Handling (draft)
 - **`Result` propagation:** the postfix `?` operator unwraps `Result<T, Error>` in-place; on error, it invokes a local
   `on_error` handler and then returns the error from the current function.
+  - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
+    `Result.and_then` semantics and is the recommended shorthand for fallible sequencing.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
@@ -519,7 +546,7 @@ for(
 
 ### File I/O (draft)
 - **RAII object:** `File<Mode>` is the owning file handle with automatic close on scope exit (`Destroy`).
-  - `File<Mode>` is move-only; `Copy` is a compile-time error.
+  - `File<Mode>` is move-only; `Clone` is a compile-time error.
   - `close()` disarms the handle so `Destroy` becomes a no-op.
 - **Modes:** `Read`, `Write`, `Append`.
 - **Construction:** `File<Mode>(path)` returns `Result<File<Mode>, FileError>`.
@@ -717,15 +744,51 @@ Colors() {
   ```
 - **Constructor semantics:** struct constructors use field initializers as defaults; `Create`/`Destroy` remain optional hooks. Constant member behavior follows the normal `mut` rules (immutable unless declared `mut`).
 
-## Move/Copy/Destroy
-- **Lifecycle set:** structured types can define `Create`, `Move`, `Copy`, and `Destroy` helpers. `Create`/`Destroy` are optional hooks; `Move`/`Copy` must be nested inside the struct, return `void`, and accept exactly one parameter.
-- **Copy signature:** the canonical copy constructor is `Copy([Reference<Self>] other) { ... }`. A shorthand `Copy(other) { ... }` desugars to the reference form.
+## Move/Clone/Destroy
+- **Lifecycle set:** structured types can define `Create`, `Move`, `Clone`, and `Destroy` helpers. `Create`/`Destroy` are optional hooks; `Move`/`Clone` must be nested inside the struct, return `void`, and accept exactly one parameter.
+- **Clone signature:** the canonical clone constructor is `Clone([Reference<Self>] other) { ... }`. A shorthand `Clone(other) { ... }` desugars to the reference form.
+- **Move-by-default:** assignments, argument passing, and returns consume values unless the type is `Copy` or the value is a `Reference<T>`.
+- **`Copy` types (Rust-aligned):** values that can be duplicated by a simple bitwise copy with no custom destruction.
+  - Built-in `Copy` types: `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `Pointer<T>`, `Reference<T>`.
+  - Structs are `Copy` when they are `[pod]`, all fields are `Copy`, and they do **not** define `Destroy` or `Clone`.
+  - Types with `handle`/`gpu_lane` fields are not `Copy` (they cannot be `[pod]`).
+- **Explicit clone:** `clone(value)` invokes the `Clone` helper and returns a new value. It is a compile-time error if the type does not define `Clone`.
 - **Move signature:** the canonical move constructor is `Move([Reference<Self>] other) { ... }`. A shorthand `Move(other) { ... }` desugars to the reference form.
 - **Explicit move:** `move(value)` is the explicit consume helper. It requires a local binding or parameter name (no arbitrary expressions) and marks the source binding as moved-from while returning its value.
 - **Use-after-move:** any use of a moved-from binding is a compile error until it is re-initialized (e.g., `assign(value, ...)`). The analysis is conservative across control flow.
 - **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no implicit `null` literal; `0x0` is just a numeric value).
 - **References:** `move(...)` rejects `Reference<T>` bindings; references do not participate in move semantics.
 - **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter emits `std::move`.
+
+## Optional Values (Maybe) (draft)
+- **Purpose:** represent either "no value" or a value of `T` without heap allocation.
+- **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
+- **Required primitives:** `uninitialized<T>` storage, `init(slot, value)` to construct in-place, and `drop(slot)` to destroy.
+- **Ergonomic constructor surface:** `Maybe()` yields empty; `Maybe(value)` yields present.
+- **Example shape:**
+  ```
+  [struct]
+  Maybe<T>() {
+    [bool] empty{true}
+    [uninitialized<T>] value{uninitialized<T>()}
+
+    [public]
+    Create() { }
+
+    [public]
+    Create([T] v) {
+      init(this.value, v) // consumes v
+      assign(this.empty, false)
+    }
+
+    [public]
+    Destroy() {
+      if(not(this.empty)) {
+        drop(this.value)
+      }
+    }
+  }
+  ```
 
 ## Lambdas & Higher-Order Functions
 - **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is required but may be empty (`[]`). Template arguments are optional.

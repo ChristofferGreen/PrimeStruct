@@ -544,6 +544,11 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
+  - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
+    `Result.and_then` semantics and is the recommended shorthand for fallible sequencing.
+  - **Type rule:** `?` is only valid inside a definition (or block) whose return envelope is `Result<_, ErrorType>`.
+    The nearest `on_error<ErrorType, Handler>(...)` must match the error type, and the `?` expression yields the
+    success payload type.
 - Error handlers are declared with a semantic transform on the same scope as the `?` usage:
   - `on_error<ErrorType, Handler>(args...)`
   - The handler signature is `Handler(ErrorType err, args...)`.
