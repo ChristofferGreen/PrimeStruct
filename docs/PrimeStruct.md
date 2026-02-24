@@ -1,6 +1,6 @@
 # PrimeStruct Plan
 
-PrimeStruct is built around a simple idea: program meaning comes from two primitives—**definitions** (potential) and **executions** (actual). Both map to a single canonical **Envelope** in the AST; executions are envelopes with an implicit empty body. Compile-time transforms rewrite the surface into a small canonical core. That core is what we target to C++, GLSL, and the PrimeStruct VM. It also keeps semantics deterministic and leaves room for future tooling (PathSpace integration, visual editors).
+PrimeStruct is built around a simple idea: program meaning comes from two primitives—**definitions** (potential) and **executions** (actual). Both map to a single canonical **Envelope** in the AST; executions are envelopes with an implicit empty body. Compile-time transforms rewrite the surface into a small canonical core. That core is what we target to C++, GLSL, and the PrimeStruct VM. It also keeps semantics deterministic and leaves room for future tooling and visual editors.
 
 ### Source-processing pipeline
 1. **Import resolver:** first pass walks the raw text and expands every `import<...>` source entry so the compiler always works on a single flattened source stream.
@@ -59,12 +59,12 @@ open question is unresolved.
 ## Deferred Features (not in v1)
 - Borrow checker and lifetime enforcement beyond basic effects gating.
 - Full capability taxonomy and policy-driven capability enforcement (beyond documented effects).
-- PathSpace integration beyond `notify`/`insert`/`take` helpers and basic runtime hooks.
+- Tooling integrations beyond basic CLI workflows.
 - Backend support for software numeric envelopes (`integer`/`decimal`/`complex`) and mixed-mode numeric ops.
 - Placement transforms (`stack`/`heap`/`buffer`) and placement-driven layout guarantees.
 - Recursive struct layouts and cross-module layout stability guarantees.
 - JIT, chunk caching, or dynamic recompilation tooling.
-- IDE/LSP integration and PathSpace-native editor tooling.
+- IDE/LSP integration and editor tooling.
 - Standard library packaging/version negotiation beyond a single in-tree reference set.
 - `tools/PrimeStructc` feature parity with the main compiler and template codegen (PrimeStructc stays a minimal subset; template codegen and import version selection are explicitly out of scope for v1).
 - Tail-call or tail-execution optimization guarantees across all backends.
@@ -122,7 +122,7 @@ module {
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
 - Emit high-performance C++ for engine integration, optional GLSL/SPIR-V targets via external toolchains, and bytecode for an embedded VM without diverging semantics.
-- Share a consistent standard library (math, texture IO, resource bindings, PathSpace helpers) across backends while preserving determinism for replay/testing.
+- Share a consistent standard library (math, texture IO, resource bindings) across backends while preserving determinism for replay/testing.
 
 ## Proposed Architecture
 - **Front-end parser:** C/TypeScript-inspired surface syntax with explicit envelope annotations, deterministic control flow, and explicit resource usage.
@@ -209,7 +209,7 @@ module {
   }
 }
 ```
-- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_write`, `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`, and `gpu_dispatch`; GLSL only accepts `io_out`, `io_err`, and `pathspace_*`.
+- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_write`, and `gpu_dispatch`; GLSL only accepts `io_out` and `io_err`.
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 
 ### Backend Type Support (v1)
@@ -218,7 +218,7 @@ module {
 - **GLSL:** numeric/bool scalar locals only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`); string literals and non-scalar bindings are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
 - **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` only. Using `i64`/`u64` or `f64` emits `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, structs, pointers/references, maps, and vectors are rejected.
-- **GLSL effects/capabilities (current):** only `io_out`, `io_err`, and `pathspace_*` are accepted as metadata; other effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
+- **GLSL effects/capabilities (current):** only `io_out` and `io_err` are accepted as metadata; other effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
 - **GLSL determinism (current):** only local scalar bindings are allowed; no static storage or heap/placement transforms. GPU backends are treated as deterministic with no external I/O.
 - **GPU compute (draft):**
   - A definition tagged with `[compute]` is lowered as a GPU kernel. Kernels are `void` and write outputs via buffer parameters rather than return values.
@@ -232,7 +232,6 @@ module {
   - **IO:** `io_out` (stdout), `io_err` (stderr), `file_write` (filesystem output).
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
-  - **PathSpace:** `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`.
   - **GPU:** `gpu_dispatch` (host-side GPU submission/dispatch).
   - Unknown capability names are errors; capability identifiers are `lower_snake_case`.
 - **Tooling vs runtime visibility:**
@@ -454,7 +453,6 @@ for(
   do() { work(i) }
 )
 ```
-- **`notify(path, payload)`, `insert`, `take`, `bind`, `unbind`, `schedule`:** PathSpace integration hooks for signaling, data movement, and runtime wiring.
 - **`return(value)`:** explicit return primitive; may appear as a statement inside control-flow blocks. For `void` definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers / brace constructors), `return(value)` returns from the block and yields its value.
 - **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or bindings backed by literals (string table entries). VM/native vectors use fixed capacity; `push`/`reserve` succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`, `remove_swap`) continue to work against the fixed capacity.
 
@@ -490,7 +488,6 @@ for(
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
-  - **PathSpace helpers:** `notify`, `insert`, `take`, `bind`, `unbind`, `schedule`.
   - **GPU builtins (draft):**
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
     - `/std/gpu/global_id_y()` → `i32` (kernel invocation y coordinate).
@@ -587,7 +584,7 @@ sum_two_files([string] a, [string] b) {
 - **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit `return(void)` fires if a definition body reaches the end.
 - **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
 - **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the single frame.
-- **Resource handles:** PathSpace references/handles live inside frame slots as opaque values; lifetimes follow lexical scope.
+- **Resource handles:** handles live inside frame slots as opaque values; lifetimes follow lexical scope.
 - **Tail execution:** lowering marks tail-position calls in metadata; backends may reuse frames when the tail flag is set. VM/native currently ignore the hint; GPU backends may require tail-safe forms for determinism.
 - **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering; runtime enforcement is limited to builtin checks.
 
@@ -851,7 +848,6 @@ bad_use_after_take() {
 - **Parameters:** lambda parameters must use binding syntax. Defaults are allowed but must be literal/pure expressions and may not use named arguments.
 - **Backend support (current):** lambdas are supported only by the C++ emitter, which lowers them to native C++ lambdas with the same capture list. IR/VM/GLSL backends reject lambdas; use named definitions when targeting those backends.
 - **Inlining transforms:** standard transforms may inline pure lambdas in C++ emission paths; non-pure lambdas remain as closures.
-- **PathSpace interop:** captured handles follow normal lifetime rules; lambdas do not extend handle lifetimes automatically.
 
 ## Literals & Composite Construction
 - **Numeric literals:** decimal, float, hexadecimal with optional width suffixes (`42i64`, `42u64`, `1.0f64`).
@@ -952,7 +948,7 @@ bad_use_after_take() {
     ReturnI32
     ```
   - References can be used directly in arithmetic (e.g., `plus(ref, 2i32)`), and `location(ref)` yields the underlying pointer.
-- **Ownership:** references are non-owning, frame-bound views. Pointers can be tagged `raw`, `unique`, `shared` via transform-generated wrappers around PathSpace-aware allocators.
+- **Ownership:** references are non-owning, frame-bound views. Pointer ownership tags (`raw`, `unique`, `shared`) are reserved for future allocator integrations.
 - **Raw memory:** `memory::load/store` primitives expose byte-level access; opt-in to highlight unsafe operations.
 - **Layout control:** attributes like `[packed]` guarantee interop-friendly layouts for C++/GLSL.
 - **Open design:** pointer qualifier syntax, aliasing rules (restrict/readonly), and GPU backend constraints remain TBD.
@@ -1002,7 +998,7 @@ import /std/math/*
 clamp_exposure(img) {
   if(
     greater_than(img.exposure, 1.0f32),
-    then() { notify("/warn/exposure"utf8, img.exposure) },
+    then() { print_line_error("exposure too high"utf8) },
     else() { }
   )
 }
@@ -1092,16 +1088,14 @@ module {
 
 ## Integration Points
 - **Build system:** extend CMake/tooling to run `primec`, track dependency graphs, and support incremental builds.
-- **PathSpace Scene Graph:** helper APIs map PrimeStruct modules to scenes/renderers and manage path-based resource bindings.
 - **Testing:** unit/looped regression suites verify backend parity (C++, VM, GLSL).
 - **Diagnostics:** metrics/logs land under `diagnostics/PrimeStruct/*`. Effect annotations drive error messaging.
-- **PathSpace runtime wiring:** generated code uses PathSpace helper APIs (`insert`, `take`, `notify`). Transforms wrap high-level IO primitives so emitted C++/VM code interacts through envelope-tagged handles; GLSL outputs map onto renderer inputs. Lifetimes/ownership align with PathSpace nodes.
 
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export (`--emit-diagnostics`) for tooling/tests.
 - **Phase 1 (source maps):** attach token spans to AST, keep span provenance through text/semantic transforms, and emit IR-to-source maps for VM/native/GLSL. Require every diagnostic to carry at least one source span.
 - **Phase 2 (incremental):** content-addressed caches for AST/IR, dependency graph tracking for imports, and invalidation rules per transform phase. Add `--watch` to reuse caches and stream diagnostics.
-- **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus a PathSpace-native editor adapter.
+- **Phase 3 (IDE/LSP):** go-to-definition, completion, and signature help using the same symbol tables as the compiler. Provide diagnostics in LSP format plus an editor adapter.
 - **Phase 4 (runtime):** VM/native stack traces mapped via source maps, crash reports emitted with IR/AST hashes, and opt-in runtime tracing for effect/capability usage.
 
 ### Semantics Parallelism (Investigation)
@@ -1140,7 +1134,6 @@ Out of scope (initial):
 ## Dependencies & Related Work
 - Stable IR definition & serialization (std::serialization once available).
 - Scene graph/rendering plans (`docs/finished/Plan_SceneGraph_Renderer_Finished.md`).
-- PathIO/device plans for IO abstractions (`docs/AI_Paths.md`).
 
 ## Risks & Research Tasks
 - **Memory model** – value/reference semantics, handle lifetimes, POD vs GPU staging rules.
@@ -1149,7 +1142,7 @@ Out of scope (initial):
 - **Performance** – ensure parity with handwritten code; benchmark harnesses.
 - **Adoption** – migration strategy from existing shaders/scripts.
 - **Diagnostics** – map compile/runtime errors back to PrimeStruct source across backends.
-- **Concurrency** – finalise coroutine/await integrations with PathSpace scheduling.
+- **Concurrency** – finalise coroutine/await integrations.
 - **Security** – sandbox policy for transforms/archives.
 - **Tooling** – IDE/LSP roadmap, incremental compilation caches, metadata outputs.
 
@@ -1167,5 +1160,5 @@ Out of scope (initial):
 6. Flesh out stack/class specifications (calling convention, class sugar transforms, dispatch strategy) across backends.
 7. Lock down composite literal syntax across backends and add conformance tests.
 8. Decide machine-code strategy (C++ emission, third-party JIT) and prototype.
-9. Define diagnostics/tooling plan (source maps, error reporting pipeline, incremental tooling, future PathSpace-native editor).
-10. Document staffing/time requirements before promoting PrimeStruct onto the active PathSpace roadmap.
+9. Define diagnostics/tooling plan (source maps, error reporting pipeline, incremental tooling, editor roadmap).
+10. Document staffing/time requirements before promoting PrimeStruct onto the active roadmap.

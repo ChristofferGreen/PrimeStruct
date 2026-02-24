@@ -85,13 +85,12 @@ Legend:
 - ✓ Document canonical string normalization: parser emits `raw_utf8` / `raw_ascii` with unescaped content, not the escaped `"..."utf8/ascii` form described in the spec.
 - ✓ Document vector helper calls (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) as statement-only or allow them in expression contexts.
 - ✓ Add missing `/std/math/*` builtins present in code: `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, `is_finite`.
-- ✓ Add PathSpace builtins (`notify`, `insert`, `take`) to `docs/PrimeStruct_SyntaxSpec.md` (currently only in the design doc).
 
 **Spec Completion & Open Design**
 - ✓ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.
 - ✓ Create a risk log for open questions (borrow checker, capability taxonomy, GPU constraints) and mitigation plan.
 - ✓ Finalize capability taxonomy and decide which fields are surfaced in tooling vs runtime-only logs.
-- ✓ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, PathSpace-native editor plan).
+- ✓ Define the diagnostics/tooling roadmap (source maps, error reporting pipeline, incremental tooling, editor plan).
 - ✓ (Low) Investigate multithreaded semantics pass (task pool per root function) with deterministic diagnostics.
 - ✓ Finalize transform phases documentation and confirm phase ordering/auto-deduction rules.
 - ✓ Audit and document supported text/semantic transforms; consider adding a CLI listing or richer diagnostics for unsupported transforms.
@@ -119,7 +118,6 @@ Legend:
 - ✓ Finalize and version the Standard Library Reference (currently draft v0).
 - ✓ Decide on standard library package versioning and remove the planned `--stdlib-version` flag.
 - ✓ Define and implement stdlib conformance markers for VM/native subset differences.
-- ✓ Define PathSpace runtime integration beyond `notify`/`insert`/`take` (host hooks, scheduling, effects).
 - ✓ Define GPU backend constraints (allowed effects, memory model, supported envelope set, and determinism rules).
 - ✓ Define execution metadata (scheduling scope, instrumentation fields) and thread it through IR/backends.
 - ✓ Finalize the IR definition/PSIR spec and mark it stable in `docs/PrimeStruct.md` (includes opcodes, module layout).
