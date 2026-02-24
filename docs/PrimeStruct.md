@@ -489,6 +489,7 @@ for(
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
   - **Pointer helpers:** `location`, `dereference`.
+  - **Storage helpers (draft):** `init`, `drop`, `take`, `borrow`.
   - **PathSpace helpers:** `notify`, `insert`, `take`, `bind`, `unbind`, `schedule`.
   - **GPU builtins (draft):**
     - `/std/gpu/global_id_x()` → `i32` (kernel invocation x coordinate).
@@ -760,6 +761,24 @@ Colors() {
 - **References:** `move(...)` rejects `Reference<T>` bindings; references do not participate in move semantics.
 - **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter emits `std::move`.
 
+## Uninitialized Storage (draft)
+- **Purpose:** model explicit, inline storage without implicit construction (C-style tagged storage and optional values).
+- **Envelope:** `uninitialized<T>` allocates space for `T` but does not construct a `T` value.
+- **Allowed locations:** local bindings and struct fields only. `uninitialized<T>` is rejected for parameters, return types,
+  collection elements, pointer/reference targets, or template arguments to user-defined types.
+- **Initialization:** `init(slot, value)` constructs `T` in-place.
+  - `slot` must be `uninitialized<T>` and must be definitely uninitialized at the call site.
+  - `value` is consumed (move-by-default); use `clone(value)` to duplicate.
+  - After `init`, the slot is definitely initialized.
+- **Destruction:** `drop(slot)` destroys the in-place value and marks the slot uninitialized.
+  - `slot` must be definitely initialized; otherwise a diagnostic is emitted.
+- **Access:**
+  - `take(slot)` moves the value out and leaves the slot uninitialized.
+  - `borrow(slot)` returns `Reference<T>` and participates in normal borrow rules; the slot must be initialized.
+  - Any other use of an `uninitialized<T>` value is a type error.
+- **Lifetime rules:** using a slot after `drop`/`take` is a compile-time error until it is reinitialized.
+- **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized.
+
 ## Optional Values (Maybe) (draft)
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
@@ -789,6 +808,42 @@ Colors() {
     }
   }
   ```
+
+Draft tests (shape only):
+```
+// Positive: create empty, create filled, drop only when filled.
+[return<i32>]
+maybe_basic() {
+  [Maybe<i32>] a{Maybe<i32>()}
+  [Maybe<i32>] b{Maybe<i32>(1i32)}
+  if(not(b.empty)) { drop(b.value) }
+  return(0i32)
+}
+
+// Negative: double init.
+[return<void>]
+bad_double_init() {
+  [uninitialized<i32>] slot{uninitialized<i32>()}
+  init(slot, 1i32)
+  init(slot, 2i32) // error: slot already initialized
+}
+
+// Negative: drop before init.
+[return<void>]
+bad_drop_uninit() {
+  [uninitialized<i32>] slot{uninitialized<i32>()}
+  drop(slot) // error: slot not initialized
+}
+
+// Negative: use after take.
+[return<void>]
+bad_use_after_take() {
+  [uninitialized<i32>] slot{uninitialized<i32>()}
+  init(slot, 1i32)
+  [i32] v{take(slot)}
+  drop(slot) // error: slot not initialized
+}
+```
 
 ## Lambdas & Higher-Order Functions
 - **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is required but may be empty (`[]`). Template arguments are optional.

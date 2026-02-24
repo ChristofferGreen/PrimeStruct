@@ -45,7 +45,7 @@ Legend:
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
-- ○ Define `uninitialized<T>` storage plus `init`/`drop` helpers (required for `Maybe<T>` and other explicit storage patterns).
+- ○ Define `uninitialized<T>` storage plus `init`/`drop`/`take`/`borrow` helpers (required for `Maybe<T>` and other explicit storage patterns).
 - ○ Define `Maybe<T>` (optional value) using uninitialized storage + tag; add docs and tests.
 - ○ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch.
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
