@@ -367,7 +367,7 @@ if you intended to index.
 - **`single_type_to_return`:** semantic transform that rewrites a single bare envelope in a transform list into `return<envelope>` (e.g., `[i32] main()` → `[return<i32>] main()`); enabled by default, but can be disabled or overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
 
 **Semantic directives (AST-level, validated)**
-- **`copy`:** force copy-on-entry for a parameter or binding, even when references are the default. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
+- **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is only valid on lifecycle helpers to make `this` mutable; executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
 - **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules and pointer-to-reference conversions are relaxed within the body, but references created there must not escape the unsafe scope.
@@ -782,7 +782,7 @@ Colors() {
 ## Optional Values (Maybe) (draft)
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
-- **Required primitives:** `uninitialized<T>` storage, `init(slot, value)` to construct in-place, and `drop(slot)` to destroy.
+- **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
 - **Ergonomic constructor surface:** `Maybe()` yields empty; `Maybe(value)` yields present.
 - **Example shape:**
   ```
