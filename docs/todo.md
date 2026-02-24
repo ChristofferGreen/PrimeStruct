@@ -16,6 +16,7 @@ Legend:
 - ✓ Enforce canonical-only parsing when `--no-transforms` is active (disable parser sugar like `if(...) {}` / `value[index]` and require explicit return transforms); currently still accepts surface forms.
 - ○ Replace `include` with unified `import` in the parser (support `import<...>` for source expansion and `import /path/*` for namespace exposure).
 - ○ Rework include resolver into an import resolver (expand `import<...>` before transforms/inference).
+- ○ Implement import resolver version-selection rules (1/2-part “latest matching” vs 3-part exact), `_`-prefixed privacy rejection, and duplicate import handling + tests.
 - ○ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
 
 **Syntax & Surface Features**
@@ -41,10 +42,12 @@ Legend:
 - ✓ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission).
 - ✓ Implement `copy`/`public`/`private`/`static` binding semantics and metadata (currently validated but unused).
 - ○ Enforce definition export visibility: definitions are private by default and only `[public]` definitions are importable.
+- ○ Implement `[profile(...)]` transform parsing and validation (per-definition backend profile gating).
 - ○ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
+- ○ Implement `match` expressions (syntax, exhaustive type checking, and lowering).
 - ○ Define `uninitialized<T>` storage plus `init`/`drop`/`take`/`borrow` helpers (required for `Maybe<T>` and other explicit storage patterns).
 - ○ Define `Maybe<T>` (optional value) using uninitialized storage + tag; add docs and tests.
 - ○ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch.
@@ -57,12 +60,14 @@ Legend:
 - ○ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
 - ○ Enforce the core type set in semantic validation and backend filters (reject non-core envelopes unless the backend explicitly supports them).
 - ○ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
-- ○ Implement whole-program `auto` inference for parameters and returns (fixpoint over the expanded call graph after import expansion).
+- ○ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation).
+- ○ Enforce that templates/`auto` do not reach the base-level tree before lowering.
 - ○ Enforce diagnostics for unresolved inference on omitted binding envelopes and `auto` bindings/returns (no fallback); emit diagnostics on unresolved or conflicting inference.
 - ○ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
 - ✓ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
 - ✓ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
 - ✓ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
+- ○ Implement `Result` helper surface (`Result.error`, `Result.why`, `Result.map`, `Result.and_then`, `Result.map2`) and add tests.
 - ✓ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
 - ✓ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
 
