@@ -424,6 +424,19 @@ TEST_CASE("uninitialized not allowed as user template arg") {
         std::string::npos);
 }
 
+TEST_CASE("uninitialized struct fields are allowed") {
+  primec::Program program;
+  primec::Expr fieldInit = makeCall("uninitialized");
+  fieldInit.templateArgs = {"i32"};
+  primec::Expr field = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {fieldInit});
+  program.definitions.push_back(makeDefinition("/Box", {makeTransform("struct")}, {field}));
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =

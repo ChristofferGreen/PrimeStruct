@@ -702,6 +702,26 @@ bool SemanticsValidator::validateStructLayouts() {
       layoutOut = {8u, 8u};
       return true;
     }
+    if (binding.typeName == "uninitialized") {
+      if (binding.typeTemplateArg.empty()) {
+        error_ = "uninitialized requires exactly one template argument";
+        return false;
+      }
+      std::string base;
+      std::string arg;
+      BindingInfo inner;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
+        if (base == "uninitialized") {
+          error_ = "nested uninitialized storage is not supported";
+          return false;
+        }
+        inner.typeName = base;
+        inner.typeTemplateArg = arg;
+      } else {
+        inner.typeName = binding.typeTemplateArg;
+      }
+      return typeLayoutForBinding(inner, namespacePrefix, layoutOut);
+    }
     std::string structPath = resolveStructTypePath(binding.typeName, namespacePrefix);
     auto defIt = defMap_.find(structPath);
     if (defIt == defMap_.end()) {
