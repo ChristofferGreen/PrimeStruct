@@ -25,7 +25,7 @@ public:
     std::string valueType;
     std::string errorType;
   };
-  enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void, Array };
+  enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, String, Void, Array };
   std::string emitCpp(const Program &program, const std::string &entryPath) const;
 
 private:

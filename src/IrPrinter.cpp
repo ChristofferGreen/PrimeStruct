@@ -10,7 +10,7 @@
 namespace primec {
 
 namespace {
-enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, Void, Array };
+enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, String, Void, Array };
 
 std::string joinTemplateArgs(const std::vector<std::string> &args) {
   std::ostringstream out;
@@ -374,6 +374,9 @@ const char *returnTypeName(ReturnKind kind) {
   if (kind == ReturnKind::Bool) {
     return "bool";
   }
+  if (kind == ReturnKind::String) {
+    return "string";
+  }
   if (kind == ReturnKind::Array) {
     return "array";
   }
@@ -392,6 +395,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "bool") {
     return ReturnKind::Bool;
+  }
+  if (name == "string") {
+    return ReturnKind::String;
   }
   if (name == "float" || name == "f32") {
     return ReturnKind::Float32;
@@ -673,7 +679,8 @@ std::string IrPrinter::print(const Program &program) const {
       if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
         return ReturnKind::Unknown;
       }
-      if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+      if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::String ||
+          right == ReturnKind::String || left == ReturnKind::Void || right == ReturnKind::Void) {
         return ReturnKind::Unknown;
       }
       if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
@@ -714,7 +721,7 @@ std::string IrPrinter::print(const Program &program) const {
       return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
     }
     if (expr.kind == Expr::Kind::StringLiteral) {
-      return ReturnKind::Unknown;
+      return ReturnKind::String;
     }
     if (expr.kind == Expr::Kind::Name) {
       if (isParam(params, expr.name)) {

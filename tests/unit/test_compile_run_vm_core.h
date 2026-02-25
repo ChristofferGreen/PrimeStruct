@@ -290,7 +290,7 @@ main() {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_return_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "Semantic error: unsupported return type on /main\n");
+  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support string return types on /main\n");
 }
 
 TEST_CASE("vm rejects recursive calls") {

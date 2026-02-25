@@ -823,6 +823,8 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
       return "u64";
     case ReturnKind::Bool:
       return "bool";
+    case ReturnKind::String:
+      return "string";
     case ReturnKind::Float32:
       return "f32";
     case ReturnKind::Float64:

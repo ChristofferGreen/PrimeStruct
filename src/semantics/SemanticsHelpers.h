@@ -10,7 +10,21 @@
 
 namespace primec::semantics {
 
-enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Integer, Decimal, Complex, Bool, Void, Array };
+enum class ReturnKind {
+  Unknown,
+  Int,
+  Int64,
+  UInt64,
+  Float32,
+  Float64,
+  Integer,
+  Decimal,
+  Complex,
+  Bool,
+  String,
+  Void,
+  Array
+};
 
 struct BindingInfo {
   std::string typeName;

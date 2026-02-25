@@ -39,16 +39,118 @@
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult) {
       return "std::string_view()";
     }
-    if (resultInfo.errorType != "FileError") {
-      return "std::string_view()";
-    }
     std::string argText =
         emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
-    if (resultInfo.hasValue) {
-      return "ps_file_error_why(ps_result_error(" + argText + "))";
+    const std::string errorExpr =
+        resultInfo.hasValue ? "ps_result_error(" + argText + ")" : "static_cast<uint32_t>(" + argText + ")";
+    if (resultInfo.errorType == "FileError") {
+      return "ps_file_error_why(" + errorExpr + ")";
     }
-    return "ps_file_error_why(static_cast<uint32_t>(" + argText + "))";
+    auto isSupportedErrorCodeType = [&](const BindingInfo &info) -> bool {
+      if (!info.typeTemplateArg.empty()) {
+        return false;
+      }
+      const std::string normalized = normalizeBindingTypeName(info.typeName);
+      return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "bool" ||
+             normalized == "FileError";
+    };
+    auto resolveStructTypePath =
+        [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+      if (typeName.empty()) {
+        return "";
+      }
+      if (!typeName.empty() && typeName[0] == '/') {
+        return structTypeMap.count(typeName) > 0 ? typeName : "";
+      }
+      std::string current = namespacePrefix;
+      while (true) {
+        if (!current.empty()) {
+          std::string scoped = current + "/" + typeName;
+          if (structTypeMap.count(scoped) > 0) {
+            return scoped;
+          }
+          if (current.size() > typeName.size()) {
+            const size_t start = current.size() - typeName.size();
+            if (start > 0 && current[start - 1] == '/' &&
+                current.compare(start, typeName.size(), typeName) == 0 &&
+                structTypeMap.count(current) > 0) {
+              return current;
+            }
+          }
+        } else {
+          std::string root = "/" + typeName;
+          if (structTypeMap.count(root) > 0) {
+            return root;
+          }
+        }
+        if (current.empty()) {
+          break;
+        }
+        const size_t slash = current.find_last_of('/');
+        if (slash == std::string::npos || slash == 0) {
+          current.clear();
+        } else {
+          current.erase(slash);
+        }
+      }
+      auto importIt = importAliases.find(typeName);
+      if (importIt != importAliases.end() && structTypeMap.count(importIt->second) > 0) {
+        return importIt->second;
+      }
+      return "";
+    };
+    auto emitWhyCall = [&](const std::string &whyPath, const BindingInfo &paramInfo) -> std::string {
+      std::string paramType =
+          bindingTypeToCpp(paramInfo, expr.namespacePrefix, importAliases, structTypeMap);
+      if (paramType.empty()) {
+        paramType = "uint32_t";
+      }
+      return nameMap.at(whyPath) + "(static_cast<" + paramType + ">(" + errorExpr + "))";
+    };
+    const std::string errorStructPath = resolveStructTypePath(resultInfo.errorType, expr.namespacePrefix);
+    if (!errorStructPath.empty()) {
+      const std::string whyPath = errorStructPath + "/why";
+      auto whyIt = nameMap.find(whyPath);
+      auto whyParamsIt = paramMap.find(whyPath);
+      if (whyIt != nameMap.end() && whyParamsIt != paramMap.end() && whyParamsIt->second.size() == 1) {
+        const Expr &paramExpr = whyParamsIt->second.front();
+        BindingInfo paramInfo = getBindingInfo(paramExpr);
+        const std::string paramStructPath = resolveStructTypePath(paramInfo.typeName, paramExpr.namespacePrefix);
+        if (!paramStructPath.empty() && paramStructPath == errorStructPath && paramInfo.typeTemplateArg.empty()) {
+          auto ctorIt = nameMap.find(errorStructPath);
+          auto ctorParamsIt = paramMap.find(errorStructPath);
+          if (ctorIt != nameMap.end() && ctorParamsIt != paramMap.end() && ctorParamsIt->second.size() == 1) {
+            const Expr &fieldExpr = ctorParamsIt->second.front();
+            BindingInfo fieldInfo = getBindingInfo(fieldExpr);
+            if (isSupportedErrorCodeType(fieldInfo)) {
+              std::string fieldType =
+                  bindingTypeToCpp(fieldInfo, fieldExpr.namespacePrefix, importAliases, structTypeMap);
+              if (fieldType.empty()) {
+                fieldType = "uint32_t";
+              }
+              return whyIt->second + "(" + ctorIt->second + "(static_cast<" + fieldType + ">(" + errorExpr + ")))";
+            }
+          }
+        }
+        if (isSupportedErrorCodeType(paramInfo)) {
+          return emitWhyCall(whyPath, paramInfo);
+        }
+      }
+    }
+    const std::string normalizedError = normalizeBindingTypeName(resultInfo.errorType);
+    if (isPrimitiveBindingTypeName(normalizedError)) {
+      const std::string whyPath = "/" + normalizedError + "/why";
+      auto whyIt = nameMap.find(whyPath);
+      auto whyParamsIt = paramMap.find(whyPath);
+      if (whyIt != nameMap.end() && whyParamsIt != paramMap.end() && whyParamsIt->second.size() == 1) {
+        BindingInfo paramInfo = getBindingInfo(whyParamsIt->second.front());
+        if (isSupportedErrorCodeType(paramInfo)) {
+          return emitWhyCall(whyPath, paramInfo);
+        }
+      }
+    }
+    return "std::string_view()";
   }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map") {

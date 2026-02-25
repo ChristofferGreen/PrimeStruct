@@ -293,6 +293,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (returnKind == ReturnKind::Bool) {
       return std::string("bool");
     }
+    if (returnKind == ReturnKind::String) {
+      return std::string("std::string_view");
+    }
     if (returnKind == ReturnKind::Array) {
       std::string typeName = "array<i32>";
       for (const auto &transform : def.transforms) {
@@ -543,7 +546,8 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
         return ReturnKind::Unknown;
       }
-      if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+      if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::String ||
+          right == ReturnKind::String || left == ReturnKind::Void || right == ReturnKind::Void) {
         return ReturnKind::Unknown;
       }
       if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
@@ -585,7 +589,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
     }
     if (expr.kind == Expr::Kind::StringLiteral) {
-      return ReturnKind::Unknown;
+      return ReturnKind::String;
     }
     if (expr.kind == Expr::Kind::Name) {
       if (isParam(params, expr.name)) {

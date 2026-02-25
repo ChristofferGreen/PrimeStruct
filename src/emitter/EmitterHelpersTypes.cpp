@@ -39,6 +39,9 @@ ReturnKind getReturnKind(const Definition &def) {
     if (typeName == "bool") {
       return ReturnKind::Bool;
     }
+    if (typeName == "string") {
+      return ReturnKind::String;
+    }
     if (typeName == "i64") {
       return ReturnKind::Int64;
     }
@@ -547,6 +550,8 @@ std::string typeNameForReturnKind(ReturnKind kind) {
       return "u64";
     case ReturnKind::Bool:
       return "bool";
+    case ReturnKind::String:
+      return "string";
     case ReturnKind::Float32:
       return "f32";
     case ReturnKind::Float64:
@@ -570,6 +575,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "bool") {
     return ReturnKind::Bool;
+  }
+  if (name == "string") {
+    return ReturnKind::String;
   }
   if (name == "float" || name == "f32") {
     return ReturnKind::Float32;
@@ -601,7 +609,8 @@ ReturnKind combineNumericKinds(ReturnKind left, ReturnKind right) {
   if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
     return ReturnKind::Unknown;
   }
-  if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void) {
+  if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::String ||
+      right == ReturnKind::String || left == ReturnKind::Void || right == ReturnKind::Void) {
     return ReturnKind::Unknown;
   }
   if (left == ReturnKind::Float64 || right == ReturnKind::Float64) {
@@ -640,6 +649,9 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::FloatLiteral) {
     return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
+  }
+  if (expr.kind == Expr::Kind::StringLiteral) {
+    return ReturnKind::String;
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isBuiltinMathConstantName(expr.name, allowMathBare)) {
@@ -687,8 +699,9 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   auto kindIt = returnKinds.find(resolved);
   if (kindIt != returnKinds.end()) {
     ReturnKind kind = kindIt->second;
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
-        kind == ReturnKind::Float32 || kind == ReturnKind::Float64) {
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+        kind == ReturnKind::Bool || kind == ReturnKind::String || kind == ReturnKind::Float32 ||
+        kind == ReturnKind::Float64) {
       return kind;
     }
   }

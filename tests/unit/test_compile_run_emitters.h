@@ -186,6 +186,43 @@ TEST_CASE("C++ emitter supports file io") {
   CHECK(readFile(outPath) == "Hello 123 world\n\nABC");
 }
 
+TEST_CASE("C++ emitter supports custom Result.why hooks") {
+  const std::string source = R"(
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    return("custom error"utf8)
+  }
+}
+
+[return<Result<MyError>>]
+make_error() {
+  return(1i32)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(make_error()))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_result_why_custom.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_result_why_custom_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_result_why_custom_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "custom error\n");
+}
+
 TEST_CASE("C++ emitter renders static fields and visibility") {
   const std::string source = R"(
 [struct]

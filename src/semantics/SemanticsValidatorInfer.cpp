@@ -22,7 +22,8 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (left == ReturnKind::Unknown || right == ReturnKind::Unknown) {
       return ReturnKind::Unknown;
     }
-    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::Void || right == ReturnKind::Void ||
+    if (left == ReturnKind::Bool || right == ReturnKind::Bool || left == ReturnKind::String ||
+        right == ReturnKind::String || left == ReturnKind::Void || right == ReturnKind::Void ||
         left == ReturnKind::Array || right == ReturnKind::Array) {
       return ReturnKind::Unknown;
     }
@@ -103,7 +104,7 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     return expr.floatWidth == 64 ? ReturnKind::Float64 : ReturnKind::Float32;
   }
   if (expr.kind == Expr::Kind::StringLiteral) {
-    return ReturnKind::Unknown;
+    return ReturnKind::String;
   }
   if (expr.kind == Expr::Kind::Name) {
     if (isBuiltinMathConstant(expr.name, allowMathBareName(expr.name))) {
@@ -715,6 +716,12 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
         return (expr.args.size() > 1) ? ReturnKind::Int64 : ReturnKind::Int;
       }
     }
+    if (expr.isMethodCall && expr.name == "why" && expr.args.size() == 2) {
+      const Expr &receiver = expr.args.front();
+      if (receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+        return ReturnKind::String;
+      }
+    }
     if (expr.isMethodCall && expr.name == "count" && expr.args.size() == 1) {
       std::string elemType;
       std::string keyType;
@@ -734,6 +741,9 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (expr.isMethodCall) {
       std::string methodResolved;
       if (resolveMethodCallPath(methodResolved)) {
+        if (methodResolved == "/file_error/why") {
+          return ReturnKind::String;
+        }
         resolved = methodResolved;
         hasResolvedPath = true;
       }

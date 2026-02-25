@@ -213,6 +213,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "bool") {
     return ReturnKind::Bool;
   }
+  if (name == "string") {
+    return ReturnKind::String;
+  }
   if (name == "float" || name == "f32") {
     return ReturnKind::Float32;
   }
