@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
@@ -58,6 +60,7 @@ bool validateProgramWithDefaults(const std::string &source,
 #include "test_semantics_numeric_software.h"
 #include "test_semantics_entry_executions.h"
 #include "test_semantics_entry_transforms.h"
+#include "test_semantics_enum.h"
 #include "test_semantics_capabilities.h"
 #include "test_semantics_bindings_core.h"
 #include "test_semantics_bindings_pointers.h"

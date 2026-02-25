@@ -43,7 +43,7 @@ using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
-         name == "struct" ||
+         name == "struct" || name == "enum" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding" || name == "public" || name == "private" ||
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" || name == "buffer";

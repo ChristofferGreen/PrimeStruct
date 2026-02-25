@@ -364,8 +364,11 @@
       return true;
     };
 
-    auto resolveStructFieldBinding =
-        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
+    auto inferStructFieldBinding = [&](const Definition &def,
+                                       const std::string &fieldName,
+                                       BindingInfo &bindingOut,
+                                       bool allowStatic,
+                                       bool allowPrivate) -> bool {
       auto isStaticField = [](const Expr &stmt) -> bool {
         for (const auto &transform : stmt.transforms) {
           if (transform.name == "static") {
@@ -374,6 +377,44 @@
         }
         return false;
       };
+      auto isPrivateField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "private") {
+            return true;
+          }
+        }
+        return false;
+      };
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          error_ = "struct definitions may only contain field bindings: " + def.fullPath;
+          return false;
+        }
+        if (stmt.name != fieldName) {
+          continue;
+        }
+        if (isStaticField(stmt) && !allowStatic) {
+          return false;
+        }
+        if (isPrivateField(stmt) && !allowPrivate) {
+          error_ = "private field is not accessible: " + def.fullPath + "/" + fieldName;
+          return false;
+        }
+        BindingInfo fieldBinding;
+        std::optional<std::string> restrictType;
+        std::string parseError;
+        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, fieldBinding, restrictType, parseError)) {
+          error_ = parseError;
+          return false;
+        }
+        bindingOut = std::move(fieldBinding);
+        return true;
+      }
+      return false;
+    };
+
+    auto resolveStructFieldBinding =
+        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &bindingOut) -> bool {
       auto resolveStructPathFromType = [&](const std::string &typeName,
                                            const std::string &namespacePrefix,
                                            std::string &structPathOut) -> bool {

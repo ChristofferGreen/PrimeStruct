@@ -575,3 +575,50 @@ main() {
   CHECK(error.empty());
   CHECK(result == 2);
 }
+
+TEST_CASE("ir lowers enum definitions to struct layouts") {
+  const std::string source = R"(
+[enum]
+Colors() {
+  assign(Blue, 5i32)
+  Red
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  auto layoutIt = std::find_if(module.structLayouts.begin(),
+                               module.structLayouts.end(),
+                               [](const primec::IrStructLayout &layout) { return layout.name == "/Colors"; });
+  REQUIRE(layoutIt != module.structLayouts.end());
+  REQUIRE(layoutIt->fields.size() == 3u);
+  auto fieldByName = [&](const std::string &name) -> const primec::IrStructField * {
+    auto it = std::find_if(layoutIt->fields.begin(),
+                           layoutIt->fields.end(),
+                           [&](const primec::IrStructField &field) { return field.name == name; });
+    if (it == layoutIt->fields.end()) {
+      return nullptr;
+    }
+    return &(*it);
+  };
+  const primec::IrStructField *valueField = fieldByName("value");
+  const primec::IrStructField *blueField = fieldByName("Blue");
+  const primec::IrStructField *redField = fieldByName("Red");
+  REQUIRE(valueField != nullptr);
+  REQUIRE(blueField != nullptr);
+  REQUIRE(redField != nullptr);
+  CHECK(valueField->isStatic == false);
+  CHECK(blueField->isStatic == true);
+  CHECK(redField->isStatic == true);
+}

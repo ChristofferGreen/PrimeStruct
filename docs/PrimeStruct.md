@@ -714,6 +714,9 @@ sum_two_files([string] a, [string] b) {
 - `enum` introduces tagged union types.
 - Enum syntax follows the standard envelope rules; the `enum` transform rewrites the declaration to an ordinary struct
   plus static bindings so the base language never needs a dedicated enum form.
+- Enums use an integer backing type. The default is `i32`; `enum<i64>` and `enum<u64>` select other widths.
+- Entries may specify explicit integer literal values (via `Name = 5i32` or `assign(Name, 5i32)`), and omitted values
+  auto-increment from `0` or the previous entry. Values must fit in the backing type; unsigned enums reject negatives.
 - Pattern matching must be exhaustive and type-checked.
 - `match` expressions have a single result type.
 
