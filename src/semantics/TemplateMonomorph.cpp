@@ -36,6 +36,8 @@ struct Context {
   std::unordered_set<std::string> outputPaths;
   std::vector<Definition> outputDefs;
   std::vector<Execution> outputExecs;
+  std::unordered_set<std::string> implicitTemplateDefs;
+  std::unordered_map<std::string, std::vector<std::string>> implicitTemplateParams;
 };
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
@@ -180,6 +182,101 @@ bool extractExplicitBindingType(const Expr &expr, BindingInfo &infoOut) {
     return true;
   }
   return false;
+}
+
+std::string bindingTypeToString(const BindingInfo &info) {
+  if (info.typeTemplateArg.empty()) {
+    return info.typeName;
+  }
+  return info.typeName + "<" + info.typeTemplateArg + ">";
+}
+
+std::string generateTemplateParamName(const Definition &def, size_t index) {
+  std::string candidate = "T" + std::to_string(index);
+  auto isUsed = [&](const std::string &name) -> bool {
+    for (const auto &existing : def.templateArgs) {
+      if (existing == name) {
+        return true;
+      }
+    }
+    return false;
+  };
+  while (isUsed(candidate)) {
+    ++index;
+    candidate = "T" + std::to_string(index);
+  }
+  return candidate;
+}
+
+bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std::string &error) {
+  bool replaced = false;
+  for (auto &transform : binding.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities" || transform.name == "return") {
+      continue;
+    }
+    if (isBindingAuxTransformName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      error = "binding transforms do not take arguments";
+      return false;
+    }
+    if (!transform.templateArgs.empty()) {
+      error = "binding transforms do not take template arguments";
+      return false;
+    }
+    if (replaced) {
+      error = "binding requires exactly one type";
+      return false;
+    }
+    transform.name = typeName;
+    replaced = true;
+  }
+  return replaced;
+}
+
+bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &error) {
+  for (auto &def : program.definitions) {
+    std::vector<std::string> implicitParams;
+    if (!def.templateArgs.empty()) {
+      for (const auto &param : def.parameters) {
+        BindingInfo info;
+        if (extractExplicitBindingType(param, info) && info.typeName == "auto") {
+          error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
+          return false;
+        }
+      }
+      continue;
+    }
+    size_t autoIndex = 0;
+    for (auto &param : def.parameters) {
+      BindingInfo info;
+      if (!extractExplicitBindingType(param, info)) {
+        continue;
+      }
+      if (info.typeName != "auto") {
+        continue;
+      }
+      if (!info.typeTemplateArg.empty()) {
+        error = "auto parameters do not accept template arguments: " + def.fullPath;
+        return false;
+      }
+      std::string templateParam = generateTemplateParamName(def, autoIndex++);
+      if (!replaceBindingTypeTransform(param, templateParam, error)) {
+        if (error.empty()) {
+          error = "auto parameter requires an explicit type transform: " + def.fullPath;
+        }
+        return false;
+      }
+      def.templateArgs.push_back(templateParam);
+      implicitParams.push_back(templateParam);
+    }
+    if (!implicitParams.empty()) {
+      ctx.implicitTemplateDefs.insert(def.fullPath);
+      ctx.implicitTemplateParams.emplace(def.fullPath, std::move(implicitParams));
+    }
+  }
+  return true;
 }
 
 std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx);
@@ -354,6 +451,112 @@ bool instantiateTemplate(const std::string &basePath,
                          Context &ctx,
                          std::string &error,
                          std::string &specializedPathOut);
+
+bool inferImplicitTemplateArgs(const Definition &def,
+                               const Expr &callExpr,
+                               const LocalTypeMap &locals,
+                               const std::vector<ParameterInfo> &params,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               bool allowMathBare,
+                               std::vector<std::string> &outArgs,
+                               std::string &error) {
+  auto implicitIt = ctx.implicitTemplateParams.find(def.fullPath);
+  if (implicitIt == ctx.implicitTemplateParams.end()) {
+    return false;
+  }
+  const auto &implicitParams = implicitIt->second;
+  std::unordered_set<std::string> implicitSet(implicitParams.begin(), implicitParams.end());
+  std::unordered_map<std::string, std::string> inferred;
+  inferred.reserve(implicitParams.size());
+  std::vector<const Expr *> orderedArgs(def.parameters.size(), nullptr);
+  size_t positionalIndex = 0;
+  for (size_t i = 0; i < callExpr.args.size(); ++i) {
+    if (i < callExpr.argNames.size() && callExpr.argNames[i].has_value()) {
+      const std::string &name = *callExpr.argNames[i];
+      size_t index = def.parameters.size();
+      for (size_t p = 0; p < def.parameters.size(); ++p) {
+        if (def.parameters[p].name == name) {
+          index = p;
+          break;
+        }
+      }
+      if (index >= def.parameters.size()) {
+        error = "unknown named argument: " + name;
+        return false;
+      }
+      if (orderedArgs[index] != nullptr) {
+        error = "named argument duplicates parameter: " + name;
+        return false;
+      }
+      orderedArgs[index] = &callExpr.args[i];
+      continue;
+    }
+    while (positionalIndex < orderedArgs.size() && orderedArgs[positionalIndex] != nullptr) {
+      ++positionalIndex;
+    }
+    if (positionalIndex >= orderedArgs.size()) {
+      error = "argument count mismatch";
+      return false;
+    }
+    orderedArgs[positionalIndex] = &callExpr.args[i];
+    ++positionalIndex;
+  }
+
+  for (size_t i = 0; i < def.parameters.size(); ++i) {
+    const Expr &param = def.parameters[i];
+    BindingInfo paramInfo;
+    if (!extractExplicitBindingType(param, paramInfo)) {
+      continue;
+    }
+    if (implicitSet.count(paramInfo.typeName) == 0) {
+      continue;
+    }
+    const Expr *argExpr = i < orderedArgs.size() ? orderedArgs[i] : nullptr;
+    if (!argExpr) {
+      error = "implicit template arguments require values on " + def.fullPath;
+      return false;
+    }
+    BindingInfo argInfo;
+    if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
+      error = "unable to infer implicit template arguments for " + def.fullPath;
+      return false;
+    }
+    std::string argType = bindingTypeToString(argInfo);
+    if (argType.empty()) {
+      error = "unable to infer implicit template arguments for " + def.fullPath;
+      return false;
+    }
+    ResolvedType resolvedArg = resolveTypeString(argType, mapping, allowedParams, namespacePrefix, ctx, error);
+    if (!error.empty()) {
+      return false;
+    }
+    if (!resolvedArg.concrete) {
+      error = "implicit template arguments must be concrete on " + def.fullPath;
+      return false;
+    }
+    auto it = inferred.find(paramInfo.typeName);
+    if (it != inferred.end() && it->second != resolvedArg.text) {
+      error = "implicit template arguments conflict on " + def.fullPath;
+      return false;
+    }
+    inferred[paramInfo.typeName] = resolvedArg.text;
+  }
+
+  outArgs.clear();
+  outArgs.reserve(def.templateArgs.size());
+  for (const auto &paramName : def.templateArgs) {
+    auto it = inferred.find(paramName);
+    if (it == inferred.end()) {
+      error = "implicit template arguments could not be inferred for " + def.fullPath;
+      return false;
+    }
+    outArgs.push_back(it->second);
+  }
+  return true;
+}
 
 ResolvedType resolveTypeString(const std::string &input,
                                const SubstMap &mapping,
@@ -613,6 +816,28 @@ bool rewriteExpr(Expr &expr,
     const bool isKnownDef = ctx.sourceDefs.count(resolvedPath) > 0;
     if (isTemplateDef) {
       if (expr.templateArgs.empty()) {
+        auto defIt = ctx.sourceDefs.find(resolvedPath);
+        if (defIt != ctx.sourceDefs.end()) {
+          std::vector<std::string> inferredArgs;
+          if (inferImplicitTemplateArgs(defIt->second,
+                                        expr,
+                                        locals,
+                                        params,
+                                        mapping,
+                                        allowedParams,
+                                        namespacePrefix,
+                                        ctx,
+                                        allowMathBare,
+                                        inferredArgs,
+                                        error)) {
+            expr.templateArgs = std::move(inferredArgs);
+            allConcrete = true;
+          } else if (!error.empty()) {
+            return false;
+          }
+        }
+      }
+      if (expr.templateArgs.empty()) {
         error = "template arguments required for " + resolvedPath;
         return false;
       }
@@ -635,6 +860,28 @@ bool rewriteExpr(Expr &expr,
       const bool isTemplateDef = ctx.templateDefs.count(methodPath) > 0;
       const bool isKnownDef = ctx.sourceDefs.count(methodPath) > 0;
       if (isTemplateDef) {
+        if (expr.templateArgs.empty()) {
+          auto defIt = ctx.sourceDefs.find(methodPath);
+          if (defIt != ctx.sourceDefs.end()) {
+            std::vector<std::string> inferredArgs;
+            if (inferImplicitTemplateArgs(defIt->second,
+                                          expr,
+                                          locals,
+                                          params,
+                                          mapping,
+                                          allowedParams,
+                                          namespacePrefix,
+                                          ctx,
+                                          allowMathBare,
+                                          inferredArgs,
+                                          error)) {
+              expr.templateArgs = std::move(inferredArgs);
+              allConcrete = true;
+            } else if (!error.empty()) {
+              return false;
+            }
+          }
+        }
         if (expr.templateArgs.empty()) {
           error = "template arguments required for " + methodPath;
           return false;
@@ -952,12 +1199,18 @@ void buildImportAliases(Context &ctx) {
 } // namespace
 
 bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
-  Context ctx{program, {}, {}, {}, {}, {}, {}, {}};
+  Context ctx{program, {}, {}, {}, {}, {}, {}, {}, {}, {}};
   ctx.sourceDefs.clear();
   ctx.templateDefs.clear();
   ctx.outputDefs.clear();
   ctx.outputExecs.clear();
   ctx.outputPaths.clear();
+  ctx.implicitTemplateDefs.clear();
+  ctx.implicitTemplateParams.clear();
+
+  if (!applyImplicitAutoTemplates(program, ctx, error)) {
+    return false;
+  }
 
   std::unordered_set<std::string> templateRoots;
   templateRoots.clear();

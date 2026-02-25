@@ -196,6 +196,38 @@ TEST_CASE("template arguments required for templated calls") {
   CHECK(error.find("template arguments required") != std::string::npos);
 }
 
+TEST_CASE("implicit auto template inference for calls") {
+  primec::Program program;
+  primec::Definition identity =
+      makeDefinition("/identity", {makeTransform("return", std::string("auto"))},
+                     {makeCall("/return", {makeName("value")})},
+                     {makeParameter("value", "auto")});
+  program.definitions.push_back(identity);
+
+  primec::Expr call = makeCall("/identity", {makeLiteral(1)});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("i32"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("implicit auto parameters reject templated definitions") {
+  primec::Program program;
+  primec::Definition wrap =
+      makeDefinition("/wrap", {makeTransform("return", std::string("auto"))},
+                     {makeCall("/return", {makeName("value")})},
+                     {makeParameter("value", "auto")});
+  wrap.templateArgs = {"T"};
+  program.definitions.push_back(wrap);
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("i32"))}, {makeCall("/return", {makeLiteral(1)})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("implicit auto parameters are only supported on non-templated definitions") != std::string::npos);
+}
+
 TEST_CASE("struct definition cannot return a value") {
   primec::Program program;
   primec::Definition def = makeDefinition("/main", {makeTransform("struct")}, {});
