@@ -78,26 +78,9 @@
     }
     return false;
   };
-  auto isSimpleUninitializedName = [&](const Expr &expr, const char *name) -> bool {
-    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
-      return false;
-    }
-    if (!expr.templateArgs.empty() || hasNamedArguments(expr.argNames) ||
-        expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return false;
-    }
-    return isSimpleCallName(expr, name);
-  };
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void &&
       !isStructConstructorValueExpr(initializer)) {
-    if (isSimpleUninitializedName(initializer, "init") ||
-        isSimpleUninitializedName(initializer, "drop") ||
-        isSimpleUninitializedName(initializer, "take") ||
-        isSimpleUninitializedName(initializer, "borrow")) {
-      error_ = "uninitialized helpers are only valid as statements";
-      return false;
-    }
     error_ = "binding initializer requires a value";
     return false;
   }
@@ -160,6 +143,90 @@
       return false;
     }
     effectScope.emplace(*this, std::move(executionEffects));
+  }
+  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
+      (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop"))) {
+    const std::string name = stmt.name;
+    if (hasNamedArguments(stmt.argNames)) {
+      error_ = "named arguments not supported for builtin calls";
+      return false;
+    }
+    if (!stmt.templateArgs.empty()) {
+      error_ = name + " does not accept template arguments";
+      return false;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error_ = name + " does not accept block arguments";
+      return false;
+    }
+    const size_t expectedArgs = (name == "init") ? 2 : 1;
+    if (stmt.args.size() != expectedArgs) {
+      error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
+               (expectedArgs == 1 ? "" : "s");
+      return false;
+    }
+    const Expr &storageArg = stmt.args.front();
+    if (!validateExpr(params, locals, storageArg)) {
+      return false;
+    }
+    const BindingInfo *binding = nullptr;
+    if (storageArg.kind == Expr::Kind::Name) {
+      binding = findBinding(params, locals, storageArg.name);
+    }
+    if (!binding || binding->typeName != "uninitialized" || binding->typeTemplateArg.empty()) {
+      error_ = name + " requires uninitialized<T> storage";
+      return false;
+    }
+    if (name == "init") {
+      if (!validateExpr(params, locals, stmt.args[1])) {
+        return false;
+      }
+      ReturnKind valueKind = inferExprReturnKind(stmt.args[1], params, locals);
+      if (valueKind == ReturnKind::Void) {
+        error_ = "init requires a value";
+        return false;
+      }
+    }
+    return true;
+  }
+  if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
+      (isSimpleCallName(stmt, "take") || isSimpleCallName(stmt, "borrow"))) {
+    const std::string name = stmt.name;
+    auto isUninitializedStorage = [&](const Expr &arg) -> bool {
+      if (arg.kind != Expr::Kind::Name) {
+        return false;
+      }
+      const BindingInfo *binding = findBinding(params, locals, arg.name);
+      return binding && binding->typeName == "uninitialized" && !binding->typeTemplateArg.empty();
+    };
+    const bool treatAsUninitializedHelper =
+        (name != "take") || (!stmt.args.empty() && isUninitializedStorage(stmt.args.front()));
+    if (treatAsUninitializedHelper) {
+      if (hasNamedArguments(stmt.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!stmt.templateArgs.empty()) {
+        error_ = name + " does not accept template arguments";
+        return false;
+      }
+      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+        error_ = name + " does not accept block arguments";
+        return false;
+      }
+      if (stmt.args.size() != 1) {
+        error_ = name + " requires exactly 1 argument";
+        return false;
+      }
+      if (!validateExpr(params, locals, stmt.args.front())) {
+        return false;
+      }
+      if (!isUninitializedStorage(stmt.args.front())) {
+        error_ = name + " requires uninitialized<T> storage";
+        return false;
+      }
+      return true;
+    }
   }
   if (stmt.kind != Expr::Kind::Call) {
     if (!allowBindings) {

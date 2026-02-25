@@ -83,6 +83,27 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     return ReturnKind::Unknown;
   };
+  auto uninitializedTargetKind = [&](const std::string &templateArg, const std::string &namespacePrefix) -> ReturnKind {
+    if (templateArg.empty()) {
+      return ReturnKind::Unknown;
+    }
+    ReturnKind kind = returnKindForTypeName(templateArg);
+    if (kind != ReturnKind::Unknown) {
+      return kind;
+    }
+    if (isStructTypeName(templateArg, namespacePrefix)) {
+      return ReturnKind::Array;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(templateArg, base, arg) && base == "array") {
+      std::vector<std::string> args;
+      if (splitTopLevelTemplateArgs(arg, args) && args.size() == 1) {
+        return ReturnKind::Array;
+      }
+    }
+    return ReturnKind::Unknown;
+  };
 
   if (expr.isLambda) {
     return ReturnKind::Unknown;
@@ -265,6 +286,19 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     }
     if (isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) || isRepeatCall(expr)) {
       return ReturnKind::Void;
+    }
+    if (!expr.isMethodCall &&
+        (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) && expr.args.size() == 1) {
+      const Expr &storage = expr.args.front();
+      if (storage.kind == Expr::Kind::Name) {
+        const BindingInfo *binding = findBinding(params, locals, storage.name);
+        if (binding && binding->typeName == "uninitialized" && !binding->typeTemplateArg.empty()) {
+          ReturnKind kind = uninitializedTargetKind(binding->typeTemplateArg, storage.namespacePrefix);
+          if (kind != ReturnKind::Unknown) {
+            return kind;
+          }
+        }
+      }
     }
     std::string collection;
     if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {

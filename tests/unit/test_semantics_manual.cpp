@@ -310,7 +310,61 @@ TEST_CASE("uninitialized helpers are statement-only") {
                                                {binding, badBinding, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("uninitialized helpers are only valid as statements") != std::string::npos);
+  CHECK(error.find("init is only supported as a statement") != std::string::npos);
+}
+
+TEST_CASE("uninitialized init/drop allowed as statements") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr dropCall = makeCall("drop", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, initCall, dropCall, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized take infers return kind") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr takeCall = makeCall("take", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, makeCall("/return", {takeCall})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized borrow infers return kind") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr borrowCall = makeCall("borrow", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, makeCall("/return", {borrowCall})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized init rejects non-storage binding") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr initCall = makeCall("init", {makeName("value"), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, initCall, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("init requires uninitialized<T> storage") != std::string::npos);
 }
 
 TEST_CASE("implicit auto parameters reject templated definitions") {

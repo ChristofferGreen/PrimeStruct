@@ -978,25 +978,52 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                isSimpleCallName(expr, "take") ||
                                isSimpleCallName(expr, "borrow"))) {
       const std::string name = expr.name;
-      if (hasNamedArguments(expr.argNames)) {
-        error_ = "named arguments not supported for builtin calls";
-        return false;
+      auto isUninitializedStorage = [&](const Expr &arg) -> bool {
+        if (arg.kind != Expr::Kind::Name) {
+          return false;
+        }
+        const BindingInfo *binding = findBinding(params, locals, arg.name);
+        if (!binding || binding->typeName != "uninitialized" || binding->typeTemplateArg.empty()) {
+          return false;
+        }
+        return true;
+      };
+      const bool treatAsUninitializedHelper =
+          (name != "take") || (!expr.args.empty() && isUninitializedStorage(expr.args.front()));
+      if (treatAsUninitializedHelper) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = name + " does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = name + " does not accept block arguments";
+          return false;
+        }
+        const size_t expectedArgs = (name == "init") ? 2 : 1;
+        if (expr.args.size() != expectedArgs) {
+          error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
+                   (expectedArgs == 1 ? "" : "s");
+          return false;
+        }
+        if (name == "init" || name == "drop") {
+          error_ = name + " is only supported as a statement";
+          return false;
+        }
+        for (const auto &arg : expr.args) {
+          if (!validateExpr(params, locals, arg)) {
+            return false;
+          }
+        }
+        if (!isUninitializedStorage(expr.args.front())) {
+          error_ = name + " requires uninitialized<T> storage";
+          return false;
+        }
+        return true;
       }
-      if (!expr.templateArgs.empty()) {
-        error_ = name + " does not accept template arguments";
-        return false;
-      }
-      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = name + " does not accept block arguments";
-        return false;
-      }
-      const size_t expectedArgs = (name == "init") ? 2 : 1;
-      if (expr.args.size() != expectedArgs) {
-        error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
-                 (expectedArgs == 1 ? "" : "s");
-        return false;
-      }
-      return true;
     }
     if (isBuiltinBlockCall(expr) && expr.hasBodyArguments) {
       if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
