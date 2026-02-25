@@ -232,6 +232,25 @@ main() {
   CHECK(readFile(outPath) == "alpha\n");
 }
 
+TEST_CASE("compiles and runs native string indexing") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] text{"abc"utf8}
+  [i32] a{at(text, 0i32)}
+  [i32] b{at_unsafe(text, 1i32)}
+  [i32] len{count(text)}
+  return(plus(plus(a, b), len))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_index.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_string_index_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == (97 + 98 + 3));
+}
+
 TEST_CASE("compiles and runs native large frame") {
   std::ostringstream source;
   source << "[return<int>]\n";
