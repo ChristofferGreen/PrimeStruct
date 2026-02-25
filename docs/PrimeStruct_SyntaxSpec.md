@@ -43,6 +43,10 @@ parameter/return positions it introduces implicit template parameters that are r
 canonical form after monomorphisation carries explicit envelopes. The base-level core passed to lowering contains
 no templates or `auto`. When `--no-transforms` is active, source is expected to already be in canonical form.
 
+Struct definitions may omit an empty parameter list in all language levels (including Concrete); `[struct] A { ... }`
+is treated as `[struct] A() { ... }`. Helpers inside struct bodies receive an implicit `this` (`Reference<Self>`)
+unless marked `[static]`; `[static]` disables the implicit `this` and method-call sugar.
+
 Language levels (0.Concrete → 3.Surface) follow the same ordering as the compiler pipeline:
 - **0.Concrete:** canonical envelopes only, no text transforms, no templates, no `auto`.
 - **1.Template:** canonical envelopes plus explicit templates.
@@ -161,7 +165,8 @@ Imports must appear at the top level (not inside `namespace` blocks).
 - `import /std/math` (without a wildcard or explicit name) is not supported; use `import /std/math/*` or
   `import /std/math/<name>` instead.
 
-Definitions are private by default; add `[public]` to a definition to make it importable.
+Definitions are private by default; add `[public]` to a definition to make it importable. Private definitions remain
+callable within the same compilation unit; visibility only affects imports.
 
 Unknown import paths are errors. Imports are resolved after import expansion, and the same syntax is accepted by `primec`
 and `primevm`.
@@ -198,7 +203,8 @@ namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 definition     = envelope body_block ;
 execution      = transforms_opt call ;
 
-envelope       = transforms_opt name template_opt params ;
+envelope       = transforms_opt name template_opt params_opt ;
+params_opt     = params | /* empty */ ;
 
 transforms_opt            = [ "[" transform_list "]" ] ;
 transform_list            = transform_entry { transform_entry } ;
@@ -218,6 +224,7 @@ text_arg                  = identifier | literal ;
 // Transform template args accept one or more envelope entries.
 // Text transform argument lists accept only identifiers or literals (no nested envelopes).
 // Semantic transform argument lists accept full forms.
+// Definitions may omit an empty parameter list; the parser treats it as (). Executions still require parentheses.
 // The special transform groups `text(...)` and `semantic(...)` accept a list of transforms instead.
 
 template_opt   = [ "<" template_list ">" ] ;
@@ -440,9 +447,21 @@ block()
   arguments (e.g., `[T] name{ T(arg1, arg2) }`). Commas and semicolons are treated as whitespace separators.
   A brace constructor form (`Type{...}`) is allowed in value positions (e.g., `bool{35}` in arguments
   or returns) and passes the block’s resulting value to the constructor.
+- If a local binding omits an initializer, it is a diagnostic unless the binding envelope is a struct type with a
+  zero-argument constructor **and** the compiler can prove the construction has no outside effects. In that case the
+  initializer is treated as `Type()` (e.g., `[A] a` → `[A] a{A()}`). Struct fields still require explicit initializers.
+  - **No outside effects (definition):**
+    - Empty effects/capabilities mask (no `effects(...)`/`capabilities(...)`, and no callees with non-empty effects).
+    - Writes limited to the newly constructed value (`this`) and local temporaries; writes through pointers/references
+      or to non-local bindings are disallowed.
+    - Field initializers and helper calls must be effect-free transitively.
+    - If the compiler cannot prove these constraints, omitted-initializer bindings are rejected.
 - Struct constructor calls treat non-static field bindings as parameters. Positional and labeled arguments map to
   fields; any field not supplied by the call uses its field initializer expression. Missing fields without
   initializers are a semantic error (struct fields require initializers).
+- **Zero-arg constructor:** exists when every field has an initializer, or when a `Create()` helper exists and
+  initializes every field (including `uninitialized<T>` fields via `init`). Field initializers run first, then
+  `Create()` runs (if present) and may override field values.
 - If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
   initializer form; if inference fails, it is a diagnostic. Parameters are handled separately.
 - An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to any width.

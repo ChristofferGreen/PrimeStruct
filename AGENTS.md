@@ -22,6 +22,7 @@ build and layout solidify.
 - When semantics change, update docs first (or alongside code) and keep examples aligned.
 - If new public syntax/IR features are added, document them with a minimal runnable
   example and expected IR snippet.
+- When specs change, add a matching TODO entry unless explicitly marked as docs-only/no TODO.
 
 ## Build/test workflow
 - **Primary entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).

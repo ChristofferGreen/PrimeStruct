@@ -13,7 +13,7 @@ Each stage halts on error (reporting diagnostics immediately) and exposes `--dum
 
 ### Language levels (0.Concrete → 3.Surface)
 PrimeStruct is organized into four language levels. Each higher level desugars into the level below it.
-- **0.Concrete:** fully explicit envelopes only. No text transforms, no templates, no `auto`. Explicit `return<T>`, explicit literal suffixes, canonical calls (`if(cond, then(){...}, else(){...})`, `loop/while/for` as calls).
+- **0.Concrete:** fully explicit envelopes only (definitions may omit an empty parameter list; executions still require parentheses). No text transforms, no templates, no `auto`. Explicit `return<T>`, explicit literal suffixes, canonical calls (`if(cond, then(){...}, else(){...})`, `loop/while/for` as calls).
 - **1.Template:** canonical syntax plus explicit templates (`array<i32>`, `Pointer<T>`, `convert<T>(...)`). No `auto`.
 - **2.Inference:** canonical syntax plus `auto`/omitted envelopes. Implicit template parameters are resolved per call site, then lowered to explicit templates.
 - **3.Surface:** surface syntax and text transforms (operator sugar, collection literals, indexing sugar, `if(...) {}` blocks, etc.) that rewrite into canonical forms.
@@ -180,7 +180,7 @@ module {
 - **Aliases:** none for numeric widths; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
 - **`auto` (implicit templates + local inference):** `auto` may appear on binding envelopes, parameters, or return transforms. In parameter/return positions it introduces an implicit template parameter (equivalent to adding a fresh type parameter) and is inferred per call site; omitted parameter envelopes are treated as `auto`. In bindings, `auto` requests local inference from the initializer and must resolve to a concrete envelope; unresolved or conflicting local inference is a diagnostic. Return `auto` is constrained by return statements; if all constraints resolve to a concrete envelope the definition becomes monomorphic.
   - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`, `1.e2`).
-- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body; surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. Local bindings use the form `[Envelope qualifiers…] name{initializer}` and may omit the envelope transform when the initializer lets the compiler infer it; failures to infer are diagnostics. Parameters that omit an explicit envelope are treated as `auto` and become implicit template parameters inferred per call site. Lists recursively reuse whitespace-separated tokens.
+- **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list] identifier<template-list>(parameter-or-arg-list) {body-list}`. Surface definitions require an explicit `{...}` body; surface executions are call-style (`identifier<template-list>(arg-list)`) and map to an envelope with an implicit empty body. **Definitions may omit an empty parameter list** (e.g., `Foo { ... }` is treated as `Foo() { ... }`), and this is accepted even at the concrete level; executions still require parentheses. Local bindings use the form `[Envelope qualifiers…] name{initializer}` and may omit the envelope transform when the initializer lets the compiler infer it; failures to infer are diagnostics. Parameters that omit an explicit envelope are treated as `auto` and become implicit template parameters inferred per call site. Lists recursively reuse whitespace-separated tokens.
   - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code (definition bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
   - `<...>` supplies compile-time envelopes/templates—primarily for transforms or when inference must be overridden.
@@ -247,7 +247,7 @@ module {
 - **Paths & imports:** every definition/execution lives at a canonical path (`/ui/widgets/log_button_press`). Authors can spell the path inline or rely on `namespace foo { ... }` blocks to prepend `/foo` automatically. Import expansion produces a single compilation unit; implicit-template inference may use call sites anywhere in that unit; there are no module boundaries. Import paths are parsed before text transforms, so they remain quoted without literal suffixes.
   - **Source imports:** `import<"/std/io", version="1.2.0">` resolves packages from the import path (zipped archive or plain directory) whose layout mirrors `/version/first_namespace/second_namespace/...`. The angle-bracket list may contain multiple quoted string paths—`import<"/std/io", "./local/io/helpers", version="1.2.0">`—and the resolver applies the same version selector to each path; mismatched archives raise an error before expansion. Versions live in the leading segment (e.g., `1.2/std/io/*.prime` or `1/std/io/*.prime`). If the version attribute provides one or two numbers (`1` or `1.2`), the newest matching archive is selected; three-part versions (`1.2.0`) require an exact match. Each `.prime` source file is expanded exactly once and registered under its namespace/path (e.g., `/std/io`); duplicate imports are ignored. Folders prefixed with `_` remain private.
   - **Namespace imports:** `import /foo/*` brings the immediate **public** children of `/foo` into the root namespace. `import /foo/bar` brings a single **public** definition (or builtin) by its final segment; importing a non-public definition is a diagnostic. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or whitespace-separated paths.
-  - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make it importable. `[private]` explicitly marks it as non-exported.
+  - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make it importable; `[private]` explicitly marks it as non-exported. Private definitions are still callable within the same compilation unit; visibility only affects imports.
 - **Transform-driven control flow:** control structures desugar into prefix calls that accept envelope arguments. A surface form like `if(condition) { … } else { … }` rewrites into `if(condition, then() { … }, else() { … })`. `loop(count) { … }`, `while(condition) { … }`, and `for(init cond step) { … }` rewrite into `loop(count, do() { … })`, `while(condition, do() { … })`, and `for(init, cond, step, do() { … })`. The envelope names (`do`, `then`, `else`) are for readability only; any name is accepted and ignored by the compiler. Infix operators (`a + b`) become canonical calls (`plus(a, b)`), ensuring IR/backends see a small, predictable surface.
 - **Mutability:** bindings are immutable by default. Opt into mutation by placing `mut` inside the stack-value execution or helper (`[Integer mut] exposure{42}`, `[mut] Create()`). Transforms enforce that only mutable bindings can serve as `assign` or pointer-write targets.
 
@@ -269,7 +269,7 @@ module {
   - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`, `single_type_to_return`.
   - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
-  - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is bindings-only.
+  - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is valid on bindings and struct helpers (disables implicit `this` on helpers).
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
   - Any transform outside its allowed scope is a compile-time error with a diagnostic naming the enclosing path.
 
@@ -306,14 +306,53 @@ if you intended to index.
 - Because imports expand first, slash paths survive every transform untouched until the AST builder consumes them, and IR lowering never needs to reason about infix syntax.
 
 ### Struct & envelope categories
-- **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
+- **Struct tag as transform:** any of `[struct]`, `[pod]`, `[handle]`, or `[gpu_lane]` marks the envelope as a struct-style definition. It records a layout manifest (field names, envelopes, offsets) and validates the body, but the underlying syntax remains a standard definition. Struct-tagged definitions are field-only: no parameters or return transforms, and no return statements. The body may include nested helper definitions; only stack-value bindings contribute to layout. Non-lifecycle helpers lower into the struct method namespace (`/<Struct>/name`) and can be called via method sugar or as plain namespace functions. Un-tagged definitions may still be instantiated as structs; they simply skip the extra validation/metadata until another transform demands it.
 - **Placement policy:** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site decision gated by capabilities. The `stack`/`heap`/`buffer` transforms remain reserved and rejected in v1.
 - **POD tag as validation:** `[pod]` on a struct-style definition asserts trivially-copyable semantics. Violations (hidden lifetimes, handles, async captures) raise diagnostics; without the tag the compiler treats the body permissively.
 - **Member syntax:** every field is just a stack-value execution (`[f32 mut] exposure{1.0f32}`, `[handle<PathNode>] target{get_default()}`). Attributes (`[mut]`, `[align_bytes(16)]`, `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
-- **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
+- **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For struct helpers with implicit `this`, the receiver becomes the hidden `this` parameter; static helpers do not accept method-call sugar. For arrays, `value.count()` rewrites to `/array/count<T>(value)`; the helper `count(value)` simply forwards to `value.count()`. Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks; `at_unsafe(value, index)` skips checks.
+- **Struct body semantics (example):**
+  ```
+  [struct]
+  BrushSettings {
+    // Field bindings contribute to layout.
+    [f32] size{12.0f32}
+    [f32] hardness{0.75f32}
+
+    // Helpers are ordinary definitions in /BrushSettings/* and do not affect layout.
+    // Non-static helpers have an implicit `this` (Reference<Self>).
+    [public return<f32>]
+    clampSize([f32] value) {
+      return(clamp(value, 1.0f32, 64.0f32))
+    }
+
+    // Method-call sugar supplies the implicit `this` (settings.normalize()).
+    [public return<f32>]
+    normalize() {
+      return(this.clampSize(this.size))
+    }
+
+    // Static helper: no implicit `this`.
+    [public static return<f32>]
+    defaultSize() {
+      return(12.0f32)
+    }
+
+    // `mut` makes `this` writable inside the helper.
+    [public mut return<void>]
+    setSize([f32] value) {
+      assign(this.size, this.clampSize(value))
+    }
+  }
+  ```
 - **Baseline layout rule:** members default to source-order packing. Backend-imposed padding is allowed only when the metadata (`layout.fields[].padding_kind`) records the reason; `[no_padding]` and `[platform_independent_padding]` fail the build if the backend cannot honor them bit-for-bit.
 - **Alignment transforms:** `[align_bytes(n)]` (or `[align_kbytes(n)]`) may appear on the struct or field; violations again produce diagnostics instead of silent adjustments.
-- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[f32 mut] exposure{1.0f32}`). Default initializers are mandatory to keep frames fully initialized.
+- **Stack value executions:** every local binding—including struct “fields”—materializes via `[Type qualifiers…] name{initializer}` so stack frames remain declarative (e.g., `[f32 mut] exposure{1.0f32}`). Default initializers are mandatory for fields; local bindings may omit the initializer only when the envelope is a struct type with a zero-argument constructor **and** the compiler can prove the construction has no outside effects. In that case the binding desugars to `Type()` (e.g., `[BrushSettings] s` → `[BrushSettings] s{BrushSettings()}`).
+  - **No outside effects (definition):** zero-arg construction is outside-effect-free only when all of the following hold:
+    - The constructor path has an empty effects/capabilities mask (no `effects(...)`/`capabilities(...)`, and no callees with non-empty effects).
+    - Writes are limited to the newly constructed value (`this`) and local temporaries; any writes through pointers/references or to non-local bindings are disallowed.
+    - Field initializers are effect-free under the same rules, and all called helpers are effect-free transitively.
+    - If the compiler cannot prove these constraints, omitted-initializer bindings are rejected.
   - Multi-step initializer example:
     ```
     [return<f32>]
@@ -326,7 +365,8 @@ if you intended to index.
       return(x)
     }
     ```
-- **Lifecycle helpers (Create/Destroy):** Within a struct-tagged or field-only struct definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. `this` is implicitly available inside helpers. Add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable); omit it for pure helpers. Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
+- **Lifecycle helpers (Create/Destroy):** Within a struct-tagged or field-only struct definition, nested definitions named `Create` and `Destroy` gain constructor/destructor semantics. Placement-specific variants add suffixes (`CreateStack`, `DestroyHeap`, etc.). Without these helpers the field initializer list defines the default constructor/destructor semantics. Struct helpers receive an implicit `this` unless marked `[static]`; add `mut` to the helper’s transform list when it writes to `this` (otherwise `this` stays immutable). Lifecycle helpers must return `void` and accept no parameters. We capitalise system-provided helper names so they stand out, but authors are free to use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
+  - **Helper visibility:** nested non-lifecycle helpers are normal definitions in the struct method namespace. Use `[public]` on the helper definition to export it; private helpers remain callable within the same compilation unit. Non-static helpers receive an implicit `this` (`Reference<Self>`); `[static]` disables the implicit `this` and method-call sugar.
   ```
   import /std/math/*
   namespace demo {
@@ -374,7 +414,7 @@ if you intended to index.
 
 **Semantic directives (AST-level, validated)**
 - **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
-- **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is only valid on lifecycle helpers to make `this` mutable; executions do not accept `mut`.
+- **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is valid on struct helpers (including lifecycle helpers) to make the implicit `this` mutable; using `mut` on a `[static]` helper is a diagnostic. Executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
 - **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules and pointer-to-reference conversions are relaxed within the body, but references created there must not escape the unsafe scope.
 - **`return<T>`:** optional contract that pins the inferred return envelope. `return<auto>` requests inference; unresolved or conflicting returns are diagnostics.
@@ -387,7 +427,7 @@ if you intended to index.
 - **`workgroup_size(x, y, z)`:** fixes the kernel's local workgroup size (must appear with `compute`).
 - **`struct`, `pod`, `handle`, `gpu_lane`:** declarative tags that emit metadata/validation only. They never change syntax; instead they fail compilation when the body violates the advertised contract (e.g., `[pod]` forbids handles/async fields).
 - **`public`, `private`:** visibility tags. On definitions, they control export visibility for imports (default: private). On bindings, they control field visibility (default: public). Mutually exclusive.
-- **`static`:** field storage tag; hoists storage to namespace scope while keeping the field in the layout manifest.
+- **`static`:** on fields, hoists storage to namespace scope while keeping the field in the layout manifest. On struct helpers, disables the implicit `this` parameter and method-call sugar.
 - **`stack`, `heap`, `buffer`:** placement transforms reserved for future backends; currently rejected in validation.
 - **`shared_scope`:** loop-only transform that makes a loop body share one scope across all iterations. Valid on `loop`/`while`/`for` only. Bindings declared in the loop body are initialized once before the loop body runs and persist for the duration of the loop without escaping the surrounding scope.
 The lists above reflect the built-in transforms recognized by the compiler today; future additions will extend them here.
@@ -750,6 +790,9 @@ Colors() {
   }
   ```
 - **Constructor semantics:** struct constructors use field initializers as defaults; `Create`/`Destroy` remain optional hooks. Constant member behavior follows the normal `mut` rules (immutable unless declared `mut`).
+  - **Zero-arg constructor exists when:** either (a) every field has an initializer, or (b) a `Create()` helper exists and initializes every field (including `uninitialized<T>` fields via `init`).
+  - **Execution order:** field initializers run first, then `Create()` runs (if present) and may override field values.
+  - **Effect interaction:** a zero-arg constructor is outside-effect-free only when both `Create()` (if present) and all field initializers are effect-free under the “no outside effects” rules.
 
 ## Move/Clone/Destroy
 - **Lifecycle set:** structured types can define `Create`, `Move`, `Clone`, and `Destroy` helpers. `Create`/`Destroy` are optional hooks; `Move`/`Clone` must be nested inside the struct, return `void`, and accept exactly one parameter.
@@ -885,6 +928,13 @@ bad_use_after_take() {
   - Numeric/bool map literals (`map<i32, i32>{...}`, `map<u64, bool>{...}`) also lower through IR/VM/native (construction, `count`, `at`, and `at_unsafe`).
   - String-keyed map literals lower through VM/native when keys are string literals or bindings backed by literals; other string key expressions require the C++ emitter (which uses `std::string_view` keys).
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<f32>(value)` or `bool{value}`) or custom transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++ emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
+  - **Convert constructor resolution (v1):**
+    - Builtin fast-path: when `T` is `bool/i32/i64/u64/f32/f64` and `value` is numeric/bool, use the builtin conversion rules; user-defined conversions do not override this.
+    - Otherwise, resolve `convert<T>(value)` as a call to `T.Convert(value)` in the struct method namespace (`/T/Convert`).
+    - Signature must match exactly after monomorphisation: `[return<T>] Convert([U] value)`. No implicit conversions are applied to match the parameter type.
+    - If no match exists, emit a `no conversion found` diagnostic. If multiple matches exist, emit an `ambiguous conversion` diagnostic with the candidate list.
+    - Visibility follows import rules: only `[public]` `Convert` helpers are visible across imports.
+    - `convert<T>(value)` does not fall back to `T(value)` or `T{...}`.
 - **Float note:** VM/native lowering supports float literals, bindings, arithmetic, comparisons, numeric conversions, and `/std/math/*` helpers.
 - **String note:** VM/native lowering supports string literals and string bindings in `print*`, plus `count`/indexing (`at`/`at_unsafe`) on string literals and string bindings that originate from literals; other string operations still require the C++ emitter for now.
   - **Struct note:** VM/native lowering supports struct values when fields are numeric/bool or other struct values (nested structs). Struct fields with strings or templated envelopes still require the C++ emitter.

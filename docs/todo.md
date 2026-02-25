@@ -27,6 +27,7 @@ Legend:
 - ✓ Remove `include` syntax and unify `import` to cover source expansion (`import<...>`) plus namespace exposure (`import /path/*`; `import<...>` now expands like includes; `include` rejected by parser and resolver).
 - ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/import resolver currently allow them).
 - ✓ Enforce reserved keyword `auto` in identifiers and slash paths (parser/import resolver currently allow it).
+- ○ Allow omitting empty parameter lists on definitions (`Foo { ... }` → `Foo() { ... }`) at all language levels (executions still require `()`).
 - ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ✓ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ✓ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
@@ -44,6 +45,10 @@ Legend:
 - ✓ Enforce definition export visibility: definitions are private by default and only `[public]` definitions are importable.
 - ✓ Implement `[profile(...)]` transform parsing and validation (per-definition backend profile gating).
 - ✓ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
+- ○ Define/implement struct helper semantics: helpers inside struct bodies with implicit `this`, `[static]` helpers with no `this`, and method-call sugar for non-static helpers.
+- ○ Allow omitted initializer for local bindings of struct types when zero-arg construction is provably effect-free; emit diagnostics otherwise.
+- ○ Define and implement the "no outside effects" proof for zero-arg construction (effects/capabilities mask, write restrictions, transitive checks).
+- ○ Formalize zero-arg constructor rules (field initializers vs `Create()` + execution order) and align effect checks.
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
@@ -58,6 +63,8 @@ Legend:
 - ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
 - ✓ Implement deterministic conversion semantics for `T{value}` (float -> int trunc+clamp, NaN -> 0, +/-Inf -> min/max; integer width sign/zero-extend or truncate) across VM/native/C++ backends.
 - ✓ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
+- ○ Add user-defined convert constructors (resolve `convert<T>(u)` to `T.Convert(u)` for non-numeric targets) and tests.
+- ○ Formalize and implement convert-constructor resolution rules (builtin fast-path, exact signature match, ambiguity diagnostics, visibility).
 - ✓ Enforce the core type set in semantic validation and backend filters (software numeric rejection now enforced in semantics; still need a full per-backend allowlist for other non-core envelopes).
 - ✓ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
 - ○ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation).
@@ -84,6 +91,7 @@ Legend:
 
 **Docs Alignment**
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
+- ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.
 - ✓ Document the `repeat(count) { ... }` statement builtin (count accepts integers or bool; non-positive counts skip the body).
 - ✓ Align block call syntax with `docs/PrimeStruct.md` (require `block()` before a body block).
 - ✓ Document map literal `key=value` syntax supported by the `collections` text filter.
