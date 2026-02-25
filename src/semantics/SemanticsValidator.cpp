@@ -38,6 +38,9 @@ bool SemanticsValidator::run() {
   if (!inferUnknownReturnKinds()) {
     return false;
   }
+  if (!validateTraitConstraints()) {
+    return false;
+  }
   if (!validateStructLayouts()) {
     return false;
   }

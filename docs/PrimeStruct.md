@@ -704,6 +704,13 @@ sum_two_files([string] a, [string] b) {
   - `Multiplicative<T>` requires `multiply(T, T) -> T`.
   - `Comparable<T>` requires `equal(T, T) -> bool` and `less_than(T, T) -> bool`.
   - `Indexable<T, Elem>` requires `count(T) -> i32` and `at(T, i32) -> Elem`.
+Example (trait constraints are transforms on definitions):
+```
+[return<i32> Additive<i32> Comparable<i32>]
+sum([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+```
 
 ### Parametric Types
 - Type parameters are explicit in signatures or implicit via `auto` in signatures.

@@ -75,5 +75,6 @@ bool validateProgramWithDefaults(const std::string &source,
 #include "test_semantics_calls_and_flow_numeric_builtins.h"
 #include "test_semantics_calls_and_flow_comparisons_literals.h"
 #include "test_semantics_calls_and_flow_effects.h"
+#include "test_semantics_traits.h"
 #include "test_semantics_lambdas.h"
 #include "test_semantics_move.h"

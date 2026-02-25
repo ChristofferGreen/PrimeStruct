@@ -49,8 +49,8 @@ Legend:
 - ○ Allow omitted initializer for local bindings of struct types when zero-arg construction is provably effect-free; emit diagnostics otherwise.
 - ○ Define and implement the "no outside effects" proof for zero-arg construction (effects/capabilities mask, write restrictions, transitive checks).
 - ○ Formalize zero-arg constructor rules (field initializers vs `Create()` + execution order) and align effect checks.
-- ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
-- ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
+- ✓ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
+- ✓ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ✓ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
 - ✓ Define enum value access surface (static field access via type name) and add tests.
 - ○ Implement `match` expressions (syntax, exhaustive type checking, and lowering).
@@ -102,6 +102,7 @@ Legend:
 - ✓ Document canonical string normalization: parser emits `raw_utf8` / `raw_ascii` with unescaped content, not the escaped `"..."utf8/ascii` form described in the spec.
 - ✓ Document vector helper calls (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) as statement-only or allow them in expression contexts.
 - ✓ Add missing `/std/math/*` builtins present in code: `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, `is_finite`.
+- ○ Document trait constraint syntax in `docs/PrimeStruct_SyntaxSpec.md`.
 
 **Spec Completion & Open Design**
 - ✓ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.

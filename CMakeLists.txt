@@ -41,6 +41,7 @@ add_library(primec_lib
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPasses.cpp
   src/semantics/SemanticsValidatorStatement.cpp
+  src/semantics/SemanticsValidatorTraits.cpp
   src/text_filter/TextFilterHelpers.cpp
   src/text_filter/TextFilterPipelineEnvelope.cpp
   src/text_filter/TextFilterPipelinePass.cpp
@@ -138,6 +139,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.calls_flow.comparisons_literals
     primestruct.semantics.calls_flow.effects
     primestruct.semantics.imports
+    primestruct.semantics.traits
     primestruct.semantics.manual
     primestruct.parser.templates
     primestruct.text_filters.pipeline.basics

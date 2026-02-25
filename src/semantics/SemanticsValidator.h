@@ -25,6 +25,7 @@ private:
   bool buildDefinitionMaps();
   bool buildParameters();
   bool inferUnknownReturnKinds();
+  bool validateTraitConstraints();
   bool validateStructLayouts();
   bool validateDefinitions();
   bool validateExecutions();
