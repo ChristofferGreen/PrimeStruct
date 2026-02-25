@@ -1183,6 +1183,10 @@ bool parseBindingInfo(const Expr &expr,
       error = "Pointer requires a template argument";
       return false;
     }
+    if (containsUninitializedType(info.typeTemplateArg)) {
+      error = "uninitialized storage is not allowed in pointer targets";
+      return false;
+    }
     std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);
     if (!isPrimitiveBindingTypeName(normalizedTarget) && !isStructTypeName(normalizedTarget)) {
       error = "unsupported pointer target type: " + info.typeTemplateArg;
@@ -1192,6 +1196,10 @@ bool parseBindingInfo(const Expr &expr,
   if (typeHasTemplate && typeName == "Reference") {
     if (info.typeTemplateArg.empty()) {
       error = "Reference requires a template argument";
+      return false;
+    }
+    if (containsUninitializedType(info.typeTemplateArg)) {
+      error = "uninitialized storage is not allowed in reference targets";
       return false;
     }
     std::string normalizedTarget = normalizeBindingTypeName(info.typeTemplateArg);

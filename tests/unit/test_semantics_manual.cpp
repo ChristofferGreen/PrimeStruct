@@ -437,6 +437,34 @@ TEST_CASE("uninitialized struct fields are allowed") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("uninitialized not allowed in pointer targets") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr init = makeCall("location", {makeName("value")});
+  primec::Expr binding =
+      makeBinding("ptr", {makeTransform("Pointer", std::string("uninitialized<i32>"))}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, binding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed in pointer targets") != std::string::npos);
+}
+
+TEST_CASE("uninitialized not allowed in reference targets") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr init = makeCall("location", {makeName("value")});
+  primec::Expr binding =
+      makeBinding("ref", {makeTransform("Reference", std::string("uninitialized<i32>"))}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, binding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed in reference targets") != std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
