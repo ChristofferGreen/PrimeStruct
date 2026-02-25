@@ -147,6 +147,50 @@
   if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && !stmt.isMethodCall &&
       (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop"))) {
     const std::string name = stmt.name;
+    auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+      if (typeName.empty() || isPrimitiveBindingTypeName(typeName)) {
+        return "";
+      }
+      if (!typeName.empty() && typeName[0] == '/') {
+        return structNames_.count(typeName) > 0 ? typeName : "";
+      }
+      std::string current = namespacePrefix;
+      while (true) {
+        if (!current.empty()) {
+          std::string scoped = current + "/" + typeName;
+          if (structNames_.count(scoped) > 0) {
+            return scoped;
+          }
+          if (current.size() > typeName.size()) {
+            const size_t start = current.size() - typeName.size();
+            if (start > 0 && current[start - 1] == '/' &&
+                current.compare(start, typeName.size(), typeName) == 0 &&
+                structNames_.count(current) > 0) {
+              return current;
+            }
+          }
+        } else {
+          std::string root = "/" + typeName;
+          if (structNames_.count(root) > 0) {
+            return root;
+          }
+        }
+        if (current.empty()) {
+          break;
+        }
+        const size_t slash = current.find_last_of('/');
+        if (slash == std::string::npos || slash == 0) {
+          current.clear();
+        } else {
+          current.erase(slash);
+        }
+      }
+      auto importIt = importAliases_.find(typeName);
+      if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+        return importIt->second;
+      }
+      return "";
+    };
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
       return false;
@@ -185,6 +229,29 @@
       if (valueKind == ReturnKind::Void) {
         error_ = "init requires a value";
         return false;
+      }
+      const std::string expectedType = binding->typeTemplateArg;
+      ReturnKind expectedKind = returnKindForTypeName(expectedType);
+      if (expectedKind != ReturnKind::Unknown && expectedKind != ReturnKind::Array) {
+        if (valueKind != ReturnKind::Unknown && valueKind != expectedKind) {
+          error_ = "init value type mismatch";
+          return false;
+        }
+      } else {
+        std::string expectedStruct = resolveStructTypePath(expectedType, namespacePrefix);
+        if (!expectedStruct.empty()) {
+          if (valueKind != ReturnKind::Unknown && valueKind != ReturnKind::Array) {
+            error_ = "init value type mismatch";
+            return false;
+          }
+          if (valueKind == ReturnKind::Array) {
+            std::string actualStruct = inferStructReturnPath(stmt.args[1], params, locals);
+            if (!actualStruct.empty() && actualStruct != expectedStruct) {
+              error_ = "init value type mismatch";
+              return false;
+            }
+          }
+        }
       }
     }
     return true;

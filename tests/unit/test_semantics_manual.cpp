@@ -367,6 +367,20 @@ TEST_CASE("uninitialized init rejects non-storage binding") {
   CHECK(error.find("init requires uninitialized<T> storage") != std::string::npos);
 }
 
+TEST_CASE("uninitialized init rejects value type mismatch") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeBool(true)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, initCall, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("init value type mismatch") != std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
