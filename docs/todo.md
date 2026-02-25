@@ -64,8 +64,8 @@ Legend:
 - ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
 - ✓ Implement deterministic conversion semantics for `T{value}` (float -> int trunc+clamp, NaN -> 0, +/-Inf -> min/max; integer width sign/zero-extend or truncate) across VM/native/C++ backends.
 - ✓ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
-- ○ Add user-defined convert constructors (resolve `convert<T>(u)` to `T.Convert(u)` for non-numeric targets) and tests.
-- ○ Formalize and implement convert-constructor resolution rules (builtin fast-path, exact signature match, ambiguity diagnostics, visibility).
+- ✓ Add user-defined convert constructors (resolve `convert<T>(u)` to `T.Convert(u)` for non-numeric targets) and tests.
+- ◐ Formalize and implement convert-constructor resolution rules (builtin fast-path, exact signature match, ambiguity diagnostics, visibility).
 - ✓ Enforce the core type set in semantic validation and backend filters (software numeric rejection now enforced in semantics; still need a full per-backend allowlist for other non-core envelopes).
 - ✓ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
 - ◐ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation; currently only top-level parameter `auto` with concrete argument/default inference).

@@ -58,6 +58,9 @@ struct PathSpaceBuiltin {
 
 bool validateAlignTransform(const Transform &transform, const std::string &context, std::string &error);
 std::string resolveTypePath(const std::string &name, const std::string &namespacePrefix);
+std::string resolveStructTypePath(const std::string &name,
+                                  const std::string &namespacePrefix,
+                                  const std::unordered_set<std::string> &structTypes);
 
 bool isBindingQualifierName(const std::string &name);
 bool isBindingAuxTransformName(const std::string &name);

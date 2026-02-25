@@ -120,6 +120,70 @@ main() {
   CHECK(error.find("convert requires numeric or bool operand") != std::string::npos);
 }
 
+TEST_CASE("convert resolves struct helper") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [i32] value{1i32}
+
+  [return<Widget>]
+  Convert([i32] raw) {
+    return(Widget{ raw })
+  }
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(5i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("convert resolves imported struct helper") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [struct]
+  Widget() {
+    [i32] value{1i32}
+
+    [return<Widget>]
+    Convert([i32] raw) {
+      return(Widget{ raw })
+    }
+  }
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(9i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("convert rejects missing struct helper") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [i32] value{1i32}
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(5i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no conversion found for convert<Widget>") != std::string::npos);
+}
+
 TEST_CASE("abs rejects non-numeric operand") {
   const std::string source = R"(
 import /std/math/*

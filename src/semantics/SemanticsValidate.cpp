@@ -830,6 +830,162 @@ bool rewriteEnumDefinitions(Program &program, std::string &error) {
   return true;
 }
 
+bool rewriteConvertConstructors(Program &program, std::string &error) {
+  std::unordered_set<std::string> structNames;
+  std::unordered_set<std::string> definitionPaths;
+  for (const auto &def : program.definitions) {
+    definitionPaths.insert(def.fullPath);
+    bool hasStructTransform = false;
+    bool hasReturnTransform = false;
+    for (const auto &transform : def.transforms) {
+      if (semantics::isStructTransformName(transform.name)) {
+        hasStructTransform = true;
+      }
+      if (transform.name == "return") {
+        hasReturnTransform = true;
+      }
+    }
+    bool fieldOnlyStruct = false;
+    if (!hasStructTransform && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
+        !def.returnExpr.has_value()) {
+      fieldOnlyStruct = true;
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          fieldOnlyStruct = false;
+          break;
+        }
+      }
+    }
+    if (hasStructTransform || fieldOnlyStruct) {
+      structNames.insert(def.fullPath);
+    }
+  }
+
+  std::unordered_map<std::string, std::string> importAliases;
+  for (const auto &importPath : program.imports) {
+    if (importPath.empty() || importPath[0] != '/') {
+      continue;
+    }
+    bool isWildcard = false;
+    std::string prefix;
+    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+      isWildcard = true;
+      prefix = importPath.substr(0, importPath.size() - 2);
+    } else if (importPath.find('/', 1) == std::string::npos) {
+      isWildcard = true;
+      prefix = importPath;
+    }
+    if (isWildcard) {
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &def : program.definitions) {
+        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        importAliases.emplace(remainder, def.fullPath);
+      }
+      continue;
+    }
+    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+    if (remainder.empty()) {
+      continue;
+    }
+    importAliases.emplace(remainder, importPath);
+  }
+
+  auto resolveStructTarget = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+    if (typeName == "Self") {
+      return structNames.count(namespacePrefix) > 0 ? namespacePrefix : std::string{};
+    }
+    if (typeName.find('<') != std::string::npos) {
+      return {};
+    }
+    std::string resolved = semantics::resolveStructTypePath(typeName, namespacePrefix, structNames);
+    if (!resolved.empty()) {
+      return resolved;
+    }
+    auto importIt = importAliases.find(typeName);
+    if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return {};
+  };
+
+  auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
+    for (auto &arg : expr.args) {
+      if (!self(self, arg)) {
+        return false;
+      }
+    }
+    for (auto &arg : expr.bodyArguments) {
+      if (!self(self, arg)) {
+        return false;
+      }
+    }
+    std::string builtinName;
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+        !semantics::getBuiltinConvertName(expr, builtinName) ||
+        expr.templateArgs.size() != 1) {
+      return true;
+    }
+    const std::string targetName = expr.templateArgs.front();
+    const std::string normalizedTarget = semantics::normalizeBindingTypeName(targetName);
+    if (normalizedTarget == "i32" || normalizedTarget == "i64" || normalizedTarget == "u64" ||
+        normalizedTarget == "bool" || normalizedTarget == "f32" || normalizedTarget == "f64") {
+      return true;
+    }
+    if (semantics::isSoftwareNumericTypeName(normalizedTarget)) {
+      return true;
+    }
+    const std::string structPath = resolveStructTarget(targetName, expr.namespacePrefix);
+    if (structPath.empty()) {
+      return true;
+    }
+    const std::string helperPath = structPath + "/Convert";
+    if (definitionPaths.count(helperPath) == 0) {
+      error = "no conversion found for convert<" + targetName + ">";
+      return false;
+    }
+    expr.name = helperPath;
+    expr.templateArgs.clear();
+    return true;
+  };
+
+  for (auto &def : program.definitions) {
+    for (auto &param : def.parameters) {
+      if (!rewriteExpr(rewriteExpr, param)) {
+        return false;
+      }
+    }
+    for (auto &stmt : def.statements) {
+      if (!rewriteExpr(rewriteExpr, stmt)) {
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      if (!rewriteExpr(rewriteExpr, *def.returnExpr)) {
+        return false;
+      }
+    }
+  }
+  for (auto &exec : program.executions) {
+    for (auto &arg : exec.arguments) {
+      if (!rewriteExpr(rewriteExpr, arg)) {
+        return false;
+      }
+    }
+    for (auto &arg : exec.bodyArguments) {
+      if (!rewriteExpr(rewriteExpr, arg)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool validateExprTransforms(const Expr &expr, const std::string &context, std::string &error) {
   if (!validateTransformListContext(expr.transforms, context, false, error)) {
     return false;
@@ -899,6 +1055,9 @@ bool applySemanticTransforms(Program &program,
     stripTextTransforms(exec);
   }
   if (!rewriteEnumDefinitions(program, error)) {
+    return false;
+  }
+  if (!rewriteConvertConstructors(program, error)) {
     return false;
   }
   for (auto &def : program.definitions) {
