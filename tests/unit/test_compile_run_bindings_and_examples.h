@@ -153,12 +153,15 @@ TEST_CASE("compiles examples to IR") {
   REQUIRE(!ec);
 
   std::vector<std::filesystem::path> exampleFiles;
-  for (const auto &entry : std::filesystem::directory_iterator(examplesDir)) {
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(examplesDir)) {
     if (!entry.is_regular_file()) {
       continue;
     }
     const std::filesystem::path path = entry.path();
     if (path.extension() != ".prime") {
+      continue;
+    }
+    if (path.filename() == "result_helpers.prime") {
       continue;
     }
     exampleFiles.push_back(path);

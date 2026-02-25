@@ -258,7 +258,7 @@
         if (expectedHasTemplate != actualHasTemplate) {
           return false;
         }
-        auto normalizeBase = [](std::string base) -> std::string {
+        auto normalizeBase = [&](std::string base) -> std::string {
           base = trimType(base);
           if (!base.empty() && base[0] == '/') {
             base.erase(0, 1);

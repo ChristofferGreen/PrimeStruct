@@ -60,7 +60,7 @@ main() {
   CHECK(error.find("unsupported convert target type") != std::string::npos);
 }
 
-TEST_CASE("convert accepts decimal target") {
+TEST_CASE("convert rejects decimal target") {
   const std::string source = R"(
 [return<decimal>]
 main() {
@@ -68,11 +68,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("convert accepts integer target") {
+TEST_CASE("convert rejects integer target") {
   const std::string source = R"(
 [return<integer>]
 main() {
@@ -80,8 +80,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
 }
 
 TEST_CASE("convert<bool> accepts u64 literal") {

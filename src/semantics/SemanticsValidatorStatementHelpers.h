@@ -148,6 +148,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
       return true;
     }
+    if (kind == ReturnKind::String) {
+      return true;
+    }
     if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
       return false;
     }

@@ -73,6 +73,12 @@
       continue;
     }
     const std::string &structType = structTypeMap.at(def.fullPath);
+    struct StaticFieldInfo {
+      std::string name;
+      BindingInfo binding;
+      const Expr *initializer = nullptr;
+    };
+    std::vector<StaticFieldInfo> staticFields;
     out << "struct " << structType << " {\n";
     std::unordered_map<std::string, BindingInfo> emptyLocals;
     for (const auto &field : def.statements) {
@@ -83,21 +89,14 @@
       std::string fieldType =
           bindingTypeToCpp(binding, def.namespacePrefix, importAliases, structTypeMap);
       if (binding.isStatic) {
-        out << "  static inline " << fieldType << " " << field.name;
+        StaticFieldInfo info;
+        info.name = field.name;
+        info.binding = binding;
         if (!field.args.empty()) {
-          out << " = "
-              << emitExpr(field.args.front(),
-                          nameMap,
-                          paramMap,
-                          structTypeMap,
-                          importAliases,
-                          emptyLocals,
-                          returnKinds,
-                          resultInfos,
-                          returnStructs,
-                          hasMathImport);
+          info.initializer = &field.args.front();
         }
-        out << ";\n";
+        staticFields.push_back(std::move(info));
+        out << "  static " << fieldType << " " << field.name << ";\n";
       } else {
         out << "  " << fieldType << " " << field.name << ";\n";
       }
@@ -133,6 +132,26 @@
     }
     out << "  return __instance;\n";
     out << "}\n";
+
+    for (const auto &field : staticFields) {
+      std::string fieldType =
+          bindingTypeToCpp(field.binding, def.namespacePrefix, importAliases, structTypeMap);
+      out << "inline " << fieldType << " " << structType << "::" << field.name;
+      if (field.initializer) {
+        out << " = "
+            << emitExpr(*field.initializer,
+                        nameMap,
+                        paramMap,
+                        structTypeMap,
+                        importAliases,
+                        emptyLocals,
+                        returnKinds,
+                        resultInfos,
+                        returnStructs,
+                        hasMathImport);
+      }
+      out << ";\n";
+    }
   }
   for (const auto &def : program.definitions) {
     if (isStructDefinition(def)) {

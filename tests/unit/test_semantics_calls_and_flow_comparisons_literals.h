@@ -187,7 +187,7 @@ main() {
   CHECK(error.find("vector literal requires element type i32") != std::string::npos);
 }
 
-TEST_CASE("array literal accepts software numeric type") {
+TEST_CASE("array literal rejects software numeric type") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -196,11 +196,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
-TEST_CASE("vector literal accepts software numeric type") {
+TEST_CASE("vector literal rejects software numeric type") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -209,8 +209,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
 TEST_CASE("map literal missing template args fails") {
@@ -230,7 +230,7 @@ main() {
   CHECK(error.find("map literal requires exactly two template arguments") != std::string::npos);
 }
 
-TEST_CASE("map literal accepts software numeric types") {
+TEST_CASE("map literal rejects software numeric types") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -239,8 +239,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
 }
 
 TEST_CASE("map literal key type mismatch fails") {

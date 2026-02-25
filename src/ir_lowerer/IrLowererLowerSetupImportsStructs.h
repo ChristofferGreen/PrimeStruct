@@ -313,13 +313,27 @@
       return false;
     }
     uint32_t offset = 0;
-    uint32_t staticOffset = 0;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
         continue;
       }
       FieldBinding binding;
       getBindingTypeForLayout(stmt, binding);
+      const bool fieldIsStatic = isStaticField(stmt);
+      if (fieldIsStatic) {
+        IrStructField field;
+        field.name = stmt.name;
+        field.envelope = formatEnvelope(binding);
+        field.offsetBytes = 0;
+        field.sizeBytes = 0;
+        field.alignmentBytes = 1;
+        field.paddingKind = IrStructPaddingKind::None;
+        field.category = fieldCategory(stmt);
+        field.visibility = fieldVisibility(stmt);
+        field.isStatic = true;
+        layout.fields.push_back(std::move(field));
+        continue;
+      }
       TypeLayout typeLayout;
       if (!typeLayoutForBinding(binding, def.namespacePrefix, typeLayout)) {
         return false;
@@ -337,8 +351,7 @@
       }
       uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, typeLayout.alignmentBytes)
                                           : typeLayout.alignmentBytes;
-      const bool fieldIsStatic = isStaticField(stmt);
-      uint32_t &activeOffset = fieldIsStatic ? staticOffset : offset;
+      uint32_t &activeOffset = offset;
       uint32_t alignedOffset = alignTo(activeOffset, fieldAlign);
       IrStructField field;
       field.name = stmt.name;
@@ -349,12 +362,10 @@
       field.paddingKind = (alignedOffset != activeOffset) ? IrStructPaddingKind::Align : IrStructPaddingKind::None;
       field.category = fieldCategory(stmt);
       field.visibility = fieldVisibility(stmt);
-      field.isStatic = fieldIsStatic;
+      field.isStatic = false;
       layout.fields.push_back(std::move(field));
       activeOffset = alignedOffset + typeLayout.sizeBytes;
-      if (!fieldIsStatic) {
-        structAlign = std::max(structAlign, fieldAlign);
-      }
+      structAlign = std::max(structAlign, fieldAlign);
     }
     if (hasStructAlign && explicitStructAlign < structAlign) {
       error = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +

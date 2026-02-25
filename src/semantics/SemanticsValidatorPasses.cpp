@@ -331,6 +331,51 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     return merged;
   };
 
+  auto applyStorageCall = [&](const std::string &callName,
+                              const Expr &target,
+                              std::unordered_map<std::string, BindingInfo> &localsIn,
+                              StateMap &statesIn,
+                              bool consumeBorrow) -> std::optional<std::string> {
+    if (target.kind != Expr::Kind::Name) {
+      return std::nullopt;
+    }
+    auto bindingIt = localsIn.find(target.name);
+    if (bindingIt == localsIn.end() || !isUninitializedBinding(bindingIt->second)) {
+      return std::nullopt;
+    }
+    auto stateIt = statesIn.find(target.name);
+    UninitState current = stateIt == statesIn.end() ? UninitState::Unknown : stateIt->second;
+    if (callName == "init") {
+      if (current != UninitState::Uninitialized) {
+        return "init requires uninitialized storage: " + target.name;
+      }
+      statesIn[target.name] = UninitState::Initialized;
+      return std::nullopt;
+    }
+    if (callName == "drop") {
+      if (current != UninitState::Initialized) {
+        return "drop requires initialized storage: " + target.name;
+      }
+      statesIn[target.name] = UninitState::Uninitialized;
+      return std::nullopt;
+    }
+    if (callName == "take") {
+      if (current != UninitState::Initialized) {
+        return "take requires initialized storage: " + target.name;
+      }
+      statesIn[target.name] = UninitState::Uninitialized;
+      return std::nullopt;
+    }
+    if (callName == "borrow") {
+      if (current != UninitState::Initialized) {
+        return "borrow requires initialized storage: " + target.name;
+      }
+      statesIn[target.name] = consumeBorrow ? UninitState::Uninitialized : UninitState::Initialized;
+      return std::nullopt;
+    }
+    return std::nullopt;
+  };
+
   struct FlowResult {
     std::optional<std::string> error;
     bool terminated = false;
@@ -368,6 +413,31 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
   analyzeStatement = [&](const Expr &stmt,
                          std::unordered_map<std::string, BindingInfo> &localsIn,
                          StateMap &statesIn) -> FlowResult {
+    std::function<std::optional<std::string>(const Expr &)> applyExprEffects;
+    applyExprEffects = [&](const Expr &expr) -> std::optional<std::string> {
+      if (expr.kind != Expr::Kind::Call) {
+        return std::nullopt;
+      }
+      if (!expr.isMethodCall &&
+          (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
+          !expr.args.empty()) {
+        if (auto err = applyStorageCall(expr.name, expr.args.front(), localsIn, statesIn, true)) {
+          return err;
+        }
+      }
+      for (const auto &arg : expr.args) {
+        if (auto err = applyExprEffects(arg)) {
+          return err;
+        }
+      }
+      for (const auto &bodyExpr : expr.bodyArguments) {
+        if (auto err = applyExprEffects(bodyExpr)) {
+          return err;
+        }
+      }
+      return std::nullopt;
+    };
+
     if (stmt.isBinding) {
       BindingInfo info;
       std::optional<std::string> restrictType;
@@ -385,6 +455,11 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       return {};
     }
     if (isReturnCall(stmt)) {
+      for (const auto &arg : stmt.args) {
+        if (auto err = applyExprEffects(arg)) {
+          return {err, false};
+        }
+      }
       if (auto name = firstNonUninitialized(statesIn)) {
         return {"return requires uninitialized storage to be dropped: " + *name, false};
       }
@@ -522,44 +597,10 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
          isSimpleCallName(stmt, "take") || isSimpleCallName(stmt, "borrow")) &&
         !stmt.args.empty()) {
       const std::string name = stmt.name;
-      const Expr &target = stmt.args.front();
-      if (target.kind != Expr::Kind::Name) {
-        return {};
+      if (auto err = applyStorageCall(name, stmt.args.front(), localsIn, statesIn, false)) {
+        return {err, false};
       }
-      auto bindingIt = localsIn.find(target.name);
-      if (bindingIt == localsIn.end() || !isUninitializedBinding(bindingIt->second)) {
-        return {};
-      }
-      auto stateIt = statesIn.find(target.name);
-      UninitState current = stateIt == statesIn.end() ? UninitState::Unknown : stateIt->second;
-      if (name == "init") {
-        if (current != UninitState::Uninitialized) {
-          return {"init requires uninitialized storage: " + target.name, false};
-        }
-        statesIn[target.name] = UninitState::Initialized;
-        return {};
-      }
-      if (name == "drop") {
-        if (current != UninitState::Initialized) {
-          return {"drop requires initialized storage: " + target.name, false};
-        }
-        statesIn[target.name] = UninitState::Uninitialized;
-        return {};
-      }
-      if (name == "take") {
-        if (current != UninitState::Initialized) {
-          return {"take requires initialized storage: " + target.name, false};
-        }
-        statesIn[target.name] = UninitState::Uninitialized;
-        return {};
-      }
-      if (name == "borrow") {
-        if (current != UninitState::Initialized) {
-          return {"borrow requires initialized storage: " + target.name, false};
-        }
-        statesIn[target.name] = UninitState::Initialized;
-        return {};
-      }
+      return {};
     }
     return {};
   };
@@ -914,12 +955,14 @@ bool SemanticsValidator::validateStructLayouts() {
       return false;
     }
     uint32_t offset = 0;
-    uint32_t staticOffset = 0;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
         continue;
       }
       const bool fieldIsStatic = isStaticField(stmt);
+      if (fieldIsStatic) {
+        continue;
+      }
       BindingInfo binding;
       std::optional<std::string> restrictType;
       if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
@@ -942,7 +985,7 @@ bool SemanticsValidator::validateStructLayouts() {
       }
       uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, fieldLayout.alignmentBytes)
                                           : fieldLayout.alignmentBytes;
-      uint32_t *activeOffset = fieldIsStatic ? &staticOffset : &offset;
+      uint32_t *activeOffset = &offset;
       uint32_t alignedOffset = alignTo(*activeOffset, fieldAlign);
       if (requireNoPadding && alignedOffset != *activeOffset) {
         error_ = "no_padding disallows alignment padding on " + fieldContext;

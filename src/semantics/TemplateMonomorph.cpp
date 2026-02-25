@@ -42,6 +42,13 @@ struct Context {
 
 using LocalTypeMap = std::unordered_map<std::string, BindingInfo>;
 
+ResolvedType resolveTypeString(const std::string &input,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx,
+                               std::string &error);
+
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "mut" || name == "copy" ||
          name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||

@@ -24,7 +24,7 @@ main() {
   CHECK(error.find("array return type requires exactly one template argument") != std::string::npos);
 }
 
-TEST_CASE("software numeric return type is accepted") {
+TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]
 main() {
@@ -33,8 +33,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: complex") != std::string::npos);
 }
 
 TEST_CASE("duplicate return transform fails") {

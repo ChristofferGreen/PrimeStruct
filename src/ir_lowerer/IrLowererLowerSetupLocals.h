@@ -149,9 +149,22 @@
       returnsVoid = true;
     }
     if (transform.templateArgs.size() == 1) {
+      const std::string &typeName = transform.templateArgs.front();
+      if (typeName == "string") {
+        error = "native backend does not support string return types on " + entryPath;
+        return false;
+      }
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+        if (valueKindFromTypeName(trimText(arg)) == LocalInfo::ValueKind::String) {
+          error = "native backend does not support string array return types on " + entryPath;
+          return false;
+        }
+      }
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-      if (parseResultTypeName(transform.templateArgs.front(), resultHasValue, resultValueKind)) {
+      if (parseResultTypeName(typeName, resultHasValue, resultValueKind)) {
         entryResultInfo.isResult = true;
         entryResultInfo.hasValue = resultHasValue;
         entryHasResultInfo = true;

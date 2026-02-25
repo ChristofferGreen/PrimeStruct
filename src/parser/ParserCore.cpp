@@ -731,12 +731,16 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
 bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vector<Definition> &defs) {
   bool returnsVoid = false;
   bool hasReturnTransform = false;
+  bool allowNoReturnAuto = false;
   for (const auto &transform : def.transforms) {
     if (transform.name == "return" && transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
       returnsVoid = true;
     }
     if (transform.name == "return") {
       hasReturnTransform = true;
+      if (transform.templateArgs.size() == 1 && transform.templateArgs.front() == "auto") {
+        allowNoReturnAuto = true;
+      }
     }
   }
   const bool allowImplicitVoidReturn = !hasReturnTransform && !allowNoReturn;
@@ -942,7 +946,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
     def.statements.push_back(std::move(statementExpr));
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
-  if (!foundReturn && !returnsVoid && !allowNoReturn) {
+  if (!foundReturn && !returnsVoid && !allowNoReturn && !allowNoReturnAuto) {
     if (!allowImplicitVoidReturn) {
       return fail("missing return statement in definition body");
     }

@@ -243,7 +243,8 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("struct ps_Widget") != std::string::npos);
-  CHECK(output.find("static inline int counter") != std::string::npos);
+  CHECK(output.find("static int counter") != std::string::npos);
+  CHECK(output.find("ps_Widget::counter") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter uses copy to force by-value params") {

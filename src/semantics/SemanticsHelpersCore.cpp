@@ -153,7 +153,7 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
 }
 
 bool isBuiltinTemplateTypeName(const std::string &name) {
-  return name == "Pointer" || name == "Reference" || name == "Buffer";
+  return name == "Pointer" || name == "Reference" || name == "Buffer" || name == "uninitialized";
 }
 
 bool restrictMatchesBinding(const std::string &restrictType,
@@ -362,6 +362,19 @@ ReturnKind getReturnKind(const Definition &def,
     if (containsUninitializedType(typeName)) {
       error = "uninitialized storage is not allowed as return type on " + def.fullPath;
       return ReturnKind::Unknown;
+    }
+    if (typeName == "auto") {
+      if (sawReturn) {
+        if (kind == ReturnKind::Unknown) {
+          error = "duplicate return transform on " + def.fullPath;
+          return ReturnKind::Unknown;
+        }
+        error = "conflicting return types on " + def.fullPath;
+        return ReturnKind::Unknown;
+      }
+      sawReturn = true;
+      kind = ReturnKind::Unknown;
+      continue;
     }
     ReturnKind nextKind = returnKindForTypeName(typeName);
     if (nextKind == ReturnKind::Unknown) {

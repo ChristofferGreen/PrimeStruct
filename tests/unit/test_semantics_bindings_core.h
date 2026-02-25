@@ -109,7 +109,7 @@ main() {
   CHECK(error.find("unsupported binding type") != std::string::npos);
 }
 
-TEST_CASE("software numeric bindings are accepted") {
+TEST_CASE("software numeric bindings are rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -118,11 +118,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: integer") != std::string::npos);
 }
 
-TEST_CASE("software numeric collection bindings are accepted") {
+TEST_CASE("software numeric collection bindings are rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -131,8 +131,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
 TEST_CASE("field-only definition can be used as a type") {
@@ -396,7 +396,7 @@ main() {
   CHECK(error.find("restrict type does not match binding type") != std::string::npos);
 }
 
-TEST_CASE("restrict accepts software numeric types") {
+TEST_CASE("restrict rejects software numeric types") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -405,8 +405,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
 TEST_CASE("binding align_bytes validates") {

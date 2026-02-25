@@ -130,7 +130,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding requires explicit type or inferable initializer: value") != std::string::npos);
+  CHECK(error.find("then block must produce a value") != std::string::npos);
 }
 
 TEST_CASE("infers float return type without transform") {
