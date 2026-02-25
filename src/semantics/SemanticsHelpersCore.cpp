@@ -303,6 +303,51 @@ ReturnKind getReturnKind(const Definition &def,
                          const std::unordered_set<std::string> &structNames,
                          const std::unordered_map<std::string, std::string> &importAliases,
                          std::string &error) {
+  auto containsUninitializedType = [](const std::string &text) -> bool {
+    auto trim = [](const std::string &value) -> std::string {
+      size_t start = 0;
+      while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start])) != 0) {
+        ++start;
+      }
+      size_t end = value.size();
+      while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) {
+        --end;
+      }
+      return value.substr(start, end - start);
+    };
+    std::function<bool(const std::string &)> contains;
+    contains = [&](const std::string &value) -> bool {
+      std::string trimmed = trim(value);
+      if (trimmed.empty()) {
+        return false;
+      }
+      if (!trimmed.empty() && trimmed[0] == '/') {
+        trimmed.erase(0, 1);
+      }
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(trimmed, base, arg)) {
+        base = trim(base);
+        if (!base.empty() && base[0] == '/') {
+          base.erase(0, 1);
+        }
+        if (base == "uninitialized") {
+          return true;
+        }
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args)) {
+          for (const auto &entry : args) {
+            if (contains(entry)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+      return trimmed == "uninitialized";
+    };
+    return contains(text);
+  };
   ReturnKind kind = ReturnKind::Unknown;
   bool sawReturn = false;
   for (const auto &transform : def.transforms) {
@@ -314,6 +359,10 @@ ReturnKind getReturnKind(const Definition &def,
       return ReturnKind::Unknown;
     }
     const std::string &typeName = transform.templateArgs.front();
+    if (containsUninitializedType(typeName)) {
+      error = "uninitialized storage is not allowed as return type on " + def.fullPath;
+      return ReturnKind::Unknown;
+    }
     ReturnKind nextKind = returnKindForTypeName(typeName);
     if (nextKind == ReturnKind::Unknown) {
       if (typeName == "array") {

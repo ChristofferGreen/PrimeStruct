@@ -498,6 +498,16 @@ TEST_CASE("uninitialized not allowed in reference targets") {
   CHECK(error.find("uninitialized storage is not allowed in reference targets") != std::string::npos);
 }
 
+TEST_CASE("uninitialized return types are rejected") {
+  primec::Program program;
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("uninitialized<i32>"))},
+                                               {makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed as return type") != std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
