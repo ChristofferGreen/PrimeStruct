@@ -73,17 +73,34 @@
         const Expr &elseExpr = elseValue ? *elseValue : elseArg;
         return isStructConstructorValueExpr(thenExpr) && isStructConstructorValueExpr(elseExpr);
       }
-      if (const Expr *valueExpr = getEnvelopeValueExpr(candidate, false)) {
-        return isStructConstructorValueExpr(*valueExpr);
-      }
-      return false;
-    };
-    ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
-    if (initKind == ReturnKind::Void &&
-        !isStructConstructorValueExpr(initializer)) {
-      error_ = "binding initializer requires a value";
+    if (const Expr *valueExpr = getEnvelopeValueExpr(candidate, false)) {
+      return isStructConstructorValueExpr(*valueExpr);
+    }
+    return false;
+  };
+  auto isSimpleUninitializedName = [&](const Expr &expr, const char *name) -> bool {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
       return false;
     }
+    if (!expr.templateArgs.empty() || hasNamedArguments(expr.argNames) ||
+        expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return false;
+    }
+    return isSimpleCallName(expr, name);
+  };
+  ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
+  if (initKind == ReturnKind::Void &&
+      !isStructConstructorValueExpr(initializer)) {
+    if (isSimpleUninitializedName(initializer, "init") ||
+        isSimpleUninitializedName(initializer, "drop") ||
+        isSimpleUninitializedName(initializer, "take") ||
+        isSimpleUninitializedName(initializer, "borrow")) {
+      error_ = "uninitialized helpers are only valid as statements";
+      return false;
+    }
+    error_ = "binding initializer requires a value";
+    return false;
+  }
     if (!hasExplicitBindingTypeTransform(stmt)) {
       (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
     }

@@ -973,6 +973,31 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
+    if (!expr.isMethodCall && (isSimpleCallName(expr, "init") ||
+                               isSimpleCallName(expr, "drop") ||
+                               isSimpleCallName(expr, "take") ||
+                               isSimpleCallName(expr, "borrow"))) {
+      const std::string name = expr.name;
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (!expr.templateArgs.empty()) {
+        error_ = name + " does not accept template arguments";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = name + " does not accept block arguments";
+        return false;
+      }
+      const size_t expectedArgs = (name == "init") ? 2 : 1;
+      if (expr.args.size() != expectedArgs) {
+        error_ = name + " requires exactly " + std::to_string(expectedArgs) + " argument" +
+                 (expectedArgs == 1 ? "" : "s");
+        return false;
+      }
+      return true;
+    }
     if (isBuiltinBlockCall(expr) && expr.hasBodyArguments) {
       if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
         error_ = "block expression does not accept arguments";

@@ -298,6 +298,21 @@ TEST_CASE("uninitialized initializer type mismatch fails") {
   CHECK(error.find("uninitialized initializer type mismatch") != std::string::npos);
 }
 
+TEST_CASE("uninitialized helpers are statement-only") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr badBinding = makeBinding("value", {makeTransform("i32")}, {initCall});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, badBinding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized helpers are only valid as statements") != std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
