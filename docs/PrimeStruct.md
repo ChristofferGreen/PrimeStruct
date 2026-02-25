@@ -742,6 +742,8 @@ Colors() {
 }
 ```
 
+Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the constructor call (`Colors(5i32)`).
+
 ### Ownership and Mutability
 - `mut` marks writeable bindings.
 - `move(x)` consumes a binding and forbids use until reinitialized.

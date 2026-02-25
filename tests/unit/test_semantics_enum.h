@@ -70,11 +70,11 @@ main() {
     REQUIRE(binding != nullptr);
     CHECK(hasTransform(binding->transforms, "public"));
     CHECK(hasTransform(binding->transforms, "static"));
-    CHECK(hasTransform(binding->transforms, "Colors"));
+  CHECK(hasTransform(binding->transforms, "/Colors"));
     REQUIRE(binding->args.size() == 1);
     const primec::Expr &call = binding->args.front();
     REQUIRE(call.kind == primec::Expr::Kind::Call);
-    CHECK(call.name == "Colors");
+    CHECK(call.name == "/Colors");
     REQUIRE(call.args.size() == 1);
     const primec::Expr &literal = call.args.front();
     REQUIRE(literal.kind == primec::Expr::Kind::Literal);

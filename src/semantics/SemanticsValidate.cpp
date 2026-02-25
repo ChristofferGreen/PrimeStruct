@@ -7,6 +7,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -435,6 +436,15 @@ struct EnumTypeInfo {
   int width = 32;
 };
 
+struct EnumValueEntry {
+  bool isUnsigned = false;
+  int width = 32;
+  int64_t signedValue = 0;
+  uint64_t unsignedValue = 0;
+};
+
+using EnumValueMap = std::unordered_map<std::string, std::unordered_map<std::string, EnumValueEntry>>;
+
 bool parseEnumType(const Transform &transform, EnumTypeInfo &out, const std::string &context, std::string &error) {
   if (!transform.arguments.empty()) {
     error = "enum transform does not accept arguments on " + context;
@@ -535,7 +545,7 @@ bool extractEnumLiteralValue(const Expr &expr,
   return true;
 }
 
-bool rewriteEnumDefinition(Definition &def, std::string &error) {
+bool rewriteEnumDefinition(Definition &def, EnumValueMap &enumValues, std::string &error) {
   size_t enumIndex = def.transforms.size();
   for (size_t i = 0; i < def.transforms.size(); ++i) {
     if (def.transforms[i].name != "enum") {
@@ -652,6 +662,7 @@ bool rewriteEnumDefinition(Definition &def, std::string &error) {
   const int64_t maxSigned = enumType.width == 32 ? static_cast<int64_t>(std::numeric_limits<int32_t>::max())
                                                  : std::numeric_limits<int64_t>::max();
 
+  auto &enumMap = enumValues[def.fullPath];
   for (const auto &entry : entries) {
     int64_t signedValue = 0;
     uint64_t unsignedValue = 0;
@@ -696,16 +707,20 @@ bool rewriteEnumDefinition(Definition &def, std::string &error) {
       }
     }
 
-    Expr enumValue;
-    if (enumType.isUnsigned) {
-      enumValue = makeEnumLiteralUnsigned(unsignedValue, enumType.width, def.namespacePrefix);
-    } else {
-      enumValue = makeEnumLiteralSigned(signedValue, enumType.width, def.namespacePrefix);
-    }
+    EnumValueEntry entryValue;
+    entryValue.isUnsigned = enumType.isUnsigned;
+    entryValue.width = enumType.width;
+    entryValue.signedValue = signedValue;
+    entryValue.unsignedValue = unsignedValue;
+    enumMap.emplace(entry.name, entryValue);
+
+    Expr enumValue = enumType.isUnsigned
+                         ? makeEnumLiteralUnsigned(unsignedValue, enumType.width, def.namespacePrefix)
+                         : makeEnumLiteralSigned(signedValue, enumType.width, def.namespacePrefix);
 
     Expr constructorCall;
     constructorCall.kind = Expr::Kind::Call;
-    constructorCall.name = def.name;
+    constructorCall.name = def.fullPath;
     constructorCall.namespacePrefix = def.namespacePrefix;
     constructorCall.args.push_back(std::move(enumValue));
     constructorCall.argNames.push_back(std::nullopt);
@@ -722,7 +737,7 @@ bool rewriteEnumDefinition(Definition &def, std::string &error) {
     staticTransform.name = "static";
     staticTransform.phase = TransformPhase::Auto;
     Transform valueTypeTransform;
-    valueTypeTransform.name = def.name;
+    valueTypeTransform.name = def.fullPath;
     valueTypeTransform.phase = TransformPhase::Auto;
     enumBinding.transforms.push_back(std::move(publicTransform));
     enumBinding.transforms.push_back(std::move(staticTransform));
@@ -737,9 +752,78 @@ bool rewriteEnumDefinition(Definition &def, std::string &error) {
 }
 
 bool rewriteEnumDefinitions(Program &program, std::string &error) {
+  EnumValueMap enumValues;
   for (auto &def : program.definitions) {
-    if (!rewriteEnumDefinition(def, error)) {
+    if (!rewriteEnumDefinition(def, enumValues, error)) {
       return false;
+    }
+  }
+  auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
+    for (auto &arg : expr.args) {
+      if (!self(self, arg)) {
+        return false;
+      }
+    }
+    for (auto &arg : expr.bodyArguments) {
+      if (!self(self, arg)) {
+        return false;
+      }
+    }
+    if (!expr.isFieldAccess || expr.args.size() != 1) {
+      return true;
+    }
+    const Expr &receiver = expr.args.front();
+    if (receiver.kind != Expr::Kind::Name) {
+      return true;
+    }
+    const std::string structPath = semantics::resolveTypePath(receiver.name, receiver.namespacePrefix);
+    auto typeIt = enumValues.find(structPath);
+    if (typeIt == enumValues.end()) {
+      return true;
+    }
+    auto entryIt = typeIt->second.find(expr.name);
+    if (entryIt == typeIt->second.end()) {
+      return true;
+    }
+    const EnumValueEntry &value = entryIt->second;
+    Expr literal = value.isUnsigned ? makeEnumLiteralUnsigned(value.unsignedValue, value.width, expr.namespacePrefix)
+                                    : makeEnumLiteralSigned(value.signedValue, value.width, expr.namespacePrefix);
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = structPath;
+    call.namespacePrefix = expr.namespacePrefix;
+    call.args.push_back(std::move(literal));
+    call.argNames.push_back(std::nullopt);
+    expr = std::move(call);
+    return true;
+  };
+  for (auto &def : program.definitions) {
+    for (auto &param : def.parameters) {
+      if (!rewriteExpr(rewriteExpr, param)) {
+        return false;
+      }
+    }
+    for (auto &stmt : def.statements) {
+      if (!rewriteExpr(rewriteExpr, stmt)) {
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      if (!rewriteExpr(rewriteExpr, *def.returnExpr)) {
+        return false;
+      }
+    }
+  }
+  for (auto &exec : program.executions) {
+    for (auto &arg : exec.arguments) {
+      if (!rewriteExpr(rewriteExpr, arg)) {
+        return false;
+      }
+    }
+    for (auto &arg : exec.bodyArguments) {
+      if (!rewriteExpr(rewriteExpr, arg)) {
+        return false;
+      }
     }
   }
   return true;

@@ -52,7 +52,7 @@ Legend:
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ✓ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
-- ○ Define enum value access surface (static field access via type name) and add tests.
+- ✓ Define enum value access surface (static field access via type name) and add tests.
 - ○ Implement `match` expressions (syntax, exhaustive type checking, and lowering).
 - ○ Define `uninitialized<T>` storage plus `init`/`drop`/`take`/`borrow` helpers (required for `Maybe<T>` and other explicit storage patterns).
 - ○ Define `Maybe<T>` (optional value) using uninitialized storage + tag; add docs and tests.
