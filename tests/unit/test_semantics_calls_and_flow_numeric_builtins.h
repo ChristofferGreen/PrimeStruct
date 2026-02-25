@@ -126,7 +126,7 @@ TEST_CASE("convert resolves struct helper") {
 Widget() {
   [i32] value{1i32}
 
-  [return<Widget>]
+  [static return<Widget>]
   Convert([i32] raw) {
     return(Widget{ raw })
   }
@@ -150,7 +150,7 @@ namespace util {
   Widget() {
     [i32] value{1i32}
 
-    [public return<Widget>]
+    [public static return<Widget>]
     Convert([i32] raw) {
       return(Widget{ raw })
     }
@@ -173,7 +173,7 @@ TEST_CASE("convert rejects helper with wrong return type") {
 Widget() {
   [i32] value{1i32}
 
-  [return<Other>]
+  [static return<Other>]
   Convert([i32] raw) {
     return(Other())
   }
@@ -200,7 +200,7 @@ TEST_CASE("convert rejects helper with wrong param count") {
 Widget() {
   [i32] value{1i32}
 
-  [return<Widget>]
+  [static return<Widget>]
   Convert() {
     return(Widget())
   }

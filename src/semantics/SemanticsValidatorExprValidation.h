@@ -143,6 +143,14 @@
       }
       return true;
     };
+    auto isStaticHelperDefinition = [&](const Definition &def) -> bool {
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "static") {
+          return true;
+        }
+      }
+      return false;
+    };
     auto resolveMethodTarget =
         [&](const Expr &receiver, const std::string &methodName, std::string &resolvedOut, bool &isBuiltinOut) -> bool {
       isBuiltinOut = false;
@@ -508,6 +516,7 @@
 
     std::string resolved = resolveCalleePath(expr);
     bool resolvedMethod = false;
+    bool usedMethodTarget = false;
     if (expr.isFieldAccess) {
       if (expr.args.size() != 1) {
         error_ = "field access requires a receiver";
@@ -542,6 +551,7 @@
         error_ = "method call missing receiver";
         return false;
       }
+      usedMethodTarget = true;
       bool isBuiltinMethod = false;
       if (!resolveMethodTarget(expr.args.front(), expr.name, resolved, isBuiltinMethod)) {
         return false;
@@ -552,6 +562,7 @@
       }
       resolvedMethod = isBuiltinMethod;
     } else if (expr.name == "count" && expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {
+      usedMethodTarget = true;
       bool isBuiltinMethod = false;
       std::string methodResolved;
       if (!resolveMethodTarget(expr.args.front(), "count", methodResolved, isBuiltinMethod)) {
@@ -563,6 +574,13 @@
       }
       resolved = methodResolved;
       resolvedMethod = isBuiltinMethod;
+    }
+    if (usedMethodTarget && !resolvedMethod) {
+      auto defIt = defMap_.find(resolved);
+      if (defIt != defMap_.end() && isStaticHelperDefinition(*defIt->second)) {
+        error_ = "static helper does not accept method-call syntax: " + resolved;
+        return false;
+      }
     }
     if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
       if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {

@@ -51,6 +51,7 @@ struct Definition {
   std::vector<Expr> statements;
   std::optional<Expr> returnExpr;
   bool hasReturnStatement = false;
+  bool isNested = false;
 };
 
 struct Execution {

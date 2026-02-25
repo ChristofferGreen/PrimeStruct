@@ -2,6 +2,58 @@
                                       const Definition &callee,
                                       const LocalMap &callerLocals,
                                       bool requireValue) -> bool {
+    auto isStructHelper = [&](const Definition &def, std::string &parentOut) -> bool {
+      parentOut.clear();
+      if (!def.isNested) {
+        return false;
+      }
+      if (structNames.count(def.fullPath) > 0) {
+        return false;
+      }
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash == std::string::npos || slash == 0) {
+        return false;
+      }
+      const std::string parent = def.fullPath.substr(0, slash);
+      if (structNames.count(parent) == 0) {
+        return false;
+      }
+      parentOut = parent;
+      return true;
+    };
+    auto hasStaticTransform = [&](const Definition &def) -> bool {
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "static") {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto hasMutTransform = [&](const Definition &def) -> bool {
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "mut") {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto makeThisParam = [&](const std::string &structPath, bool isMutable) {
+      Expr param;
+      param.kind = Expr::Kind::Name;
+      param.isBinding = true;
+      param.name = "this";
+      Transform typeTransform;
+      typeTransform.name = "Reference";
+      typeTransform.templateArgs.push_back(structPath);
+      param.transforms.push_back(std::move(typeTransform));
+      if (isMutable) {
+        Transform mutTransform;
+        mutTransform.name = "mut";
+        param.transforms.push_back(std::move(mutTransform));
+      }
+      return param;
+    };
+
     ReturnInfo returnInfo;
     if (!getReturnInfo(callee.fullPath, returnInfo)) {
       return false;
@@ -50,7 +102,19 @@
         structParams.push_back(param);
       }
     }
-    const std::vector<Expr> &callParams = structDef ? structParams : callee.parameters;
+    std::vector<Expr> helperParams;
+    if (!structDef) {
+      std::string helperParent;
+      if (isStructHelper(callee, helperParent) && !hasStaticTransform(callee)) {
+        helperParams.reserve(callee.parameters.size() + 1);
+        helperParams.push_back(makeThisParam(helperParent, hasMutTransform(callee)));
+        for (const auto &param : callee.parameters) {
+          helperParams.push_back(param);
+        }
+      }
+    }
+    const std::vector<Expr> &callParams =
+        structDef ? structParams : (helperParams.empty() ? callee.parameters : helperParams);
 
     std::vector<const Expr *> orderedArgs;
     if (!buildOrderedCallArguments(callExpr, callParams, orderedArgs)) {

@@ -46,6 +46,8 @@ build and layout solidify.
   production paths.
 - **Parser disambiguation:** in statement position, `name{...}` is parsed as a binding; nested
   definitions must use `name()` to avoid ambiguity.
+- **AST ordering:** nested definitions are appended to `Program.definitions` before their parent
+  definition; build a prepass when parent metadata is needed (struct/helper relationships, etc).
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **IR stability:** avoid silent changes to serialized IR; include versioning or migration

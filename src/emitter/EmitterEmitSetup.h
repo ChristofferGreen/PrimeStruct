@@ -53,6 +53,13 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     }
     return true;
   };
+  std::unordered_set<std::string> structPaths;
+  structPaths.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    if (isStructDefinition(def)) {
+      structPaths.insert(def.fullPath);
+    }
+  }
   enum class HelperKind { Create, Destroy, Copy, Move };
   struct HelperSuffixInfo {
     std::string_view suffix;
@@ -100,6 +107,33 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
       return false;
     }
     return true;
+  };
+  auto isStructHelper = [&](const Definition &def, std::string &parentOut) {
+    parentOut.clear();
+    if (!def.isNested) {
+      return false;
+    }
+    if (structPaths.count(def.fullPath) > 0) {
+      return false;
+    }
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return false;
+    }
+    const std::string parent = def.fullPath.substr(0, slash);
+    if (structPaths.count(parent) == 0) {
+      return false;
+    }
+    parentOut = parent;
+    return true;
+  };
+  auto isStaticHelper = [](const Definition &def) {
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
   };
   auto isHelperMutable = [](const Definition &def) {
     for (const auto &transform : def.transforms) {
@@ -378,7 +412,18 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
         }
         paramMap[def.fullPath] = std::move(params);
       } else {
-        paramMap[def.fullPath] = def.parameters;
+        std::string helperParent;
+        if (isStructHelper(def, helperParent) && !isStaticHelper(def)) {
+          std::vector<Expr> params;
+          params.reserve(def.parameters.size() + 1);
+          params.push_back(makeThisParam(helperParent, isHelperMutable(def)));
+          for (const auto &param : def.parameters) {
+            params.push_back(param);
+          }
+          paramMap[def.fullPath] = std::move(params);
+        } else {
+          paramMap[def.fullPath] = def.parameters;
+        }
       }
     }
     defMap[def.fullPath] = &def;

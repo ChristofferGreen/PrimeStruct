@@ -304,7 +304,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mut transform is only supported on lifecycle helpers") != std::string::npos);
+  CHECK(error.find("mut transform is only supported on struct helpers") != std::string::npos);
 }
 
 TEST_CASE("lifecycle helpers reject duplicate mut") {

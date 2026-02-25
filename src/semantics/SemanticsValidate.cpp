@@ -970,9 +970,13 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     if (def.parameters.size() != 1) {
       return false;
     }
+    bool sawStatic = false;
     bool sawReturn = false;
     std::string returnType;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "static") {
+        sawStatic = true;
+      }
       if (transform.name != "return") {
         continue;
       }
@@ -982,6 +986,9 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
       }
       returnType = transform.templateArgs.front();
       break;
+    }
+    if (!sawStatic) {
+      return false;
     }
     if (!sawReturn || returnType.empty() || returnType == "auto") {
       return false;

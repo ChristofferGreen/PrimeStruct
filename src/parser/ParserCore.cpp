@@ -758,6 +758,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   def.transforms = transforms;
   def.templateArgs = std::move(templateArgs);
   def.parameters = std::move(parameters);
+  def.isNested = true;
   if (!parseDefinitionBody(def, hasStructTransform, defs)) {
     return false;
   }

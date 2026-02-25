@@ -943,7 +943,7 @@ bad_use_after_take() {
   - **Convert constructor resolution (v1):**
     - Builtin fast-path: when `T` is `bool/i32/i64/u64/f32/f64` and `value` is numeric/bool, use the builtin conversion rules; user-defined conversions do not override this.
     - Otherwise, resolve `convert<T>(value)` as a call to `T.Convert(value)` in the struct method namespace (`/T/Convert`).
-    - Signature must match exactly after monomorphisation: `[return<T>] Convert([U] value)`. No implicit conversions are applied to match the parameter type.
+    - Signature must match exactly after monomorphisation: `[static return<T>] Convert([U] value)` (Convert helpers are static, no implicit `this`). No implicit conversions are applied to match the parameter type.
     - If no match exists, emit a `no conversion found` diagnostic. If multiple matches exist, emit an `ambiguous conversion` diagnostic with the candidate list.
     - Visibility follows import rules: only `[public]` `Convert` helpers are visible across imports.
     - `convert<T>(value)` does not fall back to `T(value)` or `T{...}`.

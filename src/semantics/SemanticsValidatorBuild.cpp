@@ -41,6 +41,91 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
 
   std::unordered_set<std::string> explicitStructs;
+  struct HelperSuffixInfo {
+    std::string_view suffix;
+    std::string_view placement;
+  };
+  auto isStructDefinition = [&](const Definition &def, bool &isExplicitOut) {
+    bool hasStruct = false;
+    bool hasReturn = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "return") {
+        hasReturn = true;
+      }
+      if (isStructTransformName(transform.name)) {
+        hasStruct = true;
+      }
+    }
+    if (hasStruct) {
+      isExplicitOut = true;
+      return true;
+    }
+    if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+      isExplicitOut = false;
+      return false;
+    }
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        isExplicitOut = false;
+        return false;
+      }
+    }
+    isExplicitOut = false;
+    return true;
+  };
+  for (const auto &def : program_.definitions) {
+    bool isExplicit = false;
+    if (isStructDefinition(def, isExplicit)) {
+      structNames_.insert(def.fullPath);
+      if (isExplicit) {
+        explicitStructs.insert(def.fullPath);
+      }
+    }
+  }
+
+  auto isLifecycleHelperName = [](const std::string &fullPath) -> bool {
+    static const std::array<HelperSuffixInfo, 10> suffixes = {{
+        {"Create", ""},
+        {"Destroy", ""},
+        {"Copy", ""},
+        {"Move", ""},
+        {"CreateStack", "stack"},
+        {"DestroyStack", "stack"},
+        {"CreateHeap", "heap"},
+        {"DestroyHeap", "heap"},
+        {"CreateBuffer", "buffer"},
+        {"DestroyBuffer", "buffer"},
+    }};
+    for (const auto &info : suffixes) {
+      const std::string_view suffix = info.suffix;
+      if (fullPath.size() < suffix.size() + 1) {
+        continue;
+      }
+      const size_t suffixStart = fullPath.size() - suffix.size();
+      if (fullPath[suffixStart - 1] != '/') {
+        continue;
+      }
+      if (fullPath.compare(suffixStart, suffix.size(), suffix.data(), suffix.size()) != 0) {
+        continue;
+      }
+      return true;
+    }
+    return false;
+  };
+  auto isStructHelperDefinition = [&](const Definition &def) -> bool {
+    if (!def.isNested) {
+      return false;
+    }
+    if (structNames_.count(def.fullPath) > 0) {
+      return false;
+    }
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return false;
+    }
+    const std::string parent = def.fullPath.substr(0, slash);
+    return structNames_.count(parent) > 0;
+  };
   for (const auto &def : program_.definitions) {
     if (defMap_.count(def.fullPath) > 0) {
       error_ = "duplicate definition: " + def.fullPath;
@@ -60,8 +145,11 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawWorkgroupSize = false;
     bool sawNoPadding = false;
     bool sawPlatformPadding = false;
+    const bool isStructHelper = isStructHelperDefinition(def);
+    const bool isLifecycleHelper = isLifecycleHelperName(def.fullPath);
     bool sawVisibility = false;
     bool isPublic = false;
+    bool sawStatic = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "public" || transform.name == "private") {
         if (!transform.templateArgs.empty()) {
@@ -78,6 +166,26 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
         sawVisibility = true;
         isPublic = (transform.name == "public");
+        continue;
+      }
+      if (transform.name == "static") {
+        if (!transform.templateArgs.empty()) {
+          error_ = "static transform does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error_ = "static transform does not accept arguments on " + def.fullPath;
+          return false;
+        }
+        if (sawStatic) {
+          error_ = "duplicate static transform on " + def.fullPath;
+          return false;
+        }
+        sawStatic = true;
+        if (!isStructHelper || isLifecycleHelper) {
+          error_ = "binding visibility/static transforms are only valid on bindings: " + def.fullPath;
+          return false;
+        }
         continue;
       }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
@@ -509,11 +617,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
     returnKinds_[def.fullPath] = kind;
   }
 
-  struct HelperSuffixInfo {
-    std::string_view suffix;
-    std::string_view placement;
-  };
-
   auto isLifecycleHelper =
       [](const std::string &fullPath, std::string &parentOut, std::string &placementOut) -> bool {
     static const std::array<HelperSuffixInfo, 10> suffixes = {{
@@ -566,17 +669,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
                             moveSuffix.data(),
                             moveSuffix.size()) == 0;
   };
-  auto isStructDefinition = [&](const std::string &path) -> bool {
-    return structNames_.count(path) > 0;
-  };
-
   for (const auto &def : program_.definitions) {
     std::string parentPath;
     std::string placement;
     if (!isLifecycleHelper(def.fullPath, parentPath, placement)) {
       continue;
     }
-    if (parentPath.empty() || !isStructDefinition(parentPath)) {
+    if (parentPath.empty() || structNames_.count(parentPath) == 0) {
       error_ = "lifecycle helper must be nested inside a struct: " + def.fullPath;
       return false;
     }
@@ -652,6 +751,33 @@ bool SemanticsValidator::buildParameters() {
                             moveSuffix.data(),
                             moveSuffix.size()) == 0;
   };
+  auto isStructHelperDefinition = [&](const Definition &def, std::string &parentOut) -> bool {
+    parentOut.clear();
+    if (!def.isNested) {
+      return false;
+    }
+    if (structNames_.count(def.fullPath) > 0) {
+      return false;
+    }
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash == std::string::npos || slash == 0) {
+      return false;
+    }
+    const std::string parent = def.fullPath.substr(0, slash);
+    if (structNames_.count(parent) == 0) {
+      return false;
+    }
+    parentOut = parent;
+    return true;
+  };
+  auto hasStaticTransform = [](const Definition &def) -> bool {
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
+  };
 
   for (const auto &def : program_.definitions) {
     std::unordered_set<std::string> seen;
@@ -715,7 +841,45 @@ bool SemanticsValidator::buildParameters() {
     }
     std::string parentPath;
     std::string placement;
-    if (isLifecycleHelper(def.fullPath, parentPath, placement)) {
+    std::string helperParent;
+    const bool isLifecycle = isLifecycleHelper(def.fullPath, parentPath, placement);
+    if (!isLifecycle) {
+      (void)isStructHelperDefinition(def, helperParent);
+      if (!helperParent.empty()) {
+        parentPath = helperParent;
+      }
+    }
+    const bool isStructHelper = isLifecycle || !helperParent.empty();
+    const bool isStaticHelper = isStructHelper && !isLifecycle && hasStaticTransform(def);
+    bool sawMut = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "mut") {
+        continue;
+      }
+      if (sawMut) {
+        error_ = "duplicate mut transform on " + def.fullPath;
+        return false;
+      }
+      sawMut = true;
+      if (!transform.templateArgs.empty()) {
+        error_ = "mut transform does not accept template arguments on " + def.fullPath;
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error_ = "mut transform does not accept arguments on " + def.fullPath;
+        return false;
+      }
+    }
+    if (sawMut && !isStructHelper) {
+      error_ = "mut transform is only supported on struct helpers: " + def.fullPath;
+      return false;
+    }
+    if (sawMut && isStaticHelper) {
+      error_ = "mut transform is not allowed on static helpers: " + def.fullPath;
+      return false;
+    }
+
+    if (isLifecycle) {
       if (isCopyHelperName(def.fullPath)) {
         if (params.size() != 1) {
           error_ = "Copy/Move helpers require exactly one parameter: " + def.fullPath;
@@ -727,41 +891,18 @@ bool SemanticsValidator::buildParameters() {
           return false;
         }
       }
-      bool sawMut = false;
-      for (const auto &transform : def.transforms) {
-        if (transform.name != "mut") {
-          continue;
-        }
-        if (sawMut) {
-          error_ = "duplicate mut transform on " + def.fullPath;
-          return false;
-        }
-        sawMut = true;
-        if (!transform.templateArgs.empty()) {
-          error_ = "mut transform does not accept template arguments on " + def.fullPath;
-          return false;
-        }
-        if (!transform.arguments.empty()) {
-          error_ = "mut transform does not accept arguments on " + def.fullPath;
-          return false;
-        }
-      }
+    }
+    if (isStructHelper && !isStaticHelper) {
       if (!seen.insert("this").second) {
         error_ = "duplicate parameter: this";
         return false;
       }
       ParameterInfo info;
       info.name = "this";
-      info.binding.typeName = parentPath;
+      info.binding.typeName = "Reference";
+      info.binding.typeTemplateArg = parentPath;
       info.binding.isMutable = sawMut;
       params.insert(params.begin(), std::move(info));
-    } else {
-      for (const auto &transform : def.transforms) {
-        if (transform.name == "mut") {
-          error_ = "mut transform is only supported on lifecycle helpers: " + def.fullPath;
-          return false;
-        }
-      }
     }
     if (def.fullPath == entryPath_) {
       if (params.size() == 1 && params.front().binding.typeName == "array" &&

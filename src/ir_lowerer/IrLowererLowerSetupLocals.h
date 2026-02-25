@@ -1062,10 +1062,11 @@
   };
 
   auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
-    if (info.kind != LocalInfo::Kind::Value || !info.structTypeName.empty()) {
+    if (!info.structTypeName.empty()) {
       return;
     }
     std::string typeName;
+    std::string typeTemplateArg;
     for (const auto &transform : expr.transforms) {
       if (transform.name == "effects" || transform.name == "capabilities") {
         continue;
@@ -1077,9 +1078,24 @@
         continue;
       }
       typeName = transform.name;
+      if (!transform.templateArgs.empty()) {
+        typeTemplateArg = joinTemplateArgsLocals(transform.templateArgs);
+      }
       break;
     }
-    if (typeName.empty() || typeName == "Reference" || typeName == "Pointer") {
+    if (typeName.empty()) {
+      return;
+    }
+    if (typeName == "Reference" || typeName == "Pointer") {
+      if (!typeTemplateArg.empty()) {
+        std::string resolved;
+        if (resolveStructTypeName(typeTemplateArg, expr.namespacePrefix, resolved)) {
+          info.structTypeName = resolved;
+        }
+      }
+      return;
+    }
+    if (info.kind != LocalInfo::Kind::Value) {
       return;
     }
     std::string resolved;
