@@ -232,7 +232,48 @@
       }
       const std::string expectedType = binding->typeTemplateArg;
       ReturnKind expectedKind = returnKindForTypeName(expectedType);
-      if (expectedKind != ReturnKind::Unknown && expectedKind != ReturnKind::Array) {
+      if (expectedKind == ReturnKind::Array) {
+        if (valueKind != ReturnKind::Unknown && valueKind != ReturnKind::Array) {
+          error_ = "init value type mismatch";
+          return false;
+        }
+        std::string expectedBase;
+        std::string expectedElem;
+        if (splitTemplateTypeName(expectedType, expectedBase, expectedElem) &&
+            (expectedBase == "array" || expectedBase == "vector")) {
+          auto resolveCollectionValueType = [&](const Expr &value,
+                                                std::string &baseOut,
+                                                std::string &elemOut) -> bool {
+            if (value.kind == Expr::Kind::Name) {
+              const BindingInfo *bindingInfo = findBinding(params, locals, value.name);
+              if (bindingInfo && (bindingInfo->typeName == "array" || bindingInfo->typeName == "vector") &&
+                  !bindingInfo->typeTemplateArg.empty()) {
+                baseOut = bindingInfo->typeName;
+                elemOut = bindingInfo->typeTemplateArg;
+                return true;
+              }
+            }
+            if (value.kind == Expr::Kind::Call) {
+              std::string collection;
+              if (getBuiltinCollectionName(value, collection) &&
+                  (collection == "array" || collection == "vector") && value.templateArgs.size() == 1) {
+                baseOut = collection;
+                elemOut = value.templateArgs.front();
+                return true;
+              }
+            }
+            return false;
+          };
+          std::string actualBase;
+          std::string actualElem;
+          if (resolveCollectionValueType(stmt.args[1], actualBase, actualElem)) {
+            if (actualBase != expectedBase || !errorTypesMatch(expectedElem, actualElem, namespacePrefix)) {
+              error_ = "init value type mismatch";
+              return false;
+            }
+          }
+        }
+      } else if (expectedKind != ReturnKind::Unknown) {
         if (valueKind != ReturnKind::Unknown && valueKind != expectedKind) {
           error_ = "init value type mismatch";
           return false;

@@ -381,6 +381,22 @@ TEST_CASE("uninitialized init rejects value type mismatch") {
   CHECK(error.find("init value type mismatch") != std::string::npos);
 }
 
+TEST_CASE("uninitialized init validates array element types") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"array<i32>"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("array<i32>"))}, {initStorage});
+  primec::Expr arrayValue = makeCall("array", {makeBool(true)});
+  arrayValue.templateArgs = {"bool"};
+  primec::Expr initCall = makeCall("init", {makeName("storage"), arrayValue});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, initCall, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("init value type mismatch") != std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
