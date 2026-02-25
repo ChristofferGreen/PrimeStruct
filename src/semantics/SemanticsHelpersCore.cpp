@@ -1108,6 +1108,76 @@ bool parseBindingInfo(const Expr &expr,
     }
     return false;
   };
+  auto containsUninitializedType = [&](const std::string &text) -> bool {
+    auto trim = [](const std::string &value) -> std::string {
+      size_t start = 0;
+      while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start])) != 0) {
+        ++start;
+      }
+      size_t end = value.size();
+      while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) {
+        --end;
+      }
+      return value.substr(start, end - start);
+    };
+    std::function<bool(const std::string &)> contains;
+    contains = [&](const std::string &value) -> bool {
+      std::string trimmed = trim(value);
+      if (trimmed.empty()) {
+        return false;
+      }
+      if (!trimmed.empty() && trimmed[0] == '/') {
+        trimmed.erase(0, 1);
+      }
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(trimmed, base, arg)) {
+        base = trim(base);
+        if (!base.empty() && base[0] == '/') {
+          base.erase(0, 1);
+        }
+        if (base == "uninitialized") {
+          return true;
+        }
+        std::vector<std::string> args;
+        if (splitTopLevelTemplateArgs(arg, args)) {
+          for (const auto &entry : args) {
+            if (contains(entry)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+      return trimmed == "uninitialized";
+    };
+    return contains(text);
+  };
+  if (typeHasTemplate && (typeName == "array" || typeName == "vector" || typeName == "Buffer")) {
+    if (containsUninitializedType(info.typeTemplateArg)) {
+      error = "uninitialized storage is not allowed in " + typeName + " element types";
+      return false;
+    }
+  }
+  if (typeHasTemplate && typeName == "map") {
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(info.typeTemplateArg, args) || args.size() != 2) {
+      error = "map requires exactly two template arguments";
+      return false;
+    }
+    if (containsUninitializedType(args[0]) || containsUninitializedType(args[1])) {
+      error = "uninitialized storage is not allowed in map key/value types";
+      return false;
+    }
+  }
+  if (typeHasTemplate && typeName != "Pointer" && typeName != "Reference" && typeName != "uninitialized" &&
+      typeName != "array" && typeName != "vector" && typeName != "map" && typeName != "Buffer" &&
+      typeName != "Result") {
+    if (containsUninitializedType(info.typeTemplateArg)) {
+      error = "uninitialized storage is not allowed as template argument to user-defined types";
+      return false;
+    }
+  }
   if (typeHasTemplate && typeName == "Pointer") {
     if (info.typeTemplateArg.empty()) {
       error = "Pointer requires a template argument";

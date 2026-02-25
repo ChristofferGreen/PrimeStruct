@@ -397,6 +397,33 @@ TEST_CASE("uninitialized init validates array element types") {
   CHECK(error.find("init value type mismatch") != std::string::npos);
 }
 
+TEST_CASE("uninitialized not allowed in array element types") {
+  primec::Program program;
+  primec::Expr init = makeCall("array");
+  init.templateArgs = {"uninitialized<i32>"};
+  primec::Expr binding = makeBinding("values", {makeTransform("array", std::string("uninitialized<i32>"))}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed in array element types") != std::string::npos);
+}
+
+TEST_CASE("uninitialized not allowed as user template arg") {
+  primec::Program program;
+  primec::Expr init = makeCall("Widget");
+  init.templateArgs = {"uninitialized<i32>"};
+  primec::Expr binding = makeBinding("value", {makeTransform("Widget", std::string("uninitialized<i32>"))}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed as template argument to user-defined types") !=
+        std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
