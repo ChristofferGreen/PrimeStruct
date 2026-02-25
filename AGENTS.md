@@ -46,8 +46,8 @@ build and layout solidify.
   production paths.
 - **Parser disambiguation:** in statement position, `name{...}` is parsed as a binding; nested
   definitions must use `name()` to avoid ambiguity.
-- **Visibility transforms:** `public`/`private`/`static` are currently binding-only; definitions
-  and executions reject them (tests expect this).
+- **Visibility transforms:** `public`/`private` are valid on definitions (controls import
+  visibility) and bindings (field visibility). Executions still reject them.
 - **IR stability:** avoid silent changes to serialized IR; include versioning or migration
   notes when the format changes.
 - **Determinism:** no unordered iteration that affects outputs; sort keys before emitting

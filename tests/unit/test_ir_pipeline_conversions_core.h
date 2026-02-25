@@ -510,7 +510,7 @@ TEST_CASE("ir lowerer resolves imported definition calls") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }

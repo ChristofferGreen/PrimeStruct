@@ -157,6 +157,7 @@ private:
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_set<std::string> structNames_;
+  std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
   std::unordered_set<std::string> activeEffects_;
   std::unordered_set<std::string> movedBindings_;

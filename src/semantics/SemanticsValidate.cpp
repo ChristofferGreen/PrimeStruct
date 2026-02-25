@@ -834,6 +834,22 @@ bool rewriteEnumDefinitions(Program &program, std::string &error) {
 
 bool rewriteConvertConstructors(Program &program, std::string &error) {
   std::unordered_set<std::string> structNames;
+  std::unordered_set<std::string> publicDefinitions;
+  auto isDefinitionPublic = [](const Definition &def) -> bool {
+    bool sawVisibility = false;
+    bool isPublic = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "public" && transform.name != "private") {
+        continue;
+      }
+      if (sawVisibility) {
+        return false;
+      }
+      sawVisibility = true;
+      isPublic = (transform.name == "public");
+    }
+    return isPublic;
+  };
   for (const auto &def : program.definitions) {
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
@@ -858,6 +874,9 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     }
     if (hasStructTransform || fieldOnlyStruct) {
       structNames.insert(def.fullPath);
+    }
+    if (isDefinitionPublic(def)) {
+      publicDefinitions.insert(def.fullPath);
     }
   }
 
@@ -885,12 +904,18 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
           continue;
         }
+        if (publicDefinitions.count(def.fullPath) == 0) {
+          continue;
+        }
         importAliases.emplace(remainder, def.fullPath);
       }
       continue;
     }
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
     if (remainder.empty()) {
+      continue;
+    }
+    if (publicDefinitions.count(importPath) == 0) {
       continue;
     }
     importAliases.emplace(remainder, importPath);

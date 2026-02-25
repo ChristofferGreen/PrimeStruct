@@ -1,6 +1,6 @@
 namespace std {
   namespace math {
-  [return<f32>]
+  [public return<f32>]
   srgbToLinearChannel([f32] c) {
     if(c <= 0.04045) {
       return(c / 12.92)
@@ -9,7 +9,7 @@ namespace std {
     }
   }
 
-  [return<f32>]
+  [public return<f32>]
   linearToSrgbChannel([f32] c) {
     if(c <= 0.0031308) {
       return(c * 12.92)
@@ -18,7 +18,7 @@ namespace std {
     }
   }
 
-  [struct]
+  [public struct]
   ColorRGB() {
     [public f32] r{0.0}
     [public f32] g{0.0}
@@ -26,27 +26,27 @@ namespace std {
   }
 
   namespace ColorRGB {
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     add([ColorRGB] self, [ColorRGB] other) {
       return(ColorRGB(self.r + other.r, self.g + other.g, self.b + other.b))
     }
 
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     sub([ColorRGB] self, [ColorRGB] other) {
       return(ColorRGB(self.r - other.r, self.g - other.g, self.b - other.b))
     }
 
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     mul([ColorRGB] self, [ColorRGB] other) {
       return(ColorRGB(self.r * other.r, self.g * other.g, self.b * other.b))
     }
 
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     mulScalar([ColorRGB] self, [f32] s) {
       return(ColorRGB(self.r * s, self.g * s, self.b * s))
     }
 
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     mix([ColorRGB] self, [ColorRGB] other, [f32] t) {
       [f32] inv{1.0 - t}
       return(ColorRGB(
@@ -56,7 +56,7 @@ namespace std {
       ))
     }
 
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     clamp([ColorRGB] self, [f32] minValue, [f32] maxValue) {
       return(ColorRGB(
         /std/math/clamp(self.r, minValue, maxValue),
@@ -65,7 +65,7 @@ namespace std {
       ))
     }
 
-    [return<ColorSRGB>]
+    [public return<ColorSRGB>]
     toSRGB([ColorRGB] self) {
       return(ColorSRGB(
         linearToSrgbChannel(self.r),
@@ -75,7 +75,7 @@ namespace std {
     }
   }
 
-  [struct]
+  [public struct]
   ColorRGBA() {
     [public f32] r{0.0}
     [public f32] g{0.0}
@@ -84,17 +84,17 @@ namespace std {
   }
 
   namespace ColorRGBA {
-    [return<ColorRGBA>]
+    [public return<ColorRGBA>]
     add([ColorRGBA] self, [ColorRGBA] other) {
       return(ColorRGBA(self.r + other.r, self.g + other.g, self.b + other.b, self.a + other.a))
     }
 
-    [return<ColorRGBA>]
+    [public return<ColorRGBA>]
     mulScalar([ColorRGBA] self, [f32] s) {
       return(ColorRGBA(self.r * s, self.g * s, self.b * s, self.a * s))
     }
 
-    [return<ColorRGBA>]
+    [public return<ColorRGBA>]
     mix([ColorRGBA] self, [ColorRGBA] other, [f32] t) {
       [f32] inv{1.0 - t}
       return(ColorRGBA(
@@ -105,7 +105,7 @@ namespace std {
       ))
     }
 
-    [return<ColorRGBA>]
+    [public return<ColorRGBA>]
     clamp([ColorRGBA] self, [f32] minValue, [f32] maxValue) {
       return(ColorRGBA(
         /std/math/clamp(self.r, minValue, maxValue),
@@ -115,7 +115,7 @@ namespace std {
       ))
     }
 
-    [return<ColorSRGBA>]
+    [public return<ColorSRGBA>]
     toSRGBA([ColorRGBA] self) {
       return(ColorSRGBA(
         linearToSrgbChannel(self.r),
@@ -126,7 +126,7 @@ namespace std {
     }
   }
 
-  [struct]
+  [public struct]
   ColorSRGB() {
     [public f32] r{0.0}
     [public f32] g{0.0}
@@ -134,7 +134,7 @@ namespace std {
   }
 
   namespace ColorSRGB {
-    [return<ColorRGB>]
+    [public return<ColorRGB>]
     toLinear([ColorSRGB] self) {
       return(ColorRGB(
         srgbToLinearChannel(self.r),
@@ -144,7 +144,7 @@ namespace std {
     }
   }
 
-  [struct]
+  [public struct]
   ColorSRGBA() {
     [public f32] r{0.0}
     [public f32] g{0.0}
@@ -153,7 +153,7 @@ namespace std {
   }
 
   namespace ColorSRGBA {
-    [return<ColorRGBA>]
+    [public return<ColorRGBA>]
     toLinear([ColorSRGBA] self) {
       return(ColorRGBA(
         srgbToLinearChannel(self.r),

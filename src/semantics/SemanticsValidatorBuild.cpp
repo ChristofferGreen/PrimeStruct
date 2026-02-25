@@ -13,6 +13,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   returnKinds_.clear();
   returnStructs_.clear();
   structNames_.clear();
+  publicDefinitions_.clear();
   paramsByDef_.clear();
 
   auto isMathBuiltinName = [&](const std::string &name) -> bool {
@@ -59,7 +60,26 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawWorkgroupSize = false;
     bool sawNoPadding = false;
     bool sawPlatformPadding = false;
+    bool sawVisibility = false;
+    bool isPublic = false;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "public" || transform.name == "private") {
+        if (!transform.templateArgs.empty()) {
+          error_ = transform.name + " transform does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error_ = transform.name + " transform does not accept arguments on " + def.fullPath;
+          return false;
+        }
+        if (sawVisibility) {
+          error_ = "definition visibility transforms are mutually exclusive: " + def.fullPath;
+          return false;
+        }
+        sawVisibility = true;
+        isPublic = (transform.name == "public");
+        continue;
+      }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
         if (!transform.templateArgs.empty()) {
           error_ = transform.name + " transform does not accept template arguments on " + def.fullPath;
@@ -304,6 +324,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
       }
     }
+    if (isPublic) {
+      publicDefinitions_.insert(def.fullPath);
+    }
     defMap_[def.fullPath] = &def;
   }
 
@@ -335,6 +358,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
         const std::string remainder = def.fullPath.substr(scopedPrefix.size());
         if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        if (publicDefinitions_.count(def.fullPath) == 0) {
           continue;
         }
         sawImmediateDefinition = true;
@@ -377,6 +403,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
         return false;
       }
       continue;
+    }
+    if (publicDefinitions_.count(importPath) == 0) {
+      error_ = "import path refers to private definition: " + importPath;
+      return false;
     }
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
     if (remainder.empty()) {

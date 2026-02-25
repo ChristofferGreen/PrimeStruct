@@ -28,7 +28,7 @@ TEST_CASE("compiles and runs include inside namespace") {
 TEST_CASE("compiles and runs include with import aliases") {
   const std::string libSource = R"(
 namespace lib {
-  [return<int>]
+  [public return<int>]
   add([i32] a, [i32] b) {
     return(plus(a, b))
   }

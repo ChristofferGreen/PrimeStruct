@@ -6,7 +6,7 @@ TEST_CASE("import brings immediate children into root") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -25,7 +25,7 @@ main() {
 TEST_CASE("import resolves definitions declared before import") {
   const std::string source = R"(
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -45,7 +45,7 @@ TEST_CASE("import resolves struct types and constructors") {
   const std::string source = R"(
 import /util
 namespace util {
-  [struct]
+  [public struct]
   Widget() {
     [i32] value{1i32}
   }
@@ -64,11 +64,11 @@ main() {
 TEST_CASE("import resolves methods on struct types") {
   const std::string source = R"(
 import /util
-[struct]
+[public struct]
 /util/Widget() {
   [i32] value{1i32}
 }
-[return<int>]
+[public return<int>]
 /util/Widget/get([Widget] self, [i32] value) {
   return(value)
 }
@@ -87,7 +87,7 @@ TEST_CASE("import aliases a single definition") {
   const std::string source = R"(
 import /util/inc
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -106,12 +106,12 @@ TEST_CASE("import does not alias nested definitions") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   immediate() {
     return(0i32)
   }
   namespace nested {
-    [return<int>]
+    [public return<int>]
     inner() {
       return(1i32)
     }
@@ -132,7 +132,7 @@ TEST_CASE("import aliases explicit nested definition path") {
 import /util/nested/inner
 namespace util {
   namespace nested {
-    [return<int>]
+    [public return<int>]
     inner() {
       return(1i32)
     }
@@ -152,12 +152,12 @@ TEST_CASE("import does not alias namespace blocks") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   immediate() {
     return(0i32)
   }
   namespace nested {
-    [return<int>]
+    [public return<int>]
     inner() {
       return(1i32)
     }
@@ -178,7 +178,7 @@ TEST_CASE("import rejects namespace-only path") {
 import /util
 namespace util {
   namespace nested {
-    [return<int>]
+    [public return<int>]
     inner() {
       return(1i32)
     }
@@ -198,7 +198,7 @@ TEST_CASE("import rejects /std/math without wildcard after semicolon") {
   const std::string source = R"(
 import /util; /std/math
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -217,7 +217,7 @@ TEST_CASE("import accepts whitespace-separated paths") {
   const std::string source = R"(
 import /util /std/math/*
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -236,7 +236,7 @@ TEST_CASE("import accepts semicolon-separated paths") {
   const std::string source = R"(
 import /util; /std/math/*
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -255,7 +255,7 @@ TEST_CASE("import accepts wildcard math and util paths") {
   const std::string source = R"(
 import /std/math/* /util/*
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -336,6 +336,44 @@ main() {
   CHECK(error.find("unknown import path: /util/missing") != std::string::npos);
 }
 
+TEST_CASE("import rejects private definition path") {
+  const std::string source = R"(
+import /util/inc
+namespace util {
+  [private return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(inc(4i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import path refers to private definition: /util/inc") != std::string::npos);
+}
+
+TEST_CASE("import rejects wildcard with only private children") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [private return<int>]
+  inc([i32] value) {
+    return(plus(value, 1i32))
+  }
+}
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown import path: /util/*") != std::string::npos);
+}
+
 TEST_CASE("import conflicts with existing root definitions") {
   const std::string source = R"(
 import /util
@@ -344,7 +382,7 @@ dup() {
   return(1i32)
 }
 namespace util {
-  [return<int>]
+  [public return<int>]
   dup() {
     return(2i32)
   }
@@ -363,7 +401,7 @@ TEST_CASE("import conflicts with root builtin names") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   plus([i32] value) {
     return(value)
   }
@@ -382,7 +420,7 @@ TEST_CASE("import rejects explicit root builtin alias") {
   const std::string source = R"(
 import /util/assign
 namespace util {
-  [return<void>]
+  [public return<void>]
   assign([i32] value) {
     return()
   }
@@ -401,13 +439,13 @@ TEST_CASE("import conflicts between namespaces") {
   const std::string source = R"(
 import /util, /tools
 namespace util {
-  [return<int>]
+  [public return<int>]
   dup() {
     return(1i32)
   }
 }
 namespace tools {
-  [return<int>]
+  [public return<int>]
   dup() {
     return(2i32)
   }
@@ -426,7 +464,7 @@ TEST_CASE("import resolves execution targets") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<void>]
+  [public return<void>]
   run([i32] count) {
     return()
   }
@@ -446,7 +484,7 @@ TEST_CASE("import accepts multiple paths in one statement") {
   const std::string source = R"(
 import /util, /std/math/*
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -465,7 +503,7 @@ TEST_CASE("import accepts comma-separated wildcards") {
   const std::string source = R"(
 import /std/math/*, /util/*
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -485,7 +523,7 @@ TEST_CASE("duplicate imports are ignored") {
 import /util, /util
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -503,7 +541,7 @@ main() {
 TEST_CASE("import works after definitions") {
   const std::string source = R"(
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -523,12 +561,12 @@ TEST_CASE("import ignores nested definitions") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   first() {
     return(1i32)
   }
   namespace nested {
-    [return<int>]
+    [public return<int>]
     second() {
       return(2i32)
     }
@@ -548,12 +586,12 @@ TEST_CASE("import rejects nested definitions in root") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   immediate() {
     return(0i32)
   }
   namespace nested {
-    [return<int>]
+    [public return<int>]
     second() {
       return(2i32)
     }

@@ -1,7 +1,7 @@
 TEST_CASE("compiles and runs import after definitions") {
   const std::string source = R"(
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -41,7 +41,7 @@ namespace pkg {
   }
 }
 namespace pkg {
-  [return<int>]
+  [public return<int>]
   add_one([i32] value) {
     return(plus(value, 1i32))
   }

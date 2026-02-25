@@ -184,7 +184,7 @@ main() {
   CHECK(error.find("binding visibility transforms are mutually exclusive") != std::string::npos);
 }
 
-TEST_CASE("visibility tags reject on definitions") {
+TEST_CASE("visibility tags accept on definitions") {
   const std::string source = R"(
 [public return<int>]
 main() {
@@ -192,8 +192,20 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("duplicate visibility tags reject on definitions") {
+  const std::string source = R"(
+[public private return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding visibility/static transforms are only valid on bindings") != std::string::npos);
+  CHECK(error.find("definition visibility transforms are mutually exclusive") != std::string::npos);
 }
 
 TEST_CASE("static tag rejects on definitions") {

@@ -92,7 +92,7 @@ Legend:
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
 
 **Docs Alignment**
-- ○ Reconcile definition visibility: docs describe `[public]/[private]` on definitions, but tests currently reject those transforms (binding-only).
+- ✓ Reconcile definition visibility: allow `[public]/[private]` on definitions and enforce import visibility.
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.
 - ✓ Document the `repeat(count) { ... }` statement builtin (count accepts integers or bool; non-positive counts skip the body).

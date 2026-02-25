@@ -123,7 +123,7 @@ TEST_CASE("compiles and runs native import alias in namespace") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   helper() {
     return(7i32)
   }
@@ -148,7 +148,7 @@ TEST_CASE("compiles and runs native import alias") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }
@@ -171,7 +171,7 @@ TEST_CASE("compiles and runs native with multiple imports") {
   const std::string source = R"(
 import /util, /std/math/*
 namespace util {
-  [return<int>]
+  [public return<int>]
   add([i32] a, [i32] b) {
     return(plus(a, b))
   }

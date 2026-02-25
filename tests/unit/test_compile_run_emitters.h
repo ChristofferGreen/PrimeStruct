@@ -314,7 +314,7 @@ TEST_CASE("compiles and runs import alias in C++ emitter") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   helper() {
     return(7i32)
   }
@@ -782,7 +782,7 @@ TEST_CASE("compiles and runs import aliases in C++ emitter") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   inc([i32] value) {
     return(plus(value, 1i32))
   }

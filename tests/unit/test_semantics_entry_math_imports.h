@@ -249,7 +249,7 @@ TEST_CASE("import rejects math builtin conflicts") {
 import /std/math/*
 import /util
 namespace util {
-  [return<f32>]
+  [public return<f32>]
   sin([f32] value) {
     return(value)
   }
@@ -268,7 +268,7 @@ TEST_CASE("import aliases namespace definitions") {
   const std::string source = R"(
 import /util
 namespace util {
-  [return<int>]
+  [public return<int>]
   add_one([i32] value) {
     return(plus(value, 1i32))
   }
@@ -287,12 +287,12 @@ TEST_CASE("import aliases namespace types and methods") {
   const std::string source = R"(
 import /util
 namespace util {
-  [struct]
+  [public struct]
   Thing() {
     [i32] value{1i32}
   }
 
-  [return<int>]
+  [public return<int>]
   /util/Thing/get([Thing] self) {
     return(7i32)
   }
