@@ -167,6 +167,55 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("convert rejects helper with wrong return type") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [i32] value{1i32}
+
+  [return<Other>]
+  Convert([i32] raw) {
+    return(Other())
+  }
+}
+
+[struct]
+Other() {
+  [i32] value{2i32}
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(5i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no conversion found for convert<Widget>") != std::string::npos);
+}
+
+TEST_CASE("convert rejects helper with wrong param count") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [i32] value{1i32}
+
+  [return<Widget>]
+  Convert() {
+    return(Widget())
+  }
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(5i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no conversion found for convert<Widget>") != std::string::npos);
+}
+
 TEST_CASE("convert rejects missing struct helper") {
   const std::string source = R"(
 [struct]

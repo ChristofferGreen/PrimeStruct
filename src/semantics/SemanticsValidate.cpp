@@ -3,9 +3,11 @@
 #include "SemanticsValidator.h"
 #include "primec/TransformRegistry.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -832,9 +834,7 @@ bool rewriteEnumDefinitions(Program &program, std::string &error) {
 
 bool rewriteConvertConstructors(Program &program, std::string &error) {
   std::unordered_set<std::string> structNames;
-  std::unordered_set<std::string> definitionPaths;
   for (const auto &def : program.definitions) {
-    definitionPaths.insert(def.fullPath);
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
     for (const auto &transform : def.transforms) {
@@ -914,6 +914,73 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     return {};
   };
 
+  auto resolveReturnStructTarget =
+      [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+    if (typeName == "Self") {
+      return structNames.count(namespacePrefix) > 0 ? namespacePrefix : std::string{};
+    }
+    if (typeName.find('<') != std::string::npos) {
+      return {};
+    }
+    std::string resolved = semantics::resolveStructTypePath(typeName, namespacePrefix, structNames);
+    if (!resolved.empty()) {
+      return resolved;
+    }
+    auto importIt = importAliases.find(typeName);
+    if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return {};
+  };
+
+  auto isConvertHelperPath = [](const std::string &helperBase, const std::string &path) -> bool {
+    if (path == helperBase) {
+      return true;
+    }
+    const std::string mangledPrefix = helperBase + "__t";
+    return path.rfind(mangledPrefix, 0) == 0;
+  };
+
+  auto convertHelperMatches = [&](const Definition &def, const std::string &targetStruct) -> bool {
+    if (def.parameters.size() != 1) {
+      return false;
+    }
+    bool sawReturn = false;
+    std::string returnType;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return") {
+        continue;
+      }
+      sawReturn = true;
+      if (transform.templateArgs.size() != 1) {
+        return false;
+      }
+      returnType = transform.templateArgs.front();
+      break;
+    }
+    if (!sawReturn || returnType.empty() || returnType == "auto") {
+      return false;
+    }
+    std::string resolvedReturn = resolveReturnStructTarget(returnType, def.namespacePrefix);
+    return !resolvedReturn.empty() && resolvedReturn == targetStruct;
+  };
+
+  auto collectConvertHelpers = [&](const std::string &structPath) -> std::vector<std::string> {
+    std::vector<std::string> matches;
+    const std::string helperBase = structPath + "/Convert";
+    for (const auto &def : program.definitions) {
+      if (!isConvertHelperPath(helperBase, def.fullPath)) {
+        continue;
+      }
+      if (!convertHelperMatches(def, structPath)) {
+        continue;
+      }
+      matches.push_back(def.fullPath);
+    }
+    std::sort(matches.begin(), matches.end());
+    return matches;
+  };
+
   auto rewriteExpr = [&](auto &self, Expr &expr) -> bool {
     for (auto &arg : expr.args) {
       if (!self(self, arg)) {
@@ -944,12 +1011,24 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     if (structPath.empty()) {
       return true;
     }
-    const std::string helperPath = structPath + "/Convert";
-    if (definitionPaths.count(helperPath) == 0) {
+    std::vector<std::string> helpers = collectConvertHelpers(structPath);
+    if (helpers.empty()) {
       error = "no conversion found for convert<" + targetName + ">";
       return false;
     }
-    expr.name = helperPath;
+    if (helpers.size() > 1) {
+      std::ostringstream message;
+      message << "ambiguous conversion for convert<" << targetName << ">: ";
+      for (size_t i = 0; i < helpers.size(); ++i) {
+        if (i > 0) {
+          message << ", ";
+        }
+        message << helpers[i];
+      }
+      error = message.str();
+      return false;
+    }
+    expr.name = helpers.front();
     expr.templateArgs.clear();
     return true;
   };
@@ -1057,9 +1136,6 @@ bool applySemanticTransforms(Program &program,
   if (!rewriteEnumDefinitions(program, error)) {
     return false;
   }
-  if (!rewriteConvertConstructors(program, error)) {
-    return false;
-  }
   for (auto &def : program.definitions) {
     if (!rewriteSharedScopeStatements(def.statements, error)) {
       return false;
@@ -1090,6 +1166,9 @@ bool Semantics::validate(Program &program,
     return false;
   }
   if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
+    return false;
+  }
+  if (!rewriteConvertConstructors(program, error)) {
     return false;
   }
   semantics::SemanticsValidator validator(program, entryPath, error, defaultEffects, entryDefaultEffects);

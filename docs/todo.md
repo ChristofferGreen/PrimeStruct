@@ -65,7 +65,7 @@ Legend:
 - ✓ Implement deterministic conversion semantics for `T{value}` (float -> int trunc+clamp, NaN -> 0, +/-Inf -> min/max; integer width sign/zero-extend or truncate) across VM/native/C++ backends.
 - ✓ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
 - ✓ Add user-defined convert constructors (resolve `convert<T>(u)` to `T.Convert(u)` for non-numeric targets) and tests.
-- ◐ Formalize and implement convert-constructor resolution rules (builtin fast-path, exact signature match, ambiguity diagnostics, visibility).
+- ◐ Formalize and implement convert-constructor resolution rules (builtin fast-path + signature/ambiguity done; visibility pending definition-level public/private support).
 - ✓ Enforce the core type set in semantic validation and backend filters (software numeric rejection now enforced in semantics; still need a full per-backend allowlist for other non-core envelopes).
 - ✓ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
 - ◐ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation; currently only top-level parameter `auto` with concrete argument/default inference).
@@ -92,6 +92,7 @@ Legend:
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
 
 **Docs Alignment**
+- ○ Reconcile definition visibility: docs describe `[public]/[private]` on definitions, but tests currently reject those transforms (binding-only).
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.
 - ✓ Document the `repeat(count) { ... }` statement builtin (count accepts integers or bool; non-positive counts skip the body).
