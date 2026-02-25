@@ -645,6 +645,10 @@ bool SemanticsValidator::buildParameters() {
       if (!parseBindingInfo(param, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
         return false;
       }
+      if (binding.typeName == "uninitialized") {
+        error_ = "uninitialized storage is not allowed on parameters: " + param.name;
+        return false;
+      }
       if (param.args.size() > 1) {
         error_ = "parameter defaults accept at most one argument: " + param.name;
         return false;

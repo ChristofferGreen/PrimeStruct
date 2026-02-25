@@ -954,6 +954,25 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return true;
     }
+    if (!expr.isMethodCall && isSimpleCallName(expr, "uninitialized")) {
+      if (hasNamedArguments(expr.argNames)) {
+        error_ = "named arguments not supported for builtin calls";
+        return false;
+      }
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        error_ = "uninitialized does not accept block arguments";
+        return false;
+      }
+      if (!expr.args.empty()) {
+        error_ = "uninitialized does not accept arguments";
+        return false;
+      }
+      if (expr.templateArgs.size() != 1) {
+        error_ = "uninitialized requires exactly one template argument";
+        return false;
+      }
+      return true;
+    }
     if (isBuiltinBlockCall(expr) && expr.hasBodyArguments) {
       if (!expr.args.empty() || !expr.templateArgs.empty() || hasNamedArguments(expr.argNames)) {
         error_ = "block expression does not accept arguments";

@@ -1038,6 +1038,10 @@ bool parseBindingInfo(const Expr &expr,
         error = "map requires exactly two template arguments";
         return false;
       }
+      if (transform.name == "uninitialized" && transform.templateArgs.size() != 1) {
+        error = "uninitialized requires exactly one template argument";
+        return false;
+      }
       typeName = transform.name;
       typeHasTemplate = true;
       info.typeTemplateArg = joinTemplateArgs(transform.templateArgs);

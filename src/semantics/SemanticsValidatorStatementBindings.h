@@ -87,6 +87,29 @@
     if (!hasExplicitBindingTypeTransform(stmt)) {
       (void)inferBindingTypeFromInitializer(initializer, params, locals, info);
     }
+    if (info.typeName == "uninitialized") {
+      if (info.typeTemplateArg.empty()) {
+        error_ = "uninitialized requires exactly one template argument";
+        return false;
+      }
+      if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || initializer.isBinding) {
+        error_ = "uninitialized bindings require uninitialized<T>() initializer";
+        return false;
+      }
+      if (initializer.name != "uninitialized" && initializer.name != "/uninitialized") {
+        error_ = "uninitialized bindings require uninitialized<T>() initializer";
+        return false;
+      }
+      if (initializer.hasBodyArguments || !initializer.bodyArguments.empty() || !initializer.args.empty()) {
+        error_ = "uninitialized does not accept arguments";
+        return false;
+      }
+      if (initializer.templateArgs.size() != 1 ||
+          !errorTypesMatch(info.typeTemplateArg, initializer.templateArgs.front(), namespacePrefix)) {
+        error_ = "uninitialized initializer type mismatch";
+        return false;
+      }
+    }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();
       if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {

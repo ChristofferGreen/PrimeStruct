@@ -261,6 +261,43 @@ TEST_CASE("match call behaves like if") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("uninitialized binding accepts constructor") {
+  primec::Program program;
+  primec::Expr init = makeCall("uninitialized");
+  init.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized parameters are rejected") {
+  primec::Program program;
+  primec::Expr param = makeBinding("value", {makeTransform("uninitialized", std::string("i32"))}, {});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {makeCall("/return")},
+                                               {param}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized storage is not allowed on parameters") != std::string::npos);
+}
+
+TEST_CASE("uninitialized initializer type mismatch fails") {
+  primec::Program program;
+  primec::Expr init = makeCall("uninitialized");
+  init.templateArgs = {"i64"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {init});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("uninitialized initializer type mismatch") != std::string::npos);
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
