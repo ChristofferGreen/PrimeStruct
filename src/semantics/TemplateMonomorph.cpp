@@ -515,6 +515,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
       continue;
     }
     const Expr *argExpr = i < orderedArgs.size() ? orderedArgs[i] : nullptr;
+    if (!argExpr && param.args.size() == 1) {
+      argExpr = &param.args.front();
+    }
     if (!argExpr) {
       error = "implicit template arguments require values on " + def.fullPath;
       return false;

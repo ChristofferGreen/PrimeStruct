@@ -212,6 +212,41 @@ TEST_CASE("implicit auto template inference for calls") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("implicit auto template inference uses defaults") {
+  primec::Program program;
+  primec::Expr param = makeBinding("value", {makeTransform("auto")}, {makeLiteral(3)});
+  primec::Definition identity =
+      makeDefinition("/identity", {makeTransform("return", std::string("auto"))},
+                     {makeCall("/return", {makeName("value")})},
+                     {param});
+  program.definitions.push_back(identity);
+
+  primec::Expr call = makeCall("/identity");
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("i32"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("implicit auto template inference honors named arguments") {
+  primec::Program program;
+  primec::Definition pick =
+      makeDefinition("/pick", {makeTransform("return", std::string("auto"))},
+                     {makeCall("/return", {makeName("first")})},
+                     {makeParameter("first", "auto"), makeParameter("second", "auto")});
+  program.definitions.push_back(pick);
+
+  std::vector<primec::Expr> args = {makeLiteral(2), makeLiteral(1)};
+  std::vector<std::optional<std::string>> argNames = {std::string("second"), std::string("first")};
+  primec::Expr call = makeCall("/pick", args, argNames);
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("i32"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =
