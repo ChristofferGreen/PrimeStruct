@@ -43,6 +43,12 @@ parameter/return positions it introduces implicit template parameters that are r
 canonical form after monomorphisation carries explicit envelopes. The base-level core passed to lowering contains
 no templates or `auto`. When `--no-transforms` is active, source is expected to already be in canonical form.
 
+Language levels (0.Concrete → 3.Surface) follow the same ordering as the compiler pipeline:
+- **0.Concrete:** canonical envelopes only, no text transforms, no templates, no `auto`.
+- **1.Template:** canonical envelopes plus explicit templates.
+- **2.Inference:** canonical envelopes plus `auto`/omitted envelopes (implicit template inference).
+- **3.Surface:** surface syntax + text transforms that rewrite into canonical forms.
+
 Import expansion runs before type checking and template inference. All definitions/executions live in a single
 compilation unit after imports are expanded, so implicit-template inference may use call sites anywhere in the
 expanded source; there are no module boundaries.

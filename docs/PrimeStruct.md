@@ -11,6 +11,13 @@ PrimeStruct is built around a simple idea: program meaning comes from two primit
 
 Each stage halts on error (reporting diagnostics immediately) and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just before failure. Text transforms are configured via `--text-transforms=<list>`; the default list enables `collections`, `operators`, `implicit-utf8` (auto-appends `utf8` to bare string literals), and `implicit-i32` (auto-appends `i32` to bare integer literals). Order matters: `collections` runs before `operators` so map literal `key=value` pairs are rewritten as key/value arguments rather than assignment expressions. Semantic transforms are configured via `--semantic-transforms=<list>`. `--transform-list=<list>` is an auto-deducing shorthand that routes each transform name to its declared phase (text or semantic); ambiguous names are errors. Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require canonical syntax.
 
+### Language levels (0.Concrete → 3.Surface)
+PrimeStruct is organized into four language levels. Each higher level desugars into the level below it.
+- **0.Concrete:** fully explicit envelopes only. No text transforms, no templates, no `auto`. Explicit `return<T>`, explicit literal suffixes, canonical calls (`if(cond, then(){...}, else(){...})`, `loop/while/for` as calls).
+- **1.Template:** canonical syntax plus explicit templates (`array<i32>`, `Pointer<T>`, `convert<T>(...)`). No `auto`.
+- **2.Inference:** canonical syntax plus `auto`/omitted envelopes. Implicit template parameters are resolved per call site, then lowered to explicit templates.
+- **3.Surface:** surface syntax and text transforms (operator sugar, collection literals, indexing sugar, `if(...) {}` blocks, etc.) that rewrite into canonical forms.
+
 ### Compilation model (v1)
 - **Whole-program by default:** `import` expansion produces a single compilation unit, and semantic resolution runs over that full unit; implicit-template inference may use call sites anywhere in the expanded source. The v1 toolchain prioritises fast full rebuilds over incremental compilation.
 - **Envelope stream boundary:** high-level features are lowered into the canonical envelope form, and backends consume this stable envelope stream. Emission can stream envelopes directly into IR/bytecode or native codegen without reintroducing surface syntax.

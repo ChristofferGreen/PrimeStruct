@@ -1,0 +1,13 @@
+[return<int> effects(io_out)]
+main() {
+  [Result<FileError>] status{ Result.ok() }
+  [bool] is_error{ Result.error(status) }
+  [string] message{ Result.why(status) }
+  if(is_error) {
+    print_line("status: error"utf8)
+    print_line(message)
+  } else {
+    print_line("status: ok"utf8)
+  }
+  return(0i32)
+}

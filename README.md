@@ -96,12 +96,12 @@ Release build:
 
 Compile to a native executable:
 
-    primec --emit=native examples/hello_world.prime -o hello
+    primec --emit=native examples/0.Concrete/hello_world.prime -o hello
     ./hello
 
 Run via the VM:
 
-    primevm examples/hello_world.prime --entry /main
+    primevm examples/0.Concrete/hello_world.prime --entry /main
 
 ------------------------------------------------------------------------
 
@@ -259,11 +259,11 @@ See `docs/PrimeStruct.md` for detailed backend constraints and effect allowlists
 
 ## Examples
 
-See `examples/` for runnable samples. Highlights:
+See `examples/` for runnable samples organized by language level (0.Concrete → 3.Surface). Highlights:
 
-- `examples/hello_world.prime` – minimal entry definition
-- `examples/if_else.prime` – `if` in statement position
-- `examples/collections.prime` – array/vector/map literals
+- `examples/0.Concrete/hello_world.prime` – minimal entry definition
+- `examples/3.Surface/if_else.prime` – `if` in statement position
+- `examples/3.Surface/collections.prime` – array/vector/map literals
 
 ------------------------------------------------------------------------
 
