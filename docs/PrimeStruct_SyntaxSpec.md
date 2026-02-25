@@ -59,6 +59,8 @@ expanded source; there are no module boundaries.
 
 Transform template lists accept one or more envelope entries, so generic binding envelopes can be
 spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i32, i32>] pairs{...}`).
+Trait constraints are also encoded as transforms on definitions (e.g. `[Additive<i32>]`, `[Indexable<array<i32>, i32>]`);
+they follow the same transform-list grammar and are validated during semantic analysis.
 
 The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after import expansion/text transforms,
 the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text

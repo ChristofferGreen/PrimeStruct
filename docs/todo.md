@@ -102,7 +102,7 @@ Legend:
 - ✓ Document canonical string normalization: parser emits `raw_utf8` / `raw_ascii` with unescaped content, not the escaped `"..."utf8/ascii` form described in the spec.
 - ✓ Document vector helper calls (`push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap`) as statement-only or allow them in expression contexts.
 - ✓ Add missing `/std/math/*` builtins present in code: `floor`, `ceil`, `round`, `trunc`, `fract`, `is_nan`, `is_inf`, `is_finite`.
-- ○ Document trait constraint syntax in `docs/PrimeStruct_SyntaxSpec.md`.
+- ✓ Document trait constraint syntax in `docs/PrimeStruct_SyntaxSpec.md`.
 
 **Spec Completion & Open Design**
 - ✓ Finalize the project charter/deferred-features list in `docs/PrimeStruct.md`.

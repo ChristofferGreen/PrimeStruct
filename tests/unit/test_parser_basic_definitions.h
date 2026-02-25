@@ -444,6 +444,27 @@ main() {
   CHECK(program.definitions[0].transforms[1].name == "effects");
 }
 
+TEST_CASE("parses trait constraint transforms") {
+  const std::string source = R"(
+[return<int> Additive<i32> Indexable<array<i32>, i32>]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 3);
+  CHECK(transforms[0].name == "return");
+  CHECK(transforms[1].name == "Additive");
+  REQUIRE(transforms[1].templateArgs.size() == 1);
+  CHECK(transforms[1].templateArgs[0] == "i32");
+  CHECK(transforms[2].name == "Indexable");
+  REQUIRE(transforms[2].templateArgs.size() == 2);
+  CHECK(transforms[2].templateArgs[0] == "array<i32>");
+  CHECK(transforms[2].templateArgs[1] == "i32");
+}
+
 TEST_CASE("parses transform groups") {
   const std::string source = R"(
 [text(operators, collections) semantic(return<int>, effects(io_out))]
