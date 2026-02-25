@@ -29,7 +29,7 @@ bool isIgnorableToken(TokenKind kind) {
 }
 
 bool isControlKeyword(const std::string &name) {
-  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for";
+  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for" || name == "match";
 }
 
 bool isLoopFormKeyword(const std::string &name) {
@@ -37,7 +37,7 @@ bool isLoopFormKeyword(const std::string &name) {
 }
 
 bool isSurfaceControlFlowBody(const std::string &name) {
-  return name == "if" || isLoopFormKeyword(name);
+  return name == "if" || name == "match" || isLoopFormKeyword(name);
 }
 
 std::string stripNumericSeparators(const std::string &text) {

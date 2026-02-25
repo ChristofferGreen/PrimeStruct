@@ -247,6 +247,20 @@ TEST_CASE("implicit auto template inference honors named arguments") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("match call behaves like if") {
+  primec::Program program;
+  primec::Expr thenCall = makeCall("then", {}, {}, {makeLiteral(1)});
+  thenCall.hasBodyArguments = true;
+  primec::Expr elseCall = makeCall("else", {}, {}, {makeLiteral(2)});
+  elseCall.hasBodyArguments = true;
+  primec::Expr matchCall = makeCall("match", {makeBool(true), thenCall, elseCall});
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("int"))}, {makeCall("/return", {matchCall})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("implicit auto parameters reject templated definitions") {
   primec::Program program;
   primec::Definition wrap =

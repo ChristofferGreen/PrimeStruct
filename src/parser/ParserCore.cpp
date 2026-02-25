@@ -16,7 +16,7 @@ bool isIgnorableToken(TokenKind kind) {
 }
 
 bool isControlKeyword(const std::string &name) {
-  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for";
+  return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for" || name == "match";
 }
 
 bool isLoopFormKeyword(const std::string &name) {

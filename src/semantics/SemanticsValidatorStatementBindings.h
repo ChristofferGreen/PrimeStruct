@@ -180,16 +180,17 @@
     return true;
   }
   if (isIfCall(stmt)) {
+    const std::string keyword = isSimpleCallName(stmt, "match") ? "match" : "if";
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
       return false;
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = "if does not accept trailing block arguments";
+      error_ = keyword + " does not accept trailing block arguments";
       return false;
     }
     if (stmt.args.size() != 3) {
-      error_ = "if requires condition, then, else";
+      error_ = keyword + " requires condition, then, else";
       return false;
     }
     const Expr &cond = stmt.args[0];
@@ -200,7 +201,7 @@
     }
     ReturnKind condKind = inferExprReturnKind(cond, params, locals);
     if (condKind != ReturnKind::Bool) {
-      error_ = "if condition requires bool";
+      error_ = keyword + " condition requires bool";
       return false;
     }
     auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
@@ -217,7 +218,7 @@
     };
     auto validateBranch = [&](const Expr &branch) -> bool {
       if (!isIfBlockEnvelope(branch)) {
-        error_ = "if branches require block envelopes";
+        error_ = keyword + " branches require block envelopes";
         return false;
       }
       std::unordered_map<std::string, BindingInfo> branchLocals = locals;

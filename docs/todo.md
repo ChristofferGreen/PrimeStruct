@@ -53,7 +53,7 @@ Legend:
 - ✓ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ✓ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
 - ✓ Define enum value access surface (static field access via type name) and add tests.
-- ○ Implement `match` expressions (syntax, exhaustive type checking, and lowering).
+- ◐ Implement `match` expressions (syntax, exhaustive type checking, and lowering; currently aliases `if` for bool conditions with then/else blocks).
 - ○ Define `uninitialized<T>` storage plus `init`/`drop`/`take`/`borrow` helpers (required for `Maybe<T>` and other explicit storage patterns).
 - ○ Define `Maybe<T>` (optional value) using uninitialized storage + tag; add docs and tests.
 - ○ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch.

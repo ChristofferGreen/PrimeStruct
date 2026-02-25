@@ -741,16 +741,17 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       effectScope.emplace(*this, std::move(executionEffects));
     }
     if (isIfCall(expr)) {
+      const std::string keyword = isSimpleCallName(expr, "match") ? "match" : "if";
       if (hasNamedArguments(expr.argNames)) {
         error_ = "named arguments not supported for builtin calls";
         return false;
       }
       if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-        error_ = "if does not accept trailing block arguments";
+        error_ = keyword + " does not accept trailing block arguments";
         return false;
       }
       if (expr.args.size() != 3) {
-        error_ = "if requires condition, then, else";
+        error_ = keyword + " requires condition, then, else";
         return false;
       }
       const Expr &cond = expr.args[0];
@@ -761,7 +762,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       ReturnKind condKind = inferExprReturnKind(cond, params, locals);
       if (condKind != ReturnKind::Bool) {
-        error_ = "if condition requires bool";
+        error_ = keyword + " condition requires bool";
         return false;
       }
       auto isStringValue = [&](const Expr &valueExpr,
@@ -921,13 +922,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             if (isStructConstructorValueExpr(*valueExpr)) {
               kindOut = ReturnKind::Unknown;
             } else {
-              error_ = "if branches must produce a value";
+              error_ = keyword + " branches must produce a value";
               return false;
             }
           }
           return true;
         }
-        error_ = "if branches require block envelopes";
+        error_ = keyword + " branches require block envelopes";
         return false;
       };
 
@@ -942,13 +943,13 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       if (thenIsString != elseIsString) {
-        error_ = "if branches must return compatible types";
+        error_ = keyword + " branches must return compatible types";
         return false;
       }
 
       ReturnKind combined = inferExprReturnKind(expr, params, locals);
       if (thenKind != ReturnKind::Unknown && elseKind != ReturnKind::Unknown && combined == ReturnKind::Unknown) {
-        error_ = "if branches must return compatible types";
+        error_ = keyword + " branches must return compatible types";
         return false;
       }
       return true;

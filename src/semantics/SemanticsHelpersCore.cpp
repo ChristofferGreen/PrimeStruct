@@ -740,7 +740,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
 }
 
 bool isIfCall(const Expr &expr) {
-  return isSimpleCallName(expr, "if");
+  return isSimpleCallName(expr, "if") || isSimpleCallName(expr, "match");
 }
 
 bool isReturnCall(const Expr &expr) {

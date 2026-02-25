@@ -92,6 +92,21 @@ if() {
   CHECK(error.find("reserved keyword") != std::string::npos);
 }
 
+TEST_CASE("match keyword cannot name definition") {
+  const std::string source = R"(
+[return<int>]
+match() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword") != std::string::npos);
+}
+
 TEST_CASE("reserved keyword cannot name parameter") {
   const std::string source = R"(
 [return<int>]
