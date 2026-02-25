@@ -473,6 +473,48 @@ TEST_CASE("uninitialized storage must be dropped before end of scope") {
   CHECK(error.find("uninitialized storage must be dropped before end of scope") != std::string::npos);
 }
 
+TEST_CASE("uninitialized return requires drop") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, initCall, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return requires uninitialized storage to be dropped") != std::string::npos);
+}
+
+TEST_CASE("uninitialized non-void return requires drop") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, makeCall("/return", {makeLiteral(7)})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return requires uninitialized storage to be dropped") != std::string::npos);
+}
+
+TEST_CASE("uninitialized drop before non-void return passes") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr dropCall = makeCall("drop", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, dropCall, makeCall("/return", {makeLiteral(7)})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");
