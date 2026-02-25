@@ -11,6 +11,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("return auto infers value type") {
+  const std::string source = R"(
+[return<auto>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("return auto conflicts on mixed types") {
+  const std::string source = R"(
+[return<auto>]
+main() {
+  if(true,
+    then(){ return(1i32) },
+    else(){ return(1.5f) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("conflicting return types on /main") != std::string::npos);
+}
+
+TEST_CASE("return auto conflicts on mixed call sites") {
+  const std::string source = R"(
+[return<auto>]
+value_int() {
+  return(1i32)
+}
+
+[return<auto>]
+value_float() {
+  return(1.5f)
+}
+
+[return<auto>]
+main() {
+  if(true,
+    then(){ return(value_int()) },
+    else(){ return(value_float()) })
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("conflicting return types on /main") != std::string::npos);
+}
+
 TEST_CASE("infers array return type without transform") {
   const std::string source = R"(
 main() {
@@ -57,6 +107,30 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("return auto without return is diagnostic") {
+  const std::string source = R"(
+[return<auto>]
+main() {
+  [i32] value{1i32}
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unable to infer return type on /main") != std::string::npos);
+}
+
+TEST_CASE("return inference requires inferable binding types") {
+  const std::string source = R"(
+main() {
+  value{if(true, then(){}, else(){})}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding requires explicit type or inferable initializer: value") != std::string::npos);
 }
 
 TEST_CASE("infers float return type without transform") {

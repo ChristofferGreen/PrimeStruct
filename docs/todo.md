@@ -14,19 +14,19 @@ Legend:
 - ✓ Apply `single_type_to_return` via semantic transforms or per-definition markers (it is currently toggled via the text filter list).
 - ✓ Document `--emit=ir` (PSIR bytecode output) in the docs or remove it from the CLI.
 - ✓ Enforce canonical-only parsing when `--no-transforms` is active (disable parser sugar like `if(...) {}` / `value[index]` and require explicit return transforms); currently still accepts surface forms.
-- ○ Replace `include` with unified `import` in the parser (support `import<...>` for source expansion and `import /path/*` for namespace exposure).
-- ○ Rework include resolver into an import resolver (expand `import<...>` before transforms/inference).
-- ○ Implement import resolver version-selection rules (1/2-part “latest matching” vs 3-part exact), `_`-prefixed privacy rejection, and duplicate import handling + tests.
-- ○ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
+- ✓ Replace `include` with unified `import` in the parser (support `import<...>` for source expansion and `import /path/*` for namespace exposure; parser rejects `include` directives, include resolver + text filter pipeline accept `import<...>`).
+- ✓ Rework include resolver into an import resolver (expand `import<...>` before transforms/inference; `import<...>` now expands, including versioned entries).
+- ✓ Implement import resolver version-selection rules (1/2-part “latest matching” vs 3-part exact), `_`-prefixed privacy rejection, and duplicate import handling + tests.
+- ✓ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.
 - ✓ Treat commas as optional separators everywhere the SyntaxSpec treats them as whitespace (statement lists and binding initializers, not just argument/template lists).
 - ✓ Allow trailing separators (comma/semicolon) in lists where the SyntaxSpec permits them; parser rejects trailing commas and semicolons entirely.
 - ✓ Allow whitespace-separated import source entries (grammar allows separators to be optional; import lists currently require commas).
-- ○ Remove `include` syntax and unify `import` to cover source expansion (`import<...>`) plus namespace exposure (`import /path/*`).
+- ✓ Remove `include` syntax and unify `import` to cover source expansion (`import<...>`) plus namespace exposure (`import /path/*`; `import<...>` now expands like includes; `include` rejected by parser and resolver).
 - ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/import resolver currently allow them).
-- ○ Enforce reserved keyword `auto` in identifiers and slash paths (parser/import resolver currently allow it).
+- ✓ Enforce reserved keyword `auto` in identifiers and slash paths (parser/import resolver currently allow it).
 - ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ✓ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ✓ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
@@ -41,9 +41,9 @@ Legend:
 - ✓ Add template monomorphization for user-defined definitions (templates are parsed but only builtins/collections use them today).
 - ✓ Complete struct lowering (layout metadata, alignment enforcement, `Create`/`Destroy` semantics, and backend emission).
 - ✓ Implement `copy`/`public`/`private`/`static` binding semantics and metadata (currently validated but unused).
-- ○ Enforce definition export visibility: definitions are private by default and only `[public]` definitions are importable.
-- ○ Implement `[profile(...)]` transform parsing and validation (per-definition backend profile gating).
-- ○ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
+- ✓ Enforce definition export visibility: definitions are private by default and only `[public]` definitions are importable.
+- ✓ Implement `[profile(...)]` transform parsing and validation (per-definition backend profile gating).
+- ✓ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
 - ○ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ○ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ○ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.
@@ -56,18 +56,21 @@ Legend:
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
 - ✓ Align default effects behavior: docs say entry defaults include `io_out`, but code applies no default effects unless `--default-effects` is provided.
 - ✓ Implement binding initializer block semantics: `{ ... }` should allow multi-statement blocks and `return(value)` with last-expression value; current parser treats multiple expressions as constructor args (requires explicit type) and forbids `return`.
-- ○ Implement deterministic conversion semantics for `T{value}` (float -> int trunc+clamp, NaN -> 0, +/-Inf -> min/max; integer width sign/zero-extend or truncate) across VM/native/C++ backends.
-- ○ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
-- ○ Enforce the core type set in semantic validation and backend filters (reject non-core envelopes unless the backend explicitly supports them).
-- ○ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
+- ✓ Implement deterministic conversion semantics for `T{value}` (float -> int trunc+clamp, NaN -> 0, +/-Inf -> min/max; integer width sign/zero-extend or truncate) across VM/native/C++ backends.
+- ✓ Add conversion edge-case tests (NaN/Inf, out-of-range, narrowing).
+- ✓ Enforce the core type set in semantic validation and backend filters (software numeric rejection now enforced in semantics; still need a full per-backend allowlist for other non-core envelopes).
+- ✓ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
 - ○ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation).
-- ○ Enforce that templates/`auto` do not reach the base-level tree before lowering.
-- ○ Enforce diagnostics for unresolved inference on omitted binding envelopes and `auto` bindings/returns (no fallback); emit diagnostics on unresolved or conflicting inference.
-- ○ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
+- ✓ Enforce that templates/`auto` do not reach the base-level tree before lowering (IR lowerer now treats `return<auto>` as inferred returns; templated definitions/executions are rejected and `auto` bindings fail during IR lowering; semantics also rejects templated executions).
+- ◐ Enforce diagnostics for unresolved inference on omitted binding envelopes and `auto` bindings/returns (no fallback); emit diagnostics on unresolved or conflicting inference (binding inference now enforces explicit types or inferable defaults, including during return inference; Result initializers require explicit binding types; IR lowerer fallback removed to keep unknown binding inference from defaulting; `auto` bindings/returns now route through inference diagnostics; lambda initializers now require explicit binding types; struct field access/layout now infer `auto` from initializers; `return<auto>` now requires at least one `return` statement).
+- ✓ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
 - ✓ Add stdlib vector types (`Vec2`, `Vec3`, `Vec4`) with member methods (`length`, `normalize`, `toNormalized`, etc.).
 - ✓ Add stdlib color types (`ColorRGB`, `ColorRGBA`, `ColorSRGB`, `ColorSRGBA`) as distinct types with color-space helpers and per-channel ops.
 - ✓ Implement `Result<Error>` / `Result<T, Error>` plus postfix `?` propagation and `on_error<ErrorType, Handler>(args...)` semantics (local-scope-only handlers, compile error if missing).
-- ○ Implement `Result` helper surface (`Result.error`, `Result.why`, `Result.map`, `Result.and_then`, `Result.map2`) and add tests.
+- ✓ Implement `Result` helper surface (`Result.error`/`Result.why`/`Result.map`/`Result.and_then`/`Result.map2`) and add tests.
+- ✓ Add VM/native lowering for `Result.map`/`Result.and_then`/`Result.map2`.
+- ✓ Add VM/native Result helper tests.
+- ○ Generalize `Result.why` beyond `FileError` (define error-to-string hooks for custom error types).
 - ✓ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
 - ✓ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
 

@@ -1104,6 +1104,17 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     error_ = "return type inference requires explicit annotation on " + def.fullPath;
     return false;
   }
+  bool hasReturnTransform = false;
+  bool hasReturnAuto = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    hasReturnTransform = true;
+    if (transform.templateArgs.front() == "auto") {
+      hasReturnAuto = true;
+    }
+  }
   ReturnKind inferred = ReturnKind::Unknown;
   std::string inferredStructPath;
   bool sawReturn = false;
@@ -1267,6 +1278,12 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     }
   }
   if (!sawReturn) {
+    if (hasReturnTransform && hasReturnAuto) {
+      if (error_.empty()) {
+        error_ = "unable to infer return type on " + def.fullPath;
+      }
+      return false;
+    }
     kindIt->second = ReturnKind::Void;
   } else if (inferred == ReturnKind::Unknown) {
     if (error_.empty()) {
