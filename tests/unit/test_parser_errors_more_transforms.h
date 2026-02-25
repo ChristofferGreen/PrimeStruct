@@ -275,20 +275,21 @@ main() {
   CHECK(error.find("if statement cannot have transforms") != std::string::npos);
 }
 
-TEST_CASE("execution without parentheses fails") {
+TEST_CASE("definition without parameter list is allowed") {
   const std::string source = R"(
 [return<int>]
-main() {
+main {
   return(1i32)
 }
-execute_task
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected '(' after identifier") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/main");
 }
 
 TEST_CASE("return missing parentheses fails") {

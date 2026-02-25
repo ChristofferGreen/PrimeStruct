@@ -44,6 +44,8 @@ build and layout solidify.
 - **Chrono:** use `std::chrono` types for durations/timeouts.
 - **Logging:** use a centralized logger (to be defined) instead of `printf/std::cout` in
   production paths.
+- **Parser disambiguation:** in statement position, `name{...}` is parsed as a binding; nested
+  definitions must use `name()` to avoid ambiguity.
 - **IR stability:** avoid silent changes to serialized IR; include versioning or migration
   notes when the format changes.
 - **Determinism:** no unordered iteration that affects outputs; sort keys before emitting

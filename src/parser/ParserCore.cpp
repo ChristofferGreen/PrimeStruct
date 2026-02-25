@@ -19,6 +19,14 @@ bool isControlKeyword(const std::string &name) {
   return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for" || name == "match";
 }
 
+bool isBindingOnlyTransformName(const std::string &name) {
+  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" || name == "align_kbytes";
+}
+
+bool isDefinitionOnlyStructTransform(const std::string &name) {
+  return isStructTransformName(name) && !isBindingAuxTransformName(name);
+}
+
 bool isLoopFormKeyword(const std::string &name) {
   return name == "loop" || name == "while" || name == "for";
 }
@@ -300,7 +308,25 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
       hasStructTransform = true;
     }
   }
+  bool hasDefinitionOnlyStructTransform = false;
+  for (const auto &transform : transforms) {
+    if (isDefinitionOnlyStructTransform(transform.name)) {
+      hasDefinitionOnlyStructTransform = true;
+      break;
+    }
+  }
+  const bool hasBindingTypeTransform = hasExplicitBindingTypeTransform(transforms);
+  bool hasBindingOnlyTransform = false;
+  for (const auto &transform : transforms) {
+    if (isBindingOnlyTransformName(transform.name)) {
+      hasBindingOnlyTransform = true;
+      break;
+    }
+  }
   if (match(TokenKind::LBrace)) {
+    if ((hasBindingTypeTransform || hasBindingOnlyTransform) && !hasReturnTransform && !hasDefinitionOnlyStructTransform) {
+      return fail("expected '(' after identifier; bindings are only allowed inside definition bodies or parameter lists");
+    }
     if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasStructTransform) {
       return fail("definition requires explicit return transform in canonical mode");
     }
@@ -661,6 +687,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
       return false;
     }
   }
+
   bool hasReturnTransform = false;
   bool hasStructTransform = false;
   for (const auto &transform : transforms) {
@@ -672,17 +699,17 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
     }
   }
 
+  if (name.text == "repeat" && !hasReturnTransform && !hasStructTransform) {
+    pos_ = savedPos;
+    return true;
+  }
+
   if (!match(TokenKind::LParen)) {
     pos_ = savedPos;
     return true;
   }
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
-  }
-
-  if (name.text == "repeat" && !hasReturnTransform && !hasStructTransform) {
-    pos_ = savedPos;
-    return true;
   }
 
   bool paramsAreIdentifiers = false;
