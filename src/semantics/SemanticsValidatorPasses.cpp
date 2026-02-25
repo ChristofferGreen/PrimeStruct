@@ -5,6 +5,7 @@
 #include <cctype>
 #include <functional>
 #include <limits>
+#include <optional>
 
 namespace primec::semantics {
 
@@ -263,6 +264,14 @@ bool SemanticsValidator::validateDefinitions() {
         return false;
       }
     }
+    if (kind == ReturnKind::Void) {
+      std::optional<std::string> uninitError =
+          validateUninitializedDefiniteState(defParams, def.statements);
+      if (uninitError.has_value()) {
+        error_ = *uninitError;
+        return false;
+      }
+    }
     if (kind != ReturnKind::Void && !isStructDefinition(def)) {
       bool allPathsReturn = blockAlwaysReturns(def.statements);
       if (!allPathsReturn) {
@@ -277,6 +286,248 @@ bool SemanticsValidator::validateDefinitions() {
   }
   currentDefinitionPath_.clear();
   return true;
+}
+
+std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteState(
+    const std::vector<ParameterInfo> &params,
+    const std::vector<Expr> &statements) {
+  enum class UninitState { Uninitialized, Initialized, Unknown };
+  using StateMap = std::unordered_map<std::string, UninitState>;
+
+  auto isUninitializedBinding = [](const BindingInfo &binding) -> bool {
+    return binding.typeName == "uninitialized" && !binding.typeTemplateArg.empty();
+  };
+
+  auto firstNonUninitialized = [&](const StateMap &states) -> std::optional<std::string> {
+    std::vector<std::string> names;
+    names.reserve(states.size());
+    for (const auto &entry : states) {
+      if (entry.second != UninitState::Uninitialized) {
+        names.push_back(entry.first);
+      }
+    }
+    if (names.empty()) {
+      return std::nullopt;
+    }
+    std::sort(names.begin(), names.end());
+    return names.front();
+  };
+
+  auto mergeStates = [&](const StateMap &base, const StateMap &left, const StateMap &right) -> StateMap {
+    StateMap merged = base;
+    for (const auto &entry : base) {
+      const auto leftIt = left.find(entry.first);
+      const auto rightIt = right.find(entry.first);
+      if (leftIt == left.end() || rightIt == right.end()) {
+        merged[entry.first] = UninitState::Unknown;
+        continue;
+      }
+      merged[entry.first] = (leftIt->second == rightIt->second) ? leftIt->second : UninitState::Unknown;
+    }
+    return merged;
+  };
+
+  std::function<std::optional<std::string>(const Expr &,
+                                           std::unordered_map<std::string, BindingInfo> &,
+                                           StateMap &)>
+      analyzeStatement;
+
+  std::function<std::optional<std::string>(const std::vector<Expr> &,
+                                           std::unordered_map<std::string, BindingInfo>,
+                                           StateMap,
+                                           StateMap &)>
+      analyzeStatements;
+
+  analyzeStatements = [&](const std::vector<Expr> &stmts,
+                          std::unordered_map<std::string, BindingInfo> localsIn,
+                          StateMap statesIn,
+                          StateMap &statesOut) -> std::optional<std::string> {
+    for (const auto &stmt : stmts) {
+      if (auto err = analyzeStatement(stmt, localsIn, statesIn)) {
+        return err;
+      }
+    }
+    statesOut = std::move(statesIn);
+    return std::nullopt;
+  };
+
+  analyzeStatement = [&](const Expr &stmt,
+                         std::unordered_map<std::string, BindingInfo> &localsIn,
+                         StateMap &statesIn) -> std::optional<std::string> {
+    if (stmt.isBinding) {
+      BindingInfo info;
+      std::optional<std::string> restrictType;
+      std::string error;
+      if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
+        return error;
+      }
+      localsIn.emplace(stmt.name, info);
+      if (isUninitializedBinding(info)) {
+        statesIn[stmt.name] = UninitState::Uninitialized;
+      }
+      return std::nullopt;
+    }
+    if (stmt.kind != Expr::Kind::Call) {
+      return std::nullopt;
+    }
+    if (isReturnCall(stmt)) {
+      if (auto name = firstNonUninitialized(statesIn)) {
+        return "return requires uninitialized storage to be dropped: " + *name;
+      }
+      return std::nullopt;
+    }
+    if (isIfCall(stmt) && stmt.args.size() == 3) {
+      const Expr &thenArg = stmt.args[1];
+      const Expr &elseArg = stmt.args[2];
+      StateMap thenStates;
+      StateMap elseStates;
+      if (thenArg.kind == Expr::Kind::Call && (thenArg.hasBodyArguments || !thenArg.bodyArguments.empty())) {
+        if (auto err = analyzeStatements(thenArg.bodyArguments, localsIn, statesIn, thenStates)) {
+          return err;
+        }
+      } else {
+        thenStates = statesIn;
+      }
+      if (elseArg.kind == Expr::Kind::Call && (elseArg.hasBodyArguments || !elseArg.bodyArguments.empty())) {
+        if (auto err = analyzeStatements(elseArg.bodyArguments, localsIn, statesIn, elseStates)) {
+          return err;
+        }
+      } else {
+        elseStates = statesIn;
+      }
+      statesIn = mergeStates(statesIn, thenStates, elseStates);
+      return std::nullopt;
+    }
+    auto analyzeLoopBody = [&](const Expr &body,
+                               const std::unordered_map<std::string, BindingInfo> &localsBase,
+                               const StateMap &statesBase,
+                               StateMap &statesOut) -> std::optional<std::string> {
+      if (body.kind == Expr::Kind::Call && (body.hasBodyArguments || !body.bodyArguments.empty())) {
+        return analyzeStatements(body.bodyArguments, localsBase, statesBase, statesOut);
+      }
+      statesOut = statesBase;
+      return std::nullopt;
+    };
+    if (isLoopCall(stmt) || isWhileCall(stmt)) {
+      if (stmt.args.size() >= 2) {
+        StateMap bodyStates;
+        if (auto err = analyzeLoopBody(stmt.args[1], localsIn, statesIn, bodyStates)) {
+          return err;
+        }
+        statesIn = mergeStates(statesIn, statesIn, bodyStates);
+      }
+      return std::nullopt;
+    }
+    if (isForCall(stmt)) {
+      StateMap loopStates = statesIn;
+      std::unordered_map<std::string, BindingInfo> loopLocals = localsIn;
+      if (stmt.args.size() >= 1) {
+        if (auto err = analyzeStatement(stmt.args[0], loopLocals, loopStates)) {
+          return err;
+        }
+      }
+      if (stmt.args.size() >= 2 && stmt.args[1].isBinding) {
+        if (auto err = analyzeStatement(stmt.args[1], loopLocals, loopStates)) {
+          return err;
+        }
+      }
+      if (stmt.args.size() >= 3) {
+        if (auto err = analyzeStatement(stmt.args[2], loopLocals, loopStates)) {
+          return err;
+        }
+      }
+      if (stmt.args.size() >= 4) {
+        StateMap bodyStates;
+        if (auto err = analyzeLoopBody(stmt.args[3], loopLocals, loopStates, bodyStates)) {
+          return err;
+        }
+        loopStates = bodyStates;
+      }
+      statesIn = mergeStates(statesIn, statesIn, loopStates);
+      return std::nullopt;
+    }
+    if (isRepeatCall(stmt)) {
+      StateMap bodyStates;
+      if (auto err = analyzeStatements(stmt.bodyArguments, localsIn, statesIn, bodyStates)) {
+        return err;
+      }
+      statesIn = mergeStates(statesIn, statesIn, bodyStates);
+      return std::nullopt;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      StateMap bodyStates;
+      if (auto err = analyzeStatements(stmt.bodyArguments, localsIn, statesIn, bodyStates)) {
+        return err;
+      }
+      for (const auto &entry : statesIn) {
+        auto it = bodyStates.find(entry.first);
+        if (it != bodyStates.end()) {
+          statesIn[entry.first] = it->second;
+        }
+      }
+      return std::nullopt;
+    }
+    if (!stmt.isMethodCall &&
+        (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop") ||
+         isSimpleCallName(stmt, "take") || isSimpleCallName(stmt, "borrow")) &&
+        !stmt.args.empty()) {
+      const std::string name = stmt.name;
+      const Expr &target = stmt.args.front();
+      if (target.kind != Expr::Kind::Name) {
+        return std::nullopt;
+      }
+      auto bindingIt = localsIn.find(target.name);
+      if (bindingIt == localsIn.end() || !isUninitializedBinding(bindingIt->second)) {
+        return std::nullopt;
+      }
+      auto stateIt = statesIn.find(target.name);
+      UninitState current = stateIt == statesIn.end() ? UninitState::Unknown : stateIt->second;
+      if (name == "init") {
+        if (current != UninitState::Uninitialized) {
+          return "init requires uninitialized storage: " + target.name;
+        }
+        statesIn[target.name] = UninitState::Initialized;
+        return std::nullopt;
+      }
+      if (name == "drop") {
+        if (current != UninitState::Initialized) {
+          return "drop requires initialized storage: " + target.name;
+        }
+        statesIn[target.name] = UninitState::Uninitialized;
+        return std::nullopt;
+      }
+      if (name == "take") {
+        if (current != UninitState::Initialized) {
+          return "take requires initialized storage: " + target.name;
+        }
+        statesIn[target.name] = UninitState::Uninitialized;
+        return std::nullopt;
+      }
+      if (name == "borrow") {
+        if (current != UninitState::Initialized) {
+          return "borrow requires initialized storage: " + target.name;
+        }
+        statesIn[target.name] = UninitState::Initialized;
+        return std::nullopt;
+      }
+    }
+    return std::nullopt;
+  };
+
+  std::unordered_map<std::string, BindingInfo> locals;
+  locals.reserve(params.size());
+  for (const auto &param : params) {
+    locals.emplace(param.name, param.binding);
+  }
+  StateMap states;
+  StateMap finalStates;
+  if (auto err = analyzeStatements(statements, locals, states, finalStates)) {
+    return err;
+  }
+  if (auto name = firstNonUninitialized(finalStates)) {
+    return "uninitialized storage must be dropped before end of scope: " + *name;
+  }
+  return std::nullopt;
 }
 
 bool SemanticsValidator::validateExecutions() {

@@ -30,6 +30,9 @@ private:
   bool validateDefinitions();
   bool validateExecutions();
   bool validateEntry();
+  std::optional<std::string> validateUninitializedDefiniteState(
+      const std::vector<ParameterInfo> &params,
+      const std::vector<Expr> &statements);
 
   std::string resolveCalleePath(const Expr &expr) const;
   bool isParam(const std::vector<ParameterInfo> &params, const std::string &name) const;
