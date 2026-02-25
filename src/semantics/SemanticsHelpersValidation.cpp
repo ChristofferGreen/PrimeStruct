@@ -249,6 +249,33 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
     bindingOut.typeTemplateArg.clear();
     return true;
   }
+  if (initializer.kind == Expr::Kind::Call && initializer.isMethodCall && initializer.args.size() >= 1) {
+    if (!initializer.templateArgs.empty() || initializer.hasBodyArguments || !initializer.bodyArguments.empty()) {
+      return false;
+    }
+    const Expr &receiver = initializer.args.front();
+    if (receiver.kind == Expr::Kind::Name && receiver.name == "Result" && initializer.name == "why" &&
+        initializer.args.size() == 2) {
+      bindingOut.typeName = "string";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    if (initializer.name == "why" && initializer.args.size() == 1 && receiver.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(receiver.name)) {
+        if (paramBinding->typeName == "FileError") {
+          bindingOut.typeName = "string";
+          bindingOut.typeTemplateArg.clear();
+          return true;
+        }
+      }
+      auto localIt = locals.find(receiver.name);
+      if (localIt != locals.end() && localIt->second.typeName == "FileError") {
+        bindingOut.typeName = "string";
+        bindingOut.typeTemplateArg.clear();
+        return true;
+      }
+    }
+  }
   if (initializer.kind == Expr::Kind::Name) {
     const std::string &name = initializer.name;
     if (const BindingInfo *paramBinding = findParamBinding(name)) {

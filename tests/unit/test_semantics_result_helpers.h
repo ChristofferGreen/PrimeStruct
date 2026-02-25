@@ -58,6 +58,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("Result.why infers string binding") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [Result<FileError>] status{ Result.ok() }
+  [auto] message{ Result.why(status) }
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("Result.map accepts value results") {
   const std::string source = R"(
 [return<void>]
