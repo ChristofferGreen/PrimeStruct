@@ -13,6 +13,150 @@
     }
     return "0";
   }
+  if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "error") {
+    if (expr.args.size() != 2) {
+      return "false";
+    }
+    ResultInfo resultInfo;
+    if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult) {
+      return "false";
+    }
+    std::string argText =
+        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    if (resultInfo.hasValue) {
+      return "(ps_result_error(" + argText + ") != 0u)";
+    }
+    return "(" + argText + " != 0u)";
+  }
+  if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "why") {
+    if (expr.args.size() != 2) {
+      return "std::string_view()";
+    }
+    ResultInfo resultInfo;
+    if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult) {
+      return "std::string_view()";
+    }
+    if (resultInfo.errorType != "FileError") {
+      return "std::string_view()";
+    }
+    std::string argText =
+        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    if (resultInfo.hasValue) {
+      return "ps_file_error_why(ps_result_error(" + argText + "))";
+    }
+    return "ps_file_error_why(static_cast<uint32_t>(" + argText + "))";
+  }
+  if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "map") {
+    if (expr.args.size() != 3) {
+      return "static_cast<uint64_t>(0)";
+    }
+    ResultInfo resultInfo;
+    if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
+      return "static_cast<uint64_t>(0)";
+    }
+    std::string valueType =
+        bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
+    if (valueType.empty()) {
+      valueType = "uint32_t";
+    }
+    std::string resultExpr =
+        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::string lambdaExpr =
+        emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::ostringstream out;
+    out << "([&]() -> uint64_t {";
+    out << " auto ps_result = " << resultExpr << ";";
+    out << " uint32_t ps_err = ps_result_error(ps_result);";
+    out << " if (ps_err != 0u) { return ps_result_pack(ps_err, 0u); }";
+    out << " auto ps_value = static_cast<" << valueType << ">(ps_result_value(ps_result));";
+    out << " auto ps_mapped = (" << lambdaExpr << ")(ps_value);";
+    out << " return ps_result_pack(0u, static_cast<uint32_t>(ps_mapped));";
+    out << " }())";
+    return out.str();
+  }
+  if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "and_then") {
+    if (expr.args.size() != 3) {
+      return "static_cast<uint64_t>(0)";
+    }
+    ResultInfo resultInfo;
+    if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
+      return "static_cast<uint64_t>(0)";
+    }
+    std::string valueType =
+        bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
+    if (valueType.empty()) {
+      valueType = "uint32_t";
+    }
+    std::string resultExpr =
+        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::string lambdaExpr =
+        emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::ostringstream out;
+    out << "([&]() -> uint64_t {";
+    out << " auto ps_result = " << resultExpr << ";";
+    out << " uint32_t ps_err = ps_result_error(ps_result);";
+    out << " if (ps_err != 0u) { return ps_result_pack(ps_err, 0u); }";
+    out << " auto ps_value = static_cast<" << valueType << ">(ps_result_value(ps_result));";
+    out << " auto ps_next = (" << lambdaExpr << ")(ps_value);";
+    out << " return static_cast<uint64_t>(ps_next);";
+    out << " }())";
+    return out.str();
+  }
+  if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+      expr.args.front().name == "Result" && expr.name == "map2") {
+    if (expr.args.size() != 4) {
+      return "static_cast<uint64_t>(0)";
+    }
+    ResultInfo leftInfo;
+    ResultInfo rightInfo;
+    if (!resolveResultExprInfo(expr.args[1], leftInfo) || !leftInfo.isResult || !leftInfo.hasValue ||
+        !resolveResultExprInfo(expr.args[2], rightInfo) || !rightInfo.isResult || !rightInfo.hasValue) {
+      return "static_cast<uint64_t>(0)";
+    }
+    std::string leftType =
+        bindingTypeToCpp(leftInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
+    std::string rightType =
+        bindingTypeToCpp(rightInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
+    if (leftType.empty()) {
+      leftType = "uint32_t";
+    }
+    if (rightType.empty()) {
+      rightType = "uint32_t";
+    }
+    std::string leftExpr =
+        emitExpr(expr.args[1], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::string rightExpr =
+        emitExpr(expr.args[2], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::string lambdaExpr =
+        emitExpr(expr.args[3], nameMap, paramMap, structTypeMap, importAliases, localTypes, returnKinds,
+                 resultInfos, returnStructs, allowMathBare);
+    std::ostringstream out;
+    out << "([&]() -> uint64_t {";
+    out << " auto ps_left = " << leftExpr << ";";
+    out << " uint32_t ps_left_err = ps_result_error(ps_left);";
+    out << " if (ps_left_err != 0u) { return ps_result_pack(ps_left_err, 0u); }";
+    out << " auto ps_right = " << rightExpr << ";";
+    out << " uint32_t ps_right_err = ps_result_error(ps_right);";
+    out << " if (ps_right_err != 0u) { return ps_result_pack(ps_right_err, 0u); }";
+    out << " auto ps_left_value = static_cast<" << leftType << ">(ps_result_value(ps_left));";
+    out << " auto ps_right_value = static_cast<" << rightType << ">(ps_result_value(ps_right));";
+    out << " auto ps_mapped = (" << lambdaExpr << ")(ps_left_value, ps_right_value);";
+    out << " return ps_result_pack(0u, static_cast<uint32_t>(ps_mapped));";
+    out << " }())";
+    return out.str();
+  }
   if (!expr.isMethodCall && isSimpleCallName(expr, "try") && expr.args.size() == 1) {
     ResultInfo resultInfo;
     if (resolveResultExprInfo(expr.args.front(), resultInfo) && resultInfo.isResult) {

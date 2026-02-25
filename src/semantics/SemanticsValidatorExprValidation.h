@@ -196,6 +196,22 @@
         isBuiltinOut = true;
         return true;
       }
+      if (methodName == "error" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+        resolvedOut = "/result/error";
+        isBuiltinOut = true;
+        return true;
+      }
+      if (methodName == "why" && receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+        resolvedOut = "/result/why";
+        isBuiltinOut = true;
+        return true;
+      }
+      if ((methodName == "map" || methodName == "and_then" || methodName == "map2") &&
+          receiver.kind == Expr::Kind::Name && receiver.name == "Result") {
+        resolvedOut = "/result/" + methodName;
+        isBuiltinOut = true;
+        return true;
+      }
       std::string elemType;
       if (methodName == "count") {
         if (resolveVectorTarget(receiver, elemType)) {
@@ -441,20 +457,12 @@
       if (defIt == defMap_.end() || !defIt->second) {
         return false;
       }
-      for (const auto &stmt : defIt->second->statements) {
-        if (!stmt.isBinding || isStaticField(stmt)) {
-          continue;
-        }
-        if (stmt.name != fieldName) {
-          continue;
-        }
-        std::optional<std::string> restrictType;
-        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_)) {
-          return false;
-        }
-        return true;
+      BindingInfo inferred;
+      if (!inferStructFieldBinding(*defIt->second, fieldName, inferred, false, true)) {
+        return false;
       }
-      return false;
+      bindingOut = std::move(inferred);
+      return true;
     };
 
     std::string resolved = resolveCalleePath(expr);
@@ -481,7 +489,9 @@
       }
       BindingInfo fieldBinding;
       if (!resolveStructFieldBinding(expr.args.front(), expr.name, fieldBinding)) {
-        error_ = "unknown field: " + expr.name;
+        if (error_.empty()) {
+          error_ = "unknown field: " + expr.name;
+        }
         return false;
       }
       return true;
@@ -661,6 +671,150 @@
           if (!validateExpr(params, locals, expr.args[i])) {
             return false;
           }
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/result/error") {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "Result.error does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "Result.error does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 2) {
+          error_ = "Result.error requires exactly one argument";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        ResultTypeInfo argResult;
+        if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult) {
+          error_ = "Result.error requires Result argument";
+          return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/result/why") {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "Result.why does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "Result.why does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 2) {
+          error_ = "Result.why requires exactly one argument";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        ResultTypeInfo argResult;
+        if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult) {
+          error_ = "Result.why requires Result argument";
+          return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && (resolved == "/result/map" || resolved == "/result/and_then")) {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "Result." + expr.name + " does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "Result." + expr.name + " does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 3) {
+          error_ = "Result." + expr.name + " requires exactly two arguments";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[1])) {
+          return false;
+        }
+        ResultTypeInfo argResult;
+        if (!resolveResultTypeForExpr(expr.args[1], params, locals, argResult) || !argResult.isResult) {
+          error_ = "Result." + expr.name + " requires Result argument";
+          return false;
+        }
+        if (!argResult.hasValue) {
+          error_ = "Result." + expr.name + " requires value Result";
+          return false;
+        }
+        if (!expr.args[2].isLambda) {
+          error_ = "Result." + expr.name + " requires a lambda argument";
+          return false;
+        }
+        if (expr.args[2].args.size() != 1) {
+          error_ = "Result." + expr.name + " requires a single-parameter lambda";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[2])) {
+          return false;
+        }
+        return true;
+      }
+      if (resolvedMethod && resolved == "/result/map2") {
+        if (hasNamedArguments(expr.argNames)) {
+          error_ = "named arguments not supported for builtin calls";
+          return false;
+        }
+        if (!expr.templateArgs.empty()) {
+          error_ = "Result.map2 does not accept template arguments";
+          return false;
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          error_ = "Result.map2 does not accept block arguments";
+          return false;
+        }
+        if (expr.args.size() != 4) {
+          error_ = "Result.map2 requires exactly three arguments";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[1]) || !validateExpr(params, locals, expr.args[2])) {
+          return false;
+        }
+        ResultTypeInfo leftResult;
+        ResultTypeInfo rightResult;
+        if (!resolveResultTypeForExpr(expr.args[1], params, locals, leftResult) || !leftResult.isResult ||
+            !resolveResultTypeForExpr(expr.args[2], params, locals, rightResult) || !rightResult.isResult) {
+          error_ = "Result.map2 requires Result arguments";
+          return false;
+        }
+        if (!leftResult.hasValue || !rightResult.hasValue) {
+          error_ = "Result.map2 requires value Results";
+          return false;
+        }
+        if (!errorTypesMatch(leftResult.errorType, rightResult.errorType, expr.namespacePrefix)) {
+          error_ = "Result.map2 requires matching error types";
+          return false;
+        }
+        if (!expr.args[3].isLambda) {
+          error_ = "Result.map2 requires a lambda argument";
+          return false;
+        }
+        if (expr.args[3].args.size() != 2) {
+          error_ = "Result.map2 requires a two-parameter lambda";
+          return false;
+        }
+        if (!validateExpr(params, locals, expr.args[3])) {
+          return false;
         }
         return true;
       }
@@ -1675,8 +1829,7 @@
         }
         const std::string &typeName = expr.templateArgs[0];
         if (typeName != "int" && typeName != "i32" && typeName != "i64" && typeName != "u64" &&
-            typeName != "bool" && typeName != "float" && typeName != "f32" && typeName != "f64" &&
-            typeName != "integer" && typeName != "decimal" && typeName != "complex") {
+            typeName != "bool" && typeName != "float" && typeName != "f32" && typeName != "f64") {
           error_ = "unsupported convert target type: " + typeName;
           return false;
         }

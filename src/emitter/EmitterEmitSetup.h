@@ -176,12 +176,14 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (args.size() == 1) {
       infoOut.isResult = true;
       infoOut.hasValue = false;
+      infoOut.errorType = args.front();
       return true;
     }
     if (args.size() == 2) {
       infoOut.isResult = true;
       infoOut.hasValue = true;
       infoOut.valueType = args.front();
+      infoOut.errorType = args.back();
       return true;
     }
     return false;

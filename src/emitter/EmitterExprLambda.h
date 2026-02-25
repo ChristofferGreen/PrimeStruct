@@ -37,6 +37,9 @@ std::string Emitter::emitExpr(const Expr &expr,
           out.hasValue = (args.size() == 2);
           if (out.hasValue) {
             out.valueType = args.front();
+            out.errorType = args.back();
+          } else if (!args.empty()) {
+            out.errorType = args.front();
           }
           return true;
         }
@@ -48,6 +51,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         out.isResult = true;
         out.hasValue = true;
         out.valueType = "File";
+        out.errorType = "FileError";
         return true;
       }
       std::string resolved = resolveExprPath(candidate);
@@ -59,6 +63,7 @@ std::string Emitter::emitExpr(const Expr &expr,
         if (resolved.rfind("/file/", 0) == 0) {
           out.isResult = true;
           out.hasValue = false;
+          out.errorType = "FileError";
           return true;
         }
       }
