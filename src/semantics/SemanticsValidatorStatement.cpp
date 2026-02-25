@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include <cctype>
 #include <functional>
 #include <optional>
 

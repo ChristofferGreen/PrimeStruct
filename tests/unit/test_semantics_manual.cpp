@@ -397,6 +397,39 @@ TEST_CASE("uninitialized init validates array element types") {
   CHECK(error.find("init value type mismatch") != std::string::npos);
 }
 
+TEST_CASE("uninitialized init validates vector element types") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"vector<i32>"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("vector<i32>"))}, {initStorage});
+  primec::Expr vectorValue = makeCall("vector");
+  vectorValue.templateArgs = {"bool"};
+  primec::Expr initCall = makeCall("init", {makeName("storage"), vectorValue});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, initCall, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("init value type mismatch") != std::string::npos);
+}
+
+TEST_CASE("uninitialized init validates map key/value types") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"map<i32, string>"};
+  primec::Expr binding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("map<i32, string>"))}, {initStorage});
+  primec::Expr mapValue = makeCall("map");
+  mapValue.templateArgs = {"i32", "bool"};
+  primec::Expr initCall = makeCall("init", {makeName("storage"), mapValue});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {binding, initCall, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("init value type mismatch") != std::string::npos);
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

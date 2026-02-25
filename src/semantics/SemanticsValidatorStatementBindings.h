@@ -230,48 +230,104 @@
         error_ = "init requires a value";
         return false;
       }
+      auto trimType = [](const std::string &text) -> std::string {
+        size_t start = 0;
+        while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start])) != 0) {
+          ++start;
+        }
+        size_t end = text.size();
+        while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1])) != 0) {
+          --end;
+        }
+        return text.substr(start, end - start);
+      };
+      auto isBuiltinTemplateBase = [](const std::string &base) -> bool {
+        return base == "array" || base == "vector" || base == "map" || base == "Result" || base == "Pointer" ||
+               base == "Reference" || base == "Buffer" || base == "uninitialized";
+      };
+      std::function<bool(const std::string &, const std::string &)> typesMatch;
+      typesMatch = [&](const std::string &expected, const std::string &actual) -> bool {
+        std::string expectedTrim = trimType(expected);
+        std::string actualTrim = trimType(actual);
+        std::string expectedBase;
+        std::string expectedArg;
+        std::string actualBase;
+        std::string actualArg;
+        const bool expectedHasTemplate = splitTemplateTypeName(expectedTrim, expectedBase, expectedArg);
+        const bool actualHasTemplate = splitTemplateTypeName(actualTrim, actualBase, actualArg);
+        if (expectedHasTemplate != actualHasTemplate) {
+          return false;
+        }
+        auto normalizeBase = [](std::string base) -> std::string {
+          base = trimType(base);
+          if (!base.empty() && base[0] == '/') {
+            base.erase(0, 1);
+          }
+          return base;
+        };
+        if (expectedHasTemplate) {
+          std::string expectedNorm = normalizeBase(expectedBase);
+          std::string actualNorm = normalizeBase(actualBase);
+          if (isBuiltinTemplateBase(expectedNorm) || isBuiltinTemplateBase(actualNorm)) {
+            if (expectedNorm != actualNorm) {
+              return false;
+            }
+          } else if (!errorTypesMatch(expectedBase, actualBase, namespacePrefix)) {
+            return false;
+          }
+          std::vector<std::string> expectedArgs;
+          std::vector<std::string> actualArgs;
+          if (!splitTopLevelTemplateArgs(expectedArg, expectedArgs) ||
+              !splitTopLevelTemplateArgs(actualArg, actualArgs)) {
+            return false;
+          }
+          if (expectedArgs.size() != actualArgs.size()) {
+            return false;
+          }
+          for (size_t i = 0; i < expectedArgs.size(); ++i) {
+            if (!typesMatch(expectedArgs[i], actualArgs[i])) {
+              return false;
+            }
+          }
+          return true;
+        }
+        return errorTypesMatch(expectedTrim, actualTrim, namespacePrefix);
+      };
+      auto inferValueTypeString = [&](const Expr &value, std::string &typeOut) -> bool {
+        BindingInfo inferred;
+        if (inferBindingTypeFromInitializer(value, params, locals, inferred)) {
+          if (!inferred.typeTemplateArg.empty()) {
+            typeOut = inferred.typeName + "<" + inferred.typeTemplateArg + ">";
+            return true;
+          }
+          if (!inferred.typeName.empty() && inferred.typeName != "array") {
+            typeOut = inferred.typeName;
+            return true;
+          }
+        }
+        if (inferExprReturnKind(value, params, locals) == ReturnKind::Array) {
+          std::string structPath = inferStructReturnPath(value, params, locals);
+          if (!structPath.empty()) {
+            typeOut = structPath;
+            return true;
+          }
+        }
+        return false;
+      };
       const std::string expectedType = binding->typeTemplateArg;
+      std::string actualType;
+      if (inferValueTypeString(stmt.args[1], actualType)) {
+        if (!typesMatch(expectedType, actualType)) {
+          error_ = "init value type mismatch";
+          return false;
+        }
+        return true;
+      }
       ReturnKind expectedKind = returnKindForTypeName(expectedType);
       if (expectedKind == ReturnKind::Array) {
         if (valueKind != ReturnKind::Unknown && valueKind != ReturnKind::Array) {
           error_ = "init value type mismatch";
           return false;
-        }
-        std::string expectedBase;
-        std::string expectedElem;
-        if (splitTemplateTypeName(expectedType, expectedBase, expectedElem) &&
-            (expectedBase == "array" || expectedBase == "vector")) {
-          auto resolveCollectionValueType = [&](const Expr &value,
-                                                std::string &baseOut,
-                                                std::string &elemOut) -> bool {
-            if (value.kind == Expr::Kind::Name) {
-              const BindingInfo *bindingInfo = findBinding(params, locals, value.name);
-              if (bindingInfo && (bindingInfo->typeName == "array" || bindingInfo->typeName == "vector") &&
-                  !bindingInfo->typeTemplateArg.empty()) {
-                baseOut = bindingInfo->typeName;
-                elemOut = bindingInfo->typeTemplateArg;
-                return true;
-              }
-            }
-            if (value.kind == Expr::Kind::Call) {
-              std::string collection;
-              if (getBuiltinCollectionName(value, collection) &&
-                  (collection == "array" || collection == "vector") && value.templateArgs.size() == 1) {
-                baseOut = collection;
-                elemOut = value.templateArgs.front();
-                return true;
-              }
-            }
-            return false;
-          };
-          std::string actualBase;
-          std::string actualElem;
-          if (resolveCollectionValueType(stmt.args[1], actualBase, actualElem)) {
-            if (actualBase != expectedBase || !errorTypesMatch(expectedElem, actualElem, namespacePrefix)) {
-              error_ = "init value type mismatch";
-              return false;
-            }
-          }
         }
       } else if (expectedKind != ReturnKind::Unknown) {
         if (valueKind != ReturnKind::Unknown && valueKind != expectedKind) {
