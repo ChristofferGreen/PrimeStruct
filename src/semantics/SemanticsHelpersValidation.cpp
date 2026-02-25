@@ -254,6 +254,12 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
       return false;
     }
     const Expr &receiver = initializer.args.front();
+    if (receiver.kind == Expr::Kind::Name && receiver.name == "Result" && initializer.name == "error" &&
+        initializer.args.size() == 2) {
+      bindingOut.typeName = "bool";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
     if (receiver.kind == Expr::Kind::Name && receiver.name == "Result" && initializer.name == "why" &&
         initializer.args.size() == 2) {
       bindingOut.typeName = "string";
