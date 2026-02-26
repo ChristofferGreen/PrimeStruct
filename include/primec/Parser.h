@@ -31,14 +31,19 @@ private:
   bool parseBindingInitializerList(std::vector<Expr> &out,
                                    std::vector<std::optional<std::string>> &argNames,
                                    const std::string &namespacePrefix);
-  bool parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix);
+  bool parseBraceExprList(std::vector<Expr> &out,
+                          const std::string &namespacePrefix,
+                          bool allowSingleBranchIfStatement);
   bool parseValueBlock(std::vector<Expr> &out, const std::string &namespacePrefix);
   bool normalizeValueBlock(std::vector<Expr> &body);
   bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool parseLambdaCaptureList(std::vector<std::string> &captures);
   bool tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, bool &parsed);
-  bool tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed);
+  bool tryParseIfStatementSugar(Expr &out,
+                                const std::string &namespacePrefix,
+                                bool &parsed,
+                                bool allowSingleBranchIfStatement);
   bool tryParseNestedDefinition(std::vector<Definition> &defs,
                                 const std::vector<Transform> &transforms,
                                 const std::string &parentPath,
@@ -108,6 +113,20 @@ private:
     bool prevAllowReturn_;
   };
 
+  struct SingleBranchIfGuard {
+    explicit SingleBranchIfGuard(Parser &parser, bool enabled)
+        : parser_(parser), previous_(parser_.allowSingleBranchIfStatementBlocks_) {
+      parser_.allowSingleBranchIfStatementBlocks_ = enabled;
+    }
+    ~SingleBranchIfGuard() { parser_.allowSingleBranchIfStatementBlocks_ = previous_; }
+    SingleBranchIfGuard(const SingleBranchIfGuard &) = delete;
+    SingleBranchIfGuard &operator=(const SingleBranchIfGuard &) = delete;
+
+  private:
+    Parser &parser_;
+    bool previous_;
+  };
+
   std::string currentNamespacePrefix() const;
   std::string makeFullPath(const std::string &name, const std::string &prefix) const;
 
@@ -128,6 +147,7 @@ private:
   bool allowBareBindings_ = false;
   bool allowBraceBindings_ = true;
   bool allowBraceReturn_ = true;
+  bool allowSingleBranchIfStatementBlocks_ = false;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
   bool allowSurfaceSyntax_ = true;

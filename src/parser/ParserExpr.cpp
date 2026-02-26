@@ -55,7 +55,10 @@ std::string stripNumericSeparators(const std::string &text) {
 }
 } // namespace
 
-bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
+bool Parser::tryParseIfStatementSugar(Expr &out,
+                                      const std::string &namespacePrefix,
+                                      bool &parsed,
+                                      bool allowSingleBranchIfStatement) {
   parsed = false;
   if (!match(TokenKind::Identifier)) {
     return true;
@@ -109,19 +112,26 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
   std::vector<Expr> thenBody;
   {
     BraceListGuard braceGuard(*this, true, true);
-    if (!parseBraceExprList(thenBody, namespacePrefix)) {
+    if (!parseBraceExprList(thenBody, namespacePrefix, true)) {
       return false;
     }
   }
-  if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
-    return fail(keyword + " statement requires else block");
-  }
-  consume(TokenKind::Identifier, "expected 'else'");
   std::vector<Expr> elseBody;
-  {
-    BraceListGuard braceGuard(*this, true, true);
-    if (!parseBraceExprList(elseBody, namespacePrefix)) {
-      return false;
+  if (match(TokenKind::Identifier) && tokens_[pos_].text == "else") {
+    consume(TokenKind::Identifier, "expected 'else'");
+    {
+      BraceListGuard braceGuard(*this, true, true);
+      if (!parseBraceExprList(elseBody, namespacePrefix, true)) {
+        return false;
+      }
+    }
+  } else {
+    if (keyword == "if" && allowSingleBranchIfStatement) {
+      elseBody.clear();
+    } else if (keyword == "if") {
+      return fail("single-branch if is only allowed in statement position");
+    } else {
+      return fail(keyword + " statement requires else block");
     }
   }
   Expr thenCall;
@@ -266,7 +276,7 @@ bool Parser::tryParseLoopFormAfterName(Expr &out,
   std::vector<Expr> body;
   {
     BraceListGuard braceGuard(*this, true, true);
-    if (!parseBraceExprList(body, namespacePrefix)) {
+    if (!parseBraceExprList(body, namespacePrefix, true)) {
       return false;
     }
   }
@@ -373,7 +383,7 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
     } returnGuard(*this);
 
     BraceListGuard braceGuard(*this, true, true);
-    if (!parseBraceExprList(body, namespacePrefix)) {
+    if (!parseBraceExprList(body, namespacePrefix, true)) {
       return false;
     }
   }
@@ -510,7 +520,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (allowSurfaceSyntax_ && match(TokenKind::Identifier) &&
         (tokens_[pos_].text == "if" || tokens_[pos_].text == "match")) {
       bool parsed = false;
-      if (!tryParseIfStatementSugar(out, namespacePrefix, parsed)) {
+      if (!tryParseIfStatementSugar(out, namespacePrefix, parsed, false)) {
         return false;
       }
       if (parsed) {
@@ -587,7 +597,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
               return false;
             }
           } else {
-            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            if (!parseBraceExprList(call.bodyArguments, namespacePrefix, allowSingleBranchIfStatementBlocks_)) {
               return false;
             }
           }
@@ -868,7 +878,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
               return false;
             }
           } else {
-            if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+            if (!parseBraceExprList(call.bodyArguments, namespacePrefix, allowSingleBranchIfStatementBlocks_)) {
               return false;
             }
           }
@@ -975,7 +985,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         call.argNames.insert(call.argNames.begin(), std::nullopt);
         if (match(TokenKind::LBrace)) {
           call.hasBodyArguments = true;
-          if (!parseBraceExprList(call.bodyArguments, namespacePrefix)) {
+          if (!parseBraceExprList(call.bodyArguments, namespacePrefix, allowSingleBranchIfStatementBlocks_)) {
             return false;
           }
         }

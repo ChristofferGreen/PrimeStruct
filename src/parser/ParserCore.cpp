@@ -922,7 +922,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       }
       Expr ifExpr;
       bool parsedIf = false;
-      if (!tryParseIfStatementSugar(ifExpr, def.namespacePrefix, parsedIf)) {
+      if (!tryParseIfStatementSugar(ifExpr, def.namespacePrefix, parsedIf, true)) {
         return false;
       }
       if (parsedIf) {
@@ -1023,7 +1023,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
               return false;
             }
           } else {
-            if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix)) {
+            if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix, true)) {
               return false;
             }
           }
@@ -1047,6 +1047,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
     Expr statementExpr;
     {
       BareBindingGuard bindingGuard(*this, true);
+      SingleBranchIfGuard singleBranchGuard(*this, true);
       if (!parseExpr(statementExpr, def.namespacePrefix)) {
         return false;
       }

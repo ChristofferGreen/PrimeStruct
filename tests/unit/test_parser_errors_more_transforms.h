@@ -346,11 +346,26 @@ main() {
   CHECK(error.find("unexpected end of file inside definition body") != std::string::npos);
 }
 
-TEST_CASE("if statement requires else block") {
+TEST_CASE("single-branch if in value position is rejected") {
   const std::string source = R"(
 [return<int>]
 main() {
-  if(true) {
+  return(if(true) { return(1i32) })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("single-branch if is only allowed in statement position") != std::string::npos);
+}
+
+TEST_CASE("match statement requires else block") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  match(true) {
     return(1i32)
   }
 }
@@ -360,7 +375,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("if statement requires else block") != std::string::npos);
+  CHECK(error.find("match statement requires else block") != std::string::npos);
 }
 
 TEST_CASE("definitions must have body") {

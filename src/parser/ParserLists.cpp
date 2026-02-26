@@ -790,7 +790,7 @@ bool Parser::parseValueBlock(std::vector<Expr> &out, const std::string &namespac
   } returnGuard(*this);
 
   BraceListGuard braceGuard(*this, true, true);
-  if (!parseBraceExprList(out, namespacePrefix)) {
+  if (!parseBraceExprList(out, namespacePrefix, false)) {
     return false;
   }
   return normalizeValueBlock(out);
@@ -896,7 +896,9 @@ bool Parser::validateNamedArgumentOrdering(const std::vector<std::optional<std::
   return true;
 }
 
-bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &namespacePrefix) {
+bool Parser::parseBraceExprList(std::vector<Expr> &out,
+                                const std::string &namespacePrefix,
+                                bool allowSingleBranchIfStatement) {
   if (!expect(TokenKind::LBrace, "expected '{'")) {
     return false;
   }
@@ -917,7 +919,7 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
     if (match(TokenKind::Identifier) &&
         (tokens_[pos_].text == "if" || tokens_[pos_].text == "match")) {
       bool parsedIf = false;
-      if (!tryParseIfStatementSugar(arg, namespacePrefix, parsedIf)) {
+      if (!tryParseIfStatementSugar(arg, namespacePrefix, parsedIf, allowSingleBranchIfStatement)) {
         return false;
       }
       if (parsedIf) {
@@ -940,6 +942,7 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
         return false;
       }
     } else {
+      SingleBranchIfGuard singleBranchGuard(*this, allowSingleBranchIfStatement);
       if (!parseExpr(arg, namespacePrefix)) {
         return false;
       }
