@@ -331,6 +331,26 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     return merged;
   };
 
+  auto statesEqual = [](const StateMap &left, const StateMap &right) -> bool {
+    if (left.size() != right.size()) {
+      return false;
+    }
+    for (const auto &entry : left) {
+      const auto it = right.find(entry.first);
+      if (it == right.end() || it->second != entry.second) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  auto loopIterationLimit = [](const StateMap &statesIn) -> size_t {
+    if (statesIn.empty()) {
+      return 2;
+    }
+    return statesIn.size() * 3 + 2;
+  };
+
   auto applyStorageCall = [&](const std::string &callName,
                               const Expr &target,
                               std::unordered_map<std::string, BindingInfo> &localsIn,
@@ -636,19 +656,73 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       terminatedOut = false;
       return {};
     };
-    if (isLoopCall(stmt) || isWhileCall(stmt)) {
+    if (isLoopCall(stmt)) {
       if (stmt.args.size() >= 2) {
         if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
           return {err, false};
         }
-        StateMap bodyStates;
-        bool bodyTerminated = false;
-        FlowResult result = analyzeLoopBody(stmt.args[1], localsIn, statesIn, bodyStates, bodyTerminated);
-        if (result.error.has_value()) {
-          return result;
+        StateMap loopHead = statesIn;
+        StateMap exitStates = loopHead;
+        const size_t maxIterations = loopIterationLimit(loopHead);
+        for (size_t i = 0; i < maxIterations; ++i) {
+          StateMap bodyStates;
+          bool bodyTerminated = false;
+          FlowResult result = analyzeLoopBody(stmt.args[1], localsIn, loopHead, bodyStates, bodyTerminated);
+          if (result.error.has_value()) {
+            return result;
+          }
+          if (bodyTerminated) {
+            statesIn = exitStates;
+            return {};
+          }
+          exitStates = mergeStates(exitStates, exitStates, bodyStates);
+          StateMap nextHead = mergeStates(loopHead, loopHead, bodyStates);
+          if (statesEqual(nextHead, loopHead)) {
+            statesIn = exitStates;
+            return {};
+          }
+          loopHead = std::move(nextHead);
         }
-        if (!bodyTerminated) {
-          statesIn = mergeStates(statesIn, statesIn, bodyStates);
+        statesIn = exitStates;
+      }
+      return {};
+    }
+    if (isWhileCall(stmt)) {
+      if (stmt.args.size() >= 2) {
+        StateMap loopHead = statesIn;
+        StateMap exitStates = statesIn;
+        bool hasExitStates = false;
+        const size_t maxIterations = loopIterationLimit(loopHead);
+        for (size_t i = 0; i < maxIterations; ++i) {
+          StateMap conditionStates = loopHead;
+          if (auto err = applyExprEffects(stmt.args.front(), localsIn, conditionStates)) {
+            return {err, false};
+          }
+          if (!hasExitStates) {
+            exitStates = conditionStates;
+            hasExitStates = true;
+          } else {
+            exitStates = mergeStates(exitStates, exitStates, conditionStates);
+          }
+          StateMap bodyStates;
+          bool bodyTerminated = false;
+          FlowResult result = analyzeLoopBody(stmt.args[1], localsIn, conditionStates, bodyStates, bodyTerminated);
+          if (result.error.has_value()) {
+            return result;
+          }
+          if (bodyTerminated) {
+            statesIn = exitStates;
+            return {};
+          }
+          StateMap nextHead = mergeStates(loopHead, loopHead, bodyStates);
+          if (statesEqual(nextHead, loopHead)) {
+            statesIn = exitStates;
+            return {};
+          }
+          loopHead = std::move(nextHead);
+        }
+        if (hasExitStates) {
+          statesIn = exitStates;
         }
       }
       return {};
@@ -714,14 +788,33 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       return {};
     }
     if (isRepeatCall(stmt)) {
-      StateMap bodyStates;
-      FlowResult result = analyzeStatements(stmt.bodyArguments, localsIn, statesIn, bodyStates);
-      if (result.error.has_value()) {
-        return result;
+      if (!stmt.args.empty()) {
+        if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
+          return {err, false};
+        }
       }
-      if (!result.terminated) {
-        statesIn = mergeStates(statesIn, statesIn, bodyStates);
+      StateMap loopHead = statesIn;
+      StateMap exitStates = loopHead;
+      const size_t maxIterations = loopIterationLimit(loopHead);
+      for (size_t i = 0; i < maxIterations; ++i) {
+        StateMap bodyStates;
+        FlowResult result = analyzeStatements(stmt.bodyArguments, localsIn, loopHead, bodyStates);
+        if (result.error.has_value()) {
+          return result;
+        }
+        if (result.terminated) {
+          statesIn = exitStates;
+          return {};
+        }
+        exitStates = mergeStates(exitStates, exitStates, bodyStates);
+        StateMap nextHead = mergeStates(loopHead, loopHead, bodyStates);
+        if (statesEqual(nextHead, loopHead)) {
+          statesIn = exitStates;
+          return {};
+        }
+        loopHead = std::move(nextHead);
       }
+      statesIn = exitStates;
       return {};
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {

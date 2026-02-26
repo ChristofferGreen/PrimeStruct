@@ -36,6 +36,7 @@ build and layout solidify.
 - **Configure only:** `./scripts/compile.sh --configure` (regenerates build dir only).
 - **Skip tests:** `./scripts/compile.sh --skip-tests` (build only).
 - **CTest:** from `build-debug/` run `ctest --output-on-failure`.
+- **Direct test binary runs:** execute `build-debug/PrimeStruct_tests` from `build-debug/` so compile-run suites can resolve `./primec`.
 
 ## Semantics pipeline note
 - `Semantics::validate` runs in this order: apply semantic transforms → maybe-constructor rewrite →
