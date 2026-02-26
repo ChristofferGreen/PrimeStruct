@@ -57,7 +57,11 @@ std::string stripNumericSeparators(const std::string &text) {
 
 bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePrefix, bool &parsed) {
   parsed = false;
-  if (!match(TokenKind::Identifier) || tokens_[pos_].text != "if") {
+  if (!match(TokenKind::Identifier)) {
+    return true;
+  }
+  const std::string keyword = tokens_[pos_].text;
+  if (keyword != "if" && keyword != "match") {
     return true;
   }
   size_t savedPos = pos_;
@@ -69,7 +73,7 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
     pos_ = savedPos;
     return true;
   }
-  expect(TokenKind::LParen, "expected '(' after if");
+  expect(TokenKind::LParen, "expected '(' after " + keyword);
   if (match(TokenKind::LBracket)) {
     size_t scan = pos_ + 1;
     while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
@@ -97,7 +101,7 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
     pos_ = savedPos;
     return true;
   }
-  expect(TokenKind::RParen, "expected ')' after if condition");
+  expect(TokenKind::RParen, "expected ')' after " + keyword + " condition");
   if (!match(TokenKind::LBrace)) {
     pos_ = savedPos;
     return true;
@@ -110,7 +114,7 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
     }
   }
   if (!match(TokenKind::Identifier) || tokens_[pos_].text != "else") {
-    return fail("if statement requires else block");
+    return fail(keyword + " statement requires else block");
   }
   consume(TokenKind::Identifier, "expected 'else'");
   std::vector<Expr> elseBody;
@@ -134,7 +138,7 @@ bool Parser::tryParseIfStatementSugar(Expr &out, const std::string &namespacePre
   elseCall.bodyArguments = std::move(elseBody);
   Expr ifCall;
   ifCall.kind = Expr::Kind::Call;
-  ifCall.name = "if";
+  ifCall.name = name.text;
   ifCall.namespacePrefix = namespacePrefix;
   ifCall.args.push_back(std::move(condition));
   ifCall.argNames.push_back(std::nullopt);
@@ -503,7 +507,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       out = std::move(inner);
       return true;
     }
-    if (allowSurfaceSyntax_ && match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
+    if (allowSurfaceSyntax_ && match(TokenKind::Identifier) &&
+        (tokens_[pos_].text == "if" || tokens_[pos_].text == "match")) {
       bool parsed = false;
       if (!tryParseIfStatementSugar(out, namespacePrefix, parsed)) {
         return false;

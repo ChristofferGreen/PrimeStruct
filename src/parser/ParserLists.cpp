@@ -914,7 +914,8 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out, const std::string &names
       continue;
     }
     Expr arg;
-    if (match(TokenKind::Identifier) && tokens_[pos_].text == "if") {
+    if (match(TokenKind::Identifier) &&
+        (tokens_[pos_].text == "if" || tokens_[pos_].text == "match")) {
       bool parsedIf = false;
       if (!tryParseIfStatementSugar(arg, namespacePrefix, parsedIf)) {
         return false;
