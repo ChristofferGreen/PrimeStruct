@@ -23,9 +23,7 @@ Surface {
 Sphere {
   [public Vec3] center{Vec3(0.0, 0.0, 0.0)}
   [public f32] radius{0.0}
-  [public f32] baseR{1.0}
-  [public f32] baseG{1.0}
-  [public f32] baseB{1.0}
+  [public ColorRGB] base{ColorRGB(1.0, 1.0, 1.0)}
   [public f32] reflectivity{0.0}
   [public f32] isGlass{0.0}
 }
@@ -35,6 +33,7 @@ Scene {
   [public Sphere] s1{Sphere()}
   [public Sphere] s2{Sphere()}
   [public Sphere] s3{Sphere()}
+  [public Vec3] planeNormal{Vec3(0.0, 1.0, 0.0)}
   [public f32] planeY{-0.6}
 }
 
@@ -44,30 +43,25 @@ main() {
     [s1] Sphere(
       [center] Vec3(0.0, -0.1, -1.0),
       [radius] 0.5,
-      [baseR] 0.8,
-      [baseG] 0.2,
-      [baseB] 0.2,
+      [base] ColorRGB(0.8, 0.2, 0.2),
       [reflectivity] 0.75,
       [isGlass] 0.0
     ),
     [s2] Sphere(
       [center] Vec3(1.1, -0.1, -1.6),
       [radius] 0.5,
-      [baseR] 0.2,
-      [baseG] 0.2,
-      [baseB] 0.85,
+      [base] ColorRGB(0.2, 0.2, 0.85),
       [reflectivity] 0.85,
       [isGlass] 0.0
     ),
     [s3] Sphere(
       [center] Vec3(-1.2, -0.2, -1.4),
       [radius] 0.4,
-      [baseR] 1.0,
-      [baseG] 1.0,
-      [baseB] 1.0,
+      [base] ColorRGB(1.0, 1.0, 1.0),
       [reflectivity] 0.0,
       [isGlass] 1.0
     ),
+    [planeNormal] Vec3(0.0, 1.0, 0.0),
     [planeY] -0.6
   )}
   [i32] width{128}
@@ -234,62 +228,36 @@ scene_surface([Scene] scene, [f32] hitId, [Vec3] hitPoint) {
   [Vec3] c1{s1.center}
   [Vec3] c2{s2.center}
   [Vec3] c3{s3.center}
-  [ColorRGB] b1{ColorRGB(s1.baseR, s1.baseG, s1.baseB)}
-  [ColorRGB] b2{ColorRGB(s2.baseR, s2.baseG, s2.baseB)}
-  [ColorRGB] b3{ColorRGB(s3.baseR, s3.baseG, s3.baseB)}
+  [ColorRGB] b1{s1.base}
+  [ColorRGB] b2{s2.base}
+  [ColorRGB] b3{s3.base}
   [f32] r1{s1.reflectivity}
   [f32] r2{s2.reflectivity}
   [f32] r3{s3.reflectivity}
   [f32] g1{s1.isGlass}
   [f32] g2{s2.isGlass}
   [f32] g3{s3.isGlass}
+  [Vec3] planeNormal{scene.planeNormal}
   if(hitId == 1.0) {
     [Vec3] normalRaw{hitPoint.sub(c1)}
     [Vec3] normal{normalRaw.toNormalized()}
-    return(Surface(
-      normal.x,
-      normal.y,
-      normal.z,
-      b1.r,
-      b1.g,
-      b1.b,
-      r1,
-      g1
-    ))
+    return(Surface(normal.x, normal.y, normal.z, b1.r, b1.g, b1.b, r1, g1))
   } else {
     if(hitId == 2.0) {
       [Vec3] normalRaw{hitPoint.sub(c2)}
       [Vec3] normal{normalRaw.toNormalized()}
-      return(Surface(
-        normal.x,
-        normal.y,
-        normal.z,
-        b2.r,
-        b2.g,
-        b2.b,
-        r2,
-        g2
-      ))
+      return(Surface(normal.x, normal.y, normal.z, b2.r, b2.g, b2.b, r2, g2))
     } else {
       if(hitId == 4.0) {
         [Vec3] normalRaw{hitPoint.sub(c3)}
         [Vec3] normal{normalRaw.toNormalized()}
-        return(Surface(
-          normal.x,
-          normal.y,
-          normal.z,
-          b3.r,
-          b3.g,
-          b3.b,
-          r3,
-          g3
-        ))
+        return(Surface(normal.x, normal.y, normal.z, b3.r, b3.g, b3.b, r3, g3))
       } else {
         [f32] checker{sin(hitPoint.x * 4.0) * sin(hitPoint.z * 4.0)}
         if(checker < 0.0) {
-          return(Surface(0.0, 1.0, 0.0, 0.1, 0.1, 0.1, 0.1, 0.0))
+          return(Surface(planeNormal.x, planeNormal.y, planeNormal.z, 0.1, 0.1, 0.1, 0.1, 0.0))
         } else {
-          return(Surface(0.0, 1.0, 0.0, 0.9, 0.9, 0.9, 0.1, 0.0))
+          return(Surface(planeNormal.x, planeNormal.y, planeNormal.z, 0.9, 0.9, 0.9, 0.1, 0.0))
         }
       }
     }
