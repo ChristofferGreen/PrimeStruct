@@ -638,16 +638,21 @@ TEST_CASE("placement transforms are rejected") {
   }
 }
 
-TEST_CASE("struct definitions require field initializers") {
+TEST_CASE("struct definitions allow missing field initializers") {
   const std::string source = R"(
 [struct]
+Thing() {
+  [i32] value
+}
+
+[return<int>]
 main() {
-  [i32] value{}
+  return(1i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block expression requires a value") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("struct definitions allow initialized fields") {

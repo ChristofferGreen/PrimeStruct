@@ -396,10 +396,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
     if (isStruct || isFieldOnlyStruct) {
       for (const auto &stmt : def.statements) {
-        if (stmt.isBinding && stmt.args.empty()) {
-          error_ = "struct definitions require field initializers: " + def.fullPath;
-          return false;
-        }
         if (stmt.isBinding) {
           bool fieldHasHandle = false;
           bool fieldHasGpuLane = false;

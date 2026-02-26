@@ -77,4 +77,94 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("omitted initializer allows Create to fill missing fields") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  assign(this.value, 1i32)
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted initializer rejects Create missing fields") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value
+}
+
+[return<void>]
+/Thing/Create() {
+}
+
+[return<int>]
+main() {
+  [Thing] value
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("omitted initializer requires zero-arg constructor") != std::string::npos);
+}
+
+TEST_CASE("zero-arg struct call allows Create to fill missing fields") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value
+}
+
+[mut return<void>]
+/Thing/Create() {
+  assign(this.value, 1i32)
+}
+
+[return<int>]
+main() {
+  [Thing] value{Thing()}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("zero-arg struct call rejects missing Create fields") {
+  const std::string source = R"(
+[struct]
+Thing() {
+  [i32] value
+}
+
+[return<void>]
+/Thing/Create() {
+}
+
+[return<int>]
+main() {
+  [Thing] value{Thing()}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for /Thing") != std::string::npos);
+}
+
 TEST_SUITE_END();

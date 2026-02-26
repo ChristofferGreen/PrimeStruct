@@ -2156,6 +2156,7 @@
         }
         return false;
       };
+      bool hasMissingDefaults = false;
       for (const auto &stmt : it->second->statements) {
         if (!stmt.isBinding) {
           error_ = "struct definitions may only contain field bindings: " + resolved;
@@ -2168,8 +2169,15 @@
         field.name = stmt.name;
         if (stmt.args.size() == 1) {
           field.defaultExpr = &stmt.args.front();
+        } else {
+          hasMissingDefaults = true;
         }
         fieldParams.push_back(field);
+      }
+      if (hasMissingDefaults && expr.args.empty() && !hasNamedArguments(expr.argNames)) {
+        if (hasStructZeroArgConstructor(resolved)) {
+          return true;
+        }
       }
       if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
         return false;
