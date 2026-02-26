@@ -11,10 +11,40 @@ Maybe<T>() {
   Create() {
   }
 
-  [public]
-  Destroy() {
-    if(not(this.empty), then() { drop(this.value) }, else() { })
-  }
+[public]
+Destroy() {
+  if(not(this.empty), then() { drop(this.value) }, else() { })
+}
+
+[public return<bool>]
+is_empty() {
+  return(this.empty)
+}
+
+[public return<bool>]
+is_some() {
+  return(not(this.empty))
+}
+
+[public mut return<void>]
+clear() {
+  if(not(this.empty), then() { drop(this.value) }, else() { })
+  assign(this.empty, true)
+}
+
+[public mut return<void>]
+set([T] v) {
+  if(not(this.empty), then() { drop(this.value) }, else() { })
+  init(this.value, v)
+  assign(this.empty, false)
+}
+
+[public mut return<T>]
+take() {
+  [T] out{take(this.value)}
+  assign(this.empty, true)
+  return(out)
+}
 }
 
 [public return<Maybe<T>>]
@@ -110,6 +140,74 @@ choose([bool] flag) {
 main() {
   [Maybe<i32>] value{choose(false)}
   if(value.empty) { return(1i32) } else { return(0i32) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe helpers report empty and some") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{none<i32>()}
+  if(value.is_some()) {
+    return(0i32)
+  }
+  if(value.is_empty()) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe set and clear mutate value") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{none<i32>()}
+  value.set(9i32)
+  if(value.is_empty()) {
+    return(0i32)
+  }
+  value.clear()
+  if(value.is_empty()) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe take returns stored value") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{some<i32>(7i32)}
+  [i32] out{value.take()}
+  return(out)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe set overwrites existing value") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{some<i32>(1i32)}
+  value.set(2i32)
+  if(value.is_some()) { return(1i32) } else { return(0i32) }
 }
 )";
   std::string error;

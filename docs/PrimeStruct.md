@@ -847,6 +847,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
 - **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()` for empty.
   - `Maybe(value)` is not supported yet because lifecycle helpers do not accept parameters and constructor arguments map to fields.
+- **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value and marks empty).
 - **Example shape:**
   ```
   [struct]
@@ -862,6 +863,40 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
       if(not(this.empty)) {
         drop(this.value)
       }
+    }
+
+    [public return<bool>]
+    is_empty() {
+      return(this.empty)
+    }
+
+    [public return<bool>]
+    is_some() {
+      return(not(this.empty))
+    }
+
+    [public mut return<void>]
+    clear() {
+      if(not(this.empty)) {
+        drop(this.value)
+      }
+      assign(this.empty, true)
+    }
+
+    [public mut return<void>]
+    set([T] v) {
+      if(not(this.empty)) {
+        drop(this.value)
+      }
+      init(this.value, v)
+      assign(this.empty, false)
+    }
+
+    [public mut return<T>]
+    take() {
+      [T] out{take(this.value)}
+      assign(this.empty, true)
+      return(out)
     }
   }
 

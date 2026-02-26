@@ -13,6 +13,36 @@ namespace std {
     Destroy() {
       if(not(this.empty), then() { drop(this.value) }, else() { })
     }
+
+    [public return<bool>]
+    is_empty() {
+      return(this.empty)
+    }
+
+    [public return<bool>]
+    is_some() {
+      return(not(this.empty))
+    }
+
+    [public mut return<void>]
+    clear() {
+      if(not(this.empty), then() { drop(this.value) }, else() { })
+      assign(this.empty, true)
+    }
+
+    [public mut return<void>]
+    set([T] v) {
+      if(not(this.empty), then() { drop(this.value) }, else() { })
+      init(this.value, v)
+      assign(this.empty, false)
+    }
+
+    [public mut return<T>]
+    take() {
+      [T] out{take(this.value)}
+      assign(this.empty, true)
+      return(out)
+    }
   }
 
   [public return<Maybe<T>>]
