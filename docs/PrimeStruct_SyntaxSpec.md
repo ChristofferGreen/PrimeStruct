@@ -27,6 +27,14 @@ foo()
 foo(arg1, arg2)
 ```
 
+Surface definitions also accept a post-parameter transform placement:
+
+```
+name<template-list>(param-list) [transform-list] { body-list }
+```
+
+This is definition-only sugar. The parser normalizes it to canonical prefix form before semantic validation and IR lowering. `name[]() { ... }` is not valid syntax.
+
 Transforms operate in two phases:
 - **Text transforms:** token-level rewrites that run before AST construction. They apply to the entire envelope (transform list, templates, parameters, and body) for the definition/execution they are attached to.
 - **Semantic transforms:** AST-level annotations/validation that run after parsing.
@@ -48,10 +56,10 @@ is treated as `[struct] A() { ... }`. Helpers inside struct bodies receive an im
 unless marked `[static]`; `[static]` disables the implicit `this` and method-call sugar.
 
 Language levels (0.Concrete → 3.Surface) follow the same ordering as the compiler pipeline:
-- **0.Concrete:** canonical envelopes only, no text transforms, no templates, no `auto`.
+- **0.Concrete:** canonical envelopes only, no text transforms, no templates, no `auto`. Definition transforms use prefix placement only (`[transforms] name(...) { ... }`).
 - **1.Template:** canonical envelopes plus explicit templates.
 - **2.Inference:** canonical envelopes plus `auto`/omitted envelopes (implicit template inference).
-- **3.Surface:** surface syntax + text transforms that rewrite into canonical forms.
+- **3.Surface:** surface syntax + text transforms that rewrite into canonical forms, including `name(...) [transforms] { ... }` definition sugar.
 
 Import expansion runs before type checking and template inference. All definitions/executions live in a single
 compilation unit after imports are expanded, so implicit-template inference may use call sites anywhere in the
@@ -202,8 +210,11 @@ import_path          = slash_path [ "/*" ] ;
 
 namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 
-definition     = envelope body_block ;
+definition     = canonical_definition | post_params_definition ;
 execution      = transforms_opt call ;
+
+canonical_definition = envelope body_block ;
+post_params_definition = name template_opt params "[" transform_list "]" body_block ;
 
 envelope       = transforms_opt name template_opt params_opt ;
 params_opt     = params | /* empty */ ;
@@ -272,7 +283,7 @@ brace_ctor     = name template_opt value_block ;
 
 index_form     = form "[" form "]" ;
 
-if_form        = "if" "(" form ")" block_if_body "else" block_if_body ;
+if_form        = "if" "(" form ")" block_if_body [ "else" block_if_body ] ;
 block_if_body  = "{" stmt_list_opt "}" ;
 
 loop_form      = transforms_opt "loop" "(" form ")" block_if_body ;
@@ -290,7 +301,10 @@ Notes:
 - `binding` reuses the Envelope; it becomes a local declaration.
 - `execution` is a call-style form (optionally prefixed by transforms) with mandatory parentheses and no body block. Definitions require a body block.
   - AST mapping: `foo()` parses as a call-style execution and lowers to the canonical envelope `foo() { }` with an implicit empty body.
+- Definitions may use post-parameter transform placement (`name(...) [transforms] { ... }`) in surface syntax. The parser rewrites this to canonical prefix form (`[transforms] name(...) { ... }`) before semantic validation and lowering.
+- Post-parameter transform placement is definition-only and requires the transform list to be followed by a definition body. `name[]() { ... }` is rejected.
 - `form` includes surface `if` blocks, which are rewritten into canonical calls.
+- Surface `if(cond) { ... }` (without `else`) is allowed only in statement position; using it where a value/form result is required is a diagnostic.
 - `execution` is valid anywhere a form is allowed, so transform-prefixed calls can appear inside bodies and argument lists.
 - Definition order does not affect name resolution: calls may reference definitions that appear later in the same file or namespace. Resolution runs after import expansion and namespace expansion; unresolved names are diagnostics.
 - Return transforms may name struct definitions; functions can return struct values, and the return type may be inferred from struct constructor/value returns or `return<auto>`.
@@ -324,9 +338,11 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - 1) must evaluate to a boolean (`bool`), either a boolean value or a function returning boolean
   - 2) must be a definition envelope; its body yields the `if` result when the condition is `true`
   - 3) must be a definition envelope; its body yields the `if` result when the condition is `false`
-  - The surface form `if(cond) { ... } else { ... }` requires an `else` block and is accepted in any form position
-    (including statement lists and call arguments); it is rewritten into canonical `if(...)` by wrapping the two bodies
-    as definition envelopes (`then() { ... }` / `else() { ... }`).
+  - Surface `if(cond) { ... } else { ... }` is accepted in any form position (including statement lists and call
+    arguments) and is rewritten into canonical `if(...)` by wrapping the two bodies as definition envelopes
+    (`then() { ... }` / `else() { ... }`).
+  - Surface `if(cond) { ... }` (no `else`) is statement-only sugar and rewrites to
+    `if(cond, then() { ... }, else() { })`.
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two definition bodies is evaluated.
 - Loops:
   - `loop(count) { ... }` rewrites to `loop(count, do() { ... })`.
@@ -466,6 +482,11 @@ block()
   `Create()` runs (if present) and may override field values.
 - If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
   initializer form; if inference fails, it is a diagnostic. Parameters are handled separately.
+- For struct fields, omitted envelope annotations follow the same rule (`center{Vec3(...)}` is valid when inference
+  resolves one concrete envelope). Field envelopes must be concrete before layout manifest emission; unresolved or
+  ambiguous inference is a diagnostic.
+- Field visibility tags (`[public]` / `[private]`) default to `public` and control field-access metadata only; they do
+  not affect top-level import/export visibility.
 - An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to any width.
 - `mut` marks the binding as writable; otherwise immutable.
 
@@ -638,7 +659,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Labeled arguments are rejected for builtin calls.
 - `return` is valid inside definition bodies and value blocks. In a value block, `return(value)` returns from the block and yields its value.
 - Transform argument lists may not be empty.
-- `if` statement sugar requires an `else` block.
+- Single-branch surface `if(cond) { ... }` is allowed only in statement position; using it in value/form position is rejected.
 - `if(condition, then() { ... }, else() { ... })` requires both branches to produce a value when used in value position.
 - `if` / `while` / `for` conditions must evaluate to `bool` (or a function returning `bool`).
 - `loop` counts must be integer envelopes; negative counts are errors.
