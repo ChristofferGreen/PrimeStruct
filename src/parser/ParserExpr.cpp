@@ -608,7 +608,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (bindingTransforms) {
-        return fail("binding requires initializer");
+        call.isBinding = true;
+        out = std::move(call);
+        return true;
       }
       return fail("transform-prefixed execution requires arguments");
     }

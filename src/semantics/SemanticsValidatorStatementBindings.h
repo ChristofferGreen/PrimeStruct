@@ -16,6 +16,20 @@
     if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
       return false;
     }
+    if (stmt.args.empty()) {
+      if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
+        return false;
+      }
+      if (restrictType.has_value()) {
+        const bool hasTemplate = !info.typeTemplateArg.empty();
+        if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
+          error_ = "restrict type does not match binding type";
+          return false;
+        }
+      }
+      locals.emplace(stmt.name, info);
+      return true;
+    }
     if (stmt.args.size() != 1) {
       error_ = "binding requires exactly one argument";
       return false;

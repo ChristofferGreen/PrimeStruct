@@ -970,7 +970,9 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
         return fail("template arguments require a call");
       }
       if (bindingTransforms) {
-        return fail("binding requires initializer");
+        callExpr.isBinding = true;
+        def.statements.push_back(std::move(callExpr));
+        continue;
       }
       return fail("transform-prefixed execution requires arguments");
     }

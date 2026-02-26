@@ -46,9 +46,10 @@ Legend:
 - ✓ Implement `[profile(...)]` transform parsing and validation (per-definition backend profile gating).
 - ✓ Add type system conformance tests (positive typing, negative typing, inference resolution, unresolved `auto`).
 - ✓ Define/implement struct helper semantics: helpers inside struct bodies with implicit `this`, `[static]` helpers with no `this`, and method-call sugar for non-static helpers.
-- ○ Allow omitted initializer for local bindings of struct types when zero-arg construction is provably effect-free; emit diagnostics otherwise.
-- ○ Define and implement the "no outside effects" proof for zero-arg construction (effects/capabilities mask, write restrictions, transitive checks).
-- ○ Formalize zero-arg constructor rules (field initializers vs `Create()` + execution order) and align effect checks.
+- ✓ Allow omitted initializer for local bindings of struct types when zero-arg construction is provably effect-free; emit diagnostics otherwise.
+- ✓ Define and implement the "no outside effects" proof for zero-arg construction (effects/capabilities mask, write restrictions, transitive checks).
+- ✓ Formalize zero-arg constructor rules (field initializers vs `Create()` + execution order) and align effect checks.
+- ○ Prove `Create()` initializes all fields for zero-arg construction when field initializers are missing.
 - ✓ Add explicit trait constraints (EoP-style) defined by required named functions (e.g., `plus`, `multiply`, `count`).
 - ✓ Define initial built-in traits (`Additive`, `Multiplicative`, `Comparable`, `Indexable`) and wire validation to type checking.
 - ✓ Define enum transform desugaring to a struct (value field + static bindings) and document auto-increment/underlying type rules.

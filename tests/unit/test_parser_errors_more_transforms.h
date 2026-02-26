@@ -127,7 +127,7 @@ main() {
   CHECK(error.find("expected template identifier") != std::string::npos);
 }
 
-TEST_CASE("binding requires initializer in expression") {
+TEST_CASE("binding without initializer parses as binding") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -138,8 +138,18 @@ main() {
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("binding requires initializer") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  const auto &statements = program.definitions[0].statements;
+  REQUIRE(statements.size() == 1);
+  const auto &call = statements[0];
+  REQUIRE(call.kind == primec::Expr::Kind::Call);
+  REQUIRE(call.args.size() == 1);
+  const auto &arg = call.args[0];
+  REQUIRE(arg.kind == primec::Expr::Kind::Call);
+  CHECK(arg.isBinding);
+  CHECK(arg.args.empty());
 }
 
 TEST_CASE("binding-like transforms allow paren call") {

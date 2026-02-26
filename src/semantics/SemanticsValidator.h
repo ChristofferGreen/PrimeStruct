@@ -33,6 +33,11 @@ private:
   std::optional<std::string> validateUninitializedDefiniteState(
       const std::vector<ParameterInfo> &params,
       const std::vector<Expr> &statements);
+  bool validateOmittedBindingInitializer(const Expr &binding,
+                                         const BindingInfo &info,
+                                         const std::string &namespacePrefix);
+  bool hasStructZeroArgConstructor(const std::string &structPath) const;
+  bool isOutsideEffectFreeStructConstructor(const std::string &structPath);
 
   std::string resolveCalleePath(const Expr &expr) const;
   bool isParam(const std::vector<ParameterInfo> &params, const std::string &name) const;
@@ -100,6 +105,21 @@ private:
                              std::optional<OnErrorHandler> &out);
   bool errorTypesMatch(const std::string &left, const std::string &right, const std::string &namespacePrefix) const;
 
+  struct EffectFreeSummary {
+    bool effectFree = false;
+    bool writesThis = false;
+  };
+  struct EffectFreeContext {
+    const std::vector<ParameterInfo> *params = nullptr;
+    std::unordered_map<std::string, BindingInfo> locals;
+    std::unordered_set<std::string> paramNames;
+    std::string thisName;
+  };
+
+  EffectFreeSummary effectFreeSummaryForDefinition(const Definition &def);
+  bool isOutsideEffectFreeStatement(const Expr &stmt, EffectFreeContext &ctx, bool &writesThis);
+  bool isOutsideEffectFreeExpr(const Expr &expr, EffectFreeContext &ctx, bool &writesThis);
+
   struct EffectScope {
     SemanticsValidator &validator;
     std::unordered_set<std::string> previous;
@@ -163,6 +183,10 @@ private:
   std::unordered_set<std::string> movedBindings_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_map<std::string, std::string> importAliases_;
+  std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;
+  std::unordered_set<std::string> effectFreeDefStack_;
+  std::unordered_map<std::string, bool> effectFreeStructCache_;
+  std::unordered_set<std::string> effectFreeStructStack_;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
   std::string entryArgsName_;

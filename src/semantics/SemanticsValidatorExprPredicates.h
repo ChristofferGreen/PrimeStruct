@@ -854,21 +854,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
                 return false;
               }
-              if (bodyExpr.args.size() != 1) {
-                error_ = "binding requires exactly one argument";
-                return false;
-              }
-              if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
-                return false;
-              }
-              ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
-              if (initKind == ReturnKind::Void &&
-                  !isStructConstructorValueExpr(bodyExpr.args.front())) {
-                error_ = "binding initializer requires a value";
-                return false;
-              }
-              if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-                (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info);
+              if (bodyExpr.args.empty()) {
+                if (!validateOmittedBindingInitializer(bodyExpr, info, bodyExpr.namespacePrefix)) {
+                  return false;
+                }
+              } else {
+                if (bodyExpr.args.size() != 1) {
+                  error_ = "binding requires exactly one argument";
+                  return false;
+                }
+                if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
+                  return false;
+                }
+                ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, branchLocals);
+                if (initKind == ReturnKind::Void &&
+                    !isStructConstructorValueExpr(bodyExpr.args.front())) {
+                  error_ = "binding initializer requires a value";
+                  return false;
+                }
+                if (!hasExplicitBindingTypeTransform(bodyExpr)) {
+                  (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, branchLocals, info);
+                }
               }
               if (restrictType.has_value()) {
                 const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -882,12 +888,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                 }
               }
               if (info.typeName == "Reference") {
-                const Expr &init = bodyExpr.args.front();
-                std::string pointerName;
-                if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
-                    pointerName != "location" || init.args.size() != 1) {
-                  error_ = "Reference bindings require location(...)";
-                  return false;
+                if (!bodyExpr.args.empty()) {
+                  const Expr &init = bodyExpr.args.front();
+                  std::string pointerName;
+                  if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
+                      pointerName != "location" || init.args.size() != 1) {
+                    error_ = "Reference bindings require location(...)";
+                    return false;
+                  }
                 }
               }
               branchLocals.emplace(bodyExpr.name, info);
@@ -1053,21 +1061,27 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
           if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
             return false;
           }
-          if (bodyExpr.args.size() != 1) {
-            error_ = "binding requires exactly one argument";
-            return false;
-          }
-          if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
-            return false;
-          }
-          ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
-          if (initKind == ReturnKind::Void &&
-              !isStructConstructorValueExpr(bodyExpr.args.front())) {
-            error_ = "binding initializer requires a value";
-            return false;
-          }
-          if (!hasExplicitBindingTypeTransform(bodyExpr)) {
-            (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+          if (bodyExpr.args.empty()) {
+            if (!validateOmittedBindingInitializer(bodyExpr, info, bodyExpr.namespacePrefix)) {
+              return false;
+            }
+          } else {
+            if (bodyExpr.args.size() != 1) {
+              error_ = "binding requires exactly one argument";
+              return false;
+            }
+            if (!validateExpr(params, blockLocals, bodyExpr.args.front())) {
+              return false;
+            }
+            ReturnKind initKind = inferExprReturnKind(bodyExpr.args.front(), params, blockLocals);
+            if (initKind == ReturnKind::Void &&
+                !isStructConstructorValueExpr(bodyExpr.args.front())) {
+              error_ = "binding initializer requires a value";
+              return false;
+            }
+            if (!hasExplicitBindingTypeTransform(bodyExpr)) {
+              (void)inferBindingTypeFromInitializer(bodyExpr.args.front(), params, blockLocals, info);
+            }
           }
           if (restrictType.has_value()) {
             const bool hasTemplate = !info.typeTemplateArg.empty();
@@ -1081,12 +1095,14 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
             }
           }
           if (info.typeName == "Reference") {
-            const Expr &init = bodyExpr.args.front();
-            std::string pointerName;
-            if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
-                pointerName != "location" || init.args.size() != 1) {
-              error_ = "Reference bindings require location(...)";
-              return false;
+            if (!bodyExpr.args.empty()) {
+              const Expr &init = bodyExpr.args.front();
+              std::string pointerName;
+              if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
+                  pointerName != "location" || init.args.size() != 1) {
+                error_ = "Reference bindings require location(...)";
+                return false;
+              }
             }
           }
           blockLocals.emplace(bodyExpr.name, info);

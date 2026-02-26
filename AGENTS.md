@@ -48,6 +48,8 @@ build and layout solidify.
   definitions must use `name()` to avoid ambiguity.
 - **AST ordering:** nested definitions are appended to `Program.definitions` before their parent
   definition; build a prepass when parent metadata is needed (struct/helper relationships, etc).
+- **Semantic rewrites:** `Semantics::validate` mutates the AST in-place (enum expansion, loop
+  desugaring, omitted struct initializers), so backend passes should assume canonicalized forms.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **IR stability:** avoid silent changes to serialized IR; include versioning or migration
