@@ -107,6 +107,55 @@ main() {
   CHECK(expr.args[1].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses brace constructor in call arguments") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  helper(Vec2{1f32, 2f32})
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].statements.size() == 1);
+  const auto &stmt = program.definitions[0].statements[0];
+  CHECK(stmt.kind == primec::Expr::Kind::Call);
+  CHECK(stmt.name == "helper");
+  REQUIRE(stmt.args.size() == 1);
+  const auto &arg = stmt.args[0];
+  CHECK(arg.kind == primec::Expr::Kind::Call);
+  CHECK(arg.name == "Vec2");
+  CHECK_FALSE(arg.isBinding);
+  REQUIRE(arg.args.size() == 1);
+  CHECK(arg.args[0].kind == primec::Expr::Kind::Call);
+  CHECK(arg.args[0].name == "block");
+  CHECK(arg.args[0].hasBodyArguments);
+  REQUIRE(arg.args[0].bodyArguments.size() == 2);
+  CHECK(arg.args[0].bodyArguments[0].kind == primec::Expr::Kind::FloatLiteral);
+  CHECK(arg.args[0].bodyArguments[1].kind == primec::Expr::Kind::FloatLiteral);
+}
+
+TEST_CASE("parses brace constructor in return expression") {
+  const std::string source = R"(
+[return<Vec2>]
+main() {
+  return(Vec2{1f32})
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "Vec2");
+  CHECK_FALSE(expr.isBinding);
+  REQUIRE(expr.args.size() == 1);
+  CHECK(expr.args[0].kind == primec::Expr::Kind::Call);
+  CHECK(expr.args[0].name == "block");
+  CHECK(expr.args[0].hasBodyArguments);
+  REQUIRE(expr.args[0].bodyArguments.size() == 1);
+  CHECK(expr.args[0].bodyArguments[0].kind == primec::Expr::Kind::FloatLiteral);
+}
+
 TEST_CASE("parses binding after call without separator") {
   const std::string source = R"(
 [return<void>]

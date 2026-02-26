@@ -34,7 +34,7 @@ Legend:
 - ✓ Support nested definitions inside definition bodies (nested definitions receive their own transforms).
 - ✓ Support lambdas inside definition bodies (spec references lambdas; parser only allows bindings/expressions).
 - ✓ Allow execution-style transforms inside bodies and argument lists (SyntaxSpec allows `[effects(io_out)] log()` anywhere a form is allowed; parser treats leading `[...]` as a binding and rejects `()`).
-- ✓ Support brace constructor forms in value positions (`Type{ ... }` in arguments/returns); parser currently requires `()` or treats braces as bindings.
+- ✓ Support brace constructor forms in value positions (`Type{ ... }` in arguments/returns).
 
 **Types & Semantics**
 - ✓ Implement software numeric envelopes (`integer`, `decimal`, `complex`) or document their explicit rejection in the syntax spec.

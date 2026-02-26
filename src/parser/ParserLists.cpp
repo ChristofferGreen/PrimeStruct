@@ -728,8 +728,11 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
       }
     }
     Expr arg;
-    if (!parseExpr(arg, namespacePrefix)) {
-      return false;
+    {
+      BareBindingGuard bindingGuard(*this, false);
+      if (!parseExpr(arg, namespacePrefix)) {
+        return false;
+      }
     }
     out.push_back(std::move(arg));
     argNames.push_back(std::move(argName));
