@@ -846,7 +846,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
 - **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()` for empty.
-  - `Maybe(value)` is not supported yet because lifecycle helpers do not accept parameters and constructor arguments map to fields.
+  - `Maybe(value)` is sugar for `some<T>(value)` when `T` can be inferred; it still depends on uninitialized storage lowering in VM/native.
 - **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value and marks empty).
 - **Example shape:**
   ```

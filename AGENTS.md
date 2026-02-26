@@ -38,9 +38,12 @@ build and layout solidify.
 - **CTest:** from `build-debug/` run `ctest --output-on-failure`.
 
 ## Semantics pipeline note
-- `Semantics::validate` runs in this order: apply semantic transforms → template monomorphization →
-  convert-constructor rewrite → validator passes → omitted struct initializer rewrite. When changing
-  diagnostics, keep in mind template inference runs before the main validator.
+- `Semantics::validate` runs in this order: apply semantic transforms → maybe-constructor rewrite →
+  template monomorphization → convert-constructor rewrite → validator passes → omitted struct
+  initializer rewrite. When changing diagnostics, keep in mind template inference runs before the
+  main validator.
+- Rewrites that depend on implicit template inference (e.g., sugar that introduces templated calls)
+  must run before template monomorphization.
 
 ## Tests
 - Prefer deterministic, snapshot-style tests for parser/IR/transform stages.

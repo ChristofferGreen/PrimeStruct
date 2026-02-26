@@ -215,4 +215,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("maybe constructor sugar infers template") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{Maybe(1i32)}
+  if(value.empty) { return(0i32) } else { return(1i32) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe constructor sugar keeps explicit template") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{Maybe<i32>(1i32)}
+  if(value.empty) { return(0i32) } else { return(1i32) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
