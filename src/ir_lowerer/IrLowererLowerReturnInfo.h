@@ -87,6 +87,7 @@
           } else {
             paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
           }
+          paramInfo.isFileError = isFileErrorBinding(param);
           applyStructArrayInfo(param, paramInfo);
           applyStructValueInfo(param, paramInfo);
           if (isStringBinding(param)) {
@@ -126,6 +127,7 @@
             } else {
               bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
             }
+            bindingInfo.isFileError = isFileErrorBinding(stmt);
             applyStructArrayInfo(stmt, bindingInfo);
             applyStructValueInfo(stmt, bindingInfo);
             if (bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&

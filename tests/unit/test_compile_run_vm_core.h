@@ -1,3 +1,5 @@
+#include <cerrno>
+
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
 
 TEST_CASE("runs vm with method call result") {
@@ -330,6 +332,27 @@ main() {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "custom error\n");
 }
+
+#if defined(EACCES)
+TEST_CASE("vm maps FileError.why codes") {
+  const std::string source =
+      "[return<Result<FileError>>]\n"
+      "make_error() {\n"
+      "  return(" + std::to_string(EACCES) + "i32)\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(io_out)]\n"
+      "main() {\n"
+      "  print_line(Result.why(make_error()))\n"
+      "  return(0i32)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("vm_file_error_why.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_file_error_why_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EACCES\n");
+}
+#endif
 
 TEST_CASE("vm rejects recursive calls") {
   const std::string source = R"(

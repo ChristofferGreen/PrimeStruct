@@ -351,6 +351,18 @@
               return LocalInfo::ValueKind::String;
             }
           }
+          if (!expr.args.empty() && expr.name == "why") {
+            const Expr &receiver = expr.args.front();
+            if (receiver.kind == Expr::Kind::Name) {
+              if (receiver.name == "FileError") {
+                return LocalInfo::ValueKind::String;
+              }
+              auto it = localsIn.find(receiver.name);
+              if (it != localsIn.end() && it->second.isFileError) {
+                return LocalInfo::ValueKind::String;
+              }
+            }
+          }
           if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
             auto it = localsIn.find(expr.args.front().name);
             if (it != localsIn.end() && it->second.isFileHandle) {

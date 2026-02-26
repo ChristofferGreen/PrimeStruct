@@ -9,6 +9,7 @@
     ValueKind mapKeyKind = ValueKind::Unknown;
     ValueKind mapValueKind = ValueKind::Unknown;
     bool isFileHandle = false;
+    bool isFileError = false;
     bool isResult = false;
     bool resultHasValue = false;
     std::string resultErrorType;
@@ -747,6 +748,17 @@
       }
       if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArgs.size() == 1 &&
           isStringTypeName(transform.templateArgs.front())) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto isFileErrorBinding = [&](const Expr &expr) -> bool {
+    for (const auto &transform : expr.transforms) {
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (transform.name == "FileError") {
         return true;
       }
     }

@@ -1,3 +1,5 @@
+#include <cerrno>
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 TEST_CASE("compiles and runs native file io") {
@@ -244,6 +246,32 @@ main() {
   CHECK(runCommand(runCmd) == 0);
   CHECK(readFile(outPath) == "custom error\n");
 }
+
+#if defined(EACCES)
+TEST_CASE("compiles and runs native FileError.why mapping") {
+  const std::string source =
+      "[return<Result<FileError>>]\n"
+      "make_error() {\n"
+      "  return(" + std::to_string(EACCES) + "i32)\n"
+      "}\n"
+      "\n"
+      "[return<int> effects(io_out)]\n"
+      "main() {\n"
+      "  print_line(Result.why(make_error()))\n"
+      "  return(0i32)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_native_file_error_why.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_file_error_why_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_file_error_why_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "EACCES\n");
+}
+#endif
 
 TEST_CASE("compiles and runs native void call with string param") {
   const std::string source = R"(

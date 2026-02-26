@@ -243,6 +243,7 @@
           }
         }
       }
+      paramInfo.isFileError = isFileErrorBinding(param);
       setReferenceArrayInfo(param, paramInfo);
       applyStructArrayInfo(param, paramInfo);
       applyStructValueInfo(param, paramInfo);

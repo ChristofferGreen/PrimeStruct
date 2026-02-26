@@ -112,6 +112,7 @@
           }
         }
       }
+      info.isFileError = isFileErrorBinding(stmt);
       valueKind = info.valueKind;
 
       if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {

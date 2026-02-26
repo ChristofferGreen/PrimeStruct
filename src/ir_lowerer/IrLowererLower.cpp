@@ -6,6 +6,7 @@
 #include "IrLowererHelpers.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cctype>
 #include <cstdlib>
 #include <cstring>

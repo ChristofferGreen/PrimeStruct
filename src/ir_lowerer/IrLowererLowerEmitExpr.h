@@ -1,3 +1,80 @@
+  auto emitFileErrorWhy = [&](int32_t errorLocal) -> bool {
+    struct FileErrorMapping {
+      int code;
+      const char *name;
+    };
+    std::vector<FileErrorMapping> mappings;
+#ifdef EACCES
+    mappings.push_back({EACCES, "EACCES"});
+#endif
+#ifdef ENOENT
+    mappings.push_back({ENOENT, "ENOENT"});
+#endif
+#ifdef EEXIST
+    mappings.push_back({EEXIST, "EEXIST"});
+#endif
+#ifdef ENOTDIR
+    mappings.push_back({ENOTDIR, "ENOTDIR"});
+#endif
+#ifdef EISDIR
+    mappings.push_back({EISDIR, "EISDIR"});
+#endif
+#ifdef EINVAL
+    mappings.push_back({EINVAL, "EINVAL"});
+#endif
+#ifdef EIO
+    mappings.push_back({EIO, "EIO"});
+#endif
+#ifdef EBADF
+    mappings.push_back({EBADF, "EBADF"});
+#endif
+#ifdef EPERM
+    mappings.push_back({EPERM, "EPERM"});
+#endif
+#ifdef ENOSPC
+    mappings.push_back({ENOSPC, "ENOSPC"});
+#endif
+#ifdef EROFS
+    mappings.push_back({EROFS, "EROFS"});
+#endif
+#ifdef EPIPE
+    mappings.push_back({EPIPE, "EPIPE"});
+#endif
+
+    auto emitMatch = [&](uint64_t code, int32_t stringIndex, std::vector<size_t> &jumpToEnd) {
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+      function.instructions.push_back({IrOpcode::PushI64, code});
+      function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+      size_t jumpNext = function.instructions.size();
+      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+      function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(stringIndex)});
+      size_t jumpEnd = function.instructions.size();
+      function.instructions.push_back({IrOpcode::Jump, 0});
+      size_t nextIndex = function.instructions.size();
+      function.instructions[jumpNext].imm = static_cast<int32_t>(nextIndex);
+      jumpToEnd.push_back(jumpEnd);
+    };
+
+    std::vector<size_t> jumpToEnd;
+    int32_t emptyIndex = internString("");
+    emitMatch(0, emptyIndex, jumpToEnd);
+    std::unordered_set<int> seen;
+    for (const auto &mapping : mappings) {
+      if (mapping.code == 0 || !seen.insert(mapping.code).second) {
+        continue;
+      }
+      int32_t stringIndex = internString(mapping.name);
+      emitMatch(static_cast<uint64_t>(mapping.code), stringIndex, jumpToEnd);
+    }
+    int32_t unknownIndex = internString("Unknown file error");
+    function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(unknownIndex)});
+    size_t endIndex = function.instructions.size();
+    for (size_t jumpIndex : jumpToEnd) {
+      function.instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);
+    }
+    return true;
+  };
+
   emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (expr.isLambda) {
       error = "IR backends do not support lambdas";
@@ -507,7 +584,37 @@
             }
           }
 
+          if (resultInfo.errorType == "FileError") {
+            return emitFileErrorWhy(errorLocal);
+          }
           return emitEmptyString();
+        }
+        if (expr.isMethodCall && expr.name == "why" && !expr.args.empty() &&
+            expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "FileError") {
+          if (expr.args.size() != 2) {
+            error = "FileError.why requires exactly one argument";
+            return false;
+          }
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          const int32_t errorLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          return emitFileErrorWhy(errorLocal);
+        }
+        if (expr.isMethodCall && expr.name == "why" && expr.args.size() == 1 &&
+            expr.args.front().kind == Expr::Kind::Name) {
+          auto it = localsIn.find(expr.args.front().name);
+          if (it != localsIn.end() && it->second.isFileError) {
+            if (it->second.kind == LocalInfo::Kind::Reference) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+              const int32_t errorLocal = allocTempLocal();
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+              return emitFileErrorWhy(errorLocal);
+            }
+            return emitFileErrorWhy(it->second.index);
+          }
         }
         if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
           if (expr.templateArgs.size() != 1) {
