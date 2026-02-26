@@ -24,6 +24,64 @@ main() {
   CHECK(error.find("array return type requires exactly one template argument") != std::string::npos);
 }
 
+TEST_CASE("reference return allows direct parameter reference") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+identity([Reference<i32>] input) {
+  return(input)
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(identity(ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reference return rejects local reference escape") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+bad() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(ref)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/bad", error));
+  CHECK(error.find("reference return requires direct parameter reference") != std::string::npos);
+}
+
+TEST_CASE("reference return rejects derived parameter reference") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+bad([Reference<i32>] input) {
+  [Reference<i32>] alias{location(input)}
+  return(alias)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/bad", error));
+  CHECK(error.find("reference return requires direct parameter reference") != std::string::npos);
+}
+
+TEST_CASE("reference return requires matching template target") {
+  const std::string source = R"(
+[return<Reference<i32>>]
+bad([Reference<i64>] input) {
+  return(input)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/bad", error));
+  CHECK(error.find("reference return type mismatch") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]

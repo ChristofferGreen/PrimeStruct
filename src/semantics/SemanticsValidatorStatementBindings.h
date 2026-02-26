@@ -526,6 +526,59 @@
       if (!validateExpr(params, locals, stmt.args.front())) {
         return false;
       }
+      auto declaredReferenceReturnTarget = [&]() -> std::optional<std::string> {
+        auto defIt = defMap_.find(currentDefinitionPath_);
+        if (defIt == defMap_.end() || defIt->second == nullptr) {
+          return std::nullopt;
+        }
+        for (const auto &transform : defIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "Reference") {
+            continue;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            return std::nullopt;
+          }
+          return args.front();
+        }
+        return std::nullopt;
+      };
+      if (std::optional<std::string> expectedReferenceTarget = declaredReferenceReturnTarget();
+          expectedReferenceTarget.has_value()) {
+        const Expr &returnExpr = stmt.args.front();
+        if (returnExpr.kind != Expr::Kind::Name) {
+          error_ = "reference return requires direct parameter reference";
+          return false;
+        }
+        const BindingInfo *paramBinding = findParamBinding(params, returnExpr.name);
+        if (paramBinding == nullptr || paramBinding->typeName != "Reference") {
+          error_ = "reference return requires direct parameter reference";
+          return false;
+        }
+        auto normalizeReferenceTarget = [&](const std::string &target) -> std::string {
+          std::string trimmed = target;
+          size_t start = 0;
+          while (start < trimmed.size() && std::isspace(static_cast<unsigned char>(trimmed[start])) != 0) {
+            ++start;
+          }
+          size_t end = trimmed.size();
+          while (end > start && std::isspace(static_cast<unsigned char>(trimmed[end - 1])) != 0) {
+            --end;
+          }
+          trimmed = trimmed.substr(start, end - start);
+          return normalizeBindingTypeName(trimmed);
+        };
+        if (normalizeReferenceTarget(paramBinding->typeTemplateArg) !=
+            normalizeReferenceTarget(*expectedReferenceTarget)) {
+          error_ = "reference return type mismatch";
+          return false;
+        }
+      }
       if (returnKind != ReturnKind::Unknown) {
         ReturnKind exprKind = inferExprReturnKind(stmt.args.front(), params, locals);
         if (returnKind == ReturnKind::Array) {

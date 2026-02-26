@@ -378,37 +378,51 @@ ReturnKind getReturnKind(const Definition &def,
     }
     ReturnKind nextKind = returnKindForTypeName(typeName);
     if (nextKind == ReturnKind::Unknown) {
-      if (typeName == "array") {
-        error = "array return type requires exactly one template argument on " + def.fullPath;
-        return ReturnKind::Unknown;
-      }
       std::string base;
       std::string arg;
-      if (!splitTemplateTypeName(typeName, base, arg) || base != "array") {
-        std::string resolvedType = resolveStructTypePath(typeName, def.namespacePrefix, structNames);
-        if (resolvedType.empty()) {
-          auto importIt = importAliases.find(typeName);
-          if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
-            resolvedType = importIt->second;
-          }
-        }
-        if (resolvedType.empty()) {
-          error = "unsupported return type on " + def.fullPath;
-          return ReturnKind::Unknown;
-        }
-        nextKind = ReturnKind::Array;
-      } else {
+      if (splitTemplateTypeName(typeName, base, arg) && base == "Reference") {
         std::vector<std::string> args;
         if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          error = "array return type requires exactly one template argument on " + def.fullPath;
+          error = "Reference return type requires exactly one template argument on " + def.fullPath;
           return ReturnKind::Unknown;
         }
-        const std::string elem = normalizeBindingTypeName(args.front());
-        if (!isPrimitiveBindingTypeName(elem)) {
+        nextKind = returnKindForTypeName(normalizeBindingTypeName(args.front()));
+        if (nextKind == ReturnKind::Unknown) {
           error = "unsupported return type on " + def.fullPath;
           return ReturnKind::Unknown;
         }
-        nextKind = ReturnKind::Array;
+      } else if (typeName == "array") {
+        error = "array return type requires exactly one template argument on " + def.fullPath;
+        return ReturnKind::Unknown;
+      } else {
+        std::string base;
+        std::string arg;
+        if (!splitTemplateTypeName(typeName, base, arg) || base != "array") {
+          std::string resolvedType = resolveStructTypePath(typeName, def.namespacePrefix, structNames);
+          if (resolvedType.empty()) {
+            auto importIt = importAliases.find(typeName);
+            if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+              resolvedType = importIt->second;
+            }
+          }
+          if (resolvedType.empty()) {
+            error = "unsupported return type on " + def.fullPath;
+            return ReturnKind::Unknown;
+          }
+          nextKind = ReturnKind::Array;
+        } else {
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            error = "array return type requires exactly one template argument on " + def.fullPath;
+            return ReturnKind::Unknown;
+          }
+          const std::string elem = normalizeBindingTypeName(args.front());
+          if (!isPrimitiveBindingTypeName(elem)) {
+            error = "unsupported return type on " + def.fullPath;
+            return ReturnKind::Unknown;
+          }
+          nextKind = ReturnKind::Array;
+        }
       }
     }
     if (sawReturn) {
