@@ -968,8 +968,9 @@
       return true;
     }
     if (kind == LocalInfo::ValueKind::String) {
-      error = "native backend does not support uninitialized string storage";
-      return false;
+      out.kind = LocalInfo::Kind::Value;
+      out.valueKind = kind;
+      return true;
     }
     return false;
   };
@@ -1157,7 +1158,7 @@
       info.name = field.name;
       info.slotOffset = offset;
       LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
-      if (kind != LocalInfo::ValueKind::Unknown && kind != LocalInfo::ValueKind::String) {
+      if (kind != LocalInfo::ValueKind::Unknown) {
         info.valueKind = kind;
         info.slotCount = 1;
       } else {

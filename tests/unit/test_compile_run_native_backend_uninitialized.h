@@ -20,6 +20,28 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("compiles and runs native uninitialized string storage") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  [uninitialized<string>] storage{uninitialized<string>()}
+  init(storage, "hello"utf8)
+  print_line(take(storage))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_uninitialized_string.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_string_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_uninitialized_string_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "hello\n");
+}
+
 TEST_CASE("compiles and runs native uninitialized struct field") {
   const std::string source = R"(
 [struct]

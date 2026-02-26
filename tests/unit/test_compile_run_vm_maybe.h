@@ -31,6 +31,24 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
+TEST_CASE("runs vm with Maybe of string") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int> effects(io_out)]
+main() {
+  [Maybe<string> mut] value{some<string>("hello"utf8)}
+  print_line(value.take())
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_maybe_string.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_maybe_string_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "hello\n");
+}
+
 TEST_CASE("runs vm with Maybe of struct value") {
   const std::string source = R"(
 import /std/maybe/*

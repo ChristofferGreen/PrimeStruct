@@ -38,6 +38,27 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs native Maybe of string") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int> effects(io_out)]
+main() {
+  [Maybe<string> mut] value{some<string>("hello"utf8)}
+  print_line(value.take())
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("native_maybe_string.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_exe").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_native_maybe_string_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "hello\n");
+}
+
 TEST_CASE("compiles and runs native Maybe of struct value") {
   const std::string source = R"(
 import /std/maybe/*

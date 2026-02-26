@@ -68,6 +68,9 @@
             case LocalInfo::ValueKind::Bool:
               zeroOp = IrOpcode::PushI32;
               break;
+            case LocalInfo::ValueKind::String:
+              zeroOp = IrOpcode::PushI64;
+              break;
             default:
               error = "native backend requires a concrete uninitialized storage type on " + stmt.name;
               return false;
