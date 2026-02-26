@@ -845,7 +845,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)` to destroy.
-- **Ergonomic constructor surface:** `Maybe()` yields empty; `Maybe(value)` yields present.
+- **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()` for empty.
+  - `Maybe(value)` is not supported yet because lifecycle helpers do not accept parameters and constructor arguments map to fields.
 - **Example shape:**
   ```
   [struct]
@@ -857,17 +858,25 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
     Create() { }
 
     [public]
-    Create([T] v) {
-      init(this.value, v) // consumes v
-      assign(this.empty, false)
-    }
-
-    [public]
     Destroy() {
       if(not(this.empty)) {
         drop(this.value)
       }
     }
+  }
+
+  [return<Maybe<T>>]
+  some<T>([T] v) {
+    [Maybe<T> mut] out{Maybe<T>()}
+    [Reference<Maybe<T>> mut] ref{location(out)}
+    init(ref.value, v)
+    assign(ref.empty, false)
+    return(out)
+  }
+
+  [return<Maybe<T>>]
+  none<T>() {
+    return(Maybe<T>())
   }
   ```
 
@@ -876,8 +885,8 @@ Draft tests (shape only):
 // Positive: create empty, create filled, drop only when filled.
 [return<i32>]
 maybe_basic() {
-  [Maybe<i32>] a{Maybe<i32>()}
-  [Maybe<i32>] b{Maybe<i32>(1i32)}
+  [Maybe<i32>] a{none<i32>()}
+  [Maybe<i32>] b{some<i32>(1i32)}
   if(not(b.empty)) { drop(b.value) }
   return(0i32)
 }

@@ -14,5 +14,19 @@ namespace std {
       if(not(this.empty), then() { drop(this.value) }, else() { })
     }
   }
+
+  [public return<Maybe<T>>]
+  some<T>([T] value) {
+    [Maybe<T> mut] out{Maybe<T>()}
+    [Reference<Maybe<T>> mut] ref{location(out)}
+    init(ref.value, value)
+    assign(ref.empty, false)
+    return(out)
+  }
+
+  [public return<Maybe<T>>]
+  none<T>() {
+    return(Maybe<T>())
+  }
   }
 }

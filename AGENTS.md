@@ -24,6 +24,12 @@ build and layout solidify.
   example and expected IR snippet.
 - When specs change, add a matching TODO entry unless explicitly marked as docs-only/no TODO.
 
+## Struct helper notes
+- Struct constructor calls (`Type(...)`) map arguments to fields (positional/labeled); they do not forward to `Create()`.
+- Lifecycle helpers (`Create`/`Destroy`) must be `void` and accept no parameters.
+- Non-lifecycle helpers only get an implicit `this` when nested inside the struct body; helpers defined as `/Type/Name`
+  outside the struct should use an explicit `self` parameter if they want method-call sugar.
+
 ## Build/test workflow
 - **Primary entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
 - **Release build:** `./scripts/compile.sh --release` (Release build in `build-release`).
