@@ -35,7 +35,7 @@ Legend:
 - ✓ Support lambdas inside definition bodies (spec references lambdas; parser only allows bindings/expressions).
 - ✓ Allow execution-style transforms inside bodies and argument lists (SyntaxSpec allows `[effects(io_out)] log()` anywhere a form is allowed; parser treats leading `[...]` as a binding and rejects `()`).
 - ✓ Support brace constructor forms in value positions (`Type{ ... }` in arguments/returns).
-- ○ Implement definition transform tail sugar (`name(...) [transforms] { ... }`) and normalize it to canonical prefix form (`[transforms] name(...) { ... }`); reject `name[]() { ... }` to avoid indexing-style ambiguity.
+- ✓ Implement definition transform tail sugar (`name(...) [transforms] { ... }`) and normalize it to canonical prefix form (`[transforms] name(...) { ... }`); reject `name[]() { ... }` to avoid indexing-style ambiguity.
 - ○ Allow single-branch surface `if(cond) { ... }` in statement position and desugar to canonical `if(cond, then() { ... }, else() { })`; diagnose single-branch `if` in value/form positions.
 
 **Types & Semantics**

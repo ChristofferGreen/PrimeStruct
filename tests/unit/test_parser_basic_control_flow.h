@@ -377,6 +377,42 @@ main() {
   CHECK(program.definitions[0].transforms[1].arguments[0] == "io_out");
 }
 
+TEST_CASE("parses definition tail transforms and normalizes to prefix list") {
+  const std::string source = R"(
+main([i32] value) [return<int> effects(io_out)] {
+  return(value)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &def = program.definitions[0];
+  REQUIRE(def.transforms.size() == 2);
+  CHECK(def.transforms[0].name == "return");
+  CHECK(def.transforms[1].name == "effects");
+  REQUIRE(def.transforms[1].arguments.size() == 1);
+  CHECK(def.transforms[1].arguments[0] == "io_out");
+  REQUIRE(def.parameters.size() == 1);
+  CHECK(def.parameters[0].name == "value");
+}
+
+TEST_CASE("parses nested definition tail transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  helper([i32] value) [return<int>] {
+    return(value)
+  }
+  return(helper(1i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 2);
+  CHECK(program.definitions[0].fullPath == "/main/helper");
+  REQUIRE(program.definitions[0].transforms.size() == 1);
+  CHECK(program.definitions[0].transforms[0].name == "return");
+  CHECK(program.definitions[1].fullPath == "/main");
+}
+
 TEST_CASE("parses template lists without commas") {
   const std::string source = R"(
 [custom<i32 f32>]

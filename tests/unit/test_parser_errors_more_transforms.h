@@ -376,6 +376,33 @@ main()
   CHECK(error.find("definitions must have a body") != std::string::npos);
 }
 
+TEST_CASE("definition tail transforms require parameter list first") {
+  const std::string source = R"(
+main[]() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("definition transform tail sugar requires parameter list before transform list") !=
+        std::string::npos);
+}
+
+TEST_CASE("executions reject tail transform lists") {
+  const std::string source = R"(
+run(1i32) [effects(io_out)]
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("post-parameter transforms are only valid on definitions") != std::string::npos);
+}
+
 TEST_CASE("namespace identifier cannot be reserved keyword") {
   const std::string source = R"(
 namespace return {

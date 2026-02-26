@@ -38,6 +38,28 @@ size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
   return index;
 }
 
+size_t skipDefinitionTailTransforms(const std::vector<Token> &tokens, size_t index, bool allowSurfaceSyntax) {
+  size_t scan = skipCommentTokens(tokens, index);
+  if (!allowSurfaceSyntax || scan >= tokens.size() || tokens[scan].kind != TokenKind::LBracket) {
+    return scan;
+  }
+  int bracketDepth = 0;
+  while (scan < tokens.size()) {
+    TokenKind kind = tokens[scan].kind;
+    if (kind == TokenKind::LBracket) {
+      ++bracketDepth;
+    } else if (kind == TokenKind::RBracket) {
+      --bracketDepth;
+      if (bracketDepth == 0) {
+        ++scan;
+        break;
+      }
+    }
+    ++scan;
+  }
+  return skipCommentTokens(tokens, scan);
+}
+
 bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
   if (index >= tokens.size() || tokens[index].kind != TokenKind::LBracket) {
     return false;
@@ -298,6 +320,9 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
       return false;
     }
   }
+  if (allowSurfaceSyntax_ && match(TokenKind::LBracket)) {
+    return fail("definition transform tail sugar requires parameter list before transform list");
+  }
   bool hasReturnTransform = false;
   bool hasStructTransform = false;
   for (const auto &transform : transforms) {
@@ -378,6 +403,21 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
       return false;
     }
+    if (allowSurfaceSyntax_ && match(TokenKind::LBracket)) {
+      std::vector<Transform> tailTransforms;
+      if (!parseTransformList(tailTransforms)) {
+        return false;
+      }
+      for (auto &transform : tailTransforms) {
+        if (transform.name == "return") {
+          hasReturnTransform = true;
+        }
+        if (isStructTransformName(transform.name)) {
+          hasStructTransform = true;
+        }
+        transforms.push_back(std::move(transform));
+      }
+    }
     if (!match(TokenKind::LBrace)) {
       return fail("definitions must have a body");
     }
@@ -409,6 +449,12 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   if (!expect(TokenKind::RParen, "expected ')' after arguments")) {
     return false;
+  }
+  if (allowSurfaceSyntax_ && match(TokenKind::LBracket)) {
+    const size_t afterTailTransforms = skipDefinitionTailTransforms(tokens_, pos_, true);
+    if (afterTailTransforms >= tokens_.size() || tokens_[afterTailTransforms].kind != TokenKind::Identifier) {
+      return fail("post-parameter transforms are only valid on definitions");
+    }
   }
   if (match(TokenKind::LBrace)) {
     return fail("executions do not accept body blocks");
@@ -449,6 +495,7 @@ bool Parser::definitionHasReturnBeforeClose() const {
     return false;
   }
   size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  braceIndex = skipDefinitionTailTransforms(tokens_, braceIndex, allowSurfaceSyntax_);
   if (braceIndex >= tokens_.size()) {
     return false;
   }
@@ -541,6 +588,7 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
     return false;
   }
   size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  braceIndex = skipDefinitionTailTransforms(tokens_, braceIndex, allowSurfaceSyntax_);
   if (braceIndex >= tokens_.size()) {
     return false;
   }
@@ -608,6 +656,7 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
     return false;
   }
   size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  braceIndex = skipDefinitionTailTransforms(tokens_, braceIndex, allowSurfaceSyntax_);
   if (braceIndex >= tokens_.size()) {
     return false;
   }
@@ -631,6 +680,7 @@ bool Parser::isCopyConstructorShorthandSignature() const {
     return false;
   }
   size_t braceIndex = skipCommentTokens(tokens_, index + 1);
+  braceIndex = skipDefinitionTailTransforms(tokens_, braceIndex, allowSurfaceSyntax_);
   if (braceIndex >= tokens_.size()) {
     return false;
   }
@@ -747,6 +797,22 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   if (!expect(TokenKind::RParen, "expected ')' after parameters")) {
     return false;
   }
+  std::vector<Transform> combinedTransforms = transforms;
+  if (allowSurfaceSyntax_ && match(TokenKind::LBracket)) {
+    std::vector<Transform> tailTransforms;
+    if (!parseTransformList(tailTransforms)) {
+      return false;
+    }
+    for (auto &transform : tailTransforms) {
+      if (transform.name == "return") {
+        hasReturnTransform = true;
+      }
+      if (isStructTransformName(transform.name)) {
+        hasStructTransform = true;
+      }
+      combinedTransforms.push_back(std::move(transform));
+    }
+  }
   if (!match(TokenKind::LBrace)) {
     return fail("definitions must have a body");
   }
@@ -755,7 +821,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   def.name = name.text;
   def.namespacePrefix = parentPath;
   def.fullPath = makeFullPath(def.name, def.namespacePrefix);
-  def.transforms = transforms;
+  def.transforms = std::move(combinedTransforms);
   def.templateArgs = std::move(templateArgs);
   def.parameters = std::move(parameters);
   def.isNested = true;
