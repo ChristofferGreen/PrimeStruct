@@ -13,7 +13,7 @@
   /std/gpu/buffer_store(output, x, plus(value, 1i32))
 }
 
-[effects(gpu_dispatch) return<int>]
+[effects(gpu_dispatch) return<i32>]
 main() {
   [array<i32>] values{array<i32>(1i32, 2i32, 3i32, 4i32)}
   [Buffer<i32>] input{ /std/gpu/upload(values) }

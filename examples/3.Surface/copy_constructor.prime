@@ -8,7 +8,7 @@ Widget() {
   }
 }
 
-[return<int>]
+[return<i32>]
 main() {
   [Widget mut] a{Widget()}
   [Widget] b{Widget()}

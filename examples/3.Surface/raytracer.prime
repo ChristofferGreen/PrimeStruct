@@ -1,14 +1,14 @@
 import /std/math/*
 
 [struct]
-Hit() {
+Hit {
   [public f32] hit{0.0}
   [public f32] t{-1.0}
   [public f32] id{0.0}
 }
 
 [struct]
-Surface() {
+Surface {
   [public f32] normalX{0.0}
   [public f32] normalY{1.0}
   [public f32] normalZ{0.0}
@@ -20,10 +20,8 @@ Surface() {
 }
 
 [struct]
-Sphere() {
-  [public f32] centerX{0.0}
-  [public f32] centerY{0.0}
-  [public f32] centerZ{0.0}
+Sphere {
+  [public Vec3] center{Vec3(0.0, 0.0, 0.0)}
   [public f32] radius{0.0}
   [public f32] baseR{1.0}
   [public f32] baseG{1.0}
@@ -33,20 +31,18 @@ Sphere() {
 }
 
 [struct]
-Scene() {
+Scene {
   [public Sphere] s1{Sphere()}
   [public Sphere] s2{Sphere()}
   [public Sphere] s3{Sphere()}
   [public f32] planeY{-0.6}
 }
 
-[return<int> effects(io_out)]
+[return<i32> effects(io_out)]
 main() {
   [Scene] scene{Scene(
     [s1] Sphere(
-      [centerX] 0.0,
-      [centerY] -0.1,
-      [centerZ] -1.0,
+      [center] Vec3(0.0, -0.1, -1.0),
       [radius] 0.5,
       [baseR] 0.8,
       [baseG] 0.2,
@@ -55,9 +51,7 @@ main() {
       [isGlass] 0.0
     ),
     [s2] Sphere(
-      [centerX] 1.1,
-      [centerY] -0.1,
-      [centerZ] -1.6,
+      [center] Vec3(1.1, -0.1, -1.6),
       [radius] 0.5,
       [baseR] 0.2,
       [baseG] 0.2,
@@ -66,9 +60,7 @@ main() {
       [isGlass] 0.0
     ),
     [s3] Sphere(
-      [centerX] -1.2,
-      [centerY] -0.2,
-      [centerZ] -1.4,
+      [center] Vec3(-1.2, -0.2, -1.4),
       [radius] 0.4,
       [baseR] 1.0,
       [baseG] 1.0,
@@ -78,56 +70,56 @@ main() {
     ),
     [planeY] -0.6
   )}
-  [int] width{128}
-  [int] height{128}
-  [int] samples{2}
+  [i32] width{128}
+  [i32] height{128}
+  [i32] samples{2}
   [f32] samplesF{f32{samples}}
   [f32] sampleScale{1.0 / samplesF / samplesF}
   [Vec3] origin{Vec3(0.0, 0.8, 2.5)}
 
-  print_line("P3"utf8)
+  print_line("P3")
   print(width)
-  print(" "utf8)
+  print(" ")
   print_line(height)
-  print_line("255"utf8)
+  print_line("255")
 
-  for([int mut] y{0}; y < height; ++y) {
-    for([int mut] x{0}; x < width; ++x) {
+  for([i32 mut] y{0}; y < height; ++y) {
+    for([i32 mut] x{0}; x < width; ++x) {
       [ColorRGB] color{pixel_color(scene, origin, x, y, width, height, samples, sampleScale)}
-      [int] r{to_byte(color.r)}
-      [int] g{to_byte(color.g)}
-      [int] b{to_byte(color.b)}
+      [i32] r{to_byte(color.r)}
+      [i32] g{to_byte(color.g)}
+      [i32] b{to_byte(color.b)}
 
       print(r)
-      print(" "utf8)
+      print(" ")
       print(g)
-      print(" "utf8)
+      print(" ")
       print_line(b)
     }
   }
 
-  return(0i32)
+  return(0)
 }
 
 [ColorRGB]
 pixel_color([Scene] scene,
             [Vec3] origin,
-            [int] x,
-            [int] y,
-            [int] width,
-            [int] height,
-            [int] samples,
+            [i32] x,
+            [i32] y,
+            [i32] width,
+            [i32] height,
+            [i32] samples,
             [f32] sampleScale) {
   [ColorRGB mut] accum{ColorRGB(0.0, 0.0, 0.0)}
   [f32] samplesF{f32{samples}}
-  [int] widthMinus{width - 1}
-  [int] heightMinus{height - 1}
+  [i32] widthMinus{width - 1}
+  [i32] heightMinus{height - 1}
   [f32] widthMinusF{f32{widthMinus}}
   [f32] heightMinusF{f32{heightMinus}}
   [f32] xF{f32{x}}
   [f32] yF{f32{y}}
-  for([int mut] sy{0}; sy < samples; ++sy) {
-    for([int mut] sx{0}; sx < samples; ++sx) {
+  for([i32 mut] sy{0}; sy < samples; ++sy) {
+    for([i32 mut] sx{0}; sx < samples; ++sx) {
       [f32] sxF{f32{sx}}
       [f32] syF{f32{sy}}
       [f32] jitterX{(sxF + 0.5) / samplesF}
@@ -174,16 +166,16 @@ hit_sphere([Vec3] center, [f32] radius, [Vec3] origin, [Vec3] dir) {
 }
 
 [Hit]
-scene_hit([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist, [int] includeGlass) {
+scene_hit([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist, [i32] includeGlass) {
   [f32 mut] closest{maxDist}
   [f32 mut] hit{0.0}
   [f32 mut] hitId{0.0}
   [Sphere] s1{scene.s1}
   [Sphere] s2{scene.s2}
   [Sphere] s3{scene.s3}
-  [Vec3] c1{Vec3(s1.centerX, s1.centerY, s1.centerZ)}
-  [Vec3] c2{Vec3(s2.centerX, s2.centerY, s2.centerZ)}
-  [Vec3] c3{Vec3(s3.centerX, s3.centerY, s3.centerZ)}
+  [Vec3] c1{s1.center}
+  [Vec3] c2{s2.center}
+  [Vec3] c3{s3.center}
   [f32] r1{s1.radius}
   [f32] r2{s2.radius}
   [f32] r3{s3.radius}
@@ -239,9 +231,9 @@ scene_surface([Scene] scene, [f32] hitId, [Vec3] hitPoint) {
   [Sphere] s1{scene.s1}
   [Sphere] s2{scene.s2}
   [Sphere] s3{scene.s3}
-  [Vec3] c1{Vec3(s1.centerX, s1.centerY, s1.centerZ)}
-  [Vec3] c2{Vec3(s2.centerX, s2.centerY, s2.centerZ)}
-  [Vec3] c3{Vec3(s3.centerX, s3.centerY, s3.centerZ)}
+  [Vec3] c1{s1.center}
+  [Vec3] c2{s2.center}
+  [Vec3] c3{s3.center}
   [ColorRGB] b1{ColorRGB(s1.baseR, s1.baseG, s1.baseB)}
   [ColorRGB] b2{ColorRGB(s2.baseR, s2.baseG, s2.baseB)}
   [ColorRGB] b3{ColorRGB(s3.baseR, s3.baseG, s3.baseB)}
@@ -304,10 +296,10 @@ scene_surface([Scene] scene, [f32] hitId, [Vec3] hitPoint) {
   }
 }
 
-[int]
+[i32]
 occluded([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist) {
   [Hit] hit{scene_hit(scene, origin, dir, maxDist, 1)}
-  return(int{hit.hit})
+  return(i32{hit.hit})
 }
 
 [f32]
@@ -322,34 +314,26 @@ ambient_occlusion([Scene] scene, [Vec3] point, [Vec3] normal) {
   tangent = tangent.toNormalized()
   [Vec3] bitangent{/std/math/Vec3/cross(normal, tangent)}
 
-  [Vec3] origin{Vec3(
-    point.x + normal.x * 0.001,
-    point.y + normal.y * 0.001,
-    point.z + normal.z * 0.001
-  )}
+  [Vec3] origin{point.add(normal.mulScalar(0.001))}
   [f32] maxDist{2.0}
   [f32 mut] visible{0.0}
 
-  [Vec3] d1{Vec3(
-    tangent.x * 0.707 + bitangent.x * 0.0 + normal.x * 0.707,
-    tangent.y * 0.707 + bitangent.y * 0.0 + normal.y * 0.707,
-    tangent.z * 0.707 + bitangent.z * 0.0 + normal.z * 0.707
-  ).toNormalized()}
-  [Vec3] d2{Vec3(
-    tangent.x * -0.707 + bitangent.x * 0.0 + normal.x * 0.707,
-    tangent.y * -0.707 + bitangent.y * 0.0 + normal.y * 0.707,
-    tangent.z * -0.707 + bitangent.z * 0.0 + normal.z * 0.707
-  ).toNormalized()}
-  [Vec3] d3{Vec3(
-    tangent.x * 0.0 + bitangent.x * 0.707 + normal.x * 0.707,
-    tangent.y * 0.0 + bitangent.y * 0.707 + normal.y * 0.707,
-    tangent.z * 0.0 + bitangent.z * 0.707 + normal.z * 0.707
-  ).toNormalized()}
-  [Vec3] d4{Vec3(
-    tangent.x * 0.0 + bitangent.x * -0.707 + normal.x * 0.707,
-    tangent.y * 0.0 + bitangent.y * -0.707 + normal.y * 0.707,
-    tangent.z * 0.0 + bitangent.z * -0.707 + normal.z * 0.707
-  ).toNormalized()}
+  [Vec3] d1Tan{tangent.mulScalar(0.707)}
+  [Vec3] d1Norm{normal.mulScalar(0.707)}
+  [Vec3] d1Raw{d1Tan.add(d1Norm)}
+  [Vec3] d2Tan{tangent.mulScalar(-0.707)}
+  [Vec3] d2Norm{normal.mulScalar(0.707)}
+  [Vec3] d2Raw{d2Tan.add(d2Norm)}
+  [Vec3] d3Bitangent{bitangent.mulScalar(0.707)}
+  [Vec3] d3Norm{normal.mulScalar(0.707)}
+  [Vec3] d3Raw{d3Bitangent.add(d3Norm)}
+  [Vec3] d4Bitangent{bitangent.mulScalar(-0.707)}
+  [Vec3] d4Norm{normal.mulScalar(0.707)}
+  [Vec3] d4Raw{d4Bitangent.add(d4Norm)}
+  [Vec3] d1{d1Raw.toNormalized()}
+  [Vec3] d2{d2Raw.toNormalized()}
+  [Vec3] d3{d3Raw.toNormalized()}
+  [Vec3] d4{d4Raw.toNormalized()}
 
   if(occluded(scene, origin, d1, maxDist) == 0) { visible = visible + 1.0 } else {}
   if(occluded(scene, origin, d2, maxDist) == 0) { visible = visible + 1.0 } else {}
@@ -409,14 +393,14 @@ trace_direct_skip_glass([Scene] scene, [Vec3] origin, [Vec3] dir) {
 }
 
 [ColorRGB]
-trace([Scene] scene, [Vec3] origin, [Vec3] dir, [int] depth) {
+trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
   [ColorRGB mut] result{ColorRGB(0.0, 0.0, 0.0)}
   [Vec3 mut] currentOrigin{origin}
   [Vec3 mut] currentDir{dir}
   [f32 mut] weight{1.0}
   [ColorRGB mut] filter{ColorRGB(1.0, 1.0, 1.0)}
 
-  for([int mut] bounce{0}; bounce < depth; ++bounce) {
+  for([i32 mut] bounce{0}; bounce < depth; ++bounce) {
     [ColorRGB] sky{sky_color(currentDir)}
     [Hit] hit{scene_hit(scene, currentOrigin, currentDir, 1.0e9, 1)}
     if(hit.hit == 0.0) {
@@ -461,7 +445,7 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [int] depth) {
       }
 
       [f32] ndot{currentDir.dot(hitNormal)}
-      [int mut] frontFace{0}
+      [i32 mut] frontFace{0}
       if(ndot < 0.0) {
         frontFace = 1
       } else {
@@ -528,8 +512,8 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [int] depth) {
   return(result)
 }
 
-[int]
+[i32]
 to_byte([f32] value) {
   [f32] clamped{clamp(value, 0.0, 1.0)}
-  return(int{clamped * 255.0 + 0.5})
+  return(i32{clamped * 255.0 + 0.5})
 }

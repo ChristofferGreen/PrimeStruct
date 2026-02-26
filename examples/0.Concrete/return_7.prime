@@ -1,4 +1,4 @@
-[return<int>]
-main() {
+[return<i32>]
+main {
   return(7i32)
 }

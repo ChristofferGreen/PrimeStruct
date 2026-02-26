@@ -1,4 +1,4 @@
-[return<int> effects(io_out, io_err)]
+[return<i32> effects(io_out, io_err)]
 main() {
   print("value="utf8)
   print_line(42i32)

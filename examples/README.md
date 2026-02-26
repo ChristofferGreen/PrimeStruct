@@ -48,7 +48,7 @@ From `build-debug/`:
 - `examples/3.Surface/param_defaults.prime`: default parameter values.
 - `examples/3.Surface/hello_world_if.prime`: surface `if` blocks.
 - `examples/3.Surface/syntax_braces.prime`: mixed `{}` bindings and surface `if`.
-- `examples/3.Surface/result_helpers.prime`: `Result.error`/`Result.why` helpers + status check.
+- `examples/3.Surface/result_helpers.prime`: `Result.error`/`Result.why` helpers + status check (`--emit=exe`/`--emit=vm`; not part of the IR example sweep).
 - `examples/3.Surface/features_overview.prime`: high-level tour (imports, namespace, collections, loops, operators, indexing, effects).
 - `examples/3.Surface/gpu_compute.prime`: compute kernel + `/std/gpu/dispatch` fallback in VM/native.
 - `examples/3.Surface/raytracer.prime`: simple ray tracer (reflective spheres + checkerboard) emitting PPM.

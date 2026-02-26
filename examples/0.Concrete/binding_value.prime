@@ -1,4 +1,4 @@
-[return<int>]
+[return<i32>]
 main() {
   [i32] value{7i32}
   return(value)

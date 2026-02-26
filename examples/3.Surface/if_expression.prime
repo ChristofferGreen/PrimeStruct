@@ -1,4 +1,4 @@
-[return<int>]
+[return<i32>]
 main() {
   return(if(true) { 5i32 } else { 2i32 })
 }

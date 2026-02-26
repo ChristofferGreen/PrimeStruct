@@ -1,6 +1,6 @@
 namespace i64 {
   [return<i64>]
-  inc([i64] self) {
+  inc([auto] self) {
     return(plus(self, 1i64))
   }
 }

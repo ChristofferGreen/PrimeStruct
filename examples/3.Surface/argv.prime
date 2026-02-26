@@ -1,4 +1,4 @@
-[return<int> effects(io_out)]
+[return<i32> effects(io_out)]
 main([array<string>] args) {
   print("argc="utf8)
   print_line(args.count())

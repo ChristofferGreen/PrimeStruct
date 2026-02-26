@@ -1,4 +1,4 @@
-[return<int> effects(io_out)]
+[return<i32> effects(io_out)]
 main() {
   if(true) {
     print_line("Hello, world! 1"utf8)

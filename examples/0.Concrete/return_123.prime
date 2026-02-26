@@ -1,4 +1,4 @@
-[return<int>]
+[return<i32>]
 main() {
   return(123i32)
 }

@@ -1,4 +1,4 @@
-[return<int>]
+[return<i32>]
 main() {
   [i32 mut] value{4i32}
   [Reference<i32> mut] ref{location(value)}

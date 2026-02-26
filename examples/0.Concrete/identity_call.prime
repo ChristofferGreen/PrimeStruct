@@ -1,9 +1,9 @@
-[return<int>]
+[return<i32>]
 identity([i32] x) {
   return(x)
 }
 
-[return<int>]
+[return<i32>]
 main() {
   return(identity(88i32))
 }

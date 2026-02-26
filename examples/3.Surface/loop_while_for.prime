@@ -1,4 +1,4 @@
-[return<int>]
+[return<i32>]
 main() {
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}

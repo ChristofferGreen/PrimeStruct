@@ -1,16 +1,16 @@
 namespace demo {
-  [return<int>]
+  [return<i32>]
   get_value() {
     return(19i32)
   }
 
-  [return<int>]
+  [return<i32>]
   main() {
     return(get_value())
   }
 }
 
-[return<int>]
+[return<i32>]
 main() {
   return(/demo/main())
 }

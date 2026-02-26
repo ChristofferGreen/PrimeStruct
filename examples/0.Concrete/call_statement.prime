@@ -1,9 +1,9 @@
-[return<int>]
+[return<i32>]
 helper() {
   return(3i32)
 }
 
-[return<int>]
+[return<i32>]
 main() {
   helper()
   return(7i32)

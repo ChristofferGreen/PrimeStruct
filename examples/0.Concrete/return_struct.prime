@@ -9,7 +9,7 @@ make_point([i32] x, [i32] y) {
   return(Point([x] x, [y] y))
 }
 
-[return<int>]
+[return<i32>]
 main() {
   [Point] value{make_point(3i32, 4i32)}
   return(plus(value.x, value.y))
