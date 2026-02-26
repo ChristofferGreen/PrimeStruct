@@ -207,6 +207,9 @@
       bool sawMutableBorrow = false;
       bool sawImmutableBorrow = false;
       auto observeBorrow = [&](const std::string &bindingName, const BindingInfo &binding) {
+        if (endedReferenceBorrows_.count(bindingName) > 0) {
+          return;
+        }
         const std::string root = referenceRootForBinding(bindingName, binding);
         if (root.empty() || root != borrowRoot) {
           return;
@@ -605,7 +608,9 @@
       }
       std::unordered_map<std::string, BindingInfo> branchLocals = locals;
       OnErrorScope onErrorScope(*this, std::nullopt);
-      for (const auto &bodyExpr : branch.bodyArguments) {
+      BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+      for (size_t bodyIndex = 0; bodyIndex < branch.bodyArguments.size(); ++bodyIndex) {
+        const Expr &bodyExpr = branch.bodyArguments[bodyIndex];
         if (!validateStatement(params,
                                branchLocals,
                                bodyExpr,
@@ -616,6 +621,7 @@
                                namespacePrefix)) {
           return false;
         }
+        expireReferenceBorrowsForRemainder(params, branchLocals, branch.bodyArguments, bodyIndex + 1);
       }
       return true;
     };

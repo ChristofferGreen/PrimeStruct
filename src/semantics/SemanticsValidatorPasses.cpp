@@ -258,11 +258,14 @@ bool SemanticsValidator::validateDefinitions() {
     }
     OnErrorScope onErrorScope(*this, onErrorHandler);
     movedBindings_.clear();
+    endedReferenceBorrows_.clear();
     bool sawReturn = false;
-    for (const auto &stmt : def.statements) {
+    for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
+      const Expr &stmt = def.statements[stmtIndex];
       if (!validateStatement(defParams, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder(defParams, locals, def.statements, stmtIndex + 1);
     }
     if (kind != ReturnKind::Void && !isStructDefinition(def)) {
       bool allPathsReturn = blockAlwaysReturns(def.statements);
@@ -945,6 +948,7 @@ bool SemanticsValidator::validateExecutions() {
   for (const auto &exec : program_.executions) {
     activeEffects_ = resolveEffects(exec.transforms, false);
     movedBindings_.clear();
+    endedReferenceBorrows_.clear();
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {
@@ -1052,10 +1056,12 @@ bool SemanticsValidator::validateExecutions() {
       }
     }
     std::unordered_map<std::string, BindingInfo> execLocals;
-    for (const auto &arg : exec.bodyArguments) {
+    for (size_t bodyIndex = 0; bodyIndex < exec.bodyArguments.size(); ++bodyIndex) {
+      const Expr &arg = exec.bodyArguments[bodyIndex];
       if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, true, nullptr, exec.namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder({}, execLocals, exec.bodyArguments, bodyIndex + 1);
     }
   }
   return true;

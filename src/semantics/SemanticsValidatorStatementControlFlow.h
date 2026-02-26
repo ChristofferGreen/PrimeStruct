@@ -17,7 +17,9 @@
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = baseLocals;
     OnErrorScope onErrorScope(*this, std::nullopt);
-    for (const auto &bodyExpr : body.bodyArguments) {
+    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+    for (size_t bodyIndex = 0; bodyIndex < body.bodyArguments.size(); ++bodyIndex) {
+      const Expr &bodyExpr = body.bodyArguments[bodyIndex];
       if (!validateStatement(params,
                              blockLocals,
                              bodyExpr,
@@ -28,6 +30,7 @@
                              namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder(params, blockLocals, body.bodyArguments, bodyIndex + 1);
     }
     return true;
   };
@@ -196,7 +199,9 @@
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
     OnErrorScope onErrorScope(*this, std::nullopt);
-    for (const auto &bodyExpr : stmt.bodyArguments) {
+    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+    for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
+      const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params,
                              blockLocals,
                              bodyExpr,
@@ -207,6 +212,7 @@
                              namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
     }
     return true;
   }
@@ -233,7 +239,9 @@
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
     OnErrorScope onErrorScope(*this, blockOnError);
-    for (const auto &bodyExpr : stmt.bodyArguments) {
+    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+    for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
+      const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params,
                              blockLocals,
                              bodyExpr,
@@ -244,6 +252,7 @@
                              namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
     }
     return true;
   }
@@ -723,10 +732,13 @@
       return false;
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-    for (const auto &bodyExpr : stmt.bodyArguments) {
+    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+    for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
+      const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
       if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, true, nullptr, namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
     }
     return true;
   }

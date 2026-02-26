@@ -759,8 +759,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 - **Borrow rules (safe scope):**
   - A `Reference<T>` is a borrow of a storage location.
   - Many immutable borrows are allowed, or one mutable borrow; they may not overlap.
-  - Borrow overlap checks currently use lexical scopes (block/function), including alias tracking through `location(ref)`.
-  - Non-lexical last-use lifetimes are planned but not implemented yet.
+  - Borrows can end at last use before lexical scope exit (non-lexical lifetimes), including alias tracking through `location(ref)`.
+  - Last-use analysis is conservative across complex control flow: if later use cannot be proven absent, the borrow stays active.
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
   - Full no-escape enforcement for `Reference<T>` values (except direct parameter returns) is planned but not implemented yet.

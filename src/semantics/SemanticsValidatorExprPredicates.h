@@ -132,6 +132,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
 
     MovedScope movedScope(*this, {});
+    BorrowEndScope borrowScope(*this, {});
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> lambdaParams;
     lambdaParams.reserve(expr.args.size());
@@ -194,7 +195,8 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
 
     bool sawReturn = false;
-    for (const auto &stmt : expr.bodyArguments) {
+    for (size_t stmtIndex = 0; stmtIndex < expr.bodyArguments.size(); ++stmtIndex) {
+      const Expr &stmt = expr.bodyArguments[stmtIndex];
       if (!validateStatement(lambdaParams,
                              lambdaLocals,
                              stmt,
@@ -205,6 +207,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                              expr.namespacePrefix)) {
         return false;
       }
+      expireReferenceBorrowsForRemainder(lambdaParams, lambdaLocals, expr.bodyArguments, stmtIndex + 1);
     }
     return true;
   }

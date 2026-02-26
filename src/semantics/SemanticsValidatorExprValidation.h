@@ -582,20 +582,23 @@
         return false;
       }
     }
-    if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
-      if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {
-        error_ = "block arguments require a definition target: " + resolved;
-        return false;
-      }
-      std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-      OnErrorScope onErrorScope(*this, std::nullopt);
-      for (const auto &bodyExpr : expr.bodyArguments) {
-        if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
-                               expr.namespacePrefix)) {
+      if ((expr.hasBodyArguments || !expr.bodyArguments.empty()) && !isBuiltinBlockCall(expr)) {
+        if (resolvedMethod || defMap_.find(resolved) == defMap_.end()) {
+          error_ = "block arguments require a definition target: " + resolved;
           return false;
         }
+        std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+        OnErrorScope onErrorScope(*this, std::nullopt);
+        BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
+        for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
+          const Expr &bodyExpr = expr.bodyArguments[bodyIndex];
+          if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
+                                 expr.namespacePrefix)) {
+            return false;
+          }
+          expireReferenceBorrowsForRemainder(params, blockLocals, expr.bodyArguments, bodyIndex + 1);
+        }
       }
-    }
     std::string gpuBuiltin;
     if (getBuiltinGpuName(expr, gpuBuiltin)) {
       if (hasNamedArguments(expr.argNames)) {
@@ -2015,6 +2018,9 @@
         };
         auto hasBorrowFrom = [&](const std::string &borrowName, const BindingInfo &binding) -> bool {
           if (borrowName == name) {
+            return false;
+          }
+          if (endedReferenceBorrows_.count(borrowName) > 0) {
             return false;
           }
           const std::string root = referenceRootForBinding(borrowName, binding);

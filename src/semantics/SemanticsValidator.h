@@ -79,6 +79,12 @@ private:
   std::unordered_set<std::string> resolveEffects(const std::vector<Transform> &transforms, bool isEntry) const;
   bool validateCapabilitiesSubset(const std::vector<Transform> &transforms, const std::string &context);
   bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
+  bool exprUsesName(const Expr &expr, const std::string &name) const;
+  bool statementsUseNameFrom(const std::vector<Expr> &statements, size_t startIndex, const std::string &name) const;
+  void expireReferenceBorrowsForRemainder(const std::vector<ParameterInfo> &params,
+                                          const std::unordered_map<std::string, BindingInfo> &locals,
+                                          const std::vector<Expr> &statements,
+                                          size_t nextIndex);
 
   struct ResultTypeInfo {
     bool isResult = false;
@@ -169,6 +175,17 @@ private:
       validator.movedBindings_ = std::move(previous);
     }
   };
+  struct BorrowEndScope {
+    SemanticsValidator &validator;
+    std::unordered_set<std::string> previous;
+    BorrowEndScope(SemanticsValidator &validatorIn, std::unordered_set<std::string> next)
+        : validator(validatorIn), previous(std::move(validatorIn.endedReferenceBorrows_)) {
+      validator.endedReferenceBorrows_ = std::move(next);
+    }
+    ~BorrowEndScope() {
+      validator.endedReferenceBorrows_ = std::move(previous);
+    }
+  };
 
   const Program &program_;
   const std::string &entryPath_;
@@ -186,6 +203,7 @@ private:
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
   std::unordered_set<std::string> activeEffects_;
   std::unordered_set<std::string> movedBindings_;
+  std::unordered_set<std::string> endedReferenceBorrows_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_map<std::string, std::string> importAliases_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;

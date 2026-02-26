@@ -989,7 +989,7 @@ TEST_CASE("uninitialized loop literal one leaves storage uninitialized") {
   CHECK(error.find("drop requires initialized storage") != std::string::npos);
 }
 
-TEST_CASE("borrow checker rejects overlapping mutable and immutable references") {
+TEST_CASE("borrow checker rejects overlapping mutable and immutable references with future use") {
   primec::Program program;
   primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
   primec::Expr refA =
@@ -998,15 +998,18 @@ TEST_CASE("borrow checker rejects overlapping mutable and immutable references")
   primec::Expr refB =
       makeBinding("refB", {makeTransform("Reference", std::string("i32"))},
                   {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("refA")})});
   program.definitions.push_back(makeDefinition("/main",
                                                {makeTransform("return", std::string("void"))},
-                                               {valueBinding, refA, refB, makeCall("/return")}));
+                                               {valueBinding, refA, refB, observed, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("borrow conflict") != std::string::npos);
 }
 
-TEST_CASE("borrow checker rejects overlapping mutable references") {
+TEST_CASE("borrow checker rejects overlapping mutable references with future use") {
   primec::Program program;
   primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
   primec::Expr refA =
@@ -1015,9 +1018,12 @@ TEST_CASE("borrow checker rejects overlapping mutable references") {
   primec::Expr refB =
       makeBinding("refB", {makeTransform("Reference", std::string("i32")), makeTransform("mut")},
                   {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("refA")})});
   program.definitions.push_back(makeDefinition("/main",
                                                {makeTransform("return", std::string("void"))},
-                                               {valueBinding, refA, refB, makeCall("/return")}));
+                                               {valueBinding, refA, refB, observed, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("borrow conflict") != std::string::npos);
@@ -1046,9 +1052,12 @@ TEST_CASE("borrow checker rejects assign to borrowed binding") {
       makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
                   {makeCall("location", {makeName("value")})});
   primec::Expr assign = makeCall("assign", {makeName("value"), makeLiteral(2)});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
   program.definitions.push_back(makeDefinition("/main",
                                                {makeTransform("return", std::string("void"))},
-                                               {valueBinding, ref, assign, makeCall("/return")}));
+                                               {valueBinding, ref, assign, observed, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("borrowed binding") != std::string::npos);
@@ -1062,9 +1071,12 @@ TEST_CASE("borrow checker rejects move from borrowed binding") {
                   {makeCall("location", {makeName("value")})});
   primec::Expr moveValue = makeCall("move", {makeName("value")});
   primec::Expr movedBinding = makeBinding("out", {makeTransform("i32")}, {moveValue});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
   program.definitions.push_back(makeDefinition("/main",
                                                {makeTransform("return", std::string("void"))},
-                                               {valueBinding, ref, movedBinding, makeCall("/return")}));
+                                               {valueBinding, ref, movedBinding, observed, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("borrowed binding") != std::string::npos);
@@ -1104,6 +1116,61 @@ TEST_CASE("borrow checker tracks references through location(ref)") {
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
   CHECK(error.find("borrow conflict") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows assign after last use in same scope") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  primec::Expr assign = makeCall("assign", {makeName("value"), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, observed, assign, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("borrow checker allows mutable borrow after immutable last use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr refA =
+      makeBinding("refA", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("refA")})});
+  primec::Expr refB =
+      makeBinding("refB", {makeTransform("Reference", std::string("i32")), makeTransform("mut")},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr writeThroughRef = makeCall("assign", {makeName("refB"), makeLiteral(3)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, refA, observed, refB, writeThroughRef, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("borrow checker rejects assign before last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr assign = makeCall("assign", {makeName("value"), makeLiteral(2)});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, assign, observed, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("borrowed binding") != std::string::npos);
 }
 
 TEST_CASE("uninitialized not allowed in array element types") {
