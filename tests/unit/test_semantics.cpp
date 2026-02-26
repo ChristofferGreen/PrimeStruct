@@ -80,3 +80,4 @@ bool validateProgramWithDefaults(const std::string &source,
 #include "test_semantics_traits.h"
 #include "test_semantics_lambdas.h"
 #include "test_semantics_move.h"
+#include "test_semantics_uninitialized_fields.h"

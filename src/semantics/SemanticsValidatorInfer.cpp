@@ -290,13 +290,15 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (!expr.isMethodCall &&
         (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) && expr.args.size() == 1) {
       const Expr &storage = expr.args.front();
-      if (storage.kind == Expr::Kind::Name) {
-        const BindingInfo *binding = findBinding(params, locals, storage.name);
-        if (binding && binding->typeName == "uninitialized" && !binding->typeTemplateArg.empty()) {
-          ReturnKind kind = uninitializedTargetKind(binding->typeTemplateArg, storage.namespacePrefix);
-          if (kind != ReturnKind::Unknown) {
-            return kind;
-          }
+      BindingInfo binding;
+      bool resolved = false;
+      if (!resolveUninitializedStorageBinding(params, locals, storage, binding, resolved)) {
+        return ReturnKind::Unknown;
+      }
+      if (resolved && binding.typeName == "uninitialized" && !binding.typeTemplateArg.empty()) {
+        ReturnKind kind = uninitializedTargetKind(binding.typeTemplateArg, storage.namespacePrefix);
+        if (kind != ReturnKind::Unknown) {
+          return kind;
         }
       }
     }

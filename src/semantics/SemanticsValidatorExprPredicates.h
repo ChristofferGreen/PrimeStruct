@@ -987,11 +987,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                isSimpleCallName(expr, "borrow"))) {
       const std::string name = expr.name;
       auto isUninitializedStorage = [&](const Expr &arg) -> bool {
-        if (arg.kind != Expr::Kind::Name) {
+        BindingInfo binding;
+        bool resolved = false;
+        if (!resolveUninitializedStorageBinding(params, locals, arg, binding, resolved)) {
           return false;
         }
-        const BindingInfo *binding = findBinding(params, locals, arg.name);
-        if (!binding || binding->typeName != "uninitialized" || binding->typeTemplateArg.empty()) {
+        if (!resolved || binding.typeName != "uninitialized" || binding.typeTemplateArg.empty()) {
           return false;
         }
         return true;

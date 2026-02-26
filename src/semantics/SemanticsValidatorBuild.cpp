@@ -958,6 +958,69 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   return root;
 }
 
+bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<ParameterInfo> &params,
+                                                            const std::unordered_map<std::string, BindingInfo> &locals,
+                                                            const Expr &storage,
+                                                            BindingInfo &bindingOut,
+                                                            bool &resolvedOut) {
+  resolvedOut = false;
+  if (storage.kind == Expr::Kind::Name) {
+    if (const BindingInfo *binding = findBinding(params, locals, storage.name)) {
+      bindingOut = *binding;
+      resolvedOut = true;
+    }
+    return true;
+  }
+  if (!storage.isFieldAccess || storage.args.size() != 1) {
+    return true;
+  }
+  const Expr &receiver = storage.args.front();
+  if (receiver.kind != Expr::Kind::Name) {
+    return true;
+  }
+  const BindingInfo *receiverBinding = findBinding(params, locals, receiver.name);
+  if (!receiverBinding || receiverBinding->typeName != "Reference" || receiverBinding->typeTemplateArg.empty()) {
+    return true;
+  }
+  std::string structPath =
+      resolveStructTypePath(receiverBinding->typeTemplateArg, receiver.namespacePrefix, structNames_);
+  if (structPath.empty()) {
+    return true;
+  }
+  auto defIt = defMap_.find(structPath);
+  if (defIt == defMap_.end() || !defIt->second) {
+    return true;
+  }
+  auto isStaticField = [](const Expr &stmt) -> bool {
+    for (const auto &transform : stmt.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const auto &stmt : defIt->second->statements) {
+    if (!stmt.isBinding || isStaticField(stmt)) {
+      continue;
+    }
+    if (stmt.name != storage.name) {
+      continue;
+    }
+    BindingInfo fieldBinding;
+    std::optional<std::string> restrictType;
+    std::string parseError;
+    if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, fieldBinding, restrictType,
+                          parseError)) {
+      error_ = parseError;
+      return false;
+    }
+    bindingOut = std::move(fieldBinding);
+    resolvedOut = true;
+    return true;
+  }
+  return true;
+}
+
 bool SemanticsValidator::isBuiltinBlockCall(const Expr &expr) const {
   if (!isBlockCall(expr)) {
     return false;

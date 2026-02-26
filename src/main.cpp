@@ -787,7 +787,19 @@ std::string quotePath(const std::filesystem::path &path) {
 }
 
 bool shouldAutoIncludeStdlib(const std::string &source) {
-  return source.find("import /std/math") != std::string::npos;
+  size_t pos = 0;
+  while ((pos = source.find("import /std", pos)) != std::string::npos) {
+    size_t next = pos + std::string("import /std").size();
+    if (next >= source.size()) {
+      return true;
+    }
+    char c = source[next];
+    if (c == '/' || std::isspace(static_cast<unsigned char>(c)) != 0) {
+      return true;
+    }
+    pos = next;
+  }
+  return false;
 }
 
 bool appendStdlibSources(const std::vector<std::string> &includePaths,

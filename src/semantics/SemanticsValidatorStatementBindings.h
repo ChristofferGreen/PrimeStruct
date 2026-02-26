@@ -238,11 +238,12 @@
     if (!validateExpr(params, locals, storageArg)) {
       return false;
     }
-    const BindingInfo *binding = nullptr;
-    if (storageArg.kind == Expr::Kind::Name) {
-      binding = findBinding(params, locals, storageArg.name);
+    BindingInfo storageBinding;
+    bool resolved = false;
+    if (!resolveUninitializedStorageBinding(params, locals, storageArg, storageBinding, resolved)) {
+      return false;
     }
-    if (!binding || binding->typeName != "uninitialized" || binding->typeTemplateArg.empty()) {
+    if (!resolved || storageBinding.typeName != "uninitialized" || storageBinding.typeTemplateArg.empty()) {
       error_ = name + " requires uninitialized<T> storage";
       return false;
     }
@@ -339,7 +340,7 @@
         }
         return false;
       };
-      const std::string expectedType = binding->typeTemplateArg;
+      const std::string expectedType = storageBinding.typeTemplateArg;
       std::string actualType;
       if (inferValueTypeString(stmt.args[1], actualType)) {
         if (!typesMatch(expectedType, actualType)) {

@@ -104,6 +104,11 @@ private:
                              const std::string &context,
                              std::optional<OnErrorHandler> &out);
   bool errorTypesMatch(const std::string &left, const std::string &right, const std::string &namespacePrefix) const;
+  bool resolveUninitializedStorageBinding(const std::vector<ParameterInfo> &params,
+                                          const std::unordered_map<std::string, BindingInfo> &locals,
+                                          const Expr &storage,
+                                          BindingInfo &bindingOut,
+                                          bool &resolvedOut);
 
   struct EffectFreeSummary {
     bool effectFree = false;
