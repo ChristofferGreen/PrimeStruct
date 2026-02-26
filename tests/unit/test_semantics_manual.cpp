@@ -874,6 +874,121 @@ TEST_CASE("uninitialized repeat count expression effects are tracked") {
   CHECK(error.find("drop requires initialized storage") != std::string::npos);
 }
 
+TEST_CASE("uninitialized loop literal one executes body exactly once") {
+  primec::Program program;
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr bodyBlock = makeCall("do", {}, {}, {makeCall("take", {makeName("storage")})});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr loopCall = makeCall("loop", {makeLiteral(1), bodyBlock});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, loopCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized loop literal zero preserves initialized state") {
+  primec::Program program;
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr bodyBlock = makeCall("do", {}, {}, {makeCall("take", {makeName("storage")})});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr loopCall = makeCall("loop", {makeLiteral(0), bodyBlock});
+  primec::Expr dropCall = makeCall("drop", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, loopCall, dropCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized repeat literal one executes body exactly once") {
+  primec::Program program;
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr repeatCall = makeCall("repeat", {makeLiteral(1)}, {}, {makeCall("take", {makeName("storage")})});
+  repeatCall.hasBodyArguments = true;
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, repeatCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized repeat false executes zero iterations") {
+  primec::Program program;
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr repeatCall = makeCall("repeat", {makeBool(false)}, {}, {makeCall("take", {makeName("storage")})});
+  repeatCall.hasBodyArguments = true;
+  primec::Expr dropCall = makeCall("drop", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, repeatCall, dropCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized repeat true executes body once") {
+  primec::Program program;
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr repeatCall = makeCall("repeat", {makeBool(true)}, {}, {makeCall("take", {makeName("storage")})});
+  repeatCall.hasBodyArguments = true;
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, repeatCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized loop literal one leaves storage uninitialized") {
+  primec::Program program;
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr bodyBlock = makeCall("do", {}, {}, {makeCall("take", {makeName("storage")})});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr loopCall = makeCall("loop", {makeLiteral(1), bodyBlock});
+  primec::Expr dropCall = makeCall("drop", {makeName("storage")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, loopCall, dropCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("drop requires initialized storage") != std::string::npos);
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

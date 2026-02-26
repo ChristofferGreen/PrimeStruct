@@ -351,6 +351,43 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     return statesIn.size() * 3 + 2;
   };
 
+  auto integerLiteralCount = [](const Expr &expr) -> std::optional<uint64_t> {
+    if (expr.kind != Expr::Kind::Literal) {
+      return std::nullopt;
+    }
+    if (expr.isUnsigned) {
+      return expr.literalValue;
+    }
+    if (expr.intWidth == 32) {
+      const int32_t value = static_cast<int32_t>(expr.literalValue);
+      if (value < 0) {
+        return std::nullopt;
+      }
+      return static_cast<uint64_t>(value);
+    }
+    const int64_t value = static_cast<int64_t>(expr.literalValue);
+    if (value < 0) {
+      return std::nullopt;
+    }
+    return static_cast<uint64_t>(value);
+  };
+
+  auto boundedLoopCount = [&](const Expr &countExpr) -> std::optional<size_t> {
+    constexpr uint64_t kMaxBoundedCount = 1;
+    std::optional<uint64_t> count = integerLiteralCount(countExpr);
+    if (!count.has_value() || *count > kMaxBoundedCount) {
+      return std::nullopt;
+    }
+    return static_cast<size_t>(*count);
+  };
+
+  auto boundedRepeatCount = [&](const Expr &countExpr) -> std::optional<size_t> {
+    if (countExpr.kind == Expr::Kind::BoolLiteral) {
+      return countExpr.boolValue ? static_cast<size_t>(1) : static_cast<size_t>(0);
+    }
+    return boundedLoopCount(countExpr);
+  };
+
   auto applyStorageCall = [&](const std::string &callName,
                               const Expr &target,
                               std::unordered_map<std::string, BindingInfo> &localsIn,
@@ -661,6 +698,24 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
           return {err, false};
         }
+        if (auto exactIterations = boundedLoopCount(stmt.args.front()); exactIterations.has_value()) {
+          StateMap iterStates = statesIn;
+          for (size_t i = 0; i < *exactIterations; ++i) {
+            StateMap bodyStates;
+            bool bodyTerminated = false;
+            FlowResult result = analyzeLoopBody(stmt.args[1], localsIn, iterStates, bodyStates, bodyTerminated);
+            if (result.error.has_value()) {
+              return result;
+            }
+            if (bodyTerminated) {
+              statesIn = iterStates;
+              return {};
+            }
+            iterStates = std::move(bodyStates);
+          }
+          statesIn = std::move(iterStates);
+          return {};
+        }
         StateMap loopHead = statesIn;
         StateMap exitStates = loopHead;
         const size_t maxIterations = loopIterationLimit(loopHead);
@@ -791,6 +846,23 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       if (!stmt.args.empty()) {
         if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
           return {err, false};
+        }
+        if (auto exactIterations = boundedRepeatCount(stmt.args.front()); exactIterations.has_value()) {
+          StateMap iterStates = statesIn;
+          for (size_t i = 0; i < *exactIterations; ++i) {
+            StateMap bodyStates;
+            FlowResult result = analyzeStatements(stmt.bodyArguments, localsIn, iterStates, bodyStates);
+            if (result.error.has_value()) {
+              return result;
+            }
+            if (result.terminated) {
+              statesIn = iterStates;
+              return {};
+            }
+            iterStates = std::move(bodyStates);
+          }
+          statesIn = std::move(iterStates);
+          return {};
         }
       }
       StateMap loopHead = statesIn;
