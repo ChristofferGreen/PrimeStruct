@@ -239,6 +239,12 @@ bool replaceBindingTypeTransform(Expr &binding, const std::string &typeName, std
     transform.name = typeName;
     replaced = true;
   }
+  if (!replaced) {
+    Transform transform;
+    transform.name = typeName;
+    binding.transforms.push_back(std::move(transform));
+    replaced = true;
+  }
   return replaced;
 }
 
@@ -247,7 +253,14 @@ bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &err
     std::vector<std::string> implicitParams;
     if (!def.templateArgs.empty()) {
       for (const auto &param : def.parameters) {
+        if (!param.isBinding) {
+          continue;
+        }
         BindingInfo info;
+        if (!hasExplicitBindingTypeTransform(param)) {
+          error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
+          return false;
+        }
         if (extractExplicitBindingType(param, info) && info.typeName == "auto") {
           error = "implicit auto parameters are only supported on non-templated definitions: " + def.fullPath;
           return false;
@@ -257,14 +270,18 @@ bool applyImplicitAutoTemplates(Program &program, Context &ctx, std::string &err
     }
     size_t autoIndex = 0;
     for (auto &param : def.parameters) {
+      if (!param.isBinding) {
+        continue;
+      }
       BindingInfo info;
-      if (!extractExplicitBindingType(param, info)) {
+      bool hasExplicit = extractExplicitBindingType(param, info);
+      if (!hasExplicit && hasExplicitBindingTypeTransform(param)) {
         continue;
       }
-      if (info.typeName != "auto") {
+      if (hasExplicit && info.typeName != "auto") {
         continue;
       }
-      if (!info.typeTemplateArg.empty()) {
+      if (hasExplicit && !info.typeTemplateArg.empty()) {
         error = "auto parameters do not accept template arguments: " + def.fullPath;
         return false;
       }

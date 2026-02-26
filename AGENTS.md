@@ -37,6 +37,11 @@ build and layout solidify.
 - **Skip tests:** `./scripts/compile.sh --skip-tests` (build only).
 - **CTest:** from `build-debug/` run `ctest --output-on-failure`.
 
+## Semantics pipeline note
+- `Semantics::validate` runs in this order: apply semantic transforms → template monomorphization →
+  convert-constructor rewrite → validator passes → omitted struct initializer rewrite. When changing
+  diagnostics, keep in mind template inference runs before the main validator.
+
 ## Tests
 - Prefer deterministic, snapshot-style tests for parser/IR/transform stages.
 - Include golden files for IR and diagnostic output; failures should be easy to diff.
