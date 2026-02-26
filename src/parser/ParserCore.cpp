@@ -290,13 +290,6 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
       return false;
     }
   }
-
-  if (match(TokenKind::LBrace)) {
-    return fail("expected '(' after identifier; bindings are only allowed inside definition bodies or parameter lists");
-  }
-  if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
-    return false;
-  }
   bool hasReturnTransform = false;
   bool hasStructTransform = false;
   for (const auto &transform : transforms) {
@@ -306,6 +299,25 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     if (isStructTransformName(transform.name)) {
       hasStructTransform = true;
     }
+  }
+  if (match(TokenKind::LBrace)) {
+    if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasStructTransform) {
+      return fail("definition requires explicit return transform in canonical mode");
+    }
+    Definition def;
+    def.name = name.text;
+    def.namespacePrefix = currentNamespacePrefix();
+    def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+    def.transforms = std::move(transforms);
+    def.templateArgs = std::move(templateArgs);
+    if (!parseDefinitionBody(def, hasStructTransform, defs)) {
+      return false;
+    }
+    defs.push_back(std::move(def));
+    return true;
+  }
+  if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
+    return false;
   }
   bool paramsAreIdentifiers = false;
   bool isDefinition = false;
@@ -649,15 +661,6 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
       return false;
     }
   }
-
-  if (!match(TokenKind::LParen)) {
-    pos_ = savedPos;
-    return true;
-  }
-  if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
-    return false;
-  }
-
   bool hasReturnTransform = false;
   bool hasStructTransform = false;
   for (const auto &transform : transforms) {
@@ -667,6 +670,14 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
     if (isStructTransformName(transform.name)) {
       hasStructTransform = true;
     }
+  }
+
+  if (!match(TokenKind::LParen)) {
+    pos_ = savedPos;
+    return true;
+  }
+  if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
+    return false;
   }
 
   if (name.text == "repeat" && !hasReturnTransform && !hasStructTransform) {

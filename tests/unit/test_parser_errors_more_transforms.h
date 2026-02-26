@@ -275,12 +275,13 @@ main() {
   CHECK(error.find("if statement cannot have transforms") != std::string::npos);
 }
 
-TEST_CASE("missing '(' after identifier fails") {
+TEST_CASE("execution without parentheses fails") {
   const std::string source = R"(
 [return<int>]
-main {
+main() {
   return(1i32)
 }
+execute_task
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());

@@ -29,6 +29,37 @@ main() {
   CHECK(program.definitions[0].fullPath == "/main");
 }
 
+TEST_CASE("parses definition without empty parameter list") {
+  const std::string source = R"(
+main {
+  return(7i32)
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/main");
+  CHECK(program.definitions[0].parameters.empty());
+}
+
+TEST_CASE("parses definition without empty parameter list in canonical mode") {
+  const std::string source = R"(
+[return<i32>]
+main {
+  return(7i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/main");
+  CHECK(program.definitions[0].parameters.empty());
+}
+
 TEST_CASE("parses void return without transform") {
   const std::string source = R"(
 main() {

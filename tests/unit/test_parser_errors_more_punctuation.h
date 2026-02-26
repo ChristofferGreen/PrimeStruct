@@ -4,16 +4,21 @@
 
 TEST_SUITE_BEGIN("primestruct.parser.errors.punctuation");
 
-TEST_CASE("top-level bindings are rejected") {
+TEST_CASE("top-level definition without empty parameter list is accepted") {
   const std::string source = R"(
-[i32] value{1i32}
+main {
+  return(1i32)
+}
 )";
   primec::Lexer lexer(source);
   primec::Parser parser(lexer.tokenize());
   primec::Program program;
   std::string error;
-  CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("bindings are only allowed inside definition bodies or parameter lists") != std::string::npos);
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/main");
+  CHECK(program.definitions[0].parameters.empty());
 }
 
 TEST_CASE("empty transform list is rejected") {

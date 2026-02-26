@@ -36,6 +36,15 @@ execute_task(1i32)
   CHECK_FALSE(program.executions[0].hasBodyArguments);
 }
 
+TEST_CASE("rejects execution without parentheses") {
+  const std::string source = R"(
+execute_task
+)";
+  std::string error;
+  CHECK_FALSE(parseProgramWithError(source, error));
+  CHECK(error.find("expected '(' after identifier") != std::string::npos);
+}
+
 TEST_CASE("rejects execution body arguments") {
   const std::string source = R"(
 execute_task(1i32) {

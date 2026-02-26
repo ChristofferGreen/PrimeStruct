@@ -27,7 +27,7 @@ Legend:
 - ✓ Remove `include` syntax and unify `import` to cover source expansion (`import<...>`) plus namespace exposure (`import /path/*`; `import<...>` now expands like includes; `include` rejected by parser and resolver).
 - ✓ Enforce reserved keywords `if`, `else`, `loop`, `while`, `for` in identifiers and slash paths (parser/import resolver currently allow them).
 - ✓ Enforce reserved keyword `auto` in identifiers and slash paths (parser/import resolver currently allow it).
-- ○ Allow omitting empty parameter lists on definitions (`Foo { ... }` → `Foo() { ... }`) at all language levels (executions still require `()`).
+- ✓ Allow omitting empty parameter lists on definitions (`Foo { ... }` → `Foo() { ... }`) at all language levels (executions still require `()`).
 - ✓ Implement control-flow sugar for `loop`, `while`, and `for` (only `repeat(count) { ... }` is implemented today).
 - ✓ Implement operator sugar for `++` / `--` (`increment` / `decrement` are documented but not rewritten by the text filter).
 - ✓ Support comma digit separators in numeric literals (lexer currently splits `1,000i32` into multiple tokens).
