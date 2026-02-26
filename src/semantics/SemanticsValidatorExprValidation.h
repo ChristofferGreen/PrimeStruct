@@ -2003,6 +2003,35 @@
         }
         return true;
       }
+      auto hasActiveBorrowForBinding = [&](const std::string &name) -> bool {
+        auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
+          if (binding.typeName != "Reference") {
+            return "";
+          }
+          if (!binding.referenceRoot.empty()) {
+            return binding.referenceRoot;
+          }
+          return bindingName;
+        };
+        auto hasBorrowFrom = [&](const std::string &borrowName, const BindingInfo &binding) -> bool {
+          if (borrowName == name) {
+            return false;
+          }
+          const std::string root = referenceRootForBinding(borrowName, binding);
+          return !root.empty() && root == name;
+        };
+        for (const auto &param : params) {
+          if (hasBorrowFrom(param.name, param.binding)) {
+            return true;
+          }
+        }
+        for (const auto &entry : locals) {
+          if (hasBorrowFrom(entry.first, entry.second)) {
+            return true;
+          }
+        }
+        return false;
+      };
       if (isSimpleCallName(expr, "move")) {
         if (hasNamedArguments(expr.argNames)) {
           error_ = "named arguments not supported for builtin calls";
@@ -2044,6 +2073,10 @@
           error_ = "move does not support Reference bindings: " + target.name;
           return false;
         }
+        if (hasActiveBorrowForBinding(target.name)) {
+          error_ = "borrowed binding: " + target.name;
+          return false;
+        }
         if (movedBindings_.count(target.name) > 0) {
           error_ = "use-after-move: " + target.name;
           return false;
@@ -2061,6 +2094,10 @@
         if (target.kind == Expr::Kind::Name) {
           if (!isMutableBinding(params, locals, target.name)) {
             error_ = "assign target must be a mutable binding: " + target.name;
+            return false;
+          }
+          if (hasActiveBorrowForBinding(target.name)) {
+            error_ = "borrowed binding: " + target.name;
             return false;
           }
         } else if (target.kind == Expr::Kind::Call) {

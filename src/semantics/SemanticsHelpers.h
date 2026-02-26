@@ -31,6 +31,7 @@ struct BindingInfo {
   std::string typeTemplateArg;
   bool isMutable = false;
   bool isEntryArgString = false;
+  std::string referenceRoot;
 };
 
 struct ParameterInfo {

@@ -165,6 +165,70 @@
         error_ = "Reference bindings require location(...)";
         return false;
       }
+      const Expr &target = init.args.front();
+      if (target.kind != Expr::Kind::Name) {
+        error_ = "Reference bindings require location(...)";
+        return false;
+      }
+      auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
+        if (binding.typeName != "Reference") {
+          return "";
+        }
+        if (!binding.referenceRoot.empty()) {
+          return binding.referenceRoot;
+        }
+        return bindingName;
+      };
+      auto resolveBorrowRoot = [&](const std::string &targetName, std::string &rootOut) -> bool {
+        if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
+          if (paramBinding->typeName == "Reference") {
+            rootOut = referenceRootForBinding(targetName, *paramBinding);
+          } else {
+            rootOut = targetName;
+          }
+          return true;
+        }
+        auto it = locals.find(targetName);
+        if (it == locals.end()) {
+          return false;
+        }
+        if (it->second.typeName == "Reference") {
+          rootOut = referenceRootForBinding(it->first, it->second);
+        } else {
+          rootOut = targetName;
+        }
+        return true;
+      };
+      std::string borrowRoot;
+      if (!resolveBorrowRoot(target.name, borrowRoot) || borrowRoot.empty()) {
+        error_ = "Reference bindings require location(...)";
+        return false;
+      }
+      bool sawMutableBorrow = false;
+      bool sawImmutableBorrow = false;
+      auto observeBorrow = [&](const std::string &bindingName, const BindingInfo &binding) {
+        const std::string root = referenceRootForBinding(bindingName, binding);
+        if (root.empty() || root != borrowRoot) {
+          return;
+        }
+        if (binding.isMutable) {
+          sawMutableBorrow = true;
+        } else {
+          sawImmutableBorrow = true;
+        }
+      };
+      for (const auto &param : params) {
+        observeBorrow(param.name, param.binding);
+      }
+      for (const auto &entry : locals) {
+        observeBorrow(entry.first, entry.second);
+      }
+      const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
+      if (conflict) {
+        error_ = "borrow conflict: " + borrowRoot;
+        return false;
+      }
+      info.referenceRoot = std::move(borrowRoot);
     }
     locals.emplace(stmt.name, info);
     return true;
