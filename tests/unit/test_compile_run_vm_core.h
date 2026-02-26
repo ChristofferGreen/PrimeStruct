@@ -279,18 +279,56 @@ main() {
   CHECK(readFile(outPath) == "line\\nnext\n");
 }
 
-TEST_CASE("vm rejects string return types") {
+TEST_CASE("vm supports string return types") {
   const std::string source = R"(
 [return<string>]
-main() {
+message() {
   return("hi"utf8)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(message())
+  return(0i32)
 }
 )";
   const std::string srcPath = writeTemp("vm_string_return.prime", source);
-  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_string_return_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support string return types on /main\n");
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_string_return_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "hi\n");
+}
+
+TEST_CASE("vm supports Result.why hooks") {
+  const std::string source = R"(
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    return("custom error"utf8)
+  }
+}
+
+[return<Result<MyError>>]
+make_error() {
+  return(1i32)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(make_error()))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_result_why_custom.prime", source);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_vm_result_why_custom_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "custom error\n");
 }
 
 TEST_CASE("vm rejects recursive calls") {

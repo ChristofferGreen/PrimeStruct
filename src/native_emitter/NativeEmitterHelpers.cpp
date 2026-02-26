@@ -124,6 +124,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return "PrintU64";
       case IrOpcode::PrintString:
         return "PrintString";
+      case IrOpcode::PrintStringDynamic:
+        return "PrintStringDynamic";
       case IrOpcode::PrintArgv:
         return "PrintArgv";
       case IrOpcode::PrintArgvUnsafe:
@@ -333,6 +335,8 @@ bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &
         return -1;
       case IrOpcode::PrintString:
         return 0;
+      case IrOpcode::PrintStringDynamic:
+        return -1;
       case IrOpcode::PrintArgv:
       case IrOpcode::PrintArgvUnsafe:
         return -1;

@@ -238,6 +238,9 @@
           paramInfo.isResult = true;
           paramInfo.resultHasValue = (transform.templateArgs.size() == 2);
           paramInfo.valueKind = paramInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          if (!transform.templateArgs.empty()) {
+            paramInfo.resultErrorType = transform.templateArgs.back();
+          }
         }
       }
       setReferenceArrayInfo(param, paramInfo);
@@ -350,7 +353,7 @@
       context.returnLocal = allocTempLocal();
       IrOpcode zeroOp = IrOpcode::PushI32;
       if (context.returnsArray || context.returnKind == LocalInfo::ValueKind::Int64 ||
-          context.returnKind == LocalInfo::ValueKind::UInt64) {
+          context.returnKind == LocalInfo::ValueKind::UInt64 || context.returnKind == LocalInfo::ValueKind::String) {
         zeroOp = IrOpcode::PushI64;
       } else if (context.returnKind == LocalInfo::ValueKind::Float64) {
         zeroOp = IrOpcode::PushF64;

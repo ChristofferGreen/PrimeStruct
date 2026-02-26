@@ -208,6 +208,43 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("compiles and runs native Result.why hooks") {
+  const std::string source = R"(
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    return("custom error"utf8)
+  }
+}
+
+[return<Result<MyError>>]
+make_error() {
+  return(1i32)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.why(make_error()))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_result_why_custom.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_result_why_custom_exe").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_result_why_custom_out.txt").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = exePath + " > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "custom error\n");
+}
+
 TEST_CASE("compiles and runs native void call with string param") {
   const std::string source = R"(
 [return<void> effects(io_out)]

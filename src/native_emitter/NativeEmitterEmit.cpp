@@ -36,7 +36,8 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
     }
     if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
-        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe ||
+        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintStringDynamic ||
+        inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe ||
         inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
         inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
       needsPrintScratch = true;
@@ -89,6 +90,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     uint32_t stringIndex = 0;
   };
   std::vector<StringFixup> stringFixups;
+  std::vector<size_t> stringTableFixups;
   std::vector<uint64_t> stringOffsets;
   std::vector<uint8_t> stringData;
   if (!module.stringTable.empty()) {
@@ -99,6 +101,10 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       stringData.push_back(0);
     }
   }
+  const uint64_t stringDataPadding = alignTo(static_cast<uint64_t>(stringData.size()), 8) -
+                                     static_cast<uint64_t>(stringData.size());
+  const uint64_t stringTableOffsetDelta = static_cast<uint64_t>(stringData.size()) + stringDataPadding;
+  const uint64_t stringOffsetTableSize = static_cast<uint64_t>(module.stringTable.size()) * sizeof(uint64_t);
   std::vector<size_t> instOffsets(fn.instructions.size() + 1, 0);
 
   for (size_t index = 0; index < fn.instructions.size(); ++index) {
@@ -396,6 +402,16 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(stringIndex)});
         break;
       }
+      case IrOpcode::PrintStringDynamic: {
+        uint64_t flags = decodePrintFlags(inst.imm);
+        bool newline = (flags & PrintFlagNewline) != 0;
+        uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
+        size_t fixupIndex =
+            emitter.emitPrintStringDynamicPlaceholder(stringTableOffsetDelta, stringOffsetTableSize, scratchOffset,
+                                                      newline, fd);
+        stringTableFixups.push_back(fixupIndex);
+        break;
+      }
       case IrOpcode::FileOpenRead: {
         if (inst.imm >= module.stringTable.size()) {
           error = "native backend encountered invalid string index";
@@ -516,9 +532,10 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif
 
-  if (!stringFixups.empty()) {
+  if (!stringFixups.empty() || !stringTableFixups.empty()) {
     uint64_t codeSizeBytes = static_cast<uint64_t>(emitter.currentWordIndex()) * 4;
     uint64_t stringBaseOffset = codeSizeBytes;
+    uint64_t stringTableOffset = stringBaseOffset + stringTableOffsetDelta;
     constexpr int64_t kAdrpMin = -(1LL << 20);
     constexpr int64_t kAdrpMax = (1LL << 20) - 1;
     for (const auto &fixup : stringFixups) {
@@ -540,11 +557,42 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       }
       emitter.patchAdr(fixup.codeIndex, 1, static_cast<int32_t>(delta));
     }
+    for (size_t fixupIndex : stringTableFixups) {
+      int64_t targetOffset = static_cast<int64_t>(stringTableOffset);
+      int64_t instrOffset = static_cast<int64_t>(fixupIndex) * 4;
+      int64_t instrAddr = static_cast<int64_t>(codeBaseOffset) + instrOffset;
+      int64_t targetAddr = static_cast<int64_t>(codeBaseOffset) + targetOffset;
+      int64_t delta = targetOffset - instrOffset;
+      int64_t instrPage = instrAddr & ~0xFFFLL;
+      int64_t targetPage = targetAddr & ~0xFFFLL;
+      int64_t pageDelta = (targetPage - instrPage) >> 12;
+      if (pageDelta < kAdrpMin || pageDelta > kAdrpMax) {
+        error = "native backend string table out of range";
+        return false;
+      }
+      emitter.patchAdr(fixupIndex, 1, static_cast<int32_t>(delta));
+    }
   }
 
   std::vector<uint8_t> code = emitter.finalize();
   if (!stringData.empty()) {
     code.insert(code.end(), stringData.begin(), stringData.end());
+    if (stringDataPadding > 0) {
+      code.insert(code.end(), stringDataPadding, 0);
+    }
+    if (!module.stringTable.empty()) {
+      for (uint64_t offset : stringOffsets) {
+        for (size_t i = 0; i < sizeof(uint64_t); ++i) {
+          code.push_back(static_cast<uint8_t>((offset >> (i * 8)) & 0xffu));
+        }
+      }
+      for (const auto &text : module.stringTable) {
+        uint64_t length = static_cast<uint64_t>(text.size());
+        for (size_t i = 0; i < sizeof(uint64_t); ++i) {
+          code.push_back(static_cast<uint8_t>((length >> (i * 8)) & 0xffu));
+        }
+      }
+    }
   }
   std::vector<uint8_t> image;
   if (!buildMachO(code, image, error)) {

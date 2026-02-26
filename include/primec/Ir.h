@@ -107,6 +107,7 @@ enum class IrOpcode : uint8_t {
   ConvertF64ToF32,
   ReturnF32,
   ReturnF64,
+  PrintStringDynamic,
 };
 
 enum class IrStructFieldCategory : uint8_t {

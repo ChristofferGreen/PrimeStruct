@@ -17,11 +17,13 @@
       const std::string &typeName = transform.templateArgs.front();
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-      if (parseResultTypeName(typeName, resultHasValue, resultValueKind)) {
+      std::string resultErrorType;
+      if (parseResultTypeName(typeName, resultHasValue, resultValueKind, resultErrorType)) {
         info.returnsArray = false;
         info.returnsVoid = false;
         info.isResult = true;
         info.resultHasValue = resultHasValue;
+        info.resultErrorType = resultErrorType;
         info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
         break;
       }
@@ -59,12 +61,8 @@
           returnInferenceStack.erase(path);
           return false;
         }
-        if (info.kind == LocalInfo::ValueKind::String) {
-          if (info.returnsArray) {
-            error = "native backend does not support string array return types on " + def.fullPath;
-          } else {
-            error = "native backend does not support string return types on " + def.fullPath;
-          }
+        if (info.returnsArray && info.kind == LocalInfo::ValueKind::String) {
+          error = "native backend does not support string array return types on " + def.fullPath;
           returnInferenceStack.erase(path);
           return false;
         }
@@ -174,10 +172,6 @@
             LocalInfo::ValueKind kind = inferExprKind(stmt.args.front(), activeLocals);
             if (kind == LocalInfo::ValueKind::Unknown) {
               error = "unable to infer return type on " + def.fullPath;
-              return false;
-            }
-            if (kind == LocalInfo::ValueKind::String) {
-              error = "native backend does not support string return types on " + def.fullPath;
               return false;
             }
             if (inferredArray) {
@@ -431,6 +425,7 @@
   struct ResultExprInfo {
     bool isResult = false;
     bool hasValue = false;
+    std::string errorType;
   };
   auto resolveResultExprInfo = [&](const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) -> bool {
     out = ResultExprInfo{};
@@ -439,6 +434,7 @@
       if (it != localsIn.end() && it->second.isResult) {
         out.isResult = true;
         out.hasValue = it->second.resultHasValue;
+        out.errorType = it->second.resultErrorType;
         return true;
       }
       return false;
@@ -449,6 +445,7 @@
     if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
       out.isResult = true;
       out.hasValue = true;
+      out.errorType = "FileError";
       return true;
     }
     if (expr.isMethodCall && !expr.args.empty()) {
@@ -464,6 +461,7 @@
               expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
             out.isResult = true;
             out.hasValue = false;
+            out.errorType = "FileError";
             return true;
           }
         }
@@ -474,6 +472,7 @@
         if (getReturnInfo && getReturnInfo(callee->fullPath, info) && info.isResult) {
           out.isResult = true;
           out.hasValue = info.resultHasValue;
+          out.errorType = info.resultErrorType;
           return true;
         }
       }
@@ -485,6 +484,7 @@
       if (getReturnInfo && getReturnInfo(callee->fullPath, info) && info.isResult) {
         out.isResult = true;
         out.hasValue = info.resultHasValue;
+        out.errorType = info.resultErrorType;
         return true;
       }
     }
@@ -565,7 +565,8 @@
         error = "native backend does not know identifier: " + arg.name;
         return false;
       }
-      if (it->second.valueKind != LocalInfo::ValueKind::String || it->second.stringSource == LocalInfo::StringSource::None) {
+      if (it->second.valueKind != LocalInfo::ValueKind::String ||
+          it->second.stringSource == LocalInfo::StringSource::None) {
         error = "native backend requires string arguments to use string literals, bindings, or entry args";
         return false;
       }
@@ -577,55 +578,63 @@
     }
     if (arg.kind == Expr::Kind::Call) {
       std::string accessName;
-      if (!getBuiltinArrayAccessName(arg, accessName)) {
-        error = "native backend requires string arguments to use string literals, bindings, or entry args";
-        return false;
-      }
-      if (arg.args.size() != 2) {
-        error = accessName + " requires exactly two arguments";
-        return false;
-      }
-      if (!isEntryArgsName(arg.args.front(), callerLocals)) {
-        error = "native backend only supports entry argument indexing";
-        return false;
-      }
-      LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(arg.args[1], callerLocals));
-      if (!isSupportedIndexKind(indexKind)) {
-        error = "native backend requires integer indices for " + accessName;
-        return false;
-      }
+      if (getBuiltinArrayAccessName(arg, accessName)) {
+        if (arg.args.size() != 2) {
+          error = accessName + " requires exactly two arguments";
+          return false;
+        }
+        if (!isEntryArgsName(arg.args.front(), callerLocals)) {
+          error = "native backend only supports entry argument indexing";
+          return false;
+        }
+        LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(arg.args[1], callerLocals));
+        if (!isSupportedIndexKind(indexKind)) {
+          error = "native backend requires integer indices for " + accessName;
+          return false;
+        }
 
-      const int32_t argvIndexLocal = allocTempLocal();
-      if (!emitExpr(arg.args[1], callerLocals)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
+        const int32_t argvIndexLocal = allocTempLocal();
+        if (!emitExpr(arg.args[1], callerLocals)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
 
-      if (accessName == "at") {
-        if (indexKind != LocalInfo::ValueKind::UInt64) {
+        if (accessName == "at") {
+          if (indexKind != LocalInfo::ValueKind::UInt64) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
+            function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+            function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+            size_t jumpNonNegative = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitArrayIndexOutOfBounds();
+            size_t nonNegativeIndex = function.instructions.size();
+            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+          }
+
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-          function.instructions.push_back({pushZeroForIndex(indexKind), 0});
-          function.instructions.push_back({cmpLtForIndex(indexKind), 0});
-          size_t jumpNonNegative = function.instructions.size();
+          function.instructions.push_back({IrOpcode::PushArgc, 0});
+          function.instructions.push_back({cmpGeForIndex(indexKind), 0});
+          size_t jumpInRange = function.instructions.size();
           function.instructions.push_back({IrOpcode::JumpIfZero, 0});
           emitArrayIndexOutOfBounds();
-          size_t nonNegativeIndex = function.instructions.size();
-          function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+          size_t inRangeIndex = function.instructions.size();
+          function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
         }
 
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-        function.instructions.push_back({IrOpcode::PushArgc, 0});
-        function.instructions.push_back({cmpGeForIndex(indexKind), 0});
-        size_t jumpInRange = function.instructions.size();
-        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-        emitArrayIndexOutOfBounds();
-        size_t inRangeIndex = function.instructions.size();
-        function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
+        sourceOut = LocalInfo::StringSource::ArgvIndex;
+        argvCheckedOut = (accessName == "at");
+        return true;
       }
-
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-      sourceOut = LocalInfo::StringSource::ArgvIndex;
-      argvCheckedOut = (accessName == "at");
+      LocalInfo::ValueKind callKind = inferExprKind(arg, callerLocals);
+      if (callKind != LocalInfo::ValueKind::String) {
+        error = "native backend requires string arguments to use string literals, bindings, or entry args";
+        return false;
+      }
+      if (!emitExpr(arg, callerLocals)) {
+        return false;
+      }
+      sourceOut = LocalInfo::StringSource::RuntimeIndex;
       return true;
     }
     error = "native backend requires string arguments to use string literals, bindings, or entry args";

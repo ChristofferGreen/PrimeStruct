@@ -227,12 +227,21 @@
           function.instructions.push_back({printOp, flags});
           return true;
         }
+        if (it->second.stringSource == LocalInfo::StringSource::RuntimeIndex) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          function.instructions.push_back({IrOpcode::PrintStringDynamic, flags});
+          return true;
+        }
       }
     }
     if (!emitExpr(arg, localsIn)) {
       return false;
     }
     LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
+    if (kind == LocalInfo::ValueKind::String) {
+      function.instructions.push_back({IrOpcode::PrintStringDynamic, flags});
+      return true;
+    }
     if (kind == LocalInfo::ValueKind::Int64) {
       function.instructions.push_back({IrOpcode::PrintI64, flags});
       return true;

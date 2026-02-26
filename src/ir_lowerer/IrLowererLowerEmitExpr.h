@@ -33,8 +33,15 @@
       case Expr::Kind::FloatLiteral:
         return emitFloatLiteral(expr);
       case Expr::Kind::StringLiteral:
-        error = "native backend does not support string literals";
-        return false;
+        {
+          std::string decoded;
+          if (!parseStringLiteral(expr.stringValue, decoded)) {
+            return false;
+          }
+          int32_t index = internString(decoded);
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
+          return true;
+        }
       case Expr::Kind::BoolLiteral: {
         IrInstruction inst;
         inst.op = IrOpcode::PushI32;
@@ -290,6 +297,217 @@
             return false;
           }
           return emitExpr(expr.args[1], localsIn);
+        }
+        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+            expr.args.front().name == "Result" && expr.name == "why") {
+          if (expr.args.size() != 2) {
+            error = "Result.why requires exactly one argument";
+            return false;
+          }
+          ResultExprInfo resultInfo;
+          if (!resolveResultExprInfo(expr.args[1], localsIn, resultInfo) || !resultInfo.isResult) {
+            error = "Result.why requires Result argument";
+            return false;
+          }
+
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          const int32_t resultLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+
+          const int32_t errorLocal = allocTempLocal();
+          if (resultInfo.hasValue) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+            function.instructions.push_back({IrOpcode::DivI64, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          } else {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+          }
+
+          auto emitEmptyString = [&]() -> bool {
+            int32_t index = internString("");
+            function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
+            return true;
+          };
+
+          auto isSupportedErrorKind = [](LocalInfo::ValueKind kind) -> bool {
+            return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
+                   kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;
+          };
+
+          auto getBindingTypeName = [&](const Expr &binding, std::string &typeNameOut,
+                                        std::vector<std::string> &templateArgsOut) -> bool {
+            for (const auto &transform : binding.transforms) {
+              if (isBindingQualifierName(transform.name)) {
+                continue;
+              }
+              typeNameOut = transform.name;
+              templateArgsOut = transform.templateArgs;
+              return true;
+            }
+            return false;
+          };
+
+          auto makeErrorValueExpr = [&](LocalMap &callLocals,
+                                        LocalInfo::ValueKind valueKind) -> Expr {
+            std::string localName = "__result_why_err_" + std::to_string(onErrorTempCounter++);
+            LocalInfo info;
+            info.index = errorLocal;
+            info.isMutable = false;
+            info.kind = LocalInfo::Kind::Value;
+            info.valueKind = valueKind;
+            callLocals.emplace(localName, info);
+            Expr errorExpr;
+            errorExpr.kind = Expr::Kind::Name;
+            errorExpr.name = localName;
+            errorExpr.namespacePrefix = expr.namespacePrefix;
+            return errorExpr;
+          };
+
+          auto makeBoolErrorExpr = [&](LocalMap &callLocals) -> Expr {
+            const int32_t boolLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+            function.instructions.push_back({IrOpcode::PushI64, 0});
+            function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+            function.instructions.push_back({IrOpcode::PushI64, 0});
+            function.instructions.push_back({IrOpcode::CmpEqI64, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(boolLocal)});
+            std::string localName = "__result_why_bool_" + std::to_string(onErrorTempCounter++);
+            LocalInfo info;
+            info.index = boolLocal;
+            info.isMutable = false;
+            info.kind = LocalInfo::Kind::Value;
+            info.valueKind = LocalInfo::ValueKind::Bool;
+            callLocals.emplace(localName, info);
+            Expr errorExpr;
+            errorExpr.kind = Expr::Kind::Name;
+            errorExpr.name = localName;
+            errorExpr.namespacePrefix = expr.namespacePrefix;
+            return errorExpr;
+          };
+
+          std::string errorStructPath;
+          if (resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
+            const std::string whyPath = errorStructPath + "/why";
+            auto whyIt = defMap.find(whyPath);
+            if (whyIt != defMap.end() && whyIt->second && whyIt->second->parameters.size() == 1) {
+              ReturnInfo whyReturn;
+              if (!getReturnInfo || !getReturnInfo(whyIt->second->fullPath, whyReturn)) {
+                return false;
+              }
+              if (whyReturn.returnsVoid || whyReturn.returnsArray ||
+                  whyReturn.kind != LocalInfo::ValueKind::String) {
+                error = "Result.why requires a string-returning why() for " + resultInfo.errorType;
+                return false;
+              }
+              const Expr &param = whyIt->second->parameters.front();
+              LocalInfo::Kind paramKind = bindingKind(param);
+              std::string paramTypeName;
+              std::vector<std::string> paramTemplateArgs;
+              if (paramKind == LocalInfo::Kind::Value &&
+                  getBindingTypeName(param, paramTypeName, paramTemplateArgs) && paramTemplateArgs.empty()) {
+                std::string paramStructPath;
+                LocalMap callLocals = localsIn;
+                if (resolveStructTypeName(paramTypeName, param.namespacePrefix, paramStructPath) &&
+                    paramStructPath == errorStructPath) {
+                  StructSlotLayout layout;
+                  if (!resolveStructSlotLayout(errorStructPath, layout)) {
+                    return false;
+                  }
+                  if (layout.fields.size() != 1 || !layout.fields.front().structPath.empty() ||
+                      !isSupportedErrorKind(layout.fields.front().valueKind)) {
+                    return emitEmptyString();
+                  }
+                  Expr errorValueExpr = layout.fields.front().valueKind == LocalInfo::ValueKind::Bool
+                                            ? makeBoolErrorExpr(callLocals)
+                                            : makeErrorValueExpr(callLocals, layout.fields.front().valueKind);
+                  Expr ctorExpr;
+                  ctorExpr.kind = Expr::Kind::Call;
+                  ctorExpr.name = errorStructPath;
+                  ctorExpr.namespacePrefix = expr.namespacePrefix;
+                  ctorExpr.isMethodCall = false;
+                  ctorExpr.isBinding = false;
+                  ctorExpr.args.push_back(errorValueExpr);
+                  ctorExpr.argNames.push_back(std::nullopt);
+                  Expr callExpr;
+                  callExpr.kind = Expr::Kind::Call;
+                  callExpr.name = whyPath;
+                  callExpr.namespacePrefix = expr.namespacePrefix;
+                  callExpr.isMethodCall = false;
+                  callExpr.isBinding = false;
+                  callExpr.args.push_back(ctorExpr);
+                  callExpr.argNames.push_back(std::nullopt);
+                  return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
+                }
+                LocalInfo::ValueKind paramKindValue = valueKindFromTypeName(paramTypeName);
+                if (isSupportedErrorKind(paramKindValue)) {
+                  Expr errorValueExpr = paramKindValue == LocalInfo::ValueKind::Bool
+                                            ? makeBoolErrorExpr(callLocals)
+                                            : makeErrorValueExpr(callLocals, paramKindValue);
+                  Expr callExpr;
+                  callExpr.kind = Expr::Kind::Call;
+                  callExpr.name = whyPath;
+                  callExpr.namespacePrefix = expr.namespacePrefix;
+                  callExpr.isMethodCall = false;
+                  callExpr.isBinding = false;
+                  callExpr.args.push_back(errorValueExpr);
+                  callExpr.argNames.push_back(std::nullopt);
+                  return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
+                }
+              }
+            }
+          }
+
+          LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
+          if (isSupportedErrorKind(errorKind)) {
+            auto normalizedErrorName = [&]() -> std::string {
+              if (resultInfo.errorType == "FileError") {
+                return "FileError";
+              }
+              switch (errorKind) {
+                case LocalInfo::ValueKind::Int32:
+                  return "i32";
+                case LocalInfo::ValueKind::Int64:
+                  return "i64";
+                case LocalInfo::ValueKind::UInt64:
+                  return "u64";
+                case LocalInfo::ValueKind::Bool:
+                  return "bool";
+                default:
+                  return resultInfo.errorType;
+              }
+            };
+            const std::string whyPath = "/" + normalizedErrorName() + "/why";
+            auto whyIt = defMap.find(whyPath);
+            if (whyIt != defMap.end() && whyIt->second && whyIt->second->parameters.size() == 1) {
+              ReturnInfo whyReturn;
+              if (!getReturnInfo || !getReturnInfo(whyIt->second->fullPath, whyReturn)) {
+                return false;
+              }
+              if (whyReturn.returnsVoid || whyReturn.returnsArray ||
+                  whyReturn.kind != LocalInfo::ValueKind::String) {
+                error = "Result.why requires a string-returning why() for " + resultInfo.errorType;
+                return false;
+              }
+              LocalMap callLocals = localsIn;
+              Expr errorValueExpr = errorKind == LocalInfo::ValueKind::Bool ? makeBoolErrorExpr(callLocals)
+                                                                            : makeErrorValueExpr(callLocals, errorKind);
+              Expr callExpr;
+              callExpr.kind = Expr::Kind::Call;
+              callExpr.name = whyPath;
+              callExpr.namespacePrefix = expr.namespacePrefix;
+              callExpr.isMethodCall = false;
+              callExpr.isBinding = false;
+              callExpr.args.push_back(errorValueExpr);
+              callExpr.argNames.push_back(std::nullopt);
+              return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
+            }
+          }
+
+          return emitEmptyString();
         }
         if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
           if (expr.templateArgs.size() != 1) {

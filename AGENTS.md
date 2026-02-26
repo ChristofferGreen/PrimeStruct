@@ -63,6 +63,9 @@ build and layout solidify.
   desugaring, omitted struct initializers), so backend passes should assume canonicalized forms.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
+- **VM/native strings:** string values are represented as string-table indices; dynamic
+  string construction is unavailable, so string returns and `Result.why` hooks must
+  return literal-backed strings (entry args or string literals).
 - **IR stability:** avoid silent changes to serialized IR; include versioning or migration
   notes when the format changes.
 - **Determinism:** no unordered iteration that affects outputs; sort keys before emitting

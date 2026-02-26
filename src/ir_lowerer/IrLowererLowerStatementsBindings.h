@@ -1,4 +1,8 @@
   emitStatement = [&](const Expr &stmt, LocalMap &localsIn) -> bool {
+    if (!stmt.isBinding && stmt.kind == Expr::Kind::StringLiteral) {
+      error = "native backend does not support string literal statements";
+      return false;
+    }
     if (stmt.isBinding) {
       if (stmt.args.size() != 1) {
         error = "binding requires exactly one argument";
@@ -103,6 +107,9 @@
           info.isResult = true;
           info.resultHasValue = (transform.templateArgs.size() == 2);
           info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          if (!transform.templateArgs.empty()) {
+            info.resultErrorType = transform.templateArgs.back();
+          }
         }
       }
       valueKind = info.valueKind;
@@ -145,6 +152,7 @@
         int32_t index = -1;
         LocalInfo::StringSource source = LocalInfo::StringSource::None;
         bool argvChecked = true;
+        bool emittedValue = false;
         if (init.kind == Expr::Kind::StringLiteral) {
           std::string decoded;
           if (!parseStringLiteral(init.stringValue, decoded)) {
@@ -152,6 +160,8 @@
           }
           index = internString(decoded);
           source = LocalInfo::StringSource::TableIndex;
+          emittedValue = true;
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
         } else if (init.kind == Expr::Kind::Name) {
           auto it = localsIn.find(init.name);
           if (it == localsIn.end()) {
@@ -169,57 +179,68 @@
             argvChecked = it->second.argvChecked;
           }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          emittedValue = true;
         } else if (init.kind == Expr::Kind::Call) {
           std::string accessName;
-          if (!getBuiltinArrayAccessName(init, accessName)) {
-            error = "native backend requires string bindings to use string literals, bindings, or entry args";
-            return false;
-          }
-          if (init.args.size() != 2) {
-            error = accessName + " requires exactly two arguments";
-            return false;
-          }
-          if (!isEntryArgsName(init.args.front(), localsIn)) {
-            error = "native backend only supports entry argument indexing";
-            return false;
-          }
-          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(init.args[1], localsIn));
-          if (!isSupportedIndexKind(indexKind)) {
-            error = "native backend requires integer indices for " + accessName;
-            return false;
-          }
+          if (getBuiltinArrayAccessName(init, accessName)) {
+            if (init.args.size() != 2) {
+              error = accessName + " requires exactly two arguments";
+              return false;
+            }
+            if (!isEntryArgsName(init.args.front(), localsIn)) {
+              error = "native backend only supports entry argument indexing";
+              return false;
+            }
+            LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(init.args[1], localsIn));
+            if (!isSupportedIndexKind(indexKind)) {
+              error = "native backend requires integer indices for " + accessName;
+              return false;
+            }
 
-          const int32_t argvIndexLocal = allocTempLocal();
-          if (!emitExpr(init.args[1], localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
+            const int32_t argvIndexLocal = allocTempLocal();
+            if (!emitExpr(init.args[1], localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
 
-          if (accessName == "at") {
-            if (indexKind != LocalInfo::ValueKind::UInt64) {
+            if (accessName == "at") {
+              if (indexKind != LocalInfo::ValueKind::UInt64) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
+                function.instructions.push_back({pushZeroForIndex(indexKind), 0});
+                function.instructions.push_back({cmpLtForIndex(indexKind), 0});
+                size_t jumpNonNegative = function.instructions.size();
+                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+                emitArrayIndexOutOfBounds();
+                size_t nonNegativeIndex = function.instructions.size();
+                function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+              }
+
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-              function.instructions.push_back({pushZeroForIndex(indexKind), 0});
-              function.instructions.push_back({cmpLtForIndex(indexKind), 0});
-              size_t jumpNonNegative = function.instructions.size();
+              function.instructions.push_back({IrOpcode::PushArgc, 0});
+              function.instructions.push_back({cmpGeForIndex(indexKind), 0});
+              size_t jumpInRange = function.instructions.size();
               function.instructions.push_back({IrOpcode::JumpIfZero, 0});
               emitArrayIndexOutOfBounds();
-              size_t nonNegativeIndex = function.instructions.size();
-              function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+              size_t inRangeIndex = function.instructions.size();
+              function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
             }
 
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-            function.instructions.push_back({IrOpcode::PushArgc, 0});
-            function.instructions.push_back({cmpGeForIndex(indexKind), 0});
-            size_t jumpInRange = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            emitArrayIndexOutOfBounds();
-            size_t inRangeIndex = function.instructions.size();
-            function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
+            source = LocalInfo::StringSource::ArgvIndex;
+            argvChecked = (accessName == "at");
+            emittedValue = true;
+          } else {
+            LocalInfo::ValueKind initKind = inferExprKind(init, localsIn);
+            if (initKind != LocalInfo::ValueKind::String) {
+              error = "native backend requires string bindings to use string literals, bindings, or entry args";
+              return false;
+            }
+            if (!emitExpr(init, localsIn)) {
+              return false;
+            }
+            source = LocalInfo::StringSource::RuntimeIndex;
+            emittedValue = true;
           }
-
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-          source = LocalInfo::StringSource::ArgvIndex;
-          argvChecked = (accessName == "at");
         } else {
           error = "native backend requires string bindings to use string literals, bindings, or entry args";
           return false;
@@ -232,8 +253,9 @@
         info.stringSource = source;
         info.stringIndex = index;
         info.argvChecked = argvChecked;
-        if (init.kind == Expr::Kind::StringLiteral) {
-          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
+        if (!emittedValue) {
+          error = "native backend requires string bindings to use string literals, bindings, or entry args";
+          return false;
         }
         localsIn.emplace(stmt.name, info);
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
@@ -345,14 +367,15 @@
         LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
         if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
             returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool ||
-            returnKind == LocalInfo::ValueKind::Float32 || returnKind == LocalInfo::ValueKind::Float64) {
+            returnKind == LocalInfo::ValueKind::Float32 || returnKind == LocalInfo::ValueKind::Float64 ||
+            returnKind == LocalInfo::ValueKind::String) {
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
           size_t jumpIndex = function.instructions.size();
           function.instructions.push_back({IrOpcode::Jump, 0});
           context.returnJumps.push_back(jumpIndex);
           return true;
         }
-        error = "native backend only supports returning numeric or bool values";
+        error = "native backend only supports returning numeric, bool, or string values";
         return false;
       }
 
@@ -391,12 +414,14 @@
           function.instructions.push_back({IrOpcode::ReturnI64, 0});
         } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
           function.instructions.push_back({IrOpcode::ReturnI32, 0});
+        } else if (returnKind == LocalInfo::ValueKind::String) {
+          function.instructions.push_back({IrOpcode::ReturnI64, 0});
         } else if (returnKind == LocalInfo::ValueKind::Float32) {
           function.instructions.push_back({IrOpcode::ReturnF32, 0});
         } else if (returnKind == LocalInfo::ValueKind::Float64) {
           function.instructions.push_back({IrOpcode::ReturnF64, 0});
         } else {
-          error = "native backend only supports returning numeric or bool values";
+          error = "native backend only supports returning numeric, bool, or string values";
           return false;
         }
       }

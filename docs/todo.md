@@ -80,7 +80,8 @@ Legend:
 - ✓ Implement `Result` helper surface (`Result.error`/`Result.why`/`Result.map`/`Result.and_then`/`Result.map2`) and add tests.
 - ✓ Add VM/native lowering for `Result.map`/`Result.and_then`/`Result.map2`.
 - ✓ Add VM/native Result helper tests.
-- ◐ Generalize `Result.why` beyond `FileError` (C++ emitter now resolves custom `Error.why` hooks; VM/native still need hook/IR support).
+- ✓ Generalize `Result.why` beyond `FileError` (C++ emitter now resolves custom `Error.why` hooks; VM/native now support custom `Error.why` hooks).
+- ○ Add VM/native `FileError.why` mapping (currently returns an empty string without a custom hook).
 - ✓ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
 - ✓ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
 

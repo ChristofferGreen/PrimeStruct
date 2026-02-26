@@ -449,6 +449,30 @@ class Arm64Emitter {
     }
     return fixupIndex;
   }
+  size_t emitPrintStringDynamicPlaceholder(uint64_t offsetTableDelta,
+                                           uint64_t offsetTableSize,
+                                           uint32_t scratchOffset,
+                                           bool newline,
+                                           uint64_t fd) {
+    emitPopReg(0);
+    size_t fixupIndex = emitAdrPlaceholder(1);
+    emitMovImm64(2, offsetTableDelta);
+    emitSubReg(2, 1, 2);
+    emitMovImm64(3, 8);
+    emitMulReg(3, 0, 3);
+    emitAddReg(4, 1, 3);
+    emit(encodeLdrRegBase(4, 4, 0));
+    emitAddReg(5, 2, 4);
+    emitMovImm64(6, offsetTableSize);
+    emitAddReg(6, 1, 6);
+    emitAddReg(7, 6, 3);
+    emit(encodeLdrRegBase(7, 7, 0));
+    emitWriteSyscall(fd, 5, 7);
+    if (newline) {
+      emitWriteNewline(fd, scratchOffset);
+    }
+    return fixupIndex;
+  }
   size_t emitPrintStringPlaceholderReg(uint64_t lengthBytes, uint32_t scratchOffset, bool newline, uint8_t fdReg) {
     size_t fixupIndex = emitAdrPlaceholder(1);
     emitMovImm64(2, lengthBytes);

@@ -15,6 +15,7 @@
     LocalInfo::ValueKind kind = LocalInfo::ValueKind::Unknown;
     bool isResult = false;
     bool resultHasValue = false;
+    std::string resultErrorType;
   };
 
   std::unordered_map<std::string, ReturnInfo> returnInfoCache;
@@ -342,8 +343,13 @@
         }
         if (expr.isMethodCall) {
           if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-              expr.args.front().name == "Result" && expr.name == "ok") {
-            return expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+              expr.args.front().name == "Result") {
+            if (expr.name == "ok") {
+              return expr.args.size() > 1 ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+            }
+            if (expr.name == "why") {
+              return LocalInfo::ValueKind::String;
+            }
           }
           if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
             auto it = localsIn.find(expr.args.front().name);

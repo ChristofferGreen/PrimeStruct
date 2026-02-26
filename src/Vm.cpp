@@ -761,6 +761,28 @@ bool executeImpl(const IrModule &module,
         ip += 1;
         break;
       }
+      case IrOpcode::PrintStringDynamic: {
+        if (stack.empty()) {
+          error = "IR stack underflow on print";
+          return false;
+        }
+        uint64_t stringIndex = stack.back();
+        stack.pop_back();
+        if (stringIndex >= module.stringTable.size()) {
+          error = "invalid string index in IR";
+          return false;
+        }
+        uint64_t flags = decodePrintFlags(inst.imm);
+        FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+        bool newline = (flags & PrintFlagNewline) != 0;
+        const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
+        std::fwrite(text.data(), 1, text.size(), out);
+        if (newline) {
+          std::fputc('\n', out);
+        }
+        ip += 1;
+        break;
+      }
       case IrOpcode::PrintArgv: {
         if (stack.empty()) {
           error = "IR stack underflow on print";

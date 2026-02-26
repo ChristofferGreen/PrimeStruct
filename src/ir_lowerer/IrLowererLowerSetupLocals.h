@@ -11,7 +11,8 @@
     bool isFileHandle = false;
     bool isResult = false;
     bool resultHasValue = false;
-    enum class StringSource { None, TableIndex, ArgvIndex } stringSource = StringSource::None;
+    std::string resultErrorType;
+    enum class StringSource { None, TableIndex, ArgvIndex, RuntimeIndex } stringSource = StringSource::None;
     int32_t stringIndex = -1;
     bool argvChecked = true;
     bool referenceToArray = false;
@@ -98,7 +99,8 @@
   };
   auto parseResultTypeName = [&](const std::string &typeName,
                                  bool &hasValue,
-                                 LocalInfo::ValueKind &valueKind) -> bool {
+                                 LocalInfo::ValueKind &valueKind,
+                                 std::string &errorType) -> bool {
     std::string base;
     std::string arg;
     if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
@@ -111,11 +113,13 @@
     if (args.size() == 1) {
       hasValue = false;
       valueKind = LocalInfo::ValueKind::Unknown;
+      errorType = args.front();
       return true;
     }
     if (args.size() == 2) {
       hasValue = true;
       valueKind = valueKindFromTypeName(args.front());
+      errorType = args.back();
       return true;
     }
     return false;
@@ -150,10 +154,6 @@
     }
     if (transform.templateArgs.size() == 1) {
       const std::string &typeName = transform.templateArgs.front();
-      if (typeName == "string") {
-        error = "native backend does not support string return types on " + entryPath;
-        return false;
-      }
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
@@ -164,7 +164,8 @@
       }
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-      if (parseResultTypeName(typeName, resultHasValue, resultValueKind)) {
+      std::string resultErrorType;
+      if (parseResultTypeName(typeName, resultHasValue, resultValueKind, resultErrorType)) {
         entryResultInfo.isResult = true;
         entryResultInfo.hasValue = resultHasValue;
         entryHasResultInfo = true;

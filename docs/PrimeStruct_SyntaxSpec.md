@@ -559,8 +559,8 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
   - Scalar values: `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
   - Collections: `array`, `vector`, and `map` of numeric/bool values; map string keys are limited to string literals or
     literal-backed bindings.
-  - Strings: supported for literals and literal-backed bindings used in print/map contexts; string return types and string
-    pointers/references are rejected.
+  - Strings: supported for literals and literal-backed bindings used in print/map contexts; string returns are supported
+    for literal-backed values, while string pointers/references are rejected.
   - `convert<T>` targets: `i32`, `i64`, `u64`, `bool`, `f32`, `f64` (software numeric envelopes are rejected).
 - GLSL:
   - Scalar values: numeric/bool only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`).
