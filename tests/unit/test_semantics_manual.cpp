@@ -675,6 +675,52 @@ TEST_CASE("uninitialized block expression propagates take") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("uninitialized for condition take with reinit step passes") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/noop", {makeTransform("return", std::string("void"))}, {makeCall("/return")}));
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr condExpr = makeCall("equal", {makeCall("take", {makeName("storage")}), makeLiteral(1)});
+  primec::Expr stepExpr = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr bodyBlock = makeCall("do", {}, {}, {makeCall("/noop")});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr forCall = makeCall("for", {makeCall("/noop"), condExpr, stepExpr, bodyBlock});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, forCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized for condition take requires reinit before next check") {
+  primec::Program program;
+  program.definitions.push_back(
+      makeDefinition("/noop", {makeTransform("return", std::string("void"))}, {makeCall("/return")}));
+
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr storageBinding =
+      makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr condExpr = makeCall("equal", {makeCall("take", {makeName("storage")}), makeLiteral(1)});
+  primec::Expr bodyBlock = makeCall("do", {}, {}, {makeCall("/noop")});
+  bodyBlock.hasBodyArguments = true;
+  primec::Expr forCall = makeCall("for", {makeCall("/noop"), condExpr, makeCall("/noop"), bodyBlock});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {storageBinding, initCall, forCall, makeCall("/return")}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("take requires initialized storage") != std::string::npos);
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

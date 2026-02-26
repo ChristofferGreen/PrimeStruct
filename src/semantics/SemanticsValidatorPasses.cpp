@@ -656,24 +656,32 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     if (isForCall(stmt)) {
       StateMap loopStates = statesIn;
       std::unordered_map<std::string, BindingInfo> loopLocals = localsIn;
+      auto applyForCondition = [&](const Expr &condExpr,
+                                   std::unordered_map<std::string, BindingInfo> &condLocals,
+                                   StateMap &condStates) -> FlowResult {
+        if (condExpr.isBinding) {
+          return analyzeStatement(condExpr, condLocals, condStates);
+        }
+        if (auto err = applyExprEffects(condExpr, condLocals, condStates)) {
+          return {err, false};
+        }
+        return {};
+      };
       if (stmt.args.size() >= 1) {
         FlowResult result = analyzeStatement(stmt.args[0], loopLocals, loopStates);
         if (result.error.has_value()) {
           return result;
         }
       }
-      if (stmt.args.size() >= 2 && stmt.args[1].isBinding) {
-        FlowResult result = analyzeStatement(stmt.args[1], loopLocals, loopStates);
-        if (result.error.has_value()) {
-          return result;
-        }
+      if (stmt.args.size() < 2) {
+        statesIn = loopStates;
+        return {};
       }
-      if (stmt.args.size() >= 3) {
-        FlowResult result = analyzeStatement(stmt.args[2], loopLocals, loopStates);
-        if (result.error.has_value()) {
-          return result;
-        }
+      FlowResult initialCondition = applyForCondition(stmt.args[1], loopLocals, loopStates);
+      if (initialCondition.error.has_value()) {
+        return initialCondition;
       }
+      StateMap exitStates = loopStates;
       if (stmt.args.size() >= 4) {
         StateMap bodyStates;
         bool bodyTerminated = false;
@@ -682,10 +690,27 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
           return result;
         }
         if (!bodyTerminated) {
-          loopStates = bodyStates;
+          StateMap iterStates = bodyStates;
+          if (stmt.args.size() >= 3) {
+            FlowResult stepResult = analyzeStatement(stmt.args[2], loopLocals, iterStates);
+            if (stepResult.error.has_value()) {
+              return stepResult;
+            }
+            if (stepResult.terminated) {
+              statesIn = exitStates;
+              return {};
+            }
+          }
+          FlowResult nextCondition = applyForCondition(stmt.args[1], loopLocals, iterStates);
+          if (nextCondition.error.has_value()) {
+            return nextCondition;
+          }
+          if (!nextCondition.terminated) {
+            exitStates = mergeStates(exitStates, exitStates, iterStates);
+          }
         }
       }
-      statesIn = mergeStates(statesIn, statesIn, loopStates);
+      statesIn = exitStates;
       return {};
     }
     if (isRepeatCall(stmt)) {
