@@ -119,6 +119,77 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowers assign from imported struct-return function call") {
+  const std::string source = R"(
+import /math3/*
+
+namespace math3 {
+  [struct]
+  Vec3() {
+    [i32] x{0i32}
+    [i32] y{0i32}
+    [i32] z{0i32}
+  }
+
+  [return<Vec3>]
+  makeVec3([i32] x, [i32] y, [i32] z) {
+    return(Vec3([x] x, [y] y, [z] z))
+  }
+}
+
+[return<int>]
+main() {
+  [Vec3 mut] sample{Vec3()}
+  assign(sample, makeVec3(4i32, 5i32, 6i32))
+  return(sample.z)
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(result == 6);
+}
+
+TEST_CASE("semantics reports assign diagnostic for immutable struct local") {
+  const std::string source = R"(
+import /math3/*
+
+namespace math3 {
+  [struct]
+  Vec3() {
+    [i32] x{0i32}
+    [i32] y{0i32}
+    [i32] z{0i32}
+  }
+
+  [return<Vec3>]
+  makeVec3([i32] x, [i32] y, [i32] z) {
+    return(Vec3([x] x, [y] y, [z] z))
+  }
+}
+
+[return<int>]
+main() {
+  [Vec3] sample{Vec3()}
+  assign(sample, makeVec3(4i32, 5i32, 6i32))
+  return(0i32)
+}
+)";
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parseAndValidate(source, program, error));
+  CHECK(error == "assign target must be a mutable binding: sample");
+}
+
 TEST_CASE("ir emits struct layout metadata") {
   const std::string source = R"(
 [struct]

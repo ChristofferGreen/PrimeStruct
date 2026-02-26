@@ -1089,6 +1089,80 @@
   };
 
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
+  std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferDefinitionStructReturnPathImpl;
+  std::function<std::string(const Expr &, std::unordered_set<std::string> &)> inferStructReturnExprPath;
+  inferStructReturnExprPath = [&](const Expr &candidate, std::unordered_set<std::string> &visitedDefs) -> std::string {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isFieldAccess) {
+      return "";
+    }
+    std::string resolved = resolveExprPath(candidate);
+    if (structFieldInfoByName.count(resolved) > 0) {
+      return resolved;
+    }
+    return inferDefinitionStructReturnPathImpl(resolved, visitedDefs);
+  };
+  inferDefinitionStructReturnPathImpl = [&](const std::string &defPath,
+                                            std::unordered_set<std::string> &visitedDefs) -> std::string {
+    if (defPath.empty()) {
+      return "";
+    }
+    if (!visitedDefs.insert(defPath).second) {
+      return "";
+    }
+    auto defIt = defMap.find(defPath);
+    if (defIt == defMap.end() || !defIt->second) {
+      return "";
+    }
+    const Definition &def = *defIt->second;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string resolved;
+      if (resolveStructTypeName(transform.templateArgs.front(), def.namespacePrefix, resolved)) {
+        return resolved;
+      }
+      break;
+    }
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (transform.name == "return") {
+        continue;
+      }
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      std::string resolved;
+      if (resolveStructTypeName(transform.name, def.namespacePrefix, resolved)) {
+        return resolved;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      std::string inferred = inferStructReturnExprPath(*def.returnExpr, visitedDefs);
+      if (!inferred.empty()) {
+        return inferred;
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      if (!isReturnCall(stmt) || stmt.args.size() != 1) {
+        continue;
+      }
+      std::string inferred = inferStructReturnExprPath(stmt.args.front(), visitedDefs);
+      if (!inferred.empty()) {
+        return inferred;
+      }
+    }
+    return "";
+  };
+  auto inferDefinitionStructReturnPath = [&](const std::string &defPath) -> std::string {
+    std::unordered_set<std::string> visitedDefs;
+    return inferDefinitionStructReturnPathImpl(defPath, visitedDefs);
+  };
   inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
     if (expr.kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.name);
@@ -1109,10 +1183,14 @@
         }
         return fieldInfo.structPath;
       }
-      if (!expr.isMethodCall && !expr.isBinding) {
+      if (!expr.isMethodCall) {
         std::string resolved = resolveExprPath(expr);
         if (structFieldInfoByName.count(resolved) > 0) {
           return resolved;
+        }
+        std::string returnStruct = inferDefinitionStructReturnPath(resolved);
+        if (!returnStruct.empty()) {
+          return returnStruct;
         }
       }
     }
