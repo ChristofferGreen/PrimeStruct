@@ -429,6 +429,13 @@
       sawReturn = true;
       return true;
     }
+    if (isMatchCall(stmt)) {
+      Expr expanded;
+      if (!lowerMatchToIf(stmt, expanded, error)) {
+        return false;
+      }
+      return emitStatement(expanded, localsIn);
+    }
     if (isIfCall(stmt)) {
       if (stmt.args.size() != 3) {
         error = "if requires condition, then, else";

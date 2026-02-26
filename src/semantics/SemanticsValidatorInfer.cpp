@@ -306,6 +306,13 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
     if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
       return ReturnKind::Array;
     }
+    if (isMatchCall(expr)) {
+      Expr expanded;
+      if (!lowerMatchToIf(expr, expanded, error_)) {
+        return ReturnKind::Unknown;
+      }
+      return inferExprReturnKind(expanded, params, locals);
+    }
     if (isIfCall(expr) && expr.args.size() == 3) {
       auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
         if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
@@ -1099,6 +1106,14 @@ std::string SemanticsValidator::inferStructReturnPath(
       return it != returnStructs_.end() ? it->second : "";
     }
 
+    if (isMatchCall(expr)) {
+      Expr expanded;
+      std::string error;
+      if (!lowerMatchToIf(expr, expanded, error)) {
+        return "";
+      }
+      return inferStructReturnPath(expanded, params, locals);
+    }
     if (isIfCall(expr) && expr.args.size() == 3) {
       const Expr &thenArg = expr.args[1];
       const Expr &elseArg = expr.args[2];
@@ -1234,6 +1249,13 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
         }
       }
       return true;
+    }
+    if (isMatchCall(stmt)) {
+      Expr expanded;
+      if (!lowerMatchToIf(stmt, expanded, error_)) {
+        return false;
+      }
+      return inferStatement(expanded, activeLocals);
     }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
       const Expr &thenBlock = stmt.args[1];

@@ -495,6 +495,14 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
           return err;
         }
       }
+      if (isMatchCall(expr)) {
+        Expr expanded;
+        std::string error;
+        if (!lowerMatchToIf(expr, expanded, error)) {
+          return error;
+        }
+        return applyExprEffects(expanded, locals, states);
+      }
       if (isIfCall(expr) && expr.args.size() == 3) {
         if (auto err = applyExprEffects(expr.args[0], locals, states)) {
           return err;
@@ -565,6 +573,14 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         return {"return requires uninitialized storage to be dropped: " + *name, false};
       }
       return {std::nullopt, true};
+    }
+    if (isMatchCall(stmt)) {
+      Expr expanded;
+      std::string error;
+      if (!lowerMatchToIf(stmt, expanded, error)) {
+        return {error, false};
+      }
+      return analyzeStatement(expanded, localsIn, statesIn);
     }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
       if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
@@ -1360,6 +1376,14 @@ bool SemanticsValidator::hasStructZeroArgConstructor(const std::string &structPa
       }
       return FieldInitFlow{true, false, assignedIn};
     }
+    if (isMatchCall(stmt)) {
+      Expr expanded;
+      std::string error;
+      if (!lowerMatchToIf(stmt, expanded, error)) {
+        return FieldInitFlow{false, false, assignedIn};
+      }
+      return analyzeStatement(expanded, assignedIn);
+    }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
       FieldInitFlow thenFlow = analyzeBlockExpr(stmt.args[1], assignedIn);
       if (!thenFlow.ok) {
@@ -1606,6 +1630,14 @@ bool SemanticsValidator::isOutsideEffectFreeStatement(const Expr &stmt,
       }
       return true;
     }
+    if (isMatchCall(stmt)) {
+      Expr expanded;
+      std::string error;
+      if (!lowerMatchToIf(stmt, expanded, error)) {
+        return false;
+      }
+      return isOutsideEffectFreeStatement(expanded, ctx, writesThis);
+    }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
       if (!isOutsideEffectFreeExpr(stmt.args[0], ctx, writesThis)) {
         return false;
@@ -1800,6 +1832,14 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
     return true;
   }
 
+  if (isMatchCall(expr)) {
+    Expr expanded;
+    std::string error;
+    if (!lowerMatchToIf(expr, expanded, error)) {
+      return false;
+    }
+    return isOutsideEffectFreeExpr(expanded, ctx, writesThis);
+  }
   if (isIfCall(expr) && expr.args.size() == 3) {
     if (!isOutsideEffectFreeExpr(expr.args[0], ctx, writesThis)) {
       return false;

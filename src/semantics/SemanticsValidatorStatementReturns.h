@@ -21,6 +21,14 @@ bool SemanticsValidator::statementAlwaysReturns(const Expr &stmt) {
   if (isReturnCall(stmt)) {
     return true;
   }
+  if (isMatchCall(stmt)) {
+    Expr expanded;
+    std::string error;
+    if (!lowerMatchToIf(stmt, expanded, error)) {
+      return false;
+    }
+    return statementAlwaysReturns(expanded);
+  }
   if (isIfCall(stmt) && stmt.args.size() == 3) {
     return branchAlwaysReturns(stmt.args[1]) && branchAlwaysReturns(stmt.args[2]);
   }

@@ -630,6 +630,13 @@
           error = "block expression requires a value";
           return false;
         }
+        if (isMatchCall(expr)) {
+          Expr expanded;
+          if (!lowerMatchToIf(expr, expanded, error)) {
+            return false;
+          }
+          return emitExpr(expanded, localsIn);
+        }
         if (isIfCall(expr)) {
           if (expr.args.size() != 3) {
             error = "if requires condition, then, else";

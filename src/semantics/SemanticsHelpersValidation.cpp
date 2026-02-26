@@ -190,7 +190,7 @@ bool isDefaultExprAllowed(const Expr &expr) {
           getBuiltinAbsSignName(expr, builtinName, true) || getBuiltinSaturateName(expr, builtinName, true) ||
           getBuiltinMathName(expr, builtinName, true) || getBuiltinConvertName(expr, builtinName) ||
           getBuiltinCollectionName(expr, builtinName) || getBuiltinArrayAccessName(expr, builtinName) ||
-          isIfCall(expr))) {
+          isIfCall(expr) || isMatchCall(expr))) {
       return false;
     }
     for (const auto &arg : expr.args) {
@@ -528,6 +528,14 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
           return ReturnKind::Unknown;
         }
         return inferPrimitiveReturnKind(expr.args[1]);
+      }
+      if (isMatchCall(expr)) {
+        Expr expanded;
+        std::string error;
+        if (!lowerMatchToIf(expr, expanded, error)) {
+          return ReturnKind::Unknown;
+        }
+        return inferPrimitiveReturnKind(expanded);
       }
       if (isIfCall(expr)) {
         if (expr.args.size() != 3) {

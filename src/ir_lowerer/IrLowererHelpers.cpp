@@ -27,6 +27,10 @@ bool isIfCall(const Expr &expr) {
   return isSimpleCallName(expr, "if");
 }
 
+bool isMatchCall(const Expr &expr) {
+  return isSimpleCallName(expr, "match");
+}
+
 bool isLoopCall(const Expr &expr) {
   return isSimpleCallName(expr, "loop");
 }
@@ -54,6 +58,102 @@ bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) 
     }
   }
   return false;
+}
+
+bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error) {
+  if (!isMatchCall(expr)) {
+    out = expr;
+    return true;
+  }
+  if (hasNamedArguments(expr.argNames)) {
+    error = "named arguments not supported for builtin calls";
+    return false;
+  }
+  if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    error = "match does not accept trailing block arguments";
+    return false;
+  }
+  if (expr.args.size() < 3) {
+    error = "match requires value, cases, else";
+    return false;
+  }
+  auto isBlockEnvelope = [&](const Expr &candidate, size_t expectedArgs) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    if (candidate.args.size() != expectedArgs) {
+      return false;
+    }
+    if (!candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return false;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return false;
+    }
+    return true;
+  };
+  auto wrapInBlockEnvelope = [&](const Expr &value) -> Expr {
+    Expr block;
+    block.kind = Expr::Kind::Call;
+    block.name = "else";
+    block.namespacePrefix = expr.namespacePrefix;
+    block.hasBodyArguments = true;
+    block.bodyArguments = {value};
+    return block;
+  };
+  if (expr.args.size() == 3 && isBlockEnvelope(expr.args[1], 0) && isBlockEnvelope(expr.args[2], 0)) {
+    Expr ifCall;
+    ifCall.kind = Expr::Kind::Call;
+    ifCall.name = "if";
+    ifCall.namespacePrefix = expr.namespacePrefix;
+    ifCall.transforms = expr.transforms;
+    ifCall.args = {expr.args[0], expr.args[1], expr.args[2]};
+    ifCall.argNames = {std::nullopt, std::nullopt, std::nullopt};
+    out = std::move(ifCall);
+    return true;
+  }
+
+  const Expr &elseArg = expr.args.back();
+  if (!isBlockEnvelope(elseArg, 0)) {
+    error = "match requires final else block";
+    return false;
+  }
+  for (size_t i = 1; i + 1 < expr.args.size(); ++i) {
+    if (!isBlockEnvelope(expr.args[i], 1)) {
+      error = "match cases require pattern and block";
+      return false;
+    }
+  }
+
+  Expr currentElse = elseArg;
+  for (size_t i = expr.args.size() - 1; i-- > 1;) {
+    const Expr &caseExpr = expr.args[i];
+    Expr branch = caseExpr;
+    branch.args.clear();
+    branch.argNames.clear();
+    Expr cond;
+    cond.kind = Expr::Kind::Call;
+    cond.name = "equal";
+    cond.namespacePrefix = expr.namespacePrefix;
+    cond.args = {expr.args[0], caseExpr.args.front()};
+    cond.argNames = {std::nullopt, std::nullopt};
+
+    Expr ifCall;
+    ifCall.kind = Expr::Kind::Call;
+    ifCall.name = "if";
+    ifCall.namespacePrefix = expr.namespacePrefix;
+    Expr elseBranch = currentElse;
+    if (!isBlockEnvelope(elseBranch, 0)) {
+      elseBranch = wrapInBlockEnvelope(currentElse);
+    }
+    ifCall.args = {std::move(cond), std::move(branch), std::move(elseBranch)};
+    ifCall.argNames = {std::nullopt, std::nullopt, std::nullopt};
+    currentElse = std::move(ifCall);
+  }
+  currentElse.transforms = expr.transforms;
+  currentElse.namespacePrefix = expr.namespacePrefix;
+  out = std::move(currentElse);
+  return true;
 }
 
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {

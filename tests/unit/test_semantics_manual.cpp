@@ -314,6 +314,61 @@ TEST_CASE("match call behaves like if") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("match cases validate") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(2)});
+  primec::Expr caseOne = makeCall("case", {makeLiteral(1)}, {}, {makeLiteral(10)});
+  caseOne.hasBodyArguments = true;
+  primec::Expr caseTwo = makeCall("case", {makeLiteral(2)}, {}, {makeLiteral(20)});
+  caseTwo.hasBodyArguments = true;
+  primec::Expr elseCall = makeCall("else", {}, {}, {makeLiteral(30)});
+  elseCall.hasBodyArguments = true;
+  primec::Expr matchCall = makeCall("match", {makeName("value"), caseOne, caseTwo, elseCall});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {valueBinding, makeCall("/return", {matchCall})}));
+
+  std::string error;
+  CHECK_MESSAGE(validateProgram(program, "/main", error), error);
+}
+
+TEST_CASE("match requires else block") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(2)});
+  primec::Expr caseOne = makeCall("case", {makeLiteral(1)}, {}, {makeLiteral(10)});
+  caseOne.hasBodyArguments = true;
+  primec::Expr matchCall = makeCall("match", {makeName("value"), caseOne});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {valueBinding, makeCall("/return", {matchCall})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  const bool hasMatchError = (error.find("match requires value, cases, else") != std::string::npos) ||
+                             (error.find("match requires final else block") != std::string::npos);
+  CHECK(hasMatchError);
+}
+
+TEST_CASE("match rejects incompatible case patterns") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(2)});
+  primec::Expr stringLiteral;
+  stringLiteral.kind = primec::Expr::Kind::StringLiteral;
+  stringLiteral.stringValue = "\"nope\"utf8";
+  primec::Expr caseOne = makeCall("case", {stringLiteral}, {}, {makeLiteral(10)});
+  caseOne.hasBodyArguments = true;
+  primec::Expr elseCall = makeCall("else", {}, {}, {makeLiteral(30)});
+  elseCall.hasBodyArguments = true;
+  primec::Expr matchCall = makeCall("match", {makeName("value"), caseOne, elseCall});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {valueBinding, makeCall("/return", {matchCall})}));
+
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("comparisons do not support mixed string/numeric operands") != std::string::npos);
+}
+
 TEST_CASE("uninitialized binding accepts constructor") {
   primec::Program program;
   primec::Expr init = makeCall("uninitialized");

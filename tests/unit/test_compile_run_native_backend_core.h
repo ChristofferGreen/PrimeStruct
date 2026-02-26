@@ -90,6 +90,22 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
+TEST_CASE("compiles and runs match cases in native backend") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{2i32}
+  return(match(value, case(1i32) { 10i32 }, case(2i32) { 20i32 }, else() { 30i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_match_cases.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_native_match_cases_exe").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 20);
+}
+
 TEST_CASE("compiles and runs native definition call") {
   const std::string source = R"(
 [return<int>]

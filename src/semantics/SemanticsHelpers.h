@@ -111,12 +111,15 @@ bool isPointerLikeExpr(const Expr &expr,
                        const std::unordered_map<std::string, BindingInfo> &locals);
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isIfCall(const Expr &expr);
+bool isMatchCall(const Expr &expr);
 bool isReturnCall(const Expr &expr);
 bool isLoopCall(const Expr &expr);
 bool isWhileCall(const Expr &expr);
 bool isForCall(const Expr &expr);
 bool isRepeatCall(const Expr &expr);
 bool isBlockCall(const Expr &expr);
+
+bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error);
 
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out);
 bool getPathSpaceBuiltin(const Expr &expr, PathSpaceBuiltin &out);

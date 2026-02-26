@@ -15,6 +15,7 @@ constexpr const char *kGpuGlobalIdZName = "__gpu_global_id_z";
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isReturnCall(const Expr &expr);
 bool isIfCall(const Expr &expr);
+bool isMatchCall(const Expr &expr);
 bool isLoopCall(const Expr &expr);
 bool isWhileCall(const Expr &expr);
 bool isForCall(const Expr &expr);
@@ -22,6 +23,8 @@ bool isRepeatCall(const Expr &expr);
 bool isBlockCall(const Expr &expr);
 
 bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames);
+
+bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error);
 
 enum class PrintTarget { Out, Err };
 

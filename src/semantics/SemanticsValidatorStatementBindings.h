@@ -89,6 +89,14 @@
       if (isStructConstructor(candidate)) {
         return true;
       }
+      if (isMatchCall(candidate)) {
+        Expr expanded;
+        std::string error;
+        if (!lowerMatchToIf(candidate, expanded, error)) {
+          return false;
+        }
+        return isStructConstructorValueExpr(expanded);
+      }
       if (isIfCall(candidate) && candidate.args.size() == 3) {
         const Expr &thenArg = candidate.args[1];
         const Expr &elseArg = candidate.args[2];
@@ -476,18 +484,31 @@
     }
     return true;
   }
+  if (isMatchCall(stmt)) {
+    Expr expanded;
+    if (!lowerMatchToIf(stmt, expanded, error_)) {
+      return false;
+    }
+    return validateStatement(params,
+                             locals,
+                             expanded,
+                             returnKind,
+                             allowReturn,
+                             allowBindings,
+                             sawReturn,
+                             namespacePrefix);
+  }
   if (isIfCall(stmt)) {
-    const std::string keyword = isSimpleCallName(stmt, "match") ? "match" : "if";
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";
       return false;
     }
     if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-      error_ = keyword + " does not accept trailing block arguments";
+      error_ = "if does not accept trailing block arguments";
       return false;
     }
     if (stmt.args.size() != 3) {
-      error_ = keyword + " requires condition, then, else";
+      error_ = "if requires condition, then, else";
       return false;
     }
     const Expr &cond = stmt.args[0];
@@ -498,7 +519,7 @@
     }
     ReturnKind condKind = inferExprReturnKind(cond, params, locals);
     if (condKind != ReturnKind::Bool) {
-      error_ = keyword + " condition requires bool";
+      error_ = "if condition requires bool";
       return false;
     }
     auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
@@ -515,7 +536,7 @@
     };
     auto validateBranch = [&](const Expr &branch) -> bool {
       if (!isIfBlockEnvelope(branch)) {
-        error_ = keyword + " branches require block envelopes";
+        error_ = "if branches require block envelopes";
         return false;
       }
       std::unordered_map<std::string, BindingInfo> branchLocals = locals;

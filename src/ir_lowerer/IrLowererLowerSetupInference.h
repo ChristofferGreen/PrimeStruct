@@ -718,6 +718,13 @@
           }
           return LocalInfo::ValueKind::Unknown;
         }
+        if (isMatchCall(expr)) {
+          Expr expanded;
+          if (!lowerMatchToIf(expr, expanded, error)) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          return inferExprKind(expanded, localsIn);
+        }
         if (isIfCall(expr) && expr.args.size() == 3) {
           auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
             if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {

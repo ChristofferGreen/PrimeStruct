@@ -190,6 +190,13 @@
             }
             return true;
           }
+          if (isMatchCall(stmt)) {
+            Expr expanded;
+            if (!lowerMatchToIf(stmt, expanded, error)) {
+              return false;
+            }
+            return inferStatement(expanded, activeLocals);
+          }
           if (isIfCall(stmt) && stmt.args.size() == 3) {
             const Expr &thenBlock = stmt.args[1];
             const Expr &elseBlock = stmt.args[2];

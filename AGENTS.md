@@ -61,6 +61,8 @@ build and layout solidify.
   definition; build a prepass when parent metadata is needed (struct/helper relationships, etc).
 - **Semantic rewrites:** `Semantics::validate` mutates the AST in-place (enum expansion, loop
   desugaring, omitted struct initializers), so backend passes should assume canonicalized forms.
+- **Implementation layout:** large subsystems (semantics, IR lowerer) are composed from `.h`
+  fragments included into a single `.cpp`; these fragment headers are not standalone translation units.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic

@@ -84,6 +84,19 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+TEST_CASE("runs vm with match cases") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{2i32}
+  return(match(value, case(1i32) { 10i32 }, case(2i32) { 20i32 }, else() { 30i32 }))
+}
+)";
+  const std::string srcPath = writeTemp("vm_match_cases.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 20);
+}
+
 TEST_CASE("runs vm with chained method calls") {
   const std::string source = R"(
 namespace i32 {

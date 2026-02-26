@@ -270,6 +270,30 @@ main() {
   CHECK(expr.args[2].bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("parses match cases as call form") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(match(2i32, case(1i32) { 10i32 }, case(2i32) { 20i32 }, else() { 30i32 }))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &expr = *program.definitions[0].returnExpr;
+  CHECK(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "match");
+  REQUIRE(expr.args.size() == 4);
+  CHECK(expr.args[1].name == "case");
+  CHECK(expr.args[2].name == "case");
+  CHECK(expr.args[3].name == "else");
+  REQUIRE(expr.args[1].args.size() == 1);
+  REQUIRE(expr.args[2].args.size() == 1);
+  REQUIRE(expr.args[1].bodyArguments.size() == 1);
+  REQUIRE(expr.args[2].bodyArguments.size() == 1);
+  REQUIRE(expr.args[3].bodyArguments.size() == 1);
+}
+
 TEST_CASE("parses block expression with parens") {
   const std::string source = R"(
 [return<int>]
