@@ -319,7 +319,36 @@
           inlineStack.erase(callee.fullPath);
           return false;
         }
-        if (!emitExpr(*orderedArgs[i], callerLocals)) {
+        std::string argStruct = inferStructExprPath(*orderedArgs[i], callerLocals);
+        if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
+          error = "struct parameter type mismatch";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        const Expr &argExpr = *orderedArgs[i];
+        auto emitStructReference = [&](const Expr &arg) -> bool {
+          if (arg.kind == Expr::Kind::Name) {
+            auto it = callerLocals.find(arg.name);
+            if (it != callerLocals.end()) {
+              if (it->second.kind == LocalInfo::Kind::Reference) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+                return true;
+              }
+              if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
+                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index)});
+                return true;
+              }
+            }
+          }
+          if (!emitExpr(arg, callerLocals)) {
+            return false;
+          }
+          const int32_t tempLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempLocal)});
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(tempLocal)});
+          return true;
+        };
+        if (!emitStructReference(argExpr)) {
           inlineStack.erase(callee.fullPath);
           return false;
         }
