@@ -167,6 +167,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("convert rejects imported private helper") {
+  const std::string source = R"(
+import /util
+namespace util {
+  [public struct]
+  Widget() {
+    [i32] value{1i32}
+
+    [static return<Widget>]
+    Convert([i32] raw) {
+      return(Widget{ raw })
+    }
+  }
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(9i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no conversion found for convert<Widget>") != std::string::npos);
+}
+
 TEST_CASE("convert rejects helper with wrong return type") {
   const std::string source = R"(
 [struct]

@@ -921,20 +921,25 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     importAliases.emplace(remainder, importPath);
   }
 
-  auto resolveStructTarget = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
+  struct ResolvedStructTarget {
+    std::string path;
+    bool fromImport = false;
+  };
+  auto resolveStructTarget = [&](const std::string &typeName,
+                                 const std::string &namespacePrefix) -> ResolvedStructTarget {
     if (typeName == "Self") {
-      return structNames.count(namespacePrefix) > 0 ? namespacePrefix : std::string{};
+      return ResolvedStructTarget{structNames.count(namespacePrefix) > 0 ? namespacePrefix : std::string{}, false};
     }
     if (typeName.find('<') != std::string::npos) {
       return {};
     }
     std::string resolved = semantics::resolveStructTypePath(typeName, namespacePrefix, structNames);
     if (!resolved.empty()) {
-      return resolved;
+      return ResolvedStructTarget{std::move(resolved), false};
     }
     auto importIt = importAliases.find(typeName);
     if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
-      return importIt->second;
+      return ResolvedStructTarget{importIt->second, true};
     }
     return {};
   };
@@ -997,11 +1002,15 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     return !resolvedReturn.empty() && resolvedReturn == targetStruct;
   };
 
-  auto collectConvertHelpers = [&](const std::string &structPath) -> std::vector<std::string> {
+  auto collectConvertHelpers = [&](const std::string &structPath,
+                                   bool requirePublic) -> std::vector<std::string> {
     std::vector<std::string> matches;
     const std::string helperBase = structPath + "/Convert";
     for (const auto &def : program.definitions) {
       if (!isConvertHelperPath(helperBase, def.fullPath)) {
+        continue;
+      }
+      if (requirePublic && publicDefinitions.count(def.fullPath) == 0) {
         continue;
       }
       if (!convertHelperMatches(def, structPath)) {
@@ -1039,11 +1048,11 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     if (semantics::isSoftwareNumericTypeName(normalizedTarget)) {
       return true;
     }
-    const std::string structPath = resolveStructTarget(targetName, expr.namespacePrefix);
-    if (structPath.empty()) {
+    ResolvedStructTarget target = resolveStructTarget(targetName, expr.namespacePrefix);
+    if (target.path.empty()) {
       return true;
     }
-    std::vector<std::string> helpers = collectConvertHelpers(structPath);
+    std::vector<std::string> helpers = collectConvertHelpers(target.path, target.fromImport);
     if (helpers.empty()) {
       error = "no conversion found for convert<" + targetName + ">";
       return false;
