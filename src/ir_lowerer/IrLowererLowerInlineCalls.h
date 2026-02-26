@@ -313,6 +313,21 @@
         continue;
       }
 
+      if (paramInfo.kind == LocalInfo::Kind::Reference && !paramInfo.structTypeName.empty()) {
+        if (!orderedArgs[i]) {
+          error = "argument count mismatch";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        if (!emitExpr(*orderedArgs[i], callerLocals)) {
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        calleeLocals.emplace(param.name, paramInfo);
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index)});
+        continue;
+      }
+
       if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown || paramInfo.valueKind == LocalInfo::ValueKind::String) {
         error = "native backend only supports numeric/bool, string, or struct parameters";
         inlineStack.erase(callee.fullPath);

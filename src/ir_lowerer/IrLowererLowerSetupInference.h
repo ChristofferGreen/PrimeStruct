@@ -341,6 +341,23 @@
           }
           return fieldInfo.structPath.empty() ? fieldInfo.valueKind : LocalInfo::ValueKind::Unknown;
         }
+        if (!expr.isMethodCall &&
+            (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
+            expr.args.size() == 1) {
+          UninitializedStorageAccess access;
+          bool resolved = false;
+          if (!resolveUninitializedStorage(expr.args.front(), localsIn, access, resolved)) {
+            return LocalInfo::ValueKind::Unknown;
+          }
+          if (resolved) {
+            if (access.typeInfo.kind == LocalInfo::Kind::Value &&
+                access.typeInfo.structPath.empty() &&
+                access.typeInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+              return access.typeInfo.valueKind;
+            }
+            return LocalInfo::ValueKind::Unknown;
+          }
+        }
         if (expr.isMethodCall) {
           if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
               expr.args.front().name == "Result") {

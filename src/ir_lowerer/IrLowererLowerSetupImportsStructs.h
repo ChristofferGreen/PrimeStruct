@@ -410,6 +410,23 @@
       layoutOut = {8u, 8u};
       return true;
     }
+    if (binding.typeName == "uninitialized") {
+      if (binding.typeTemplateArg.empty()) {
+        error = "uninitialized requires a template argument for layout";
+        return false;
+      }
+      std::string base;
+      std::string arg;
+      FieldBinding unwrapped = binding;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
+        unwrapped.typeName = base;
+        unwrapped.typeTemplateArg = arg;
+      } else {
+        unwrapped.typeName = binding.typeTemplateArg;
+        unwrapped.typeTemplateArg.clear();
+      }
+      return typeLayoutForBinding(unwrapped, namespacePrefix, layoutOut);
+    }
     if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
       layoutOut = {8u, 8u};
       return true;

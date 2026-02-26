@@ -13,6 +13,71 @@
         return false;
       }
       const Expr &init = stmt.args.front();
+      std::string uninitializedType;
+      if (extractUninitializedTemplateArg(stmt, uninitializedType)) {
+        UninitializedTypeInfo uninitInfo;
+        if (!resolveUninitializedTypeInfo(uninitializedType, stmt.namespacePrefix, uninitInfo)) {
+          if (error.empty()) {
+            error = "native backend does not support uninitialized storage for type: " + uninitializedType;
+          }
+          return false;
+        }
+        LocalInfo info;
+        info.isMutable = isBindingMutable(stmt);
+        info.isUninitializedStorage = true;
+        info.kind = uninitInfo.kind;
+        info.valueKind = uninitInfo.valueKind;
+        info.mapKeyKind = uninitInfo.mapKeyKind;
+        info.mapValueKind = uninitInfo.mapValueKind;
+        info.structTypeName = uninitInfo.structPath;
+        if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
+          StructSlotLayout layout;
+          if (!resolveStructSlotLayout(info.structTypeName, layout)) {
+            return false;
+          }
+          const int32_t baseLocal = nextLocal;
+          nextLocal += layout.totalSlots;
+          info.index = nextLocal++;
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+          localsIn.emplace(stmt.name, info);
+          return true;
+        }
+        info.index = nextLocal++;
+        IrOpcode zeroOp = IrOpcode::PushI32;
+        uint64_t zeroImm = 0;
+        if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
+            info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer) {
+          zeroOp = IrOpcode::PushI64;
+        } else {
+          switch (info.valueKind) {
+            case LocalInfo::ValueKind::Int64:
+            case LocalInfo::ValueKind::UInt64:
+              zeroOp = IrOpcode::PushI64;
+              break;
+            case LocalInfo::ValueKind::Float32:
+              zeroOp = IrOpcode::PushF32;
+              break;
+            case LocalInfo::ValueKind::Float64:
+              zeroOp = IrOpcode::PushF64;
+              break;
+            case LocalInfo::ValueKind::Int32:
+            case LocalInfo::ValueKind::Bool:
+              zeroOp = IrOpcode::PushI32;
+              break;
+            default:
+              error = "native backend requires a concrete uninitialized storage type on " + stmt.name;
+              return false;
+          }
+        }
+        function.instructions.push_back({zeroOp, zeroImm});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+        localsIn.emplace(stmt.name, info);
+        return true;
+      }
       LocalInfo::Kind kind = bindingKind(stmt);
       if (!hasExplicitBindingTypeTransform(stmt) && kind == LocalInfo::Kind::Value) {
         if (init.kind == Expr::Kind::Name) {
@@ -282,6 +347,112 @@
         fileScopeStack.back().push_back(info.index);
       }
       return true;
+    }
+    if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall &&
+        (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop"))) {
+      const bool isInit = isSimpleCallName(stmt, "init");
+      const size_t expectedArgs = isInit ? 2 : 1;
+      if (stmt.args.size() != expectedArgs) {
+        error = std::string(isInit ? "init" : "drop") + " requires exactly " +
+                std::to_string(expectedArgs) + " argument" + (expectedArgs == 1 ? "" : "s");
+        return false;
+      }
+      UninitializedStorageAccess access;
+      bool resolved = false;
+      if (!resolveUninitializedStorage(stmt.args.front(), localsIn, access, resolved)) {
+        return false;
+      }
+      if (!resolved) {
+        error = std::string(isInit ? "init" : "drop") + " requires uninitialized storage";
+        return false;
+      }
+      auto emitFieldPointer = [&](const Expr &receiver, const StructSlotFieldInfo &field, int32_t ptrLocal) -> bool {
+        if (!emitExpr(receiver, localsIn)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
+        if (offsetBytes != 0) {
+          function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+        }
+        return true;
+      };
+      if (isInit) {
+        const Expr &valueExpr = stmt.args.back();
+        if (access.location == UninitializedStorageAccess::Location::Local) {
+          const LocalInfo &storageInfo = *access.local;
+          if (!storageInfo.structTypeName.empty()) {
+            StructSlotLayout layout;
+            if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
+              return false;
+            }
+            if (!emitExpr(valueExpr, localsIn)) {
+              return false;
+            }
+            const int32_t srcPtrLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+            const int32_t destPtrLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+            if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, layout.totalSlots)) {
+              return false;
+            }
+            return true;
+          }
+          if (!emitExpr(valueExpr, localsIn)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(storageInfo.index)});
+          return true;
+        }
+        if (access.location == UninitializedStorageAccess::Location::Field) {
+          const Expr &receiver = stmt.args.front().args.front();
+          const StructSlotFieldInfo &field = access.fieldSlot;
+          const int32_t ptrLocal = allocTempLocal();
+          if (!emitFieldPointer(receiver, field, ptrLocal)) {
+            return false;
+          }
+          if (!field.structPath.empty()) {
+            if (!emitExpr(valueExpr, localsIn)) {
+              return false;
+            }
+            const int32_t srcPtrLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+            if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, field.slotCount)) {
+              return false;
+            }
+            return true;
+          }
+          if (!emitExpr(valueExpr, localsIn)) {
+            return false;
+          }
+          const int32_t valueLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+          return true;
+        }
+      }
+      return true;
+    }
+    if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall && isSimpleCallName(stmt, "take") &&
+        stmt.args.size() == 1) {
+      UninitializedStorageAccess access;
+      bool resolved = false;
+      if (!resolveUninitializedStorage(stmt.args.front(), localsIn, access, resolved)) {
+        return false;
+      }
+      if (resolved) {
+        if (!emitExpr(stmt, localsIn)) {
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::Pop, 0});
+        return true;
+      }
     }
     PrintBuiltin printBuiltin;
     if (stmt.kind == Expr::Kind::Call && getPrintBuiltin(stmt, printBuiltin)) {

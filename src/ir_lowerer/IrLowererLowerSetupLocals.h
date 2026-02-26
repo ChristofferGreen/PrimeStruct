@@ -17,6 +17,7 @@
     int32_t stringIndex = -1;
     bool argvChecked = true;
     bool referenceToArray = false;
+    bool isUninitializedStorage = false;
   };
   struct OnErrorHandler {
     std::string handlerPath;
@@ -124,6 +125,14 @@
       return true;
     }
     return false;
+  };
+
+  struct UninitializedTypeInfo {
+    LocalInfo::Kind kind = LocalInfo::Kind::Value;
+    LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+    std::string structPath;
   };
 
 
@@ -379,6 +388,30 @@
       if (!transform.arguments.empty()) {
         continue;
       }
+      return true;
+    }
+    return false;
+  };
+
+  auto extractUninitializedTemplateArg = [&](const Expr &expr, std::string &typeTextOut) -> bool {
+    typeTextOut.clear();
+    for (const auto &transform : expr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (isBindingQualifierName(transform.name)) {
+        continue;
+      }
+      if (!transform.arguments.empty()) {
+        continue;
+      }
+      if (transform.name != "uninitialized") {
+        continue;
+      }
+      if (transform.templateArgs.size() != 1) {
+        return false;
+      }
+      typeTextOut = transform.templateArgs.front();
       return true;
     }
     return false;
@@ -863,6 +896,84 @@
     return false;
   };
 
+  auto resolveUninitializedTypeInfo = [&](const std::string &typeText,
+                                          const std::string &namespacePrefix,
+                                          UninitializedTypeInfo &out) -> bool {
+    out = UninitializedTypeInfo{};
+    if (typeText.empty()) {
+      return false;
+    }
+    auto isSupportedNumeric = [&](LocalInfo::ValueKind kind) {
+      return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
+             kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float32 ||
+             kind == LocalInfo::ValueKind::Float64 || kind == LocalInfo::ValueKind::Bool;
+    };
+
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(typeText, base, argText)) {
+      if (base == "array" || base == "vector") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+          error = "native backend requires " + base + " to have exactly one template argument";
+          return false;
+        }
+        LocalInfo::ValueKind elemKind = valueKindFromTypeName(trimText(args.front()));
+        if (!isSupportedNumeric(elemKind)) {
+          error = "native backend only supports numeric/bool uninitialized " + base + " storage";
+          return false;
+        }
+        out.kind = (base == "array") ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
+        out.valueKind = elemKind;
+        return true;
+      }
+      if (base == "map") {
+        std::vector<std::string> args;
+        if (!splitTemplateArgs(argText, args) || args.size() != 2) {
+          error = "native backend requires map to have exactly two template arguments";
+          return false;
+        }
+        LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimText(args.front()));
+        LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimText(args.back()));
+        if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown ||
+            valueKind == LocalInfo::ValueKind::String) {
+          error = "native backend only supports numeric/bool map values for uninitialized storage";
+          return false;
+        }
+        out.kind = LocalInfo::Kind::Map;
+        out.valueKind = valueKind;
+        out.mapKeyKind = keyKind;
+        out.mapValueKind = valueKind;
+        return true;
+      }
+      if (base == "Pointer" || base == "Reference" || base == "Buffer") {
+        out.kind = LocalInfo::Kind::Value;
+        out.valueKind = LocalInfo::ValueKind::Int64;
+        return true;
+      }
+      error = "native backend does not support uninitialized storage for type: " + typeText;
+      return false;
+    }
+
+    LocalInfo::ValueKind kind = valueKindFromTypeName(typeText);
+    if (isSupportedNumeric(kind)) {
+      out.kind = LocalInfo::Kind::Value;
+      out.valueKind = kind;
+      return true;
+    }
+    std::string resolved;
+    if (resolveStructTypeName(typeText, namespacePrefix, resolved)) {
+      out.kind = LocalInfo::Kind::Value;
+      out.structPath = resolved;
+      return true;
+    }
+    if (kind == LocalInfo::ValueKind::String) {
+      error = "native backend does not support uninitialized string storage";
+      return false;
+    }
+    return false;
+  };
+
   struct StructArrayInfo {
     std::string structPath;
     LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
@@ -1020,7 +1131,24 @@
       if (field.isStatic) {
         continue;
       }
-      if (!field.binding.typeTemplateArg.empty()) {
+      FieldBinding binding = field.binding;
+      if (binding.typeName == "uninitialized") {
+        if (binding.typeTemplateArg.empty()) {
+          error = "uninitialized requires a template argument on " + structPath;
+          structSlotLayoutStack.erase(structPath);
+          return false;
+        }
+        std::string base;
+        std::string arg;
+        if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
+          binding.typeName = base;
+          binding.typeTemplateArg = arg;
+        } else {
+          binding.typeName = binding.typeTemplateArg;
+          binding.typeTemplateArg.clear();
+        }
+      }
+      if (!binding.typeTemplateArg.empty()) {
         error = "native backend does not support templated struct fields on " + structPath;
         structSlotLayoutStack.erase(structPath);
         return false;
@@ -1028,14 +1156,14 @@
       StructSlotFieldInfo info;
       info.name = field.name;
       info.slotOffset = offset;
-      LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
+      LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
       if (kind != LocalInfo::ValueKind::Unknown && kind != LocalInfo::ValueKind::String) {
         info.valueKind = kind;
         info.slotCount = 1;
       } else {
         std::string nestedStruct;
-        if (!resolveStructTypeName(field.binding.typeName, namespacePrefix, nestedStruct)) {
-          error = "native backend does not support struct field type: " + field.binding.typeName + " on " +
+        if (!resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
+          error = "native backend does not support struct field type: " + binding.typeName + " on " +
                   structPath;
           structSlotLayoutStack.erase(structPath);
           return false;
@@ -1072,6 +1200,88 @@
       }
     }
     return false;
+  };
+
+  struct UninitializedStorageAccess {
+    enum class Location { Local, Field } location = Location::Local;
+    const LocalInfo *local = nullptr;
+    const LocalInfo *receiver = nullptr;
+    StructSlotFieldInfo fieldSlot;
+    UninitializedTypeInfo typeInfo;
+  };
+
+  auto resolveUninitializedStorage = [&](const Expr &storage,
+                                         const LocalMap &localsIn,
+                                         UninitializedStorageAccess &out,
+                                         bool &resolved) -> bool {
+    resolved = false;
+    if (storage.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(storage.name);
+      if (it != localsIn.end() && it->second.isUninitializedStorage) {
+        out = UninitializedStorageAccess{};
+        out.location = UninitializedStorageAccess::Location::Local;
+        out.local = &it->second;
+        out.typeInfo.kind = it->second.kind;
+        out.typeInfo.valueKind = it->second.valueKind;
+        out.typeInfo.mapKeyKind = it->second.mapKeyKind;
+        out.typeInfo.mapValueKind = it->second.mapValueKind;
+        out.typeInfo.structPath = it->second.structTypeName;
+        resolved = true;
+      }
+      return true;
+    }
+    if (!storage.isFieldAccess || storage.args.size() != 1) {
+      return true;
+    }
+    const Expr &receiver = storage.args.front();
+    if (receiver.kind != Expr::Kind::Name) {
+      return true;
+    }
+    auto recvIt = localsIn.find(receiver.name);
+    if (recvIt == localsIn.end() || recvIt->second.structTypeName.empty()) {
+      return true;
+    }
+    const std::string &structPath = recvIt->second.structTypeName;
+    auto fieldIt = structFieldInfoByName.find(structPath);
+    if (fieldIt == structFieldInfoByName.end()) {
+      return true;
+    }
+    for (const auto &field : fieldIt->second) {
+      if (field.isStatic) {
+        continue;
+      }
+      if (field.name != storage.name) {
+        continue;
+      }
+      if (field.binding.typeName != "uninitialized" || field.binding.typeTemplateArg.empty()) {
+        return true;
+      }
+      UninitializedTypeInfo info;
+      auto defIt = defMap.find(structPath);
+      std::string namespacePrefix;
+      if (defIt != defMap.end() && defIt->second) {
+        namespacePrefix = defIt->second->namespacePrefix;
+      }
+      if (!resolveUninitializedTypeInfo(field.binding.typeTemplateArg, namespacePrefix, info)) {
+        if (error.empty()) {
+          error = "native backend does not support uninitialized storage for type: " +
+                  field.binding.typeTemplateArg;
+        }
+        return false;
+      }
+      StructSlotFieldInfo slot;
+      if (!resolveStructFieldSlot(structPath, field.name, slot)) {
+        return false;
+      }
+      out = UninitializedStorageAccess{};
+      out.location = UninitializedStorageAccess::Location::Field;
+      out.receiver = &recvIt->second;
+      out.fieldSlot = slot;
+      out.typeInfo = info;
+      resolved = true;
+      return true;
+    }
+    return true;
   };
 
   auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
