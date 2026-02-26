@@ -515,6 +515,58 @@ TEST_CASE("uninitialized drop before non-void return passes") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("uninitialized if expression requires drop on all branches") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("take", {makeName("storage")})});
+  thenBlock.hasBodyArguments = true;
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeLiteral(7)});
+  elseBlock.hasBodyArguments = true;
+  primec::Expr ifExpr = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, makeCall("/return", {ifExpr})}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("return requires uninitialized storage to be dropped") != std::string::npos);
+}
+
+TEST_CASE("uninitialized if expression drops on both branches") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr thenBlock = makeCall("then", {}, {}, {makeCall("take", {makeName("storage")})});
+  thenBlock.hasBodyArguments = true;
+  primec::Expr elseBlock = makeCall("else", {}, {}, {makeCall("take", {makeName("storage")})});
+  elseBlock.hasBodyArguments = true;
+  primec::Expr ifExpr = makeCall("if", {makeBool(true), thenBlock, elseBlock});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, makeCall("/return", {ifExpr})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("uninitialized block expression propagates take") {
+  primec::Program program;
+  primec::Expr initStorage = makeCall("uninitialized");
+  initStorage.templateArgs = {"i32"};
+  primec::Expr binding = makeBinding("storage", {makeTransform("uninitialized", std::string("i32"))}, {initStorage});
+  primec::Expr initCall = makeCall("init", {makeName("storage"), makeLiteral(1)});
+  primec::Expr blockExpr = makeCall("block", {}, {}, {makeCall("take", {makeName("storage")})});
+  blockExpr.hasBodyArguments = true;
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("i32"))},
+                                               {binding, initCall, makeCall("/return", {blockExpr})}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

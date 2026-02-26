@@ -381,6 +381,17 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     bool terminated = false;
   };
 
+  std::function<std::optional<std::string>(const Expr &,
+                                           std::unordered_map<std::string, BindingInfo> &,
+                                           StateMap &)>
+      applyExprEffects;
+
+  std::function<std::optional<std::string>(const std::vector<Expr> &,
+                                           std::unordered_map<std::string, BindingInfo>,
+                                           StateMap,
+                                           StateMap &)>
+      analyzeValueBlock;
+
   std::function<FlowResult(const Expr &,
                            std::unordered_map<std::string, BindingInfo> &,
                            StateMap &)>
@@ -410,30 +421,120 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     return {};
   };
 
+  analyzeValueBlock = [&](const std::vector<Expr> &stmts,
+                          std::unordered_map<std::string, BindingInfo> localsIn,
+                          StateMap statesIn,
+                          StateMap &statesOut) -> std::optional<std::string> {
+    if (stmts.empty()) {
+      statesOut = std::move(statesIn);
+      return std::nullopt;
+    }
+    for (size_t i = 0; i < stmts.size(); ++i) {
+      const Expr &stmt = stmts[i];
+      const bool isLast = (i + 1 == stmts.size());
+      if (stmt.isBinding) {
+        BindingInfo info;
+        std::optional<std::string> restrictType;
+        std::string error;
+        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
+          return error;
+        }
+        localsIn.emplace(stmt.name, info);
+        if (isUninitializedBinding(info)) {
+          statesIn[stmt.name] = UninitState::Uninitialized;
+        }
+        continue;
+      }
+      if (isReturnCall(stmt)) {
+        for (const auto &arg : stmt.args) {
+          if (auto err = applyExprEffects(arg, localsIn, statesIn)) {
+            return err;
+          }
+        }
+        statesOut = std::move(statesIn);
+        return std::nullopt;
+      }
+      if (!stmt.isMethodCall &&
+          (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop") ||
+           isSimpleCallName(stmt, "take") || isSimpleCallName(stmt, "borrow")) &&
+          !stmt.args.empty()) {
+        if (auto err = applyStorageCall(stmt.name, stmt.args.front(), localsIn, statesIn, false)) {
+          return err;
+        }
+        if (isLast) {
+          statesOut = std::move(statesIn);
+          return std::nullopt;
+        }
+        continue;
+      }
+      if (auto err = applyExprEffects(stmt, localsIn, statesIn)) {
+        return err;
+      }
+      if (isLast) {
+        statesOut = std::move(statesIn);
+        return std::nullopt;
+      }
+    }
+    statesOut = std::move(statesIn);
+    return std::nullopt;
+  };
+
   analyzeStatement = [&](const Expr &stmt,
                          std::unordered_map<std::string, BindingInfo> &localsIn,
                          StateMap &statesIn) -> FlowResult {
-    std::function<std::optional<std::string>(const Expr &)> applyExprEffects;
-    applyExprEffects = [&](const Expr &expr) -> std::optional<std::string> {
+    applyExprEffects = [&](const Expr &expr,
+                           std::unordered_map<std::string, BindingInfo> &locals,
+                           StateMap &states) -> std::optional<std::string> {
       if (expr.kind != Expr::Kind::Call) {
         return std::nullopt;
       }
       if (!expr.isMethodCall &&
           (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
           !expr.args.empty()) {
-        if (auto err = applyStorageCall(expr.name, expr.args.front(), localsIn, statesIn, true)) {
+        if (auto err = applyStorageCall(expr.name, expr.args.front(), locals, states, true)) {
           return err;
         }
+      }
+      if (isIfCall(expr) && expr.args.size() == 3) {
+        if (auto err = applyExprEffects(expr.args[0], locals, states)) {
+          return err;
+        }
+        StateMap thenStates = states;
+        StateMap elseStates = states;
+        const Expr &thenArg = expr.args[1];
+        const Expr &elseArg = expr.args[2];
+        if (thenArg.kind == Expr::Kind::Call && (thenArg.hasBodyArguments || !thenArg.bodyArguments.empty())) {
+          StateMap branchStates;
+          if (auto err = analyzeValueBlock(thenArg.bodyArguments, locals, thenStates, branchStates)) {
+            return err;
+          }
+          thenStates = std::move(branchStates);
+        } else if (auto err = applyExprEffects(thenArg, locals, thenStates)) {
+          return err;
+        }
+        if (elseArg.kind == Expr::Kind::Call && (elseArg.hasBodyArguments || !elseArg.bodyArguments.empty())) {
+          StateMap branchStates;
+          if (auto err = analyzeValueBlock(elseArg.bodyArguments, locals, elseStates, branchStates)) {
+            return err;
+          }
+          elseStates = std::move(branchStates);
+        } else if (auto err = applyExprEffects(elseArg, locals, elseStates)) {
+          return err;
+        }
+        states = mergeStates(states, thenStates, elseStates);
+        return std::nullopt;
       }
       for (const auto &arg : expr.args) {
-        if (auto err = applyExprEffects(arg)) {
+        if (auto err = applyExprEffects(arg, locals, states)) {
           return err;
         }
       }
-      for (const auto &bodyExpr : expr.bodyArguments) {
-        if (auto err = applyExprEffects(bodyExpr)) {
+      if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+        StateMap bodyStates;
+        if (auto err = analyzeValueBlock(expr.bodyArguments, locals, states, bodyStates)) {
           return err;
         }
+        states = std::move(bodyStates);
       }
       return std::nullopt;
     };
@@ -456,7 +557,7 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     }
     if (isReturnCall(stmt)) {
       for (const auto &arg : stmt.args) {
-        if (auto err = applyExprEffects(arg)) {
+        if (auto err = applyExprEffects(arg, localsIn, statesIn)) {
           return {err, false};
         }
       }
@@ -466,6 +567,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       return {std::nullopt, true};
     }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
+      if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
+        return {err, false};
+      }
       const Expr &thenArg = stmt.args[1];
       const Expr &elseArg = stmt.args[2];
       StateMap thenStates;
@@ -518,6 +622,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
     };
     if (isLoopCall(stmt) || isWhileCall(stmt)) {
       if (stmt.args.size() >= 2) {
+        if (auto err = applyExprEffects(stmt.args.front(), localsIn, statesIn)) {
+          return {err, false};
+        }
         StateMap bodyStates;
         bool bodyTerminated = false;
         FlowResult result = analyzeLoopBody(stmt.args[1], localsIn, statesIn, bodyStates, bodyTerminated);
