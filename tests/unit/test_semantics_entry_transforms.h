@@ -179,19 +179,55 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("unsafe scope rejects pointer to reference conversion initializer") {
+TEST_CASE("unsafe scope allows pointer to reference conversion initializer") {
   const std::string source = R"(
 [unsafe, return<int>]
 main() {
   [i32 mut] value{1i32}
   [Pointer<i32>] ptr{location(value)}
   [Reference<i32>] ref{ptr}
+  return(dereference(ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe scope rejects mismatched pointer to reference conversion") {
+  const std::string source = R"(
+[unsafe, return<int>]
+main() {
+  [i64 mut] value{1i64}
+  [Pointer<i64>] ptr{location(value)}
+  [Reference<i32>] ref{ptr}
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("Reference bindings require location") != std::string::npos);
+  CHECK(error.find("unsafe Reference binding type mismatch") != std::string::npos);
+}
+
+TEST_CASE("unsafe pointer-converted reference rejects safe-call boundary escape") {
+  const std::string source = R"(
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
+  [Reference<i32>] ref{ptr}
+  consume(ref)
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
 }
 
 TEST_CASE("software numeric return type is rejected") {

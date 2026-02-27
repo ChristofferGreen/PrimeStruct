@@ -159,17 +159,6 @@
     }
     if (info.typeName == "Reference") {
       const Expr &init = initializer;
-      std::string pointerName;
-      if (init.kind != Expr::Kind::Call || !getBuiltinPointerName(init, pointerName) ||
-          pointerName != "location" || init.args.size() != 1) {
-        error_ = "Reference bindings require location(...)";
-        return false;
-      }
-      const Expr &target = init.args.front();
-      if (target.kind != Expr::Kind::Name) {
-        error_ = "Reference bindings require location(...)";
-        return false;
-      }
       auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
         if (binding.typeName != "Reference") {
           return "";
@@ -179,6 +168,82 @@
         }
         return bindingName;
       };
+      auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
+        if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+          return paramBinding;
+        }
+        auto it = locals.find(name);
+        if (it == locals.end()) {
+          return nullptr;
+        }
+        return &it->second;
+      };
+      std::function<bool(const Expr &, std::string &)> resolvePointerTargetType;
+      resolvePointerTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
+        if (expr.kind == Expr::Kind::Name) {
+          const BindingInfo *binding = resolveNamedBinding(expr.name);
+          if (binding == nullptr) {
+            return false;
+          }
+          if ((binding->typeName == "Pointer" || binding->typeName == "Reference") &&
+              !binding->typeTemplateArg.empty()) {
+            targetOut = binding->typeTemplateArg;
+            return true;
+          }
+          return false;
+        }
+        if (expr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string builtinName;
+        if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
+          const Expr &target = expr.args.front();
+          if (target.kind != Expr::Kind::Name) {
+            return false;
+          }
+          const BindingInfo *binding = resolveNamedBinding(target.name);
+          if (binding == nullptr) {
+            return false;
+          }
+          if (binding->typeName == "Reference" && !binding->typeTemplateArg.empty()) {
+            targetOut = binding->typeTemplateArg;
+          } else {
+            targetOut = binding->typeName;
+          }
+          return true;
+        }
+        std::string opName;
+        if (getBuiltinOperatorName(expr, opName) && (opName == "plus" || opName == "minus") && expr.args.size() == 2) {
+          if (isPointerLikeExpr(expr.args[1], params, locals)) {
+            return false;
+          }
+          return resolvePointerTargetType(expr.args[0], targetOut);
+        }
+        return false;
+      };
+      std::string pointerName;
+      const bool initIsLocation =
+          init.kind == Expr::Kind::Call && getBuiltinPointerName(init, pointerName) && pointerName == "location" &&
+          init.args.size() == 1 && init.args.front().kind == Expr::Kind::Name;
+      if (!initIsLocation && !currentDefinitionIsUnsafe_) {
+        error_ = "Reference bindings require location(...)";
+        return false;
+      }
+      if (!initIsLocation && currentDefinitionIsUnsafe_) {
+        std::string pointerTargetType;
+        if (!resolvePointerTargetType(init, pointerTargetType)) {
+          error_ = "unsafe Reference bindings require pointer-like initializer";
+          return false;
+        }
+        if (!errorTypesMatch(pointerTargetType, info.typeTemplateArg, namespacePrefix)) {
+          error_ = "unsafe Reference binding type mismatch";
+          return false;
+        }
+        info.isUnsafeReference = true;
+        locals.emplace(stmt.name, info);
+        return true;
+      }
+      const Expr &target = init.args.front();
       auto resolveBorrowRoot = [&](const std::string &targetName, std::string &rootOut) -> bool {
         if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
           if (paramBinding->typeName == "Reference") {

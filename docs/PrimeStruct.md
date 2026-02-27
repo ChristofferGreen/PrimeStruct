@@ -416,7 +416,7 @@ if you intended to index.
 - **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is valid on struct helpers (including lifecycle helpers) to make the implicit `this` mutable; using `mut` on a `[static]` helper is a diagnostic. Executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
-- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules are relaxed within the body, but `Reference<T>` bindings still require `location(...)` initialization, and references created there must not escape the unsafe scope.
+- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules are relaxed within the body, and `Reference<T>` bindings may use pointer-like initializers (`Pointer<T>`/`Reference<T>` values, including pointer arithmetic) when the pointee type matches. References created there must not escape the unsafe scope.
 - **`return<T>`:** optional contract that pins the inferred return envelope. `return<auto>` requests inference; unresolved or conflicting returns are diagnostics.
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
@@ -764,7 +764,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
   - `return<Reference<T>>` may only return a direct `Reference<T>` parameter (`return(paramRef)`); local and derived references are rejected.
-- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, but `Reference<T>` bindings still require `location(...)` initialization and references created there must not escape the unsafe scope. Unsafe scopes are aliasing barriers for optimization.
+- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, and also allows pointer-to-reference initialization from pointer-like expressions when types match. References created there must not escape the unsafe scope. Unsafe scopes are aliasing barriers for optimization.
 - **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as unsafe-created references do not escape.
 
 ### Layout and Struct Semantics
@@ -1006,7 +1006,7 @@ bad_use_after_take() {
 - **Target whitelist:** `Pointer<T>` targets must be primitive or struct types. `Reference<T>` targets may be primitive, struct, or `array<T>` (array references are allowed). `Pointer<array<T>>` and other template types are rejected by the front-end.
 - **Backend limits:** VM/native lowering rejects `Pointer<string>` / `Reference<string>` (string pointers are not supported). Entry-argument arrays are not addressable (`location(args)` is invalid).
 - **Surface syntax:** canonical syntax uses explicit calls (`location`, `dereference`, `plus`/`minus`); the `operators` text transform rewrites `&name`/`*name` sugar into those calls.
-- **Reference binding:** `Reference<T>` bindings are initialized from `location(...)` and behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
+- **Reference binding:** in safe scopes, `Reference<T>` bindings are initialized from `location(...)`. In `[unsafe]` scopes they may also be initialized from pointer-like expressions (`Pointer<T>`/`Reference<T>` values and pointer arithmetic results) when the target type matches. References behave like `*Pointer<T>` in use. Use `mut` on the reference binding to allow `assign(ref, value)`.
 - **Array references:** `Reference<array<T>>` is allowed; treat the reference like an array value for `count`/`at` and other array operations while still using `location(...)` to form the reference.
 - **Core pointer calls:** `location(value)` yields a pointer to a local binding or parameter (entry argument arrays are not addressable); `location(ref)` returns the pointer stored by a `Reference<T>` binding; `dereference(ptr)` reads through a pointer/reference form; `assign(dereference(ptr), value)` writes through the pointer. Pointer writes require the pointer binding to be declared `mut`; attempting to assign through an immutable pointer or reference is rejected.
 - **Pointer arithmetic:** `plus(ptr, offset)` and `minus(ptr, offset)` treat `offset` as a byte offset. VM/native frames currently space locals in 16-byte slots, so adding or subtracting `16` advances one local slot. Offsets accept `i32`, `i64`, or `u64` in the front-end; non-integer offsets are rejected, and the native backend lowers all three widths.
