@@ -629,22 +629,39 @@
     if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
       return false;
     }
-    std::function<bool(const Expr &)> isUnsafeReferenceExpr;
-    isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
-      if (argExpr.kind == Expr::Kind::Name) {
-        if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
-          return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
+      std::function<bool(const Expr &)> isUnsafeReferenceExpr;
+      isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
+        if (argExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
+            return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
         }
         auto itLocal = locals.find(argExpr.name);
         return itLocal != locals.end() && itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference;
-      }
-      if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
-        return false;
-      }
-      const std::string nestedResolved = resolveCalleePath(argExpr);
-      if (nestedResolved.empty()) {
-        return false;
-      }
+        }
+        if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
+          return false;
+        }
+        auto hasUnsafeChildExpr = [&](const Expr &callExpr) -> bool {
+          for (const auto &nestedArg : callExpr.args) {
+            if (isUnsafeReferenceExpr(nestedArg)) {
+              return true;
+            }
+          }
+          for (const auto &bodyExpr : callExpr.bodyArguments) {
+            if (isUnsafeReferenceExpr(bodyExpr)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        if (isIfCall(argExpr) || isBlockCall(argExpr) || isSimpleCallName(argExpr, "then") ||
+            isSimpleCallName(argExpr, "else")) {
+          return hasUnsafeChildExpr(argExpr);
+        }
+        const std::string nestedResolved = resolveCalleePath(argExpr);
+        if (nestedResolved.empty()) {
+          return false;
+        }
       auto nestedIt = defMap_.find(nestedResolved);
       if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
         return false;
