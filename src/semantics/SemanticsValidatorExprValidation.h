@@ -629,6 +629,65 @@
     if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
       return false;
     }
+    std::function<bool(const Expr &)> isUnsafeReferenceExpr;
+    isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
+      if (argExpr.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
+          return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
+        }
+        auto itLocal = locals.find(argExpr.name);
+        return itLocal != locals.end() && itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference;
+      }
+      if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
+        return false;
+      }
+      const std::string nestedResolved = resolveCalleePath(argExpr);
+      if (nestedResolved.empty()) {
+        return false;
+      }
+      auto nestedIt = defMap_.find(nestedResolved);
+      if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
+        return false;
+      }
+      bool returnsReference = false;
+      for (const auto &transform : nestedIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        if (splitTemplateTypeName(transform.templateArgs.front(), base, arg) && base == "Reference") {
+          returnsReference = true;
+          break;
+        }
+      }
+      if (!returnsReference) {
+        return false;
+      }
+      const auto &nestedParams = paramsByDef_[nestedResolved];
+      if (nestedParams.empty()) {
+        return false;
+      }
+      std::string nestedArgError;
+      if (!validateNamedArgumentsAgainstParams(nestedParams, argExpr.argNames, nestedArgError)) {
+        return false;
+      }
+      std::vector<const Expr *> nestedOrderedArgs;
+      if (!buildOrderedArguments(nestedParams, argExpr.args, argExpr.argNames, nestedOrderedArgs, nestedArgError)) {
+        return false;
+      }
+      for (size_t nestedIndex = 0; nestedIndex < nestedOrderedArgs.size() && nestedIndex < nestedParams.size();
+           ++nestedIndex) {
+        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+        if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
+          continue;
+        }
+        if (isUnsafeReferenceExpr(*nestedArg)) {
+          return true;
+        }
+      }
+      return false;
+    };
     auto it = defMap_.find(resolved);
     if (it == defMap_.end() || resolvedMethod) {
       if (!expr.isMethodCall && isSimpleCallName(expr, "try")) {
@@ -2231,6 +2290,14 @@
           error_ = "assign target must be a mutable binding";
           return false;
         }
+        if (currentDefinitionIsUnsafe_ && targetIsName) {
+          if (const BindingInfo *targetBinding = findParamBinding(params, target.name);
+              targetBinding != nullptr && targetBinding->typeName == "Reference" &&
+              isUnsafeReferenceExpr(expr.args[1])) {
+            error_ = "unsafe reference escapes via assignment to " + target.name;
+            return false;
+          }
+        }
         if (!validateExpr(params, locals, expr.args[1])) {
           return false;
         }
@@ -2399,65 +2466,6 @@
       }
     }
     if (currentDefinitionIsUnsafe_ && !calleeIsUnsafe) {
-      std::function<bool(const Expr &)> isUnsafeReferenceExpr;
-      isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
-        if (argExpr.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
-            return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
-          }
-          auto itLocal = locals.find(argExpr.name);
-          return itLocal != locals.end() && itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference;
-        }
-        if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
-          return false;
-        }
-        const std::string nestedResolved = resolveCalleePath(argExpr);
-        if (nestedResolved.empty()) {
-          return false;
-        }
-        auto nestedIt = defMap_.find(nestedResolved);
-        if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
-          return false;
-        }
-        bool returnsReference = false;
-        for (const auto &transform : nestedIt->second->transforms) {
-          if (transform.name != "return" || transform.templateArgs.size() != 1) {
-            continue;
-          }
-          std::string base;
-          std::string arg;
-          if (splitTemplateTypeName(transform.templateArgs.front(), base, arg) && base == "Reference") {
-            returnsReference = true;
-            break;
-          }
-        }
-        if (!returnsReference) {
-          return false;
-        }
-        const auto &nestedParams = paramsByDef_[nestedResolved];
-        if (nestedParams.empty()) {
-          return false;
-        }
-        std::string nestedArgError;
-        if (!validateNamedArgumentsAgainstParams(nestedParams, argExpr.argNames, nestedArgError)) {
-          return false;
-        }
-        std::vector<const Expr *> nestedOrderedArgs;
-        if (!buildOrderedArguments(nestedParams, argExpr.args, argExpr.argNames, nestedOrderedArgs, nestedArgError)) {
-          return false;
-        }
-        for (size_t nestedIndex = 0; nestedIndex < nestedOrderedArgs.size() && nestedIndex < nestedParams.size();
-             ++nestedIndex) {
-          const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
-          if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
-            continue;
-          }
-          if (isUnsafeReferenceExpr(*nestedArg)) {
-            return true;
-          }
-        }
-        return false;
-      };
       for (size_t i = 0; i < orderedArgs.size() && i < calleeParams.size(); ++i) {
         const Expr *arg = orderedArgs[i];
         if (arg == nullptr) {

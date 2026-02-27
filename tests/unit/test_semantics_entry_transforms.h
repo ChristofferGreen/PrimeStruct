@@ -255,6 +255,55 @@ main() {
   CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
 }
 
+TEST_CASE("unsafe parameter reference allows safe-call boundary") {
+  const std::string source = R"(
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+forward([Reference<i32>] input) {
+  consume(input)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  forward(ref)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe reference rejects assignment escape to outer binding") {
+  const std::string source = R"(
+[unsafe, return<void>]
+leak([Pointer<i32>] ptr, [Reference<i32> mut] out) {
+  [Reference<i32>] local{ptr}
+  assign(out, local)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] sourceValue{1i32}
+  [i32 mut] sinkValue{2i32}
+  [Reference<i32> mut] out{location(sinkValue)}
+  leak(location(sourceValue), out)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes via assignment to out") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]
