@@ -1290,6 +1290,106 @@ TEST_CASE("borrow checker allows pointer dereference mutation after last referen
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("borrow checker allows pointer arithmetic dereference assign without borrow") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ptr =
+      makeBinding("ptr", {makeTransform("Pointer", std::string("i32")), makeTransform("mut")},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr offsetPtr = makeCall("plus", {makeName("ptr"), makeLiteral(0)});
+  primec::Expr write = makeCall("assign", {makeCall("dereference", {offsetPtr}), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("void"))}, {valueBinding, ptr, write, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("borrow checker rejects pointer arithmetic assign before last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ptr =
+      makeBinding("ptr", {makeTransform("Pointer", std::string("i32")), makeTransform("mut")},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr offsetPtr = makeCall("plus", {makeName("ptr"), makeLiteral(0)});
+  primec::Expr write = makeCall("assign", {makeCall("dereference", {offsetPtr}), makeLiteral(2)});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ptr, ref, write, observed, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("borrowed binding") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows pointer arithmetic assign after last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ptr =
+      makeBinding("ptr", {makeTransform("Pointer", std::string("i32")), makeTransform("mut")},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  primec::Expr offsetPtr = makeCall("plus", {makeName("ptr"), makeLiteral(0)});
+  primec::Expr write = makeCall("assign", {makeCall("dereference", {offsetPtr}), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ptr, ref, observed, write, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("borrow checker rejects pointer arithmetic mutation before last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ptr =
+      makeBinding("ptr", {makeTransform("Pointer", std::string("i32")), makeTransform("mut")},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr offsetPtr = makeCall("plus", {makeName("ptr"), makeLiteral(0)});
+  primec::Expr mutate = makeCall("increment", {makeCall("dereference", {offsetPtr})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ptr, ref, mutate, observed, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("borrowed binding") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows pointer arithmetic mutation after last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ptr =
+      makeBinding("ptr", {makeTransform("Pointer", std::string("i32")), makeTransform("mut")},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  primec::Expr offsetPtr = makeCall("plus", {makeName("ptr"), makeLiteral(0)});
+  primec::Expr mutate = makeCall("increment", {makeCall("dereference", {offsetPtr})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ptr, ref, observed, mutate, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

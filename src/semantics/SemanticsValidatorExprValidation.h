@@ -2042,6 +2042,46 @@
         }
         return false;
       };
+      auto findNamedBinding = [&](const std::string &name) -> const BindingInfo * {
+        if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+          return paramBinding;
+        }
+        auto itBinding = locals.find(name);
+        if (itBinding != locals.end()) {
+          return &itBinding->second;
+        }
+        return nullptr;
+      };
+      std::function<bool(const Expr &, std::string &, std::string &)> resolveMutablePointerWriteTarget;
+      resolveMutablePointerWriteTarget =
+          [&](const Expr &pointerExpr, std::string &borrowRootOut, std::string &ignoreBorrowNameOut) -> bool {
+        if (pointerExpr.kind == Expr::Kind::Name) {
+          if (!isMutableBinding(params, locals, pointerExpr.name)) {
+            return false;
+          }
+          const BindingInfo *pointerBinding = findNamedBinding(pointerExpr.name);
+          if (!pointerBinding || !isPointerLikeExpr(pointerExpr, params, locals)) {
+            return false;
+          }
+          ignoreBorrowNameOut = pointerExpr.name;
+          if (!pointerBinding->referenceRoot.empty()) {
+            borrowRootOut = pointerBinding->referenceRoot;
+          }
+          return true;
+        }
+        if (pointerExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string opName;
+        if (!getBuiltinOperatorName(pointerExpr, opName) || (opName != "plus" && opName != "minus") ||
+            pointerExpr.args.size() != 2) {
+          return false;
+        }
+        if (isPointerLikeExpr(pointerExpr.args[1], params, locals)) {
+          return false;
+        }
+        return resolveMutablePointerWriteTarget(pointerExpr.args.front(), borrowRootOut, ignoreBorrowNameOut);
+      };
       if (isSimpleCallName(expr, "move")) {
         if (hasNamedArguments(expr.argNames)) {
           error_ = "named arguments not supported for builtin calls";
@@ -2117,24 +2157,18 @@
             return false;
           }
           const Expr &pointerExpr = target.args.front();
-          if (pointerExpr.kind != Expr::Kind::Name || !isMutableBinding(params, locals, pointerExpr.name)) {
-            error_ = "assign target must be a mutable binding";
-            return false;
-          }
-          const BindingInfo *pointerBinding = findParamBinding(params, pointerExpr.name);
-          if (!pointerBinding) {
-            auto itBinding = locals.find(pointerExpr.name);
-            if (itBinding != locals.end()) {
-              pointerBinding = &itBinding->second;
+          std::string pointerBorrowRoot;
+          std::string ignoreBorrowName;
+          if (!resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot, ignoreBorrowName)) {
+            if (pointerExpr.kind == Expr::Kind::Name && !isMutableBinding(params, locals, pointerExpr.name)) {
+              error_ = "assign target must be a mutable binding";
+              return false;
             }
-          }
-          if (pointerBinding && !pointerBinding->referenceRoot.empty() &&
-              hasActiveBorrowForBinding(pointerBinding->referenceRoot, pointerExpr.name)) {
-            error_ = "borrowed binding: " + pointerBinding->referenceRoot;
+            error_ = "assign target must be a mutable pointer binding";
             return false;
           }
-          if (!isPointerLikeExpr(pointerExpr, params, locals)) {
-            error_ = "assign target must be a mutable pointer binding";
+          if (!pointerBorrowRoot.empty() && hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
+            error_ = "borrowed binding: " + pointerBorrowRoot;
             return false;
           }
           if (!validateExpr(params, locals, pointerExpr)) {
@@ -2175,24 +2209,18 @@
             return false;
           }
           const Expr &pointerExpr = target.args.front();
-          if (pointerExpr.kind != Expr::Kind::Name || !isMutableBinding(params, locals, pointerExpr.name)) {
-            error_ = mutateName + " target must be a mutable binding";
-            return false;
-          }
-          const BindingInfo *pointerBinding = findParamBinding(params, pointerExpr.name);
-          if (!pointerBinding) {
-            auto itBinding = locals.find(pointerExpr.name);
-            if (itBinding != locals.end()) {
-              pointerBinding = &itBinding->second;
+          std::string pointerBorrowRoot;
+          std::string ignoreBorrowName;
+          if (!resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot, ignoreBorrowName)) {
+            if (pointerExpr.kind == Expr::Kind::Name && !isMutableBinding(params, locals, pointerExpr.name)) {
+              error_ = mutateName + " target must be a mutable binding";
+              return false;
             }
-          }
-          if (pointerBinding && !pointerBinding->referenceRoot.empty() &&
-              hasActiveBorrowForBinding(pointerBinding->referenceRoot, pointerExpr.name)) {
-            error_ = "borrowed binding: " + pointerBinding->referenceRoot;
+            error_ = mutateName + " target must be a mutable pointer binding";
             return false;
           }
-          if (!isPointerLikeExpr(pointerExpr, params, locals)) {
-            error_ = mutateName + " target must be a mutable pointer binding";
+          if (!pointerBorrowRoot.empty() && hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
+            error_ = "borrowed binding: " + pointerBorrowRoot;
             return false;
           }
           if (!validateExpr(params, locals, pointerExpr)) {
