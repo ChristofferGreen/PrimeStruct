@@ -654,8 +654,9 @@
           }
           return false;
         };
-        if (isIfCall(argExpr) || isBlockCall(argExpr) || isSimpleCallName(argExpr, "then") ||
-            isSimpleCallName(argExpr, "else")) {
+        if (isIfCall(argExpr) || isMatchCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) ||
+            isSimpleCallName(argExpr, "then") || isSimpleCallName(argExpr, "else") ||
+            isSimpleCallName(argExpr, "case")) {
           return hasUnsafeChildExpr(argExpr);
         }
         const std::string nestedResolved = resolveCalleePath(argExpr);
@@ -737,8 +738,9 @@
         }
         return false;
       };
-      if (isIfCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) || isSimpleCallName(argExpr, "then") ||
-          isSimpleCallName(argExpr, "else")) {
+      if (isIfCall(argExpr) || isMatchCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) ||
+          isSimpleCallName(argExpr, "then") || isSimpleCallName(argExpr, "else") ||
+          isSimpleCallName(argExpr, "case")) {
         return hasEscapingChildExpr(argExpr);
       }
       const std::string nestedResolved = resolveCalleePath(argExpr);

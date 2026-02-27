@@ -295,6 +295,27 @@ main() {
   CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
 }
 
+TEST_CASE("unsafe reference rejects safe-call boundary escape through match expression") {
+  const std::string source = R"(
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [i32] selector{0i32}
+  consume(match(selector, case(0i32) { ref }, else() { ref }))
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
+}
+
 TEST_CASE("unsafe parameter reference allows safe-call boundary") {
   const std::string source = R"(
 [return<void>]
@@ -360,6 +381,31 @@ useLocal([Pointer<i32>] ptr) {
 main() {
   [i32 mut] sourceValue{1i32}
   useLocal(location(sourceValue))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe reference allows assignment through parameter-rooted pointer alias") {
+  const std::string source = R"(
+[unsafe, return<void>]
+forward([Reference<i32> mut] out, [Reference<i32>] input) {
+  [Pointer<i32>] aliasPtr{location(input)}
+  [Reference<i32>] alias{aliasPtr}
+  assign(out, alias)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] first{1i32}
+  [i32 mut] second{2i32}
+  [Reference<i32> mut] out{location(first)}
+  [Reference<i32>] input{location(second)}
+  forward(out, input)
   return(0i32)
 }
 )";
@@ -446,6 +492,30 @@ leak([Reference<i32> mut] out) {
   [i32 mut] localValue{1i32}
   [Reference<i32>] local{location(localValue)}
   assign(out, local)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] sinkValue{2i32}
+  [Reference<i32> mut] out{location(sinkValue)}
+  leak(out)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reference escapes via assignment to out") != std::string::npos);
+}
+
+TEST_CASE("safe reference rejects assignment escape through match expression") {
+  const std::string source = R"(
+[return<void>]
+leak([Reference<i32> mut] out) {
+  [i32 mut] localValue{1i32}
+  [Reference<i32>] local{location(localValue)}
+  [i32] selector{0i32}
+  assign(out, match(selector, case(0i32) { local }, else() { local }))
   return()
 }
 

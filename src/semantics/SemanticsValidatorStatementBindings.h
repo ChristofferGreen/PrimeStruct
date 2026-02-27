@@ -311,6 +311,10 @@
           error_ = "unsafe Reference binding type mismatch";
           return false;
         }
+        std::string borrowRoot;
+        if (resolvePointerRoot(init, borrowRoot)) {
+          info.referenceRoot = std::move(borrowRoot);
+        }
         info.isUnsafeReference = true;
         locals.emplace(stmt.name, info);
         return true;
