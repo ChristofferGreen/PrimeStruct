@@ -275,6 +275,26 @@ main() {
   CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
 }
 
+TEST_CASE("unsafe reference rejects safe-call boundary escape through block return expression") {
+  const std::string source = R"(
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  consume(block(){ return(ref) })
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
+}
+
 TEST_CASE("unsafe parameter reference allows safe-call boundary") {
   const std::string source = R"(
 [return<void>]
@@ -417,6 +437,52 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsafe reference escapes via assignment to out") != std::string::npos);
+}
+
+TEST_CASE("safe reference rejects assignment escape to parameter") {
+  const std::string source = R"(
+[return<void>]
+leak([Reference<i32> mut] out) {
+  [i32 mut] localValue{1i32}
+  [Reference<i32>] local{location(localValue)}
+  assign(out, local)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] sinkValue{2i32}
+  [Reference<i32> mut] out{location(sinkValue)}
+  leak(out)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("reference escapes via assignment to out") != std::string::npos);
+}
+
+TEST_CASE("safe reference allows assignment from parameter to parameter") {
+  const std::string source = R"(
+[return<void>]
+forward([Reference<i32> mut] out, [Reference<i32>] input) {
+  assign(out, input)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] first{1i32}
+  [i32 mut] second{2i32}
+  [Reference<i32> mut] out{location(first)}
+  [Reference<i32>] input{location(second)}
+  forward(out, input)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("software numeric return type is rejected") {

@@ -629,8 +629,8 @@
     if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
       return false;
     }
-      std::function<bool(const Expr &)> isUnsafeReferenceExpr;
-      isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
+    std::function<bool(const Expr &)> isUnsafeReferenceExpr;
+    isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
         if (argExpr.kind == Expr::Kind::Name) {
           if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
             return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
@@ -704,6 +704,100 @@
         }
       }
       return false;
+    };
+    std::function<bool(const Expr &)> isEscapingReferenceExpr;
+    isEscapingReferenceExpr = [&](const Expr &argExpr) -> bool {
+      if (argExpr.kind == Expr::Kind::Name) {
+        if (findParamBinding(params, argExpr.name) != nullptr) {
+          return false;
+        }
+        auto itLocal = locals.find(argExpr.name);
+        if (itLocal == locals.end() || itLocal->second.typeName != "Reference") {
+          return false;
+        }
+        std::string sourceRoot = itLocal->second.referenceRoot.empty() ? argExpr.name : itLocal->second.referenceRoot;
+        if (const BindingInfo *rootParam = findParamBinding(params, sourceRoot)) {
+          return rootParam->typeName != "Reference";
+        }
+        return true;
+      }
+      if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
+        return false;
+      }
+      auto hasEscapingChildExpr = [&](const Expr &callExpr) -> bool {
+        for (const auto &nestedArg : callExpr.args) {
+          if (isEscapingReferenceExpr(nestedArg)) {
+            return true;
+          }
+        }
+        for (const auto &bodyExpr : callExpr.bodyArguments) {
+          if (isEscapingReferenceExpr(bodyExpr)) {
+            return true;
+          }
+        }
+        return false;
+      };
+      if (isIfCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) || isSimpleCallName(argExpr, "then") ||
+          isSimpleCallName(argExpr, "else")) {
+        return hasEscapingChildExpr(argExpr);
+      }
+      const std::string nestedResolved = resolveCalleePath(argExpr);
+      if (nestedResolved.empty()) {
+        return false;
+      }
+      auto nestedIt = defMap_.find(nestedResolved);
+      if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
+        return false;
+      }
+      bool returnsReference = false;
+      for (const auto &transform : nestedIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string arg;
+        if (splitTemplateTypeName(transform.templateArgs.front(), base, arg) && base == "Reference") {
+          returnsReference = true;
+          break;
+        }
+      }
+      if (!returnsReference) {
+        return false;
+      }
+      const auto &nestedParams = paramsByDef_[nestedResolved];
+      if (nestedParams.empty()) {
+        return false;
+      }
+      std::string nestedArgError;
+      if (!validateNamedArgumentsAgainstParams(nestedParams, argExpr.argNames, nestedArgError)) {
+        return false;
+      }
+      std::vector<const Expr *> nestedOrderedArgs;
+      if (!buildOrderedArguments(nestedParams, argExpr.args, argExpr.argNames, nestedOrderedArgs, nestedArgError)) {
+        return false;
+      }
+      for (size_t nestedIndex = 0; nestedIndex < nestedOrderedArgs.size() && nestedIndex < nestedParams.size();
+           ++nestedIndex) {
+        const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+        if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
+          continue;
+        }
+        if (isEscapingReferenceExpr(*nestedArg)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    auto reportReferenceAssignmentEscape = [&](const std::string &sinkName, const Expr &rhsExpr) -> bool {
+      if (!isEscapingReferenceExpr(rhsExpr)) {
+        return false;
+      }
+      if (currentDefinitionIsUnsafe_ && isUnsafeReferenceExpr(rhsExpr)) {
+        error_ = "unsafe reference escapes via assignment to " + sinkName;
+      } else {
+        error_ = "reference escapes via assignment to " + sinkName;
+      }
+      return true;
     };
     auto it = defMap_.find(resolved);
     if (it == defMap_.end() || resolvedMethod) {
@@ -2342,7 +2436,31 @@
               }
             }
             if (hasEscapeSink) {
-              error_ = "unsafe reference escapes via assignment to " + escapeSink;
+              if (reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
+                return false;
+              }
+            }
+          }
+          if (!currentDefinitionIsUnsafe_) {
+            std::string escapeSink;
+            bool hasEscapeSink = false;
+            if (pointerExpr.kind == Expr::Kind::Name) {
+              hasEscapeSink = resolveReferenceEscapeSink(pointerExpr.name, escapeSink);
+            }
+            if (!hasEscapeSink) {
+              std::string locationRootName;
+              if (resolveLocationRootBindingName(pointerExpr, locationRootName)) {
+                hasEscapeSink = resolveReferenceEscapeSink(locationRootName, escapeSink);
+              }
+            }
+            if (!hasEscapeSink && !pointerBorrowRoot.empty()) {
+              if (const BindingInfo *rootParam = findParamBinding(params, pointerBorrowRoot);
+                  rootParam != nullptr && rootParam->typeName == "Reference") {
+                hasEscapeSink = true;
+                escapeSink = pointerBorrowRoot;
+              }
+            }
+            if (hasEscapeSink && reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
               return false;
             }
           }
@@ -2356,7 +2474,15 @@
         if (currentDefinitionIsUnsafe_ && targetIsName && isUnsafeReferenceExpr(expr.args[1])) {
           std::string escapeSink;
           if (resolveReferenceEscapeSink(target.name, escapeSink)) {
-            error_ = "unsafe reference escapes via assignment to " + escapeSink;
+            if (reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
+              return false;
+            }
+          }
+        }
+        if (!currentDefinitionIsUnsafe_ && targetIsName) {
+          std::string escapeSink;
+          if (resolveReferenceEscapeSink(target.name, escapeSink) &&
+              reportReferenceAssignmentEscape(escapeSink, expr.args[1])) {
             return false;
           }
         }
