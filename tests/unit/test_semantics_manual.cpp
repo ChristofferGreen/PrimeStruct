@@ -1430,7 +1430,7 @@ TEST_CASE("borrow checker rejects assign through location of immutable reference
       "/main", {makeTransform("return", std::string("void"))}, {valueBinding, ref, write, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("assign target must be a mutable pointer binding") != std::string::npos);
+  CHECK(error.find("assign target must be a mutable binding: ref") != std::string::npos);
 }
 
 TEST_CASE("borrow checker rejects mutation through location of immutable reference") {
@@ -1445,7 +1445,31 @@ TEST_CASE("borrow checker rejects mutation through location of immutable referen
       "/main", {makeTransform("return", std::string("void"))}, {valueBinding, ref, mutate, makeCall("/return")}));
   std::string error;
   CHECK_FALSE(validateProgram(program, "/main", error));
-  CHECK(error.find("increment target must be a mutable pointer binding") != std::string::npos);
+  CHECK(error.find("increment target must be a mutable binding: ref") != std::string::npos);
+}
+
+TEST_CASE("borrow checker reports immutable location root for assign") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr write =
+      makeCall("assign", {makeCall("dereference", {makeCall("location", {makeName("value")})}), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("void"))}, {valueBinding, write, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker reports immutable location arithmetic root for mutation") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32")}, {makeLiteral(1)});
+  primec::Expr offsetPtr = makeCall("plus", {makeCall("location", {makeName("value")}), makeLiteral(0)});
+  primec::Expr mutate = makeCall("increment", {makeCall("dereference", {offsetPtr})});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("void"))}, {valueBinding, mutate, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("increment target must be a mutable binding: value") != std::string::npos);
 }
 
 TEST_CASE("borrow checker allows assign through location of mutable binding") {

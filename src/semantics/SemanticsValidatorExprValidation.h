@@ -2052,6 +2052,30 @@
         }
         return nullptr;
       };
+      std::function<bool(const Expr &, std::string &)> resolveLocationRootBindingName;
+      resolveLocationRootBindingName = [&](const Expr &pointerExpr, std::string &rootNameOut) -> bool {
+        if (pointerExpr.kind != Expr::Kind::Call) {
+          return false;
+        }
+        std::string pointerBuiltinName;
+        if (getBuiltinPointerName(pointerExpr, pointerBuiltinName) && pointerBuiltinName == "location" &&
+            pointerExpr.args.size() == 1) {
+          if (pointerExpr.args.front().kind != Expr::Kind::Name) {
+            return false;
+          }
+          rootNameOut = pointerExpr.args.front().name;
+          return true;
+        }
+        std::string opName;
+        if (!getBuiltinOperatorName(pointerExpr, opName) || (opName != "plus" && opName != "minus") ||
+            pointerExpr.args.size() != 2) {
+          return false;
+        }
+        if (isPointerLikeExpr(pointerExpr.args[1], params, locals)) {
+          return false;
+        }
+        return resolveLocationRootBindingName(pointerExpr.args.front(), rootNameOut);
+      };
       std::function<bool(const Expr &, std::string &, std::string &)> resolveMutablePointerWriteTarget;
       resolveMutablePointerWriteTarget =
           [&](const Expr &pointerExpr, std::string &borrowRootOut, std::string &ignoreBorrowNameOut) -> bool {
@@ -2187,6 +2211,12 @@
               error_ = "assign target must be a mutable binding";
               return false;
             }
+            std::string locationRootName;
+            if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
+                !isMutableBinding(params, locals, locationRootName)) {
+              error_ = "assign target must be a mutable binding: " + locationRootName;
+              return false;
+            }
             error_ = "assign target must be a mutable pointer binding";
             return false;
           }
@@ -2237,6 +2267,12 @@
           if (!resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot, ignoreBorrowName)) {
             if (pointerExpr.kind == Expr::Kind::Name && !isMutableBinding(params, locals, pointerExpr.name)) {
               error_ = mutateName + " target must be a mutable binding";
+              return false;
+            }
+            std::string locationRootName;
+            if (resolveLocationRootBindingName(pointerExpr, locationRootName) &&
+                !isMutableBinding(params, locals, locationRootName)) {
+              error_ = mutateName + " target must be a mutable binding: " + locationRootName;
               return false;
             }
             error_ = mutateName + " target must be a mutable pointer binding";
