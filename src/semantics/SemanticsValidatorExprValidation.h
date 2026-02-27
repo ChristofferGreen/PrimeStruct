@@ -2072,6 +2072,25 @@
         if (pointerExpr.kind != Expr::Kind::Call) {
           return false;
         }
+        std::string pointerBuiltinName;
+        if (getBuiltinPointerName(pointerExpr, pointerBuiltinName) && pointerBuiltinName == "location" &&
+            pointerExpr.args.size() == 1) {
+          const Expr &locationTarget = pointerExpr.args.front();
+          if (locationTarget.kind != Expr::Kind::Name || !isMutableBinding(params, locals, locationTarget.name)) {
+            return false;
+          }
+          const BindingInfo *targetBinding = findNamedBinding(locationTarget.name);
+          if (targetBinding == nullptr || targetBinding->typeName != "Reference") {
+            return false;
+          }
+          ignoreBorrowNameOut = locationTarget.name;
+          if (!targetBinding->referenceRoot.empty()) {
+            borrowRootOut = targetBinding->referenceRoot;
+          } else {
+            borrowRootOut = locationTarget.name;
+          }
+          return true;
+        }
         std::string opName;
         if (!getBuiltinOperatorName(pointerExpr, opName) || (opName != "plus" && opName != "minus") ||
             pointerExpr.args.size() != 2) {
