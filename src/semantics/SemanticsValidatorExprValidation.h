@@ -2111,6 +2111,28 @@
         }
         return nullptr;
       };
+      auto resolveReferenceEscapeSink = [&](const std::string &targetName, std::string &sinkOut) -> bool {
+        sinkOut.clear();
+        if (const BindingInfo *targetParam = findParamBinding(params, targetName)) {
+          if (targetParam->typeName == "Reference") {
+            sinkOut = targetName;
+            return true;
+          }
+          return false;
+        }
+        auto targetIt = locals.find(targetName);
+        if (targetIt == locals.end() || targetIt->second.typeName != "Reference" ||
+            targetIt->second.referenceRoot.empty()) {
+          return false;
+        }
+        if (const BindingInfo *rootParam = findParamBinding(params, targetIt->second.referenceRoot)) {
+          if (rootParam->typeName == "Reference") {
+            sinkOut = targetIt->second.referenceRoot;
+            return true;
+          }
+        }
+        return false;
+      };
       std::function<bool(const Expr &, std::string &)> resolveLocationRootBindingName;
       resolveLocationRootBindingName = [&](const Expr &pointerExpr, std::string &rootNameOut) -> bool {
         if (pointerExpr.kind != Expr::Kind::Call) {
@@ -2290,11 +2312,10 @@
           error_ = "assign target must be a mutable binding";
           return false;
         }
-        if (currentDefinitionIsUnsafe_ && targetIsName) {
-          if (const BindingInfo *targetBinding = findParamBinding(params, target.name);
-              targetBinding != nullptr && targetBinding->typeName == "Reference" &&
-              isUnsafeReferenceExpr(expr.args[1])) {
-            error_ = "unsafe reference escapes via assignment to " + target.name;
+        if (currentDefinitionIsUnsafe_ && targetIsName && isUnsafeReferenceExpr(expr.args[1])) {
+          std::string escapeSink;
+          if (resolveReferenceEscapeSink(target.name, escapeSink)) {
+            error_ = "unsafe reference escapes via assignment to " + escapeSink;
             return false;
           }
         }

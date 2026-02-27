@@ -304,6 +304,54 @@ main() {
   CHECK(error.find("unsafe reference escapes via assignment to out") != std::string::npos);
 }
 
+TEST_CASE("unsafe reference allows assignment through local alias") {
+  const std::string source = R"(
+[unsafe, return<void>]
+useLocal([Pointer<i32>] ptr) {
+  [i32 mut] sinkValue{2i32}
+  [Reference<i32> mut] localOut{location(sinkValue)}
+  [Reference<i32> mut] alias{location(localOut)}
+  [Reference<i32>] local{ptr}
+  assign(alias, local)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] sourceValue{1i32}
+  useLocal(location(sourceValue))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe reference rejects assignment escape through parameter alias") {
+  const std::string source = R"(
+[unsafe, return<void>]
+leak([Pointer<i32>] ptr, [Reference<i32> mut] out) {
+  [Reference<i32> mut] alias{location(out)}
+  [Reference<i32>] local{ptr}
+  assign(alias, local)
+  return()
+}
+
+[return<int>]
+main() {
+  [i32 mut] sourceValue{1i32}
+  [i32 mut] sinkValue{2i32}
+  [Reference<i32> mut] out{location(sinkValue)}
+  leak(location(sourceValue), out)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes via assignment to out") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]
