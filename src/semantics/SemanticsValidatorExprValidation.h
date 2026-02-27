@@ -2399,24 +2399,64 @@
       }
     }
     if (currentDefinitionIsUnsafe_ && !calleeIsUnsafe) {
-      auto findUnsafeReferenceBinding = [&](const Expr &argExpr) -> const BindingInfo * {
-        if (argExpr.kind != Expr::Kind::Name) {
-          return nullptr;
-        }
-        if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
-          if (paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference) {
-            return paramBinding;
+      std::function<bool(const Expr &)> isUnsafeReferenceExpr;
+      isUnsafeReferenceExpr = [&](const Expr &argExpr) -> bool {
+        if (argExpr.kind == Expr::Kind::Name) {
+          if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
+            return paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference;
           }
-          return nullptr;
+          auto itLocal = locals.find(argExpr.name);
+          return itLocal != locals.end() && itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference;
         }
-        auto itLocal = locals.find(argExpr.name);
-        if (itLocal == locals.end()) {
-          return nullptr;
+        if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
+          return false;
         }
-        if (itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference) {
-          return &itLocal->second;
+        const std::string nestedResolved = resolveCalleePath(argExpr);
+        if (nestedResolved.empty()) {
+          return false;
         }
-        return nullptr;
+        auto nestedIt = defMap_.find(nestedResolved);
+        if (nestedIt == defMap_.end() || nestedIt->second == nullptr) {
+          return false;
+        }
+        bool returnsReference = false;
+        for (const auto &transform : nestedIt->second->transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          if (splitTemplateTypeName(transform.templateArgs.front(), base, arg) && base == "Reference") {
+            returnsReference = true;
+            break;
+          }
+        }
+        if (!returnsReference) {
+          return false;
+        }
+        const auto &nestedParams = paramsByDef_[nestedResolved];
+        if (nestedParams.empty()) {
+          return false;
+        }
+        std::string nestedArgError;
+        if (!validateNamedArgumentsAgainstParams(nestedParams, argExpr.argNames, nestedArgError)) {
+          return false;
+        }
+        std::vector<const Expr *> nestedOrderedArgs;
+        if (!buildOrderedArguments(nestedParams, argExpr.args, argExpr.argNames, nestedOrderedArgs, nestedArgError)) {
+          return false;
+        }
+        for (size_t nestedIndex = 0; nestedIndex < nestedOrderedArgs.size() && nestedIndex < nestedParams.size();
+             ++nestedIndex) {
+          const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
+          if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
+            continue;
+          }
+          if (isUnsafeReferenceExpr(*nestedArg)) {
+            return true;
+          }
+        }
+        return false;
       };
       for (size_t i = 0; i < orderedArgs.size() && i < calleeParams.size(); ++i) {
         const Expr *arg = orderedArgs[i];
@@ -2426,7 +2466,7 @@
         if (calleeParams[i].binding.typeName != "Reference") {
           continue;
         }
-        if (findUnsafeReferenceBinding(*arg) == nullptr) {
+        if (!isUnsafeReferenceExpr(*arg)) {
           continue;
         }
         error_ = "unsafe reference escapes across safe boundary to " + resolved;

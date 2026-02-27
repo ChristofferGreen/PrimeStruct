@@ -230,6 +230,31 @@ main() {
   CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
 }
 
+TEST_CASE("unsafe reference rejects safe-call boundary escape through call result") {
+  const std::string source = R"(
+[unsafe, return<Reference<i32>>]
+forward([Reference<i32>] input) {
+  return(input)
+}
+
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  consume(forward(ref))
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]
