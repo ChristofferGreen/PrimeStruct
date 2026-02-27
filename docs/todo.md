@@ -70,6 +70,7 @@ Legend:
 - ○ Extend pointer-alias borrow-liveness checks across branch-path merges (`if`/`match`) when alias usage is path-dependent.
 - ○ Extend pointer-alias borrow-liveness checks through lambdas/captures and execution body-argument blocks.
 - ○ Expand alias-chain diagnostic coverage so borrow/escape errors consistently report root and sink context.
+- ○ Investigate the unreachable statement-level `on_error` diagnostic path in `SemanticsValidatorStatementControlFlow` (either remove dead validation or enable/document a syntax path that can trigger it).
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).
