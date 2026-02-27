@@ -788,3 +788,33 @@ main() {
   CHECK(runCommand(recurseCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 }
+
+TEST_CASE("root wildcard transform rules only recurse when requested") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  helper() {
+    return(1i32+2i32)
+  }
+  return(/main/helper())
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_root_wildcard_recurse.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_root_wildcard_recurse_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_root_wildcard_recurse_err.txt").string();
+
+  const std::string noRecurseCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/*=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(noRecurseCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+
+  const std::string recurseCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=/*:recurse=operators";
+  CHECK(runCommand(recurseCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
