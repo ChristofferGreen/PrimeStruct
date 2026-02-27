@@ -1448,6 +1448,91 @@ TEST_CASE("borrow checker rejects mutation through location of immutable referen
   CHECK(error.find("increment target must be a mutable pointer binding") != std::string::npos);
 }
 
+TEST_CASE("borrow checker allows assign through location of mutable binding") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr write =
+      makeCall("assign", {makeCall("dereference", {makeCall("location", {makeName("value")})}), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition(
+      "/main", {makeTransform("return", std::string("void"))}, {valueBinding, write, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("borrow checker rejects location(value) assign before last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr write =
+      makeCall("assign", {makeCall("dereference", {makeCall("location", {makeName("value")})}), makeLiteral(2)});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, write, observed, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("borrowed binding") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows location(value) assign after reference last use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  primec::Expr write =
+      makeCall("assign", {makeCall("dereference", {makeCall("location", {makeName("value")})}), makeLiteral(2)});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, observed, write, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
+TEST_CASE("borrow checker rejects location(value) mutation before last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr mutate =
+      makeCall("increment", {makeCall("dereference", {makeCall("location", {makeName("value")})})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, mutate, observed, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("borrowed binding") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows location(value) mutation after reference last use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  primec::Expr mutate =
+      makeCall("increment", {makeCall("dereference", {makeCall("location", {makeName("value")})})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, observed, mutate, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

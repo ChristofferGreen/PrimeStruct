@@ -2080,12 +2080,16 @@
             return false;
           }
           const BindingInfo *targetBinding = findNamedBinding(locationTarget.name);
-          if (targetBinding == nullptr || targetBinding->typeName != "Reference") {
+          if (targetBinding == nullptr) {
             return false;
           }
-          ignoreBorrowNameOut = locationTarget.name;
-          if (!targetBinding->referenceRoot.empty()) {
-            borrowRootOut = targetBinding->referenceRoot;
+          if (targetBinding->typeName == "Reference") {
+            ignoreBorrowNameOut = locationTarget.name;
+            if (!targetBinding->referenceRoot.empty()) {
+              borrowRootOut = targetBinding->referenceRoot;
+            } else {
+              borrowRootOut = locationTarget.name;
+            }
           } else {
             borrowRootOut = locationTarget.name;
           }
