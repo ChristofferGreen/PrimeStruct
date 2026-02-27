@@ -973,6 +973,45 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   return root;
 }
 
+bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
+                                                   const Expr &fieldStmt,
+                                                   BindingInfo &bindingOut) {
+  std::optional<std::string> restrictType;
+  std::string parseError;
+  if (!parseBindingInfo(fieldStmt, structDef.namespacePrefix, structNames_, importAliases_, bindingOut, restrictType,
+                        parseError)) {
+    error_ = parseError;
+    return false;
+  }
+  if (hasExplicitBindingTypeTransform(fieldStmt)) {
+    return true;
+  }
+  const std::string fieldPath = structDef.fullPath + "/" + fieldStmt.name;
+  if (fieldStmt.args.size() != 1) {
+    error_ = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
+    return false;
+  }
+  const std::vector<ParameterInfo> noParams;
+  const std::unordered_map<std::string, BindingInfo> noLocals;
+  BindingInfo inferred = bindingOut;
+  if (inferBindingTypeFromInitializer(fieldStmt.args.front(), noParams, noLocals, inferred)) {
+    if (!(inferred.typeName == "array" && inferred.typeTemplateArg.empty())) {
+      bindingOut = std::move(inferred);
+      return true;
+    }
+  }
+  if (inferExprReturnKind(fieldStmt.args.front(), noParams, noLocals) == ReturnKind::Array) {
+    std::string structPath = inferStructReturnPath(fieldStmt.args.front(), noParams, noLocals);
+    if (!structPath.empty()) {
+      bindingOut.typeName = std::move(structPath);
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+  }
+  error_ = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
+  return false;
+}
+
 bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<ParameterInfo> &params,
                                                             const std::unordered_map<std::string, BindingInfo> &locals,
                                                             const Expr &storage,
@@ -1022,11 +1061,7 @@ bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<Pa
       continue;
     }
     BindingInfo fieldBinding;
-    std::optional<std::string> restrictType;
-    std::string parseError;
-    if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, fieldBinding, restrictType,
-                          parseError)) {
-      error_ = parseError;
+    if (!resolveStructFieldBinding(*defIt->second, stmt, fieldBinding)) {
       return false;
     }
     bindingOut = std::move(fieldBinding);

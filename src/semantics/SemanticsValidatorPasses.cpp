@@ -1294,8 +1294,7 @@ bool SemanticsValidator::validateStructLayouts() {
         continue;
       }
       BindingInfo binding;
-      std::optional<std::string> restrictType;
-      if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+      if (!resolveStructFieldBinding(def, stmt, binding)) {
         return false;
       }
       LayoutInfo fieldLayout;

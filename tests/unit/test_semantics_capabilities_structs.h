@@ -667,6 +667,60 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct fields infer omitted envelopes from struct initializers") {
+  const std::string source = R"(
+[struct]
+Vec3() {
+  [i32] x{7i32}
+  [return<i32>]
+  getX() {
+    return(this.x)
+  }
+}
+
+[struct]
+Sphere() {
+  [mut] center{Vec3()}
+}
+
+[return<i32>]
+main() {
+  [Sphere] s{Sphere()}
+  return(s.center.getX())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct fields reject ambiguous omitted envelopes") {
+  const std::string source = R"(
+[struct]
+Vec2() {
+  [i32] x{1i32}
+}
+
+[struct]
+Vec3() {
+  [i32] x{2i32}
+}
+
+[struct]
+Shape() {
+  center{if(true, then() { Vec2() }, else() { Vec3() })}
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unresolved or ambiguous omitted struct field envelope: /Shape/center") != std::string::npos);
+}
+
 TEST_CASE("recursive struct layouts are rejected") {
   const std::string source = R"(
 [struct]

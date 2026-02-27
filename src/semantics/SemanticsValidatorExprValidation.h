@@ -409,10 +409,7 @@
           return false;
         }
         BindingInfo fieldBinding;
-        std::optional<std::string> restrictType;
-        std::string parseError;
-        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, fieldBinding, restrictType, parseError)) {
-          error_ = parseError;
+        if (!resolveStructFieldBinding(def, stmt, fieldBinding)) {
           return false;
         }
         bindingOut = std::move(fieldBinding);

@@ -266,16 +266,22 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
             continue;
           }
           BindingInfo fieldBinding;
-          std::optional<std::string> restrictType;
-          std::string error;
-          if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, fieldBinding, restrictType, error)) {
+          if (!resolveStructFieldBinding(*defIt->second, stmt, fieldBinding)) {
             return ReturnKind::Unknown;
           }
           std::string typeName = fieldBinding.typeName;
-          if (typeName == "Reference" && !fieldBinding.typeTemplateArg.empty()) {
+          if ((typeName == "Reference" || typeName == "Pointer") && !fieldBinding.typeTemplateArg.empty()) {
             typeName = fieldBinding.typeTemplateArg;
           }
-          return returnKindForTypeName(typeName);
+          ReturnKind kind = returnKindForTypeName(typeName);
+          if (kind != ReturnKind::Unknown) {
+            return kind;
+          }
+          std::string fieldStructPath;
+          if (resolveStructPathFromType(typeName, stmt.namespacePrefix, fieldStructPath)) {
+            return ReturnKind::Array;
+          }
+          return ReturnKind::Unknown;
         }
         return ReturnKind::Unknown;
       };
@@ -1087,6 +1093,39 @@ std::string SemanticsValidator::inferStructReturnPath(
   }
 
   if (expr.kind == Expr::Kind::Call) {
+    if (expr.isFieldAccess && expr.args.size() == 1) {
+      auto isStaticField = [](const Expr &stmt) -> bool {
+        for (const auto &transform : stmt.transforms) {
+          if (transform.name == "static") {
+            return true;
+          }
+        }
+        return false;
+      };
+      std::string receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
+      if (receiverStruct.empty()) {
+        return "";
+      }
+      auto defIt = defMap_.find(receiverStruct);
+      if (defIt == defMap_.end() || !defIt->second) {
+        return "";
+      }
+      for (const auto &stmt : defIt->second->statements) {
+        if (!stmt.isBinding || isStaticField(stmt) || stmt.name != expr.name) {
+          continue;
+        }
+        BindingInfo fieldBinding;
+        if (!resolveStructFieldBinding(*defIt->second, stmt, fieldBinding)) {
+          return "";
+        }
+        std::string fieldType = fieldBinding.typeName;
+        if ((fieldType == "Reference" || fieldType == "Pointer") && !fieldBinding.typeTemplateArg.empty()) {
+          fieldType = fieldBinding.typeTemplateArg;
+        }
+        return resolveStructTypePath(fieldType, expr.namespacePrefix);
+      }
+      return "";
+    }
     if (expr.isMethodCall) {
       if (expr.args.empty()) {
         return "";

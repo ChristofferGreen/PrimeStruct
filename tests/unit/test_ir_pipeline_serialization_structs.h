@@ -240,6 +240,55 @@ main() {
   CHECK(decodedIt->fields.size() == 2u);
 }
 
+TEST_CASE("ir infers omitted struct field envelopes before layout emission") {
+  const std::string source = R"(
+[struct]
+Vec3() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+  [i32] z{3i32}
+}
+
+[return<Vec3>]
+makeCenter() {
+  return(Vec3())
+}
+
+[struct]
+Sphere() {
+  center{makeCenter()}
+  [i32] radius{4i32}
+}
+
+[return<void>]
+main() {
+  Sphere()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  auto layoutIt = std::find_if(module.structLayouts.begin(),
+                               module.structLayouts.end(),
+                               [](const primec::IrStructLayout &layout) { return layout.name == "/Sphere"; });
+  REQUIRE(layoutIt != module.structLayouts.end());
+  REQUIRE(layoutIt->fields.size() == 2u);
+  CHECK(layoutIt->fields[0].name == "center");
+  CHECK(layoutIt->fields[0].envelope == "/Vec3");
+  CHECK(layoutIt->fields[0].offsetBytes == 0u);
+  CHECK(layoutIt->fields[0].sizeBytes == 12u);
+  CHECK(layoutIt->fields[1].name == "radius");
+  CHECK(layoutIt->fields[1].offsetBytes == 12u);
+  CHECK(layoutIt->totalSizeBytes == 16u);
+}
+
 TEST_CASE("ir emits struct field visibility and static metadata") {
   const std::string source = R"(
 [struct]

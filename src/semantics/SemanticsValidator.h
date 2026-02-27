@@ -50,6 +50,9 @@ private:
                                        const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        BindingInfo &bindingOut);
+  bool resolveStructFieldBinding(const Definition &structDef,
+                                 const Expr &fieldStmt,
+                                 BindingInfo &bindingOut);
   bool allowMathBareName(const std::string &name) const;
   bool hasAnyMathImport() const;
   bool isEntryArgsName(const std::string &name) const;

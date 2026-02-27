@@ -185,7 +185,7 @@
            name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "pod" ||
            name == "handle" || name == "gpu_lane";
   };
-  auto getBindingTypeForLayout = [&](const Expr &expr, FieldBinding &bindingOut) {
+  auto extractExplicitBindingTypeForLayout = [&](const Expr &expr, FieldBinding &bindingOut) -> bool {
     bindingOut = {};
     for (const auto &transform : expr.transforms) {
       if (transform.name == "effects" || transform.name == "capabilities") {
@@ -200,15 +200,294 @@
       if (!transform.templateArgs.empty()) {
         bindingOut.typeName = transform.name;
         bindingOut.typeTemplateArg = joinTemplateArgs(transform.templateArgs);
-        return;
+        return true;
       }
       bindingOut.typeName = transform.name;
       bindingOut.typeTemplateArg.clear();
-      return;
+      return true;
     }
-    if (bindingOut.typeName.empty()) {
-      bindingOut.typeName = "int";
+    return false;
+  };
+  auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
+    if (expr.name.empty()) {
+      return "";
     }
+    if (expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      const size_t lastSlash = expr.namespacePrefix.find_last_of('/');
+      const std::string suffix = lastSlash == std::string::npos ? expr.namespacePrefix
+                                                                 : expr.namespacePrefix.substr(lastSlash + 1);
+      if (suffix == expr.name && defMap.count(expr.namespacePrefix) > 0) {
+        return expr.namespacePrefix;
+      }
+      std::string prefix = expr.namespacePrefix;
+      while (!prefix.empty()) {
+        std::string candidate = prefix + "/" + expr.name;
+        if (defMap.count(candidate) > 0) {
+          return candidate;
+        }
+        const size_t slash = prefix.find_last_of('/');
+        if (slash == std::string::npos) {
+          break;
+        }
+        prefix = prefix.substr(0, slash);
+      }
+      auto importIt = importAliases.find(expr.name);
+      if (importIt != importAliases.end()) {
+        return importIt->second;
+      }
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    std::string root = "/" + expr.name;
+    if (defMap.count(root) > 0) {
+      return root;
+    }
+    auto importIt = importAliases.find(expr.name);
+    if (importIt != importAliases.end()) {
+      return importIt->second;
+    }
+    return root;
+  };
+  auto getEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> const Expr * {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return nullptr;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return nullptr;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return nullptr;
+    }
+    if (!allowAnyName && !isBlockCall(candidate)) {
+      return nullptr;
+    }
+    const Expr *valueExpr = nullptr;
+    for (const auto &bodyExpr : candidate.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        continue;
+      }
+      valueExpr = &bodyExpr;
+    }
+    return valueExpr;
+  };
+  std::function<bool(const Expr &, const std::unordered_map<std::string, FieldBinding> &, FieldBinding &)>
+      inferPrimitiveFieldBinding;
+  inferPrimitiveFieldBinding = [&](const Expr &initializer,
+                                   const std::unordered_map<std::string, FieldBinding> &knownFields,
+                                   FieldBinding &bindingOut) -> bool {
+    if (initializer.kind == Expr::Kind::Literal) {
+      bindingOut.typeName = initializer.isUnsigned ? "u64" : (initializer.intWidth == 64 ? "i64" : "i32");
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    if (initializer.kind == Expr::Kind::BoolLiteral) {
+      bindingOut.typeName = "bool";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    if (initializer.kind == Expr::Kind::FloatLiteral) {
+      bindingOut.typeName = initializer.floatWidth == 64 ? "f64" : "f32";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    if (initializer.kind == Expr::Kind::StringLiteral) {
+      bindingOut.typeName = "string";
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    if (initializer.kind == Expr::Kind::Name) {
+      auto fieldIt = knownFields.find(initializer.name);
+      if (fieldIt != knownFields.end()) {
+        bindingOut = fieldIt->second;
+        return true;
+      }
+      return false;
+    }
+    if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || initializer.isFieldAccess) {
+      return false;
+    }
+    if (initializer.hasBodyArguments && initializer.args.empty()) {
+      const Expr *valueExpr = getEnvelopeValueExpr(initializer, false);
+      return valueExpr != nullptr && inferPrimitiveFieldBinding(*valueExpr, knownFields, bindingOut);
+    }
+    std::string collection;
+    if (getBuiltinCollectionName(initializer, collection)) {
+      if ((collection == "array" || collection == "vector" || collection == "Buffer") &&
+          initializer.templateArgs.size() == 1) {
+        bindingOut.typeName = collection;
+        bindingOut.typeTemplateArg = initializer.templateArgs.front();
+        return true;
+      }
+      if (collection == "map" && initializer.templateArgs.size() == 2) {
+        bindingOut.typeName = "map";
+        bindingOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+        return true;
+      }
+      return false;
+    }
+    if (getBuiltinConvertName(initializer) && initializer.templateArgs.size() == 1) {
+      const std::string &target = initializer.templateArgs.front();
+      if (target == "int") {
+        bindingOut.typeName = "i32";
+      } else {
+        bindingOut.typeName = target;
+      }
+      bindingOut.typeTemplateArg.clear();
+      return bindingOut.typeName == "i32" || bindingOut.typeName == "i64" || bindingOut.typeName == "u64" ||
+             bindingOut.typeName == "f32" || bindingOut.typeName == "f64" || bindingOut.typeName == "bool" ||
+             bindingOut.typeName == "string" || bindingOut.typeName == "integer" || bindingOut.typeName == "decimal" ||
+             bindingOut.typeName == "complex";
+    }
+    return false;
+  };
+  std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferStructReturnPathFromDefinition;
+  std::function<std::string(const Expr &,
+                            const std::unordered_map<std::string, FieldBinding> &,
+                            std::unordered_set<std::string> &)>
+      inferStructReturnPathFromExpr;
+  inferStructReturnPathFromExpr =
+      [&](const Expr &expr,
+          const std::unordered_map<std::string, FieldBinding> &knownFields,
+          std::unordered_set<std::string> &visitedDefs) -> std::string {
+    if (expr.kind == Expr::Kind::Name) {
+      auto fieldIt = knownFields.find(expr.name);
+      if (fieldIt == knownFields.end()) {
+        return "";
+      }
+      std::string fieldType = fieldIt->second.typeName;
+      if ((fieldType == "Reference" || fieldType == "Pointer") && !fieldIt->second.typeTemplateArg.empty()) {
+        fieldType = fieldIt->second.typeTemplateArg;
+      }
+      std::string resolved = resolveStructTypePath(fieldType, expr.namespacePrefix);
+      return structNames.count(resolved) > 0 ? resolved : "";
+    }
+    if (expr.kind != Expr::Kind::Call) {
+      return "";
+    }
+    if (isMatchCall(expr)) {
+      Expr lowered;
+      std::string loweredError;
+      if (!lowerMatchToIf(expr, lowered, loweredError)) {
+        return "";
+      }
+      return inferStructReturnPathFromExpr(lowered, knownFields, visitedDefs);
+    }
+    if (isIfCall(expr) && expr.args.size() == 3) {
+      const Expr *thenValue = getEnvelopeValueExpr(expr.args[1], true);
+      const Expr *elseValue = getEnvelopeValueExpr(expr.args[2], true);
+      const Expr &thenExpr = thenValue ? *thenValue : expr.args[1];
+      const Expr &elseExpr = elseValue ? *elseValue : expr.args[2];
+      std::string thenPath = inferStructReturnPathFromExpr(thenExpr, knownFields, visitedDefs);
+      if (thenPath.empty()) {
+        return "";
+      }
+      std::string elsePath = inferStructReturnPathFromExpr(elseExpr, knownFields, visitedDefs);
+      return thenPath == elsePath ? thenPath : "";
+    }
+    if (const Expr *valueExpr = getEnvelopeValueExpr(expr, false)) {
+      if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
+        return inferStructReturnPathFromExpr(valueExpr->args.front(), knownFields, visitedDefs);
+      }
+      return inferStructReturnPathFromExpr(*valueExpr, knownFields, visitedDefs);
+    }
+    if (expr.isMethodCall) {
+      if (expr.args.empty()) {
+        return "";
+      }
+      std::string receiverStruct = inferStructReturnPathFromExpr(expr.args.front(), knownFields, visitedDefs);
+      if (receiverStruct.empty()) {
+        return "";
+      }
+      return inferStructReturnPathFromDefinition(receiverStruct + "/" + expr.name, visitedDefs);
+    }
+    std::string resolved = resolveStructLayoutExprPath(expr);
+    if (structNames.count(resolved) > 0) {
+      return resolved;
+    }
+    return inferStructReturnPathFromDefinition(resolved, visitedDefs);
+  };
+  inferStructReturnPathFromDefinition = [&](const std::string &defPath,
+                                            std::unordered_set<std::string> &visitedDefs) -> std::string {
+    if (defPath.empty()) {
+      return "";
+    }
+    if (!visitedDefs.insert(defPath).second) {
+      return "";
+    }
+    auto defIt = defMap.find(defPath);
+    if (defIt == defMap.end() || !defIt->second) {
+      return "";
+    }
+    const Definition &def = *defIt->second;
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string resolved = resolveStructTypePath(transform.templateArgs.front(), def.namespacePrefix);
+      if (structNames.count(resolved) > 0) {
+        return resolved;
+      }
+      break;
+    }
+    auto inferFromReturnValue = [&](const Expr &valueExpr) -> std::string {
+      std::unordered_map<std::string, FieldBinding> noFields;
+      std::string inferred = inferStructReturnPathFromExpr(valueExpr, noFields, visitedDefs);
+      return inferred;
+    };
+    if (def.returnExpr.has_value()) {
+      std::string inferred = inferFromReturnValue(*def.returnExpr);
+      if (!inferred.empty()) {
+        return inferred;
+      }
+    }
+    std::string inferred;
+    for (const auto &stmt : def.statements) {
+      if (!isReturnCall(stmt) || stmt.args.size() != 1) {
+        continue;
+      }
+      std::string candidate = inferFromReturnValue(stmt.args.front());
+      if (candidate.empty()) {
+        continue;
+      }
+      if (inferred.empty()) {
+        inferred = std::move(candidate);
+        continue;
+      }
+      if (candidate != inferred) {
+        return "";
+      }
+    }
+    return inferred;
+  };
+  auto resolveFieldBindingForLayout = [&](const Definition &def,
+                                          const Expr &expr,
+                                          const std::unordered_map<std::string, FieldBinding> &knownFields,
+                                          FieldBinding &bindingOut) -> bool {
+    if (extractExplicitBindingTypeForLayout(expr, bindingOut)) {
+      return true;
+    }
+    const std::string fieldPath = def.fullPath + "/" + expr.name;
+    if (expr.args.size() != 1) {
+      error = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
+      return false;
+    }
+    if (inferPrimitiveFieldBinding(expr.args.front(), knownFields, bindingOut)) {
+      return true;
+    }
+    std::unordered_set<std::string> visitedDefs;
+    std::string inferredStruct = inferStructReturnPathFromExpr(expr.args.front(), knownFields, visitedDefs);
+    if (!inferredStruct.empty()) {
+      bindingOut.typeName = std::move(inferredStruct);
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    error = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
+    return false;
   };
   auto formatEnvelope = [&](const FieldBinding &binding) -> std::string {
     if (binding.typeTemplateArg.empty()) {
@@ -270,17 +549,21 @@
       continue;
     }
     std::vector<StructFieldInfo> fields;
+    std::unordered_map<std::string, FieldBinding> knownFields;
     fields.reserve(def.statements.size());
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
         continue;
       }
       FieldBinding binding;
-      getBindingTypeForLayout(stmt, binding);
+      if (!resolveFieldBindingForLayout(def, stmt, knownFields, binding)) {
+        return false;
+      }
       StructFieldInfo field;
       field.name = stmt.name;
       field.binding = std::move(binding);
       field.isStatic = isStaticField(stmt);
+      knownFields[field.name] = field.binding;
       fields.push_back(std::move(field));
     }
     structFieldInfoByName.emplace(def.fullPath, std::move(fields));
@@ -313,12 +596,22 @@
       return false;
     }
     uint32_t offset = 0;
+    auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
+    if (fieldInfoIt == structFieldInfoByName.end()) {
+      error = "internal error: missing struct field info for " + def.fullPath;
+      return false;
+    }
+    size_t fieldIndex = 0;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {
         continue;
       }
-      FieldBinding binding;
-      getBindingTypeForLayout(stmt, binding);
+      if (fieldIndex >= fieldInfoIt->second.size()) {
+        error = "internal error: mismatched struct field info for " + def.fullPath;
+        return false;
+      }
+      const FieldBinding &binding = fieldInfoIt->second[fieldIndex].binding;
+      ++fieldIndex;
       const bool fieldIsStatic = isStaticField(stmt);
       if (fieldIsStatic) {
         IrStructField field;
