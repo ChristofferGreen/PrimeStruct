@@ -1173,6 +1173,41 @@ TEST_CASE("borrow checker rejects assign before last reference use") {
   CHECK(error.find("borrowed binding") != std::string::npos);
 }
 
+TEST_CASE("borrow checker rejects mutation before last reference use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr mutate = makeCall("increment", {makeName("value")});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, mutate, observed, makeCall("/return")}));
+  std::string error;
+  CHECK_FALSE(validateProgram(program, "/main", error));
+  CHECK(error.find("borrowed binding") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows mutation after reference last use") {
+  primec::Program program;
+  primec::Expr valueBinding = makeBinding("value", {makeTransform("i32"), makeTransform("mut")}, {makeLiteral(1)});
+  primec::Expr ref =
+      makeBinding("ref", {makeTransform("Reference", std::string("i32"))},
+                  {makeCall("location", {makeName("value")})});
+  primec::Expr observed =
+      makeBinding("observed", {makeTransform("i32")},
+                  {makeCall("dereference", {makeName("ref")})});
+  primec::Expr mutate = makeCall("increment", {makeName("value")});
+  program.definitions.push_back(makeDefinition("/main",
+                                               {makeTransform("return", std::string("void"))},
+                                               {valueBinding, ref, observed, mutate, makeCall("/return")}));
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("uninitialized not allowed in array element types") {
   primec::Program program;
   primec::Expr init = makeCall("array");

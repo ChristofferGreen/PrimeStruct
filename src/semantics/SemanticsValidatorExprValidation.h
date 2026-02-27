@@ -2148,6 +2148,10 @@
             error_ = mutateName + " target must be a mutable binding: " + target.name;
             return false;
           }
+          if (hasActiveBorrowForBinding(target.name)) {
+            error_ = "borrowed binding: " + target.name;
+            return false;
+          }
         } else if (target.kind == Expr::Kind::Call) {
           std::string pointerName;
           if (!getBuiltinPointerName(target, pointerName) || pointerName != "dereference" || target.args.size() != 1) {
