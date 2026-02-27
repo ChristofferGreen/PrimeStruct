@@ -2003,7 +2003,8 @@
         }
         return true;
       }
-      auto hasActiveBorrowForBinding = [&](const std::string &name) -> bool {
+      auto hasActiveBorrowForBinding = [&](const std::string &name,
+                                           const std::string &ignoreBorrowName = std::string()) -> bool {
         if (currentDefinitionIsUnsafe_) {
           return false;
         }
@@ -2018,6 +2019,9 @@
         };
         auto hasBorrowFrom = [&](const std::string &borrowName, const BindingInfo &binding) -> bool {
           if (borrowName == name) {
+            return false;
+          }
+          if (!ignoreBorrowName.empty() && borrowName == ignoreBorrowName) {
             return false;
           }
           if (endedReferenceBorrows_.count(borrowName) > 0) {
@@ -2117,6 +2121,18 @@
             error_ = "assign target must be a mutable binding";
             return false;
           }
+          const BindingInfo *pointerBinding = findParamBinding(params, pointerExpr.name);
+          if (!pointerBinding) {
+            auto itBinding = locals.find(pointerExpr.name);
+            if (itBinding != locals.end()) {
+              pointerBinding = &itBinding->second;
+            }
+          }
+          if (pointerBinding && !pointerBinding->referenceRoot.empty() &&
+              hasActiveBorrowForBinding(pointerBinding->referenceRoot, pointerExpr.name)) {
+            error_ = "borrowed binding: " + pointerBinding->referenceRoot;
+            return false;
+          }
           if (!isPointerLikeExpr(pointerExpr, params, locals)) {
             error_ = "assign target must be a mutable pointer binding";
             return false;
@@ -2161,6 +2177,18 @@
           const Expr &pointerExpr = target.args.front();
           if (pointerExpr.kind != Expr::Kind::Name || !isMutableBinding(params, locals, pointerExpr.name)) {
             error_ = mutateName + " target must be a mutable binding";
+            return false;
+          }
+          const BindingInfo *pointerBinding = findParamBinding(params, pointerExpr.name);
+          if (!pointerBinding) {
+            auto itBinding = locals.find(pointerExpr.name);
+            if (itBinding != locals.end()) {
+              pointerBinding = &itBinding->second;
+            }
+          }
+          if (pointerBinding && !pointerBinding->referenceRoot.empty() &&
+              hasActiveBorrowForBinding(pointerBinding->referenceRoot, pointerExpr.name)) {
+            error_ = "borrowed binding: " + pointerBinding->referenceRoot;
             return false;
           }
           if (!isPointerLikeExpr(pointerExpr, params, locals)) {

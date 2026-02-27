@@ -157,27 +157,85 @@
       }
       info.isEntryArgString = true;
     }
-    if (info.typeName == "Reference") {
-      const Expr &init = initializer;
-      auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
-        if (binding.typeName != "Reference") {
-          return "";
-        }
+    auto referenceRootForBorrowBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
+      if (binding.typeName == "Reference") {
         if (!binding.referenceRoot.empty()) {
           return binding.referenceRoot;
         }
         return bindingName;
-      };
-      auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
-        if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
-          return paramBinding;
+      }
+      return "";
+    };
+    auto pointerAliasRootForBinding = [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
+      std::string referenceRoot = referenceRootForBorrowBinding(bindingName, binding);
+      if (!referenceRoot.empty()) {
+        return referenceRoot;
+      }
+      if (binding.typeName == "Pointer" && !binding.referenceRoot.empty()) {
+        return binding.referenceRoot;
+      }
+      return "";
+    };
+    auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
+      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+        return paramBinding;
+      }
+      auto it = locals.find(name);
+      if (it == locals.end()) {
+        return nullptr;
+      }
+      return &it->second;
+    };
+    std::function<bool(const Expr &, std::string &)> resolvePointerRoot;
+    resolvePointerRoot = [&](const Expr &expr, std::string &rootOut) -> bool {
+      if (expr.kind == Expr::Kind::Name) {
+        const BindingInfo *binding = resolveNamedBinding(expr.name);
+        if (binding == nullptr) {
+          return false;
         }
-        auto it = locals.find(name);
-        if (it == locals.end()) {
-          return nullptr;
+        rootOut = pointerAliasRootForBinding(expr.name, *binding);
+        return !rootOut.empty();
+      }
+      if (expr.kind != Expr::Kind::Call) {
+        return false;
+      }
+      std::string builtinName;
+      if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
+        const Expr &target = expr.args.front();
+        if (target.kind != Expr::Kind::Name) {
+          return false;
         }
-        return &it->second;
-      };
+        const BindingInfo *binding = resolveNamedBinding(target.name);
+        if (binding != nullptr) {
+          std::string root = pointerAliasRootForBinding(target.name, *binding);
+          if (!root.empty()) {
+            rootOut = std::move(root);
+          } else {
+            rootOut = target.name;
+          }
+          return true;
+        }
+        return false;
+      }
+      std::string opName;
+      if (getBuiltinOperatorName(expr, opName) && (opName == "plus" || opName == "minus") && expr.args.size() == 2) {
+        if (isPointerLikeExpr(expr.args[1], params, locals)) {
+          return false;
+        }
+        return resolvePointerRoot(expr.args[0], rootOut);
+      }
+      return false;
+    };
+    if (info.typeName == "Pointer") {
+      std::string pointerRoot;
+      if (resolvePointerRoot(initializer, pointerRoot)) {
+        info.referenceRoot = std::move(pointerRoot);
+      }
+      locals.emplace(stmt.name, info);
+      return true;
+    }
+    if (info.typeName == "Reference") {
+      const Expr &init = initializer;
       std::function<bool(const Expr &, std::string &)> resolvePointerTargetType;
       resolvePointerTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
         if (expr.kind == Expr::Kind::Name) {
@@ -247,7 +305,7 @@
       auto resolveBorrowRoot = [&](const std::string &targetName, std::string &rootOut) -> bool {
         if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
           if (paramBinding->typeName == "Reference") {
-            rootOut = referenceRootForBinding(targetName, *paramBinding);
+            rootOut = referenceRootForBorrowBinding(targetName, *paramBinding);
           } else {
             rootOut = targetName;
           }
@@ -258,7 +316,7 @@
           return false;
         }
         if (it->second.typeName == "Reference") {
-          rootOut = referenceRootForBinding(it->first, it->second);
+          rootOut = referenceRootForBorrowBinding(it->first, it->second);
         } else {
           rootOut = targetName;
         }
@@ -275,7 +333,7 @@
         if (endedReferenceBorrows_.count(bindingName) > 0) {
           return;
         }
-        const std::string root = referenceRootForBinding(bindingName, binding);
+        const std::string root = referenceRootForBorrowBinding(bindingName, binding);
         if (root.empty() || root != borrowRoot) {
           return;
         }
