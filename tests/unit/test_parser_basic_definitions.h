@@ -195,6 +195,23 @@ main() {
   CHECK(lambdaExpr.lambdaCaptures[2] == "=");
 }
 
+TEST_CASE("parses lambda captures with comment-only separators") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([/* lead */ , /* comma */ ; /* tail */]([i32] value) { value })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &returnCall = program.definitions[0].statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  REQUIRE(lambdaExpr.isLambda);
+  CHECK(lambdaExpr.lambdaCaptures.empty());
+}
+
 TEST_CASE("parses lambda capture ampersand") {
   const std::string source = R"(
 [return<int>]
@@ -644,6 +661,30 @@ main() {
   CHECK(transforms[3].arguments[1] == "io_err");
 }
 
+TEST_CASE("parses transform groups with comments and semicolons") {
+  const std::string source = R"(
+[text(/*first*/ operators; /*second*/ collections;); semantic(return<int>; effects(io_out; /*mid*/ io_err;);)]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 4);
+  CHECK(transforms[0].name == "operators");
+  CHECK(transforms[0].phase == primec::TransformPhase::Text);
+  CHECK(transforms[1].name == "collections");
+  CHECK(transforms[1].phase == primec::TransformPhase::Text);
+  CHECK(transforms[2].name == "return");
+  CHECK(transforms[2].phase == primec::TransformPhase::Semantic);
+  CHECK(transforms[3].name == "effects");
+  CHECK(transforms[3].phase == primec::TransformPhase::Semantic);
+  REQUIRE(transforms[3].arguments.size() == 2);
+  CHECK(transforms[3].arguments[0] == "io_out");
+  CHECK(transforms[3].arguments[1] == "io_err");
+}
+
 TEST_CASE("parses semantic transform full form arguments") {
   const std::string source = R"(
 [semantic(tag(foo(1i32)))]
@@ -675,6 +716,101 @@ main() {
   REQUIRE(transforms[0].arguments.size() == 2);
   CHECK(transforms[0].arguments[0] == "foo(1i32)");
   CHECK(transforms[0].arguments[1] == "bar(2i32)");
+}
+
+TEST_CASE("parses semantic transform full forms across bracket continuation") {
+  const std::string source = R"(
+[semantic(tag(foo(1i32) [i32] value{1i32}))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 2);
+  CHECK(transforms[0].arguments[0] == "at(foo(1i32), i32)");
+  CHECK(transforms[0].arguments[1] == "value(block() { 1i32 })");
+}
+
+TEST_CASE("parses semantic transform scalar and body full forms") {
+  const std::string source = R"(
+[semantic(tag(true 1.5f32 "ok"utf8 [i32] value{1i32} block() { 1i32 }))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 5);
+  CHECK(transforms[0].arguments[0] == "true");
+  CHECK(transforms[0].arguments[1] == "1.5f32");
+  CHECK(transforms[0].arguments[2] == "at(\"ok\"utf8, i32)");
+  CHECK(transforms[0].arguments[3] == "value(block() { 1i32 })");
+  CHECK(transforms[0].arguments[4] == "block() { 1i32 }");
+}
+
+TEST_CASE("parses semantic transform method-call full form argument") {
+  const std::string source = R"(
+[semantic(tag(values.count(2i32)))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "values.count(2i32)");
+}
+
+TEST_CASE("parses semantic transform method-call with named argument") {
+  const std::string source = R"(
+[semantic(tag(values.mix([ratio] 2i32)))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "values.mix([ratio] 2i32)");
+}
+
+TEST_CASE("parses semantic transform method-call with multiple arguments") {
+  const std::string source = R"(
+[semantic(tag(values.mix([ratio] 2i32, 3i32)))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "values.mix([ratio] 2i32, 3i32)");
+}
+
+TEST_CASE("parses semantic transform method-call with multiple named arguments") {
+  const std::string source = R"(
+[semantic(tag(values.mix([ratio] 2i32, [bias] 3i32)))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "values.mix([ratio] 2i32, [bias] 3i32)");
 }
 
 TEST_CASE("parses transform-prefixed execution") {

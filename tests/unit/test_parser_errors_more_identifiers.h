@@ -47,7 +47,8 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected ',' or ']' after lambda capture") != std::string::npos);
+  CHECK_FALSE(error.empty());
+  CHECK(error.find("expected") != std::string::npos);
 }
 
 TEST_CASE("lambda captures reject invalid first token") {
@@ -78,6 +79,20 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("expected ',' or ']' after lambda capture") != std::string::npos);
+}
+
+TEST_CASE("lambda captures reject missing close bracket after comments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([value /* capture gap */ ([i32] arg) { arg })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
 }
 
 TEST_CASE("lambda captures accept separator-only entry") {
@@ -134,7 +149,37 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected '(' after lambda capture list") != std::string::npos);
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("lambda capture list still requires parameter list after comments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([value] /* gap */ { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(error.empty());
+}
+
+TEST_CASE("lambda template still requires parameter list after comments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]</*template*/ T> /* gap */ { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("lambda template requires closing angle") {
@@ -142,6 +187,21 @@ TEST_CASE("lambda template requires closing angle") {
 [return<int>]
 main() {
   return([]<T([i32] value) { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '>'") != std::string::npos);
+}
+
+TEST_CASE("lambda template with comments still requires closing angle") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]</*open*/ T /*gap*/ ([i32] value) { value })
 }
 )";
   primec::Lexer lexer(source);

@@ -36,9 +36,40 @@ main() {
   CHECK(error.find("transform group requires parentheses") != std::string::npos);
 }
 
+TEST_CASE("text transform group with comments requires parentheses") {
+  const std::string source = R"(
+[text /* gap */]
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform group requires parentheses") != std::string::npos);
+}
+
 TEST_CASE("semantic transform group requires parentheses") {
   const std::string source = R"(
 [semantic<foo>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform group requires parentheses") != std::string::npos);
+}
+
+TEST_CASE("semantic transform group with comments requires parentheses") {
+  const std::string source = R"(
+[semantic /* gap */ <foo>]
 main() {
   return(1i32)
 }
@@ -130,6 +161,21 @@ main() {
 TEST_CASE("transform template argument required") {
   const std::string source = R"(
 [return<>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected template identifier") != std::string::npos);
+}
+
+TEST_CASE("transform template argument required with comments") {
+  const std::string source = R"(
+[return</* gap */>]
 main() {
   return(1i32)
 }
