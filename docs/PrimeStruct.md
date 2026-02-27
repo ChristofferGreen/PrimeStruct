@@ -416,7 +416,7 @@ if you intended to index.
 - **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types; otherwise a diagnostic. Often paired with `mut`.
 - **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On definitions, `mut` is valid on struct helpers (including lifecycle helpers) to make the implicit `this` mutable; using `mut` on a `[static]` helper is a diagnostic. Executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low level.
-- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules and pointer-to-reference conversions are relaxed within the body, but references created there must not escape the unsafe scope.
+- **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules are relaxed within the body, but `Reference<T>` bindings still require `location(...)` initialization, and references created there must not escape the unsafe scope.
 - **`return<T>`:** optional contract that pins the inferred return envelope. `return<auto>` requests inference; unresolved or conflicting returns are diagnostics.
 - **`effects(...)`:** declare side-effect capabilities; absence implies purity. Backends reject unsupported capabilities.
 - **Transform scope:** `effects(...)` and `capabilities(...)` are only valid on definitions/executions, not bindings.
@@ -764,7 +764,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
   - `return<Reference<T>>` may only return a direct `Reference<T>` parameter (`return(paramRef)`); local and derived references are rejected.
-- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing and pointer-to-reference conversions within that body, but references created there must not escape the unsafe scope. Unsafe scopes are aliasing barriers for optimization.
+- **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, but `Reference<T>` bindings still require `location(...)` initialization and references created there must not escape the unsafe scope. Unsafe scopes are aliasing barriers for optimization.
 - **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as unsafe-created references do not escape.
 
 ### Layout and Struct Semantics

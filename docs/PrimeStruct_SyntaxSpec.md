@@ -445,7 +445,7 @@ block()
 ```
 
 - `[unsafe]` is a semantic transform on a definition; the body is an unsafe scope.
-- Unsafe scopes may violate `Reference<T>` aliasing rules and allow pointer-to-reference conversions.
+- Unsafe scopes may violate `Reference<T>` aliasing rules, but `Reference<T>` bindings still require `location(...)` initialization.
 - References created inside an unsafe scope must not escape that scope (return, assign to outer bindings, or store into aggregates that outlive the scope).
 - `[unsafe] block { ... }` defines a local definition; it executes only when called (`block()`).
 - Unsafe definitions may be called from safe code; unsafe does not propagate to the caller when escape rules are satisfied.

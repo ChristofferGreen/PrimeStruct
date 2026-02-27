@@ -164,6 +164,36 @@ main() {
   CHECK(error.find("unsafe does not accept arguments") != std::string::npos);
 }
 
+TEST_CASE("unsafe scope accepts reference location initialization") {
+  const std::string source = R"(
+[unsafe, return<int>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  assign(value, 2i32)
+  return(dereference(ref))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe scope rejects pointer to reference conversion initializer") {
+  const std::string source = R"(
+[unsafe, return<int>]
+main() {
+  [i32 mut] value{1i32}
+  [Pointer<i32>] ptr{location(value)}
+  [Reference<i32>] ref{ptr}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Reference bindings require location") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]
