@@ -224,6 +224,36 @@ main() {
   CHECK(error.find("Reference bindings require location") != std::string::npos);
 }
 
+TEST_CASE("reference binding rejects location pointer type mismatch") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] value{5i32}
+  [Pointer<i32>] ptr{location(value)}
+  [Reference<i32>] ref{location(ptr)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Reference binding type mismatch") != std::string::npos);
+}
+
+TEST_CASE("reference binding rejects location reference type mismatch") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i64 mut] value{5i64}
+  [Reference<i64>] base{location(value)}
+  [Reference<i32>] ref{location(base)}
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("Reference binding type mismatch") != std::string::npos);
+}
+
 TEST_CASE("safe scope rejects pointer to reference conversion initializer") {
   const std::string source = R"(
 [return<int>]

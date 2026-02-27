@@ -236,6 +236,12 @@
     }
     if (info.typeName == "Reference") {
       const Expr &init = initializer;
+      auto formatBindingType = [](const BindingInfo &binding) -> std::string {
+        if (binding.typeTemplateArg.empty()) {
+          return binding.typeName;
+        }
+        return binding.typeName + "<" + binding.typeTemplateArg + ">";
+      };
       std::function<bool(const Expr &, std::string &)> resolvePointerTargetType;
       resolvePointerTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
         if (expr.kind == Expr::Kind::Name) {
@@ -266,7 +272,7 @@
           if (binding->typeName == "Reference" && !binding->typeTemplateArg.empty()) {
             targetOut = binding->typeTemplateArg;
           } else {
-            targetOut = binding->typeName;
+            targetOut = formatBindingType(*binding);
           }
           return true;
         }
@@ -286,6 +292,14 @@
       if (!initIsLocation && !currentDefinitionIsUnsafe_) {
         error_ = "Reference bindings require location(...)";
         return false;
+      }
+      if (initIsLocation) {
+        std::string safeTargetType;
+        if (!resolvePointerTargetType(init, safeTargetType) ||
+            !errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
+          error_ = "Reference binding type mismatch";
+          return false;
+        }
       }
       if (!initIsLocation && currentDefinitionIsUnsafe_) {
         std::string pointerTargetType;
