@@ -215,6 +215,7 @@ private:
   std::string entryArgsName_;
   std::string currentDefinitionPath_;
   bool currentDefinitionIsCompute_ = false;
+  bool currentDefinitionIsUnsafe_ = false;
   bool allowEntryArgStringUse_ = false;
   std::optional<ResultTypeInfo> currentResultType_;
   std::optional<OnErrorHandler> currentOnError_;

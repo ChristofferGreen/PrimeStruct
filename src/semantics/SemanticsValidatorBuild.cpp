@@ -142,6 +142,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawCapabilities = false;
     bool sawOnError = false;
     bool sawCompute = false;
+    bool sawUnsafe = false;
     bool sawWorkgroupSize = false;
     bool sawNoPadding = false;
     bool sawPlatformPadding = false;
@@ -251,6 +252,20 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
         if (!transform.arguments.empty()) {
           error_ = "compute does not accept arguments on " + def.fullPath;
+          return false;
+        }
+      } else if (transform.name == "unsafe") {
+        if (sawUnsafe) {
+          error_ = "duplicate unsafe transform on " + def.fullPath;
+          return false;
+        }
+        sawUnsafe = true;
+        if (!transform.templateArgs.empty()) {
+          error_ = "unsafe does not accept template arguments on " + def.fullPath;
+          return false;
+        }
+        if (!transform.arguments.empty()) {
+          error_ = "unsafe does not accept arguments on " + def.fullPath;
           return false;
         }
       } else if (transform.name == "workgroup_size") {

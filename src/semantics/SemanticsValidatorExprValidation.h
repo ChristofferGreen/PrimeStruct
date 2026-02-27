@@ -2007,6 +2007,9 @@
         return true;
       }
       auto hasActiveBorrowForBinding = [&](const std::string &name) -> bool {
+        if (currentDefinitionIsUnsafe_) {
+          return false;
+        }
         auto referenceRootForBinding = [](const std::string &bindingName, const BindingInfo &binding) -> std::string {
           if (binding.typeName != "Reference") {
             return "";
@@ -2269,6 +2272,48 @@
         continue;
       }
       if (!validateExpr(params, locals, *arg)) {
+        return false;
+      }
+    }
+    bool calleeIsUnsafe = false;
+    for (const auto &transform : it->second->transforms) {
+      if (transform.name == "unsafe") {
+        calleeIsUnsafe = true;
+        break;
+      }
+    }
+    if (currentDefinitionIsUnsafe_ && !calleeIsUnsafe) {
+      auto findUnsafeReferenceBinding = [&](const Expr &argExpr) -> const BindingInfo * {
+        if (argExpr.kind != Expr::Kind::Name) {
+          return nullptr;
+        }
+        if (const BindingInfo *paramBinding = findParamBinding(params, argExpr.name)) {
+          if (paramBinding->typeName == "Reference" && paramBinding->isUnsafeReference) {
+            return paramBinding;
+          }
+          return nullptr;
+        }
+        auto itLocal = locals.find(argExpr.name);
+        if (itLocal == locals.end()) {
+          return nullptr;
+        }
+        if (itLocal->second.typeName == "Reference" && itLocal->second.isUnsafeReference) {
+          return &itLocal->second;
+        }
+        return nullptr;
+      };
+      for (size_t i = 0; i < orderedArgs.size() && i < calleeParams.size(); ++i) {
+        const Expr *arg = orderedArgs[i];
+        if (arg == nullptr) {
+          continue;
+        }
+        if (calleeParams[i].binding.typeName != "Reference") {
+          continue;
+        }
+        if (findUnsafeReferenceBinding(*arg) == nullptr) {
+          continue;
+        }
+        error_ = "unsafe reference escapes across safe boundary to " + resolved;
         return false;
       }
     }

@@ -63,7 +63,8 @@ Legend:
 - ◐ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch (implemented borrow conflict checks with `location(ref)` root tracking, diagnostics that reject `assign`/`move` while a relevant borrow remains active, last-use borrow-end analysis for statement sequences, and direct-parameter-only `return<Reference<T>>` escape checks).
 - ✓ Implement non-lexical lifetime (last-use) borrow-end analysis for `Reference<T>` so borrows can end before lexical block exit.
 - ✓ Enforce `Reference<T>` no-escape rules (allow direct parameter-reference returns only; reject local/derived escapes).
-- ○ Add `[unsafe]` aliasing escape-hatch semantics for references and enforce safe/unsafe boundary escape diagnostics.
+- ✓ Add `[unsafe]` aliasing escape-hatch semantics for references and enforce safe/unsafe boundary escape diagnostics.
+- ○ Align `[unsafe]` pointer-to-reference conversion behavior with docs (implement broader conversions or document/tests for current `location(...)`-only reference construction).
 - ✓ Allow non-primitive `Pointer<T>`/`Reference<T>` targets (or document the primitive-only restriction enforced today).
 - ✓ Allow untagged definitions to be used as struct types in bindings (docs say struct tags are optional for instantiation).
 - ✓ Treat `if` block envelope names as ignored even if they collide with definitions (branch blocks should not resolve to defs).

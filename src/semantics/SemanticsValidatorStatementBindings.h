@@ -227,11 +227,12 @@
         observeBorrow(entry.first, entry.second);
       }
       const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
-      if (conflict) {
+      if (conflict && !currentDefinitionIsUnsafe_) {
         error_ = "borrow conflict: " + borrowRoot;
         return false;
       }
       info.referenceRoot = std::move(borrowRoot);
+      info.isUnsafeReference = currentDefinitionIsUnsafe_;
     }
     locals.emplace(stmt.name, info);
     return true;

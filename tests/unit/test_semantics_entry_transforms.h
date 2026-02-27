@@ -82,6 +82,88 @@ bad([Reference<i64>] input) {
   CHECK(error.find("reference return type mismatch") != std::string::npos);
 }
 
+TEST_CASE("unsafe definitions allow overlapping mutable references") {
+  const std::string source = R"(
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32> mut] refA{location(value)}
+  [Reference<i32> mut] refB{location(value)}
+  [i32] observed{dereference(refA)}
+  assign(refA, 2i32)
+  assign(refB, 3i32)
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe reference rejects safe-call boundary escape") {
+  const std::string source = R"(
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  consume(ref)
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe reference escapes across safe boundary to /consume") != std::string::npos);
+}
+
+TEST_CASE("unsafe reference allows unsafe-call boundary") {
+  const std::string source = R"(
+[unsafe, return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  consume(ref)
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unsafe transform rejects duplicate markers") {
+  const std::string source = R"(
+[unsafe, unsafe, return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate unsafe transform") != std::string::npos);
+}
+
+TEST_CASE("unsafe transform rejects arguments") {
+  const std::string source = R"(
+[unsafe(flag), return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsafe does not accept arguments") != std::string::npos);
+}
+
 TEST_CASE("software numeric return type is rejected") {
   const std::string source = R"(
 [return<complex>]

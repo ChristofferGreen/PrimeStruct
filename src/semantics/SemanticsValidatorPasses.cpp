@@ -139,6 +139,9 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
     } else if (transform.name == "mut") {
       error_ = "mut transform is not allowed on executions: " + context;
       return false;
+    } else if (transform.name == "unsafe") {
+      error_ = "unsafe transform is not allowed on executions: " + context;
+      return false;
     } else if (transform.name == "copy") {
       error_ = "copy transform is not allowed on executions: " + context;
       return false;
@@ -193,10 +196,12 @@ bool SemanticsValidator::validateDefinitions() {
     };
     currentDefinitionPath_ = def.fullPath;
     currentDefinitionIsCompute_ = false;
+    currentDefinitionIsUnsafe_ = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "compute") {
         currentDefinitionIsCompute_ = true;
-        break;
+      } else if (transform.name == "unsafe") {
+        currentDefinitionIsUnsafe_ = true;
       }
     }
     activeEffects_ = resolveEffects(def.transforms, def.fullPath == entryPath_);
@@ -943,6 +948,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
 
 bool SemanticsValidator::validateExecutions() {
   currentDefinitionPath_.clear();
+  currentDefinitionIsCompute_ = false;
+  currentDefinitionIsUnsafe_ = false;
   currentResultType_.reset();
   currentOnError_.reset();
   for (const auto &exec : program_.executions) {
@@ -958,6 +965,10 @@ bool SemanticsValidator::validateExecutions() {
       }
       if (transform.name == "mut") {
         error_ = "mut transform is not allowed on executions: " + exec.fullPath;
+        return false;
+      }
+      if (transform.name == "unsafe") {
+        error_ = "unsafe transform is not allowed on executions: " + exec.fullPath;
         return false;
       }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
