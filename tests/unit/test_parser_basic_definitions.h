@@ -813,6 +813,21 @@ main() {
   CHECK(transforms[0].arguments[0] == "values.mix([ratio] 2i32, [bias] 3i32)");
 }
 
+TEST_CASE("parses semantic transform full form template call") {
+  const std::string source = R"(
+[semantic(tag(convert<i32>(2u64)))]
+main() {
+  return(1i32)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &transforms = program.definitions[0].transforms;
+  REQUIRE(transforms.size() == 1);
+  REQUIRE(transforms[0].arguments.size() == 1);
+  CHECK(transforms[0].arguments[0] == "convert<i32>(2u64)");
+}
+
 TEST_CASE("parses transform-prefixed execution") {
   const std::string source = R"(
 [return<int> effects(io_out)]
