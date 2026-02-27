@@ -213,6 +213,31 @@ main() {
   CHECK(lambdaExpr.lambdaCaptures[0] == "&");
 }
 
+TEST_CASE("parses lambda with semicolon-only parameter list") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([](;) { 1i32 })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.name == "return");
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  REQUIRE(lambdaExpr.isLambda);
+  CHECK(lambdaExpr.lambdaCaptures.empty());
+  CHECK(lambdaExpr.args.empty());
+  CHECK(lambdaExpr.argNames.empty());
+  CHECK(lambdaExpr.hasBodyArguments);
+  REQUIRE(lambdaExpr.bodyArguments.size() == 1);
+  CHECK(lambdaExpr.bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses lambda template arguments") {
   const std::string source = R"(
 [return<int>]
@@ -234,6 +259,48 @@ main() {
   CHECK(lambdaExpr.templateArgs[0] == "T");
   REQUIRE(lambdaExpr.args.size() == 1);
   CHECK(lambdaExpr.args[0].isBinding);
+  CHECK(lambdaExpr.hasBodyArguments);
+  REQUIRE(lambdaExpr.bodyArguments.size() == 1);
+}
+
+TEST_CASE("parses lambda captures with comments and operator chain") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([/* lead */ value /* gap */ = /* eq */ & /* ref */ target ;]([i32] value) { value })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &returnCall = program.definitions[0].statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  REQUIRE(lambdaExpr.isLambda);
+  REQUIRE(lambdaExpr.lambdaCaptures.size() == 1);
+  CHECK(lambdaExpr.lambdaCaptures[0] == "value = & target");
+}
+
+TEST_CASE("parses lambda template arguments with comments and semicolons") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]</* open */ T ; /* mid */ U>([T] value [U] extra) { value })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &returnCall = program.definitions[0].statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  REQUIRE(lambdaExpr.isLambda);
+  REQUIRE(lambdaExpr.templateArgs.size() == 2);
+  CHECK(lambdaExpr.templateArgs[0] == "T");
+  CHECK(lambdaExpr.templateArgs[1] == "U");
+  REQUIRE(lambdaExpr.args.size() == 2);
+  CHECK(lambdaExpr.args[0].isBinding);
+  CHECK(lambdaExpr.args[1].isBinding);
   CHECK(lambdaExpr.hasBodyArguments);
   REQUIRE(lambdaExpr.bodyArguments.size() == 1);
 }
