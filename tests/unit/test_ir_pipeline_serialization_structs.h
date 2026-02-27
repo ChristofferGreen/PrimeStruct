@@ -119,22 +119,18 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowers assign from imported struct-return function call") {
+TEST_CASE("ir lowers assign from struct-return function call") {
   const std::string source = R"(
-import /math3/*
+[struct]
+Vec3() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+  [i32] z{0i32}
+}
 
-namespace math3 {
-  [struct]
-  Vec3() {
-    [i32] x{0i32}
-    [i32] y{0i32}
-    [i32] z{0i32}
-  }
-
-  [return<Vec3>]
-  makeVec3([i32] x, [i32] y, [i32] z) {
-    return(Vec3([x] x, [y] y, [z] z))
-  }
+[return<Vec3>]
+makeVec3([i32] x, [i32] y, [i32] z) {
+  return(Vec3([x] x, [y] y, [z] z))
 }
 
 [return<int>]
@@ -161,20 +157,16 @@ main() {
 
 TEST_CASE("semantics reports assign diagnostic for immutable struct local") {
   const std::string source = R"(
-import /math3/*
+[struct]
+Vec3() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+  [i32] z{0i32}
+}
 
-namespace math3 {
-  [struct]
-  Vec3() {
-    [i32] x{0i32}
-    [i32] y{0i32}
-    [i32] z{0i32}
-  }
-
-  [return<Vec3>]
-  makeVec3([i32] x, [i32] y, [i32] z) {
-    return(Vec3([x] x, [y] y, [z] z))
-  }
+[return<Vec3>]
+makeVec3([i32] x, [i32] y, [i32] z) {
+  return(Vec3([x] x, [y] y, [z] z))
 }
 
 [return<int>]

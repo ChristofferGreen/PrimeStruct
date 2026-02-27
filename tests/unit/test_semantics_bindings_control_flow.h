@@ -293,6 +293,86 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrow checker rejects assign before pointer alias use in repeat body") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  assign(value, 2i32)
+  repeat(1i32) {
+    [i32] observed{dereference(ptr)}
+  }
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows assign after pointer alias use in repeat body") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  repeat(1i32) {
+    [i32] observed{dereference(ptr)}
+  }
+  assign(value, 2i32)
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("borrow checker rejects assign before pointer alias use in if branch") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  assign(value, 2i32)
+  if(true, then(){
+    [i32] observed{dereference(ptr)}
+  }, else(){
+    [i32] fallback{0i32}
+  })
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows assign after pointer alias use in if branch") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  if(true, then(){
+    [i32] observed{dereference(ptr)}
+  }, else(){
+    [i32] fallback{0i32}
+  })
+  assign(value, 2i32)
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("repeat rejects float count") {
   const std::string source = R"(
 [return<int>]
