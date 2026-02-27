@@ -261,6 +261,25 @@ main() {
   CHECK(error.find("invalid integer literal") != std::string::npos);
 }
 
+TEST_CASE("rejects malformed numeric tokens in expression parser") {
+  auto expectInvalidIntegerLiteral = [](const std::string &numberText) {
+    std::vector<primec::Token> tokens = {
+        {primec::TokenKind::Number, numberText, 1, 1},
+        {primec::TokenKind::End, "", 1, 1},
+    };
+    primec::Parser parser(std::move(tokens));
+    primec::Expr expr;
+    std::string error;
+    CHECK_FALSE(parser.parseExpression(expr, "", error));
+    CHECK(error.find("invalid integer literal") != std::string::npos);
+  };
+
+  expectInvalidIntegerLiteral("i32");
+  expectInvalidIntegerLiteral("-i32");
+  expectInvalidIntegerLiteral("0xZi32");
+  expectInvalidIntegerLiteral("12a3i32");
+}
+
 TEST_CASE("rejects hex integer literals without digits") {
   const std::string source = R"(
 [return<int>]
