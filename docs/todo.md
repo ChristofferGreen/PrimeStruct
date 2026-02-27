@@ -18,6 +18,10 @@ Legend:
 - ✓ Rework include resolver into an import resolver (expand `import<...>` before transforms/inference; `import<...>` now expands, including versioned entries).
 - ✓ Implement import resolver version-selection rules (1/2-part “latest matching” vs 3-part exact), `_`-prefixed privacy rejection, and duplicate import handling + tests.
 - ✓ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
+- ○ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
+- ○ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
+- ○ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
+- ○ Add a post-semantics AST dump stage (`--emit=ast-semantic` or equivalent) to inspect canonicalized AST after rewrites/inference.
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.
@@ -98,6 +102,9 @@ Legend:
 - ✓ Add VM/native `FileError.why` mapping (returns errno name strings for common codes).
 - ✓ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
 - ✓ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
+- ○ Introduce structured diagnostics payloads (stable error code, primary span, related spans, notes) with a machine-readable output mode for tooling.
+- ○ Refactor semantics state into per-definition context objects to reduce shared mutable state and make validator ordering/contracts explicit.
+- ○ Add import semantics conformance tests for privacy (`_`), version resolution, duplicate imports, wildcard exposure, and deterministic expansion ordering.
 
 **Backends & IR**
 - ✓ Add GLSL backend (docs mention GPU lowering, but there is no backend in `src/`).
@@ -106,8 +113,11 @@ Legend:
 - ✓ Expand VM/native `/std/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (VM/native support literal/binding indexing; native tests added).
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
+- ○ Add an IR validation pass immediately before backend emission to reject malformed/unsupported canonical IR earlier.
+- ○ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec.
 
 **Docs Alignment**
+- ○ Audit and remove remaining `include` terminology from docs/diagnostics/tests/tooling so `import` is the only surface term.
 - ✓ Reconcile definition visibility: allow `[public]/[private]` on definitions and enforce import visibility.
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.
