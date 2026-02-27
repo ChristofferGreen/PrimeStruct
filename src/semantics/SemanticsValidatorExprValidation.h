@@ -2305,6 +2305,30 @@
             error_ = "borrowed binding: " + pointerBorrowRoot;
             return false;
           }
+          if (currentDefinitionIsUnsafe_ && isUnsafeReferenceExpr(expr.args[1])) {
+            std::string escapeSink;
+            bool hasEscapeSink = false;
+            if (pointerExpr.kind == Expr::Kind::Name) {
+              hasEscapeSink = resolveReferenceEscapeSink(pointerExpr.name, escapeSink);
+            }
+            if (!hasEscapeSink) {
+              std::string locationRootName;
+              if (resolveLocationRootBindingName(pointerExpr, locationRootName)) {
+                hasEscapeSink = resolveReferenceEscapeSink(locationRootName, escapeSink);
+              }
+            }
+            if (!hasEscapeSink && !pointerBorrowRoot.empty()) {
+              if (const BindingInfo *rootParam = findParamBinding(params, pointerBorrowRoot);
+                  rootParam != nullptr && rootParam->typeName == "Reference") {
+                hasEscapeSink = true;
+                escapeSink = pointerBorrowRoot;
+              }
+            }
+            if (hasEscapeSink) {
+              error_ = "unsafe reference escapes via assignment to " + escapeSink;
+              return false;
+            }
+          }
           if (!validateExpr(params, locals, pointerExpr)) {
             return false;
           }
