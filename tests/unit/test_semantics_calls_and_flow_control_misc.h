@@ -294,4 +294,33 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("loop rejects negative i64 count") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  loop(-1i64, do(){ })
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("loop count must be non-negative") != std::string::npos);
+}
+
+TEST_CASE("loop body propagates statement validation errors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] value{1i32}
+  loop(1i32, do() {
+    assign(value, 2i32)
+  })
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
 TEST_SUITE_END();
