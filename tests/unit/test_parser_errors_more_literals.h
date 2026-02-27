@@ -64,6 +64,34 @@ main() {
   CHECK(error.find("canonical string literal must use normalized escapes") != std::string::npos);
 }
 
+TEST_CASE("canonical mode requires explicit return transform on definitions") {
+  const std::string source = R"(
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("definition requires explicit return transform in canonical mode") != std::string::npos);
+}
+
+TEST_CASE("identifier parameter definition reports missing return transform") {
+  const std::string source = R"(
+main(x) {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("definition missing return statement") != std::string::npos);
+}
+
 TEST_CASE("string literal rejects unknown suffix") {
   const std::string source = R"(
 [return<void>]

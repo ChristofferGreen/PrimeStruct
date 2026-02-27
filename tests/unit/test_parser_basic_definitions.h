@@ -213,6 +213,31 @@ main() {
   CHECK(lambdaExpr.lambdaCaptures[0] == "&");
 }
 
+TEST_CASE("parses lambda template arguments") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]<T>([T] value) { value })
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.name == "return");
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &lambdaExpr = returnCall.args[0];
+  REQUIRE(lambdaExpr.isLambda);
+  REQUIRE(lambdaExpr.templateArgs.size() == 1);
+  CHECK(lambdaExpr.templateArgs[0] == "T");
+  REQUIRE(lambdaExpr.args.size() == 1);
+  CHECK(lambdaExpr.args[0].isBinding);
+  CHECK(lambdaExpr.hasBodyArguments);
+  REQUIRE(lambdaExpr.bodyArguments.size() == 1);
+}
+
 TEST_CASE("parses brace constructor values") {
   const std::string source = R"(
 [return<int>]

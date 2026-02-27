@@ -67,6 +67,21 @@ main() {
   CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
 }
 
+TEST_CASE("transform arguments reject punctuation token") {
+  const std::string source = R"(
+[tag(.)]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected transform argument") != std::string::npos);
+}
+
 TEST_CASE("transform string arguments require suffix") {
   const std::string source = R"(
 [tag("oops")]
@@ -251,6 +266,37 @@ main() {
   CHECK(error.find("template arguments require a call") != std::string::npos);
 }
 
+TEST_CASE("match template arguments require a call") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  match<i32>
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("template arguments require a call") != std::string::npos);
+}
+
+TEST_CASE("member template arguments require a call") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(items.count<i32>)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("template arguments require a call") != std::string::npos);
+}
+
 TEST_CASE("return statement cannot have transforms") {
   const std::string source = R"(
 [return<int>]
@@ -283,6 +329,25 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("if statement cannot have transforms") != std::string::npos);
+}
+
+TEST_CASE("match statement cannot have transforms") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [trace] match(true) {
+    return(1i32)
+  } else {
+    return(2i32)
+  }
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("match statement cannot have transforms") != std::string::npos);
 }
 
 TEST_CASE("definition without parameter list is allowed") {
@@ -496,6 +561,163 @@ main() {
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
   CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
+}
+
+TEST_CASE("top-level binding-style transform requires parameter list") {
+  const std::string source = R"(
+[i32]
+main {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("bindings are only allowed inside definition bodies or parameter lists") != std::string::npos);
+}
+
+TEST_CASE("top-level binding-only transform requires parameter list") {
+  const std::string source = R"(
+[mut]
+main {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '(' after identifier; bindings are only allowed inside definition bodies or parameter lists") !=
+        std::string::npos);
+}
+
+TEST_CASE("statement transform requires callable syntax") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_out)] action
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform-prefixed execution requires arguments") != std::string::npos);
+}
+
+TEST_CASE("expression transform requires callable syntax") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo([effects(io_out)] action))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("transform-prefixed execution requires arguments") != std::string::npos);
+}
+
+TEST_CASE("canonical mode rejects transform-prefixed loop body sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_out)] loop(1i32) { return(1i32) }
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("control-flow body sugar requires canonical call form") != std::string::npos);
+}
+
+TEST_CASE("canonical mode rejects transform-prefixed while body sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_out)] while(true) { return(1i32) }
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("control-flow body sugar requires canonical call form") != std::string::npos);
+}
+
+TEST_CASE("canonical mode rejects transform-prefixed for body sugar") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(io_out)] for([i32] i{0i32} less_than(i 3i32) increment(i)) {
+    plus(i 1i32)
+  }
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("control-flow body sugar requires canonical call form") != std::string::npos);
+}
+
+TEST_CASE("canonical mode rejects transform-prefixed loop body sugar in expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo([effects(io_out)] loop(1i32) { 1i32 }))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("control-flow body sugar requires canonical call form") != std::string::npos);
+}
+
+TEST_CASE("canonical mode rejects transform-prefixed if body sugar in expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo([effects(io_out)] if(true) { 1i32 }))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("control-flow body sugar requires canonical call form") != std::string::npos);
+}
+
+TEST_CASE("canonical mode rejects transform-prefixed match body sugar in expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(foo([effects(io_out)] match(true) { 1i32 }))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize(), false);
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("control-flow body sugar requires canonical call form") != std::string::npos);
 }
 
 TEST_CASE("transform-prefixed loop parses without body") {

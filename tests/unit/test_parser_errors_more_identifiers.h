@@ -35,6 +35,138 @@ main() {
   CHECK(error.find("lambda requires a body") != std::string::npos);
 }
 
+TEST_CASE("lambda captures reject unexpected separator token") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([value x .]([i32] value) { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected ',' or ']' after lambda capture") != std::string::npos);
+}
+
+TEST_CASE("lambda captures reject invalid first token") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([.]([i32] value) { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected lambda capture") != std::string::npos);
+}
+
+TEST_CASE("lambda captures reject numeric token after capture entry") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([value 1]([i32] arg) { arg })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected ',' or ']' after lambda capture") != std::string::npos);
+}
+
+TEST_CASE("lambda captures accept separator-only entry") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([,]([i32] value) { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &lambdaExpr = *program.definitions[0].returnExpr;
+  REQUIRE(lambdaExpr.kind == primec::Expr::Kind::Call);
+  REQUIRE(lambdaExpr.isLambda);
+  CHECK(lambdaExpr.lambdaCaptures.empty());
+}
+
+TEST_CASE("lambda captures accept semicolon-only entry") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([;]([i32] value) { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &lambdaExpr = *program.definitions[0].returnExpr;
+  REQUIRE(lambdaExpr.kind == primec::Expr::Kind::Call);
+  REQUIRE(lambdaExpr.isLambda);
+  CHECK(lambdaExpr.lambdaCaptures.empty());
+}
+
+TEST_CASE("lambda template requires parameter list") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]<T>{ value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '(' after lambda capture list") != std::string::npos);
+}
+
+TEST_CASE("lambda template requires closing angle") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]<T([i32] value) { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected '>'") != std::string::npos);
+}
+
+TEST_CASE("lambda parameter default still requires lambda body") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return([]([i32] value { value })
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("lambda requires a body") != std::string::npos);
+}
+
 TEST_CASE("block shorthand rejected in expression context") {
   const std::string source = R"(
 [return<int>]
