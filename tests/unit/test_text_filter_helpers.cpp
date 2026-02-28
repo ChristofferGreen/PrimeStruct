@@ -157,15 +157,21 @@ TEST_CASE("template list heuristics") {
 TEST_CASE("literal suffix helpers") {
   using namespace primec::text_filter;
   CHECK(maybeAppendI32("123") == "123i32");
+  CHECK(maybeAppendI32("1,234") == "1,234i32");
   CHECK(maybeAppendI32("-7") == "-7i32");
   CHECK(maybeAppendI32("0x2A") == "0x2Ai32");
+  CHECK(maybeAppendI32("0xDE,AD") == "0xDE,ADi32");
   CHECK(maybeAppendI32("-0x2A") == "-0x2Ai32");
+  CHECK(maybeAppendI32("-0xDE,AD") == "-0xDE,ADi32");
+  CHECK(maybeAppendI32("1,,234") == "1,,234");
+  CHECK(maybeAppendI32("0xDE,,AD") == "0xDE,,AD");
   CHECK(maybeAppendI32("1foo") == "1foo");
   CHECK(maybeAppendI32("-") == "-");
 
   CHECK(maybeAppendUtf8("\"hi\"") == "\"hi\"utf8");
   CHECK(maybeAppendUtf8("\"hi\"ascii") == "\"hi\"ascii");
   CHECK(maybeAppendUtf8("value") == "value");
+  CHECK(maybeAppendUtf8("") == "");
 }
 
 TEST_CASE("rewrite unary helpers") {
@@ -179,10 +185,40 @@ TEST_CASE("rewrite unary helpers") {
   CHECK(output == "not(flag)");
   CHECK(index == input.size() - 1);
 
+  output = "unchanged";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryNot("value", output, index, options));
+  CHECK(output == "unchanged");
+  CHECK(index == 0);
+
   output = "stay";
   index = 0;
   CHECK_FALSE(rewriteUnaryNot("!=", output, index, options));
   CHECK(output == "stay");
+
+  output = "bang";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryNot("!", output, index, options));
+  CHECK(output == "bang");
+  CHECK(index == 0);
+
+  output = "keep";
+  index = 1;
+  CHECK_FALSE(rewriteUnaryNot("a!b", output, index, options));
+  CHECK(output == "keep");
+  CHECK(index == 1);
+
+  output = "double";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryNot("!!=flag", output, index, options));
+  CHECK(output == "double");
+  CHECK(index == 0);
+
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryNot("!!flag", output, index, options));
+  CHECK(output == "not(not(flag))");
+  CHECK(index == std::string("!!flag").size() - 1);
 
   output.clear();
   index = 0;
@@ -203,11 +239,36 @@ TEST_CASE("rewrite unary helpers") {
   CHECK(output == "dereference(ptr)");
   CHECK(index == std::string("*ptr").size() - 1);
 
+  const std::string infixDeref = "a*ptr";
+  output = "stay";
+  index = 1;
+  CHECK_FALSE(rewriteUnaryDeref(infixDeref, output, index, options));
+  CHECK(output == "stay");
+  CHECK(index == 1);
+
+  output = "star";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryDeref("*", output, index, options));
+  CHECK(output == "star");
+  CHECK(index == 0);
+
+  output = "none";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryDeref("*-ptr", output, index, options));
+  CHECK(output == "none");
+  CHECK(index == 0);
+
   output.clear();
   index = 0;
   CHECK(rewriteUnaryMinus("-value", output, index, options));
   CHECK(output == "negate(value)");
   CHECK(index == std::string("-value").size() - 1);
+
+  output = "keepminus";
+  index = 1;
+  CHECK_FALSE(rewriteUnaryMinus("a-value", output, index, options));
+  CHECK(output == "keepminus");
+  CHECK(index == 1);
 
   output = "nochange";
   index = 0;
@@ -238,11 +299,109 @@ TEST_CASE("rewrite unary helpers with parens") {
   CHECK(index == 0);
 }
 
+TEST_CASE("rewrite unary address-of rejects logical and") {
+  using namespace primec::text_filter;
+  std::string output = "unchanged";
+  size_t index = 0;
+  primec::TextFilterOptions options;
+
+  CHECK_FALSE(rewriteUnaryAddressOf("value", output, index, options));
+  CHECK(output == "unchanged");
+  CHECK(index == 0);
+
+  CHECK_FALSE(rewriteUnaryAddressOf("&&value", output, index, options));
+  CHECK(output == "unchanged");
+  CHECK(index == 0);
+
+  output = "amp";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryAddressOf("&", output, index, options));
+  CHECK(output == "amp");
+  CHECK(index == 0);
+
+  const std::string chained = "a&&value";
+  output = "still";
+  index = 2;
+  CHECK_FALSE(rewriteUnaryAddressOf(chained, output, index, options));
+  CHECK(output == "still");
+  CHECK(index == 2);
+
+  output = "token";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryAddressOf("&-value", output, index, options));
+  CHECK(output == "token");
+  CHECK(index == 0);
+
+  const std::string infix = "a&value";
+  output = "infix";
+  index = 1;
+  CHECK_FALSE(rewriteUnaryAddressOf(infix, output, index, options));
+  CHECK(output == "infix");
+  CHECK(index == 1);
+}
+
+TEST_CASE("rewrite unary mutation helpers") {
+  using namespace primec::text_filter;
+  std::string output;
+  size_t index = 0;
+  primec::TextFilterOptions options;
+
+  std::string prefix = "++value";
+  CHECK(rewriteUnaryIncrement(prefix, output, index, options));
+  CHECK(output == "increment(value)");
+  CHECK(index == prefix.size() - 1);
+
+  output = "badprefix";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryIncrement("++?a", output, index, options));
+  CHECK(output == "badprefix");
+  CHECK(index == 0);
+
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryIncrement("++(value)", output, index, options));
+  CHECK(output == "increment");
+  CHECK(index == 1);
+
+  const std::string postfix = "value--";
+  output = "value";
+  index = 5;
+  CHECK(rewriteUnaryDecrement(postfix, output, index, options));
+  CHECK(output == "decrement(value)");
+  CHECK(index == postfix.size() - 1);
+
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryDecrement("--value", output, index, options));
+  CHECK(output == "decrement(value)");
+  CHECK(index == std::string("--value").size() - 1);
+
+  const std::string infix = "value--next";
+  output = "value";
+  index = 5;
+  CHECK_FALSE(rewriteUnaryDecrement(infix, output, index, options));
+  CHECK(output == "value");
+  CHECK(index == 5);
+
+  output = "stay";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryIncrement("++", output, index, options));
+  CHECK(output == "stay");
+  CHECK(index == 0);
+}
+
 TEST_CASE("transform rules reject non-absolute root wildcard match") {
   primec::TextTransformRule rule;
   rule.wildcard = true;
   rule.path.clear();
   CHECK_FALSE(primec::ruleMatchesPath(rule, "main"));
+}
+
+TEST_CASE("transform rules reject empty path for root wildcard match") {
+  primec::TextTransformRule rule;
+  rule.wildcard = true;
+  rule.path.clear();
+  CHECK_FALSE(primec::ruleMatchesPath(rule, ""));
 }
 
 TEST_CASE("apply semantic transform rules returns early when empty") {
@@ -271,6 +430,21 @@ TEST_CASE("apply semantic transform rules handles executions") {
   REQUIRE(program.executions[0].transforms.size() == 1);
   CHECK(program.executions[0].transforms[0].name == "single_type_to_return");
   CHECK(program.executions[0].transforms[0].phase == primec::TransformPhase::Semantic);
+}
+
+TEST_CASE("apply semantic transform rules skips unmatched execution") {
+  primec::Program program;
+  primec::Execution exec;
+  exec.fullPath = "/main";
+  program.executions.push_back(exec);
+
+  primec::TextTransformRule rule;
+  rule.path = "/other";
+  rule.transforms = {"single_type_to_return"};
+  primec::applySemanticTransformRules(program, {rule});
+
+  REQUIRE(program.executions.size() == 1);
+  CHECK(program.executions[0].transforms.empty());
 }
 
 TEST_SUITE_END();
