@@ -25,6 +25,31 @@ std::vector<std::string> defaultEffectsList() {
   return {"io_out"};
 }
 
+std::string transformAvailability(const primec::TransformInfo &info) {
+  std::string availability;
+  if (info.availableInPrimec) {
+    availability = "primec";
+  }
+  if (info.availableInPrimevm) {
+    if (!availability.empty()) {
+      availability += ",";
+    }
+    availability += "primevm";
+  }
+  if (availability.empty()) {
+    return "none";
+  }
+  return availability;
+}
+
+void printTransformList(std::ostream &out) {
+  out << "name\tphase\taliases\tavailability\n";
+  for (const auto &transform : primec::listTransforms()) {
+    out << transform.name << '\t' << primec::transformPhaseName(transform.phase) << '\t' << transform.aliases << '\t'
+        << transformAvailability(transform) << '\n';
+  }
+}
+
 std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -327,7 +352,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     if (arg == "--emit=vm") {
       continue;
     }
-    if (arg == "--entry" && i + 1 < argc) {
+    if (arg == "--list-transforms") {
+      out.listTransforms = true;
+    } else if (arg == "--entry" && i + 1 < argc) {
       out.entryPath = argv[++i];
     } else if (arg.rfind("--entry=", 0) == 0) {
       out.entryPath = arg.substr(std::string("--entry=").size());
@@ -460,6 +487,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
   } else if (out.entryPath[0] != '/') {
     out.entryPath = "/" + out.entryPath;
   }
+  if (out.listTransforms) {
+    return true;
+  }
   return !out.inputPath.empty();
 }
 } // namespace
@@ -475,9 +505,14 @@ int main(int argc, char **argv) {
                  "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                  "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                  "[--no-semantic-transforms] [--no-transforms] "
+                 "[--list-transforms] "
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] "
                  "[-- <program args...>]\n";
     return 2;
+  }
+  if (options.listTransforms) {
+    printTransformList(std::cout);
+    return 0;
   }
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.includePaths);

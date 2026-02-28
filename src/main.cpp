@@ -535,6 +535,32 @@ bool ensureOutputDirectory(const std::filesystem::path &outputPath, std::string 
   }
   return true;
 }
+
+std::string transformAvailability(const primec::TransformInfo &info) {
+  std::string availability;
+  if (info.availableInPrimec) {
+    availability = "primec";
+  }
+  if (info.availableInPrimevm) {
+    if (!availability.empty()) {
+      availability += ",";
+    }
+    availability += "primevm";
+  }
+  if (availability.empty()) {
+    return "none";
+  }
+  return availability;
+}
+
+void printTransformList(std::ostream &out) {
+  out << "name\tphase\taliases\tavailability\n";
+  for (const auto &transform : primec::listTransforms()) {
+    out << transform.name << '\t' << primec::transformPhaseName(transform.phase) << '\t' << transform.aliases << '\t'
+        << transformAvailability(transform) << '\n';
+  }
+}
+
 bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) {
   bool noTransforms = false;
   bool noTextTransforms = false;
@@ -550,6 +576,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" ||
         arg == "--emit=vm" || arg == "--emit=glsl" || arg == "--emit=spirv") {
       out.emitKind = arg.substr(std::string("--emit=").size());
+    } else if (arg == "--list-transforms") {
+      out.listTransforms = true;
     } else if (arg == "-o" && i + 1 < argc) {
       out.outputPath = argv[++i];
     } else if (arg == "--entry" && i + 1 < argc) {
@@ -689,6 +717,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
   } else if (out.entryPath[0] != '/') {
     out.entryPath = "/" + out.entryPath;
   }
+  if (out.listTransforms) {
+    return true;
+  }
   if (out.inputPath.empty()) {
     return false;
   }
@@ -794,8 +825,13 @@ int main(int argc, char **argv) {
                  "[--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                  "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                  "[--no-semantic-transforms] [--no-transforms] [--out-dir <dir>] "
+                 "[--list-transforms] "
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] [-- <program args...>]\n";
     return 2;
+  }
+  if (options.listTransforms) {
+    printTransformList(std::cout);
+    return 0;
   }
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.includePaths);

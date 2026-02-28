@@ -121,6 +121,32 @@ main() {
   CHECK(readFile(errPath).find("Unsupported dump stage: bananas") != std::string::npos);
 }
 
+TEST_CASE("primec list transforms prints metadata") {
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_list_transforms.txt").string();
+  const std::string listCmd = "./primec --list-transforms > " + quoteShellArg(outPath);
+
+  CHECK(runCommand(listCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("name\tphase\taliases\tavailability\n") != std::string::npos);
+  CHECK(output.find("append_operators\ttext\t-\tprimec,primevm\n") != std::string::npos);
+  CHECK(output.find("on_error\tsemantic\t-\tprimec,primevm\n") != std::string::npos);
+  CHECK(output.find("single_type_to_return\tsemantic\t-\tprimec,primevm\n") != std::string::npos);
+}
+
+TEST_CASE("primec and primevm list transforms match") {
+  const std::string primecOut =
+      (std::filesystem::temp_directory_path() / "primec_list_transforms_parity.txt").string();
+  const std::string primevmOut =
+      (std::filesystem::temp_directory_path() / "primevm_list_transforms_parity.txt").string();
+
+  const std::string primecCmd = "./primec --list-transforms > " + quoteShellArg(primecOut);
+  const std::string primevmCmd = "./primevm --list-transforms > " + quoteShellArg(primevmOut);
+  CHECK(runCommand(primecCmd) == 0);
+  CHECK(runCommand(primevmCmd) == 0);
+  CHECK(readFile(primecOut) == readFile(primevmOut));
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]

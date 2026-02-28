@@ -20,7 +20,7 @@ Legend:
 - ✓ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
-- ○ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
+- ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
 - ○ Add a post-semantics AST dump stage (`--emit=ast-semantic` or equivalent) to inspect canonicalized AST after rewrites/inference.
 
 **Syntax & Surface Features**

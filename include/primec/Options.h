@@ -8,6 +8,7 @@
 namespace primec {
 struct Options {
   std::string emitKind;
+  bool listTransforms = false;
   std::string inputPath;
   std::string outputPath;
   std::string outDir = ".";
