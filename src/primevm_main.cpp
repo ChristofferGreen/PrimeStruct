@@ -1,6 +1,7 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/IrLowerer.h"
+#include "primec/IrValidation.h"
 #include "primec/Options.h"
 #include "primec/TransformRegistry.h"
 #include "primec/TransformRules.h"
@@ -639,6 +640,14 @@ int main(int argc, char **argv) {
                        vmError,
                        2,
                        {"backend: vm"});
+  }
+  if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+    return emitFailure(options,
+                       primec::DiagnosticCode::LoweringError,
+                       "VM IR validation error: ",
+                       error,
+                       2,
+                       {"backend: vm", "stage: ir-validate"});
   }
 
   primec::Vm vm;

@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 #include "third_party/doctest.h"
 
 #include "primec/IrLowerer.h"
 #include "primec/IrSerializer.h"
+#include "primec/IrValidation.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
@@ -46,4 +48,5 @@ bool validateProgram(primec::Program &program,
 #include "test_ir_pipeline_pointers.h"
 #include "test_ir_pipeline_conversions.h"
 #include "test_ir_pipeline_entry_args.h"
+#include "test_ir_pipeline_validation.h"
 #include "test_ir_pipeline_gpu.h"

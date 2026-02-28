@@ -117,7 +117,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Expand VM/native `/std/math/*` coverage (docs list full math set; VM/native currently support only a subset like abs/sign/min/max/clamp/lerp/pow).
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (VM/native support literal/binding indexing; native tests added).
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
-- ○ Add an IR validation pass immediately before backend emission to reject malformed/unsupported canonical IR earlier.
+- ✓ Add an IR validation pass immediately before backend emission to reject malformed/unsupported canonical IR earlier (`validateIrModule` now runs after IR lowering for VM/native/IR emit paths in `primec` and `primevm`, with dedicated IR pipeline validation tests).
 - ○ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec.
 
 **Docs Alignment**

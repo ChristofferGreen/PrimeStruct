@@ -24,6 +24,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererLower.cpp
   src/IrPrinter.cpp
   src/IrSerializer.cpp
+  src/IrValidation.cpp
   src/Lexer.cpp
   src/TransformRules.cpp
   src/TransformRegistry.cpp
@@ -107,6 +108,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.pointers
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
+    primestruct.ir.pipeline.validation
     primestruct.lexer
     primestruct.parser.basic
     primestruct.parser.errors

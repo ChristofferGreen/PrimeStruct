@@ -4,6 +4,7 @@
 #include "primec/GlslEmitter.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrSerializer.h"
+#include "primec/IrValidation.h"
 #include "primec/NativeEmitter.h"
 #include "primec/Options.h"
 #include "primec/TransformRegistry.h"
@@ -954,6 +955,14 @@ int main(int argc, char **argv) {
       return emitFailure(
           options, primec::DiagnosticCode::LoweringError, "VM lowering error: ", vmError, 2, {"backend: vm"});
     }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::LoweringError,
+                         "VM IR validation error: ",
+                         error,
+                         2,
+                         {"backend: vm", "stage: ir-validate"});
+    }
     primec::Vm vm;
     std::vector<std::string_view> args;
     args.reserve(1 + options.programArgs.size());
@@ -988,6 +997,14 @@ int main(int argc, char **argv) {
       return emitFailure(
           options, primec::DiagnosticCode::LoweringError, "Native lowering error: ", error, 2, {"backend: native"});
     }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Native, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::LoweringError,
+                         "Native IR validation error: ",
+                         error,
+                         2,
+                         {"backend: native", "stage: ir-validate"});
+    }
     primec::NativeEmitter nativeEmitter;
     if (!nativeEmitter.emitExecutable(ir, options.outputPath, error)) {
       return emitFailure(options, primec::DiagnosticCode::EmitError, "Native emit error: ", error, 2, {"backend: native"});
@@ -1005,6 +1022,14 @@ int main(int argc, char **argv) {
                        ir,
                        error)) {
       return emitFailure(options, primec::DiagnosticCode::LoweringError, "IR lowering error: ", error, 2, {"backend: ir"});
+    }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::IrSerializeError,
+                         "IR validation error: ",
+                         error,
+                         2,
+                         {"backend: ir", "stage: ir-validate"});
     }
     std::vector<uint8_t> data;
     if (!primec::serializeIr(ir, data, error)) {
