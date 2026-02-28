@@ -78,12 +78,6 @@
     }
     return *knownCount > 1u;
   };
-  for (const auto &transform : stmt.transforms) {
-    if (transform.name == "on_error" && !isBuiltinBlockCall(stmt)) {
-      error_ = "on_error is only valid on definitions and block scopes";
-      return false;
-    }
-  }
   if (isLoopCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
       error_ = "named arguments not supported for builtin calls";

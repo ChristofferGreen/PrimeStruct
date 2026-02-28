@@ -1310,6 +1310,44 @@ log_file_error([FileError] err) {
   CHECK(error.find("on_error requires Result return type") != std::string::npos);
 }
 
+TEST_CASE("statement on_error rejects non-block execution target") {
+  const std::string source = R"(
+[return<Result<FileError>> on_error<FileError, /log_file_error>]
+main() {
+  [on_error<FileError, /log_file_error>] print_line("x"utf8)
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("on_error transform is not allowed on executions: /print_line") != std::string::npos);
+}
+
+TEST_CASE("statement block on_error reports block Result requirement") {
+  const std::string source = R"(
+[return<Result<FileError>> on_error<FileError, /log_file_error>]
+main() {
+  [on_error<FileError, /log_file_error>] block(){
+    print_line("x"utf8)
+  }
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("on_error requires Result return type on /main/block") != std::string::npos);
+}
+
 TEST_CASE("try rejects mismatched error type") {
   const std::string source = R"(
 [struct]
