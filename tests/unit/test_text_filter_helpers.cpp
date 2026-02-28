@@ -1,5 +1,9 @@
 #include "src/text_filter/TextFilterHelpers.h"
 
+#include "primec/Ast.h"
+#include "primec/TextFilterPipeline.h"
+#include "primec/TransformRules.h"
+
 #include "third_party/doctest.h"
 
 #include <string>
@@ -232,6 +236,41 @@ TEST_CASE("rewrite unary helpers with parens") {
   CHECK(rewriteUnaryMinus("-(value)", output, index, options));
   CHECK(output == "negate");
   CHECK(index == 0);
+}
+
+TEST_CASE("transform rules reject non-absolute root wildcard match") {
+  primec::TextTransformRule rule;
+  rule.wildcard = true;
+  rule.path.clear();
+  CHECK_FALSE(primec::ruleMatchesPath(rule, "main"));
+}
+
+TEST_CASE("apply semantic transform rules returns early when empty") {
+  primec::Program program;
+  primec::Definition def;
+  def.fullPath = "/main";
+  program.definitions.push_back(def);
+
+  primec::applySemanticTransformRules(program, {});
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].transforms.empty());
+}
+
+TEST_CASE("apply semantic transform rules handles executions") {
+  primec::Program program;
+  primec::Execution exec;
+  exec.fullPath = "/main";
+  program.executions.push_back(exec);
+
+  primec::TextTransformRule rule;
+  rule.path = "/main";
+  rule.transforms = {"single_type_to_return"};
+  primec::applySemanticTransformRules(program, {rule});
+
+  REQUIRE(program.executions.size() == 1);
+  REQUIRE(program.executions[0].transforms.size() == 1);
+  CHECK(program.executions[0].transforms[0].name == "single_type_to_return");
+  CHECK(program.executions[0].transforms[0].phase == primec::TransformPhase::Semantic);
 }
 
 TEST_SUITE_END();
