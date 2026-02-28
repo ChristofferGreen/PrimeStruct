@@ -21,7 +21,7 @@ Legend:
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
-- ○ Add a post-semantics AST dump stage (`--emit=ast-semantic` or equivalent) to inspect canonicalized AST after rewrites/inference.
+- ✓ Add a post-semantics AST dump stage (`--dump-stage ast-semantic`, alias `ast_semantic`) to inspect canonicalized AST after rewrites/inference.
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.

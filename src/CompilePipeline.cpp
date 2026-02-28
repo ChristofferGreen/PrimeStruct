@@ -18,6 +18,34 @@
 namespace primec {
 namespace {
 
+enum class DumpStage {
+  None,
+  PreAst,
+  Ast,
+  Ir,
+  AstSemantic,
+  Unsupported,
+};
+
+DumpStage parseDumpStage(const std::string &dumpStage) {
+  if (dumpStage.empty()) {
+    return DumpStage::None;
+  }
+  if (dumpStage == "pre_ast") {
+    return DumpStage::PreAst;
+  }
+  if (dumpStage == "ast") {
+    return DumpStage::Ast;
+  }
+  if (dumpStage == "ir") {
+    return DumpStage::Ir;
+  }
+  if (dumpStage == "ast_semantic" || dumpStage == "ast-semantic") {
+    return DumpStage::AstSemantic;
+  }
+  return DumpStage::Unsupported;
+}
+
 bool shouldAutoIncludeStdlib(const std::string &source) {
   size_t pos = 0;
   while ((pos = source.find("import /std", pos)) != std::string::npos) {
@@ -170,7 +198,9 @@ bool runCompilePipeline(const Options &options,
     return false;
   }
 
-  if (!options.dumpStage.empty() && options.dumpStage == "pre_ast") {
+  const DumpStage dumpStage = parseDumpStage(options.dumpStage);
+
+  if (dumpStage == DumpStage::PreAst) {
     output.dumpOutput = output.filteredSource;
     output.hasDumpOutput = true;
     return true;
@@ -183,14 +213,14 @@ bool runCompilePipeline(const Options &options,
     return false;
   }
 
-  if (!options.dumpStage.empty()) {
-    if (options.dumpStage == "ast") {
+  if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic) {
+    if (dumpStage == DumpStage::Ast) {
       AstPrinter printer;
       output.dumpOutput = printer.print(output.program);
       output.hasDumpOutput = true;
       return true;
     }
-    if (options.dumpStage == "ir") {
+    if (dumpStage == DumpStage::Ir) {
       IrPrinter printer;
       output.dumpOutput = printer.print(output.program);
       output.hasDumpOutput = true;
@@ -214,6 +244,13 @@ bool runCompilePipeline(const Options &options,
                           options.semanticTransforms)) {
     errorStage = CompilePipelineErrorStage::Semantic;
     return false;
+  }
+
+  if (dumpStage == DumpStage::AstSemantic) {
+    AstPrinter printer;
+    output.dumpOutput = printer.print(output.program);
+    output.hasDumpOutput = true;
+    return true;
   }
 
   return true;

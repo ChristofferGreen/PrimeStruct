@@ -70,8 +70,9 @@ spelled directly in transform position (e.g. `[array<i32>] values{...}`, `[map<i
 Trait constraints are also encoded as transforms on definitions (e.g. `[Additive<i32>]`, `[Indexable<array<i32>, i32>]`);
 they follow the same transform-list grammar and are validated during semantic analysis.
 
-The CLI supports `--dump-stage=pre_ast|ast|ir` to emit the text after import expansion/text transforms,
-the parsed AST, or the IR view respectively. `--dump-stage` exits before lowering/emission. Text
+The CLI supports `--dump-stage=pre_ast|ast|ast-semantic|ir` to emit the text after import expansion/text transforms,
+the parsed AST, the post-semantics canonicalized AST (after semantic rewrites/inference), or the IR view respectively.
+`--dump-stage` exits before lowering/emission. Text
 transforms are configured via `--text-transforms=<list>` (the default list is `collections`, `operators`,
 `implicit-utf8`), semantic transforms via `--semantic-transforms=<list>` (default: `single_type_to_return`), and
 `--transform-list=<list>` is

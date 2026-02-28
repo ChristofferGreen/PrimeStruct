@@ -826,7 +826,7 @@ int main(int argc, char **argv) {
                  "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                  "[--no-semantic-transforms] [--no-transforms] [--out-dir <dir>] "
                  "[--list-transforms] "
-                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] [-- <program args...>]\n";
+                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
     return 2;
   }
   if (options.listTransforms) {

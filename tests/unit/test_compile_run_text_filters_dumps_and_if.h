@@ -63,6 +63,72 @@ main() {
   CHECK(ast.find("nope(1)") != std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic shows canonicalized ast") {
+  const std::string source = R"(
+[enum]
+Colors() {
+  Red
+  Green
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  CHECK(ast.find("[struct] /Colors()") != std::string::npos);
+  CHECK(ast.find("[i32] value{0}") != std::string::npos);
+  CHECK(ast.find("Red{/Colors(0)}") != std::string::npos);
+  CHECK(ast.find("Green{/Colors(1)}") != std::string::npos);
+}
+
+TEST_CASE("dump ast_semantic alias works") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_alias.prime", source);
+  const std::string hyphenOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic_hyphen.txt").string();
+  const std::string underscoreOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic_underscore.txt").string();
+
+  const std::string hyphenCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(hyphenOut);
+  const std::string underscoreCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast_semantic > " + quoteShellArg(underscoreOut);
+  CHECK(runCommand(hyphenCmd) == 0);
+  CHECK(runCommand(underscoreCmd) == 0);
+  CHECK(readFile(hyphenOut) == readFile(underscoreOut));
+}
+
+TEST_CASE("dump ast-semantic reports semantic errors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(nope(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_semantic_nope.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_dump_ast_semantic_nope_err.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(dumpCmd) == 2);
+  CHECK(readFile(errPath).find("Semantic error: unknown call target: nope") != std::string::npos);
+}
+
 TEST_CASE("dump stage rejects unknown value") {
   const std::string source = R"(
 [return<int>]
@@ -99,6 +165,34 @@ TEST_CASE("primec and primevm dump pre_ast match") {
       "./primec " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(primecOut);
   const std::string primevmCmd =
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(primevmOut);
+  CHECK(runCommand(primecCmd) == 0);
+  CHECK(runCommand(primevmCmd) == 0);
+  CHECK(readFile(primecOut) == readFile(primevmOut));
+}
+
+TEST_CASE("primec and primevm dump ast-semantic match") {
+  const std::string source = R"(
+[enum]
+Colors() {
+  Red
+  Green
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_shared_ast_semantic.prime", source);
+  const std::string primecOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_shared_ast_semantic.txt").string();
+  const std::string primevmOut =
+      (std::filesystem::temp_directory_path() / "primevm_dump_shared_ast_semantic.txt").string();
+
+  const std::string primecCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(primecOut);
+  const std::string primevmCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(primevmOut);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
   CHECK(readFile(primecOut) == readFile(primevmOut));
