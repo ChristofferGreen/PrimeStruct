@@ -50,6 +50,8 @@ TEST_CASE("unary prefix detection") {
   CHECK(isUnaryPrefixPosition("a*-b", 2));
   CHECK(isUnaryPrefixPosition("a -b", 2));
   CHECK_FALSE(isUnaryPrefixPosition("a)-b", 2));
+  CHECK(isUnaryPrefixPosition("/*-a", 2));
+  CHECK(isUnaryPrefixPosition("*/-a", 2));
 }
 
 TEST_CASE("right operand start detection") {
@@ -57,6 +59,7 @@ TEST_CASE("right operand start detection") {
   CHECK(isRightOperandStartChar("-value", 0));
   CHECK(isRightOperandStartChar("(value)", 0));
   CHECK(isRightOperandStartChar("\"hi\"", 0));
+  CHECK_FALSE(isRightOperandStartChar("/*x", 0));
   CHECK_FALSE(isRightOperandStartChar("?value", 0));
   CHECK_FALSE(isRightOperandStartChar("a-b", 1));
 }
@@ -106,6 +109,12 @@ TEST_CASE("matching parens skip quoted text") {
 
   const std::string noClose = "(";
   CHECK(findMatchingClose(noClose, 0, '(', ')') == std::string::npos);
+
+  const std::string noOpen = "abc)";
+  CHECK(findMatchingOpen(noOpen, noOpen.size() - 1, '(', ')') == std::string::npos);
+
+  const std::string quoteAtStart = "\"a\")";
+  CHECK(findMatchingOpen(quoteAtStart, quoteAtStart.size() - 1, '(', ')') == std::string::npos);
 }
 
 TEST_CASE("token boundary helpers") {
@@ -138,6 +147,9 @@ TEST_CASE("token boundary helpers") {
   const std::string unary = "-value";
   CHECK(findRightTokenEnd(unary, 0) == unary.size());
 
+  const std::string doubleUnary = "--value";
+  CHECK(findRightTokenEnd(doubleUnary, 0) == doubleUnary.size());
+
   const std::string grouped = "(a(b))";
   CHECK(findRightTokenEnd(grouped, 0) == grouped.size());
 
@@ -149,6 +161,15 @@ TEST_CASE("token boundary helpers") {
 
   const std::string openParen = "(a";
   CHECK(findRightTokenEnd(openParen, 0) == 0);
+
+  const std::string unmatchedClose = "a)";
+  CHECK(findLeftTokenStart(unmatchedClose, unmatchedClose.size()) == unmatchedClose.size());
+
+  const std::string unaryGrouped = "-(a)";
+  CHECK(findLeftTokenStart(unaryGrouped, unaryGrouped.size()) == 0);
+
+  const std::string quoted = "\"ok\"";
+  CHECK(findLeftTokenStart(quoted, quoted.size()) == 0);
 }
 
 TEST_CASE("strip and normalize unary operands") {
@@ -188,6 +209,8 @@ TEST_CASE("template list heuristics") {
   std::string leadingNested = "convert<<i32>>";
   openPos = leadingNested.find('<');
   CHECK_FALSE(looksLikeTemplateList(leadingNested, openPos));
+
+  CHECK_FALSE(looksLikeTemplateList("value", 0));
 }
 
 TEST_CASE("literal suffix helpers") {
@@ -207,6 +230,7 @@ TEST_CASE("literal suffix helpers") {
   CHECK(maybeAppendI32("0XDE,,AD") == "0XDE,,AD");
   CHECK(maybeAppendI32("1foo") == "1foo");
   CHECK(maybeAppendI32("-") == "-");
+  CHECK(maybeAppendI32("") == "");
 
   CHECK(maybeAppendUtf8("\"hi\"") == "\"hi\"utf8");
   CHECK(maybeAppendUtf8("\"hi\"ascii") == "\"hi\"ascii");
@@ -258,6 +282,12 @@ TEST_CASE("rewrite unary helpers") {
   index = 0;
   CHECK_FALSE(rewriteUnaryNot("!\"oops", output, index, options));
   CHECK(output == "unterminated");
+  CHECK(index == 0);
+
+  output = "comment";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryNot("!/*x", output, index, options));
+  CHECK(output == "comment");
   CHECK(index == 0);
 
   output.clear();
@@ -334,6 +364,12 @@ TEST_CASE("rewrite unary helpers") {
   index = 0;
   CHECK_FALSE(rewriteUnaryMinus("-1", output, index, options));
   CHECK(output == "nochange");
+
+  output = "doubleminus";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryMinus("--value", output, index, options));
+  CHECK(output == "doubleminus");
+  CHECK(index == 0);
 }
 
 TEST_CASE("rewrite unary helpers with parens") {
@@ -452,6 +488,20 @@ TEST_CASE("rewrite unary mutation helpers") {
   CHECK(output == "decrement(value)");
   CHECK(index == postfix.size() - 1);
 
+  const std::string groupedPostfix = "(value)--";
+  output = "(value)";
+  index = 7;
+  CHECK(rewriteUnaryDecrement(groupedPostfix, output, index, options));
+  CHECK(output == "decrement(value)");
+  CHECK(index == groupedPostfix.size() - 1);
+
+  const std::string groupedPostfixIncrement = "(value)++";
+  output = "(value)";
+  index = 7;
+  CHECK(rewriteUnaryIncrement(groupedPostfixIncrement, output, index, options));
+  CHECK(output == "increment(value)");
+  CHECK(index == groupedPostfixIncrement.size() - 1);
+
   output = "1";
   index = 1;
   CHECK(rewriteUnaryIncrement("1++", output, index, implicitMutationOptions));
@@ -460,14 +510,38 @@ TEST_CASE("rewrite unary mutation helpers") {
 
   output.clear();
   index = 0;
+  CHECK(rewriteUnaryDecrement("--1", output, index, implicitMutationOptions));
+  CHECK(output == "decrement(1i32)");
+  CHECK(index == 2);
+
+  output = "1";
+  index = 1;
+  CHECK(rewriteUnaryDecrement("1--", output, index, implicitMutationOptions));
+  CHECK(output == "decrement(1i32)");
+  CHECK(index == 2);
+
+  output.clear();
+  index = 0;
   CHECK(rewriteUnaryDecrement("--\"hi\"", output, index, implicitUtf8MutationOptions));
   CHECK(output == "decrement(\"hi\"utf8)");
   CHECK(index == std::string("--\"hi\"").size() - 1);
+
+  output = "baddecquote";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryDecrement("--\"oops", output, index, options));
+  CHECK(output == "baddecquote");
+  CHECK(index == 0);
 
   output = "invalidleft";
   index = 1;
   CHECK_FALSE(rewriteUnaryIncrement("?++x", output, index, options));
   CHECK(output == "invalidleft");
+  CHECK(index == 1);
+
+  output = "invaliddecleft";
+  index = 1;
+  CHECK_FALSE(rewriteUnaryDecrement("?--x", output, index, options));
+  CHECK(output == "invaliddecleft");
   CHECK(index == 1);
 
   output.clear();
@@ -480,6 +554,13 @@ TEST_CASE("rewrite unary mutation helpers") {
   output = "/*x*/";
   index = 5;
   CHECK_FALSE(rewriteUnaryIncrement(commentTail, output, index, options));
+  CHECK(output == "/*x*/");
+  CHECK(index == 5);
+
+  const std::string decrementCommentTail = "/*x*/--";
+  output = "/*x*/";
+  index = 5;
+  CHECK_FALSE(rewriteUnaryDecrement(decrementCommentTail, output, index, options));
   CHECK(output == "/*x*/");
   CHECK(index == 5);
 
@@ -502,10 +583,23 @@ TEST_CASE("rewrite unary mutation helpers") {
   CHECK(output == "value");
   CHECK(index == 5);
 
+  const std::string infixIncrement = "value++next";
+  output = "value";
+  index = 5;
+  CHECK_FALSE(rewriteUnaryIncrement(infixIncrement, output, index, options));
+  CHECK(output == "value");
+  CHECK(index == 5);
+
   output = "stay";
   index = 0;
   CHECK_FALSE(rewriteUnaryIncrement("++", output, index, options));
   CHECK(output == "stay");
+  CHECK(index == 0);
+
+  output = "staydec";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryDecrement("--", output, index, options));
+  CHECK(output == "staydec");
   CHECK(index == 0);
 }
 
