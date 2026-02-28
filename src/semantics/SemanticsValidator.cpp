@@ -38,6 +38,55 @@ SemanticsValidator::SemanticsValidator(const Program &program,
   }
 }
 
+SemanticsValidator::ValidationContext
+SemanticsValidator::buildDefinitionValidationContext(const Definition &def) const {
+  ValidationContext context;
+  context.definitionPath = def.fullPath;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "compute") {
+      context.definitionIsCompute = true;
+    } else if (transform.name == "unsafe") {
+      context.definitionIsUnsafe = true;
+    }
+  }
+  context.activeEffects = resolveEffects(def.transforms, def.fullPath == entryPath_);
+  return context;
+}
+
+SemanticsValidator::ValidationContext
+SemanticsValidator::buildExecutionValidationContext(const Execution &exec) const {
+  ValidationContext context;
+  context.definitionPath.clear();
+  context.definitionIsCompute = false;
+  context.definitionIsUnsafe = false;
+  context.activeEffects = resolveEffects(exec.transforms, false);
+  return context;
+}
+
+SemanticsValidator::ValidationContext SemanticsValidator::snapshotValidationContext() const {
+  ValidationContext snapshot;
+  snapshot.activeEffects = activeEffects_;
+  snapshot.movedBindings = movedBindings_;
+  snapshot.endedReferenceBorrows = endedReferenceBorrows_;
+  snapshot.definitionPath = currentDefinitionPath_;
+  snapshot.definitionIsCompute = currentDefinitionIsCompute_;
+  snapshot.definitionIsUnsafe = currentDefinitionIsUnsafe_;
+  snapshot.resultType = currentResultType_;
+  snapshot.onError = currentOnError_;
+  return snapshot;
+}
+
+void SemanticsValidator::restoreValidationContext(ValidationContext context) {
+  activeEffects_ = std::move(context.activeEffects);
+  movedBindings_ = std::move(context.movedBindings);
+  endedReferenceBorrows_ = std::move(context.endedReferenceBorrows);
+  currentDefinitionPath_ = std::move(context.definitionPath);
+  currentDefinitionIsCompute_ = context.definitionIsCompute;
+  currentDefinitionIsUnsafe_ = context.definitionIsUnsafe;
+  currentResultType_ = std::move(context.resultType);
+  currentOnError_ = std::move(context.onError);
+}
+
 void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
   if (diagnosticInfo_ == nullptr) {
     return;

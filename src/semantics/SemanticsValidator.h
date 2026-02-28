@@ -61,6 +61,11 @@ private:
   bool isEntryArgsAccess(const Expr &expr) const;
   bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
   bool isBuiltinBlockCall(const Expr &expr) const;
+  struct ValidationContext;
+  ValidationContext buildDefinitionValidationContext(const Definition &def) const;
+  ValidationContext buildExecutionValidationContext(const Execution &exec) const;
+  ValidationContext snapshotValidationContext() const;
+  void restoreValidationContext(ValidationContext context);
   void capturePrimarySpanIfUnset(int line, int column);
   void captureRelatedSpan(int line, int column, const std::string &label);
   void captureExprContext(const Expr &expr);
@@ -111,6 +116,16 @@ private:
     std::string handlerPath;
     std::vector<Expr> boundArgs;
   };
+  struct ValidationContext {
+    std::unordered_set<std::string> activeEffects;
+    std::unordered_set<std::string> movedBindings;
+    std::unordered_set<std::string> endedReferenceBorrows;
+    std::string definitionPath;
+    bool definitionIsCompute = false;
+    bool definitionIsUnsafe = false;
+    std::optional<ResultTypeInfo> resultType;
+    std::optional<OnErrorHandler> onError;
+  };
 
   bool parseTransformArgumentExpr(const std::string &text, const std::string &namespacePrefix, Expr &out);
   bool resolveResultTypeFromTypeName(const std::string &typeName, ResultTypeInfo &out) const;
@@ -154,6 +169,17 @@ private:
     }
     ~EffectScope() {
       validator.activeEffects_ = std::move(previous);
+    }
+  };
+  struct ValidationContextScope {
+    SemanticsValidator &validator;
+    ValidationContext previous;
+    ValidationContextScope(SemanticsValidator &validatorIn, ValidationContext context)
+        : validator(validatorIn), previous(validatorIn.snapshotValidationContext()) {
+      validator.restoreValidationContext(std::move(context));
+    }
+    ~ValidationContextScope() {
+      validator.restoreValidationContext(std::move(previous));
     }
   };
   struct EntryArgStringScope {

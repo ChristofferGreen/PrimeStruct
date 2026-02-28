@@ -187,6 +187,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
 bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
+    ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
     auto isStructDefinition = [&](const Definition &candidate) {
       for (const auto &transform : candidate.transforms) {
         if (isStructTransformName(transform.name)) {
@@ -195,17 +196,6 @@ bool SemanticsValidator::validateDefinitions() {
       }
       return false;
     };
-    currentDefinitionPath_ = def.fullPath;
-    currentDefinitionIsCompute_ = false;
-    currentDefinitionIsUnsafe_ = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "compute") {
-        currentDefinitionIsCompute_ = true;
-      } else if (transform.name == "unsafe") {
-        currentDefinitionIsUnsafe_ = true;
-      }
-    }
-    activeEffects_ = resolveEffects(def.transforms, def.fullPath == entryPath_);
     if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
       return false;
     }
@@ -263,8 +253,6 @@ bool SemanticsValidator::validateDefinitions() {
       }
     }
     OnErrorScope onErrorScope(*this, onErrorHandler);
-    movedBindings_.clear();
-    endedReferenceBorrows_.clear();
     bool sawReturn = false;
     for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
       const Expr &stmt = def.statements[stmtIndex];
@@ -306,7 +294,6 @@ bool SemanticsValidator::validateDefinitions() {
       }
     }
   }
-  currentDefinitionPath_.clear();
   return true;
 }
 
@@ -957,16 +944,9 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
 }
 
 bool SemanticsValidator::validateExecutions() {
-  currentDefinitionPath_.clear();
-  currentDefinitionIsCompute_ = false;
-  currentDefinitionIsUnsafe_ = false;
-  currentResultType_.reset();
-  currentOnError_.reset();
   for (const auto &exec : program_.executions) {
     ExecutionContextScope executionScope(*this, exec);
-    activeEffects_ = resolveEffects(exec.transforms, false);
-    movedBindings_.clear();
-    endedReferenceBorrows_.clear();
+    ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
     bool sawEffects = false;
     bool sawCapabilities = false;
     for (const auto &transform : exec.transforms) {

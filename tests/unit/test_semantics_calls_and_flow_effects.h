@@ -1226,6 +1226,44 @@ main() {
   CHECK(error.find("invalid default effect: bad-effect") != std::string::npos);
 }
 
+TEST_CASE("definition validation context isolates moved bindings") {
+  const std::string source = R"(
+[return<void>]
+consume() {
+  [i32] value{1i32}
+  move(value)
+}
+
+[return<i32>]
+main() {
+  [i32] value{2i32}
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("definition validation context isolates active effects") {
+  const std::string source = R"(
+[effects(heap_alloc), return<i32>]
+warmup() {
+  vector<i32>(1i32)
+  return(0i32)
+}
+
+[return<i32>]
+main() {
+  vector<i32>(1i32)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vector literal requires heap_alloc effect") != std::string::npos);
+}
+
 TEST_CASE("File constructor requires file_write effect") {
   const std::string source = R"(
 [return<Result<FileError>> on_error<FileError, /log_file_error>]
