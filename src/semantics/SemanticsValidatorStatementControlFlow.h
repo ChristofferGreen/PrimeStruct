@@ -10,12 +10,20 @@
     }
     return true;
   };
-  auto validateLoopBody = [&](const Expr &body, const std::unordered_map<std::string, BindingInfo> &baseLocals) -> bool {
+  auto validateLoopBody = [&](const Expr &body,
+                              const std::unordered_map<std::string, BindingInfo> &baseLocals,
+                              const std::vector<Expr> &boundaryStatements,
+                              bool includeNextIterationBody) -> bool {
     if (!isLoopBlockEnvelope(body)) {
       error_ = "loop body requires a block envelope";
       return false;
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = baseLocals;
+    std::vector<Expr> livenessStatements = body.bodyArguments;
+    livenessStatements.insert(livenessStatements.end(), boundaryStatements.begin(), boundaryStatements.end());
+    if (includeNextIterationBody) {
+      livenessStatements.insert(livenessStatements.end(), body.bodyArguments.begin(), body.bodyArguments.end());
+    }
     OnErrorScope onErrorScope(*this, std::nullopt);
     BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
     for (size_t bodyIndex = 0; bodyIndex < body.bodyArguments.size(); ++bodyIndex) {
@@ -30,10 +38,11 @@
                              namespacePrefix)) {
         return false;
       }
-      expireReferenceBorrowsForRemainder(params, blockLocals, body.bodyArguments, bodyIndex + 1);
+      expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
     }
     return true;
   };
+  auto isBoolLiteralFalse = [](const Expr &expr) -> bool { return expr.kind == Expr::Kind::BoolLiteral && !expr.boolValue; };
   auto isNegativeIntegerLiteral = [&](const Expr &expr) -> bool {
     if (expr.kind != Expr::Kind::Literal || expr.isUnsigned) {
       return false;
@@ -42,6 +51,30 @@
       return static_cast<int32_t>(expr.literalValue) < 0;
     }
     return static_cast<int64_t>(expr.literalValue) < 0;
+  };
+  auto knownIterationCount = [&](const Expr &countExpr, bool allowBoolCount) -> std::optional<uint64_t> {
+    if (allowBoolCount && countExpr.kind == Expr::Kind::BoolLiteral) {
+      return countExpr.boolValue ? 1u : 0u;
+    }
+    if (countExpr.kind != Expr::Kind::Literal) {
+      return std::nullopt;
+    }
+    if (countExpr.isUnsigned) {
+      return countExpr.literalValue;
+    }
+    const int64_t signedCount = countExpr.intWidth == 32 ? static_cast<int32_t>(countExpr.literalValue)
+                                                         : static_cast<int64_t>(countExpr.literalValue);
+    if (signedCount <= 0) {
+      return 0u;
+    }
+    return static_cast<uint64_t>(signedCount);
+  };
+  auto canIterateMoreThanOnce = [&](const Expr &countExpr, bool allowBoolCount) -> bool {
+    std::optional<uint64_t> knownCount = knownIterationCount(countExpr, allowBoolCount);
+    if (!knownCount.has_value()) {
+      return true;
+    }
+    return *knownCount > 1u;
   };
   for (const auto &transform : stmt.transforms) {
     if (transform.name == "on_error" && !isBuiltinBlockCall(stmt)) {
@@ -79,7 +112,8 @@
       error_ = "loop count must be non-negative";
       return false;
     }
-    return validateLoopBody(stmt.args[1], locals);
+    const bool includeNextIterationBody = canIterateMoreThanOnce(count, false);
+    return validateLoopBody(stmt.args[1], locals, {}, includeNextIterationBody);
   }
   if (isWhileCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
@@ -107,7 +141,12 @@
       error_ = "while condition requires bool";
       return false;
     }
-    return validateLoopBody(stmt.args[1], locals);
+    std::vector<Expr> boundaryStatements;
+    const bool conditionAlwaysFalse = isBoolLiteralFalse(cond);
+    if (!conditionAlwaysFalse) {
+      boundaryStatements.push_back(cond);
+    }
+    return validateLoopBody(stmt.args[1], locals, boundaryStatements, !conditionAlwaysFalse);
   }
   if (isForCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
@@ -168,7 +207,13 @@
     if (!validateStatement(params, loopLocals, stmt.args[2], returnKind, false, allowBindings, nullptr, namespacePrefix)) {
       return false;
     }
-    return validateLoopBody(stmt.args[3], loopLocals);
+    std::vector<Expr> boundaryStatements;
+    const bool conditionAlwaysFalse = !cond.isBinding && isBoolLiteralFalse(cond);
+    if (!conditionAlwaysFalse) {
+      boundaryStatements.push_back(stmt.args[2]);
+      boundaryStatements.push_back(cond);
+    }
+    return validateLoopBody(stmt.args[3], loopLocals, boundaryStatements, !conditionAlwaysFalse);
   }
   if (isRepeatCall(stmt)) {
     if (!stmt.hasBodyArguments) {
@@ -197,24 +242,13 @@
       error_ = "repeat count requires integer or bool";
       return false;
     }
-    std::unordered_map<std::string, BindingInfo> blockLocals = locals;
-    OnErrorScope onErrorScope(*this, std::nullopt);
-    BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
-    for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
-      const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
-      if (!validateStatement(params,
-                             blockLocals,
-                             bodyExpr,
-                             returnKind,
-                             allowReturn,
-                             allowBindings,
-                             sawReturn,
-                             namespacePrefix)) {
-        return false;
-      }
-      expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
-    }
-    return true;
+    const bool includeNextIterationBody = canIterateMoreThanOnce(count, true);
+    Expr repeatBody;
+    repeatBody.kind = Expr::Kind::Call;
+    repeatBody.name = "repeat_body";
+    repeatBody.bodyArguments = stmt.bodyArguments;
+    repeatBody.hasBodyArguments = stmt.hasBodyArguments;
+    return validateLoopBody(repeatBody, locals, {}, includeNextIterationBody);
   }
   if (isBuiltinBlockCall(stmt) && !stmt.hasBodyArguments) {
     error_ = "block requires block arguments";

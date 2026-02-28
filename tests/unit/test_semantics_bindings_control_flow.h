@@ -331,6 +331,121 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrow checker rejects assign after pointer alias use across while iterations") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  while(true, body(){
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  })
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker rejects assign after pointer alias use across for iterations") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  [i32 mut] i{0i32}
+  for(assign(i, 0i32), less_than(i, 3i32), assign(i, plus(i, 1i32)), body(){
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  })
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker rejects assign after pointer alias use across loop iterations") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  loop(2i32, body(){
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  })
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker rejects assign after pointer alias use across repeat iterations") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  repeat(2i32) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows assign after pointer alias use in single-iteration loop") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  loop(1i32, body(){
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  })
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("borrow checker allows assign after pointer alias use in single-iteration repeat") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  repeat(true) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("borrow checker rejects assign before pointer alias use in if branch") {
   const std::string source = R"(
 [return<void>]
