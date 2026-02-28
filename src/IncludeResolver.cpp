@@ -92,6 +92,19 @@ bool readFile(const std::string &path, std::string &out) {
   return true;
 }
 
+std::string normalizePathKey(const std::filesystem::path &path) {
+  std::error_code ec;
+  std::filesystem::path absolute = std::filesystem::absolute(path, ec);
+  if (ec) {
+    absolute = path;
+  }
+  std::filesystem::path canonical = std::filesystem::weakly_canonical(absolute, ec);
+  if (ec) {
+    canonical = absolute.lexically_normal();
+  }
+  return canonical.generic_string();
+}
+
 std::string trim(const std::string &value) {
   size_t start = 0;
   while (start < value.size() && std::isspace(static_cast<unsigned char>(value[start]))) {
@@ -325,34 +338,64 @@ bool extractArchive(const std::filesystem::path &archive,
 bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
                         std::vector<std::filesystem::path> &expanded,
                         std::string &error) {
-  expanded = roots;
+  expanded.clear();
+  std::unordered_set<std::string> seenRoots;
+  auto pushUniqueRoot = [&](const std::filesystem::path &root) {
+    std::error_code ec;
+    std::filesystem::path absolute = std::filesystem::absolute(root, ec);
+    if (ec) {
+      absolute = root;
+    }
+    const std::string key = normalizePathKey(absolute);
+    if (!seenRoots.insert(key).second) {
+      return;
+    }
+    expanded.push_back(std::move(absolute));
+  };
+
   for (const auto &root : roots) {
-    if (!std::filesystem::exists(root)) {
+    pushUniqueRoot(root);
+  }
+
+  for (const auto &root : roots) {
+    std::error_code ec;
+    std::filesystem::path rootPath = std::filesystem::absolute(root, ec);
+    if (ec) {
+      rootPath = root;
+    }
+    if (!std::filesystem::exists(rootPath)) {
       continue;
     }
-    if (std::filesystem::is_regular_file(root) && root.extension() == ".zip") {
+    if (std::filesystem::is_regular_file(rootPath) && rootPath.extension() == ".zip") {
       std::filesystem::path extracted;
-      if (!extractArchive(root, extracted, error)) {
+      if (!extractArchive(rootPath, extracted, error)) {
         return false;
       }
-      expanded.push_back(std::move(extracted));
+      pushUniqueRoot(extracted);
       continue;
     }
-    if (!std::filesystem::is_directory(root)) {
+    if (!std::filesystem::is_directory(rootPath)) {
       continue;
     }
-    for (const auto &entry : std::filesystem::directory_iterator(root)) {
+    std::vector<std::filesystem::path> archives;
+    for (const auto &entry : std::filesystem::directory_iterator(rootPath)) {
       if (!entry.is_regular_file()) {
         continue;
       }
       if (entry.path().extension() != ".zip") {
         continue;
       }
+      archives.push_back(entry.path());
+    }
+    std::sort(archives.begin(), archives.end(), [](const std::filesystem::path &lhs, const std::filesystem::path &rhs) {
+      return normalizePathKey(lhs) < normalizePathKey(rhs);
+    });
+    for (const auto &archive : archives) {
       std::filesystem::path extracted;
-      if (!extractArchive(entry.path(), extracted, error)) {
+      if (!extractArchive(archive, extracted, error)) {
         return false;
       }
-      expanded.push_back(std::move(extracted));
+      pushUniqueRoot(extracted);
     }
   }
   return true;
@@ -443,7 +486,7 @@ bool collectPrimeFiles(const std::filesystem::path &root,
     return false;
   }
   if (std::filesystem::is_regular_file(root)) {
-    out.push_back(root);
+    out.push_back(std::filesystem::path(normalizePathKey(root)));
     return true;
   }
   if (!std::filesystem::is_directory(root)) {
@@ -481,7 +524,22 @@ bool collectPrimeFiles(const std::filesystem::path &root,
     error = "include directory contains no .prime files: " + std::filesystem::absolute(root).string();
     return false;
   }
-  std::sort(out.begin(), out.end());
+  std::vector<std::pair<std::string, std::filesystem::path>> keyed;
+  keyed.reserve(out.size());
+  std::unordered_set<std::string> seen;
+  for (const auto &path : out) {
+    std::string key = normalizePathKey(path);
+    if (!seen.insert(key).second) {
+      continue;
+    }
+    keyed.push_back({std::move(key), path});
+  }
+  std::sort(keyed.begin(), keyed.end(), [](const auto &lhs, const auto &rhs) { return lhs.first < rhs.first; });
+  out.clear();
+  out.reserve(keyed.size());
+  for (const auto &entry : keyed) {
+    out.push_back(entry.second);
+  }
   return true;
 }
 
@@ -893,16 +951,17 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           allIncludeFiles.insert(allIncludeFiles.end(), includeFiles.begin(), includeFiles.end());
         }
         for (const auto &includeFile : allIncludeFiles) {
-          std::string resolvedText = includeFile.string();
-          if (expanded.count(resolvedText) > 0) {
+          const std::string expandedKey = normalizePathKey(includeFile);
+          if (expanded.count(expandedKey) > 0) {
             continue;
           }
+          std::string resolvedText = includeFile.string();
           std::string included;
           if (!readFile(resolvedText, included)) {
             error = "failed to read include: " + resolvedText;
             return false;
           }
-          expanded.insert(resolvedText);
+          expanded.insert(expandedKey);
           if (!expandIncludesInternal(includeFile.parent_path().string(), included, expanded, error, includeRoots)) {
             return false;
           }

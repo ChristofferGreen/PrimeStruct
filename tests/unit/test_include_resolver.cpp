@@ -219,6 +219,28 @@ TEST_CASE("ignores duplicate includes") {
   CHECK(second == std::string::npos);
 }
 
+TEST_CASE("ignores duplicate includes with equivalent relative paths") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_duplicate_relative";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  writeFile(baseDir / "lib.prime", "// INCLUDE_DUPLICATE_RELATIVE\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime",
+                "include<\"lib.prime\">\n"
+                "include<\"./lib.prime\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  const auto first = source.find("INCLUDE_DUPLICATE_RELATIVE");
+  const auto second = source.find("INCLUDE_DUPLICATE_RELATIVE", first == std::string::npos ? 0 : first + 1);
+  CHECK(first != std::string::npos);
+  CHECK(second == std::string::npos);
+}
+
 TEST_CASE("missing include fails") {
   const std::string srcPath = writeTemp("main_c.prime", "include<\"/tmp/does_not_exist.prime\">\n");
   std::string source;
@@ -505,6 +527,39 @@ TEST_CASE("resolves versioned include from archive root") {
   CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("ZIP_MARKER") != std::string::npos);
+}
+
+TEST_CASE("resolves versioned include from archives in stable order") {
+  if (!hasZipTools()) {
+    return;
+  }
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_stable_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_zip_stable_root";
+  auto archiveSourceA = includeRoot / "archive_src_a";
+  auto archiveSourceB = includeRoot / "archive_src_b";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(archiveSourceA);
+  std::filesystem::create_directories(archiveSourceB);
+
+  writeFile(archiveSourceA / "1.2.0" / "std" / "io" / "lib.prime", "// ZIP_STABLE_A\n");
+  writeFile(archiveSourceB / "1.2.0" / "std" / "io" / "lib.prime", "// ZIP_STABLE_B\n");
+  const std::filesystem::path archivePathZ = includeRoot / "zzz_std_io.zip";
+  const std::filesystem::path archivePathA = includeRoot / "aaa_std_io.zip";
+  CHECK(createZip(archivePathZ, archiveSourceB));
+  CHECK(createZip(archivePathA, archiveSourceA));
+
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<\"/std/io\", version=\"1.2\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("ZIP_STABLE_A") != std::string::npos);
+  CHECK(source.find("ZIP_STABLE_B") == std::string::npos);
 }
 
 TEST_CASE("resolves versioned include from zip root directly") {
