@@ -18,6 +18,7 @@ Legend:
 - ✓ Rework include resolver into an import resolver (expand `import<...>` before transforms/inference; `import<...>` now expands, including versioned entries).
 - ✓ Implement import resolver version-selection rules (1/2-part “latest matching” vs 3-part exact), `_`-prefixed privacy rejection, and duplicate import handling + tests.
 - ✓ Update CLI flags/help: deprecate `--include-path` in favor of `--import-path` (or document the alias).
+- ✓ Add regression coverage for legacy `include<...>` compatibility alias handling in the resolver/text-filter pipeline and compile-run flows (added resolver, text-filter, and compile-run tests that lock alias behavior).
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.

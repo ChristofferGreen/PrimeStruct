@@ -24,6 +24,16 @@ TEST_CASE("pipeline preserves quoted import paths") {
   CHECK(output == source);
 }
 
+TEST_CASE("pipeline preserves quoted legacy include paths") {
+  const std::string source = "include<\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("pipeline preserves import with version attribute") {
   const std::string source =
       "import<\"/std/io\", version=\"1.2\">\n[return<int>]\nmain(){ return(1i32) }\n";

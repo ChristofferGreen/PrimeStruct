@@ -70,6 +70,19 @@ TEST_CASE("expands single import") {
   CHECK(source.find("helper") != std::string::npos);
 }
 
+TEST_CASE("expands single legacy include alias") {
+  const std::string marker = "LEGACY_INCLUDE_ALIAS_MARKER";
+  const std::string libPath = writeTemp("lib_legacy_alias.prime", "// " + marker + "\n");
+  const std::string srcPath = writeTemp("main_legacy_alias.prime", "include<\"" + libPath + "\">\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error.empty());
+  CHECK(source.find(marker) != std::string::npos);
+}
+
 TEST_CASE("expands import with whitespace") {
   const std::string marker = "LIB_WS_MARKER";
   const std::string libPath = writeTemp("lib_ws.prime", "// " + marker + "\n");
