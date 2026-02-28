@@ -233,6 +233,28 @@ TEST_CASE("resolves versioned legacy include alias") {
   CHECK(source.find("INCLUDE_LEGACY_VERSION_120") == std::string::npos);
 }
 
+TEST_CASE("resolves version-first versioned legacy include alias") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_legacy_version_first_base";
+  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_legacy_version_first_root";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(baseDir);
+  std::filesystem::create_directories(includeRoot);
+
+  writeFile(includeRoot / "1.2.1" / "lib.prime", "// INCLUDE_LEGACY_VERSION_FIRST_121\n");
+  writeFile(includeRoot / "1.2.9" / "lib.prime", "// INCLUDE_LEGACY_VERSION_FIRST_129\n");
+  const std::string srcPath =
+      writeFile(baseDir / "main.prime", "include<version='1.2', '/lib.prime'>\n");
+
+  std::string source;
+  std::string error;
+  primec::IncludeResolver resolver;
+  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INCLUDE_LEGACY_VERSION_FIRST_129") != std::string::npos);
+  CHECK(source.find("INCLUDE_LEGACY_VERSION_FIRST_121") == std::string::npos);
+}
+
 TEST_CASE("ignores duplicate imports") {
   const std::string marker = "LIB_B_MARKER";
   const std::string libPath = writeTemp("lib_b.prime",

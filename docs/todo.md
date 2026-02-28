@@ -21,6 +21,7 @@ Legend:
 - ✓ Add regression coverage for legacy `include<...>` compatibility alias handling in the resolver/text-filter pipeline and compile-run flows (added resolver, text-filter, and compile-run tests that lock alias behavior).
 - ✓ Add CLI regression coverage for legacy `--include-path` alias handling in both `primec` and `primevm` (including `--include-path=<dir>` form) via compile-run import expansion coverage.
 - ✓ Add versioned regression coverage for legacy `include<...>` alias handling (`version=...`) in resolver and compile-run flows (added resolver and compile-run tests for version-selector alias behavior).
+- ✓ Add version-first regression coverage for legacy `include<...>` alias handling (`include<version=\"...\", ...>`) in resolver and compile-run flows (added resolver and compile-run tests for version-first alias ordering).
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
