@@ -67,6 +67,29 @@ main() {
   CHECK(error.find("static helper does not accept method-call syntax") != std::string::npos);
 }
 
+TEST_CASE("implicit auto helper inference works through method-call sugar") {
+  const std::string source = R"(
+[struct]
+Box() {
+  [i32] seed{1i32}
+
+  [return<auto>]
+  echo([auto] value) {
+    return(value)
+  }
+}
+
+[return<i32>]
+main() {
+  [Box] box{Box()}
+  return(box.echo(7i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("static helper allows direct calls") {
   const std::string source = R"(
 [struct]

@@ -166,6 +166,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("implicit auto inference supports nested helper calls") {
+  const std::string source = R"(
+[return<auto>]
+identity([auto] value) {
+  return(value)
+}
+
+[return<auto>]
+wrap([auto] value) {
+  return(identity(value))
+}
+
+[return<i32>]
+main() {
+  return(wrap(9i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("infers struct return type without transform") {
   const std::string source = R"(
 [struct]

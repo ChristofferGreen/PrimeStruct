@@ -83,6 +83,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("implicit auto inference crosses imported call graph") {
+  const std::string source = R"(
+import /util
+import /bridge
+namespace util {
+  [public return<auto>]
+  id([auto] value) {
+    return(value)
+  }
+}
+namespace bridge {
+  [public return<auto>]
+  forward([auto] value) {
+    return(id(value))
+  }
+}
+[return<int>]
+main() {
+  return(forward(4i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("import aliases a single definition") {
   const std::string source = R"(
 import /util/inc
