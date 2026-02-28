@@ -216,7 +216,7 @@ module {
   }
 }
 ```
-- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_write`, and `gpu_dispatch`; GLSL only accepts `io_out` and `io_err`.
+- **Effects:** by default, definitions/executions start with `io_out` enabled so logging works without explicit annotations. Authors can override with `[effects(...)]` (e.g., `[effects(global_write, io_out)]`) or tighten to pure behavior by passing `primec --default-effects=none`. Standard library routines permit stdout/stderr logging via `io_out`/`io_err`; backends reject unsupported effects (e.g., GPU code requesting filesystem access). `primec --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]` (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_write`, `gpu_dispatch`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`, `pathspace_schedule`); GLSL accepts `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities.
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by `--default-effects` in the compiler/VM.
 
 ### Backend Type Support (v1)
@@ -225,7 +225,7 @@ module {
 - **GLSL:** numeric/bool scalar locals only (`i32`, `i64`, `u64`, `bool`, `f32`, `f64`); string literals and non-scalar bindings are rejected, and entry definitions must return `void`. `convert<T>` targets match the numeric/bool list above.
 - **GLSL emitter restrictions (current):** at most one `return()` statement; static bindings are rejected; assign/increment/decrement require local mutable targets; control flow must use canonical forms (`if(cond, then() { ... }, else() { ... })`, `loop(count, body() { ... })`, `while(cond, body() { ... })`, `for(init, cond, step, body() { ... })`); builtins require positional args with no template/block arguments, and unsupported builtins fail.
 - **GLSL type support (current):** scalar `bool`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64` only. Using `i64`/`u64` or `f64` emits `GL_ARB_gpu_shader_int64`/`GL_ARB_gpu_shader_fp64` requirements. Arrays, strings, structs, pointers/references, maps, and vectors are rejected.
-- **GLSL effects/capabilities (current):** only `io_out` and `io_err` are accepted as metadata; other effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
+- **GLSL effects/capabilities (current):** `io_out`, `io_err`, and `pathspace_*` metadata entries are accepted; other effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
 - **GLSL determinism (current):** only local scalar bindings are allowed; no static storage or heap/placement transforms. GPU backends are treated as deterministic with no external I/O.
 - **GPU compute (draft):**
   - A definition tagged with `[compute]` is lowered as a GPU kernel. Kernels are `void` and write outputs via buffer parameters rather than return values.
@@ -240,6 +240,8 @@ module {
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
   - **GPU:** `gpu_dispatch` (host-side GPU submission/dispatch).
+  - **PathSpace (internal):** `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`,
+    `pathspace_schedule` (host metadata/event hooks; currently treated as backend metadata/no-op operations).
   - Unknown capability names are errors; capability identifiers are `lower_snake_case`.
 - **Tooling vs runtime visibility:**
   - **Tooling surfaces:** declared effects/capabilities, resolved defaults, entry defaults, and backend allowlist violations (diagnostics).
@@ -1085,7 +1087,7 @@ bad_use_after_take() {
   `JumpIfZero`, `Jump`, `ReturnVoid`, `ReturnI32`, `ReturnI64`, `ReturnF32`, `ReturnF64`, `PrintI32`, `PrintI64`,
   `PrintU64`, `PrintString`, `PrintArgv`, `PrintArgvUnsafe`, `LoadStringByte`, `FileOpenRead`, `FileOpenWrite`,
   `FileOpenAppend`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`, `FileWriteString`,
-  `FileWriteByte`, `FileWriteNewline`.
+  `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`.
 - **GLSL note:** GLSL emission bypasses PSIR and lowers from the canonical AST directly; PSIR opcode validation only applies to VM/native consumers.
 - **PSIR versioning:** current portable IR is PSIR v15 (adds execution metadata on top of v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** a single entry frame stores locals in 16-byte slots; the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the local slot space and must be 16-byte aligned.

@@ -101,6 +101,73 @@ main() {
         "VM lowering error: vm backend does not support effect: render_graph on /main\n");
 }
 
+TEST_CASE("accepts vm support-matrix effects") {
+  const std::string source = R"(
+[return<int> effects(io_out, io_err, heap_alloc, file_write, gpu_dispatch,
+                     pathspace_notify, pathspace_insert, pathspace_take,
+                     pathspace_bind, pathspace_schedule)]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_vm_support_matrix_effects.prime", source);
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 1);
+}
+
+TEST_CASE("accepts native support-matrix effects") {
+  const std::string source = R"(
+[return<int> effects(io_out, io_err, heap_alloc, file_write, gpu_dispatch,
+                     pathspace_notify, pathspace_insert, pathspace_take,
+                     pathspace_bind, pathspace_schedule)]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_support_matrix_effects.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_support_matrix_effects_exe").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("rejects vm support-matrix effect outside allowlist") {
+  const std::string source = R"(
+[return<int> effects(global_write)]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_vm_support_matrix_effect_reject.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_support_matrix_effect_reject_err.txt").string();
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "VM lowering error: vm backend does not support effect: global_write on /main\n");
+}
+
+TEST_CASE("rejects native support-matrix effect outside allowlist") {
+  const std::string source = R"(
+[return<int> effects(global_write)]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_support_matrix_effect_reject.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_support_matrix_effect_reject_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_native_support_matrix_effect_reject_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) ==
+        "Native lowering error: native backend does not support effect: global_write on /main\n");
+}
+
 TEST_CASE("compiles and runs namespace entry") {
   const std::string source = R"(
 namespace demo {

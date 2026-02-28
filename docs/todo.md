@@ -118,7 +118,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Implement VM/native string indexing (`at` / `at_unsafe`) for string literals/bindings or update the SyntaxSpec (VM/native support literal/binding indexing; native tests added).
 - ✓ Update PSIR version history in docs (serializer is at v12; docs list up to v12).
 - ✓ Add an IR validation pass immediately before backend emission to reject malformed/unsupported canonical IR earlier (`validateIrModule` now runs after IR lowering for VM/native/IR emit paths in `primec` and `primevm`, with dedicated IR pipeline validation tests).
-- ○ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec.
+- ✓ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec (VM/native/GLSL effect+type matrix compile-run tests plus an IR opcode allowlist lock test).
 
 **Docs Alignment**
 - ○ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term.

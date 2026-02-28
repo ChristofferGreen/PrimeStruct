@@ -352,6 +352,54 @@ main() {
   CHECK(output.find("void main()") != std::string::npos);
 }
 
+TEST_CASE("glsl emitter accepts support-matrix effects and capabilities") {
+  const std::string source = R"(
+[return<void>
+ effects(io_out, io_err, pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)
+ capabilities(io_out, io_err, pathspace_notify, pathspace_insert, pathspace_take, pathspace_bind, pathspace_schedule)]
+main() {
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_matrix_effects.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_effects.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).find("void main()") != std::string::npos);
+}
+
+TEST_CASE("glsl emitter supports support-matrix scalar bindings") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [bool] enabled{true}
+  [i32] i{1i32}
+  [i64] j{2i64}
+  [u64] k{3u64}
+  [f32] x{1.0f32}
+  [f64] y{2.0f64}
+  [i32 mut] sink{0i32}
+  if(enabled, then() { assign(sink, plus(i, 1i32)) }, else() { })
+  return()
+}
+)";
+  const std::string srcPath = writeTemp("compile_glsl_support_matrix_scalars.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_glsl_support_matrix_scalars.glsl").string();
+
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("bool enabled") != std::string::npos);
+  CHECK(output.find("int i") != std::string::npos);
+  CHECK(output.find("int64_t j") != std::string::npos);
+  CHECK(output.find("uint64_t k") != std::string::npos);
+  CHECK(output.find("float x") != std::string::npos);
+  CHECK(output.find("double y") != std::string::npos);
+}
+
 TEST_CASE("glsl emitter handles math constants") {
   const std::string source = R"(
 [return<void>]

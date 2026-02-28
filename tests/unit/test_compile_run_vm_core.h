@@ -22,6 +22,37 @@ main() {
   CHECK(runCommand(runCmd) == 8);
 }
 
+TEST_CASE("vm supports support-matrix binding types") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] i{1i32}
+  [i64] j{2i64}
+  [u64] k{3u64}
+  [bool] b{true}
+  [f32] x{1.5f32}
+  [f64] y{2.5f64}
+  [array<i32>] arr{array<i32>(1i32, 2i32, 3i32)}
+  [vector<i32>] vec{vector<i32>(4i32, 5i32)}
+  [map<i32, i32>] table{map<i32, i32>(1i32, 7i32)}
+  [string] text{"ok"utf8}
+  return(plus(
+    plus(
+      plus(convert<int>(i), convert<int>(j)),
+      plus(convert<int>(k), if(b, then() { 1i32 }, else() { 0i32 }))
+    ),
+    plus(
+      plus(convert<int>(x), convert<int>(y)),
+      plus(count(arr), plus(count(vec), plus(count(table), count(text))))
+    )
+  ))
+}
+)";
+  const std::string srcPath = writeTemp("vm_support_matrix_types.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 18);
+}
+
 TEST_CASE("runs vm with raw string literal output") {
   const std::string source = R"(
 [return<int> effects(io_out)]
