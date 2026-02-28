@@ -343,6 +343,109 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
+TEST_CASE("transform list none clears prior defaults") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("no suffix")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_none_clears_defaults.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_none_clears_defaults_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_none_clears_defaults_err.txt").string();
+
+  const std::string clearedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --transform-list=default,none 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(clearedCmd) == 2);
+  CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
+        std::string::npos);
+
+  const std::string restoredCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --transform-list=none,default";
+  CHECK(runCommand(restoredCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("transform list semicolons split tokens") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("no suffix")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_semicolon_split.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_semicolon_split_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_semicolon_split_err.txt").string();
+
+  const std::string clearedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --transform-list=default\\;none 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(clearedCmd) == 2);
+  CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
+        std::string::npos);
+
+  const std::string restoredCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --transform-list=default\\;none\\;default";
+  CHECK(runCommand(restoredCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("transform list whitespace splits tokens") {
+  const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("no suffix")
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_whitespace_split.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_whitespace_split_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_whitespace_split_err.txt").string();
+
+  const std::string clearedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --transform-list=" + quoteShellArg("default none") +
+      " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(clearedCmd) == 2);
+  CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
+        std::string::npos);
+
+  const std::string restoredCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --transform-list=" + quoteShellArg("default none default");
+  CHECK(runCommand(restoredCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
+TEST_CASE("transform list rejects unknown transform name") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_transform_list_unknown_name.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_transform_list_unknown_name_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --transform-list=not_a_transform 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown transform: not_a_transform") != std::string::npos);
+}
+
 TEST_CASE("transform list none rejects infix operators") {
   const std::string source = R"(
 [return<int>]
@@ -527,6 +630,440 @@ main() {
   CHECK(readFile(errPath).find("return type mismatch") != std::string::npos);
 }
 
+TEST_CASE("semantic transform rules prefer later matching entry") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_rule_order.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_order_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_order_err.txt").string();
+
+  const std::string disableLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main=single_type_to_return\\;/main=none";
+  CHECK(runCommand(disableLastCmd) == 0);
+
+  const std::string enableLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main=none\\;/main=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(enableLastCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules clear on none token") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_rules_none_token.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_none_token_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rules_none_token_err.txt").string();
+
+  const std::string clearedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main=single_type_to_return\\;none";
+  CHECK(runCommand(clearedCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+
+  const std::string reappliedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=none\\;/main=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(reappliedCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules ignore empty rule tokens") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_empty_tokens.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_empty_tokens_err.txt").string();
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none --semantic-transform-rules " +
+      quoteShellArg(";;/main=single_type_to_return;;") + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(ruleCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules prefer later wildcard match") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_rule_wildcard_order.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_wildcard_order_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_rule_wildcard_order_err.txt").string();
+
+  const std::string wildcardLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main=single_type_to_return\\;/*=none";
+  CHECK(runCommand(wildcardLastCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+
+  const std::string exactLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/*=none\\;/main=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(exactLastCmd) == 2);
+  CHECK(readFile(errPath).find("return type mismatch") != std::string::npos);
+}
+
+TEST_CASE("semantic transform root wildcard applies to top-level definitions") {
+  const std::string source = R"(
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_root_wildcard_top_level.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_root_wildcard_top_level_err.txt")
+          .string();
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/*=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(ruleCmd) == 2);
+  CHECK(readFile(errPath).find("single_type_to_return requires a type transform on /main") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject recurse without wildcard") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_bad_recurse_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_bad_recurse_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main:recurse=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule recursion requires a '/*' suffix") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject empty transform list") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_empty_list_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_empty_list_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main= 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule list cannot be empty") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject non-trailing wildcard") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_bad_wildcard_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_bad_wildcard_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/ma*in=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule '*' is only allowed as trailing '/*'") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject path without slash prefix") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_missing_slash_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_missing_slash_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=main=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule path must start with '/': main") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject missing equals") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_missing_equals_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_missing_equals_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule must include '=': /main") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject empty path") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_empty_path_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_empty_path_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules==single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule path cannot be empty") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject text-only transform name") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_text_only_name.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_text_only_name_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("unsupported semantic transform: operators") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules reject unknown transform name") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_unknown_name.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_unknown_name_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main=not_a_transform 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("unknown transform: not_a_transform") != std::string::npos);
+}
+
+TEST_CASE("semantic transform rules accept recursive suffix alias") {
+  const std::string source = R"(
+[i32]
+main() {
+  [i32]
+  helper() {
+    inner() {
+      return(1u64)
+    }
+    return(0i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_recursive_alias.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_recursive_alias_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_recursive_alias_err.txt").string();
+
+  const std::string nonRecursiveCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none --semantic-transform-rules=/main/*=single_type_to_return";
+  CHECK(runCommand(nonRecursiveCmd) == 0);
+
+  const std::string recursiveAliasCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main/*:recursive=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(recursiveAliasCmd) == 2);
+  CHECK(readFile(errPath).find("single_type_to_return requires a type transform on /main/helper/inner") !=
+        std::string::npos);
+}
+
+TEST_CASE("semantic transform wildcard does not match sibling prefix") {
+  const std::string source = R"(
+[i32]
+mainly() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_wildcard_prefix.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_wildcard_prefix_exe").string();
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /mainly --semantic-transforms=none "
+      "--semantic-transform-rules=/main/*=single_type_to_return";
+  CHECK(runCommand(ruleCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("semantic transform wildcard does not match base path") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_wildcard_base.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_wildcard_base_exe").string();
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/main/*=single_type_to_return";
+  CHECK(runCommand(ruleCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("semantic transform rules ignore unrelated exact path") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_unrelated_exact_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_unrelated_exact_path_exe").string();
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/other=single_type_to_return";
+  CHECK(runCommand(ruleCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("semantic transform rules ignore unrelated wildcard path") {
+  const std::string source = R"(
+[i32]
+mainly() {
+  return(1u64)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_transform_unrelated_wildcard_path.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_transform_unrelated_wildcard_path_exe").string();
+
+  const std::string ruleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /mainly --semantic-transforms=none "
+      "--semantic-transform-rules=/other/*=single_type_to_return";
+  CHECK(runCommand(ruleCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
+TEST_CASE("semantic root wildcard only recurses when requested") {
+  const std::string source = R"(
+[i32]
+main() {
+  [i32]
+  helper() {
+    inner() {
+      return(1u64)
+    }
+    return(0i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_semantic_root_wildcard_recurse.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_root_wildcard_recurse_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_semantic_root_wildcard_recurse_err.txt").string();
+
+  const std::string noRecurseCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --semantic-transforms=none --semantic-transform-rules=/*=single_type_to_return";
+  CHECK(runCommand(noRecurseCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+
+  const std::string recurseCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --semantic-transforms=none "
+      "--semantic-transform-rules=/*:recurse=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(recurseCmd) == 2);
+  CHECK(readFile(errPath).find("single_type_to_return requires a type transform on /main/helper/inner") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantic transforms ignore text transforms") {
   const std::string source = R"(
 [operators i32]
@@ -695,6 +1232,82 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
+TEST_CASE("text transform rules ignore unrelated wildcard path") {
+  const std::string source = R"(
+[return<int>]
+mainly() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_unrelated_wildcard_path.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_unrelated_wildcard_path_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /mainly --text-transforms=none --text-transform-rules=/other/*=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
+TEST_CASE("text transform rules ignore unrelated exact path") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_unrelated_exact_path.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_unrelated_exact_path_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none --text-transform-rules=/other=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
+TEST_CASE("text transform wildcard does not match base path") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_wildcard_base_path.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_base_path_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none --text-transform-rules=/main/*=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
+TEST_CASE("text transform wildcard does not match sibling prefix") {
+  const std::string source = R"(
+[return<int>]
+mainly() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_wildcard_sibling_prefix.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_sibling_prefix_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /mainly --text-transforms=none --text-transform-rules=/main/*=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
 TEST_CASE("text transform rules apply without transform lists") {
   const std::string source = R"(
 main() {
@@ -710,6 +1323,306 @@ main() {
       " --entry /main --text-transforms=none --text-transform-rules=/main=operators";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules ignore empty rule tokens") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_empty_tokens.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_empty_tokens_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules " +
+      quoteShellArg(";;/main=operators;;");
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules none token without follow-up keeps rules empty") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_none_only.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_none_only_err.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none --text-transform-rules=none 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+}
+
+TEST_CASE("text transform rules prefer later matching entry") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_order.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_text_rule_order_exe").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_text_rule_order_err.txt").string();
+
+  const std::string disableLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main=operators\\;/main=none 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(disableLastCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+
+  const std::string enableLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none "
+      "--text-transform-rules=/main=none\\;/main=operators";
+  CHECK(runCommand(enableLastCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules prefer later wildcard match") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_wildcard_order.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_order_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_wildcard_order_err.txt").string();
+
+  const std::string wildcardLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main=operators\\;/*=none 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(wildcardLastCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+
+  const std::string exactLastCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none "
+      "--text-transform-rules=/*=none\\;/main=operators";
+  CHECK(runCommand(exactLastCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform root wildcard applies to top-level definitions") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_root_wildcard_top_level.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_root_wildcard_top_level_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=/*=operators";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules clear on none token") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32+2i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_none_token.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_none_token_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_none_token_err.txt").string();
+
+  const std::string clearedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main=operators\\;none 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(clearedCmd) == 2);
+  CHECK(readFile(errPath).find("Parse error") != std::string::npos);
+
+  const std::string reappliedCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=none\\;/main=operators";
+  CHECK(runCommand(reappliedCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules reject missing equals") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_missing_equals.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_missing_equals_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule must include '=': /main") != std::string::npos);
+}
+
+TEST_CASE("text transform rules reject empty transform list") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_empty_list_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_empty_list_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main= 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule list cannot be empty") != std::string::npos);
+}
+
+TEST_CASE("text transform rules reject empty path") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_empty_path_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_empty_path_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules==operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule path cannot be empty") != std::string::npos);
+}
+
+TEST_CASE("text transform rules reject path without slash prefix") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_missing_slash_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_missing_slash_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=main=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule path must start with '/': main") != std::string::npos);
+}
+
+TEST_CASE("text transform rules reject non-trailing wildcard") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_bad_wildcard_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_bad_wildcard_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/ma*in=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule '*' is only allowed as trailing '/*'") !=
+        std::string::npos);
+}
+
+TEST_CASE("text transform rules reject recurse without wildcard") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_bad_recurse_rule.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_bad_recurse_rule_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main:recurse=operators 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("transform rule recursion requires a '/*' suffix") != std::string::npos);
+}
+
+TEST_CASE("text transform rules reject semantic-only transform name") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_semantic_only_name.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_semantic_only_name_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main=single_type_to_return 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("unsupported text transform: single_type_to_return") != std::string::npos);
+}
+
+TEST_CASE("text transform rules reject unknown transform name") {
+  const std::string source = R"(
+[i32]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_unknown_name.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_unknown_name_err.txt").string();
+
+  const std::string badRuleCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) +
+      " -o /dev/null --entry /main --text-transforms=none "
+      "--text-transform-rules=/main=not_a_transform 2> " +
+      quoteShellArg(errPath);
+  CHECK(runCommand(badRuleCmd) == 2);
+  CHECK(readFile(errPath).find("unknown transform: not_a_transform") != std::string::npos);
 }
 
 TEST_CASE("text transform rules apply to nested definitions") {
@@ -786,6 +1699,35 @@ main() {
       "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
       " --entry /main --text-transforms=none --text-transform-rules=/std/math/*:recurse=operators";
   CHECK(runCommand(recurseCmd) == 0);
+  CHECK(runCommand(exePath) == 3);
+}
+
+TEST_CASE("text transform rules accept recursive suffix alias") {
+  const std::string source = R"(
+namespace std {
+  namespace math {
+    namespace ops {
+      [return<int>]
+      add() {
+        return(1i32+2i32)
+      }
+    }
+  }
+}
+
+[return<int>]
+main() {
+  return(/std/math/ops/add())
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_rule_recursive_alias.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_text_rule_recursive_alias_exe").string();
+
+  const std::string recursiveAliasCmd =
+      "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " + quoteShellArg(exePath) +
+      " --entry /main --text-transforms=none --text-transform-rules=/std/math/*:recursive=operators";
+  CHECK(runCommand(recursiveAliasCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 }
 
