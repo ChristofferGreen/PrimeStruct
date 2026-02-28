@@ -1,4 +1,5 @@
     bool hasReturnTransformLocal = false;
+    bool hasReturnAuto = false;
     for (const auto &transform : def.transforms) {
       if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
           transform.name == "gpu_lane" || transform.name == "no_padding" ||
@@ -15,6 +16,10 @@
         continue;
       }
       const std::string &typeName = transform.templateArgs.front();
+      if (typeName == "auto") {
+        hasReturnAuto = true;
+        continue;
+      }
       bool resultHasValue = false;
       LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
       std::string resultErrorType;
@@ -55,7 +60,208 @@
     }
 
     if (hasReturnTransformLocal) {
-      if (!info.returnsVoid) {
+      if (hasReturnAuto) {
+        LocalMap localsForInference;
+        for (const auto &param : def.parameters) {
+          LocalInfo paramInfo;
+          paramInfo.index = 0;
+          paramInfo.isMutable = isBindingMutable(param);
+          paramInfo.kind = bindingKind(param);
+          if (hasExplicitBindingTypeTransform(param)) {
+            paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+          } else if (param.args.size() == 1 && paramInfo.kind == LocalInfo::Kind::Value) {
+            paramInfo.valueKind = inferExprKind(param.args.front(), localsForInference);
+            if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+              paramInfo.valueKind = LocalInfo::ValueKind::Int32;
+            }
+          } else {
+            paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+          }
+          paramInfo.isFileError = isFileErrorBinding(param);
+          applyStructArrayInfo(param, paramInfo);
+          applyStructValueInfo(param, paramInfo);
+          if (isStringBinding(param)) {
+            if (paramInfo.kind != LocalInfo::Kind::Value) {
+              error = "native backend does not support string pointers or references";
+              returnInferenceStack.erase(path);
+              return false;
+            }
+          }
+          if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown && paramInfo.structTypeName.empty()) {
+            error = "native backend requires typed parameters on " + def.fullPath;
+            returnInferenceStack.erase(path);
+            return false;
+          }
+          localsForInference.emplace(param.name, paramInfo);
+        }
+
+        LocalInfo::ValueKind inferred = LocalInfo::ValueKind::Unknown;
+        bool inferredArray = false;
+        LocalInfo::ValueKind inferredArrayKind = LocalInfo::ValueKind::Unknown;
+        bool sawReturnLocal = false;
+        bool inferredVoid = false;
+        auto recordInferredReturn = [&](const Expr &valueExpr, const LocalMap &activeLocals) -> bool {
+          LocalInfo::ValueKind arrayKind = inferArrayElementKind(valueExpr, activeLocals);
+          if (arrayKind != LocalInfo::ValueKind::Unknown) {
+            if (arrayKind == LocalInfo::ValueKind::String) {
+              error = "native backend does not support string array return types on " + def.fullPath;
+              return false;
+            }
+            if (!inferredArray && inferred == LocalInfo::ValueKind::Unknown) {
+              inferredArray = true;
+              inferredArrayKind = arrayKind;
+              return true;
+            }
+            if (inferredArray && inferredArrayKind == arrayKind) {
+              return true;
+            }
+            error = "conflicting return types on " + def.fullPath;
+            return false;
+          }
+          LocalInfo::ValueKind kind = inferExprKind(valueExpr, activeLocals);
+          if (kind == LocalInfo::ValueKind::Unknown) {
+            error = "unable to infer return type on " + def.fullPath;
+            return false;
+          }
+          if (inferredArray) {
+            error = "conflicting return types on " + def.fullPath;
+            return false;
+          }
+          if (inferred == LocalInfo::ValueKind::Unknown) {
+            inferred = kind;
+            return true;
+          }
+          if (inferred != kind) {
+            error = "conflicting return types on " + def.fullPath;
+            return false;
+          }
+          return true;
+        };
+        std::function<bool(const Expr &, LocalMap &)> inferStatement;
+        inferStatement = [&](const Expr &stmt, LocalMap &activeLocals) -> bool {
+          if (stmt.isBinding) {
+            LocalInfo bindingInfo;
+            bindingInfo.index = 0;
+            bindingInfo.isMutable = isBindingMutable(stmt);
+            bindingInfo.kind = bindingKind(stmt);
+            if (hasExplicitBindingTypeTransform(stmt)) {
+              bindingInfo.valueKind = bindingValueKind(stmt, bindingInfo.kind);
+            } else if (stmt.args.size() == 1 && bindingInfo.kind == LocalInfo::Kind::Value) {
+              bindingInfo.valueKind = inferExprKind(stmt.args.front(), activeLocals);
+              if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+                bindingInfo.valueKind = LocalInfo::ValueKind::Int32;
+              }
+            } else {
+              bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
+            }
+            bindingInfo.isFileError = isFileErrorBinding(stmt);
+            applyStructArrayInfo(stmt, bindingInfo);
+            applyStructValueInfo(stmt, bindingInfo);
+            if (bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
+                bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && stmt.args.size() == 1) {
+              std::string inferredStruct = inferStructExprPath(stmt.args.front(), activeLocals);
+              if (!inferredStruct.empty()) {
+                bindingInfo.structTypeName = inferredStruct;
+              }
+            }
+            if (bindingInfo.valueKind == LocalInfo::ValueKind::String && bindingInfo.kind != LocalInfo::Kind::Value) {
+              error = "native backend does not support string pointers or references";
+              return false;
+            }
+            if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingInfo.structTypeName.empty()) {
+              error = "native backend requires typed bindings on " + def.fullPath;
+              return false;
+            }
+            activeLocals.emplace(stmt.name, bindingInfo);
+            return true;
+          }
+          if (isReturnCall(stmt)) {
+            sawReturnLocal = true;
+            if (stmt.args.empty()) {
+              inferredVoid = true;
+              return true;
+            }
+            return recordInferredReturn(stmt.args.front(), activeLocals);
+          }
+          if (isMatchCall(stmt)) {
+            Expr expanded;
+            if (!lowerMatchToIf(stmt, expanded, error)) {
+              return false;
+            }
+            return inferStatement(expanded, activeLocals);
+          }
+          if (isIfCall(stmt) && stmt.args.size() == 3) {
+            const Expr &thenBlock = stmt.args[1];
+            const Expr &elseBlock = stmt.args[2];
+            auto walkBlock = [&](const Expr &block) -> bool {
+              LocalMap blockLocals = activeLocals;
+              for (const auto &bodyStmt : block.bodyArguments) {
+                if (!inferStatement(bodyStmt, blockLocals)) {
+                  return false;
+                }
+              }
+              return true;
+            };
+            if (!walkBlock(thenBlock)) {
+              return false;
+            }
+            if (!walkBlock(elseBlock)) {
+              return false;
+            }
+          }
+          if (isRepeatCall(stmt)) {
+            LocalMap blockLocals = activeLocals;
+            for (const auto &bodyStmt : stmt.bodyArguments) {
+              if (!inferStatement(bodyStmt, blockLocals)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        };
+
+        LocalMap locals = localsForInference;
+        for (const auto &stmt : def.statements) {
+          if (!inferStatement(stmt, locals)) {
+            returnInferenceStack.erase(path);
+            return false;
+          }
+        }
+        if (def.returnExpr.has_value()) {
+          sawReturnLocal = true;
+          if (!recordInferredReturn(*def.returnExpr, locals)) {
+            returnInferenceStack.erase(path);
+            return false;
+          }
+        }
+        if (!sawReturnLocal) {
+          error = "unable to infer return type on " + def.fullPath;
+          returnInferenceStack.erase(path);
+          return false;
+        }
+        if (inferredVoid) {
+          if (inferred != LocalInfo::ValueKind::Unknown || inferredArray) {
+            error = "conflicting return types on " + def.fullPath;
+            returnInferenceStack.erase(path);
+            return false;
+          }
+          info.returnsVoid = true;
+        } else {
+          info.returnsVoid = false;
+          if (inferredArray) {
+            info.returnsArray = true;
+            info.kind = inferredArrayKind;
+          } else {
+            info.returnsArray = false;
+            info.kind = inferred;
+          }
+          if (info.kind == LocalInfo::ValueKind::Unknown) {
+            error = "unable to infer return type on " + def.fullPath;
+            returnInferenceStack.erase(path);
+            return false;
+          }
+        }
+      } else if (!info.returnsVoid) {
         if (info.kind == LocalInfo::ValueKind::Unknown) {
           error = "native backend does not support return type on " + def.fullPath;
           returnInferenceStack.erase(path);

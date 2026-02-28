@@ -387,3 +387,210 @@ main() {
   CHECK(result == 0);
 }
 
+TEST_CASE("ir and semantics agree on conflicting auto returns in statements") {
+  auto makeProgram = []() {
+    auto makeLiteral = [](uint64_t value) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Literal;
+      expr.literalValue = value;
+      expr.intWidth = 32;
+      return expr;
+    };
+    auto makeBool = [](bool value) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::BoolLiteral;
+      expr.boolValue = value;
+      return expr;
+    };
+    auto makeCall = [](const std::string &name, std::vector<primec::Expr> args = {}) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Call;
+      expr.name = name;
+      expr.args = std::move(args);
+      return expr;
+    };
+
+    primec::Program program;
+    primec::Definition pick;
+    pick.name = "/pick";
+    pick.fullPath = "/pick";
+    primec::Transform pickReturn;
+    pickReturn.name = "return";
+    pickReturn.templateArgs = {"auto"};
+    pick.transforms.push_back(std::move(pickReturn));
+    pick.hasReturnStatement = true;
+    pick.statements.push_back(makeCall("/return", {makeLiteral(1)}));
+    pick.statements.push_back(makeCall("/return", {makeBool(true)}));
+    program.definitions.push_back(std::move(pick));
+
+    primec::Definition mainDef;
+    mainDef.name = "/main";
+    mainDef.fullPath = "/main";
+    primec::Transform mainReturn;
+    mainReturn.name = "return";
+    mainReturn.templateArgs = {"i32"};
+    mainDef.transforms.push_back(std::move(mainReturn));
+    mainDef.hasReturnStatement = true;
+    mainDef.statements.push_back(makeCall("/return", {makeCall("/pick")}));
+    program.definitions.push_back(std::move(mainDef));
+    return program;
+  };
+
+  primec::Program semanticsProgram = makeProgram();
+  std::string semanticsError;
+  CHECK_FALSE(validateProgram(semanticsProgram, "/main", semanticsError));
+  CHECK(semanticsError.find("conflicting return types on /pick") != std::string::npos);
+
+  primec::Program lowerProgram = makeProgram();
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  std::string lowerError;
+  CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
+  CHECK(lowerError.find("conflicting return types on /pick") != std::string::npos);
+}
+
+TEST_CASE("ir and semantics agree on unresolved auto return in statements") {
+  auto makeProgram = []() {
+    auto makeLiteral = [](uint64_t value) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Literal;
+      expr.literalValue = value;
+      expr.intWidth = 32;
+      return expr;
+    };
+    auto makeBool = [](bool value) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::BoolLiteral;
+      expr.boolValue = value;
+      return expr;
+    };
+    auto makeEnvelope = [](const std::string &name, primec::Expr valueExpr) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Call;
+      expr.name = name;
+      expr.hasBodyArguments = true;
+      expr.bodyArguments.push_back(std::move(valueExpr));
+      return expr;
+    };
+    auto makeCall = [](const std::string &name, std::vector<primec::Expr> args = {}) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Call;
+      expr.name = name;
+      expr.args = std::move(args);
+      return expr;
+    };
+
+    primec::Expr unresolvedIf = makeCall("/if", {makeBool(true),
+                                                  makeEnvelope("then", makeLiteral(1)),
+                                                  makeEnvelope("else", makeBool(true))});
+
+    primec::Program program;
+    primec::Definition pick;
+    pick.name = "/pick";
+    pick.fullPath = "/pick";
+    primec::Transform pickReturn;
+    pickReturn.name = "return";
+    pickReturn.templateArgs = {"auto"};
+    pick.transforms.push_back(std::move(pickReturn));
+    pick.hasReturnStatement = true;
+    pick.statements.push_back(makeCall("/return", {std::move(unresolvedIf)}));
+    program.definitions.push_back(std::move(pick));
+
+    primec::Definition mainDef;
+    mainDef.name = "/main";
+    mainDef.fullPath = "/main";
+    primec::Transform mainReturn;
+    mainReturn.name = "return";
+    mainReturn.templateArgs = {"i32"};
+    mainDef.transforms.push_back(std::move(mainReturn));
+    mainDef.hasReturnStatement = true;
+    mainDef.statements.push_back(makeCall("/return", {makeCall("/pick")}));
+    program.definitions.push_back(std::move(mainDef));
+    return program;
+  };
+
+  primec::Program semanticsProgram = makeProgram();
+  std::string semanticsError;
+  CHECK_FALSE(validateProgram(semanticsProgram, "/main", semanticsError));
+  CHECK(semanticsError.find("unable to infer return type on /pick") != std::string::npos);
+
+  primec::Program lowerProgram = makeProgram();
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  std::string lowerError;
+  CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
+  CHECK(lowerError.find("unable to infer return type on /pick") != std::string::npos);
+}
+
+TEST_CASE("ir and semantics agree on unresolved auto return_expr") {
+  auto makeProgram = []() {
+    auto makeLiteral = [](uint64_t value) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Literal;
+      expr.literalValue = value;
+      expr.intWidth = 32;
+      return expr;
+    };
+    auto makeBool = [](bool value) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::BoolLiteral;
+      expr.boolValue = value;
+      return expr;
+    };
+    auto makeEnvelope = [](const std::string &name, primec::Expr valueExpr) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Call;
+      expr.name = name;
+      expr.hasBodyArguments = true;
+      expr.bodyArguments.push_back(std::move(valueExpr));
+      return expr;
+    };
+    auto makeCall = [](const std::string &name, std::vector<primec::Expr> args = {}) {
+      primec::Expr expr;
+      expr.kind = primec::Expr::Kind::Call;
+      expr.name = name;
+      expr.args = std::move(args);
+      return expr;
+    };
+
+    primec::Expr unresolvedIf = makeCall("/if", {makeBool(true),
+                                                  makeEnvelope("then", makeLiteral(1)),
+                                                  makeEnvelope("else", makeBool(true))});
+
+    primec::Program program;
+    primec::Definition pick;
+    pick.name = "/pick";
+    pick.fullPath = "/pick";
+    primec::Transform pickReturn;
+    pickReturn.name = "return";
+    pickReturn.templateArgs = {"auto"};
+    pick.transforms.push_back(std::move(pickReturn));
+    pick.returnExpr = std::move(unresolvedIf);
+    pick.hasReturnStatement = false;
+    program.definitions.push_back(std::move(pick));
+
+    primec::Definition mainDef;
+    mainDef.name = "/main";
+    mainDef.fullPath = "/main";
+    primec::Transform mainReturn;
+    mainReturn.name = "return";
+    mainReturn.templateArgs = {"i32"};
+    mainDef.transforms.push_back(std::move(mainReturn));
+    mainDef.hasReturnStatement = true;
+    mainDef.statements.push_back(makeCall("/return", {makeCall("/pick")}));
+    program.definitions.push_back(std::move(mainDef));
+    return program;
+  };
+
+  primec::Program semanticsProgram = makeProgram();
+  std::string semanticsError;
+  CHECK_FALSE(validateProgram(semanticsProgram, "/main", semanticsError));
+  CHECK(semanticsError.find("unable to infer return type on /pick") != std::string::npos);
+
+  primec::Program lowerProgram = makeProgram();
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  std::string lowerError;
+  CHECK_FALSE(lowerer.lower(lowerProgram, "/main", {}, {}, module, lowerError));
+  CHECK(lowerError.find("unable to infer return type on /pick") != std::string::npos);
+}

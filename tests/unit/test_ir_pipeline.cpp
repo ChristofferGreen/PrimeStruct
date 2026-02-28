@@ -32,6 +32,14 @@ bool parseAndValidate(const std::string &source,
                       std::vector<std::string> defaultEffects = {}) {
   return parseAndValidate(source, program, error, defaultEffects, defaultEffects);
 }
+
+bool validateProgram(primec::Program &program,
+                     const std::string &entry,
+                     std::string &error,
+                     std::vector<std::string> defaultEffects = {}) {
+  primec::Semantics semantics;
+  return semantics.validate(program, entry, error, defaultEffects, defaultEffects);
+}
 } // namespace
 
 #include "test_ir_pipeline_serialization.h"

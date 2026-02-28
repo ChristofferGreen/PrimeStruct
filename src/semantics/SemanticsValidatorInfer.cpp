@@ -1220,6 +1220,54 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
   bool sawReturn = false;
   const auto &defParams = paramsByDef_[def.fullPath];
   std::unordered_map<std::string, BindingInfo> locals;
+  auto recordInferredReturn = [&](const Expr *valueExpr,
+                                  const std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
+    ReturnKind exprKind = ReturnKind::Void;
+    std::string exprStructPath;
+    if (valueExpr != nullptr) {
+      exprKind = inferExprReturnKind(*valueExpr, defParams, activeLocals);
+      if (exprKind == ReturnKind::Array) {
+        exprStructPath = inferStructReturnPath(*valueExpr, defParams, activeLocals);
+      }
+    }
+    if (exprKind == ReturnKind::Unknown) {
+      if (error_.empty()) {
+        error_ = "unable to infer return type on " + def.fullPath;
+      }
+      return false;
+    }
+    if (inferred == ReturnKind::Unknown) {
+      inferred = exprKind;
+      if (!exprStructPath.empty()) {
+        inferredStructPath = exprStructPath;
+      }
+      return true;
+    }
+    if (inferred != exprKind) {
+      if (error_.empty()) {
+        error_ = "conflicting return types on " + def.fullPath;
+      }
+      return false;
+    }
+    if (inferred == ReturnKind::Array) {
+      if (!exprStructPath.empty()) {
+        if (inferredStructPath.empty()) {
+          inferredStructPath = exprStructPath;
+        } else if (inferredStructPath != exprStructPath) {
+          if (error_.empty()) {
+            error_ = "conflicting return types on " + def.fullPath;
+          }
+          return false;
+        }
+      } else if (!inferredStructPath.empty()) {
+        if (error_.empty()) {
+          error_ = "conflicting return types on " + def.fullPath;
+        }
+        return false;
+      }
+    }
+    return true;
+  };
   std::function<bool(const Expr &, std::unordered_map<std::string, BindingInfo> &)> inferStatement;
   inferStatement = [&](const Expr &stmt, std::unordered_map<std::string, BindingInfo> &activeLocals) -> bool {
     if (stmt.isBinding) {
@@ -1243,51 +1291,8 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
     }
     if (isReturnCall(stmt)) {
       sawReturn = true;
-      ReturnKind exprKind = ReturnKind::Void;
-      std::string exprStructPath;
-      if (!stmt.args.empty()) {
-        exprKind = inferExprReturnKind(stmt.args.front(), defParams, activeLocals);
-        if (exprKind == ReturnKind::Array) {
-          exprStructPath = inferStructReturnPath(stmt.args.front(), defParams, activeLocals);
-        }
-      }
-      if (exprKind == ReturnKind::Unknown) {
-        if (error_.empty()) {
-          error_ = "unable to infer return type on " + def.fullPath;
-        }
-        return false;
-      }
-      if (inferred == ReturnKind::Unknown) {
-        inferred = exprKind;
-        if (!exprStructPath.empty()) {
-          inferredStructPath = exprStructPath;
-        }
-        return true;
-      }
-      if (inferred != exprKind) {
-        if (error_.empty()) {
-          error_ = "conflicting return types on " + def.fullPath;
-        }
-        return false;
-      }
-      if (inferred == ReturnKind::Array) {
-        if (!exprStructPath.empty()) {
-          if (inferredStructPath.empty()) {
-            inferredStructPath = exprStructPath;
-          } else if (inferredStructPath != exprStructPath) {
-            if (error_.empty()) {
-              error_ = "conflicting return types on " + def.fullPath;
-            }
-            return false;
-          }
-        } else if (!inferredStructPath.empty()) {
-          if (error_.empty()) {
-            error_ = "conflicting return types on " + def.fullPath;
-          }
-          return false;
-        }
-      }
-      return true;
+      const Expr *returnValue = stmt.args.empty() ? nullptr : &stmt.args.front();
+      return recordInferredReturn(returnValue, activeLocals);
     }
     if (isMatchCall(stmt)) {
       Expr expanded;
@@ -1381,6 +1386,12 @@ bool SemanticsValidator::inferDefinitionReturnKind(const Definition &def) {
 
   for (const auto &stmt : def.statements) {
     if (!inferStatement(stmt, locals)) {
+      return false;
+    }
+  }
+  if (def.returnExpr.has_value()) {
+    sawReturn = true;
+    if (!recordInferredReturn(&*def.returnExpr, locals)) {
       return false;
     }
   }
