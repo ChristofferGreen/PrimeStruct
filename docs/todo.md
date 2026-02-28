@@ -105,7 +105,8 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add VM/native `FileError.why` mapping (returns errno name strings for common codes).
 - ✓ Add `File<Mode>` RAII type (`Read`/`Write`/`Append`), `FileError`, and method surface (`write`, `write_line`, `write_byte`, `write_bytes`, `flush`, `close`) returning `Result<FileError>`.
 - ✓ Add `file_write` effect gating for `File` operations (VM/native/C++ emitters + validation).
-- ○ Introduce structured diagnostics payloads (stable error code, primary span, related spans, notes) with a machine-readable output mode for tooling.
+- ✓ Introduce structured diagnostics payloads (stable error code, primary span, related spans, notes) with a machine-readable output mode for tooling (`--emit-diagnostics` now emits deterministic JSON for argument/pipeline/lowering/runtime failures in `primec`/`primevm`).
+- ○ Populate structured diagnostics `related_spans`/precise spans directly from parser+semantic diagnostics (instead of mostly empty arrays and `"... at line:col"` suffix parsing).
 - ○ Refactor semantics state into per-definition context objects to reduce shared mutable state and make validator ordering/contracts explicit.
 - ○ Add import semantics conformance tests for privacy (`_`), version resolution, duplicate imports, wildcard exposure, and deterministic expansion ordering.
 

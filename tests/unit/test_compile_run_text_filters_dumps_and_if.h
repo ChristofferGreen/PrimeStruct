@@ -215,6 +215,76 @@ main() {
   CHECK(readFile(errPath).find("Unsupported dump stage: bananas") != std::string::npos);
 }
 
+TEST_CASE("primec emit-diagnostics reports structured parse payload") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32
+}
+)";
+  const std::string srcPath = writeTemp("primec_emit_diagnostics_parse.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_parse_err.json").string();
+
+  const std::string cmd =
+      "./primec " + quoteShellArg(srcPath) + " --emit-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1003\"") != std::string::npos);
+  CHECK(diagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"") != std::string::npos);
+  CHECK(diagnostics.find("\"line\":0") == std::string::npos);
+  CHECK(diagnostics.find("\"column\":0") == std::string::npos);
+  CHECK(diagnostics.find("\"related_spans\":[]") != std::string::npos);
+}
+
+TEST_CASE("primevm emit-diagnostics reports structured semantic payload") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(nope(1i32))
+}
+)";
+  const std::string srcPath = writeTemp("primevm_emit_diagnostics_semantic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_semantic_err.json").string();
+
+  const std::string cmd =
+      "./primevm " + quoteShellArg(srcPath) + " --emit-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown call target: nope\"") != std::string::npos);
+  CHECK(diagnostics.find("\"line\":0") != std::string::npos);
+  CHECK(diagnostics.find("\"notes\":[\"stage: semantic\"]") != std::string::npos);
+}
+
+TEST_CASE("primec emit-diagnostics reports structured lowering payload") {
+  const std::string source = R"(
+[return<bool>]
+main() {
+  return(equal("alpha"utf8, "alpha"utf8))
+}
+)";
+  const std::string srcPath = writeTemp("primec_emit_diagnostics_lowering.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_lowering_err.json").string();
+
+  const std::string cmd =
+      "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC2001\"") != std::string::npos);
+  CHECK(diagnostics.find("vm backend does not support string comparisons") != std::string::npos);
+  CHECK(diagnostics.find("\"notes\":[\"backend: vm\"]") != std::string::npos);
+}
+
 TEST_CASE("primec list transforms prints metadata") {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_list_transforms.txt").string();

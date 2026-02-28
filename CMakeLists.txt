@@ -10,6 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(primec_lib
   src/AstPrinter.cpp
   src/CompilePipeline.cpp
+  src/Diagnostics.cpp
   src/emitter/EmitterEmit.cpp
   src/emitter/EmitterExpr.cpp
   src/emitter/EmitterHelpersBuiltins.cpp

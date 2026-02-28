@@ -1,4 +1,5 @@
 #include "primec/CompilePipeline.h"
+#include "primec/Diagnostics.h"
 #include "primec/Emitter.h"
 #include "primec/GlslEmitter.h"
 #include "primec/IrLowerer.h"
@@ -576,6 +577,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     if (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" ||
         arg == "--emit=vm" || arg == "--emit=glsl" || arg == "--emit=spirv") {
       out.emitKind = arg.substr(std::string("--emit=").size());
+    } else if (arg == "--emit-diagnostics") {
+      out.emitDiagnostics = true;
     } else if (arg == "--list-transforms") {
       out.listTransforms = true;
     } else if (arg == "-o" && i + 1 < argc) {
@@ -686,9 +689,11 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
     } else if (!arg.empty() && arg[0] == '-') {
+      error = "unknown option: " + arg;
       return false;
     } else {
       if (!out.inputPath.empty()) {
+        error = "multiple input files are not supported";
         return false;
       }
       out.inputPath = arg;
@@ -721,6 +726,7 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     return true;
   }
   if (out.inputPath.empty()) {
+    error = "missing input path";
     return false;
   }
   if (!out.dumpStage.empty()) {
@@ -811,22 +817,47 @@ std::string quotePath(const std::filesystem::path &path) {
   return quoted;
 }
 
+int emitFailure(const primec::Options &options,
+                primec::DiagnosticCode code,
+                const std::string &plainPrefix,
+                const std::string &message,
+                int exitCode,
+                const std::vector<std::string> &notes = {}) {
+  if (options.emitDiagnostics) {
+    const primec::DiagnosticRecord diagnostic =
+        primec::makeDiagnosticRecord(code, message, options.inputPath, notes);
+    std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
+    return exitCode;
+  }
+  std::cerr << plainPrefix << message << "\n";
+  return exitCode;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
   primec::Options options;
   std::string argError;
   if (!parseArgs(argc, argv, options, argError)) {
-    if (!argError.empty()) {
-      std::cerr << "Argument error: " << argError << "\n";
+    if (options.emitDiagnostics) {
+      if (argError.empty()) {
+        argError = "invalid arguments";
+      }
+      const primec::DiagnosticRecord diagnostic =
+          primec::makeDiagnosticRecord(primec::DiagnosticCode::ArgumentError, argError, options.inputPath);
+      std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
+    } else {
+      if (!argError.empty()) {
+        std::cerr << "Argument error: " << argError << "\n";
+      }
+      std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv] <input.prime> [-o <output>] "
+                   "[--entry /path] [--include-path <dir>] [--text-filters <list>] "
+                   "[--text-transforms <list>] [--text-transform-rules <rules>] "
+                   "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
+                   "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "
+                   "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
+                   "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
     }
-    std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv] <input.prime> [-o <output>] [--entry /path] "
-                 "[--include-path <dir>] [--text-filters <list>] [--text-transforms <list>] "
-                 "[--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
-                 "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
-                 "[--no-semantic-transforms] [--no-transforms] [--out-dir <dir>] "
-                 "[--list-transforms] "
-                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
     return 2;
   }
   if (options.listTransforms) {
@@ -839,20 +870,50 @@ int main(int argc, char **argv) {
   primec::CompilePipelineOutput pipelineOutput;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error)) {
-    if (pipelineError == primec::CompilePipelineErrorStage::Include) {
-      std::cerr << "Include error: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::Transform) {
-      std::cerr << "Transform error: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::Parse) {
-      std::cerr << "Parse error: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::UnsupportedDumpStage) {
-      std::cerr << "Unsupported dump stage: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::Semantic) {
-      std::cerr << "Semantic error: " << error << "\n";
-    } else {
-      std::cerr << "Compile pipeline error: " << error << "\n";
+    switch (pipelineError) {
+      case primec::CompilePipelineErrorStage::Include:
+        return emitFailure(options,
+                           primec::DiagnosticCode::IncludeError,
+                           "Include error: ",
+                           error,
+                           2,
+                           {"stage: include"});
+      case primec::CompilePipelineErrorStage::Transform:
+        return emitFailure(options,
+                           primec::DiagnosticCode::TransformError,
+                           "Transform error: ",
+                           error,
+                           2,
+                           {"stage: transform"});
+      case primec::CompilePipelineErrorStage::Parse:
+        return emitFailure(options,
+                           primec::DiagnosticCode::ParseError,
+                           "Parse error: ",
+                           error,
+                           2,
+                           {"stage: parse"});
+      case primec::CompilePipelineErrorStage::UnsupportedDumpStage:
+        return emitFailure(options,
+                           primec::DiagnosticCode::UnsupportedDumpStage,
+                           "Unsupported dump stage: ",
+                           error,
+                           2,
+                           {"stage: dump-stage"});
+      case primec::CompilePipelineErrorStage::Semantic:
+        return emitFailure(options,
+                           primec::DiagnosticCode::SemanticError,
+                           "Semantic error: ",
+                           error,
+                           2,
+                           {"stage: semantic"});
+      default:
+        return emitFailure(options,
+                           primec::DiagnosticCode::EmitError,
+                           "Compile pipeline error: ",
+                           error,
+                           2,
+                           {"stage: compile-pipeline"});
     }
-    return 2;
   }
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
@@ -872,8 +933,8 @@ int main(int argc, char **argv) {
                        error)) {
       std::string vmError = error;
       replaceAll(vmError, "native backend", "vm backend");
-      std::cerr << "VM lowering error: " << vmError << "\n";
-      return 2;
+      return emitFailure(
+          options, primec::DiagnosticCode::LoweringError, "VM lowering error: ", vmError, 2, {"backend: vm"});
     }
     primec::Vm vm;
     std::vector<std::string_view> args;
@@ -884,8 +945,7 @@ int main(int argc, char **argv) {
     }
     uint64_t result = 0;
     if (!vm.execute(ir, result, error, args)) {
-      std::cerr << "VM error: " << error << "\n";
-      return 3;
+      return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
     }
     return static_cast<int>(static_cast<int32_t>(result));
   }
@@ -894,8 +954,7 @@ int main(int argc, char **argv) {
     std::filesystem::path resolved = resolveOutputPath(options);
     options.outputPath = resolved.string();
     if (!ensureOutputDirectory(resolved, error)) {
-      std::cerr << "Output error: " << error << "\n";
-      return 2;
+      return emitFailure(options, primec::DiagnosticCode::OutputError, "Output error: ", error, 2);
     }
   }
 
@@ -908,13 +967,12 @@ int main(int argc, char **argv) {
                        options.entryDefaultEffects,
                        ir,
                        error)) {
-      std::cerr << "Native lowering error: " << error << "\n";
-      return 2;
+      return emitFailure(
+          options, primec::DiagnosticCode::LoweringError, "Native lowering error: ", error, 2, {"backend: native"});
     }
     primec::NativeEmitter nativeEmitter;
     if (!nativeEmitter.emitExecutable(ir, options.outputPath, error)) {
-      std::cerr << "Native emit error: " << error << "\n";
-      return 2;
+      return emitFailure(options, primec::DiagnosticCode::EmitError, "Native emit error: ", error, 2, {"backend: native"});
     }
     return 0;
   }
@@ -928,17 +986,18 @@ int main(int argc, char **argv) {
                        options.entryDefaultEffects,
                        ir,
                        error)) {
-      std::cerr << "IR lowering error: " << error << "\n";
-      return 2;
+      return emitFailure(options, primec::DiagnosticCode::LoweringError, "IR lowering error: ", error, 2, {"backend: ir"});
     }
     std::vector<uint8_t> data;
     if (!primec::serializeIr(ir, data, error)) {
-      std::cerr << "IR serialize error: " << error << "\n";
-      return 2;
+      return emitFailure(options, primec::DiagnosticCode::IrSerializeError, "IR serialize error: ", error, 2);
     }
     if (!writeBinaryFile(options.outputPath, data)) {
-      std::cerr << "Failed to write output: " << options.outputPath << "\n";
-      return 2;
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         options.outputPath,
+                         2);
     }
     return 0;
   }
@@ -947,12 +1006,14 @@ int main(int argc, char **argv) {
     primec::GlslEmitter glslEmitter;
     std::string glslSource;
     if (!glslEmitter.emitSource(program, options.entryPath, glslSource, error)) {
-      std::cerr << "GLSL emit error: " << error << "\n";
-      return 2;
+      return emitFailure(options, primec::DiagnosticCode::EmitError, "GLSL emit error: ", error, 2, {"backend: glsl"});
     }
     if (!writeFile(options.outputPath, glslSource)) {
-      std::cerr << "Failed to write output: " << options.outputPath << "\n";
-      return 2;
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         options.outputPath,
+                         2);
     }
     return 0;
   }
@@ -961,22 +1022,28 @@ int main(int argc, char **argv) {
     primec::GlslEmitter glslEmitter;
     std::string glslSource;
     if (!glslEmitter.emitSource(program, options.entryPath, glslSource, error)) {
-      std::cerr << "GLSL emit error: " << error << "\n";
-      return 2;
+      return emitFailure(options, primec::DiagnosticCode::EmitError, "GLSL emit error: ", error, 2, {"backend: glsl"});
     }
     std::string spirvSource = injectComputeLayout(glslSource);
     std::string toolName;
     if (!findSpirvCompiler(toolName)) {
-      std::cerr << "SPIR-V emit error: glslangValidator or glslc not found\n";
-      return 2;
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "SPIR-V emit error: ",
+                         "glslangValidator or glslc not found",
+                         2,
+                         {"backend: spirv"});
     }
 
     const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
     std::filesystem::path tempPath =
         std::filesystem::temp_directory_path() / ("primec_spirv_" + std::to_string(timestamp) + ".comp");
     if (!writeFile(tempPath.string(), spirvSource)) {
-      std::cerr << "Failed to write output: " << tempPath.string() << "\n";
-      return 2;
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         tempPath.string(),
+                         2);
     }
 
     std::string command;
@@ -989,15 +1056,23 @@ int main(int argc, char **argv) {
     std::error_code ec;
     std::filesystem::remove(tempPath, ec);
     if (!ok) {
-      std::cerr << "SPIR-V emit error: tool invocation failed\n";
-      return 2;
+      return emitFailure(options,
+                         primec::DiagnosticCode::EmitError,
+                         "SPIR-V emit error: ",
+                         "tool invocation failed",
+                         2,
+                         {"backend: spirv"});
     }
     return 0;
   }
 
   if (auto softwareType = scanSoftwareNumericTypes(program)) {
-    std::cerr << "C++ emit error: software numeric types are not supported: " << *softwareType << "\n";
-    return 2;
+    return emitFailure(options,
+                       primec::DiagnosticCode::EmitError,
+                       "C++ emit error: ",
+                       "software numeric types are not supported: " + *softwareType,
+                       2,
+                       {"backend: cpp"});
   }
 
   primec::Emitter emitter;
@@ -1005,8 +1080,11 @@ int main(int argc, char **argv) {
 
   if (options.emitKind == "cpp") {
     if (!writeFile(options.outputPath, cppSource)) {
-      std::cerr << "Failed to write output: " << options.outputPath << "\n";
-      return 2;
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         options.outputPath,
+                         2);
     }
     return 0;
   }
@@ -1015,15 +1093,22 @@ int main(int argc, char **argv) {
   std::filesystem::path cppPath = outputPath;
   cppPath.replace_extension(".cpp");
   if (!writeFile(cppPath.string(), cppSource)) {
-    std::cerr << "Failed to write intermediate C++: " << cppPath.string() << "\n";
-    return 2;
+    return emitFailure(options,
+                       primec::DiagnosticCode::OutputError,
+                       "Failed to write intermediate C++: ",
+                       cppPath.string(),
+                       2);
   }
 
   std::string command =
       "clang++ -std=c++23 -O2 " + quotePath(cppPath) + " -o " + quotePath(outputPath);
   if (!runCommand(command)) {
-    std::cerr << "Failed to compile output executable\n";
-    return 3;
+    return emitFailure(options,
+                       primec::DiagnosticCode::EmitError,
+                       "",
+                       "Failed to compile output executable",
+                       3,
+                       {"backend: cpp"});
   }
 
   return 0;

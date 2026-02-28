@@ -1,4 +1,5 @@
 #include "primec/CompilePipeline.h"
+#include "primec/Diagnostics.h"
 #include "primec/IrLowerer.h"
 #include "primec/Options.h"
 #include "primec/TransformRegistry.h"
@@ -80,6 +81,22 @@ void addUniqueTransform(std::vector<std::string> &list, const std::string &name)
     }
   }
   list.push_back(name);
+}
+
+int emitFailure(const primec::Options &options,
+                primec::DiagnosticCode code,
+                const std::string &plainPrefix,
+                const std::string &message,
+                int exitCode,
+                const std::vector<std::string> &notes = {}) {
+  if (options.emitDiagnostics) {
+    const primec::DiagnosticRecord diagnostic =
+        primec::makeDiagnosticRecord(code, message, options.inputPath, notes);
+    std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
+    return exitCode;
+  }
+  std::cerr << plainPrefix << message << "\n";
+  return exitCode;
 }
 
 bool parseTransformListForPhase(const std::string &text,
@@ -352,7 +369,9 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     if (arg == "--emit=vm") {
       continue;
     }
-    if (arg == "--list-transforms") {
+    if (arg == "--emit-diagnostics") {
+      out.emitDiagnostics = true;
+    } else if (arg == "--list-transforms") {
       out.listTransforms = true;
     } else if (arg == "--entry" && i + 1 < argc) {
       out.entryPath = argv[++i];
@@ -456,9 +475,11 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
     } else if (!arg.empty() && arg[0] == '-') {
+      error = "unknown option: " + arg;
       return false;
     } else {
       if (!out.inputPath.empty()) {
+        error = "multiple input files are not supported";
         return false;
       }
       out.inputPath = arg;
@@ -490,7 +511,11 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
   if (out.listTransforms) {
     return true;
   }
-  return !out.inputPath.empty();
+  if (out.inputPath.empty()) {
+    error = "missing input path";
+    return false;
+  }
+  return true;
 }
 } // namespace
 
@@ -498,16 +523,24 @@ int main(int argc, char **argv) {
   primec::Options options;
   std::string argError;
   if (!parseArgs(argc, argv, options, argError)) {
-    if (!argError.empty()) {
-      std::cerr << "Argument error: " << argError << "\n";
+    if (options.emitDiagnostics) {
+      if (argError.empty()) {
+        argError = "invalid arguments";
+      }
+      const primec::DiagnosticRecord diagnostic =
+          primec::makeDiagnosticRecord(primec::DiagnosticCode::ArgumentError, argError, options.inputPath);
+      std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
+    } else {
+      if (!argError.empty()) {
+        std::cerr << "Argument error: " << argError << "\n";
+      }
+      std::cerr << "Usage: primevm <input.prime> [--entry /path] [--include-path <dir>] [--text-filters <list>] "
+                   "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
+                   "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
+                   "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
+                   "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] "
+                   "[-- <program args...>]\n";
     }
-    std::cerr << "Usage: primevm <input.prime> [--entry /path] [--include-path <dir>] [--text-filters <list>] "
-                 "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
-                 "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
-                 "[--no-semantic-transforms] [--no-transforms] "
-                 "[--list-transforms] "
-                 "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] "
-                 "[-- <program args...>]\n";
     return 2;
   }
   if (options.listTransforms) {
@@ -520,20 +553,50 @@ int main(int argc, char **argv) {
   primec::CompilePipelineOutput pipelineOutput;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error)) {
-    if (pipelineError == primec::CompilePipelineErrorStage::Include) {
-      std::cerr << "Include error: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::Transform) {
-      std::cerr << "Transform error: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::Parse) {
-      std::cerr << "Parse error: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::UnsupportedDumpStage) {
-      std::cerr << "Unsupported dump stage: " << error << "\n";
-    } else if (pipelineError == primec::CompilePipelineErrorStage::Semantic) {
-      std::cerr << "Semantic error: " << error << "\n";
-    } else {
-      std::cerr << "Compile pipeline error: " << error << "\n";
+    switch (pipelineError) {
+      case primec::CompilePipelineErrorStage::Include:
+        return emitFailure(options,
+                           primec::DiagnosticCode::IncludeError,
+                           "Include error: ",
+                           error,
+                           2,
+                           {"stage: include"});
+      case primec::CompilePipelineErrorStage::Transform:
+        return emitFailure(options,
+                           primec::DiagnosticCode::TransformError,
+                           "Transform error: ",
+                           error,
+                           2,
+                           {"stage: transform"});
+      case primec::CompilePipelineErrorStage::Parse:
+        return emitFailure(options,
+                           primec::DiagnosticCode::ParseError,
+                           "Parse error: ",
+                           error,
+                           2,
+                           {"stage: parse"});
+      case primec::CompilePipelineErrorStage::UnsupportedDumpStage:
+        return emitFailure(options,
+                           primec::DiagnosticCode::UnsupportedDumpStage,
+                           "Unsupported dump stage: ",
+                           error,
+                           2,
+                           {"stage: dump-stage"});
+      case primec::CompilePipelineErrorStage::Semantic:
+        return emitFailure(options,
+                           primec::DiagnosticCode::SemanticError,
+                           "Semantic error: ",
+                           error,
+                           2,
+                           {"stage: semantic"});
+      default:
+        return emitFailure(options,
+                           primec::DiagnosticCode::EmitError,
+                           "Compile pipeline error: ",
+                           error,
+                           2,
+                           {"stage: compile-pipeline"});
     }
-    return 2;
   }
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
@@ -552,8 +615,12 @@ int main(int argc, char **argv) {
                      error)) {
     std::string vmError = error;
     replaceAll(vmError, "native backend", "vm backend");
-    std::cerr << "VM lowering error: " << vmError << "\n";
-    return 2;
+    return emitFailure(options,
+                       primec::DiagnosticCode::LoweringError,
+                       "VM lowering error: ",
+                       vmError,
+                       2,
+                       {"backend: vm"});
   }
 
   primec::Vm vm;
@@ -565,8 +632,7 @@ int main(int argc, char **argv) {
   }
   uint64_t result = 0;
   if (!vm.execute(ir, result, error, args)) {
-    std::cerr << "VM error: " << error << "\n";
-    return 3;
+    return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
   }
 
   return static_cast<int>(static_cast<int32_t>(result));
