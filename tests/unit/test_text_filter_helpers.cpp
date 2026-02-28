@@ -128,6 +128,10 @@ TEST_CASE("token boundary helpers") {
   CHECK(findLeftTokenStart(exponentComma, exponentComma.size()) == 5);
   CHECK(findRightTokenEnd(exponentComma, 0) == 4);
 
+  const std::string exponentCommaUpper = "1E-1,000";
+  CHECK(findLeftTokenStart(exponentCommaUpper, exponentCommaUpper.size()) == 5);
+  CHECK(findRightTokenEnd(exponentCommaUpper, 0) == 4);
+
   const std::string signedToken = "-value";
   CHECK(findLeftTokenStart(signedToken, signedToken.size()) == 0);
 
@@ -464,6 +468,12 @@ TEST_CASE("rewrite unary mutation helpers") {
   index = 1;
   CHECK_FALSE(rewriteUnaryIncrement("?++x", output, index, options));
   CHECK(output == "invalidleft");
+  CHECK(index == 1);
+
+  output.clear();
+  index = 1;
+  CHECK_FALSE(rewriteUnaryIncrement(")++", output, index, options));
+  CHECK(output.empty());
   CHECK(index == 1);
 
   const std::string commentTail = "/*x*/++";
