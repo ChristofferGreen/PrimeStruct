@@ -80,6 +80,47 @@ main() {
   CHECK(readFile(errPath).find("Unsupported dump stage: bananas") != std::string::npos);
 }
 
+TEST_CASE("primec and primevm dump pre_ast match") {
+  const std::string libPath =
+      writeTemp("compile_dump_shared_lib.prime", "[return<int>]\nhelper(){ return(2i32) }\n");
+  const std::string source =
+      "import<\"" + libPath + "\">\n"
+      "[return<int>]\n"
+      "main(){\n"
+      "  return(helper()+1i32)\n"
+      "}\n";
+  const std::string srcPath = writeTemp("compile_dump_shared.prime", source);
+  const std::string primecOut =
+      (std::filesystem::temp_directory_path() / "primec_dump_shared_pre_ast.txt").string();
+  const std::string primevmOut =
+      (std::filesystem::temp_directory_path() / "primevm_dump_shared_pre_ast.txt").string();
+
+  const std::string primecCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(primecOut);
+  const std::string primevmCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(primevmOut);
+  CHECK(runCommand(primecCmd) == 0);
+  CHECK(runCommand(primevmCmd) == 0);
+  CHECK(readFile(primecOut) == readFile(primevmOut));
+}
+
+TEST_CASE("primevm dump stage rejects unknown value") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_dump_stage_unknown.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_dump_stage_unknown_err.txt").string();
+
+  const std::string dumpCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --dump-stage bananas 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(dumpCmd) == 2);
+  CHECK(readFile(errPath).find("Unsupported dump stage: bananas") != std::string::npos);
+}
+
 TEST_CASE("compiles and runs implicit utf8 suffix by default") {
   const std::string source = R"(
 [return<int> effects(io_out)]

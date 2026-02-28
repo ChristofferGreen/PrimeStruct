@@ -1,16 +1,10 @@
-#include "primec/AstPrinter.h"
+#include "primec/CompilePipeline.h"
 #include "primec/Emitter.h"
 #include "primec/GlslEmitter.h"
-#include "primec/IncludeResolver.h"
 #include "primec/IrLowerer.h"
-#include "primec/IrPrinter.h"
 #include "primec/IrSerializer.h"
-#include "primec/Lexer.h"
 #include "primec/NativeEmitter.h"
 #include "primec/Options.h"
-#include "primec/Parser.h"
-#include "primec/Semantics.h"
-#include "primec/TextFilterPipeline.h"
 #include "primec/TransformRegistry.h"
 #include "primec/TransformRules.h"
 #include "primec/Vm.h"
@@ -786,122 +780,6 @@ std::string quotePath(const std::filesystem::path &path) {
   return quoted;
 }
 
-bool shouldAutoIncludeStdlib(const std::string &source) {
-  size_t pos = 0;
-  while ((pos = source.find("import /std", pos)) != std::string::npos) {
-    size_t next = pos + std::string("import /std").size();
-    if (next >= source.size()) {
-      return true;
-    }
-    char c = source[next];
-    if (c == '/' || std::isspace(static_cast<unsigned char>(c)) != 0) {
-      return true;
-    }
-    pos = next;
-  }
-  return false;
-}
-
-bool appendStdlibSources(const std::vector<std::string> &includePaths,
-                         std::string &source,
-                         std::string &error) {
-  std::error_code ec;
-  std::unordered_set<std::string> seen;
-  bool appended = false;
-  for (const auto &pathText : includePaths) {
-    std::filesystem::path root(pathText);
-    if (root.filename() != "stdlib") {
-      continue;
-    }
-    if (!std::filesystem::exists(root, ec) || !std::filesystem::is_directory(root, ec)) {
-      continue;
-    }
-    for (const auto &entry : std::filesystem::recursive_directory_iterator(root, ec)) {
-      if (ec) {
-        error = "failed to scan stdlib: " + root.string();
-        return false;
-      }
-      if (!entry.is_regular_file(ec)) {
-        continue;
-      }
-      if (entry.path().extension() != ".prime") {
-        continue;
-      }
-      std::filesystem::path absolute = std::filesystem::absolute(entry.path(), ec);
-      if (ec) {
-        absolute = entry.path();
-      }
-      std::string absoluteText = absolute.string();
-      if (!seen.insert(absoluteText).second) {
-        continue;
-      }
-      std::ifstream file(absoluteText);
-      if (!file) {
-        error = "failed to read stdlib file: " + absoluteText;
-        return false;
-      }
-      std::ostringstream buffer;
-      buffer << file.rdbuf();
-      source.append("\n");
-      source.append(buffer.str());
-      appended = true;
-    }
-  }
-  if (!appended) {
-    error = "stdlib import requested but no stdlib files were found";
-    return false;
-  }
-  return true;
-}
-
-void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &includePaths) {
-  auto addFromBase = [&](const std::filesystem::path &base) -> bool {
-    std::error_code ec;
-    std::filesystem::path dir = base;
-    if (!std::filesystem::is_directory(dir, ec)) {
-      dir = dir.parent_path();
-    }
-    for (std::filesystem::path current = dir; !current.empty(); current = current.parent_path()) {
-      std::filesystem::path candidate = current / "stdlib";
-      if (std::filesystem::exists(candidate, ec) && std::filesystem::is_directory(candidate, ec)) {
-        std::filesystem::path absoluteCandidate = std::filesystem::absolute(candidate, ec);
-        std::string candidateText = absoluteCandidate.string();
-        for (const auto &path : includePaths) {
-          std::filesystem::path existing = std::filesystem::absolute(path, ec);
-          if (!ec && std::filesystem::equivalent(existing, absoluteCandidate, ec)) {
-            return true;
-          }
-          if (path == candidateText) {
-            return true;
-          }
-        }
-        includePaths.push_back(candidateText);
-        return true;
-      }
-      if (current == current.root_path()) {
-        break;
-      }
-    }
-    return false;
-  };
-
-  if (!inputPath.empty()) {
-    std::error_code ec;
-    std::filesystem::path resolved = std::filesystem::absolute(inputPath, ec);
-    if (ec) {
-      resolved = std::filesystem::path(inputPath);
-    }
-    if (addFromBase(resolved)) {
-      return;
-    }
-  }
-
-  std::error_code ec;
-  std::filesystem::path cwd = std::filesystem::current_path(ec);
-  if (!ec) {
-    addFromBase(cwd);
-  }
-}
 } // namespace
 
 int main(int argc, char **argv) {
@@ -919,77 +797,33 @@ int main(int argc, char **argv) {
                  "[--default-effects <list>] [--dump-stage pre_ast|ast|ir] [-- <program args...>]\n";
     return 2;
   }
-  addDefaultStdlibInclude(options.inputPath, options.includePaths);
-
-  std::string source;
   std::string error;
-  primec::IncludeResolver includeResolver;
-  if (!includeResolver.expandIncludes(options.inputPath, source, error, options.includePaths)) {
-    std::cerr << "Include error: " << error << "\n";
-    return 2;
-  }
-  if (shouldAutoIncludeStdlib(source)) {
-    if (!appendStdlibSources(options.includePaths, source, error)) {
+  primec::addDefaultStdlibInclude(options.inputPath, options.includePaths);
+
+  primec::CompilePipelineOutput pipelineOutput;
+  primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
+  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error)) {
+    if (pipelineError == primec::CompilePipelineErrorStage::Include) {
       std::cerr << "Include error: " << error << "\n";
-      return 2;
+    } else if (pipelineError == primec::CompilePipelineErrorStage::Transform) {
+      std::cerr << "Transform error: " << error << "\n";
+    } else if (pipelineError == primec::CompilePipelineErrorStage::Parse) {
+      std::cerr << "Parse error: " << error << "\n";
+    } else if (pipelineError == primec::CompilePipelineErrorStage::UnsupportedDumpStage) {
+      std::cerr << "Unsupported dump stage: " << error << "\n";
+    } else if (pipelineError == primec::CompilePipelineErrorStage::Semantic) {
+      std::cerr << "Semantic error: " << error << "\n";
+    } else {
+      std::cerr << "Compile pipeline error: " << error << "\n";
     }
-  }
-
-  primec::TextFilterPipeline textPipeline;
-  primec::TextFilterOptions textOptions;
-  textOptions.enabledFilters = options.textFilters;
-  textOptions.rules = options.textTransformRules;
-  textOptions.allowEnvelopeTransforms = options.allowEnvelopeTextTransforms;
-  std::string filteredSource;
-  if (!textPipeline.apply(source, filteredSource, error, textOptions)) {
-    std::cerr << "Transform error: " << error << "\n";
     return 2;
   }
-
-  if (!options.dumpStage.empty() && options.dumpStage == "pre_ast") {
-    std::cout << filteredSource;
+  if (pipelineOutput.hasDumpOutput) {
+    std::cout << pipelineOutput.dumpOutput;
     return 0;
   }
 
-  primec::Lexer lexer(filteredSource);
-  primec::Parser parser(lexer.tokenize(), !options.requireCanonicalSyntax);
-  primec::Program program;
-  if (!parser.parse(program, error)) {
-    std::cerr << "Parse error: " << error << "\n";
-    return 2;
-  }
-
-  if (!options.dumpStage.empty()) {
-    if (options.dumpStage == "ast") {
-      primec::AstPrinter printer;
-      std::cout << printer.print(program);
-      return 0;
-    }
-    if (options.dumpStage == "ir") {
-      primec::IrPrinter printer;
-      std::cout << printer.print(program);
-      return 0;
-    }
-    {
-      std::cerr << "Unsupported dump stage: " << options.dumpStage << "\n";
-      return 2;
-    }
-  }
-
-  if (!options.semanticTransformRules.empty()) {
-    primec::applySemanticTransformRules(program, options.semanticTransformRules);
-  }
-
-  primec::Semantics semantics;
-  if (!semantics.validate(program,
-                          options.entryPath,
-                          error,
-                          options.defaultEffects,
-                          options.entryDefaultEffects,
-                          options.semanticTransforms)) {
-    std::cerr << "Semantic error: " << error << "\n";
-    return 2;
-  }
+  primec::Program &program = pipelineOutput.program;
 
   if (options.emitKind == "vm") {
     primec::IrLowerer lowerer;
