@@ -56,6 +56,28 @@ TEST_CASE("pipeline preserves version-first legacy include paths") {
   CHECK(output == source);
 }
 
+TEST_CASE("pipeline preserves single-quoted versioned legacy include paths") {
+  const std::string source =
+      "include<'/std/io', version='1.2'>\n[return<int>]\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
+TEST_CASE("pipeline preserves single-quoted version-first legacy include paths") {
+  const std::string source =
+      "include<version='1.2', '/std/io'>\n[return<int>]\nmain(){ return(1i32) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output == source);
+}
+
 TEST_CASE("pipeline preserves import with version attribute") {
   const std::string source =
       "import<\"/std/io\", version=\"1.2\">\n[return<int>]\nmain(){ return(1i32) }\n";

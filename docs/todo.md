@@ -23,6 +23,7 @@ Legend:
 - ✓ Add versioned regression coverage for legacy `include<...>` alias handling (`version=...`) in resolver and compile-run flows (added resolver and compile-run tests for version-selector alias behavior).
 - ✓ Add version-first regression coverage for legacy `include<...>` alias handling (`include<version=\"...\", ...>`) in resolver and compile-run flows (added resolver and compile-run tests for version-first alias ordering).
 - ✓ Add text-filter regression coverage for versioned legacy `include<...>` alias directives (including `version`-first ordering) so directive payload strings are never rewritten (added pipeline passthrough tests for both ordered forms).
+- ✓ Add text-filter regression coverage for single-quoted versioned legacy `include<...>` alias directives (including `version`-first ordering) so quote-style aliases stay rewrite-safe (added pipeline passthrough tests for both single-quoted ordered forms).
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
