@@ -488,6 +488,71 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrow checker allows branch-local assign after last pointer alias use with no merge use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [bool] cond{true}
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  if(cond, then(){
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }, else(){
+  })
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("borrow checker rejects branch-local assign before post-merge pointer alias use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [bool] cond{true}
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  if(cond, then(){
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }, else(){
+  })
+  [i32] later{dereference(ptr)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker rejects match-branch assign before post-merge pointer alias use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] selector{0i32}
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  match(selector, case(0i32) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }, else() {
+  })
+  [i32] later{dereference(ptr)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
 TEST_CASE("repeat rejects float count") {
   const std::string source = R"(
 [return<int>]

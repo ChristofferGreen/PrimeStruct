@@ -758,7 +758,9 @@
                              allowReturn,
                              allowBindings,
                              sawReturn,
-                             namespacePrefix);
+                             namespacePrefix,
+                             enclosingStatements,
+                             statementIndex);
   }
   if (isIfCall(stmt)) {
     if (hasNamedArguments(stmt.argNames)) {
@@ -796,12 +798,22 @@
       }
       return true;
     };
+    std::vector<Expr> postMergeStatements;
+    if (enclosingStatements != nullptr) {
+      size_t start = statementIndex + 1;
+      if (start > enclosingStatements->size()) {
+        start = enclosingStatements->size();
+      }
+      postMergeStatements.insert(postMergeStatements.end(), enclosingStatements->begin() + start, enclosingStatements->end());
+    }
     auto validateBranch = [&](const Expr &branch) -> bool {
       if (!isIfBlockEnvelope(branch)) {
         error_ = "if branches require block envelopes";
         return false;
       }
       std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+      std::vector<Expr> livenessStatements = branch.bodyArguments;
+      livenessStatements.insert(livenessStatements.end(), postMergeStatements.begin(), postMergeStatements.end());
       OnErrorScope onErrorScope(*this, std::nullopt);
       BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
       for (size_t bodyIndex = 0; bodyIndex < branch.bodyArguments.size(); ++bodyIndex) {
@@ -813,10 +825,12 @@
                                allowReturn,
                                allowBindings,
                                sawReturn,
-                               namespacePrefix)) {
+                               namespacePrefix,
+                               &branch.bodyArguments,
+                               bodyIndex)) {
           return false;
         }
-        expireReferenceBorrowsForRemainder(params, branchLocals, branch.bodyArguments, bodyIndex + 1);
+        expireReferenceBorrowsForRemainder(params, branchLocals, livenessStatements, bodyIndex + 1);
       }
       return true;
     };

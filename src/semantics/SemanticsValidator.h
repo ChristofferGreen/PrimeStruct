@@ -75,7 +75,9 @@ private:
                          bool allowReturn,
                          bool allowBindings,
                          bool *sawReturn,
-                         const std::string &namespacePrefix);
+                         const std::string &namespacePrefix,
+                         const std::vector<Expr> *enclosingStatements = nullptr,
+                         size_t statementIndex = 0);
   bool statementAlwaysReturns(const Expr &stmt);
   bool blockAlwaysReturns(const std::vector<Expr> &statements);
 

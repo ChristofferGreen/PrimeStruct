@@ -267,7 +267,16 @@ bool SemanticsValidator::validateDefinitions() {
     bool sawReturn = false;
     for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
       const Expr &stmt = def.statements[stmtIndex];
-      if (!validateStatement(defParams, locals, stmt, kind, true, true, &sawReturn, def.namespacePrefix)) {
+      if (!validateStatement(defParams,
+                             locals,
+                             stmt,
+                             kind,
+                             true,
+                             true,
+                             &sawReturn,
+                             def.namespacePrefix,
+                             &def.statements,
+                             stmtIndex)) {
         return false;
       }
       expireReferenceBorrowsForRemainder(defParams, locals, def.statements, stmtIndex + 1);
@@ -1069,7 +1078,16 @@ bool SemanticsValidator::validateExecutions() {
     std::unordered_map<std::string, BindingInfo> execLocals;
     for (size_t bodyIndex = 0; bodyIndex < exec.bodyArguments.size(); ++bodyIndex) {
       const Expr &arg = exec.bodyArguments[bodyIndex];
-      if (!validateStatement({}, execLocals, arg, ReturnKind::Unknown, false, true, nullptr, exec.namespacePrefix)) {
+      if (!validateStatement({},
+                             execLocals,
+                             arg,
+                             ReturnKind::Unknown,
+                             false,
+                             true,
+                             nullptr,
+                             exec.namespacePrefix,
+                             &exec.bodyArguments,
+                             bodyIndex)) {
         return false;
       }
       expireReferenceBorrowsForRemainder({}, execLocals, exec.bodyArguments, bodyIndex + 1);

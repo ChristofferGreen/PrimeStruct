@@ -204,7 +204,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                              true,
                              true,
                              &sawReturn,
-                             expr.namespacePrefix)) {
+                             expr.namespacePrefix,
+                             &expr.bodyArguments,
+                             stmtIndex)) {
         return false;
       }
       expireReferenceBorrowsForRemainder(lambdaParams, lambdaLocals, expr.bodyArguments, stmtIndex + 1);

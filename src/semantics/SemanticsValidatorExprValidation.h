@@ -590,7 +590,7 @@
         for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
           const Expr &bodyExpr = expr.bodyArguments[bodyIndex];
           if (!validateStatement(params, blockLocals, bodyExpr, ReturnKind::Unknown, false, true, nullptr,
-                                 expr.namespacePrefix)) {
+                                 expr.namespacePrefix, &expr.bodyArguments, bodyIndex)) {
             return false;
           }
           expireReferenceBorrowsForRemainder(params, blockLocals, expr.bodyArguments, bodyIndex + 1);

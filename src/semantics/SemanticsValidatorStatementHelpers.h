@@ -5,7 +5,9 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            bool allowReturn,
                                            bool allowBindings,
                                            bool *sawReturn,
-                                           const std::string &namespacePrefix) {
+                                           const std::string &namespacePrefix,
+                                           const std::vector<Expr> *enclosingStatements,
+                                           size_t statementIndex) {
   auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
       std::string base;

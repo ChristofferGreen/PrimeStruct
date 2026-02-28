@@ -71,7 +71,7 @@ Legend:
 - ✓ Align `[unsafe]` pointer-to-reference conversion behavior with docs.
 - ✓ Design explicit unsafe pointer-to-reference conversion semantics beyond `location(...)`-based reference construction.
 - ✓ Extend pointer-alias borrow-liveness checks across loop iteration boundaries (`for`/`while`/`repeat`/`loop`) with focused regressions.
-- ○ Extend pointer-alias borrow-liveness checks across branch-path merges (`if`/`match`) when alias usage is path-dependent.
+- ✓ Extend pointer-alias borrow-liveness checks across branch-path merges (`if`/`match`) when alias usage is path-dependent.
 - ○ Extend pointer-alias borrow-liveness checks through lambdas/captures and execution body-argument blocks.
 - ○ Expand alias-chain diagnostic coverage so borrow/escape errors consistently report root and sink context.
 - ○ Investigate the unreachable statement-level `on_error` diagnostic path in `SemanticsValidatorStatementControlFlow` (either remove dead validation or enable/document a syntax path that can trigger it).

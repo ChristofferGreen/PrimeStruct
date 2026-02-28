@@ -35,7 +35,9 @@
                              allowReturn,
                              allowBindings,
                              sawReturn,
-                             namespacePrefix)) {
+                             namespacePrefix,
+                             &body.bodyArguments,
+                             bodyIndex)) {
         return false;
       }
       expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
@@ -283,7 +285,9 @@
                              allowReturn,
                              allowBindings,
                              sawReturn,
-                             namespacePrefix)) {
+                             namespacePrefix,
+                             &stmt.bodyArguments,
+                             bodyIndex)) {
         return false;
       }
       expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
@@ -769,7 +773,16 @@
     BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
-      if (!validateStatement(params, blockLocals, bodyExpr, returnKind, false, true, nullptr, namespacePrefix)) {
+      if (!validateStatement(params,
+                             blockLocals,
+                             bodyExpr,
+                             returnKind,
+                             false,
+                             true,
+                             nullptr,
+                             namespacePrefix,
+                             &stmt.bodyArguments,
+                             bodyIndex)) {
         return false;
       }
       expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
