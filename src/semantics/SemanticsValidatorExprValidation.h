@@ -585,6 +585,12 @@
           return false;
         }
         std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+        std::vector<Expr> livenessStatements = expr.bodyArguments;
+        if (enclosingStatements != nullptr && statementIndex < enclosingStatements->size()) {
+          for (size_t idx = statementIndex + 1; idx < enclosingStatements->size(); ++idx) {
+            livenessStatements.push_back((*enclosingStatements)[idx]);
+          }
+        }
         OnErrorScope onErrorScope(*this, std::nullopt);
         BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
         for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
@@ -593,7 +599,7 @@
                                  expr.namespacePrefix, &expr.bodyArguments, bodyIndex)) {
             return false;
           }
-          expireReferenceBorrowsForRemainder(params, blockLocals, expr.bodyArguments, bodyIndex + 1);
+          expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
         }
       }
     std::string gpuBuiltin;

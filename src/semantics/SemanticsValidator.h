@@ -67,7 +67,9 @@ private:
 
   bool validateExpr(const std::vector<ParameterInfo> &params,
                     const std::unordered_map<std::string, BindingInfo> &locals,
-                    const Expr &expr);
+                    const Expr &expr,
+                    const std::vector<Expr> *enclosingStatements = nullptr,
+                    size_t statementIndex = 0);
   bool validateStatement(const std::vector<ParameterInfo> &params,
                          std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &stmt,

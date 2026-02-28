@@ -1,6 +1,8 @@
 bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const std::unordered_map<std::string, BindingInfo> &locals,
-                                      const Expr &expr) {
+                                      const Expr &expr,
+                                      const std::vector<Expr> *enclosingStatements,
+                                      size_t statementIndex) {
   if (expr.isLambda) {
     auto splitTokens = [](const std::string &text) {
       std::vector<std::string> tokens;
@@ -194,6 +196,12 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       lambdaParams.push_back(std::move(info));
     }
 
+    std::vector<Expr> lambdaLivenessStatements = expr.bodyArguments;
+    if (enclosingStatements != nullptr && statementIndex < enclosingStatements->size()) {
+      for (size_t idx = statementIndex + 1; idx < enclosingStatements->size(); ++idx) {
+        lambdaLivenessStatements.push_back((*enclosingStatements)[idx]);
+      }
+    }
     bool sawReturn = false;
     for (size_t stmtIndex = 0; stmtIndex < expr.bodyArguments.size(); ++stmtIndex) {
       const Expr &stmt = expr.bodyArguments[stmtIndex];
@@ -209,7 +217,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                              stmtIndex)) {
         return false;
       }
-      expireReferenceBorrowsForRemainder(lambdaParams, lambdaLocals, expr.bodyArguments, stmtIndex + 1);
+      expireReferenceBorrowsForRemainder(lambdaParams, lambdaLocals, lambdaLivenessStatements, stmtIndex + 1);
     }
     return true;
   }

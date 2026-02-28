@@ -553,6 +553,96 @@ main() {
   CHECK(error.find("borrowed binding: value") != std::string::npos);
 }
 
+TEST_CASE("borrow checker rejects body-block assign before post-block pointer alias use") {
+  const std::string source = R"(
+[return<void>]
+execute_repeat([i32] count) {
+  return()
+}
+
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  execute_repeat(2i32) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }
+  [i32] later{dereference(ptr)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows body-block assign after last pointer alias use with no post-block use") {
+  const std::string source = R"(
+[return<void>]
+execute_repeat([i32] count) {
+  return()
+}
+
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  execute_repeat(2i32) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+  }
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("borrow checker rejects lambda-capture assign before later pointer alias use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  [ref value, ref ref, ref ptr]([i32] x) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+    return(plus(x, observed))
+  }
+  [i32] later{dereference(ptr)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+}
+
+TEST_CASE("borrow checker allows lambda-capture assign after last pointer alias use with no later use") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  [ref value, ref ref, ref ptr]([i32] x) {
+    [i32] observed{dereference(ptr)}
+    assign(value, 2i32)
+    return(plus(x, observed))
+  }
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("repeat rejects float count") {
   const std::string source = R"(
 [return<int>]

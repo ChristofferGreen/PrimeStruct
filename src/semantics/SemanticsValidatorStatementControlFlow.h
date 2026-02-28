@@ -751,7 +751,7 @@
     resolvedOut = resolvedType + "/" + methodName;
   };
 
-  if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt)) {
+  if ((stmt.hasBodyArguments || !stmt.bodyArguments.empty()) && !isBuiltinBlockCall(stmt) && !stmt.isLambda) {
     std::string collectionName;
     if (getBuiltinCollectionName(stmt, collectionName)) {
       error_ = collectionName + " literal does not accept block arguments";
@@ -770,6 +770,12 @@
       return false;
     }
     std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+    std::vector<Expr> livenessStatements = stmt.bodyArguments;
+    if (enclosingStatements != nullptr && statementIndex < enclosingStatements->size()) {
+      for (size_t idx = statementIndex + 1; idx < enclosingStatements->size(); ++idx) {
+        livenessStatements.push_back((*enclosingStatements)[idx]);
+      }
+    }
     BorrowEndScope borrowScope(*this, endedReferenceBorrows_);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];
@@ -785,9 +791,9 @@
                              bodyIndex)) {
         return false;
       }
-      expireReferenceBorrowsForRemainder(params, blockLocals, stmt.bodyArguments, bodyIndex + 1);
+      expireReferenceBorrowsForRemainder(params, blockLocals, livenessStatements, bodyIndex + 1);
     }
     return true;
   }
-  return validateExpr(params, locals, stmt);
+  return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
 }
