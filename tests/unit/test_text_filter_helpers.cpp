@@ -33,6 +33,14 @@ TEST_CASE("character classification helpers") {
   CHECK(isHexDigitChar('a'));
   CHECK(isHexDigitChar('F'));
   CHECK_FALSE(isHexDigitChar('g'));
+  CHECK(isCommentStart("//x", 0));
+  CHECK(isCommentStart("/*x", 0));
+  CHECK_FALSE(isCommentStart("/", 0));
+  CHECK_FALSE(isCommentStart("a/", 0));
+  CHECK(isCommentEnd("*/", 1));
+  CHECK_FALSE(isCommentEnd("*/", 0));
+  CHECK_FALSE(isCommentEnd("/*", 2));
+  CHECK_FALSE(isCommentEnd("ab/", 2));
 }
 
 TEST_CASE("unary prefix detection") {
@@ -57,6 +65,8 @@ TEST_CASE("exponent sign detection") {
   using namespace primec::text_filter;
   CHECK(isExponentSign("1e-3", 2));
   CHECK(isExponentSign("1E+3", 2));
+  CHECK_FALSE(isExponentSign("1e-3", 0));
+  CHECK_FALSE(isExponentSign("ae-3", 2));
   CHECK_FALSE(isExponentSign("1-3", 1));
   CHECK_FALSE(isExponentSign("e-3", 1));
 }
@@ -100,6 +110,9 @@ TEST_CASE("matching parens skip quoted text") {
 
 TEST_CASE("token boundary helpers") {
   using namespace primec::text_filter;
+  CHECK(findLeftTokenStart("abc", 0) == 0);
+  CHECK(findRightTokenEnd("abc", 3) == 3);
+
   const std::string suffixed = "\"hi\"utf8";
   CHECK(findLeftTokenStart(suffixed, suffixed.size()) == 0);
   CHECK(findRightTokenEnd(suffixed, 0) == suffixed.size());
@@ -111,11 +124,24 @@ TEST_CASE("token boundary helpers") {
   const std::string exponent = "1e-3";
   CHECK(findLeftTokenStart(exponent, exponent.size()) == 0);
 
+  const std::string exponentComma = "1e+1,000";
+  CHECK(findLeftTokenStart(exponentComma, exponentComma.size()) == 5);
+  CHECK(findRightTokenEnd(exponentComma, 0) == 4);
+
+  const std::string signedToken = "-value";
+  CHECK(findLeftTokenStart(signedToken, signedToken.size()) == 0);
+
   const std::string unary = "-value";
   CHECK(findRightTokenEnd(unary, 0) == unary.size());
 
   const std::string grouped = "(a(b))";
   CHECK(findRightTokenEnd(grouped, 0) == grouped.size());
+
+  const std::string danglingTailQuote = "oops\"";
+  CHECK(findLeftTokenStart(danglingTailQuote, danglingTailQuote.size()) == danglingTailQuote.size());
+
+  const std::string unterminatedQuote = "\"oops";
+  CHECK(findRightTokenEnd(unterminatedQuote, 0) == 0);
 
   const std::string openParen = "(a";
   CHECK(findRightTokenEnd(openParen, 0) == 0);
@@ -146,12 +172,18 @@ TEST_CASE("template list heuristics") {
   std::string notTemplate = "value>";
   closePos = notTemplate.find('>');
   CHECK_FALSE(looksLikeTemplateListClose(notTemplate, closePos));
+  CHECK_FALSE(looksLikeTemplateListClose(notTemplate, 0));
+  CHECK_FALSE(looksLikeTemplateListClose(notTemplate, notTemplate.size()));
 
   std::string nested = "convert<map<i32, array<i32>>>";
   openPos = nested.find('<');
   closePos = nested.rfind('>');
   CHECK(looksLikeTemplateList(nested, openPos));
   CHECK(looksLikeTemplateListClose(nested, closePos));
+
+  std::string leadingNested = "convert<<i32>>";
+  openPos = leadingNested.find('<');
+  CHECK_FALSE(looksLikeTemplateList(leadingNested, openPos));
 }
 
 TEST_CASE("literal suffix helpers") {
@@ -160,11 +192,15 @@ TEST_CASE("literal suffix helpers") {
   CHECK(maybeAppendI32("1,234") == "1,234i32");
   CHECK(maybeAppendI32("-7") == "-7i32");
   CHECK(maybeAppendI32("0x2A") == "0x2Ai32");
+  CHECK(maybeAppendI32("0X2A") == "0X2Ai32");
   CHECK(maybeAppendI32("0xDE,AD") == "0xDE,ADi32");
+  CHECK(maybeAppendI32("0XDE,AD") == "0XDE,ADi32");
   CHECK(maybeAppendI32("-0x2A") == "-0x2Ai32");
   CHECK(maybeAppendI32("-0xDE,AD") == "-0xDE,ADi32");
   CHECK(maybeAppendI32("1,,234") == "1,,234");
+  CHECK(maybeAppendI32("1e+1,000") == "1e+1,000");
   CHECK(maybeAppendI32("0xDE,,AD") == "0xDE,,AD");
+  CHECK(maybeAppendI32("0XDE,,AD") == "0XDE,,AD");
   CHECK(maybeAppendI32("1foo") == "1foo");
   CHECK(maybeAppendI32("-") == "-");
 
@@ -212,6 +248,12 @@ TEST_CASE("rewrite unary helpers") {
   index = 0;
   CHECK_FALSE(rewriteUnaryNot("!!=flag", output, index, options));
   CHECK(output == "double");
+  CHECK(index == 0);
+
+  output = "unterminated";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryNot("!\"oops", output, index, options));
+  CHECK(output == "unterminated");
   CHECK(index == 0);
 
   output.clear();
@@ -365,10 +407,32 @@ TEST_CASE("rewrite unary mutation helpers") {
   CHECK(output == "increment(value)");
   CHECK(index == prefix.size() - 1);
 
+  primec::TextFilterOptions implicitMutationOptions;
+  implicitMutationOptions.enabledFilters = {"implicit-i32"};
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryIncrement("++1", output, index, implicitMutationOptions));
+  CHECK(output == "increment(1i32)");
+  CHECK(index == std::string("++1").size() - 1);
+
+  primec::TextFilterOptions implicitUtf8MutationOptions;
+  implicitUtf8MutationOptions.enabledFilters = {"implicit-utf8"};
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryIncrement("++\"hi\"", output, index, implicitUtf8MutationOptions));
+  CHECK(output == "increment(\"hi\"utf8)");
+  CHECK(index == std::string("++\"hi\"").size() - 1);
+
   output = "badprefix";
   index = 0;
   CHECK_FALSE(rewriteUnaryIncrement("++?a", output, index, options));
   CHECK(output == "badprefix");
+  CHECK(index == 0);
+
+  output = "badquote";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryIncrement("++\"oops", output, index, options));
+  CHECK(output == "badquote");
   CHECK(index == 0);
 
   output.clear();
@@ -384,11 +448,42 @@ TEST_CASE("rewrite unary mutation helpers") {
   CHECK(output == "decrement(value)");
   CHECK(index == postfix.size() - 1);
 
+  output = "1";
+  index = 1;
+  CHECK(rewriteUnaryIncrement("1++", output, index, implicitMutationOptions));
+  CHECK(output == "increment(1i32)");
+  CHECK(index == 2);
+
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryDecrement("--\"hi\"", output, index, implicitUtf8MutationOptions));
+  CHECK(output == "decrement(\"hi\"utf8)");
+  CHECK(index == std::string("--\"hi\"").size() - 1);
+
+  output = "invalidleft";
+  index = 1;
+  CHECK_FALSE(rewriteUnaryIncrement("?++x", output, index, options));
+  CHECK(output == "invalidleft");
+  CHECK(index == 1);
+
+  const std::string commentTail = "/*x*/++";
+  output = "/*x*/";
+  index = 5;
+  CHECK_FALSE(rewriteUnaryIncrement(commentTail, output, index, options));
+  CHECK(output == "/*x*/");
+  CHECK(index == 5);
+
   output.clear();
   index = 0;
   CHECK(rewriteUnaryDecrement("--value", output, index, options));
   CHECK(output == "decrement(value)");
   CHECK(index == std::string("--value").size() - 1);
+
+  output.clear();
+  index = 0;
+  CHECK(rewriteUnaryDecrement("--(value)", output, index, options));
+  CHECK(output == "decrement");
+  CHECK(index == 1);
 
   const std::string infix = "value--next";
   output = "value";
