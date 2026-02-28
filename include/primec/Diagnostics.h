@@ -46,7 +46,9 @@ std::string diagnosticCodeString(DiagnosticCode code);
 DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
                                       const std::string &message,
                                       const std::string &inputPath,
-                                      const std::vector<std::string> &notes = {});
+                                      const std::vector<std::string> &notes = {},
+                                      const DiagnosticSpan *primarySpan = nullptr,
+                                      const std::vector<DiagnosticRelatedSpan> &relatedSpans = {});
 
 std::string encodeDiagnosticsJson(const std::vector<DiagnosticRecord> &diagnostics);
 

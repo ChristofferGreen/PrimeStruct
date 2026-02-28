@@ -11,10 +11,16 @@ namespace primec {
 
 class Parser {
 public:
+  struct ErrorInfo {
+    std::string message;
+    int line = 0;
+    int column = 0;
+  };
+
   explicit Parser(std::vector<Token> tokens, bool allowSurfaceSyntax = true);
 
-  bool parse(Program &program, std::string &error);
-  bool parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error);
+  bool parse(Program &program, std::string &error, ErrorInfo *errorInfo = nullptr);
+  bool parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error, ErrorInfo *errorInfo = nullptr);
 
 private:
   bool parseImport(Program &program);
@@ -151,6 +157,7 @@ private:
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;
   bool allowSurfaceSyntax_ = true;
+  ErrorInfo lastErrorInfo_;
 };
 
 } // namespace primec

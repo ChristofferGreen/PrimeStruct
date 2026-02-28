@@ -132,10 +132,26 @@ std::string diagnosticCodeString(DiagnosticCode code) {
 DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
                                       const std::string &message,
                                       const std::string &inputPath,
-                                      const std::vector<std::string> &notes) {
+                                      const std::vector<std::string> &notes,
+                                      const DiagnosticSpan *primarySpan,
+                                      const std::vector<DiagnosticRelatedSpan> &relatedSpans) {
   DiagnosticRecord record;
   record.code = diagnosticCodeString(code);
   record.notes = notes;
+  record.relatedSpans = relatedSpans;
+
+  if (primarySpan != nullptr) {
+    record.primarySpan = *primarySpan;
+    if (record.primarySpan.file.empty()) {
+      record.primarySpan.file = inputPath;
+    }
+    record.message = message;
+    if (record.message.empty()) {
+      record.message = "unknown error";
+    }
+    return record;
+  }
+
   record.primarySpan.file = inputPath;
 
   int line = 0;
@@ -155,6 +171,9 @@ DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
   record.message = normalizedMessage;
   if (record.message.empty()) {
     record.message = message;
+  }
+  if (record.message.empty()) {
+    record.message = "unknown error";
   }
   return record;
 }

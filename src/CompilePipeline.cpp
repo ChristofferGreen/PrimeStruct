@@ -168,10 +168,14 @@ void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::stri
 bool runCompilePipeline(const Options &options,
                         CompilePipelineOutput &output,
                         CompilePipelineErrorStage &errorStage,
-                        std::string &error) {
+                        std::string &error,
+                        CompilePipelineDiagnosticInfo *diagnosticInfo) {
   errorStage = CompilePipelineErrorStage::None;
   output = {};
   error.clear();
+  if (diagnosticInfo != nullptr) {
+    *diagnosticInfo = {};
+  }
 
   std::string source;
   IncludeResolver includeResolver;
@@ -208,8 +212,20 @@ bool runCompilePipeline(const Options &options,
 
   Lexer lexer(output.filteredSource);
   Parser parser(lexer.tokenize(), !options.requireCanonicalSyntax);
-  if (!parser.parse(output.program, error)) {
+  Parser::ErrorInfo parserErrorInfo;
+  if (!parser.parse(output.program, error, &parserErrorInfo)) {
     errorStage = CompilePipelineErrorStage::Parse;
+    if (diagnosticInfo != nullptr) {
+      diagnosticInfo->normalizedMessage = parserErrorInfo.message;
+      if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
+        diagnosticInfo->primarySpan.file = options.inputPath;
+        diagnosticInfo->primarySpan.line = parserErrorInfo.line;
+        diagnosticInfo->primarySpan.column = parserErrorInfo.column;
+        diagnosticInfo->primarySpan.endLine = parserErrorInfo.line;
+        diagnosticInfo->primarySpan.endColumn = parserErrorInfo.column;
+        diagnosticInfo->hasPrimarySpan = true;
+      }
+    }
     return false;
   }
 
@@ -236,13 +252,41 @@ bool runCompilePipeline(const Options &options,
   }
 
   Semantics semantics;
+  SemanticDiagnosticInfo semanticDiagnosticInfo;
   if (!semantics.validate(output.program,
                           options.entryPath,
                           error,
                           options.defaultEffects,
                           options.entryDefaultEffects,
-                          options.semanticTransforms)) {
+                          options.semanticTransforms,
+                          &semanticDiagnosticInfo)) {
     errorStage = CompilePipelineErrorStage::Semantic;
+    if (diagnosticInfo != nullptr) {
+      diagnosticInfo->normalizedMessage = error;
+      if (semanticDiagnosticInfo.line > 0 && semanticDiagnosticInfo.column > 0) {
+        diagnosticInfo->primarySpan.file = options.inputPath;
+        diagnosticInfo->primarySpan.line = semanticDiagnosticInfo.line;
+        diagnosticInfo->primarySpan.column = semanticDiagnosticInfo.column;
+        diagnosticInfo->primarySpan.endLine = semanticDiagnosticInfo.line;
+        diagnosticInfo->primarySpan.endColumn = semanticDiagnosticInfo.column;
+        diagnosticInfo->hasPrimarySpan = true;
+      }
+      diagnosticInfo->relatedSpans.clear();
+      diagnosticInfo->relatedSpans.reserve(semanticDiagnosticInfo.relatedSpans.size());
+      for (const auto &related : semanticDiagnosticInfo.relatedSpans) {
+        if (related.line <= 0 || related.column <= 0) {
+          continue;
+        }
+        DiagnosticRelatedSpan span;
+        span.span.file = options.inputPath;
+        span.span.line = related.line;
+        span.span.column = related.column;
+        span.span.endLine = related.line;
+        span.span.endColumn = related.column;
+        span.label = related.label;
+        diagnosticInfo->relatedSpans.push_back(std::move(span));
+      }
+    }
     return false;
   }
 

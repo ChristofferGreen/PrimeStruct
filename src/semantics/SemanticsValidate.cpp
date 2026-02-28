@@ -1532,7 +1532,8 @@ bool Semantics::validate(Program &program,
                          std::string &error,
                          const std::vector<std::string> &defaultEffects,
                          const std::vector<std::string> &entryDefaultEffects,
-                         const std::vector<std::string> &semanticTransforms) const {
+                         const std::vector<std::string> &semanticTransforms,
+                         SemanticDiagnosticInfo *diagnosticInfo) const {
   if (!applySemanticTransforms(program, semanticTransforms, error)) {
     return false;
   }
@@ -1545,7 +1546,8 @@ bool Semantics::validate(Program &program,
   if (!rewriteConvertConstructors(program, error)) {
     return false;
   }
-  semantics::SemanticsValidator validator(program, entryPath, error, defaultEffects, entryDefaultEffects);
+  semantics::SemanticsValidator validator(
+      program, entryPath, error, defaultEffects, entryDefaultEffects, diagnosticInfo);
   if (!validator.run()) {
     return false;
   }

@@ -3,6 +3,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                       const Expr &expr,
                                       const std::vector<Expr> *enclosingStatements,
                                       size_t statementIndex) {
+  ExprContextScope exprScope(*this, expr);
   if (expr.isLambda) {
     auto splitTokens = [](const std::string &text) {
       std::vector<std::string> tokens;

@@ -415,6 +415,8 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
   returnCall.kind = Expr::Kind::Call;
   returnCall.name = name.text;
   returnCall.namespacePrefix = namespacePrefix;
+  returnCall.sourceLine = name.line;
+  returnCall.sourceColumn = name.column;
   if (!expect(TokenKind::LParen, "expected '(' after return")) {
     return false;
   }
@@ -455,6 +457,20 @@ bool Parser::parseReturnStatement(Expr &out, const std::string &namespacePrefix)
 }
 
 bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
+  skipComments();
+  const Token &startToken = tokens_[pos_];
+  const int startLine = startToken.line;
+  const int startColumn = startToken.column;
+
+  auto assignSourceIfMissing = [&](Expr &target) {
+    if (target.sourceLine == 0 && startLine > 0) {
+      target.sourceLine = startLine;
+    }
+    if (target.sourceColumn == 0 && startColumn > 0) {
+      target.sourceColumn = startColumn;
+    }
+  };
+
   auto looksLikeArgumentLabel = [&](size_t start, size_t &afterLabel) -> bool {
     if (start >= tokens_.size() || tokens_[start].kind != TokenKind::LBracket) {
       return false;
@@ -903,8 +919,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
   if (!parsePrimary(current)) {
     return false;
   }
+  assignSourceIfMissing(current);
 
   if (current.isBinding) {
+    assignSourceIfMissing(current);
     expr = std::move(current);
     return true;
   }
@@ -1057,6 +1075,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     break;
   }
 
+  assignSourceIfMissing(current);
   expr = std::move(current);
   return true;
 }

@@ -8,6 +8,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
                                            const std::string &namespacePrefix,
                                            const std::vector<Expr> *enclosingStatements,
                                            size_t statementIndex) {
+  ExprContextScope statementScope(*this, stmt);
   auto returnKindForBinding = [&](const BindingInfo &binding) -> ReturnKind {
     if (binding.typeName == "Reference") {
       std::string base;

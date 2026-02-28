@@ -1,6 +1,7 @@
 #pragma once
 
 #include "primec/Ast.h"
+#include "primec/Diagnostics.h"
 #include "primec/Options.h"
 
 #include <string>
@@ -23,11 +24,19 @@ struct CompilePipelineOutput {
   bool hasDumpOutput = false;
 };
 
+struct CompilePipelineDiagnosticInfo {
+  std::string normalizedMessage;
+  DiagnosticSpan primarySpan;
+  std::vector<DiagnosticRelatedSpan> relatedSpans;
+  bool hasPrimarySpan = false;
+};
+
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &includePaths);
 
 bool runCompilePipeline(const Options &options,
                         CompilePipelineOutput &output,
                         CompilePipelineErrorStage &errorStage,
-                        std::string &error);
+                        std::string &error,
+                        CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
 
 } // namespace primec

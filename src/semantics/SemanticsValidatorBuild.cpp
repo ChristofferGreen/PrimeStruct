@@ -74,6 +74,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return true;
   };
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     bool isExplicit = false;
     if (isStructDefinition(def, isExplicit)) {
       structNames_.insert(def.fullPath);
@@ -127,6 +128,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return structNames_.count(parent) > 0;
   };
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
       error_ = "duplicate definition: " + def.fullPath;
       return false;
@@ -472,6 +474,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
       const std::string scopedPrefix = prefix + "/";
       bool sawImmediateDefinition = false;
       for (const auto &def : program_.definitions) {
+        DefinitionContextScope definitionScope(*this, def);
         if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
           continue;
         }
@@ -598,6 +601,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   };
 
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     if (structNames_.count(def.fullPath) > 0) {
       returnStructs_[def.fullPath] = def.fullPath;
       continue;
@@ -616,6 +620,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
 
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     ReturnKind kind = ReturnKind::Void;
     if (explicitStructs.count(def.fullPath) > 0) {
       kind = ReturnKind::Array;
@@ -681,6 +686,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
                             moveSuffix.size()) == 0;
   };
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     std::string parentPath;
     std::string placement;
     if (!isLifecycleHelper(def.fullPath, parentPath, placement)) {
@@ -791,6 +797,7 @@ bool SemanticsValidator::buildParameters() {
   };
 
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     std::unordered_set<std::string> seen;
     std::vector<ParameterInfo> params;
     params.reserve(def.parameters.size());

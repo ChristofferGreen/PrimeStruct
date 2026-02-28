@@ -39,6 +39,8 @@ struct Expr {
   bool isFieldAccess = false;
   bool isLambda = false;
   std::vector<std::string> lambdaCaptures;
+  int sourceLine = 0;
+  int sourceColumn = 0;
 };
 
 struct Definition {
@@ -52,6 +54,8 @@ struct Definition {
   std::optional<Expr> returnExpr;
   bool hasReturnStatement = false;
   bool isNested = false;
+  int sourceLine = 0;
+  int sourceColumn = 0;
 };
 
 struct Execution {
@@ -65,6 +69,8 @@ struct Execution {
   std::vector<Expr> bodyArguments;
   // True when `{ ... }` was present in the source, even if the list is empty.
   bool hasBodyArguments = false;
+  int sourceLine = 0;
+  int sourceColumn = 0;
 };
 
 struct Program {

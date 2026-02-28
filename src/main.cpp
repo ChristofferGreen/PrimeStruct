@@ -822,10 +822,25 @@ int emitFailure(const primec::Options &options,
                 const std::string &plainPrefix,
                 const std::string &message,
                 int exitCode,
-                const std::vector<std::string> &notes = {}) {
+                const std::vector<std::string> &notes = {},
+                const primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   if (options.emitDiagnostics) {
+    std::string diagnosticMessage = message;
+    primec::DiagnosticSpan primarySpanStorage;
+    const primec::DiagnosticSpan *primarySpan = nullptr;
+    std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
+    if (diagnosticInfo != nullptr) {
+      if (!diagnosticInfo->normalizedMessage.empty()) {
+        diagnosticMessage = diagnosticInfo->normalizedMessage;
+      }
+      if (diagnosticInfo->hasPrimarySpan) {
+        primarySpanStorage = diagnosticInfo->primarySpan;
+        primarySpan = &primarySpanStorage;
+      }
+      relatedSpans = diagnosticInfo->relatedSpans;
+    }
     const primec::DiagnosticRecord diagnostic =
-        primec::makeDiagnosticRecord(code, message, options.inputPath, notes);
+        primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans);
     std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
     return exitCode;
   }
@@ -868,8 +883,9 @@ int main(int argc, char **argv) {
   primec::addDefaultStdlibInclude(options.inputPath, options.includePaths);
 
   primec::CompilePipelineOutput pipelineOutput;
+  primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
-  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error)) {
+  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
     switch (pipelineError) {
       case primec::CompilePipelineErrorStage::Include:
         return emitFailure(options,
@@ -891,7 +907,8 @@ int main(int argc, char **argv) {
                            "Parse error: ",
                            error,
                            2,
-                           {"stage: parse"});
+                           {"stage: parse"},
+                           &pipelineDiagnosticInfo);
       case primec::CompilePipelineErrorStage::UnsupportedDumpStage:
         return emitFailure(options,
                            primec::DiagnosticCode::UnsupportedDumpStage,
@@ -905,7 +922,8 @@ int main(int argc, char **argv) {
                            "Semantic error: ",
                            error,
                            2,
-                           {"stage: semantic"});
+                           {"stage: semantic"},
+                           &pipelineDiagnosticInfo);
       default:
         return emitFailure(options,
                            primec::DiagnosticCode::EmitError,

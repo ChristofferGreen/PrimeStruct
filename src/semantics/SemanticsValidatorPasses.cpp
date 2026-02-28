@@ -186,6 +186,7 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
 
 bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     auto isStructDefinition = [&](const Definition &candidate) {
       for (const auto &transform : candidate.transforms) {
         if (isStructTransformName(transform.name)) {
@@ -962,6 +963,7 @@ bool SemanticsValidator::validateExecutions() {
   currentResultType_.reset();
   currentOnError_.reset();
   for (const auto &exec : program_.executions) {
+    ExecutionContextScope executionScope(*this, exec);
     activeEffects_ = resolveEffects(exec.transforms, false);
     movedBindings_.clear();
     endedReferenceBorrows_.clear();
@@ -1432,6 +1434,7 @@ bool SemanticsValidator::validateStructLayouts() {
   };
 
   for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
     if (!isStructDefinition(def)) {
       continue;
     }

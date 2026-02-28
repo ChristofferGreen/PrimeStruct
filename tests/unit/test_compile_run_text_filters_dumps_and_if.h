@@ -259,7 +259,9 @@ main() {
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"unknown call target: nope\"") != std::string::npos);
-  CHECK(diagnostics.find("\"line\":0") != std::string::npos);
+  CHECK(diagnostics.find("\"line\":0") == std::string::npos);
+  CHECK(diagnostics.find("\"column\":0") == std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /main\"") != std::string::npos);
   CHECK(diagnostics.find("\"notes\":[\"stage: semantic\"]") != std::string::npos);
 }
 

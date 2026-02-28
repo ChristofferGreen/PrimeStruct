@@ -114,8 +114,9 @@ bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
 Parser::Parser(std::vector<Token> tokens, bool allowSurfaceSyntax)
     : tokens_(std::move(tokens)), allowSurfaceSyntax_(allowSurfaceSyntax) {}
 
-bool Parser::parse(Program &program, std::string &error) {
+bool Parser::parse(Program &program, std::string &error, ErrorInfo *errorInfo) {
   error_ = &error;
+  lastErrorInfo_ = {};
   mathImportAll_ = false;
   mathImports_.clear();
   for (size_t scan = 0; scan < tokens_.size(); ++scan) {
@@ -161,31 +162,54 @@ bool Parser::parse(Program &program, std::string &error) {
     }
     if (match(TokenKind::KeywordImport)) {
       if (!parseImport(program)) {
+        if (errorInfo != nullptr) {
+          *errorInfo = lastErrorInfo_;
+        }
         return false;
       }
       continue;
     }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(program.definitions, program.executions)) {
+        if (errorInfo != nullptr) {
+          *errorInfo = lastErrorInfo_;
+        }
         return false;
       }
     } else {
       if (!parseDefinitionOrExecution(program.definitions, program.executions)) {
+        if (errorInfo != nullptr) {
+          *errorInfo = lastErrorInfo_;
+        }
         return false;
       }
     }
   }
+  if (errorInfo != nullptr) {
+    *errorInfo = {};
+  }
   return true;
 }
 
-bool Parser::parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error) {
+bool Parser::parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error, ErrorInfo *errorInfo) {
   error_ = &error;
+  lastErrorInfo_ = {};
   error.clear();
   if (!parseExpr(expr, namespacePrefix)) {
+    if (errorInfo != nullptr) {
+      *errorInfo = lastErrorInfo_;
+    }
     return false;
   }
   if (!match(TokenKind::End)) {
-    return fail("unexpected token after expression");
+    const bool ok = fail("unexpected token after expression");
+    if (errorInfo != nullptr) {
+      *errorInfo = lastErrorInfo_;
+    }
+    return ok;
+  }
+  if (errorInfo != nullptr) {
+    *errorInfo = {};
   }
   return true;
 }
@@ -359,6 +383,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.name = name.text;
     def.namespacePrefix = currentNamespacePrefix();
     def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+    def.sourceLine = name.line;
+    def.sourceColumn = name.column;
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
     if (!parseDefinitionBody(def, hasStructTransform, defs)) {
@@ -425,6 +451,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.name = name.text;
     def.namespacePrefix = currentNamespacePrefix();
     def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+    def.sourceLine = name.line;
+    def.sourceColumn = name.column;
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
     def.parameters = std::move(parameters);
@@ -464,6 +492,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   exec.name = name.text;
   exec.namespacePrefix = currentNamespacePrefix();
   exec.fullPath = makeFullPath(exec.name, exec.namespacePrefix);
+  exec.sourceLine = name.line;
+  exec.sourceColumn = name.column;
   exec.transforms = std::move(transforms);
   exec.templateArgs = std::move(templateArgs);
   exec.arguments = std::move(arguments);
@@ -700,6 +730,8 @@ bool Parser::parseCopyConstructorShorthand(std::vector<Expr> &out, const std::st
   param.kind = Expr::Kind::Call;
   param.name = name.text;
   param.namespacePrefix = namespacePrefix;
+  param.sourceLine = name.line;
+  param.sourceColumn = name.column;
   param.isBinding = true;
   Transform typeTransform;
   typeTransform.name = "Reference";
@@ -821,6 +853,8 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   def.name = name.text;
   def.namespacePrefix = parentPath;
   def.fullPath = makeFullPath(def.name, def.namespacePrefix);
+  def.sourceLine = name.line;
+  def.sourceColumn = name.column;
   def.transforms = std::move(combinedTransforms);
   def.templateArgs = std::move(templateArgs);
   def.parameters = std::move(parameters);
@@ -1141,17 +1175,19 @@ Token Parser::consume(TokenKind kind, const std::string &message) {
 bool Parser::fail(const std::string &message) {
   if (error_) {
     const Token &token = tokens_[pos_];
+    lastErrorInfo_.line = token.line;
+    lastErrorInfo_.column = token.column;
     std::ostringstream out;
     if (token.kind == TokenKind::Invalid) {
       if (token.text.size() == 1) {
-        out << "invalid character: " << describeInvalidToken(token);
+        lastErrorInfo_.message = "invalid character: " + describeInvalidToken(token);
       } else {
-        out << describeInvalidToken(token);
+        lastErrorInfo_.message = describeInvalidToken(token);
       }
-      out << " at " << token.line << ":" << token.column;
     } else {
-      out << message << " at " << token.line << ":" << token.column;
+      lastErrorInfo_.message = message;
     }
+    out << lastErrorInfo_.message << " at " << token.line << ":" << token.column;
     *error_ = out.str();
   }
   return false;

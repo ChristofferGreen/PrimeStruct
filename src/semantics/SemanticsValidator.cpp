@@ -5,6 +5,7 @@
 
 #include <cctype>
 #include <functional>
+#include <utility>
 
 namespace primec::semantics {
 
@@ -12,12 +13,17 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        const std::string &entryPath,
                                        std::string &error,
                                        const std::vector<std::string> &defaultEffects,
-                                       const std::vector<std::string> &entryDefaultEffects)
+                                       const std::vector<std::string> &entryDefaultEffects,
+                                       SemanticDiagnosticInfo *diagnosticInfo)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
       defaultEffects_(defaultEffects),
-      entryDefaultEffects_(entryDefaultEffects) {
+      entryDefaultEffects_(entryDefaultEffects),
+      diagnosticInfo_(diagnosticInfo) {
+  if (diagnosticInfo_ != nullptr) {
+    *diagnosticInfo_ = {};
+  }
   for (const auto &importPath : program_.imports) {
     if (importPath == "/std/math/*") {
       mathImportAll_ = true;
@@ -30,6 +36,63 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       }
     }
   }
+}
+
+void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
+  if (diagnosticInfo_ == nullptr) {
+    return;
+  }
+  if (line <= 0 || column <= 0) {
+    return;
+  }
+  if (diagnosticInfo_->line > 0 && diagnosticInfo_->column > 0) {
+    return;
+  }
+  diagnosticInfo_->line = line;
+  diagnosticInfo_->column = column;
+}
+
+void SemanticsValidator::captureRelatedSpan(int line, int column, const std::string &label) {
+  if (diagnosticInfo_ == nullptr) {
+    return;
+  }
+  if (line <= 0 || column <= 0 || label.empty()) {
+    return;
+  }
+  for (const auto &related : diagnosticInfo_->relatedSpans) {
+    if (related.line == line && related.column == column && related.label == label) {
+      return;
+    }
+  }
+  SemanticDiagnosticRelatedSpan related;
+  related.line = line;
+  related.column = column;
+  related.label = label;
+  diagnosticInfo_->relatedSpans.push_back(std::move(related));
+}
+
+void SemanticsValidator::captureExprContext(const Expr &expr) {
+  capturePrimarySpanIfUnset(expr.sourceLine, expr.sourceColumn);
+  if (currentDefinitionContext_ != nullptr) {
+    captureRelatedSpan(currentDefinitionContext_->sourceLine,
+                       currentDefinitionContext_->sourceColumn,
+                       "definition: " + currentDefinitionContext_->fullPath);
+  }
+  if (currentExecutionContext_ != nullptr) {
+    captureRelatedSpan(currentExecutionContext_->sourceLine,
+                       currentExecutionContext_->sourceColumn,
+                       "execution: " + currentExecutionContext_->fullPath);
+  }
+}
+
+void SemanticsValidator::captureDefinitionContext(const Definition &def) {
+  capturePrimarySpanIfUnset(def.sourceLine, def.sourceColumn);
+  captureRelatedSpan(def.sourceLine, def.sourceColumn, "definition: " + def.fullPath);
+}
+
+void SemanticsValidator::captureExecutionContext(const Execution &exec) {
+  capturePrimarySpanIfUnset(exec.sourceLine, exec.sourceColumn);
+  captureRelatedSpan(exec.sourceLine, exec.sourceColumn, "execution: " + exec.fullPath);
 }
 
 bool SemanticsValidator::run() {

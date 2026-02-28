@@ -603,6 +603,8 @@ bool Parser::parseParameterBinding(Expr &out, const std::string &namespacePrefix
   param.kind = Expr::Kind::Call;
   param.name = name.text;
   param.namespacePrefix = namespacePrefix;
+  param.sourceLine = name.line;
+  param.sourceColumn = name.column;
   param.transforms = std::move(transforms);
   param.isBinding = true;
   if (match(TokenKind::LParen)) {

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "SemanticsHelpers.h"
+#include "primec/Semantics.h"
 
 namespace primec::semantics {
 
@@ -17,7 +18,8 @@ public:
                      const std::string &entryPath,
                      std::string &error,
                      const std::vector<std::string> &defaultEffects,
-                     const std::vector<std::string> &entryDefaultEffects);
+                     const std::vector<std::string> &entryDefaultEffects,
+                     SemanticDiagnosticInfo *diagnosticInfo);
 
   bool run();
 
@@ -59,6 +61,11 @@ private:
   bool isEntryArgsAccess(const Expr &expr) const;
   bool isEntryArgStringBinding(const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr) const;
   bool isBuiltinBlockCall(const Expr &expr) const;
+  void capturePrimarySpanIfUnset(int line, int column);
+  void captureRelatedSpan(int line, int column, const std::string &label);
+  void captureExprContext(const Expr &expr);
+  void captureDefinitionContext(const Definition &def);
+  void captureExecutionContext(const Execution &exec);
 
   ReturnKind inferExprReturnKind(const Expr &expr,
                                 const std::vector<ParameterInfo> &params,
@@ -193,12 +200,58 @@ private:
       validator.endedReferenceBorrows_ = std::move(previous);
     }
   };
+  struct ExprContextScope {
+    SemanticsValidator &validator;
+    const Expr *previous;
+    const Expr &current;
+    ExprContextScope(SemanticsValidator &validatorIn, const Expr &exprIn)
+        : validator(validatorIn), previous(validatorIn.currentExprContext_), current(exprIn) {
+      validator.currentExprContext_ = &exprIn;
+    }
+    ~ExprContextScope() {
+      if (!validator.error_.empty()) {
+        validator.captureExprContext(current);
+      }
+      validator.currentExprContext_ = previous;
+    }
+  };
+  struct DefinitionContextScope {
+    SemanticsValidator &validator;
+    const Definition *previous;
+    const Definition &current;
+    DefinitionContextScope(SemanticsValidator &validatorIn, const Definition &defIn)
+        : validator(validatorIn), previous(validatorIn.currentDefinitionContext_), current(defIn) {
+      validator.currentDefinitionContext_ = &defIn;
+    }
+    ~DefinitionContextScope() {
+      if (!validator.error_.empty()) {
+        validator.captureDefinitionContext(current);
+      }
+      validator.currentDefinitionContext_ = previous;
+    }
+  };
+  struct ExecutionContextScope {
+    SemanticsValidator &validator;
+    const Execution *previous;
+    const Execution &current;
+    ExecutionContextScope(SemanticsValidator &validatorIn, const Execution &execIn)
+        : validator(validatorIn), previous(validatorIn.currentExecutionContext_), current(execIn) {
+      validator.currentExecutionContext_ = &execIn;
+    }
+    ~ExecutionContextScope() {
+      if (!validator.error_.empty()) {
+        validator.captureExecutionContext(current);
+      }
+      validator.currentExecutionContext_ = previous;
+    }
+  };
 
   const Program &program_;
   const std::string &entryPath_;
   std::string &error_;
   const std::vector<std::string> &defaultEffects_;
   const std::vector<std::string> &entryDefaultEffects_;
+  SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
 
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;
@@ -226,6 +279,9 @@ private:
   bool allowEntryArgStringUse_ = false;
   std::optional<ResultTypeInfo> currentResultType_;
   std::optional<OnErrorHandler> currentOnError_;
+  const Expr *currentExprContext_ = nullptr;
+  const Definition *currentDefinitionContext_ = nullptr;
+  const Execution *currentExecutionContext_ = nullptr;
 };
 
 } // namespace primec::semantics
