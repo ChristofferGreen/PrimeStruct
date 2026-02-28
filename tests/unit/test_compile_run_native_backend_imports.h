@@ -334,6 +334,37 @@ TEST_CASE("compiles and runs unquoted import expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
+TEST_CASE("legacy include-path alias works in primec and primevm") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_legacy_flag_alias";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+  {
+    std::filesystem::create_directories(includeRoot / "lib");
+    std::ofstream libFile(includeRoot / "lib" / "lib.prime");
+    CHECK(libFile.good());
+    libFile << "[return<int>]\nhelper(){ return(12i32) }\n";
+    CHECK(libFile.good());
+  }
+
+  const std::string source = "import</lib>\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string srcPath = writeTemp("compile_unquoted_include_legacy_flag.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_unquoted_inc_legacy_flag_exe").string();
+
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+                                    " --entry /main --include-path " + includeRoot.string();
+  CHECK(runCommand(compileCppCmd) == 0);
+  CHECK(runCommand(exePath) == 12);
+
+  const std::string runVmViaPrimecCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main --include-path=" + includeRoot.string();
+  CHECK(runCommand(runVmViaPrimecCmd) == 12);
+
+  const std::string runPrimevmCmd =
+      "./primevm " + srcPath + " --entry /main --include-path=" + includeRoot.string();
+  CHECK(runCommand(runPrimevmCmd) == 12);
+}
+
 TEST_CASE("compiles and runs versioned import expansion") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned";
