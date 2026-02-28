@@ -488,6 +488,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrow checker diagnostics include root and sink for pointer alias writes") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32> mut] ptr{location(ref)}
+  [Pointer<i32> mut] alias{ptr}
+  assign(dereference(alias), 2i32)
+  [i32] observed{dereference(ptr)}
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: value") != std::string::npos);
+  CHECK(error.find("root: value") != std::string::npos);
+  CHECK(error.find("sink: alias") != std::string::npos);
+}
+
 TEST_CASE("borrow checker allows branch-local assign after last pointer alias use with no merge use") {
   const std::string source = R"(
 [return<void>]

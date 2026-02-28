@@ -369,7 +369,7 @@
       }
       const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
       if (conflict && !currentDefinitionIsUnsafe_) {
-        error_ = "borrow conflict: " + borrowRoot;
+        error_ = "borrow conflict: " + borrowRoot + " (root: " + borrowRoot + ", sink: " + stmt.name + ")";
         return false;
       }
       info.referenceRoot = std::move(borrowRoot);

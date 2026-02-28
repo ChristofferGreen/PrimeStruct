@@ -506,6 +506,8 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("reference escapes via assignment to out") != std::string::npos);
+  CHECK(error.find("root: localValue") != std::string::npos);
+  CHECK(error.find("sink: out") != std::string::npos);
 }
 
 TEST_CASE("safe reference rejects assignment escape through match expression") {

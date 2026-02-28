@@ -712,8 +712,9 @@
       }
       return false;
     };
-    std::function<bool(const Expr &)> isEscapingReferenceExpr;
-    isEscapingReferenceExpr = [&](const Expr &argExpr) -> bool {
+    std::function<bool(const Expr &, std::string &)> resolveEscapingReferenceRoot;
+    resolveEscapingReferenceRoot = [&](const Expr &argExpr, std::string &rootOut) -> bool {
+      rootOut.clear();
       if (argExpr.kind == Expr::Kind::Name) {
         if (findParamBinding(params, argExpr.name) != nullptr) {
           return false;
@@ -724,21 +725,24 @@
         }
         std::string sourceRoot = itLocal->second.referenceRoot.empty() ? argExpr.name : itLocal->second.referenceRoot;
         if (const BindingInfo *rootParam = findParamBinding(params, sourceRoot)) {
-          return rootParam->typeName != "Reference";
+          if (rootParam->typeName == "Reference") {
+            return false;
+          }
         }
+        rootOut = sourceRoot;
         return true;
       }
       if (argExpr.kind != Expr::Kind::Call || argExpr.isBinding) {
         return false;
       }
-      auto hasEscapingChildExpr = [&](const Expr &callExpr) -> bool {
+      auto resolveChildRoot = [&](const Expr &callExpr) -> bool {
         for (const auto &nestedArg : callExpr.args) {
-          if (isEscapingReferenceExpr(nestedArg)) {
+          if (resolveEscapingReferenceRoot(nestedArg, rootOut)) {
             return true;
           }
         }
         for (const auto &bodyExpr : callExpr.bodyArguments) {
-          if (isEscapingReferenceExpr(bodyExpr)) {
+          if (resolveEscapingReferenceRoot(bodyExpr, rootOut)) {
             return true;
           }
         }
@@ -747,7 +751,7 @@
       if (isIfCall(argExpr) || isMatchCall(argExpr) || isBlockCall(argExpr) || isReturnCall(argExpr) ||
           isSimpleCallName(argExpr, "then") || isSimpleCallName(argExpr, "else") ||
           isSimpleCallName(argExpr, "case")) {
-        return hasEscapingChildExpr(argExpr);
+        return resolveChildRoot(argExpr);
       }
       const std::string nestedResolved = resolveCalleePath(argExpr);
       if (nestedResolved.empty()) {
@@ -790,20 +794,27 @@
         if (nestedArg == nullptr || nestedParams[nestedIndex].binding.typeName != "Reference") {
           continue;
         }
-        if (isEscapingReferenceExpr(*nestedArg)) {
+        if (resolveEscapingReferenceRoot(*nestedArg, rootOut)) {
           return true;
         }
       }
       return false;
     };
     auto reportReferenceAssignmentEscape = [&](const std::string &sinkName, const Expr &rhsExpr) -> bool {
-      if (!isEscapingReferenceExpr(rhsExpr)) {
+      std::string sourceRoot;
+      if (!resolveEscapingReferenceRoot(rhsExpr, sourceRoot)) {
         return false;
       }
+      if (sourceRoot.empty()) {
+        sourceRoot = "<unknown>";
+      }
+      const std::string sink = sinkName.empty() ? "<unknown>" : sinkName;
       if (currentDefinitionIsUnsafe_ && isUnsafeReferenceExpr(rhsExpr)) {
-        error_ = "unsafe reference escapes via assignment to " + sinkName;
+        error_ = "unsafe reference escapes via assignment to " + sink +
+                 " (root: " + sourceRoot + ", sink: " + sink + ")";
       } else {
-        error_ = "reference escapes via assignment to " + sinkName;
+        error_ = "reference escapes via assignment to " + sink +
+                 " (root: " + sourceRoot + ", sink: " + sink + ")";
       }
       return true;
     };
@@ -2220,6 +2231,10 @@
         }
         return false;
       };
+      auto formatBorrowedBindingError = [&](const std::string &borrowRoot, const std::string &sinkName) {
+        const std::string sink = sinkName.empty() ? borrowRoot : sinkName;
+        error_ = "borrowed binding: " + borrowRoot + " (root: " + borrowRoot + ", sink: " + sink + ")";
+      };
       auto findNamedBinding = [&](const std::string &name) -> const BindingInfo * {
         if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
           return paramBinding;
@@ -2371,7 +2386,7 @@
           return false;
         }
         if (hasActiveBorrowForBinding(target.name)) {
-          error_ = "borrowed binding: " + target.name;
+          formatBorrowedBindingError(target.name, target.name);
           return false;
         }
         if (movedBindings_.count(target.name) > 0) {
@@ -2394,7 +2409,7 @@
             return false;
           }
           if (hasActiveBorrowForBinding(target.name)) {
-            error_ = "borrowed binding: " + target.name;
+            formatBorrowedBindingError(target.name, target.name);
             return false;
           }
         } else if (target.kind == Expr::Kind::Call) {
@@ -2421,7 +2436,8 @@
             return false;
           }
           if (!pointerBorrowRoot.empty() && hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
-            error_ = "borrowed binding: " + pointerBorrowRoot;
+            const std::string borrowSink = !ignoreBorrowName.empty() ? ignoreBorrowName : pointerBorrowRoot;
+            formatBorrowedBindingError(pointerBorrowRoot, borrowSink);
             return false;
           }
           if (currentDefinitionIsUnsafe_ && isUnsafeReferenceExpr(expr.args[1])) {
@@ -2515,7 +2531,7 @@
             return false;
           }
           if (hasActiveBorrowForBinding(target.name)) {
-            error_ = "borrowed binding: " + target.name;
+            formatBorrowedBindingError(target.name, target.name);
             return false;
           }
         } else if (target.kind == Expr::Kind::Call) {
@@ -2542,7 +2558,8 @@
             return false;
           }
           if (!pointerBorrowRoot.empty() && hasActiveBorrowForBinding(pointerBorrowRoot, ignoreBorrowName)) {
-            error_ = "borrowed binding: " + pointerBorrowRoot;
+            const std::string borrowSink = !ignoreBorrowName.empty() ? ignoreBorrowName : pointerBorrowRoot;
+            formatBorrowedBindingError(pointerBorrowRoot, borrowSink);
             return false;
           }
           if (!validateExpr(params, locals, pointerExpr)) {
