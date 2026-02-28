@@ -397,6 +397,10 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.dumpStage = argv[++i];
     } else if (arg.rfind("--dump-stage=", 0) == 0) {
       out.dumpStage = arg.substr(std::string("--dump-stage=").size());
+    } else if (arg == "--import-path" && i + 1 < argc) {
+      out.includePaths.push_back(argv[++i]);
+    } else if (arg.rfind("--import-path=", 0) == 0) {
+      out.includePaths.push_back(arg.substr(std::string("--import-path=").size()));
     } else if (arg == "--include-path" && i + 1 < argc) {
       out.includePaths.push_back(argv[++i]);
     } else if (arg.rfind("--include-path=", 0) == 0) {
@@ -550,7 +554,7 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primevm <input.prime> [--entry /path] [--include-path <dir>] [--text-filters <list>] "
+      std::cerr << "Usage: primevm <input.prime> [--entry /path] [--import-path <dir>] [--text-filters <list>] "
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
@@ -574,10 +578,10 @@ int main(int argc, char **argv) {
       case primec::CompilePipelineErrorStage::Include:
         return emitFailure(options,
                            primec::DiagnosticCode::IncludeError,
-                           "Include error: ",
+                           "Import error: ",
                            error,
                            2,
-                           {"stage: include"});
+                           {"stage: import"});
       case primec::CompilePipelineErrorStage::Transform:
         return emitFailure(options,
                            primec::DiagnosticCode::TransformError,

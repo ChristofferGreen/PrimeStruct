@@ -203,11 +203,11 @@ Collections desugar into helper calls:
 
 ------------------------------------------------------------------------
 
-## Includes and Namespaces
+## Imports and Namespaces
 
-Includes splice text inline before text transforms:
+Imports splice text inline before text transforms:
 
-    include<"/std/io", version="1.2.0">
+    import<"/std/io", version="1.2.0">
 
 Namespaces prefix enclosed names:
 

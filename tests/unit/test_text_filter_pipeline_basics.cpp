@@ -5,7 +5,7 @@
 TEST_SUITE_BEGIN("primestruct.text_filters.pipeline.basics");
 
 TEST_CASE("pipeline passes through text") {
-  const std::string source = "include</std>\n[return<int>]\nmain(){ return(1i32) }\n";
+  const std::string source = "import</std>\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -14,8 +14,8 @@ TEST_CASE("pipeline passes through text") {
   CHECK(output == source);
 }
 
-TEST_CASE("pipeline preserves quoted include paths") {
-  const std::string source = "include<\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
+TEST_CASE("pipeline preserves quoted import paths") {
+  const std::string source = "import<\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -24,9 +24,9 @@ TEST_CASE("pipeline preserves quoted include paths") {
   CHECK(output == source);
 }
 
-TEST_CASE("pipeline preserves include with version attribute") {
+TEST_CASE("pipeline preserves import with version attribute") {
   const std::string source =
-      "include<\"/std/io\", version=\"1.2\">\n[return<int>]\nmain(){ return(1i32) }\n";
+      "import<\"/std/io\", version=\"1.2\">\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -35,9 +35,9 @@ TEST_CASE("pipeline preserves include with version attribute") {
   CHECK(output == source);
 }
 
-TEST_CASE("pipeline preserves include with comments") {
+TEST_CASE("pipeline preserves import with comments") {
   const std::string source =
-      "include /* comment */ <\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
+      "import /* comment */ <\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -46,9 +46,9 @@ TEST_CASE("pipeline preserves include with comments") {
   CHECK(output == source);
 }
 
-TEST_CASE("pipeline preserves include with tight comment") {
+TEST_CASE("pipeline preserves import with tight comment") {
   const std::string source =
-      "include/* comment */<\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
+      "import/* comment */<\"/std/io\">\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -57,9 +57,9 @@ TEST_CASE("pipeline preserves include with tight comment") {
   CHECK(output == source);
 }
 
-TEST_CASE("pipeline preserves include with payload comments") {
+TEST_CASE("pipeline preserves import with payload comments") {
   const std::string source =
-      "include</std/io /* > should be ignored */>\n[return<int>]\nmain(){ return(1i32) }\n";
+      "import</std/io /* > should be ignored */>\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;
@@ -68,8 +68,8 @@ TEST_CASE("pipeline preserves include with payload comments") {
   CHECK(output == source);
 }
 
-TEST_CASE("implicit-utf8 runs in include-like paths") {
-  const std::string source = "main(){ /path/include<\"hello\"> }\n";
+TEST_CASE("implicit-utf8 runs in import-like paths") {
+  const std::string source = "main(){ /path/import<\"hello\"> }\n";
   primec::TextFilterPipeline pipeline;
   primec::TextFilterOptions options;
   options.enabledFilters = {"implicit-utf8"};
@@ -80,8 +80,8 @@ TEST_CASE("implicit-utf8 runs in include-like paths") {
   CHECK(output.find("\"hello\"utf8") != std::string::npos);
 }
 
-TEST_CASE("pipeline preserves single-quoted include paths") {
-  const std::string source = "include<'/std\\\\'>\n[return<int>]\nmain(){ return(1i32) }\n";
+TEST_CASE("pipeline preserves single-quoted import paths") {
+  const std::string source = "import<'/std\\\\'>\n[return<int>]\nmain(){ return(1i32) }\n";
   primec::TextFilterPipeline pipeline;
   std::string output;
   std::string error;

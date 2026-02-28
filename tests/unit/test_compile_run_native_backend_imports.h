@@ -257,9 +257,9 @@ main() {
   CHECK(runCommand(exePath) == 8);
 }
 
-TEST_CASE("compiles and runs include expansion") {
+TEST_CASE("compiles and runs import expansion") {
   const std::string libPath = writeTemp("compile_lib.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
-  const std::string source = "include<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string source = "import<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_exe").string();
 
@@ -268,9 +268,9 @@ TEST_CASE("compiles and runs include expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs single-quoted include expansion") {
+TEST_CASE("compiles and runs single-quoted import expansion") {
   const std::string libPath = writeTemp("compile_lib_single.prime", "[return<int>]\nhelper(){ return(6i32) }\n");
-  const std::string source = "include<'" + libPath + "'>\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string source = "import<'" + libPath + "'>\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include_single.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_single_exe").string();
 
@@ -279,9 +279,9 @@ TEST_CASE("compiles and runs single-quoted include expansion") {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("compiles and runs with duplicate includes ignored") {
+TEST_CASE("compiles and runs with duplicate imports ignored") {
   const std::string libPath = writeTemp("compile_lib_dupe.prime", "[return<int>]\nhelper(){ return(5i32) }\n");
-  const std::string source = "include<\"" + libPath + "\">\ninclude<\"" + libPath +
+  const std::string source = "import<\"" + libPath + "\">\nimport<\"" + libPath +
                              "\">\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_include_dupe.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_inc_dupe_exe").string();
@@ -291,17 +291,17 @@ TEST_CASE("compiles and runs with duplicate includes ignored") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("rejects include path with suffix") {
+TEST_CASE("rejects import path with suffix") {
   const std::string srcPath =
-      writeTemp("compile_include_suffix.prime", "include<\"/std/io\"utf8>\n[return<int>]\nmain(){ return(0i32) }\n");
+      writeTemp("compile_include_suffix.prime", "import<\"/std/io\"utf8>\n[return<int>]\nmain(){ return(0i32) }\n");
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_include_suffix_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Include error: include path cannot have suffix\n");
+  CHECK(readFile(errPath) == "Import error: import path cannot have suffix\n");
 }
 
-TEST_CASE("compiles and runs unquoted include expansion") {
+TEST_CASE("compiles and runs unquoted import expansion") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_unquoted";
   std::filesystem::create_directories(includeRoot);
@@ -313,17 +313,17 @@ TEST_CASE("compiles and runs unquoted include expansion") {
     CHECK(libFile.good());
   }
 
-  const std::string source = "include</lib>\n[return<int>]\nmain(){ return(helper()) }\n";
+  const std::string source = "import</lib>\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_unquoted_include.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_unquoted_inc_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                 " --entry /main --include-path " + includeRoot.string();
+                                 " --entry /main --import-path " + includeRoot.string();
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs versioned include expansion") {
+TEST_CASE("compiles and runs versioned import expansion") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned";
   std::filesystem::remove_all(includeRoot);
@@ -344,7 +344,7 @@ TEST_CASE("compiles and runs versioned include expansion") {
   }
 
   const std::string source =
-      "include</lib, version=\"1.2\">\n"
+      "import</lib, version=\"1.2\">\n"
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include.prime", source);
@@ -352,21 +352,21 @@ TEST_CASE("compiles and runs versioned include expansion") {
   const std::string nativePath = (std::filesystem::temp_directory_path() / "primec_versioned_inc_native").string();
 
   const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --include-path " + includeRoot.string();
+                                    " --entry /main --import-path " + includeRoot.string();
   CHECK(runCommand(compileCppCmd) == 0);
   CHECK(runCommand(exePath) == 7);
 
   const std::string runVmCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main --include-path " + includeRoot.string();
+      "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
   CHECK(runCommand(runVmCmd) == 7);
 
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
-                                       " --entry /main --include-path " + includeRoot.string();
+                                       " --entry /main --import-path " + includeRoot.string();
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 7);
 }
 
-TEST_CASE("compiles and runs versioned include with version first") {
+TEST_CASE("compiles and runs versioned import with version first") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_first";
   std::filesystem::remove_all(includeRoot);
@@ -387,14 +387,14 @@ TEST_CASE("compiles and runs versioned include with version first") {
   }
 
   const std::string source =
-      "include<version=\"1.2\", \"/lib\">\n"
+      "import<version=\"1.2\", \"/lib\">\n"
       "[return<int>]\n"
       "main(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_first.prime", source);
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_versioned_inc_first_exe").string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                 " --entry /main --include-path " + includeRoot.string();
+                                 " --entry /main --import-path " + includeRoot.string();
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 9);
 }

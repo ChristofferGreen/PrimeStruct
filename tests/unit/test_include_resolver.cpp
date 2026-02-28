@@ -58,9 +58,9 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 
 TEST_SUITE_BEGIN("primestruct.includes.resolver");
 
-TEST_CASE("expands single include") {
+TEST_CASE("expands single import") {
   const std::string libPath = writeTemp("lib_a.prime", "[return<int>]\nhelper(){ return(3i32) }\n");
-  const std::string srcPath = writeTemp("main_a.prime", "include<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n");
+  const std::string srcPath = writeTemp("main_a.prime", "import<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n");
 
   std::string source;
   std::string error;
@@ -70,10 +70,10 @@ TEST_CASE("expands single include") {
   CHECK(source.find("helper") != std::string::npos);
 }
 
-TEST_CASE("expands include with whitespace") {
+TEST_CASE("expands import with whitespace") {
   const std::string marker = "LIB_WS_MARKER";
   const std::string libPath = writeTemp("lib_ws.prime", "// " + marker + "\n");
-  const std::string srcPath = writeTemp("main_ws.prime", "include  <  \"" + libPath + "\"  >\n");
+  const std::string srcPath = writeTemp("main_ws.prime", "import<  \"" + libPath + "\"  >\n");
 
   std::string source;
   std::string error;
@@ -83,10 +83,10 @@ TEST_CASE("expands include with whitespace") {
   CHECK(source.find(marker) != std::string::npos);
 }
 
-TEST_CASE("expands include with tight comment") {
+TEST_CASE("expands import with tight comment") {
   const std::string marker = "LIB_TIGHT_COMMENT";
   const std::string libPath = writeTemp("lib_tight_comment.prime", "// " + marker + "\n");
-  const std::string srcPath = writeTemp("main_tight_comment.prime", "include/* note */<\"" + libPath + "\">\n");
+  const std::string srcPath = writeTemp("main_tight_comment.prime", "import/* note */<\"" + libPath + "\">\n");
 
   std::string source;
   std::string error;
@@ -96,7 +96,7 @@ TEST_CASE("expands include with tight comment") {
   CHECK(source.find(marker) != std::string::npos);
 }
 
-TEST_CASE("expands include with bare slash path") {
+TEST_CASE("expands import with bare slash path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_path_root";
   std::filesystem::remove_all(baseDir);
@@ -105,7 +105,7 @@ TEST_CASE("expands include with bare slash path") {
   std::filesystem::create_directories(includeRoot);
 
   writeFile(includeRoot / "lib" / "lib.prime", "// INCLUDE_BARE_PATH\n");
-  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib>\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import</lib>\n");
 
   std::string source;
   std::string error;
@@ -115,7 +115,7 @@ TEST_CASE("expands include with bare slash path") {
   CHECK(source.find("INCLUDE_BARE_PATH") != std::string::npos);
 }
 
-TEST_CASE("expands bare slash includes with semicolons") {
+TEST_CASE("expands bare slash imports with semicolons") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_semicolon_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_semicolon_root";
   std::filesystem::remove_all(baseDir);
@@ -125,7 +125,7 @@ TEST_CASE("expands bare slash includes with semicolons") {
 
   writeFile(includeRoot / "lib_a" / "lib.prime", "// INCLUDE_BARE_SEMI_A\n");
   writeFile(includeRoot / "lib_b" / "lib.prime", "// INCLUDE_BARE_SEMI_B\n");
-  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib_a;/lib_b>\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import</lib_a;/lib_b>\n");
 
   std::string source;
   std::string error;
@@ -136,7 +136,7 @@ TEST_CASE("expands bare slash includes with semicolons") {
   CHECK(source.find("INCLUDE_BARE_SEMI_B") != std::string::npos);
 }
 
-TEST_CASE("expands bare slash includes with whitespace separators") {
+TEST_CASE("expands bare slash imports with whitespace separators") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_ws_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_ws_root";
   std::filesystem::remove_all(baseDir);
@@ -146,7 +146,7 @@ TEST_CASE("expands bare slash includes with whitespace separators") {
 
   writeFile(includeRoot / "lib_a" / "lib.prime", "// INCLUDE_BARE_WS_A\n");
   writeFile(includeRoot / "lib_b" / "lib.prime", "// INCLUDE_BARE_WS_B\n");
-  const std::string srcPath = writeFile(baseDir / "main.prime", "include</lib_a /lib_b>\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import</lib_a /lib_b>\n");
 
   std::string source;
   std::string error;
@@ -157,7 +157,7 @@ TEST_CASE("expands bare slash includes with whitespace separators") {
   CHECK(source.find("INCLUDE_BARE_WS_B") != std::string::npos);
 }
 
-TEST_CASE("bare slash include does not use absolute filesystem path") {
+TEST_CASE("bare slash import does not use absolute filesystem path") {
   auto absRoot = std::filesystem::path("/tmp") / "primec_tests" / "include_bare_absolute";
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_bare_absolute_base";
   std::filesystem::remove_all(absRoot);
@@ -167,16 +167,16 @@ TEST_CASE("bare slash include does not use absolute filesystem path") {
 
   writeFile(absRoot / "lib.prime", "// INCLUDE_BARE_ABS\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include</tmp/primec_tests/include_bare_absolute>\n");
+      writeFile(baseDir / "main.prime", "import</tmp/primec_tests/include_bare_absolute>\n");
 
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
   CHECK(!resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("failed to read include") != std::string::npos);
+  CHECK(error.find("failed to read import") != std::string::npos);
 }
 
-TEST_CASE("resolves versioned include with single quotes") {
+TEST_CASE("resolves versioned import with single quotes") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_single_quote_root";
   std::filesystem::remove_all(baseDir);
@@ -187,7 +187,7 @@ TEST_CASE("resolves versioned include with single quotes") {
   writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_SINGLE_QUOTE_120\n");
   writeFile(includeRoot / "1.2.3" / "lib.prime", "// INCLUDE_SINGLE_QUOTE_123\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include < '/lib.prime', version = '1.2' >\n");
+      writeFile(baseDir / "main.prime", "import<'/lib.prime', version = '1.2'>\n");
 
   std::string source;
   std::string error;
@@ -198,14 +198,14 @@ TEST_CASE("resolves versioned include with single quotes") {
   CHECK(source.find("INCLUDE_SINGLE_QUOTE_120") == std::string::npos);
 }
 
-TEST_CASE("ignores duplicate includes") {
+TEST_CASE("ignores duplicate imports") {
   const std::string marker = "LIB_B_MARKER";
   const std::string libPath = writeTemp("lib_b.prime",
                                         "// " + marker + "\n"
                                         "[return<int>]\nhelper(){ return(5i32) }\n");
   const std::string srcPath = writeTemp("main_b.prime",
-                                        "include<\"" + libPath + "\">\n"
-                                        "include<\"" + libPath + "\">\n"
+                                        "import<\"" + libPath + "\">\n"
+                                        "import<\"" + libPath + "\">\n"
                                         "[return<int>]\nmain(){ return(helper()) }\n");
 
   std::string source;
@@ -219,7 +219,7 @@ TEST_CASE("ignores duplicate includes") {
   CHECK(second == std::string::npos);
 }
 
-TEST_CASE("ignores duplicate includes with equivalent relative paths") {
+TEST_CASE("ignores duplicate imports with equivalent relative paths") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_duplicate_relative";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
@@ -227,8 +227,8 @@ TEST_CASE("ignores duplicate includes with equivalent relative paths") {
   writeFile(baseDir / "lib.prime", "// INCLUDE_DUPLICATE_RELATIVE\n");
   const std::string srcPath =
       writeFile(baseDir / "main.prime",
-                "include<\"lib.prime\">\n"
-                "include<\"./lib.prime\">\n");
+                "import<\"lib.prime\">\n"
+                "import<\"./lib.prime\">\n");
 
   std::string source;
   std::string error;
@@ -241,21 +241,21 @@ TEST_CASE("ignores duplicate includes with equivalent relative paths") {
   CHECK(second == std::string::npos);
 }
 
-TEST_CASE("missing include fails") {
-  const std::string srcPath = writeTemp("main_c.prime", "include<\"/tmp/does_not_exist.prime\">\n");
+TEST_CASE("missing import fails") {
+  const std::string srcPath = writeTemp("main_c.prime", "import<\"/tmp/does_not_exist.prime\">\n");
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
   CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.find("failed to read include") != std::string::npos);
+  CHECK(error.find("failed to read import") != std::string::npos);
 }
 
-TEST_CASE("ignores include directives inside string literals") {
+TEST_CASE("ignores import directives inside string literals") {
   const std::string srcPath =
       writeTemp("include_in_string.prime",
                 "[return<int>]\n"
                 "main() {\n"
-                "  print_line(\"before include<\\\"/tmp/does_not_exist.prime\\\"> after\"utf8)\n"
+                "  print_line(\"before import<\\\"/tmp/does_not_exist.prime\\\"> after\"utf8)\n"
                 "  return(0i32)\n"
                 "}\n");
 
@@ -264,13 +264,13 @@ TEST_CASE("ignores include directives inside string literals") {
   primec::IncludeResolver resolver;
   CHECK(resolver.expandIncludes(srcPath, source, error));
   CHECK(error.empty());
-  CHECK(source.find("include<\\\"/tmp/does_not_exist.prime\\\">") != std::string::npos);
+  CHECK(source.find("import<\\\"/tmp/does_not_exist.prime\\\">") != std::string::npos);
 }
 
-TEST_CASE("ignores include directives inside comments") {
+TEST_CASE("ignores import directives inside comments") {
   const std::string srcPath =
       writeTemp("include_in_comment.prime",
-                "// include<\"/tmp/does_not_exist.prime\">\n"
+                "// import<\"/tmp/does_not_exist.prime\">\n"
                 "[return<int>]\n"
                 "main(){ return(0i32) }\n");
 
@@ -279,38 +279,38 @@ TEST_CASE("ignores include directives inside comments") {
   primec::IncludeResolver resolver;
   CHECK(resolver.expandIncludes(srcPath, source, error));
   CHECK(error.empty());
-  CHECK(source.find("include<\"/tmp/does_not_exist.prime\">") != std::string::npos);
+  CHECK(source.find("import<\"/tmp/does_not_exist.prime\">") != std::string::npos);
 }
 
-TEST_CASE("ignores include keyword within identifiers") {
+TEST_CASE("ignores import keyword within identifiers") {
   const std::string srcPath =
       writeTemp("include_identifier.prime",
-                "xinclude<\"/tmp/does_not_exist.prime\">\n"
-                "includeX<\"/tmp/does_not_exist.prime\">\n");
+                "ximport<\"/tmp/does_not_exist.prime\">\n"
+                "importX<\"/tmp/does_not_exist.prime\">\n");
 
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
   CHECK(resolver.expandIncludes(srcPath, source, error));
   CHECK(error.empty());
-  CHECK(source.find("xinclude<\"/tmp/does_not_exist.prime\">") != std::string::npos);
-  CHECK(source.find("includeX<\"/tmp/does_not_exist.prime\">") != std::string::npos);
+  CHECK(source.find("ximport<\"/tmp/does_not_exist.prime\">") != std::string::npos);
+  CHECK(source.find("importX<\"/tmp/does_not_exist.prime\">") != std::string::npos);
 }
 
-TEST_CASE("ignores include keyword after path separator") {
+TEST_CASE("ignores import keyword after path separator") {
   const std::string srcPath =
       writeTemp("include_after_slash.prime",
-                "path/include<\"/tmp/does_not_exist.prime\">\n");
+                "path/import<\"/tmp/does_not_exist.prime\">\n");
 
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
   CHECK(resolver.expandIncludes(srcPath, source, error));
   CHECK(error.empty());
-  CHECK(source.find("path/include<\"/tmp/does_not_exist.prime\">") != std::string::npos);
+  CHECK(source.find("path/import<\"/tmp/does_not_exist.prime\">") != std::string::npos);
 }
 
-TEST_CASE("resolves include from include path") {
+TEST_CASE("resolves import from import path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_search_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_search_root";
   std::filesystem::remove_all(baseDir);
@@ -319,7 +319,7 @@ TEST_CASE("resolves include from include path") {
   std::filesystem::create_directories(includeRoot);
 
   writeFile(includeRoot / "lib.prime", "// INCLUDE_ROOT_MARKER\n");
-  const std::string srcPath = writeFile(baseDir / "main.prime", "include<\"/lib.prime\">\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import<\"/lib.prime\">\n");
 
   std::string source;
   std::string error;
@@ -329,7 +329,7 @@ TEST_CASE("resolves include from include path") {
   CHECK(source.find("INCLUDE_ROOT_MARKER") != std::string::npos);
 }
 
-TEST_CASE("resolves relative include from include path") {
+TEST_CASE("resolves relative import from import path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_relative_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_relative_root";
   std::filesystem::remove_all(baseDir);
@@ -338,7 +338,7 @@ TEST_CASE("resolves relative include from include path") {
   std::filesystem::create_directories(includeRoot);
 
   writeFile(includeRoot / "lib.prime", "// INCLUDE_RELATIVE_MARKER\n");
-  const std::string srcPath = writeFile(baseDir / "main.prime", "include<\"lib.prime\">\n");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import<\"lib.prime\">\n");
 
   std::string source;
   std::string error;
@@ -348,13 +348,13 @@ TEST_CASE("resolves relative include from include path") {
   CHECK(source.find("INCLUDE_RELATIVE_MARKER") != std::string::npos);
 }
 
-TEST_CASE("supports semicolon separated includes") {
+TEST_CASE("supports semicolon separated imports") {
   const std::string markerA = "SEMICOLON_A";
   const std::string markerB = "SEMICOLON_B";
   const std::string libA = writeTemp("lib_semicolon_a.prime", "// " + markerA + "\n");
   const std::string libB = writeTemp("lib_semicolon_b.prime", "// " + markerB + "\n");
   const std::string srcPath =
-      writeTemp("main_semicolon.prime", "include<\"" + libA + "\"; \"" + libB + "\">\n");
+      writeTemp("main_semicolon.prime", "import<\"" + libA + "\"; \"" + libB + "\">\n");
 
   std::string source;
   std::string error;
@@ -376,7 +376,7 @@ TEST_CASE("allows comments around version attribute") {
   writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_COMMENT_VERSION\n");
   const std::string srcPath =
       writeFile(baseDir / "main.prime",
-                "include<\"/lib.prime\" /* note */, version = \"1.2\" >\n");
+                "import<\"/lib.prime\" /* note */, version = \"1.2\" >\n");
 
   std::string source;
   std::string error;
@@ -386,7 +386,7 @@ TEST_CASE("allows comments around version attribute") {
   CHECK(source.find("INCLUDE_COMMENT_VERSION") != std::string::npos);
 }
 
-TEST_CASE("allows comments containing > in include list") {
+TEST_CASE("allows comments containing > in import list") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_comment_bracket_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_comment_bracket_root";
   std::filesystem::remove_all(baseDir);
@@ -397,7 +397,7 @@ TEST_CASE("allows comments containing > in include list") {
   writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_COMMENT_BRACKET\n");
   const std::string srcPath =
       writeFile(baseDir / "main.prime",
-                "include<\"/lib.prime\" /* ignore > here */, version=\"1.2\" >\n");
+                "import<\"/lib.prime\" /* ignore > here */, version=\"1.2\" >\n");
 
   std::string source;
   std::string error;
@@ -407,7 +407,7 @@ TEST_CASE("allows comments containing > in include list") {
   CHECK(source.find("INCLUDE_COMMENT_BRACKET") != std::string::npos);
 }
 
-TEST_CASE("resolves versioned absolute include from include path") {
+TEST_CASE("resolves versioned absolute import from import path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_abs_root";
   std::filesystem::remove_all(baseDir);
@@ -418,7 +418,7 @@ TEST_CASE("resolves versioned absolute include from include path") {
   writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_VERSION_ABS_120\n");
   writeFile(includeRoot / "1.2.9" / "lib.prime", "// INCLUDE_VERSION_ABS_129\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -429,7 +429,7 @@ TEST_CASE("resolves versioned absolute include from include path") {
   CHECK(source.find("INCLUDE_VERSION_ABS_120") == std::string::npos);
 }
 
-TEST_CASE("selects newest include version across roots") {
+TEST_CASE("selects newest import version across roots") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_base";
   auto includeRootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_a";
   auto includeRootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_multi_b";
@@ -443,7 +443,7 @@ TEST_CASE("selects newest include version across roots") {
   writeFile(includeRootA / "1.2.0" / "lib.prime", "// INCLUDE_VERSION_MULTI_120\n");
   writeFile(includeRootB / "1.2.9" / "lib.prime", "// INCLUDE_VERSION_MULTI_129\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -454,7 +454,7 @@ TEST_CASE("selects newest include version across roots") {
   CHECK(source.find("INCLUDE_VERSION_MULTI_120") == std::string::npos);
 }
 
-TEST_CASE("rejects include version mismatch across paths") {
+TEST_CASE("rejects import version mismatch across paths") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_mismatch_base";
   auto includeRootA = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_mismatch_a";
   auto includeRootB = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_mismatch_b";
@@ -468,7 +468,7 @@ TEST_CASE("rejects include version mismatch across paths") {
   writeFile(includeRootA / "1.2.0" / "lib_a.prime", "// V120_A\n");
   writeFile(includeRootB / "1.2.9" / "lib_b.prime", "// V129_B\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib_a.prime\", \"/lib_b.prime\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib_a.prime\", \"/lib_b.prime\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -477,10 +477,10 @@ TEST_CASE("rejects include version mismatch across paths") {
                                       source,
                                       error,
                                       {includeRootA.string(), includeRootB.string()}));
-  CHECK(error.find("include version mismatch") != std::string::npos);
+  CHECK(error.find("import version mismatch") != std::string::npos);
 }
 
-TEST_CASE("resolves versioned relative include from include path") {
+TEST_CASE("resolves versioned relative import from import path") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_base";
   auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_rel_root";
   std::filesystem::remove_all(baseDir);
@@ -491,7 +491,7 @@ TEST_CASE("resolves versioned relative include from include path") {
   writeFile(includeRoot / "2.0.0" / "lib.prime", "// INCLUDE_VERSION_REL_200\n");
   writeFile(includeRoot / "2.1.0" / "lib.prime", "// INCLUDE_VERSION_REL_210\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"lib.prime\", version=\"2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"lib.prime\", version=\"2\">\n");
 
   std::string source;
   std::string error;
@@ -502,7 +502,7 @@ TEST_CASE("resolves versioned relative include from include path") {
   CHECK(source.find("INCLUDE_VERSION_REL_200") == std::string::npos);
 }
 
-TEST_CASE("resolves versioned include from archive root") {
+TEST_CASE("resolves versioned import from archive root") {
   if (!hasZipTools()) {
     return;
   }
@@ -519,7 +519,7 @@ TEST_CASE("resolves versioned include from archive root") {
   CHECK(createZip(archivePath, archiveSource));
 
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/std/io\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/std/io\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -529,7 +529,7 @@ TEST_CASE("resolves versioned include from archive root") {
   CHECK(source.find("ZIP_MARKER") != std::string::npos);
 }
 
-TEST_CASE("resolves versioned include from archives in stable order") {
+TEST_CASE("resolves versioned import from archives in stable order") {
   if (!hasZipTools()) {
     return;
   }
@@ -551,7 +551,7 @@ TEST_CASE("resolves versioned include from archives in stable order") {
   CHECK(createZip(archivePathA, archiveSourceA));
 
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/std/io\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/std/io\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -562,7 +562,7 @@ TEST_CASE("resolves versioned include from archives in stable order") {
   CHECK(source.find("ZIP_STABLE_B") == std::string::npos);
 }
 
-TEST_CASE("resolves versioned include from zip root directly") {
+TEST_CASE("resolves versioned import from zip root directly") {
   if (!hasZipTools()) {
     return;
   }
@@ -579,7 +579,7 @@ TEST_CASE("resolves versioned include from zip root directly") {
   CHECK(createZip(archivePath, archiveSource));
 
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -589,14 +589,14 @@ TEST_CASE("resolves versioned include from zip root directly") {
   CHECK(source.find("ZIP_DIRECT_MARKER") != std::string::npos);
 }
 
-TEST_CASE("resolves versioned absolute include using base directory") {
+TEST_CASE("resolves versioned absolute import using base directory") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_version_base_dir";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
 
   writeFile(baseDir / "1.2.0" / "lib.prime", "// BASE_DIR_MARKER\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -606,7 +606,7 @@ TEST_CASE("resolves versioned absolute include using base directory") {
   CHECK(source.find("BASE_DIR_MARKER") != std::string::npos);
 }
 
-TEST_CASE("resolves exact include version") {
+TEST_CASE("resolves exact import version") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_exact";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
@@ -614,7 +614,7 @@ TEST_CASE("resolves exact include version") {
   writeFile(baseDir / "1.2.0" / "lib.prime", "// V120\n");
   writeFile(baseDir / "1.2.1" / "lib.prime", "// V121\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2.0\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2.0\">\n");
 
   std::string source;
   std::string error;
@@ -625,7 +625,7 @@ TEST_CASE("resolves exact include version") {
   CHECK(source.find("V121") == std::string::npos);
 }
 
-TEST_CASE("selects newest matching include version") {
+TEST_CASE("selects newest matching import version") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_versions_latest";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
@@ -634,7 +634,7 @@ TEST_CASE("selects newest matching include version") {
   writeFile(baseDir / "1.2.5" / "lib.prime", "// V125\n");
   writeFile(baseDir / "1.3.0" / "lib.prime", "// V130\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"/lib.prime\", version=\"1.2\">\n");
+      writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
 
   std::string source;
   std::string error;
@@ -645,7 +645,7 @@ TEST_CASE("selects newest matching include version") {
   CHECK(source.find("V130") == std::string::npos);
 }
 
-TEST_CASE("expands directory include contents") {
+TEST_CASE("expands directory import contents") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_dir";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
@@ -653,7 +653,7 @@ TEST_CASE("expands directory include contents") {
   writeFile(baseDir / "b.prime", "// DIR_B\n");
   writeFile(baseDir / "a.prime", "// DIR_A\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"" + baseDir.string() + "\">\n");
+      writeFile(baseDir / "main.prime", "import<\"" + baseDir.string() + "\">\n");
 
   std::string source;
   std::string error;
@@ -667,7 +667,7 @@ TEST_CASE("expands directory include contents") {
   CHECK(first < second);
 }
 
-TEST_CASE("skips private subdirectories in directory include") {
+TEST_CASE("skips private subdirectories in directory import") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_dir_private";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir);
@@ -675,7 +675,7 @@ TEST_CASE("skips private subdirectories in directory include") {
   writeFile(baseDir / "_private" / "secret.prime", "// SECRET\n");
   writeFile(baseDir / "public.prime", "// PUBLIC\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"" + baseDir.string() + "\">\n");
+      writeFile(baseDir / "main.prime", "import<\"" + baseDir.string() + "\">\n");
 
   std::string source;
   std::string error;
@@ -686,14 +686,14 @@ TEST_CASE("skips private subdirectories in directory include") {
   CHECK(source.find("SECRET") == std::string::npos);
 }
 
-TEST_CASE("rejects private include root directory") {
+TEST_CASE("rejects private import root directory") {
   auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_private_root";
   std::filesystem::remove_all(baseDir);
   std::filesystem::create_directories(baseDir / "_private");
 
   writeFile(baseDir / "_private" / "secret.prime", "// SECRET\n");
   const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<\"" + (baseDir / "_private").string() + "\">\n");
+      writeFile(baseDir / "main.prime", "import<\"" + (baseDir / "_private").string() + "\">\n");
 
   std::string source;
   std::string error;

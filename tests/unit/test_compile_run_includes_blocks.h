@@ -1,9 +1,9 @@
-TEST_CASE("compiles and runs include inside namespace") {
+TEST_CASE("compiles and runs import inside namespace") {
   const std::string libPath =
       writeTemp("compile_namespace_lib.prime", "[return<int>]\nhelper(){ return(9i32) }\n");
   const std::string source =
       "namespace outer {\n"
-      "  include<\"" + libPath + "\">\n"
+      "  import<\"" + libPath + "\">\n"
       "}\n"
       "[return<int>]\n"
       "main(){ return(/outer/helper()) }\n";
@@ -25,7 +25,7 @@ TEST_CASE("compiles and runs include inside namespace") {
   CHECK(runCommand(nativePath) == 9);
 }
 
-TEST_CASE("compiles and runs include with import aliases") {
+TEST_CASE("compiles and runs import with import aliases") {
   const std::string libSource = R"(
 namespace lib {
   [public return<int>]
@@ -36,7 +36,7 @@ namespace lib {
 )";
   const std::string libPath = writeTemp("compile_lib_imports.prime", libSource);
   const std::string source =
-      "include<\"" + libPath + "\">\n"
+      "import<\"" + libPath + "\">\n"
       "import /lib\n"
       "[return<int>]\n"
       "main(){ return(add(4i32, 3i32)) }\n";

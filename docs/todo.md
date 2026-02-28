@@ -121,7 +121,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec (VM/native/GLSL effect+type matrix compile-run tests plus an IR opcode allowlist lock test).
 
 **Docs Alignment**
-- ○ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term.
+- ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI help now advertises `--import-path` with `--include-path` as hidden compatibility alias; pipeline/include-resolver diagnostics and import-conformance tests/docs now use `import` wording).
 - ✓ Reconcile definition visibility: allow `[public]/[private]` on definitions and enforce import visibility.
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.

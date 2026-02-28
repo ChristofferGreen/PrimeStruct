@@ -631,17 +631,22 @@ bool applyPass(const std::string &input,
 
 
   auto trySkipIncludeDirective = [&](size_t &index) -> bool {
-    constexpr size_t IncludeLen = 7;
-    if (index + IncludeLen > input.size()) {
-      return false;
-    }
-    if (input.compare(index, IncludeLen, "include") != 0) {
+    constexpr std::string_view IncludeToken = "include";
+    constexpr std::string_view ImportToken = "import";
+    std::string_view directiveToken;
+    if (index + ImportToken.size() <= input.size() &&
+        input.compare(index, ImportToken.size(), ImportToken.data()) == 0) {
+      directiveToken = ImportToken;
+    } else if (index + IncludeToken.size() <= input.size() &&
+               input.compare(index, IncludeToken.size(), IncludeToken.data()) == 0) {
+      directiveToken = IncludeToken;
+    } else {
       return false;
     }
     if (index > 0 && (isTokenChar(input[index - 1]) || input[index - 1] == '/')) {
       return false;
     }
-    size_t scan = index + IncludeLen;
+    size_t scan = index + directiveToken.size();
     if (scan < input.size() && (isTokenChar(input[scan]) || input[scan] == '/')) {
       if (!(input[scan] == '/' && scan + 1 < input.size() &&
             (input[scan + 1] == '/' || input[scan + 1] == '*'))) {

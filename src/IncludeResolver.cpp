@@ -228,16 +228,19 @@ size_t findIncludePayloadEnd(const std::string &source, size_t start) {
 }
 
 bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payloadStart, size_t &payloadEnd) {
-  if (pos + 7 > source.size()) {
-    return false;
-  }
-  if (source.compare(pos, 7, "include") != 0) {
+  size_t directiveLength = 0;
+  if (pos + 6 <= source.size() && source.compare(pos, 6, "import") == 0) {
+    directiveLength = 6;
+  } else if (pos + 7 <= source.size() && source.compare(pos, 7, "include") == 0) {
+    // Keep legacy include alias support, but normalize user-facing messaging to import.
+    directiveLength = 7;
+  } else {
     return false;
   }
   if (pos > 0 && isIncludeBoundaryChar(source[pos - 1])) {
     return false;
   }
-  size_t scan = pos + 7;
+  size_t scan = pos + directiveLength;
   if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
     if (!(source[scan] == '/' && scan + 1 < source.size() &&
           (source[scan + 1] == '/' || source[scan + 1] == '*'))) {
@@ -255,14 +258,14 @@ bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payload
 
 bool readQuotedString(const std::string &payload, size_t &pos, std::string &out, std::string &error) {
   if (pos >= payload.size() || (payload[pos] != '"' && payload[pos] != '\'')) {
-    error = "expected quoted string in include<...>";
+    error = "expected quoted string in import<...>";
     return false;
   }
   char quote = payload[pos];
   ++pos;
   size_t quoteEnd = payload.find(quote, pos);
   if (quoteEnd == std::string::npos) {
-    error = "unterminated include string literal";
+    error = "unterminated import string literal";
     return false;
   }
   out = payload.substr(pos, quoteEnd - pos);
@@ -404,7 +407,7 @@ bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
 bool parseVersionParts(const std::string &text, std::vector<int> &parts, std::string &error) {
   parts.clear();
   if (text.empty()) {
-    error = "include version cannot be empty";
+    error = "import version cannot be empty";
     return false;
   }
   int current = 0;
@@ -412,7 +415,7 @@ bool parseVersionParts(const std::string &text, std::vector<int> &parts, std::st
   for (size_t i = 0; i <= text.size(); ++i) {
     if (i == text.size() || text[i] == '.') {
       if (!hasDigit) {
-        error = "invalid include version: " + text;
+        error = "invalid import version: " + text;
         return false;
       }
       parts.push_back(current);
@@ -421,14 +424,14 @@ bool parseVersionParts(const std::string &text, std::vector<int> &parts, std::st
       continue;
     }
     if (!std::isdigit(static_cast<unsigned char>(text[i]))) {
-      error = "invalid include version: " + text;
+      error = "invalid import version: " + text;
       return false;
     }
     hasDigit = true;
     current = current * 10 + (text[i] - '0');
   }
   if (parts.size() < 1 || parts.size() > 3) {
-    error = "include version must have 1 to 3 numeric parts: " + text;
+    error = "import version must have 1 to 3 numeric parts: " + text;
     return false;
   }
   return true;
@@ -482,7 +485,7 @@ bool collectPrimeFiles(const std::filesystem::path &root,
                        std::string &error) {
   out.clear();
   if (isPrivatePath(root)) {
-    error = "include path refers to private folder: " + std::filesystem::absolute(root).string();
+    error = "import path refers to private folder: " + std::filesystem::absolute(root).string();
     return false;
   }
   if (std::filesystem::is_regular_file(root)) {
@@ -490,7 +493,7 @@ bool collectPrimeFiles(const std::filesystem::path &root,
     return true;
   }
   if (!std::filesystem::is_directory(root)) {
-    error = "failed to read include: " + std::filesystem::absolute(root).string();
+    error = "failed to read import: " + std::filesystem::absolute(root).string();
     return false;
   }
   std::error_code ec;
@@ -499,7 +502,7 @@ bool collectPrimeFiles(const std::filesystem::path &root,
   std::filesystem::recursive_directory_iterator end;
   for (; it != end; it.increment(ec)) {
     if (ec) {
-      error = "failed to read include: " + std::filesystem::absolute(root).string();
+      error = "failed to read import: " + std::filesystem::absolute(root).string();
       return false;
     }
     const std::filesystem::path current = it->path();
@@ -521,7 +524,7 @@ bool collectPrimeFiles(const std::filesystem::path &root,
     out.push_back(current);
   }
   if (out.empty()) {
-    error = "include directory contains no .prime files: " + std::filesystem::absolute(root).string();
+    error = "import directory contains no .prime files: " + std::filesystem::absolute(root).string();
     return false;
   }
   std::vector<std::pair<std::string, std::filesystem::path>> keyed;
@@ -555,7 +558,7 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
       selected = exact.str();
       return true;
     }
-    error = "include version not found: " + exact.str();
+    error = "import version not found: " + exact.str();
     return false;
   }
 
@@ -567,7 +570,7 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
       }
       requestedText << requested[i];
     }
-    error = "include version not found: " + requestedText.str();
+    error = "import version not found: " + requestedText.str();
     return false;
   }
 
@@ -601,7 +604,7 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
       }
       requestedText << requested[i];
     }
-    error = "include version not found: " + requestedText.str();
+    error = "import version not found: " + requestedText.str();
     return false;
   }
   selected = bestName;
@@ -673,7 +676,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
       size_t end = 0;
       if (scanIncludeDirective(source, i, payloadStart, end)) {
         if (end == std::string::npos) {
-          error = "unterminated include<...> directive";
+          error = "unterminated import<...> directive";
           return false;
         }
         std::string payload = source.substr(payloadStart, end - payloadStart);
@@ -701,13 +704,13 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             pos = entryPos;
             skipWhitespace();
             if (pos >= payload.size() || payload[pos] != '=') {
-              error = "expected '=' after include version";
+              error = "expected '=' after import version";
               return false;
             }
             ++pos;
             skipWhitespace();
             if (versionTag) {
-              error = "duplicate version attribute in include<...>";
+              error = "duplicate version attribute in import<...>";
               return false;
             }
             std::string versionValue;
@@ -720,7 +723,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             if (pos < payload.size()) {
               if (!std::isspace(static_cast<unsigned char>(payload[pos])) && payload[pos] != ',' &&
                   payload[pos] != ';') {
-                error = "unexpected characters after include version";
+                error = "unexpected characters after import version";
                 return false;
               }
             }
@@ -734,18 +737,18 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             paths.push_back({trim(path), false});
             if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
                 payload[pos] != ',' && payload[pos] != ';') {
-              error = "include path cannot have suffix";
+              error = "import path cannot have suffix";
               return false;
             }
           } else {
             std::string path;
             if (!readBareIncludePath(payload, pos, path)) {
-              error = "invalid include entry in include<...>";
+              error = "invalid import entry in import<...>";
               return false;
             }
             path = trim(path);
             if (path.empty() || path.front() != '/') {
-              error = "unquoted include paths must be slash paths";
+              error = "unquoted import paths must be slash paths";
               return false;
             }
             if (!validateSlashPath(path, error)) {
@@ -757,7 +760,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
         }
 
         if (paths.empty()) {
-          error = "include<...> requires at least one path";
+          error = "import<...> requires at least one path";
           return false;
         }
 
@@ -803,7 +806,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
                   }
                   requestedText << (*requestedVersion)[i];
                 }
-                error = "include version not found: " + requestedText.str();
+                error = "import version not found: " + requestedText.str();
                 return false;
               }
             }
@@ -825,13 +828,13 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               std::filesystem::path candidate = root / selected / logicalPath;
               if (std::filesystem::exists(candidate)) {
                 if (isPrivatePath(candidate)) {
-                  error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                  error = "import path refers to private folder: " + std::filesystem::absolute(candidate).string();
                   return false;
                 }
                 std::vector<int> candidateParts;
                 std::string parseError;
                 if (!parseVersionParts(selected, candidateParts, parseError)) {
-                  error = "invalid include version: " + selected;
+                  error = "invalid import version: " + selected;
                   return false;
                 }
                 if (!foundCandidate || isNewerVersion(candidateParts, bestParts)) {
@@ -845,14 +848,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               lastCandidate = candidate;
             }
             if (!foundVersion) {
-              error = versionError.empty() ? "include version not found" : versionError;
+              error = versionError.empty() ? "import version not found" : versionError;
               return false;
             }
             if (!foundCandidate) {
               if (!lastCandidate.empty()) {
-                error = "failed to read include: " + std::filesystem::absolute(lastCandidate).string();
+                error = "failed to read import: " + std::filesystem::absolute(lastCandidate).string();
               } else {
-                error = "failed to read include: " + logicalPath.string();
+                error = "failed to read import: " + logicalPath.string();
               }
               return false;
             }
@@ -866,21 +869,21 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               std::filesystem::path candidate = root / logicalPath;
               if (std::filesystem::exists(candidate)) {
                 if (isPrivatePath(candidate)) {
-                  error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                  error = "import path refers to private folder: " + std::filesystem::absolute(candidate).string();
                   return false;
                 }
                 resolved = std::filesystem::absolute(candidate);
                 return true;
               }
             }
-            error = "failed to read include: " + path;
+            error = "failed to read import: " + path;
             return false;
           }
           if (!isAbsolute) {
             std::filesystem::path candidate = std::filesystem::path(baseDir) / requested;
             if (std::filesystem::exists(candidate)) {
               if (isPrivatePath(candidate)) {
-                error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                error = "import path refers to private folder: " + std::filesystem::absolute(candidate).string();
                 return false;
               }
               resolved = std::filesystem::absolute(candidate);
@@ -890,20 +893,20 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               candidate = root / requested;
               if (std::filesystem::exists(candidate)) {
                 if (isPrivatePath(candidate)) {
-                  error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                  error = "import path refers to private folder: " + std::filesystem::absolute(candidate).string();
                   return false;
                 }
                 resolved = std::filesystem::absolute(candidate);
                 return true;
               }
             }
-            error = "failed to read include: " + std::filesystem::absolute(std::filesystem::path(baseDir) / requested).string();
+            error = "failed to read import: " + std::filesystem::absolute(std::filesystem::path(baseDir) / requested).string();
             return false;
           }
 
           if (std::filesystem::exists(requested)) {
             if (isPrivatePath(requested)) {
-              error = "include path refers to private folder: " + std::filesystem::absolute(requested).string();
+              error = "import path refers to private folder: " + std::filesystem::absolute(requested).string();
               return false;
             }
             resolved = std::filesystem::absolute(requested);
@@ -913,14 +916,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             std::filesystem::path candidate = root / logicalPath;
             if (std::filesystem::exists(candidate)) {
               if (isPrivatePath(candidate)) {
-                error = "include path refers to private folder: " + std::filesystem::absolute(candidate).string();
+                error = "import path refers to private folder: " + std::filesystem::absolute(candidate).string();
                 return false;
               }
               resolved = std::filesystem::absolute(candidate);
               return true;
             }
           }
-          error = "failed to read include: " + std::filesystem::absolute(requested).string();
+          error = "failed to read import: " + std::filesystem::absolute(requested).string();
           return false;
         };
 
@@ -934,13 +937,13 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           }
           if (requestedVersion) {
             if (!resolvedVersion.has_value()) {
-              error = "include version not resolved";
+              error = "import version not resolved";
               return false;
             }
             if (!selectedVersion) {
               selectedVersion = *resolvedVersion;
             } else if (*selectedVersion != *resolvedVersion) {
-              error = "include version mismatch: expected " + *selectedVersion + " but got " + *resolvedVersion;
+              error = "import version mismatch: expected " + *selectedVersion + " but got " + *resolvedVersion;
               return false;
             }
           }
@@ -958,7 +961,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           std::string resolvedText = includeFile.string();
           std::string included;
           if (!readFile(resolvedText, included)) {
-            error = "failed to read include: " + resolvedText;
+            error = "failed to read import: " + resolvedText;
             return false;
           }
           expanded.insert(expandedKey);

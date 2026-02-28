@@ -21,11 +21,11 @@ std::string writeTemp(const std::string &name, const std::string &contents) {
 
 TEST_SUITE_BEGIN("primestruct.includes.multiple");
 
-TEST_CASE("expands multiple include paths") {
+TEST_CASE("expands multiple import paths") {
   const std::string libA = writeTemp("lib_multi_a.prime", "// LIB_A\n[return<int>]\nhelper_a(){ return(1i32) }\n");
   const std::string libB = writeTemp("lib_multi_b.prime", "// LIB_B\n[return<int>]\nhelper_b(){ return(2i32) }\n");
   const std::string srcPath = writeTemp("main_multi.prime",
-                                        "include<\"" + libA + "\"; \"" + libB + "\",>\n"
+                                        "import<\"" + libA + "\"; \"" + libB + "\",>\n"
                                         "[return<int>]\nmain(){ return(helper_a()) }\n");
 
   std::string source;
@@ -37,11 +37,11 @@ TEST_CASE("expands multiple include paths") {
   CHECK(source.find("LIB_B") != std::string::npos);
 }
 
-TEST_CASE("expands whitespace-separated include paths") {
+TEST_CASE("expands whitespace-separated import paths") {
   const std::string libA = writeTemp("lib_ws_a.prime", "// LIB_WS_A\n[return<int>]\nhelper_a(){ return(1i32) }\n");
   const std::string libB = writeTemp("lib_ws_b.prime", "// LIB_WS_B\n[return<int>]\nhelper_b(){ return(2i32) }\n");
   const std::string srcPath =
-      writeTemp("main_ws.prime", "include<\"" + libA + "\" \"" + libB + "\">\n[return<int>]\nmain(){ return(helper_a()) }\n");
+      writeTemp("main_ws.prime", "import<\"" + libA + "\" \"" + libB + "\">\n[return<int>]\nmain(){ return(helper_a()) }\n");
 
   std::string source;
   std::string error;
@@ -52,18 +52,18 @@ TEST_CASE("expands whitespace-separated include paths") {
   CHECK(source.find("LIB_WS_B") != std::string::npos);
 }
 
-TEST_CASE("ignores nested duplicate includes") {
+TEST_CASE("ignores nested duplicate imports") {
   const std::string marker = "LIB_D_MARKER";
   const std::string libD = writeTemp("lib_nested_d.prime",
                                      "// " + marker + "\n"
                                      "[return<int>]\nhelper_d(){ return(4i32) }\n");
   const std::string libB =
-      writeTemp("lib_nested_b.prime", "include<\"" + libD + "\">\n// LIB_B\n");
+      writeTemp("lib_nested_b.prime", "import<\"" + libD + "\">\n// LIB_B\n");
   const std::string libC =
-      writeTemp("lib_nested_c.prime", "include<\"" + libD + "\">\n// LIB_C\n");
+      writeTemp("lib_nested_c.prime", "import<\"" + libD + "\">\n// LIB_C\n");
   const std::string srcPath = writeTemp("main_nested.prime",
-                                        "include<\"" + libB + "\">\n"
-                                        "include<\"" + libC + "\">\n"
+                                        "import<\"" + libB + "\">\n"
+                                        "import<\"" + libC + "\">\n"
                                         "[return<int>]\nmain(){ return(helper_d()) }\n");
 
   std::string source;

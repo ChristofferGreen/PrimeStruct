@@ -1,8 +1,8 @@
-TEST_CASE("dump pre_ast shows includes and text filters") {
+TEST_CASE("dump pre_ast shows imports and text filters") {
   const std::string libPath =
       writeTemp("compile_dump_pre_ast_lib.prime", "// PRE_AST_LIB\n[return<int>]\nhelper(){ return(1i32) }\n");
   const std::string source =
-      "include<\"" + libPath + "\">\n"
+      "import<\"" + libPath + "\">\n"
       "[return<int> effects(io_out)]\n"
       "main(){\n"
       "  print_line(\"hello\")\n"
