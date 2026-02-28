@@ -61,6 +61,25 @@ main() {
   CHECK(error.find("conflicting return types on /main") != std::string::npos);
 }
 
+TEST_CASE("return auto conflicts on named/default call path") {
+  const std::string source = R"(
+[return<auto>]
+pick([auto] value{1i32}, [bool] as_float{false}) {
+  if(as_float,
+    then(){ return(1.5f) },
+    else(){ return(value) })
+}
+
+[return<i32>]
+main() {
+  return(pick([as_float] true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("conflicting return types on /pick") != std::string::npos);
+}
+
 TEST_CASE("infers array return type without transform") {
   const std::string source = R"(
 main() {

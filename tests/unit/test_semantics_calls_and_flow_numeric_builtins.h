@@ -192,6 +192,35 @@ main() {
   CHECK(error.find("no conversion found for convert<Widget>") != std::string::npos);
 }
 
+TEST_CASE("convert rejects ambiguous helper overloads") {
+  const std::string source = R"(
+[struct]
+Widget() {
+  [i32] value{1i32}
+}
+
+[static return<Widget>]
+/Widget/Convert([i32] raw) {
+  return(Widget([value] raw))
+}
+
+[static return<Widget>]
+/Widget/Convert__tdeadbeef([i32] raw) {
+  return(Widget([value] raw))
+}
+
+[return<Widget>]
+main() {
+  return(convert<Widget>(5i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ambiguous conversion for convert<Widget>") != std::string::npos);
+  CHECK(error.find("/Widget/Convert") != std::string::npos);
+  CHECK(error.find("/Widget/Convert__tdeadbeef") != std::string::npos);
+}
+
 TEST_CASE("convert rejects helper with wrong return type") {
   const std::string source = R"(
 [struct]

@@ -247,6 +247,26 @@ TEST_CASE("implicit auto template inference honors named arguments") {
   CHECK(validateProgram(program, "/main", error));
 }
 
+TEST_CASE("implicit auto template inference supports named arguments with defaults") {
+  primec::Program program;
+  primec::Expr first = makeBinding("first", {makeTransform("auto")}, {makeLiteral(3)});
+  primec::Expr second = makeBinding("second", {makeTransform("auto")}, {makeLiteral(4)});
+  primec::Definition pick =
+      makeDefinition("/pick", {makeTransform("return", std::string("auto"))},
+                     {makeCall("/return", {makeName("second")})},
+                     {first, second});
+  program.definitions.push_back(pick);
+
+  std::vector<primec::Expr> args = {makeLiteral(9)};
+  std::vector<std::optional<std::string>> argNames = {std::string("second")};
+  primec::Expr call = makeCall("/pick", args, argNames);
+  program.definitions.push_back(
+      makeDefinition("/main", {makeTransform("return", std::string("i32"))}, {makeCall("/return", {call})}));
+
+  std::string error;
+  CHECK(validateProgram(program, "/main", error));
+}
+
 TEST_CASE("implicit auto template inference for omitted parameters") {
   primec::Program program;
   primec::Expr param = makeBinding("value", {}, {});
