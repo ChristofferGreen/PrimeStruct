@@ -108,7 +108,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Introduce structured diagnostics payloads (stable error code, primary span, related spans, notes) with a machine-readable output mode for tooling (`--emit-diagnostics` now emits deterministic JSON for argument/pipeline/lowering/runtime failures in `primec`/`primevm`).
 - ✓ Populate structured diagnostics `related_spans`/precise spans directly from parser+semantic diagnostics (parser now provides direct error location/message metadata; semantics now threads source coordinates from parsed AST nodes and emits related definition/execution spans instead of relying on string suffix parsing).
 - ✓ Refactor semantics state into per-definition context objects to reduce shared mutable state and make validator ordering/contracts explicit (validator now builds explicit definition/execution validation contexts and scopes state transitions through `ValidationContextScope`, with regression coverage for cross-definition state isolation).
-- ○ Add import semantics conformance tests for privacy (`_`), version resolution, duplicate imports, wildcard exposure, and deterministic expansion ordering.
+- ✓ Add import semantics conformance tests for privacy (`_`), version resolution, duplicate imports, wildcard exposure, and deterministic expansion ordering (compile-run conformance coverage added in `tests/unit/test_compile_run_includes_versions.h`).
 
 **Backends & IR**
 - ✓ Add GLSL backend (docs mention GPU lowering, but there is no backend in `src/`).
