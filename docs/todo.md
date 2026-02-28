@@ -1,9 +1,9 @@
 # PrimeStruct Spec ↔ Code TODO
 
 Legend:
-- ○ Not started
-- ◐ Started
-- ✓ Finished
+  ○ Not started
+  ◐ Started
+  ✓ Finished
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.
@@ -64,7 +64,7 @@ Legend:
 - ✓ Define `uninitialized<T>` storage plus `init`/`drop`/`take`/`borrow` helpers (required for `Maybe<T>` and other explicit storage patterns; validates local `uninitialized<T>()` bindings, statement-only `init`/`drop`, `take`/`borrow` expression kinds, inferred init type matching (primitives/arrays/vectors/maps/structs), collection/user-template restrictions, pointer/reference/return-type restrictions, struct-field layout, and definite-init analysis for void definitions and non-void defs that always return; helper calls now accept `this.field` access for uninitialized struct fields, expression-level checks for `if`/`block` value paths are in place; `for` tracking follows runtime order (`init -> condition -> body -> step`) and re-checks condition effects on continued iterations; `loop`/`while`/`repeat` now use multi-iteration fixed-point convergence and `repeat` tracks count-expression helper effects; VM/native lowering supports numeric/bool, struct, string, and numeric/bool array/vector/map storage).
 - ✓ Improve `uninitialized<T>` definite-state precision for bounded `loop`/`repeat` counts (literal `0`/`1` and `repeat(true/false)` now run exact iteration-state simulation so known bounded loops avoid conservative `Unknown` diagnostics).
 - ✓ Define `Maybe<T>` (optional value) using uninitialized storage + tag; add docs and tests (stdlib shape + `some`/`none` + helper surface added; `Maybe(value)` sugar added; VM/native backend lowering now supports numeric/bool/struct/string `Maybe<T>`).
-- ◐ Implement borrow checking with non-lexical lifetimes (single mutable or multiple immutable `Reference<T>`), no reference escapes except direct parameter returns, and an unsafe aliasing escape hatch (core rules are implemented; remaining edge-case coverage is tracked as concrete items below).
+Borrow-checker status: core non-lexical lifetime rules, no-escape validation, and unsafe aliasing behavior are implemented; remaining edge-case work is tracked as concrete items below.
 - ✓ Implement non-lexical lifetime (last-use) borrow-end analysis for `Reference<T>` so borrows can end before lexical block exit.
 - ✓ Enforce `Reference<T>` no-escape rules (allow direct parameter-reference returns only; reject local/derived escapes).
 - ✓ Add `[unsafe]` aliasing escape-hatch semantics for references and enforce safe/unsafe boundary escape diagnostics.
@@ -86,9 +86,11 @@ Legend:
 - ✓ Formalize and implement convert-constructor resolution rules (builtin fast-path + signature/ambiguity done; visibility pending definition-level public/private support).
 - ✓ Enforce the core type set in semantic validation and backend filters (software numeric rejection now enforced in semantics; still need a full per-backend allowlist for other non-core envelopes).
 - ✓ Add backend tests for non-core envelopes to ensure unsupported types are rejected consistently.
-- ◐ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation; now covers omitted parameter envelopes; remaining: broader inference edge cases).
+- ✓ Implement implicit-template `auto` in signatures (per-call-site inference + monomorphisation; omitted parameter envelopes are covered).
 - ✓ Enforce that templates/`auto` do not reach the base-level tree before lowering (IR lowerer now treats `return<auto>` as inferred returns; templated definitions/executions are rejected and `auto` bindings fail during IR lowering; semantics also rejects templated executions).
-- ◐ Enforce diagnostics for unresolved inference on omitted binding envelopes and `auto` bindings/returns (no fallback); emit diagnostics on unresolved or conflicting inference (binding inference now enforces explicit types or inferable defaults, including during return inference; Result initializers require explicit binding types; IR lowerer fallback removed to keep unknown binding inference from defaulting; `auto` bindings/returns now route through inference diagnostics; lambda initializers now require explicit binding types; struct field access/layout now infer `auto` from initializers; `return<auto>` now requires at least one `return` statement; `Result.why` now infers `string` for auto bindings; `Result.error` now infers `bool` for auto bindings).
+- ✓ Enforce diagnostics for unresolved inference on omitted binding envelopes and `auto` bindings/returns (no fallback); emit diagnostics on unresolved or conflicting inference (binding inference now enforces explicit types or inferable defaults, including during return inference; Result initializers require explicit binding types; IR lowerer fallback removed to keep unknown binding inference from defaulting; `auto` bindings/returns now route through inference diagnostics; lambda initializers now require explicit binding types; struct field access/layout now infer `auto` from initializers; `return<auto>` now requires at least one `return` statement; `Result.why` now infers `string` for auto bindings; `Result.error` now infers `bool` for auto bindings).
+- ○ Expand implicit-template `auto` inference coverage for broader call-site patterns (nested helper calls, method-call sugar paths, and import-crossing call graphs).
+- ○ Add focused conformance regressions for implicit-template `auto` and unresolved/conflicting inference diagnostics (named/default args, overload ambiguity, and parity between semantics vs IR-lowering diagnostics).
 - ✓ Infer struct binding initializer paths from called definition return envelopes during IR lowering (resolves struct-return helpers from declared return envelopes and canonical return expressions, including imported definitions).
 - ✓ Allow omitted struct field envelopes (`center{Vec3(...)}`) in surface/inference levels and enforce concrete field-envelope resolution before layout manifest emission (diagnose unresolved/ambiguous field inference).
 - ✓ Add `auto` inference tests: omitted parameter envelopes, `return<auto>`, and multi-call-site conflict cases.
@@ -117,7 +119,7 @@ Legend:
 - ○ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec.
 
 **Docs Alignment**
-- ○ Audit and remove remaining `include` terminology from docs/diagnostics/tests/tooling so `import` is the only surface term.
+- ○ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term.
 - ✓ Reconcile definition visibility: allow `[public]/[private]` on definitions and enforce import visibility.
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.
