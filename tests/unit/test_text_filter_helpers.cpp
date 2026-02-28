@@ -264,6 +264,20 @@ TEST_CASE("rewrite unary helpers") {
   CHECK(output == "negate(value)");
   CHECK(index == std::string("-value").size() - 1);
 
+  output = "edge";
+  index = 0;
+  CHECK_FALSE(rewriteUnaryMinus("-", output, index, options));
+  CHECK(output == "edge");
+  CHECK(index == 0);
+
+  output.clear();
+  index = 0;
+  primec::TextFilterOptions implicitMinusOptions;
+  implicitMinusOptions.enabledFilters = {"implicit-i32"};
+  CHECK(rewriteUnaryMinus("-foo", output, index, implicitMinusOptions));
+  CHECK(output == "negate(foo)");
+  CHECK(index == std::string("-foo").size() - 1);
+
   output = "keepminus";
   index = 1;
   CHECK_FALSE(rewriteUnaryMinus("a-value", output, index, options));
