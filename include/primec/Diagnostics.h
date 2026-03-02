@@ -7,7 +7,7 @@ namespace primec {
 
 enum class DiagnosticCode {
   ArgumentError,
-  IncludeError,
+  ImportError,
   TransformError,
   ParseError,
   UnsupportedDumpStage,

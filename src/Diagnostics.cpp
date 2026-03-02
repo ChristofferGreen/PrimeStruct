@@ -104,7 +104,7 @@ std::string diagnosticCodeString(DiagnosticCode code) {
   switch (code) {
     case DiagnosticCode::ArgumentError:
       return "PSC0001";
-    case DiagnosticCode::IncludeError:
+    case DiagnosticCode::ImportError:
       return "PSC1001";
     case DiagnosticCode::TransformError:
       return "PSC1002";

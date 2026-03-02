@@ -180,13 +180,13 @@ bool runCompilePipeline(const Options &options,
   std::string source;
   ImportResolver importResolver;
   if (!importResolver.expandImports(options.inputPath, source, error, options.importPaths)) {
-    errorStage = CompilePipelineErrorStage::Include;
+    errorStage = CompilePipelineErrorStage::Import;
     return false;
   }
 
   if (shouldAutoIncludeStdlib(source)) {
     if (!appendStdlibSources(options.importPaths, source, error)) {
-      errorStage = CompilePipelineErrorStage::Include;
+      errorStage = CompilePipelineErrorStage::Import;
       return false;
     }
   }

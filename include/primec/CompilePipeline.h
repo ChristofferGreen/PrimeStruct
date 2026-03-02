@@ -10,7 +10,7 @@ namespace primec {
 
 enum class CompilePipelineErrorStage {
   None,
-  Include,
+  Import,
   Transform,
   Parse,
   UnsupportedDumpStage,

@@ -571,9 +571,9 @@ int main(int argc, char **argv) {
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
   if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
     switch (pipelineError) {
-      case primec::CompilePipelineErrorStage::Include:
+      case primec::CompilePipelineErrorStage::Import:
         return emitFailure(options,
-                           primec::DiagnosticCode::IncludeError,
+                           primec::DiagnosticCode::ImportError,
                            "Import error: ",
                            error,
                            2,

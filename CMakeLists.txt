@@ -91,6 +91,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_printers_manual.cpp
     tests/unit/test_semantics_manual.cpp
     tests/unit/test_lexer.cpp
+    tests/unit/test_diagnostics_codes.cpp
   )
   target_include_directories(PrimeStruct_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_tests PRIVATE primec_lib)
@@ -152,6 +153,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.text_filters.pipeline.implicit_i32
     primestruct.text_filters.pipeline.collections
     primestruct.text_filters.helpers
+    primestruct.diagnostics.codes
   )
 
   foreach(suite IN LISTS PrimeStructTestSuites)
