@@ -25,6 +25,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer effects unit resolves entry and non-entry defaults") {
+  const std::vector<primec::Transform> transforms;
+  const std::vector<std::string> defaultEffects = {"io_out"};
+  const std::vector<std::string> entryDefaultEffects = {"io_err"};
+
+  const auto entryActive =
+      primec::ir_lowerer::resolveActiveEffects(transforms, true, defaultEffects, entryDefaultEffects);
+  CHECK(entryActive.size() == 1);
+  CHECK(entryActive.count("io_err") == 1);
+  CHECK(entryActive.count("io_out") == 0);
+
+  const auto nonEntryActive =
+      primec::ir_lowerer::resolveActiveEffects(transforms, false, defaultEffects, entryDefaultEffects);
+  CHECK(nonEntryActive.size() == 1);
+  CHECK(nonEntryActive.count("io_out") == 1);
+  CHECK(nonEntryActive.count("io_err") == 0);
+}
+
+TEST_CASE("ir lowerer effects unit rejects software numeric envelopes") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("decimal");
+  mainDef.transforms.push_back(returnTransform);
+  program.definitions.push_back(std::move(mainDef));
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateNoSoftwareNumericTypes(program, error));
+  CHECK(error == "native backend does not support software numeric types: decimal");
+}
+
 TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
   const std::vector<primec::IrOpcode> expected = {
       primec::IrOpcode::PushI32,

@@ -4,6 +4,7 @@
 #include "primec/StringLiteral.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererLowerEffects.h"
 
 #include <algorithm>
 #include <cerrno>

@@ -1,0 +1,364 @@
+#include "IrLowererLowerEffects.h"
+
+#include <cctype>
+#include <functional>
+
+#include "IrLowererHelpers.h"
+#include "primec/Ir.h"
+
+namespace primec::ir_lowerer {
+namespace {
+
+bool isSoftwareNumericName(const std::string &name) {
+  return name == "integer" || name == "decimal" || name == "complex";
+}
+
+bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
+  out.clear();
+  int depth = 0;
+  size_t start = 0;
+  auto pushSegment = [&](size_t end) {
+    size_t segStart = start;
+    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
+      ++segStart;
+    }
+    size_t segEnd = end;
+    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+      --segEnd;
+    }
+    out.push_back(text.substr(segStart, segEnd - segStart));
+  };
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+      }
+      continue;
+    }
+    if (c == ',' && depth == 0) {
+      pushSegment(i);
+      start = i + 1;
+    }
+  }
+  pushSegment(text.size());
+  for (const auto &seg : out) {
+    if (seg.empty()) {
+      return false;
+    }
+  }
+  return !out.empty();
+}
+
+std::string findSoftwareNumericType(const std::string &typeName) {
+  if (typeName.empty()) {
+    return {};
+  }
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(typeName, base, arg)) {
+    return isSoftwareNumericName(typeName) ? typeName : std::string{};
+  }
+  if (isSoftwareNumericName(base)) {
+    return base;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(arg, args)) {
+    return {};
+  }
+  for (const auto &nested : args) {
+    std::string found = findSoftwareNumericType(nested);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  return {};
+}
+
+std::string scanTransformsForSoftwareNumeric(const std::vector<Transform> &transforms) {
+  for (const auto &transform : transforms) {
+    std::string found = findSoftwareNumericType(transform.name);
+    if (!found.empty()) {
+      return found;
+    }
+    for (const auto &arg : transform.templateArgs) {
+      found = findSoftwareNumericType(arg);
+      if (!found.empty()) {
+        return found;
+      }
+    }
+  }
+  return {};
+}
+
+std::string scanExprForSoftwareNumeric(const Expr &expr) {
+  std::string found = scanTransformsForSoftwareNumeric(expr.transforms);
+  if (!found.empty()) {
+    return found;
+  }
+  for (const auto &arg : expr.templateArgs) {
+    found = findSoftwareNumericType(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  for (const auto &arg : expr.args) {
+    found = scanExprForSoftwareNumeric(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  for (const auto &arg : expr.bodyArguments) {
+    found = scanExprForSoftwareNumeric(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  return {};
+}
+
+} // namespace
+
+bool findEntryDefinition(const Program &program,
+                         const std::string &entryPath,
+                         const Definition *&entryDefOut,
+                         std::string &error) {
+  entryDefOut = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == entryPath) {
+      entryDefOut = &def;
+      break;
+    }
+  }
+  if (!entryDefOut) {
+    error = "native backend requires entry definition " + entryPath;
+    return false;
+  }
+  return true;
+}
+
+bool validateNoSoftwareNumericTypes(const Program &program, std::string &error) {
+  for (const auto &def : program.definitions) {
+    std::string found = scanTransformsForSoftwareNumeric(def.transforms);
+    if (!found.empty()) {
+      error = "native backend does not support software numeric types: " + found;
+      return false;
+    }
+    for (const auto &param : def.parameters) {
+      found = scanExprForSoftwareNumeric(param);
+      if (!found.empty()) {
+        error = "native backend does not support software numeric types: " + found;
+        return false;
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      found = scanExprForSoftwareNumeric(stmt);
+      if (!found.empty()) {
+        error = "native backend does not support software numeric types: " + found;
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value()) {
+      found = scanExprForSoftwareNumeric(*def.returnExpr);
+      if (!found.empty()) {
+        error = "native backend does not support software numeric types: " + found;
+        return false;
+      }
+    }
+  }
+
+  for (const auto &exec : program.executions) {
+    std::string found = scanTransformsForSoftwareNumeric(exec.transforms);
+    if (!found.empty()) {
+      error = "native backend does not support software numeric types: " + found;
+      return false;
+    }
+    for (const auto &arg : exec.arguments) {
+      found = scanExprForSoftwareNumeric(arg);
+      if (!found.empty()) {
+        error = "native backend does not support software numeric types: " + found;
+        return false;
+      }
+    }
+    for (const auto &arg : exec.bodyArguments) {
+      found = scanExprForSoftwareNumeric(arg);
+      if (!found.empty()) {
+        error = "native backend does not support software numeric types: " + found;
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool effectBitForName(const std::string &name, uint64_t &outBit) {
+  if (name == "io_out") {
+    outBit = EffectIoOut;
+    return true;
+  }
+  if (name == "io_err") {
+    outBit = EffectIoErr;
+    return true;
+  }
+  if (name == "heap_alloc") {
+    outBit = EffectHeapAlloc;
+    return true;
+  }
+  if (name == "pathspace_notify") {
+    outBit = EffectPathSpaceNotify;
+    return true;
+  }
+  if (name == "pathspace_insert") {
+    outBit = EffectPathSpaceInsert;
+    return true;
+  }
+  if (name == "pathspace_take") {
+    outBit = EffectPathSpaceTake;
+    return true;
+  }
+  if (name == "pathspace_bind") {
+    outBit = EffectPathSpaceBind;
+    return true;
+  }
+  if (name == "pathspace_schedule") {
+    outBit = EffectPathSpaceSchedule;
+    return true;
+  }
+  if (name == "file_write") {
+    outBit = EffectFileWrite;
+    return true;
+  }
+  if (name == "gpu_dispatch") {
+    outBit = EffectGpuDispatch;
+    return true;
+  }
+  return false;
+}
+
+bool isSupportedEffect(const std::string &name) {
+  return name == "io_out" || name == "io_err" || name == "heap_alloc" || name == "pathspace_notify" ||
+         name == "pathspace_insert" || name == "pathspace_take" || name == "pathspace_bind" ||
+         name == "pathspace_schedule" || name == "file_write" || name == "gpu_dispatch";
+}
+
+std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform> &transforms,
+                                                     bool isEntry,
+                                                     const std::vector<std::string> &defaultEffects,
+                                                     const std::vector<std::string> &entryDefaultEffects) {
+  std::unordered_set<std::string> effects;
+  bool sawEffects = false;
+  for (const auto &transform : transforms) {
+    if (transform.name != "effects") {
+      continue;
+    }
+    sawEffects = true;
+    effects.clear();
+    for (const auto &effect : transform.arguments) {
+      effects.insert(effect);
+    }
+  }
+  if (!sawEffects) {
+    const auto &defaults = isEntry ? entryDefaultEffects : defaultEffects;
+    for (const auto &effect : defaults) {
+      effects.insert(effect);
+    }
+  }
+  return effects;
+}
+
+bool validateEffectsTransforms(const std::vector<Transform> &transforms,
+                               const std::string &context,
+                               std::string &error) {
+  for (const auto &transform : transforms) {
+    if (transform.name != "effects") {
+      continue;
+    }
+    for (const auto &effect : transform.arguments) {
+      if (!isSupportedEffect(effect)) {
+        error = "native backend does not support effect: " + effect + " on " + context;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool validateActiveEffects(const std::vector<Transform> &transforms,
+                           const std::string &context,
+                           bool isEntry,
+                           const std::vector<std::string> &defaultEffects,
+                           const std::vector<std::string> &entryDefaultEffects,
+                           std::string &error) {
+  const auto effects = resolveActiveEffects(transforms, isEntry, defaultEffects, entryDefaultEffects);
+  for (const auto &effect : effects) {
+    if (!isSupportedEffect(effect)) {
+      error = "native backend does not support effect: " + effect + " on " + context;
+      return false;
+    }
+  }
+  return true;
+}
+
+bool resolveEffectMask(const std::vector<Transform> &transforms,
+                       bool isEntry,
+                       const std::vector<std::string> &defaultEffects,
+                       const std::vector<std::string> &entryDefaultEffects,
+                       uint64_t &maskOut,
+                       std::string &error) {
+  const auto effects = resolveActiveEffects(transforms, isEntry, defaultEffects, entryDefaultEffects);
+  maskOut = 0;
+  for (const auto &effect : effects) {
+    uint64_t bit = 0;
+    if (!effectBitForName(effect, bit)) {
+      error = "unsupported effect in metadata: " + effect;
+      return false;
+    }
+    maskOut |= bit;
+  }
+  return true;
+}
+
+bool resolveCapabilityMask(const std::vector<Transform> &transforms,
+                           const std::unordered_set<std::string> &effects,
+                           const std::string &duplicateContext,
+                           uint64_t &maskOut,
+                           std::string &error) {
+  bool sawCapabilities = false;
+  std::unordered_set<std::string> capabilities;
+  for (const auto &transform : transforms) {
+    if (transform.name != "capabilities") {
+      continue;
+    }
+    if (sawCapabilities) {
+      error = "duplicate capabilities transform on " + duplicateContext;
+      return false;
+    }
+    sawCapabilities = true;
+    capabilities.clear();
+    for (const auto &arg : transform.arguments) {
+      capabilities.insert(arg);
+    }
+  }
+
+  if (!sawCapabilities) {
+    capabilities = effects;
+  }
+
+  maskOut = 0;
+  for (const auto &capability : capabilities) {
+    uint64_t bit = 0;
+    if (!effectBitForName(capability, bit)) {
+      error = "unsupported capability in metadata: " + capability;
+      return false;
+    }
+    maskOut |= bit;
+  }
+  return true;
+}
+
+} // namespace primec::ir_lowerer

@@ -16,6 +16,7 @@
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/Vm.h"
+#include "src/ir_lowerer/IrLowererLowerEffects.h"
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
