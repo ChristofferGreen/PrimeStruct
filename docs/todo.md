@@ -36,6 +36,7 @@ Legend:
 - ✓ Add a post-semantics AST dump stage (`--dump-stage ast-semantic`, alias `ast_semantic`) to inspect canonicalized AST after rewrites/inference.
 - ✓ Update `primec`/`primevm` usage text to prefer `--text-transforms` and `--import-path`/`-I` (usage strings now advertise modern flags only; compile-run regression coverage locks the help text for both CLIs).
 - ✓ Remove legacy `--text-filters` CLI aliases from `primec` and `primevm` so `--text-transforms` is the only text-transform flag (removed alias parsing branches from both CLIs, migrated alias-based positive tests to `--text-transforms`, and added compile-run diagnostics coverage that locks alias rejection in both `primec` and `primevm`).
+- ✓ Add CLI regression coverage for bare legacy `--text-filters` rejection in `primec` and `primevm` (existing alias rejection coverage now locks both bare `--text-filters` and `--text-filters=...` unknown-option diagnostics).
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.

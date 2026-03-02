@@ -507,7 +507,7 @@ main() {
   CHECK(runCommand(nativePath) == 3);
 }
 
-TEST_CASE("legacy text-filters alias is rejected in primec and primevm") {
+TEST_CASE("legacy text-filters alias forms are rejected in primec and primevm") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -520,14 +520,24 @@ main() {
   const std::string primevmErrPath =
       (std::filesystem::temp_directory_path() / "primevm_text_filters_legacy_alias_err.txt").string();
 
-  const std::string primecCmd =
+  const std::string primecEqCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + primecErrPath;
-  CHECK(runCommand(primecCmd) == 2);
+  CHECK(runCommand(primecEqCmd) == 2);
   CHECK(readFile(primecErrPath).find("Argument error: unknown option: --text-filters=none\n") != std::string::npos);
 
-  const std::string primevmCmd = "./primevm " + srcPath + " --entry /main --text-filters=none 2> " + primevmErrPath;
-  CHECK(runCommand(primevmCmd) == 2);
+  const std::string primevmEqCmd =
+      "./primevm " + srcPath + " --entry /main --text-filters=none 2> " + primevmErrPath;
+  CHECK(runCommand(primevmEqCmd) == 2);
   CHECK(readFile(primevmErrPath).find("Argument error: unknown option: --text-filters=none\n") != std::string::npos);
+
+  const std::string primecBareCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters 2> " + primecErrPath;
+  CHECK(runCommand(primecBareCmd) == 2);
+  CHECK(readFile(primecErrPath).find("Argument error: unknown option: --text-filters\n") != std::string::npos);
+
+  const std::string primevmBareCmd = "./primevm " + srcPath + " --entry /main --text-filters 2> " + primevmErrPath;
+  CHECK(runCommand(primevmBareCmd) == 2);
+  CHECK(readFile(primevmErrPath).find("Argument error: unknown option: --text-filters\n") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs implicit i32 via transform list") {
