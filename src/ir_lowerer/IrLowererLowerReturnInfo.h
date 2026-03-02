@@ -516,24 +516,6 @@
     function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
     return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
   };
-  struct OnErrorScope {
-    std::optional<OnErrorHandler> &target;
-    std::optional<OnErrorHandler> previous;
-    OnErrorScope(std::optional<OnErrorHandler> &targetIn, std::optional<OnErrorHandler> next)
-        : target(targetIn), previous(targetIn) {
-      target = std::move(next);
-    }
-    ~OnErrorScope() { target = std::move(previous); }
-  };
-  struct ResultReturnScope {
-    std::optional<ResultReturnInfo> &target;
-    std::optional<ResultReturnInfo> previous;
-    ResultReturnScope(std::optional<ResultReturnInfo> &targetIn, std::optional<ResultReturnInfo> next)
-        : target(targetIn), previous(targetIn) {
-      target = std::move(next);
-    }
-    ~ResultReturnScope() { target = std::move(previous); }
-  };
   auto emitFileCloseIfValid = [&](int32_t localIndex) {
     function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIndex)});
     function.instructions.push_back({IrOpcode::PushI64, 0});
@@ -629,73 +611,35 @@
   auto resolveDefinitionCall = [&](const Expr &callExpr) -> const Definition * {
     return ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath);
   };
-  struct ResultExprInfo {
-    bool isResult = false;
-    bool hasValue = false;
-    std::string errorType;
-  };
   auto resolveResultExprInfo = [&](const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) -> bool {
-    out = ResultExprInfo{};
-    if (expr.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.name);
-      if (it != localsIn.end() && it->second.isResult) {
-        out.isResult = true;
-        out.hasValue = it->second.resultHasValue;
-        out.errorType = it->second.resultErrorType;
-        return true;
+    auto lookupLocal = [&](const std::string &name) -> ir_lowerer::LocalResultInfo {
+      ir_lowerer::LocalResultInfo local;
+      auto it = localsIn.find(name);
+      if (it == localsIn.end()) {
+        return local;
       }
-      return false;
-    }
-    if (expr.kind != Expr::Kind::Call) {
-      return false;
-    }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
-      out.isResult = true;
-      out.hasValue = true;
-      out.errorType = "FileError";
-      return true;
-    }
-    if (expr.isMethodCall && !expr.args.empty()) {
-      if (expr.args.front().kind == Expr::Kind::Name) {
-        if (expr.args.front().name == "Result" && expr.name == "ok") {
-          out.isResult = true;
-          out.hasValue = (expr.args.size() > 1);
-          return true;
-        }
-        auto it = localsIn.find(expr.args.front().name);
-        if (it != localsIn.end() && it->second.isFileHandle) {
-          if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" ||
-              expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
-            out.isResult = true;
-            out.hasValue = false;
-            out.errorType = "FileError";
-            return true;
-          }
-        }
-      }
-      const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
-      if (callee) {
-        ReturnInfo info;
-        if (getReturnInfo && getReturnInfo(callee->fullPath, info) && info.isResult) {
-          out.isResult = true;
-          out.hasValue = info.resultHasValue;
-          out.errorType = info.resultErrorType;
-          return true;
-        }
-      }
-      return false;
-    }
-    const Definition *callee = resolveDefinitionCall(expr);
-    if (callee) {
+      local.found = true;
+      local.isResult = it->second.isResult;
+      local.resultHasValue = it->second.resultHasValue;
+      local.resultErrorType = it->second.resultErrorType;
+      local.isFileHandle = it->second.isFileHandle;
+      return local;
+    };
+    auto resolveMethodCall = [&](const Expr &callExpr) -> const Definition * {
+      return resolveMethodCallDefinition(callExpr, localsIn);
+    };
+    auto lookupDefinitionResult = [&](const std::string &path, ResultExprInfo &resultOut) -> bool {
       ReturnInfo info;
-      if (getReturnInfo && getReturnInfo(callee->fullPath, info) && info.isResult) {
-        out.isResult = true;
-        out.hasValue = info.resultHasValue;
-        out.errorType = info.resultErrorType;
-        return true;
+      if (!getReturnInfo || !getReturnInfo(path, info) || !info.isResult) {
+        return false;
       }
-    }
-    return false;
+      resultOut.isResult = true;
+      resultOut.hasValue = info.resultHasValue;
+      resultOut.errorType = info.resultErrorType;
+      return true;
+    };
+    return ir_lowerer::resolveResultExprInfo(
+        expr, lookupLocal, resolveMethodCall, resolveDefinitionCall, lookupDefinitionResult, out);
   };
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
                                        const std::vector<Expr> &params,
@@ -711,32 +655,50 @@
     sourceOut = LocalInfo::StringSource::None;
     stringIndexOut = -1;
     argvCheckedOut = true;
-    if (arg.kind == Expr::Kind::StringLiteral) {
-      std::string decoded;
-      if (!parseStringLiteral(arg.stringValue, decoded)) {
-        return false;
-      }
-      int32_t index = internString(decoded);
-      function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
-      sourceOut = LocalInfo::StringSource::TableIndex;
-      stringIndexOut = index;
-      return true;
+    ir_lowerer::StringCallSource helperSource = ir_lowerer::StringCallSource::None;
+    ir_lowerer::StringCallEmitResult helperResult = ir_lowerer::emitLiteralOrBindingStringCallValue(
+        arg,
+        internString,
+        [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+        [&](const std::string &name) -> ir_lowerer::StringBindingInfo {
+          ir_lowerer::StringBindingInfo binding;
+          auto it = callerLocals.find(name);
+          if (it == callerLocals.end()) {
+            return binding;
+          }
+          binding.found = true;
+          binding.isString = (it->second.valueKind == LocalInfo::ValueKind::String);
+          binding.localIndex = it->second.index;
+          if (it->second.stringSource == LocalInfo::StringSource::TableIndex) {
+            binding.source = ir_lowerer::StringCallSource::TableIndex;
+          } else if (it->second.stringSource == LocalInfo::StringSource::ArgvIndex) {
+            binding.source = ir_lowerer::StringCallSource::ArgvIndex;
+          } else if (it->second.stringSource == LocalInfo::StringSource::RuntimeIndex) {
+            binding.source = ir_lowerer::StringCallSource::RuntimeIndex;
+          } else {
+            binding.source = ir_lowerer::StringCallSource::None;
+          }
+          binding.stringIndex = it->second.stringIndex;
+          binding.argvChecked = it->second.argvChecked;
+          return binding;
+        },
+        helperSource,
+        stringIndexOut,
+        argvCheckedOut,
+        error);
+    if (helperResult == ir_lowerer::StringCallEmitResult::Error) {
+      return false;
     }
-    if (arg.kind == Expr::Kind::Name) {
-      auto it = callerLocals.find(arg.name);
-      if (it == callerLocals.end()) {
-        error = "native backend does not know identifier: " + arg.name;
-        return false;
+    if (helperResult == ir_lowerer::StringCallEmitResult::Handled) {
+      if (helperSource == ir_lowerer::StringCallSource::TableIndex) {
+        sourceOut = LocalInfo::StringSource::TableIndex;
+      } else if (helperSource == ir_lowerer::StringCallSource::ArgvIndex) {
+        sourceOut = LocalInfo::StringSource::ArgvIndex;
+      } else if (helperSource == ir_lowerer::StringCallSource::RuntimeIndex) {
+        sourceOut = LocalInfo::StringSource::RuntimeIndex;
+      } else {
+        sourceOut = LocalInfo::StringSource::None;
       }
-      if (it->second.valueKind != LocalInfo::ValueKind::String ||
-          it->second.stringSource == LocalInfo::StringSource::None) {
-        error = "native backend requires string arguments to use string literals, bindings, or entry args";
-        return false;
-      }
-      sourceOut = it->second.stringSource;
-      stringIndexOut = it->second.stringIndex;
-      argvCheckedOut = it->second.argvChecked;
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
       return true;
     }
     if (arg.kind == Expr::Kind::Call) {

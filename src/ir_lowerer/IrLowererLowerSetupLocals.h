@@ -19,15 +19,6 @@
     bool referenceToArray = false;
     bool isUninitializedStorage = false;
   };
-  struct OnErrorHandler {
-    std::string handlerPath;
-    std::vector<Expr> boundArgs;
-  };
-  struct ResultReturnInfo {
-    bool isResult = false;
-    bool hasValue = false;
-  };
-
   auto trimText = [](const std::string &text) {
     size_t start = 0;
     while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {

@@ -136,6 +136,215 @@ TEST_CASE("ir lowerer call helpers reject unknown named arg") {
   CHECK(error == "unknown named argument: missing");
 }
 
+TEST_CASE("ir lowerer result helpers resolve Result.ok method") {
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.literalValue = 1;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.isMethodCall = true;
+  callExpr.name = "ok";
+  callExpr.args = {resultName, valueExpr};
+
+  auto lookupLocal = [](const std::string &) { return primec::ir_lowerer::LocalResultInfo{}; };
+  auto resolveNone = [](const primec::Expr &) -> const primec::Definition * { return nullptr; };
+  auto lookupDefinition = [](const std::string &, primec::ir_lowerer::ResultExprInfo &) { return false; };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfo(
+      callExpr, lookupLocal, resolveNone, resolveNone, lookupDefinition, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+}
+
+TEST_CASE("ir lowerer result helpers resolve definition result metadata") {
+  primec::Definition callee;
+  callee.fullPath = "/make";
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "make";
+
+  auto lookupLocal = [](const std::string &) { return primec::ir_lowerer::LocalResultInfo{}; };
+  auto resolveNone = [](const primec::Expr &) -> const primec::Definition * { return nullptr; };
+  auto resolveDirect = [&](const primec::Expr &) -> const primec::Definition * { return &callee; };
+  auto lookupDefinition = [](const std::string &path, primec::ir_lowerer::ResultExprInfo &out) {
+    if (path != "/make") {
+      return false;
+    }
+    out.isResult = true;
+    out.hasValue = false;
+    out.errorType = "FileError";
+    return true;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfo(
+      callExpr, lookupLocal, resolveNone, resolveDirect, lookupDefinition, out));
+  CHECK(out.isResult);
+  CHECK_FALSE(out.hasValue);
+  CHECK(out.errorType == "FileError");
+}
+
+TEST_CASE("ir lowerer flow helpers restore scoped state") {
+  std::optional<primec::ir_lowerer::OnErrorHandler> onError;
+  primec::ir_lowerer::OnErrorHandler initialHandler;
+  initialHandler.handlerPath = "/initial";
+  onError = initialHandler;
+  {
+    primec::ir_lowerer::OnErrorHandler nestedHandler;
+    nestedHandler.handlerPath = "/nested";
+    primec::ir_lowerer::OnErrorScope scope(onError, nestedHandler);
+    REQUIRE(onError.has_value());
+    CHECK(onError->handlerPath == "/nested");
+  }
+  REQUIRE(onError.has_value());
+  CHECK(onError->handlerPath == "/initial");
+
+  std::optional<primec::ir_lowerer::ResultReturnInfo> resultInfo;
+  primec::ir_lowerer::ResultReturnInfo initialResult;
+  initialResult.isResult = true;
+  initialResult.hasValue = false;
+  resultInfo = initialResult;
+  {
+    primec::ir_lowerer::ResultReturnInfo nestedResult;
+    nestedResult.isResult = true;
+    nestedResult.hasValue = true;
+    primec::ir_lowerer::ResultReturnScope scope(resultInfo, nestedResult);
+    REQUIRE(resultInfo.has_value());
+    CHECK(resultInfo->hasValue);
+  }
+  REQUIRE(resultInfo.has_value());
+  CHECK_FALSE(resultInfo->hasValue);
+}
+
+TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto internString = [](const std::string &text) -> int32_t {
+    if (text == "hello") {
+      return 7;
+    }
+    return 9;
+  };
+
+  primec::Expr literalArg;
+  literalArg.kind = primec::Expr::Kind::StringLiteral;
+  literalArg.stringValue = "\"hello\"utf8";
+
+  primec::ir_lowerer::StringCallSource source = primec::ir_lowerer::StringCallSource::None;
+  int32_t stringIndex = -1;
+  bool argvChecked = true;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::emitLiteralOrBindingStringCallValue(
+            literalArg,
+            internString,
+            emitInstruction,
+            [](const std::string &) { return primec::ir_lowerer::StringBindingInfo{}; },
+            source,
+            stringIndex,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Handled);
+  CHECK(source == primec::ir_lowerer::StringCallSource::TableIndex);
+  CHECK(stringIndex == 7);
+  CHECK(argvChecked);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 7);
+
+  instructions.clear();
+  primec::Expr nameArg;
+  nameArg.kind = primec::Expr::Kind::Name;
+  nameArg.name = "text";
+  CHECK(primec::ir_lowerer::emitLiteralOrBindingStringCallValue(
+            nameArg,
+            internString,
+            emitInstruction,
+            [](const std::string &name) {
+              primec::ir_lowerer::StringBindingInfo binding;
+              if (name == "text") {
+                binding.found = true;
+                binding.isString = true;
+                binding.localIndex = 42;
+                binding.source = primec::ir_lowerer::StringCallSource::RuntimeIndex;
+                binding.argvChecked = true;
+              }
+              return binding;
+            },
+            source,
+            stringIndex,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Handled);
+  CHECK(source == primec::ir_lowerer::StringCallSource::RuntimeIndex);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 42);
+}
+
+TEST_CASE("ir lowerer string call helpers surface errors and not-handled cases") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto internString = [](const std::string &) -> int32_t { return 1; };
+
+  primec::Expr badLiteral;
+  badLiteral.kind = primec::Expr::Kind::StringLiteral;
+  badLiteral.stringValue = "\"x\"bogus";
+  primec::ir_lowerer::StringCallSource source = primec::ir_lowerer::StringCallSource::None;
+  int32_t stringIndex = -1;
+  bool argvChecked = true;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitLiteralOrBindingStringCallValue(
+            badLiteral,
+            internString,
+            emitInstruction,
+            [](const std::string &) { return primec::ir_lowerer::StringBindingInfo{}; },
+            source,
+            stringIndex,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Error);
+  CHECK(error.find("unknown string literal suffix") != std::string::npos);
+
+  instructions.clear();
+  primec::Expr unknownName;
+  unknownName.kind = primec::Expr::Kind::Name;
+  unknownName.name = "missing";
+  CHECK(primec::ir_lowerer::emitLiteralOrBindingStringCallValue(
+            unknownName,
+            internString,
+            emitInstruction,
+            [](const std::string &) { return primec::ir_lowerer::StringBindingInfo{}; },
+            source,
+            stringIndex,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Error);
+  CHECK(error == "native backend does not know identifier: missing");
+
+  instructions.clear();
+  primec::Expr callArg;
+  callArg.kind = primec::Expr::Kind::Call;
+  callArg.name = "at";
+  CHECK(primec::ir_lowerer::emitLiteralOrBindingStringCallValue(
+            callArg,
+            internString,
+            emitInstruction,
+            [](const std::string &) { return primec::ir_lowerer::StringBindingInfo{}; },
+            source,
+            stringIndex,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::NotHandled);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
   const std::vector<primec::IrOpcode> expected = {
       primec::IrOpcode::PushI32,

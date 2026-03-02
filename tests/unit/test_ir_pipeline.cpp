@@ -17,7 +17,10 @@
 #include "primec/Semantics.h"
 #include "primec/Vm.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
+#include "src/ir_lowerer/IrLowererFlowHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
+#include "src/ir_lowerer/IrLowererResultHelpers.h"
+#include "src/ir_lowerer/IrLowererStringCallHelpers.h"
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
