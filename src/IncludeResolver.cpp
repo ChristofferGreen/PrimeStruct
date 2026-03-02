@@ -231,9 +231,6 @@ bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payload
   size_t directiveLength = 0;
   if (pos + 6 <= source.size() && source.compare(pos, 6, "import") == 0) {
     directiveLength = 6;
-  } else if (pos + 7 <= source.size() && source.compare(pos, 7, "include") == 0) {
-    // Keep legacy include alias support, but normalize user-facing messaging to import.
-    directiveLength = 7;
   } else {
     return false;
   }
@@ -241,6 +238,32 @@ bool scanIncludeDirective(const std::string &source, size_t pos, size_t &payload
     return false;
   }
   size_t scan = pos + directiveLength;
+  if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
+    if (!(source[scan] == '/' && scan + 1 < source.size() &&
+          (source[scan + 1] == '/' || source[scan + 1] == '*'))) {
+      return false;
+    }
+  }
+  scan = skipWhitespaceAndComments(source, scan);
+  if (scan >= source.size() || source[scan] != '<') {
+    return false;
+  }
+  payloadStart = scan + 1;
+  payloadEnd = findIncludePayloadEnd(source, payloadStart);
+  return true;
+}
+
+bool scanLegacyIncludeDirective(const std::string &source,
+                                size_t pos,
+                                size_t &payloadStart,
+                                size_t &payloadEnd) {
+  if (!(pos + 7 <= source.size() && source.compare(pos, 7, "include") == 0)) {
+    return false;
+  }
+  if (pos > 0 && isIncludeBoundaryChar(source[pos - 1])) {
+    return false;
+  }
+  size_t scan = pos + 7;
   if (scan < source.size() && isIncludeBoundaryChar(source[scan])) {
     if (!(source[scan] == '/' && scan + 1 < source.size() &&
           (source[scan + 1] == '/' || source[scan + 1] == '*'))) {
@@ -674,6 +697,14 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
       }
       size_t payloadStart = 0;
       size_t end = 0;
+      if (scanLegacyIncludeDirective(source, i, payloadStart, end)) {
+        if (end == std::string::npos) {
+          error = "unterminated include<...> directive";
+        } else {
+          error = "legacy include<...> is no longer supported; use import<...>";
+        }
+        return false;
+      }
       if (scanIncludeDirective(source, i, payloadStart, end)) {
         if (end == std::string::npos) {
           error = "unterminated import<...> directive";

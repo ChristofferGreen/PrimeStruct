@@ -88,94 +88,32 @@ TEST_CASE("compiles and runs exact versioned import expansion") {
   CHECK(runCommand(nativePath) == 5);
 }
 
-TEST_CASE("compiles and runs versioned legacy include alias expansion") {
-  const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_legacy_alias";
-  std::filesystem::remove_all(includeRoot);
-  std::filesystem::create_directories(includeRoot);
-  {
-    std::filesystem::create_directories(includeRoot / "1.2.0" / "std" / "io");
-    std::ofstream oldLib(includeRoot / "1.2.0" / "std" / "io" / "lib.prime");
-    CHECK(oldLib.good());
-    oldLib << "[return<int>]\nhelper(){ return(3i32) }\n";
-    CHECK(oldLib.good());
-  }
-  {
-    std::filesystem::create_directories(includeRoot / "1.2.8" / "std" / "io");
-    std::ofstream newLib(includeRoot / "1.2.8" / "std" / "io" / "lib.prime");
-    CHECK(newLib.good());
-    newLib << "[return<int>]\nhelper(){ return(9i32) }\n";
-    CHECK(newLib.good());
-  }
-
+TEST_CASE("rejects versioned legacy include alias expansion") {
   const std::string source =
       "include<\"/std/io\", version=\"1.2\">\n"
       "[return<int>]\n"
-      "main(){ return(helper()) }\n";
+      "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_legacy_alias.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_exe").string();
-  const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_native").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 9);
-
-  const std::string runVmCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(runVmCmd) == 9);
-
-  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
-                                       " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 9);
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCppCmd) == 2);
+  CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
 
-TEST_CASE("compiles and runs version-first legacy include alias expansion") {
-  const std::filesystem::path includeRoot =
-      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned_legacy_alias_first";
-  std::filesystem::remove_all(includeRoot);
-  std::filesystem::create_directories(includeRoot);
-  {
-    std::filesystem::create_directories(includeRoot / "1.2.1" / "std" / "io");
-    std::ofstream oldLib(includeRoot / "1.2.1" / "std" / "io" / "lib.prime");
-    CHECK(oldLib.good());
-    oldLib << "[return<int>]\nhelper(){ return(4i32) }\n";
-    CHECK(oldLib.good());
-  }
-  {
-    std::filesystem::create_directories(includeRoot / "1.2.9" / "std" / "io");
-    std::ofstream newLib(includeRoot / "1.2.9" / "std" / "io" / "lib.prime");
-    CHECK(newLib.good());
-    newLib << "[return<int>]\nhelper(){ return(10i32) }\n";
-    CHECK(newLib.good());
-  }
-
+TEST_CASE("rejects version-first legacy include alias expansion") {
   const std::string source =
       "include<version=\"1.2\", \"/std/io\">\n"
       "[return<int>]\n"
-      "main(){ return(helper()) }\n";
+      "main(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_versioned_include_legacy_alias_first.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_first_exe").string();
-  const std::string nativePath =
-      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_first_native").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_versioned_inc_legacy_alias_first_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
-                                    " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
-
-  const std::string runVmCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(runVmCmd) == 10);
-
-  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath +
-                                       " --entry /main --import-path " + includeRoot.string();
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 10);
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCppCmd) == 2);
+  CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
 
 TEST_CASE("compiles and runs versioned import expansion with quoted import entries") {

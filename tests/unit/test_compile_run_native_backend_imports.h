@@ -268,15 +268,15 @@ TEST_CASE("compiles and runs import expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs legacy include expansion alias") {
-  const std::string libPath = writeTemp("compile_lib_legacy_include.prime", "[return<int>]\nhelper(){ return(11i32) }\n");
-  const std::string source = "include<\"" + libPath + "\">\n[return<int>]\nmain(){ return(helper()) }\n";
+TEST_CASE("rejects legacy include expansion alias") {
+  const std::string source = "include<\"/std/io\">\n[return<int>]\nmain(){ return(0i32) }\n";
   const std::string srcPath = writeTemp("compile_legacy_include_alias.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_legacy_include_alias_exe").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_legacy_include_alias_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
 
 TEST_CASE("compiles and runs single-quoted import expansion") {

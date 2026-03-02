@@ -24,7 +24,7 @@ Legend:
 - ✓ Add version-first regression coverage for legacy `include<...>` alias handling (`include<version=\"...\", ...>`) in resolver and compile-run flows (added resolver and compile-run tests for version-first alias ordering).
 - ✓ Add text-filter regression coverage for versioned legacy `include<...>` alias directives (including `version`-first ordering) so directive payload strings are never rewritten (added pipeline passthrough tests for both ordered forms).
 - ✓ Add text-filter regression coverage for single-quoted versioned legacy `include<...>` alias directives (including `version`-first ordering) so quote-style aliases stay rewrite-safe (added pipeline passthrough tests for both single-quoted ordered forms).
-- ○ Remove legacy `include<...>` compatibility aliases from resolver/text-filter parsing so only `import<...>` is accepted (convert compatibility tests into rejection diagnostics).
+- ✓ Remove legacy `include<...>` compatibility aliases from resolver/text-filter parsing so only `import<...>` is accepted (resolver now rejects `include<...>` with a migration diagnostic; legacy compatibility tests converted to rejection diagnostics).
 - ○ Remove legacy `--include-path` CLI aliases from `primec` and `primevm` so `--import-path`/`-I` are the only supported import-root flags.
 - ○ Rename import pipeline internals away from `Include*` naming (`IncludeResolver`, `expandIncludes`, `includePaths`) to `Import*` naming and update call sites.
 - ○ Rename import-stage diagnostics/enums away from `Include*` (`CompilePipelineErrorStage::Include`, `DiagnosticCode::IncludeError`) while preserving existing diagnostic code stability guarantees.

@@ -46,8 +46,7 @@ bool isBoundaryChar(char c) {
 }
 
 bool matchNonOperandKeyword(const std::string &input, size_t pos, std::string_view &out) {
-  static const std::string_view keywords[] = {"return", "import", "include", "namespace",
-                                              "if",     "else",   "for",     "while",
+  static const std::string_view keywords[] = {"return", "import", "namespace", "if", "else", "for", "while",
                                               "loop"};
   for (const auto &keyword : keywords) {
     if (input.compare(pos, keyword.size(), keyword) != 0) {
@@ -301,7 +300,7 @@ bool rewriteBinaryOperatorsWithPrecedence(const std::string &input, std::string 
     if (matchNonOperandKeyword(input, pos, keyword)) {
       output.append(keyword);
       pos += keyword.size();
-      if (keyword == "import" || keyword == "include") {
+      if (keyword == "import") {
         size_t end = pos;
         while (end < input.size() && input[end] != '\n' && input[end] != ';') {
           ++end;
@@ -370,7 +369,7 @@ bool applyPass(const std::string &input,
   const bool enableOperators = options.hasFilter("operators");
   const bool enableImplicitUtf8 = options.hasFilter("implicit-utf8");
   auto isNonOperandKeyword = [](std::string_view token) -> bool {
-    return token == "return" || token == "import" || token == "include" || token == "namespace";
+    return token == "return" || token == "import" || token == "namespace";
   };
   auto hasNonOperandKeywordBefore = [&](size_t index) -> bool {
     if (index == 0) {
@@ -630,23 +629,17 @@ bool applyPass(const std::string &input,
   };
 
 
-  auto trySkipIncludeDirective = [&](size_t &index) -> bool {
-    constexpr std::string_view IncludeToken = "include";
+  auto trySkipImportDirective = [&](size_t &index) -> bool {
     constexpr std::string_view ImportToken = "import";
-    std::string_view directiveToken;
     if (index + ImportToken.size() <= input.size() &&
         input.compare(index, ImportToken.size(), ImportToken.data()) == 0) {
-      directiveToken = ImportToken;
-    } else if (index + IncludeToken.size() <= input.size() &&
-               input.compare(index, IncludeToken.size(), IncludeToken.data()) == 0) {
-      directiveToken = IncludeToken;
     } else {
       return false;
     }
     if (index > 0 && (isTokenChar(input[index - 1]) || input[index - 1] == '/')) {
       return false;
     }
-    size_t scan = index + directiveToken.size();
+    size_t scan = index + ImportToken.size();
     if (scan < input.size() && (isTokenChar(input[scan]) || input[scan] == '/')) {
       if (!(input[scan] == '/' && scan + 1 < input.size() &&
             (input[scan + 1] == '/' || input[scan + 1] == '*'))) {
@@ -736,7 +729,7 @@ bool applyPass(const std::string &input,
   };
 
   for (size_t i = 0; i < input.size(); ++i) {
-    if (trySkipIncludeDirective(i)) {
+    if (trySkipImportDirective(i)) {
       continue;
     }
     if (input[i] == '/' && i + 1 < input.size() && input[i + 1] == '/') {

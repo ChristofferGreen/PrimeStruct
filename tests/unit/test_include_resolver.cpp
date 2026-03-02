@@ -70,17 +70,14 @@ TEST_CASE("expands single import") {
   CHECK(source.find("helper") != std::string::npos);
 }
 
-TEST_CASE("expands single legacy include alias") {
-  const std::string marker = "LEGACY_INCLUDE_ALIAS_MARKER";
-  const std::string libPath = writeTemp("lib_legacy_alias.prime", "// " + marker + "\n");
-  const std::string srcPath = writeTemp("main_legacy_alias.prime", "include<\"" + libPath + "\">\n");
+TEST_CASE("rejects single legacy include alias") {
+  const std::string srcPath = writeTemp("main_legacy_alias.prime", "include<\"/std/io\">\n");
 
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
-  CHECK(error.empty());
-  CHECK(source.find(marker) != std::string::npos);
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error == "legacy include<...> is no longer supported; use import<...>");
 }
 
 TEST_CASE("expands import with whitespace") {
@@ -211,48 +208,24 @@ TEST_CASE("resolves versioned import with single quotes") {
   CHECK(source.find("INCLUDE_SINGLE_QUOTE_120") == std::string::npos);
 }
 
-TEST_CASE("resolves versioned legacy include alias") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_legacy_version_alias_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_legacy_version_alias_root";
-  std::filesystem::remove_all(baseDir);
-  std::filesystem::remove_all(includeRoot);
-  std::filesystem::create_directories(baseDir);
-  std::filesystem::create_directories(includeRoot);
-
-  writeFile(includeRoot / "1.2.0" / "lib.prime", "// INCLUDE_LEGACY_VERSION_120\n");
-  writeFile(includeRoot / "1.2.6" / "lib.prime", "// INCLUDE_LEGACY_VERSION_126\n");
-  const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<'/lib.prime', version = '1.2'>\n");
+TEST_CASE("rejects versioned legacy include alias") {
+  const std::string srcPath = writeTemp("main_legacy_version_alias.prime", "include<'/lib.prime', version='1.2'>\n");
 
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
-  CHECK(error.empty());
-  CHECK(source.find("INCLUDE_LEGACY_VERSION_126") != std::string::npos);
-  CHECK(source.find("INCLUDE_LEGACY_VERSION_120") == std::string::npos);
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error == "legacy include<...> is no longer supported; use import<...>");
 }
 
-TEST_CASE("resolves version-first versioned legacy include alias") {
-  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_legacy_version_first_base";
-  auto includeRoot = std::filesystem::temp_directory_path() / "primec_tests" / "include_legacy_version_first_root";
-  std::filesystem::remove_all(baseDir);
-  std::filesystem::remove_all(includeRoot);
-  std::filesystem::create_directories(baseDir);
-  std::filesystem::create_directories(includeRoot);
-
-  writeFile(includeRoot / "1.2.1" / "lib.prime", "// INCLUDE_LEGACY_VERSION_FIRST_121\n");
-  writeFile(includeRoot / "1.2.9" / "lib.prime", "// INCLUDE_LEGACY_VERSION_FIRST_129\n");
-  const std::string srcPath =
-      writeFile(baseDir / "main.prime", "include<version='1.2', '/lib.prime'>\n");
+TEST_CASE("rejects version-first legacy include alias") {
+  const std::string srcPath = writeTemp("main_legacy_version_first_alias.prime", "include<version='1.2', '/lib.prime'>\n");
 
   std::string source;
   std::string error;
   primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
-  CHECK(error.empty());
-  CHECK(source.find("INCLUDE_LEGACY_VERSION_FIRST_129") != std::string::npos);
-  CHECK(source.find("INCLUDE_LEGACY_VERSION_FIRST_121") == std::string::npos);
+  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  CHECK(error == "legacy include<...> is no longer supported; use import<...>");
 }
 
 TEST_CASE("ignores duplicate imports") {
