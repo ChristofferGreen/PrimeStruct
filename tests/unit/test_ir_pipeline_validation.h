@@ -139,6 +139,60 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
   }
 }
 
+TEST_CASE("ir call semantics matrix accepts recursive call opcodes with tail metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.metadata.instrumentationFlags = primec::InstrumentationTailExecution;
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction factFn;
+  factFn.name = "/fact";
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 7});
+  factFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  factFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(factFn));
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  CHECK(error.empty());
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir call semantics matrix rejects non-direct call targets for vm and native") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::Call, 9});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string error;
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  CHECK(error.find("invalid call target") != std::string::npos);
+
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
+  CHECK(error.find("invalid call target") != std::string::npos);
+}
+
 TEST_CASE("ir validator rejects invalid jump targets") {
   primec::IrModule module;
   module.entryIndex = 0;

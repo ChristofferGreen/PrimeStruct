@@ -681,6 +681,31 @@ main() {
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) == 0u);
 }
 
+TEST_CASE("ir marks tail execution metadata for void direct call tail statement") {
+  const std::string source = R"(
+[return<void>]
+callee() {
+  return()
+}
+
+[return<void>]
+main() {
+  callee()
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 2);
+  CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
+}
+
 TEST_CASE("ir lowers pointer helper calls") {
   const std::string source = R"(
 [return<int>]
