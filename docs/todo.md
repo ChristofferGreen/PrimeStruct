@@ -38,6 +38,7 @@ Legend:
 - ✓ Remove legacy `--text-filters` CLI aliases from `primec` and `primevm` so `--text-transforms` is the only text-transform flag (removed alias parsing branches from both CLIs, migrated alias-based positive tests to `--text-transforms`, and added compile-run diagnostics coverage that locks alias rejection in both `primec` and `primevm`).
 - ✓ Add CLI regression coverage for bare legacy `--text-filters` rejection in `primec` and `primevm` (existing alias rejection coverage now locks both bare `--text-filters` and `--text-filters=...` unknown-option diagnostics).
 - ✓ Add `--emit-diagnostics` regression coverage for removed `--text-filters` in `primec` and `primevm` (compile-run diagnostics tests now lock `PSC0001` JSON argument payloads for `--text-filters=...` and ensure no plain usage text leaks in diagnostics mode).
+- ✓ Add `--emit-diagnostics` regression coverage for bare removed `--text-filters` in `primec` and `primevm` (compile-run diagnostics tests now lock `PSC0001` JSON argument payloads for bare `--text-filters` and ensure no plain usage text leaks in diagnostics mode).
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.

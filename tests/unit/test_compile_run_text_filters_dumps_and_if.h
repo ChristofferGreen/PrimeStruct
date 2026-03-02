@@ -297,8 +297,14 @@ main() {
   const std::string srcPath = writeTemp("emit_diagnostics_text_filters_removed.prime", source);
   const std::string primecErrPath =
       (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_text_filters_removed_err.json").string();
+  const std::string primecBareErrPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_text_filters_removed_bare_err.json")
+          .string();
   const std::string primevmErrPath =
       (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_text_filters_removed_err.json").string();
+  const std::string primevmBareErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_text_filters_removed_bare_err.json")
+          .string();
 
   const std::string primecCmd = "./primec " + quoteShellArg(srcPath) +
                                 " --emit-diagnostics --text-filters=none 2> " + quoteShellArg(primecErrPath);
@@ -309,6 +315,15 @@ main() {
   CHECK(primecDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
   CHECK(primecDiagnostics.find("Usage: primec") == std::string::npos);
 
+  const std::string primecBareCmd = "./primec " + quoteShellArg(srcPath) +
+                                    " --emit-diagnostics --text-filters 2> " + quoteShellArg(primecBareErrPath);
+  CHECK(runCommand(primecBareCmd) == 2);
+  const std::string primecBareDiagnostics = readFile(primecBareErrPath);
+  CHECK(primecBareDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primecBareDiagnostics.find("\"message\":\"unknown option: --text-filters\"") != std::string::npos);
+  CHECK(primecBareDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primecBareDiagnostics.find("Usage: primec") == std::string::npos);
+
   const std::string primevmCmd = "./primevm " + quoteShellArg(srcPath) +
                                  " --emit-diagnostics --text-filters=none 2> " + quoteShellArg(primevmErrPath);
   CHECK(runCommand(primevmCmd) == 2);
@@ -317,6 +332,15 @@ main() {
   CHECK(primevmDiagnostics.find("\"message\":\"unknown option: --text-filters=none\"") != std::string::npos);
   CHECK(primevmDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
   CHECK(primevmDiagnostics.find("Usage: primevm") == std::string::npos);
+
+  const std::string primevmBareCmd = "./primevm " + quoteShellArg(srcPath) +
+                                     " --emit-diagnostics --text-filters 2> " + quoteShellArg(primevmBareErrPath);
+  CHECK(runCommand(primevmBareCmd) == 2);
+  const std::string primevmBareDiagnostics = readFile(primevmBareErrPath);
+  CHECK(primevmBareDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primevmBareDiagnostics.find("\"message\":\"unknown option: --text-filters\"") != std::string::npos);
+  CHECK(primevmBareDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primevmBareDiagnostics.find("Usage: primevm") == std::string::npos);
 }
 
 TEST_CASE("primec list transforms prints metadata") {
