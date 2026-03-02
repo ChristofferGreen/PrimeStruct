@@ -69,9 +69,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_tests
     tests/unit/test_main.cpp
     tests/unit/test_parser_basic.cpp
-    tests/unit/test_include_resolver.cpp
-    tests/unit/test_include_errors.cpp
-    tests/unit/test_include_multiple.cpp
+    tests/unit/test_import_resolver.cpp
+    tests/unit/test_import_errors.cpp
+    tests/unit/test_import_multiple.cpp
     tests/unit/test_semantics.cpp
     tests/unit/test_ast_ir_dump.cpp
     tests/unit/test_ast_ir_dump_namespace.cpp
@@ -102,9 +102,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.dumps.namespace
     primestruct.parser.executions
     primestruct.parser.execution.whitespace
-    primestruct.includes.errors
-    primestruct.includes.multiple
-    primestruct.includes.resolver
+    primestruct.imports.errors
+    primestruct.imports.multiple
+    primestruct.imports.resolver
     primestruct.ir.pipeline.serialization
     primestruct.ir.pipeline.pointers
     primestruct.ir.pipeline.conversions
@@ -178,7 +178,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.compile.run.native_backend.math_numeric
     primestruct.compile.run.native_backend.collections
     primestruct.compile.run.native_backend.imports
-    primestruct.compile.run.includes
+    primestruct.compile.run.imports
     primestruct.compile.run.text_filters
     primestruct.compile.run.bindings
     primestruct.compile.run.examples

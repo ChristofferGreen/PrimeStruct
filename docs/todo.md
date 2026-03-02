@@ -28,7 +28,7 @@ Legend:
 - ✓ Remove legacy `--include-path` CLI aliases from `primec` and `primevm` so `--import-path`/`-I` are the only supported import-root flags (removed alias parsing branches from both CLIs and converted alias regression coverage to argument-error diagnostics).
 - ✓ Rename import pipeline internals away from `Include*` naming (`IncludeResolver`, `expandIncludes`, `includePaths`) to `Import*` naming and update call sites (migrated to `ImportResolver`, `expandImports`, and `importPaths` across headers/sources/tests, and renamed resolver header/source paths accordingly).
 - ✓ Rename import-stage diagnostics/enums away from `Include*` (`CompilePipelineErrorStage::Include`, `DiagnosticCode::IncludeError`) while preserving existing diagnostic code stability guarantees (renamed to import-focused enum values and added diagnostics-code regression coverage that locks `PSC1001` stability).
-- ○ Rename include-focused test files/suites to import-focused names and keep coverage parity for import expansion, versions, privacy, and ordering.
+- ✓ Rename include-focused test files/suites to import-focused names and keep coverage parity for import expansion, versions, privacy, and ordering (renamed resolver and compile-run suite/file names to `import*` across CMake + doctest registrations without dropping coverage cases).
 - ○ Update docs/changelog notes to mark the compatibility break: `include<...>` and `--include-path` removed, `import<...>` and `--import-path` required.
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
@@ -120,7 +120,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Introduce structured diagnostics payloads (stable error code, primary span, related spans, notes) with a machine-readable output mode for tooling (`--emit-diagnostics` now emits deterministic JSON for argument/pipeline/lowering/runtime failures in `primec`/`primevm`).
 - ✓ Populate structured diagnostics `related_spans`/precise spans directly from parser+semantic diagnostics (parser now provides direct error location/message metadata; semantics now threads source coordinates from parsed AST nodes and emits related definition/execution spans instead of relying on string suffix parsing).
 - ✓ Refactor semantics state into per-definition context objects to reduce shared mutable state and make validator ordering/contracts explicit (validator now builds explicit definition/execution validation contexts and scopes state transitions through `ValidationContextScope`, with regression coverage for cross-definition state isolation).
-- ✓ Add import semantics conformance tests for privacy (`_`), version resolution, duplicate imports, wildcard exposure, and deterministic expansion ordering (compile-run conformance coverage added in `tests/unit/test_compile_run_includes_versions.h`).
+- ✓ Add import semantics conformance tests for privacy (`_`), version resolution, duplicate imports, wildcard exposure, and deterministic expansion ordering (compile-run conformance coverage added in `tests/unit/test_compile_run_imports_versions.h`).
 
 **Backends & IR**
 - ✓ Add GLSL backend (docs mention GPU lowering, but there is no backend in `src/`).

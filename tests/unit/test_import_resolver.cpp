@@ -56,7 +56,7 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.includes.resolver");
+TEST_SUITE_BEGIN("primestruct.imports.resolver");
 
 TEST_CASE("expands single import") {
   const std::string libPath = writeTemp("lib_a.prime", "[return<int>]\nhelper(){ return(3i32) }\n");

@@ -28,7 +28,7 @@ std::string writeFile(const std::filesystem::path &path, const std::string &cont
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.includes.errors");
+TEST_SUITE_BEGIN("primestruct.imports.errors");
 
 TEST_CASE("unterminated import fails") {
   const std::string srcPath = writeTemp("main_bad_include.prime", "import<\"/tmp/missing.prime\"\n");

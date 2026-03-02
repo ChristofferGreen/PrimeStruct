@@ -19,7 +19,7 @@ std::string writeTemp(const std::string &name, const std::string &contents) {
 }
 } // namespace
 
-TEST_SUITE_BEGIN("primestruct.includes.multiple");
+TEST_SUITE_BEGIN("primestruct.imports.multiple");
 
 TEST_CASE("expands multiple import paths") {
   const std::string libA = writeTemp("lib_multi_a.prime", "// LIB_A\n[return<int>]\nhelper_a(){ return(1i32) }\n");
