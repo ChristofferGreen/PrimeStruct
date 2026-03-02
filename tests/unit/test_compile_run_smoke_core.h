@@ -259,6 +259,42 @@ main() {
   CHECK(runCommand(runVmCmd) == 7);
 }
 
+TEST_CASE("primevm accepts explicit emit vm compatibility flag") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(9i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_emit_vm_flag.prime", source);
+  const std::string runVmCmd = "./primevm --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 9);
+}
+
+TEST_CASE("primevm rejects primec output flags") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_reject_output_flags.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_reject_output_flags_err.txt").string();
+
+  const std::string outputPathCmd = "./primevm " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(outputPathCmd) == 2);
+  const std::string outputPathErr = readFile(errPath);
+  CHECK(outputPathErr.find("unknown option: -o") != std::string::npos);
+  CHECK(outputPathErr.find("Usage: primevm") != std::string::npos);
+
+  const std::string outDirCmd = "./primevm " + srcPath + " --out-dir /tmp --entry /main 2> " + errPath;
+  CHECK(runCommand(outDirCmd) == 2);
+  const std::string outDirErr = readFile(errPath);
+  CHECK(outDirErr.find("unknown option: --out-dir") != std::string::npos);
+  CHECK(outDirErr.find("Usage: primevm") != std::string::npos);
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]
