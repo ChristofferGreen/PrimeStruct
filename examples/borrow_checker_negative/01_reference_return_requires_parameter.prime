@@ -1,0 +1,12 @@
+// Returning a reference to a local binding is rejected.
+[return<Reference<i32>>]
+bad_return() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  return(ref)
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}

@@ -161,6 +161,9 @@ TEST_CASE("compiles examples to IR") {
     if (path.extension() != ".prime") {
       continue;
     }
+    if (path.string().find("borrow_checker_negative") != std::string::npos) {
+      continue;
+    }
     if (path.filename() == "result_helpers.prime") {
       continue;
     }
@@ -175,6 +178,71 @@ TEST_CASE("compiles examples to IR") {
         " --entry /main";
     CHECK(runCommand(compileCmd) == 0);
     CHECK(std::filesystem::exists(outDir / (path.stem().string() + ".psir")));
+  }
+}
+
+TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
+  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
+  REQUIRE(std::filesystem::exists(examplesDir));
+
+  std::vector<std::filesystem::path> exampleFiles;
+  for (const auto &entry : std::filesystem::directory_iterator(examplesDir)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    if (entry.path().extension() != ".prime") {
+      continue;
+    }
+    exampleFiles.push_back(entry.path());
+  }
+  std::sort(exampleFiles.begin(), exampleFiles.end());
+  REQUIRE(!exampleFiles.empty());
+
+  for (const auto &path : exampleFiles) {
+    std::filesystem::path expectedPath = path;
+    expectedPath.replace_extension(".expected.txt");
+    REQUIRE(std::filesystem::exists(expectedPath));
+
+    const std::string expectedContents = readFile(expectedPath.string());
+    std::istringstream expectedLines(expectedContents);
+    std::vector<std::string> expectedFragments;
+    std::string line;
+    while (std::getline(expectedLines, line)) {
+      if (line.empty() || line[0] == '#') {
+        continue;
+      }
+      expectedFragments.push_back(line);
+    }
+    REQUIRE(!expectedFragments.empty());
+
+    const std::string primecErrPath =
+        (std::filesystem::temp_directory_path() / ("primec_borrow_checker_negative_" + path.stem().string() + ".json"))
+            .string();
+    const std::string primevmErrPath = (std::filesystem::temp_directory_path() /
+                                        ("primevm_borrow_checker_negative_" + path.stem().string() + ".json"))
+                                           .string();
+
+    const std::string primecCmd = "./primec --emit=exe " + quoteShellArg(path.string()) +
+                                  " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(primecErrPath);
+    CHECK(runCommand(primecCmd) == 2);
+    const std::string primecDiagnostics = readFile(primecErrPath);
+    CHECK(primecDiagnostics.find("\"version\":1") != std::string::npos);
+    CHECK(primecDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+    for (const auto &fragment : expectedFragments) {
+      CHECK(primecDiagnostics.find(fragment) != std::string::npos);
+    }
+    CHECK(primecDiagnostics.find("Semantic error: ") == std::string::npos);
+
+    const std::string primevmCmd =
+        "./primevm " + quoteShellArg(path.string()) + " --entry /main --emit-diagnostics 2> " + quoteShellArg(primevmErrPath);
+    CHECK(runCommand(primevmCmd) == 2);
+    const std::string primevmDiagnostics = readFile(primevmErrPath);
+    CHECK(primevmDiagnostics.find("\"version\":1") != std::string::npos);
+    CHECK(primevmDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+    for (const auto &fragment : expectedFragments) {
+      CHECK(primevmDiagnostics.find(fragment) != std::string::npos);
+    }
+    CHECK(primevmDiagnostics.find("Semantic error: ") == std::string::npos);
   }
 }
 

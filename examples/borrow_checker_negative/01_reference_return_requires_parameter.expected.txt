@@ -1,0 +1,3 @@
+"code":"PSC1005"
+"message":"reference return requires direct parameter reference"
+"notes":["stage: semantic"]

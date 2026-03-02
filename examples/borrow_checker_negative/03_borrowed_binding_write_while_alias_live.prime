@@ -1,0 +1,10 @@
+// Writing to a borrowed binding before alias last-use is rejected.
+[return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  [Pointer<i32>] ptr{location(ref)}
+  assign(value, 2i32)
+  [i32] observed{dereference(ptr)}
+  return()
+}

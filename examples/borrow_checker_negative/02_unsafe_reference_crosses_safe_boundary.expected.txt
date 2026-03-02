@@ -1,0 +1,3 @@
+"code":"PSC1005"
+"message":"unsafe reference escapes across safe boundary to /consume"
+"notes":["stage: semantic"]

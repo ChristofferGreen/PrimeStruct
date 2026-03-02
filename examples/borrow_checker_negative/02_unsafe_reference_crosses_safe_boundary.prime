@@ -1,0 +1,13 @@
+// Unsafe references cannot cross into safe-call boundaries.
+[return<void>]
+consume([Reference<i32>] input) {
+  return()
+}
+
+[unsafe, return<void>]
+main() {
+  [i32 mut] value{1i32}
+  [Reference<i32>] ref{location(value)}
+  consume(ref)
+  return()
+}

@@ -52,3 +52,9 @@ From `build-debug/`:
 - `examples/3.Surface/features_overview.prime`: high-level tour (imports, namespace, collections, loops, operators, indexing, effects).
 - `examples/3.Surface/gpu_compute.prime`: compute kernel + `/std/gpu/dispatch` fallback in VM/native.
 - `examples/3.Surface/raytracer.prime`: simple ray tracer (reflective spheres + checkerboard) emitting PPM.
+
+### borrow_checker_negative
+- `examples/borrow_checker_negative/`: intentionally non-compiling borrow-checker examples.
+- Each `.prime` file has a matching `.expected.txt` with required diagnostics JSON fragments.
+- These files are validated by the compile-run test suite and excluded from the regular
+  "compile all examples to IR" sweep.
