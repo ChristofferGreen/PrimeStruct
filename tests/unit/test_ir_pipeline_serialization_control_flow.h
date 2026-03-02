@@ -257,6 +257,100 @@ TEST_CASE("ir serialization round-trips call opcodes") {
   CHECK(decoded.functions[0].instructions[2].imm == 1);
 }
 
+TEST_CASE("vm executes call and callvoid opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction valueFn;
+  valueFn.name = "/value";
+  valueFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  valueFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction ignoredFn;
+  ignoredFn.name = "/ignored";
+  ignoredFn.instructions.push_back({primec::IrOpcode::PushI32, 999});
+  ignoredFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(valueFn));
+  module.functions.push_back(std::move(ignoredFn));
+
+  primec::Vm vm;
+  std::string error;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
+TEST_CASE("vm executes recursive call opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction factFn;
+  factFn.name = "/fact";
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 7});
+  factFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  factFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(factFn));
+
+  primec::Vm vm;
+  std::string error;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 24);
+}
+
+TEST_CASE("vm reports missing return in called function") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  primec::Vm vm;
+  std::string error;
+  uint64_t result = 0;
+  CHECK_FALSE(vm.execute(module, result, error));
+  CHECK(error.find("missing return in IR function /helper") != std::string::npos);
+}
+
 TEST_CASE("ir serializes execution metadata") {
   primec::IrModule module;
   module.entryIndex = 0;

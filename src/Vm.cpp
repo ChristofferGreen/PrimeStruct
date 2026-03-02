@@ -47,16 +47,35 @@ bool executeImpl(const IrModule &module,
     error = "invalid IR entry index";
     return false;
   }
-  const IrFunction &fn = module.functions[static_cast<size_t>(module.entryIndex)];
-  std::vector<uint64_t> stack;
-  size_t localCount = 0;
-  for (const auto &inst : fn.instructions) {
-    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
-        inst.op == IrOpcode::AddressOfLocal) {
-      localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+  struct Frame {
+    const IrFunction *function = nullptr;
+    size_t functionIndex = 0;
+    std::vector<uint64_t> locals;
+    size_t ip = 0;
+    bool returnValueToCaller = false;
+  };
+  auto computeLocalCount = [&](const IrFunction &function) {
+    size_t localCount = 0;
+    for (const auto &inst : function.instructions) {
+      if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+          inst.op == IrOpcode::AddressOfLocal) {
+        localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+      }
     }
+    return localCount;
+  };
+  std::vector<size_t> localCounts(module.functions.size(), 0);
+  for (size_t i = 0; i < module.functions.size(); ++i) {
+    localCounts[i] = computeLocalCount(module.functions[i]);
   }
-  std::vector<uint64_t> locals(localCount, 0);
+  std::vector<uint64_t> stack;
+  std::vector<Frame> frames;
+  frames.reserve(64);
+  Frame entryFrame;
+  entryFrame.functionIndex = static_cast<size_t>(module.entryIndex);
+  entryFrame.function = &module.functions[entryFrame.functionIndex];
+  entryFrame.locals.assign(localCounts[entryFrame.functionIndex], 0);
+  frames.push_back(std::move(entryFrame));
   auto writeAll = [&](int fd, const void *data, size_t size) -> int {
     const char *cursor = static_cast<const char *>(data);
     size_t remaining = size;
@@ -74,8 +93,19 @@ bool executeImpl(const IrModule &module,
     return 0;
   };
 
-  size_t ip = 0;
-  while (ip < fn.instructions.size()) {
+  while (!frames.empty()) {
+    Frame &frame = frames.back();
+    const IrFunction &fn = *frame.function;
+    std::vector<uint64_t> &locals = frame.locals;
+    size_t &ip = frame.ip;
+    if (ip >= fn.instructions.size()) {
+      if (frames.size() == 1) {
+        error = "missing return in IR";
+      } else {
+        error = "missing return in IR function " + fn.name;
+      }
+      return false;
+    }
     const auto &inst = fn.instructions[ip];
     switch (inst.op) {
       case IrOpcode::PushI32:
@@ -655,44 +685,110 @@ bool executeImpl(const IrModule &module,
         break;
       }
       case IrOpcode::Call:
-      case IrOpcode::CallVoid:
-        error = "VM does not support call opcodes yet";
-        return false;
+      case IrOpcode::CallVoid: {
+        constexpr size_t MaxCallDepth = 4096;
+        if (inst.imm >= module.functions.size()) {
+          error = "invalid call target in IR";
+          return false;
+        }
+        if (frames.size() >= MaxCallDepth) {
+          error = "VM call stack overflow";
+          return false;
+        }
+        const size_t target = static_cast<size_t>(inst.imm);
+        Frame calleeFrame;
+        calleeFrame.functionIndex = target;
+        calleeFrame.function = &module.functions[target];
+        calleeFrame.locals.assign(localCounts[target], 0);
+        calleeFrame.returnValueToCaller = (inst.op == IrOpcode::Call);
+        ip += 1;
+        frames.push_back(std::move(calleeFrame));
+        break;
+      }
       case IrOpcode::ReturnVoid: {
-        result = 0;
-        return true;
+        uint64_t returnValue = 0;
+        const bool returnToCaller = frame.returnValueToCaller;
+        if (frames.size() == 1) {
+          result = returnValue;
+          return true;
+        }
+        frames.pop_back();
+        if (returnToCaller) {
+          stack.push_back(returnValue);
+        }
+        break;
       }
       case IrOpcode::ReturnI32: {
         if (stack.empty()) {
           error = "IR stack underflow on return";
           return false;
         }
-        result = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(stack.back())));
-        return true;
+        uint64_t returnValue = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(stack.back())));
+        stack.pop_back();
+        const bool returnToCaller = frame.returnValueToCaller;
+        if (frames.size() == 1) {
+          result = returnValue;
+          return true;
+        }
+        frames.pop_back();
+        if (returnToCaller) {
+          stack.push_back(returnValue);
+        }
+        break;
       }
       case IrOpcode::ReturnI64: {
         if (stack.empty()) {
           error = "IR stack underflow on return";
           return false;
         }
-        result = stack.back();
-        return true;
+        uint64_t returnValue = stack.back();
+        stack.pop_back();
+        const bool returnToCaller = frame.returnValueToCaller;
+        if (frames.size() == 1) {
+          result = returnValue;
+          return true;
+        }
+        frames.pop_back();
+        if (returnToCaller) {
+          stack.push_back(returnValue);
+        }
+        break;
       }
       case IrOpcode::ReturnF32: {
         if (stack.empty()) {
           error = "IR stack underflow on return";
           return false;
         }
-        result = static_cast<uint64_t>(static_cast<uint32_t>(stack.back()));
-        return true;
+        uint64_t returnValue = static_cast<uint64_t>(static_cast<uint32_t>(stack.back()));
+        stack.pop_back();
+        const bool returnToCaller = frame.returnValueToCaller;
+        if (frames.size() == 1) {
+          result = returnValue;
+          return true;
+        }
+        frames.pop_back();
+        if (returnToCaller) {
+          stack.push_back(returnValue);
+        }
+        break;
       }
       case IrOpcode::ReturnF64: {
         if (stack.empty()) {
           error = "IR stack underflow on return";
           return false;
         }
-        result = stack.back();
-        return true;
+        uint64_t returnValue = stack.back();
+        stack.pop_back();
+        const bool returnToCaller = frame.returnValueToCaller;
+        if (frames.size() == 1) {
+          result = returnValue;
+          return true;
+        }
+        frames.pop_back();
+        if (returnToCaller) {
+          stack.push_back(returnValue);
+        }
+        break;
       }
       case IrOpcode::PrintI32: {
         if (stack.empty()) {
