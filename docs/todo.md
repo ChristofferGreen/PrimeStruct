@@ -21,7 +21,9 @@ Legend:
 - ✓ Continue return/call split by extracting `on_error` transform parsing/definition-map wiring out of `IrLowererLowerSetupLocals.h` into compileable units (`IrLowererOnErrorHelpers.{h,cpp}` now own transform parsing and definition wiring).
 - ✓ Continue return/call split by extracting remaining call-expression string-argument emission paths (entry-arg indexing + runtime string calls) out of `IrLowererLowerReturnInfo.h` (`IrLowererStringCallHelpers` now handles call-expression string lowering via shared helper APIs).
 - ✓ Continue return/call split by moving return-type inference logic from `IrLowererLowerReturnInfo.h` into compileable units (`IrLowererReturnInferenceHelpers.{h,cpp}` now own shared return-inference traversal and conflict checks).
-- ○ Continue IR lowerer unit split by extracting operator fragments into compileable units with explicit interfaces.
+- ◐ Continue IR lowerer unit split by extracting operator fragments into compileable units with explicit interfaces (phase 1 extracted arithmetic operator lowering to `IrLowererOperatorArithmeticHelpers.{h,cpp}`).
+- ○ Continue operator fragment split by extracting comparison/logical operator lowering from `IrLowererLowerOperatorsComparisons.h` into compileable helpers.
+- ○ Continue operator fragment split by extracting remaining math/conversion operator fragments (`ClampMinMaxTrig`, `ArcHyperbolic`, `PowAbsSign`, `SaturateRoundingRoots`, `ConversionsAndCalls`) into compileable helpers.
 - ○ Continue IR lowerer unit split by extracting setup/statement fragments and removing include-only composition headers.
 - ○ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit).
 

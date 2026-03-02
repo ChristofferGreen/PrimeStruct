@@ -198,6 +198,106 @@ TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   CHECK(error == "unknown on_error handler: /missing");
 }
 
+TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Literal;
+  left.literalValue = 1;
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Literal;
+  right.literalValue = 2;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "plus";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      expr,
+      {},
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(arg.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions.back().op == primec::IrOpcode::AddI32);
+}
+
+TEST_CASE("ir lowerer arithmetic helper validates pointer operand side") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("ptr", pointerInfo);
+  primec::ir_lowerer::LocalInfo intInfo;
+  intInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  intInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("value", intInfo);
+
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Name;
+  left.name = "value";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Name;
+  right.name = "ptr";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "plus";
+  expr.args = {left, right};
+
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      expr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &localMap) {
+        auto it = localMap.find(arg.name);
+        return (it == localMap.end()) ? primec::ir_lowerer::LocalInfo::ValueKind::Unknown : it->second.valueKind;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::IrOpcode, uint64_t) {},
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Error);
+  CHECK(error == "pointer arithmetic requires pointer on the left");
+}
+
+TEST_CASE("ir lowerer arithmetic helper ignores non arithmetic calls") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "equal";
+
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      expr,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::IrOpcode, uint64_t) {},
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::NotHandled);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";
