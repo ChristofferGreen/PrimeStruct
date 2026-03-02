@@ -606,67 +606,12 @@
   if (sawTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
-  auto parseTransformArgumentExpr = [&](const std::string &text,
-                                        const std::string &namespacePrefix,
-                                        Expr &out) -> bool {
-    Lexer lexer(text);
-    Parser parser(lexer.tokenize());
-    std::string parseError;
-    if (!parser.parseExpression(out, namespacePrefix, parseError)) {
-      error = parseError.empty() ? "invalid transform argument expression" : parseError;
-      return false;
-    }
-    return true;
+  auto definitionExists = [&](const std::string &path) {
+    return defMap.find(path) != defMap.end();
   };
-  auto parseOnErrorTransform = [&](const std::vector<Transform> &transforms,
-                                   const std::string &namespacePrefix,
-                                   const std::string &context,
-                                   std::optional<OnErrorHandler> &out) -> bool {
-    out.reset();
-    for (const auto &transform : transforms) {
-      if (transform.name != "on_error") {
-        continue;
-      }
-      if (out.has_value()) {
-        error = "duplicate on_error transform on " + context;
-        return false;
-      }
-      if (transform.templateArgs.size() != 2) {
-        error = "on_error requires exactly two template arguments on " + context;
-        return false;
-      }
-      Expr handlerExpr;
-      handlerExpr.kind = Expr::Kind::Name;
-      handlerExpr.name = transform.templateArgs[1];
-      handlerExpr.namespacePrefix = namespacePrefix;
-      std::string handlerPath = resolveExprPath(handlerExpr);
-      auto defIt = defMap.find(handlerPath);
-      if (defIt == defMap.end()) {
-        error = "unknown on_error handler: " + handlerPath;
-        return false;
-      }
-      OnErrorHandler handler;
-      handler.handlerPath = handlerPath;
-      handler.boundArgs.reserve(transform.arguments.size());
-      for (const auto &argText : transform.arguments) {
-        Expr argExpr;
-        if (!parseTransformArgumentExpr(argText, namespacePrefix, argExpr)) {
-          return false;
-        }
-        handler.boundArgs.push_back(std::move(argExpr));
-      }
-      out = std::move(handler);
-    }
-    return true;
-  };
-  std::unordered_map<std::string, std::optional<OnErrorHandler>> onErrorByDef;
-  onErrorByDef.reserve(program.definitions.size());
-  for (const auto &def : program.definitions) {
-    std::optional<OnErrorHandler> handler;
-    if (!parseOnErrorTransform(def.transforms, def.namespacePrefix, def.fullPath, handler)) {
-      return false;
-    }
-    onErrorByDef.emplace(def.fullPath, std::move(handler));
+  OnErrorByDefinition onErrorByDef;
+  if (!ir_lowerer::buildOnErrorByDefinition(program, resolveExprPath, definitionExists, onErrorByDef, error)) {
+    return false;
   }
 
   auto parseMathName = [&](const std::string &name, std::string &out) -> bool {

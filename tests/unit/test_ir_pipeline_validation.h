@@ -136,6 +136,68 @@ TEST_CASE("ir lowerer call helpers reject unknown named arg") {
   CHECK(error == "unknown named argument: missing");
 }
 
+TEST_CASE("ir lowerer on_error helpers wire definition handlers") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.namespacePrefix = "";
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  onError.arguments = {"1i32"};
+  mainDef.transforms.push_back(onError);
+  program.definitions.push_back(mainDef);
+
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    return std::string("/") + expr.name;
+  };
+  auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
+
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOnErrorByDefinition(
+      program, resolveExprPath, definitionExists, onErrorByDef, error));
+  CHECK(error.empty());
+
+  REQUIRE(onErrorByDef.count("/main") == 1);
+  REQUIRE(onErrorByDef.at("/main").has_value());
+  CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
+  REQUIRE(onErrorByDef.at("/main")->boundArgs.size() == 1);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().kind == primec::Expr::Kind::Literal);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 1);
+
+  REQUIRE(onErrorByDef.count("/handler") == 1);
+  CHECK_FALSE(onErrorByDef.at("/handler").has_value());
+}
+
+TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "missing"};
+  const std::vector<primec::Transform> transforms = {onError};
+
+  std::optional<primec::ir_lowerer::OnErrorHandler> out;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::parseOnErrorTransform(
+      transforms,
+      "",
+      "/main",
+      [](const primec::Expr &expr) { return std::string("/") + expr.name; },
+      [](const std::string &) { return false; },
+      out,
+      error));
+  CHECK(error == "unknown on_error handler: /missing");
+}
+
 TEST_CASE("ir lowerer result helpers resolve Result.ok method") {
   primec::Expr resultName;
   resultName.kind = primec::Expr::Kind::Name;

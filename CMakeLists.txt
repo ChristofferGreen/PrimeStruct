@@ -26,6 +26,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererLowerEffects.cpp
+  src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererResultHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp
   src/ir_lowerer/IrLowererLower.cpp

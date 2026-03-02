@@ -7,6 +7,7 @@
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerEffects.h"
+#include "IrLowererOnErrorHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererStringCallHelpers.h"
 

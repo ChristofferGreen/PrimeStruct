@@ -318,7 +318,11 @@
         return false;
       }
       std::optional<OnErrorHandler> blockOnError;
-      if (!parseOnErrorTransform(stmt.transforms, stmt.namespacePrefix, "block", blockOnError)) {
+      auto definitionExists = [&](const std::string &path) {
+        return defMap.find(path) != defMap.end();
+      };
+      if (!ir_lowerer::parseOnErrorTransform(
+              stmt.transforms, stmt.namespacePrefix, "block", resolveExprPath, definitionExists, blockOnError, error)) {
         return false;
       }
       OnErrorScope onErrorScope(currentOnError, blockOnError);
