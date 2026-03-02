@@ -352,6 +352,10 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         fixups.push_back(fixup);
         break;
       }
+      case IrOpcode::Call:
+      case IrOpcode::CallVoid:
+        error = "native backend does not support call opcodes yet";
+        return false;
       case IrOpcode::ReturnVoid:
         emitter.emitReturnVoid();
         break;

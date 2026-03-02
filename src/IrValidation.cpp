@@ -9,7 +9,7 @@ namespace primec {
 namespace {
 
 constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::PrintStringDynamic);
+constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallVoid);
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule;
@@ -110,6 +110,12 @@ bool validateFunction(const IrModule &module,
       case IrOpcode::Jump:
         if (inst.imm > function.instructions.size()) {
           return failInstruction(functionIndex, function.name, instructionIndex, "invalid jump target", error);
+        }
+        break;
+      case IrOpcode::Call:
+      case IrOpcode::CallVoid:
+        if (inst.imm >= module.functions.size()) {
+          return failInstruction(functionIndex, function.name, instructionIndex, "invalid call target", error);
         }
         break;
       case IrOpcode::LoadLocal:

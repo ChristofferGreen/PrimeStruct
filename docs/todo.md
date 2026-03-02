@@ -6,7 +6,7 @@ Legend:
   ✓ Finished
 
 **Architecture follow-up (callable IR decoupling)**
-- ○ Add PSIR `Call`/`Return` function-call opcodes and update `docs/PrimeStruct.md` IR spec.
+- ✓ Add PSIR `Call`/`Return` function-call opcodes and update `docs/PrimeStruct.md` IR spec.
 - ○ Refactor IR lowerer to emit full function tables instead of a single inlined entry function.
 - ○ Implement VM call stack/frame execution for callable IR and add recursion conformance tests.
 - ○ Add native backend callable IR support (function labels/relocations) before optional inlining.

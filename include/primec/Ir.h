@@ -108,6 +108,8 @@ enum class IrOpcode : uint8_t {
   ReturnF32,
   ReturnF64,
   PrintStringDynamic,
+  Call,
+  CallVoid,
 };
 
 enum class IrStructFieldCategory : uint8_t {

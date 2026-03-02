@@ -221,6 +221,42 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   CHECK(error == "unsupported IR opcode");
 }
 
+TEST_CASE("ir serialization round-trips call opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.functions.size() == 2);
+  REQUIRE(decoded.functions[0].instructions.size() == 5);
+  CHECK(decoded.functions[0].instructions[0].op == primec::IrOpcode::Call);
+  CHECK(decoded.functions[0].instructions[0].imm == 1);
+  CHECK(decoded.functions[0].instructions[2].op == primec::IrOpcode::CallVoid);
+  CHECK(decoded.functions[0].instructions[2].imm == 1);
+}
+
 TEST_CASE("ir serializes execution metadata") {
   primec::IrModule module;
   module.entryIndex = 0;

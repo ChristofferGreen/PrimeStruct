@@ -128,9 +128,11 @@ TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
       primec::IrOpcode::ReturnF32,
       primec::IrOpcode::ReturnF64,
       primec::IrOpcode::PrintStringDynamic,
+      primec::IrOpcode::Call,
+      primec::IrOpcode::CallVoid,
   };
 
-  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::PrintStringDynamic)));
+  CHECK(expected.size() == static_cast<size_t>(static_cast<uint8_t>(primec::IrOpcode::CallVoid)));
   for (size_t i = 0; i < expected.size(); ++i) {
     const auto expectedValue = static_cast<uint8_t>(i + 1);
     CHECK(static_cast<uint8_t>(expected[i]) == expectedValue);
@@ -149,6 +151,20 @@ TEST_CASE("ir validator rejects invalid jump targets") {
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
   CHECK(error.find("invalid jump target") != std::string::npos);
+}
+
+TEST_CASE("ir validator rejects invalid call targets") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::Call, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string error;
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(error.find("invalid call target") != std::string::npos);
 }
 
 TEST_CASE("ir validator rejects invalid print flags") {

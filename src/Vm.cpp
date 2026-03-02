@@ -654,6 +654,10 @@ bool executeImpl(const IrModule &module,
         ip = static_cast<size_t>(inst.imm);
         break;
       }
+      case IrOpcode::Call:
+      case IrOpcode::CallVoid:
+        error = "VM does not support call opcodes yet";
+        return false;
       case IrOpcode::ReturnVoid: {
         result = 0;
         return true;
