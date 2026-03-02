@@ -9,6 +9,7 @@
 #include "IrLowererLowerEffects.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
+#include "IrLowererOperatorComparisonHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSharedTypes.h"

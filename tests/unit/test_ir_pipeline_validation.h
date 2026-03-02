@@ -298,6 +298,155 @@ TEST_CASE("ir lowerer arithmetic helper ignores non arithmetic calls") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer comparison helper emits integer less-than opcode") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Literal;
+  left.literalValue = 1;
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Literal;
+  right.literalValue = 2;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "less_than";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      expr,
+      {},
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(arg.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions.back().op == primec::IrOpcode::CmpLtI32);
+}
+
+TEST_CASE("ir lowerer comparison helper lowers logical and short-circuit") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::BoolLiteral;
+  left.boolValue = true;
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::BoolLiteral;
+  right.boolValue = false;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "and";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      expr,
+      {},
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, arg.boolValue ? 1u : 0u});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&](primec::ir_lowerer::LocalInfo::ValueKind kind, bool equals) {
+        if (kind != primec::ir_lowerer::LocalInfo::ValueKind::Bool &&
+            kind != primec::ir_lowerer::LocalInfo::ValueKind::Int32) {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::PushI32, 0});
+        instructions.push_back({equals ? primec::IrOpcode::CmpEqI32 : primec::IrOpcode::CmpNeI32, 0});
+        return true;
+      },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 9);
+  CHECK(instructions[3].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[3].imm == 8);
+  CHECK(instructions[7].op == primec::IrOpcode::Jump);
+  CHECK(instructions[7].imm == 9);
+  CHECK(instructions[8].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[8].imm == 0);
+}
+
+TEST_CASE("ir lowerer comparison helper rejects string operands") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::StringLiteral;
+  left.stringValue = "\"a\"";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::StringLiteral;
+  right.stringValue = "\"b\"";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "equal";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      expr,
+      {},
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI64, 0});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Error);
+  CHECK(error == "native backend does not support string comparisons");
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer comparison helper ignores non comparison calls") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "plus";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      expr,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";
