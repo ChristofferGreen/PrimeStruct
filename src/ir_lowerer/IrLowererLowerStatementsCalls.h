@@ -268,33 +268,29 @@
     }
   }
 
-  auto appendStubReturn = [&](IrFunction &stubFunction, const ReturnInfo &returnInfo) -> bool {
+  auto appendReturnForDefinition = [&](const std::string &defPath, const ReturnInfo &returnInfo) -> bool {
     if (returnInfo.returnsVoid) {
-      stubFunction.instructions.push_back({IrOpcode::ReturnVoid, 0});
+      function.instructions.push_back({IrOpcode::ReturnVoid, 0});
       return true;
     }
     if (returnInfo.returnsArray || returnInfo.kind == LocalInfo::ValueKind::Int64 ||
         returnInfo.kind == LocalInfo::ValueKind::UInt64 || returnInfo.kind == LocalInfo::ValueKind::String) {
-      stubFunction.instructions.push_back({IrOpcode::PushI64, 0});
-      stubFunction.instructions.push_back({IrOpcode::ReturnI64, 0});
+      function.instructions.push_back({IrOpcode::ReturnI64, 0});
       return true;
     }
     if (returnInfo.kind == LocalInfo::ValueKind::Int32 || returnInfo.kind == LocalInfo::ValueKind::Bool) {
-      stubFunction.instructions.push_back({IrOpcode::PushI32, 0});
-      stubFunction.instructions.push_back({IrOpcode::ReturnI32, 0});
+      function.instructions.push_back({IrOpcode::ReturnI32, 0});
       return true;
     }
     if (returnInfo.kind == LocalInfo::ValueKind::Float32) {
-      stubFunction.instructions.push_back({IrOpcode::PushF32, 0});
-      stubFunction.instructions.push_back({IrOpcode::ReturnF32, 0});
+      function.instructions.push_back({IrOpcode::ReturnF32, 0});
       return true;
     }
     if (returnInfo.kind == LocalInfo::ValueKind::Float64) {
-      stubFunction.instructions.push_back({IrOpcode::PushF64, 0});
-      stubFunction.instructions.push_back({IrOpcode::ReturnF64, 0});
+      function.instructions.push_back({IrOpcode::ReturnF64, 0});
       return true;
     }
-    error = "native backend does not support return type on " + stubFunction.name;
+    error = "native backend does not support return type on " + defPath;
     return false;
   };
   auto hasTailExecutionCandidate = [&](const Definition &def, bool definitionReturnsVoid) {
@@ -316,29 +312,129 @@
         loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
       continue;
     }
-    IrFunction stubFunction;
-    stubFunction.name = def.fullPath;
-    if (!resolveEffectMask(def.transforms, false, stubFunction.metadata.effectMask)) {
-      return false;
-    }
-    if (!resolveCapabilityMask(def.transforms, resolveActiveEffects(def.transforms, false),
-                               stubFunction.metadata.capabilityMask)) {
-      return false;
-    }
-    stubFunction.metadata.schedulingScope = IrSchedulingScope::Default;
-    stubFunction.metadata.instrumentationFlags = 0;
-
     ReturnInfo returnInfo;
     if (!getReturnInfo(def.fullPath, returnInfo)) {
       return false;
     }
-    if (hasTailExecutionCandidate(def, returnInfo.returnsVoid)) {
-      stubFunction.metadata.instrumentationFlags |= InstrumentationTailExecution;
-    }
-    if (!appendStubReturn(stubFunction, returnInfo)) {
+    function = IrFunction{};
+    function.name = def.fullPath;
+    if (!resolveEffectMask(def.transforms, false, function.metadata.effectMask)) {
       return false;
     }
-    out.functions.push_back(std::move(stubFunction));
+    if (!resolveCapabilityMask(def.transforms, resolveActiveEffects(def.transforms, false),
+                               function.metadata.capabilityMask)) {
+      return false;
+    }
+    function.metadata.schedulingScope = IrSchedulingScope::Default;
+    function.metadata.instrumentationFlags = 0;
+    if (hasTailExecutionCandidate(def, returnInfo.returnsVoid)) {
+      function.metadata.instrumentationFlags |= InstrumentationTailExecution;
+    }
+
+    nextLocal = 0;
+    onErrorTempCounter = 0;
+    sawReturn = false;
+    activeInlineContext = nullptr;
+    inlineStack.clear();
+    fileScopeStack.clear();
+    currentOnError.reset();
+    currentReturnResult.reset();
+
+    LocalMap definitionLocals;
+    Expr callExpr;
+    callExpr.kind = Expr::Kind::Call;
+    callExpr.name = def.fullPath;
+    callExpr.namespacePrefix = def.namespacePrefix;
+    bool isComputeDefinition = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "compute") {
+        isComputeDefinition = true;
+        break;
+      }
+    }
+    if (isComputeDefinition) {
+      auto addGpuLocal = [&](const char *name) {
+        LocalInfo gpuInfo;
+        gpuInfo.index = nextLocal++;
+        gpuInfo.kind = LocalInfo::Kind::Value;
+        gpuInfo.valueKind = LocalInfo::ValueKind::Int32;
+        definitionLocals.emplace(name, gpuInfo);
+      };
+      addGpuLocal(kGpuGlobalIdXName);
+      addGpuLocal(kGpuGlobalIdYName);
+      addGpuLocal(kGpuGlobalIdZName);
+    }
+    for (const auto &param : def.parameters) {
+      LocalInfo info;
+      info.index = nextLocal++;
+      info.isMutable = isBindingMutable(param);
+      info.kind = bindingKind(param);
+      if (hasExplicitBindingTypeTransform(param)) {
+        info.valueKind = bindingValueKind(param, info.kind);
+      } else if (param.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
+        info.valueKind = inferExprKind(param.args.front(), definitionLocals);
+        if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+          info.valueKind = LocalInfo::ValueKind::Int32;
+        }
+      } else {
+        info.valueKind = bindingValueKind(param, info.kind);
+      }
+      if (info.kind == LocalInfo::Kind::Map) {
+        for (const auto &transform : param.transforms) {
+          if (transform.name == "map" && transform.templateArgs.size() == 2) {
+            info.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
+            info.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
+            break;
+          }
+        }
+      }
+      for (const auto &transform : param.transforms) {
+        if (transform.name == "File") {
+          info.isFileHandle = true;
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        } else if (transform.name == "Result") {
+          info.isResult = true;
+          info.resultHasValue = (transform.templateArgs.size() == 2);
+          info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          if (!transform.templateArgs.empty()) {
+            info.resultErrorType = transform.templateArgs.back();
+          }
+        }
+      }
+      info.isFileError = isFileErrorBinding(param);
+      setReferenceArrayInfo(param, info);
+      applyStructArrayInfo(param, info);
+      applyStructValueInfo(param, info);
+      if (isStringBinding(param)) {
+        if (info.kind != LocalInfo::Kind::Value) {
+          error = "native backend does not support string pointers or references";
+          return false;
+        }
+        info.valueKind = LocalInfo::ValueKind::String;
+        info.stringSource = LocalInfo::StringSource::RuntimeIndex;
+        info.stringIndex = -1;
+        info.argvChecked = true;
+      }
+      if (info.valueKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
+        error = "native backend requires typed parameters on " + def.fullPath;
+        return false;
+      }
+      definitionLocals.emplace(param.name, info);
+
+      Expr argExpr;
+      argExpr.kind = Expr::Kind::Name;
+      argExpr.name = param.name;
+      callExpr.args.push_back(std::move(argExpr));
+      callExpr.argNames.push_back(std::nullopt);
+    }
+
+    if (!emitInlineDefinitionCall(callExpr, def, definitionLocals, !returnInfo.returnsVoid)) {
+      return false;
+    }
+    if (!appendReturnForDefinition(def.fullPath, returnInfo)) {
+      return false;
+    }
+    out.functions.push_back(std::move(function));
   }
 
   out.stringTable = std::move(stringTable);

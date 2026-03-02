@@ -22,9 +22,19 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/addOne");
-  REQUIRE(module.functions[1].instructions.size() == 2);
-  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(module.functions[1].instructions[1].op == primec::IrOpcode::ReturnI32);
+  CHECK(module.functions[1].instructions.size() > 2);
+  bool sawAdd = false;
+  bool sawReturn = false;
+  for (const auto &inst : module.functions[1].instructions) {
+    if (inst.op == primec::IrOpcode::AddI32) {
+      sawAdd = true;
+    }
+    if (inst.op == primec::IrOpcode::ReturnI32) {
+      sawReturn = true;
+    }
+  }
+  CHECK(sawAdd);
+  CHECK(sawReturn);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -57,9 +67,19 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/sum3");
-  REQUIRE(module.functions[1].instructions.size() == 2);
-  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(module.functions[1].instructions[1].op == primec::IrOpcode::ReturnI32);
+  CHECK(module.functions[1].instructions.size() > 2);
+  int addCount = 0;
+  bool sawReturn = false;
+  for (const auto &inst : module.functions[1].instructions) {
+    if (inst.op == primec::IrOpcode::AddI32) {
+      addCount++;
+    }
+    if (inst.op == primec::IrOpcode::ReturnI32) {
+      sawReturn = true;
+    }
+  }
+  CHECK(addCount >= 2);
+  CHECK(sawReturn);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -92,8 +112,8 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/touch");
-  REQUIRE(module.functions[1].instructions.size() == 1);
-  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::ReturnVoid);
+  REQUIRE(!module.functions[1].instructions.empty());
+  CHECK(module.functions[1].instructions.back().op == primec::IrOpcode::ReturnVoid);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -132,9 +152,19 @@ main() {
   REQUIRE(module.functions.size() == 2);
   CHECK(module.functions[0].name == "/main");
   CHECK(module.functions[1].name == "/helper");
-  REQUIRE(module.functions[1].instructions.size() == 2);
-  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::PushF64);
-  CHECK(module.functions[1].instructions[1].op == primec::IrOpcode::ReturnF64);
+  CHECK(module.functions[1].instructions.size() > 2);
+  bool sawPush = false;
+  bool sawReturn = false;
+  for (const auto &inst : module.functions[1].instructions) {
+    if (inst.op == primec::IrOpcode::PushF64) {
+      sawPush = true;
+    }
+    if (inst.op == primec::IrOpcode::ReturnF64) {
+      sawReturn = true;
+    }
+  }
+  CHECK(sawPush);
+  CHECK(sawReturn);
 }
 
 TEST_CASE("native backend rejects recursive definition calls") {
