@@ -20,7 +20,9 @@
 #include "src/ir_lowerer/IrLowererFlowHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
+#include "src/ir_lowerer/IrLowererReturnInferenceHelpers.h"
 #include "src/ir_lowerer/IrLowererResultHelpers.h"
+#include "src/ir_lowerer/IrLowererSharedTypes.h"
 #include "src/ir_lowerer/IrLowererStringCallHelpers.h"
 
 #if defined(__unix__) || defined(__APPLE__)

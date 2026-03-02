@@ -198,6 +198,144 @@ TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   CHECK(error == "unknown on_error handler: /missing");
 }
 
+TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
+  primec::Definition def;
+  def.fullPath = "/main";
+
+  primec::Expr literalOne;
+  literalOne.kind = primec::Expr::Kind::Literal;
+  literalOne.literalValue = 1;
+
+  primec::Expr bindingStmt;
+  bindingStmt.isBinding = true;
+  bindingStmt.name = "x";
+  bindingStmt.args = {literalOne};
+
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  primec::Expr nameX;
+  nameX.kind = primec::Expr::Kind::Name;
+  nameX.name = "x";
+  returnStmt.args = {nameX};
+
+  def.statements = {bindingStmt, returnStmt};
+  def.hasReturnStatement = true;
+
+  auto inferBinding = [](const primec::Expr &bindingExpr, bool, primec::ir_lowerer::LocalMap &locals, std::string &) {
+    primec::ir_lowerer::LocalInfo info;
+    info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+    info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    locals[bindingExpr.name] = info;
+    return true;
+  };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &locals) {
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    }
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto it = locals.find(expr.name);
+      if (it != locals.end()) {
+        return it->second.valueKind;
+      }
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ReturnInferenceOptions options;
+  options.missingReturnBehavior = primec::ir_lowerer::MissingReturnBehavior::Error;
+  options.includeDefinitionReturnExpr = false;
+
+  primec::ir_lowerer::ReturnInfo out;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferDefinitionReturnType(
+      def,
+      {},
+      inferBinding,
+      inferExprKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+      options,
+      out,
+      error));
+  CHECK(error.empty());
+  CHECK_FALSE(out.returnsVoid);
+  CHECK_FALSE(out.returnsArray);
+  CHECK(out.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
+TEST_CASE("ir lowerer return inference helpers report missing return in error mode") {
+  primec::Definition def;
+  def.fullPath = "/missing";
+  def.hasReturnStatement = false;
+
+  primec::ir_lowerer::ReturnInferenceOptions options;
+  options.missingReturnBehavior = primec::ir_lowerer::MissingReturnBehavior::Error;
+  options.includeDefinitionReturnExpr = false;
+
+  primec::ir_lowerer::ReturnInfo out;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferDefinitionReturnType(
+      def,
+      {},
+      [](const primec::Expr &, bool, primec::ir_lowerer::LocalMap &, std::string &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+      options,
+      out,
+      error));
+  CHECK(error == "unable to infer return type on /missing");
+}
+
+TEST_CASE("ir lowerer return inference helpers reject mixed void and value returns") {
+  primec::Definition def;
+  def.fullPath = "/mixed";
+  def.hasReturnStatement = true;
+
+  primec::Expr returnVoid;
+  returnVoid.kind = primec::Expr::Kind::Call;
+  returnVoid.name = "return";
+
+  primec::Expr literalOne;
+  literalOne.kind = primec::Expr::Kind::Literal;
+  literalOne.literalValue = 1;
+  primec::Expr returnValue;
+  returnValue.kind = primec::Expr::Kind::Call;
+  returnValue.name = "return";
+  returnValue.args = {literalOne};
+
+  def.statements = {returnVoid, returnValue};
+
+  primec::ir_lowerer::ReturnInferenceOptions options;
+  options.missingReturnBehavior = primec::ir_lowerer::MissingReturnBehavior::Void;
+  options.includeDefinitionReturnExpr = false;
+
+  primec::ir_lowerer::ReturnInfo out;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferDefinitionReturnType(
+      def,
+      {},
+      [](const primec::Expr &, bool, primec::ir_lowerer::LocalMap &, std::string &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+      options,
+      out,
+      error));
+  CHECK(error == "conflicting return types on /mixed");
+}
+
 TEST_CASE("ir lowerer result helpers resolve Result.ok method") {
   primec::Expr resultName;
   resultName.kind = primec::Expr::Kind::Name;

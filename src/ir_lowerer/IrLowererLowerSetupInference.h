@@ -9,15 +9,6 @@
     return combineNumericKinds(left, right);
   };
 
-  struct ReturnInfo {
-    bool returnsVoid = false;
-    bool returnsArray = false;
-    LocalInfo::ValueKind kind = LocalInfo::ValueKind::Unknown;
-    bool isResult = false;
-    bool resultHasValue = false;
-    std::string resultErrorType;
-  };
-
   std::unordered_map<std::string, ReturnInfo> returnInfoCache;
   std::unordered_set<std::string> returnInferenceStack;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;

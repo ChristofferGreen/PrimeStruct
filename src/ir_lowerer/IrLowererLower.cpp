@@ -8,7 +8,9 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererOnErrorHelpers.h"
+#include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSharedTypes.h"
 #include "IrLowererStringCallHelpers.h"
 
 #include <algorithm>
