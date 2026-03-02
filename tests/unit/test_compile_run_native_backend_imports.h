@@ -279,6 +279,39 @@ TEST_CASE("rejects legacy include expansion alias") {
   CHECK(readFile(errPath) == "Import error: legacy include<...> is no longer supported; use import<...>\n");
 }
 
+TEST_CASE("emit-diagnostics reports legacy include alias rejection payload") {
+  const std::string source = "include<\"/std/io\">\n[return<int>]\nmain(){ return(0i32) }\n";
+  const std::string srcPath = writeTemp("emit_diagnostics_legacy_include_alias.prime", source);
+  const std::string primecErrPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_legacy_include_alias_err.json").string();
+  const std::string primevmErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_legacy_include_alias_err.json").string();
+
+  const std::string primecCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+                                " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(primecErrPath);
+  CHECK(runCommand(primecCmd) == 2);
+  const std::string primecDiagnostics = readFile(primecErrPath);
+  CHECK(primecDiagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(primecDiagnostics.find("\"code\":\"PSC1001\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("\"message\":\"legacy include<...> is no longer supported; use import<...>\"") !=
+        std::string::npos);
+  CHECK(primecDiagnostics.find("\"notes\":[\"stage: import\"]") != std::string::npos);
+  CHECK(primecDiagnostics.find("Import error: ") == std::string::npos);
+
+  const std::string primevmCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --entry /main --emit-diagnostics 2> " + quoteShellArg(primevmErrPath);
+  CHECK(runCommand(primevmCmd) == 2);
+  const std::string primevmDiagnostics = readFile(primevmErrPath);
+  CHECK(primevmDiagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(primevmDiagnostics.find("\"code\":\"PSC1001\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("\"message\":\"legacy include<...> is no longer supported; use import<...>\"") !=
+        std::string::npos);
+  CHECK(primevmDiagnostics.find("\"notes\":[\"stage: import\"]") != std::string::npos);
+  CHECK(primevmDiagnostics.find("Import error: ") == std::string::npos);
+}
+
 TEST_CASE("compiles and runs single-quoted import expansion") {
   const std::string libPath = writeTemp("compile_lib_single.prime", "[return<int>]\nhelper(){ return(6i32) }\n");
   const std::string source = "import<'" + libPath + "'>\n[return<int>]\nmain(){ return(helper()) }\n";

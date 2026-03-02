@@ -40,6 +40,7 @@ Legend:
 - ✓ Add `--emit-diagnostics` regression coverage for removed `--text-filters` in `primec` and `primevm` (compile-run diagnostics tests now lock `PSC0001` JSON argument payloads for `--text-filters=...` and ensure no plain usage text leaks in diagnostics mode).
 - ✓ Add `--emit-diagnostics` regression coverage for bare removed `--text-filters` in `primec` and `primevm` (compile-run diagnostics tests now lock `PSC0001` JSON argument payloads for bare `--text-filters` and ensure no plain usage text leaks in diagnostics mode).
 - ✓ Add `--emit-diagnostics` regression coverage for removed `--include-path` in `primec` and `primevm` (compile-run diagnostics tests now lock `PSC0001` JSON argument payloads for both bare `--include-path` and `--include-path=...` and ensure no plain usage text leaks in diagnostics mode).
+- ✓ Add `--emit-diagnostics` regression coverage for legacy `include<...>` import rejection in `primec` and `primevm` (compile-run diagnostics tests now lock `PSC1001` JSON payloads, including `stage: import`, and ensure structured diagnostics mode avoids plain `Import error:` text).
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.
