@@ -55,7 +55,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("no transforms overrides text filters") {
+TEST_CASE("no transforms overrides text transforms") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -68,7 +68,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath +
-      " --entry /main --no-transforms --text-filters=default,implicit-i32";
+      " --entry /main --no-transforms --text-transforms=default,implicit-i32";
   CHECK(runCommand(compileCmd) != 0);
 }
 
@@ -288,7 +288,7 @@ main([array<i32>] values) {
   CHECK(readFile(errPath).find("indexing sugar") != std::string::npos);
 }
 
-TEST_CASE("text filters none disables implicit utf8") {
+TEST_CASE("text transforms none disables implicit utf8") {
   const std::string source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -301,7 +301,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_text_filters_none_utf8_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("string literal requires utf8/ascii/raw_utf8/raw_ascii suffix") !=
         std::string::npos);
@@ -463,7 +463,7 @@ main() {
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
-TEST_CASE("text filters none rejects infix operators") {
+TEST_CASE("text transforms none rejects infix operators") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -475,12 +475,12 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_text_filters_none_infix_err.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-transforms=none 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("Parse error") != std::string::npos);
 }
 
-TEST_CASE("text filters none still accepts canonical syntax") {
+TEST_CASE("text transforms none still accepts canonical syntax") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -494,17 +494,40 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_text_filters_none_canonical_native").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-filters=none";
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=none";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 3);
 
-  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-filters=none";
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main --text-transforms=none";
   CHECK(runCommand(runVmCmd) == 3);
 
   const std::string compileNativeCmd =
-      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-filters=none";
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main --text-transforms=none";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 3);
+}
+
+TEST_CASE("legacy text-filters alias is rejected in primec and primevm") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_text_filters_legacy_alias.prime", source);
+  const std::string primecErrPath =
+      (std::filesystem::temp_directory_path() / "primec_text_filters_legacy_alias_err.txt").string();
+  const std::string primevmErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_text_filters_legacy_alias_err.txt").string();
+
+  const std::string primecCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main --text-filters=none 2> " + primecErrPath;
+  CHECK(runCommand(primecCmd) == 2);
+  CHECK(readFile(primecErrPath).find("Argument error: unknown option: --text-filters=none\n") != std::string::npos);
+
+  const std::string primevmCmd = "./primevm " + srcPath + " --entry /main --text-filters=none 2> " + primevmErrPath;
+  CHECK(runCommand(primevmCmd) == 2);
+  CHECK(readFile(primevmErrPath).find("Argument error: unknown option: --text-filters=none\n") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs implicit i32 via transform list") {

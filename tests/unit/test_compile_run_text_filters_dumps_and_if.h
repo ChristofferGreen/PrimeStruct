@@ -348,7 +348,7 @@ main() {
   const std::string exePath = (std::filesystem::temp_directory_path() / "primec_hex_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-filters=default,implicit-i32";
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main --text-transforms=default,implicit-i32";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 42);
 }
