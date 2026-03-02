@@ -701,65 +701,49 @@
       }
       return true;
     }
-    if (arg.kind == Expr::Kind::Call) {
-      std::string accessName;
-      if (getBuiltinArrayAccessName(arg, accessName)) {
-        if (arg.args.size() != 2) {
-          error = accessName + " requires exactly two arguments";
-          return false;
-        }
-        if (!isEntryArgsName(arg.args.front(), callerLocals)) {
-          error = "native backend only supports entry argument indexing";
-          return false;
-        }
-        LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(arg.args[1], callerLocals));
-        if (!isSupportedIndexKind(indexKind)) {
-          error = "native backend requires integer indices for " + accessName;
-          return false;
-        }
-
-        const int32_t argvIndexLocal = allocTempLocal();
-        if (!emitExpr(arg.args[1], callerLocals)) {
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal)});
-
-        if (accessName == "at") {
-          if (indexKind != LocalInfo::ValueKind::UInt64) {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-            function.instructions.push_back({pushZeroForIndex(indexKind), 0});
-            function.instructions.push_back({cmpLtForIndex(indexKind), 0});
-            size_t jumpNonNegative = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            emitArrayIndexOutOfBounds();
-            size_t nonNegativeIndex = function.instructions.size();
-            function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+    helperSource = ir_lowerer::StringCallSource::None;
+    helperResult = ir_lowerer::emitCallStringCallValue(
+        arg,
+        [&](const Expr &callExpr, std::string &accessName) { return getBuiltinArrayAccessName(callExpr, accessName); },
+        [&](const Expr &targetExpr) { return isEntryArgsName(targetExpr, callerLocals); },
+        [&](const Expr &indexExpr,
+            const std::string &accessName,
+            ir_lowerer::StringIndexOps &ops,
+            std::string &helperError) -> bool {
+          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(indexExpr, callerLocals));
+          if (!isSupportedIndexKind(indexKind)) {
+            helperError = "native backend requires integer indices for " + accessName;
+            return false;
           }
-
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
-          function.instructions.push_back({IrOpcode::PushArgc, 0});
-          function.instructions.push_back({cmpGeForIndex(indexKind), 0});
-          size_t jumpInRange = function.instructions.size();
-          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-          emitArrayIndexOutOfBounds();
-          size_t inRangeIndex = function.instructions.size();
-          function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
-        }
-
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal)});
+          ops.pushZero = pushZeroForIndex(indexKind);
+          ops.cmpLt = cmpLtForIndex(indexKind);
+          ops.cmpGe = cmpGeForIndex(indexKind);
+          ops.skipNegativeCheck = (indexKind == LocalInfo::ValueKind::UInt64);
+          return true;
+        },
+        [&](const Expr &exprToEmit) { return emitExpr(exprToEmit, callerLocals); },
+        [&](const Expr &callExpr) { return inferExprKind(callExpr, callerLocals) == LocalInfo::ValueKind::String; },
+        [&]() { return allocTempLocal(); },
+        [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+        [&]() { return function.instructions.size(); },
+        [&](size_t index, int32_t imm) { function.instructions.at(index).imm = imm; },
+        [&]() { emitArrayIndexOutOfBounds(); },
+        helperSource,
+        argvCheckedOut,
+        error);
+    if (helperResult == ir_lowerer::StringCallEmitResult::Error) {
+      return false;
+    }
+    if (helperResult == ir_lowerer::StringCallEmitResult::Handled) {
+      if (helperSource == ir_lowerer::StringCallSource::TableIndex) {
+        sourceOut = LocalInfo::StringSource::TableIndex;
+      } else if (helperSource == ir_lowerer::StringCallSource::ArgvIndex) {
         sourceOut = LocalInfo::StringSource::ArgvIndex;
-        argvCheckedOut = (accessName == "at");
-        return true;
+      } else if (helperSource == ir_lowerer::StringCallSource::RuntimeIndex) {
+        sourceOut = LocalInfo::StringSource::RuntimeIndex;
+      } else {
+        sourceOut = LocalInfo::StringSource::None;
       }
-      LocalInfo::ValueKind callKind = inferExprKind(arg, callerLocals);
-      if (callKind != LocalInfo::ValueKind::String) {
-        error = "native backend requires string arguments to use string literals, bindings, or entry args";
-        return false;
-      }
-      if (!emitExpr(arg, callerLocals)) {
-        return false;
-      }
-      sourceOut = LocalInfo::StringSource::RuntimeIndex;
       return true;
     }
     error = "native backend requires string arguments to use string literals, bindings, or entry args";

@@ -54,4 +54,82 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
   return StringCallEmitResult::NotHandled;
 }
 
+StringCallEmitResult emitCallStringCallValue(const Expr &arg,
+                                             const ResolveArrayAccessNameFn &resolveArrayAccessName,
+                                             const IsEntryArgsNameFn &isEntryArgsName,
+                                             const ResolveStringIndexOpsFn &resolveStringIndexOps,
+                                             const EmitExprFn &emitExpr,
+                                             const InferCallReturnsStringFn &inferCallReturnsString,
+                                             const AllocTempLocalFn &allocTempLocal,
+                                             const EmitInstructionFn &emitInstruction,
+                                             const GetInstructionCountFn &getInstructionCount,
+                                             const PatchInstructionImmFn &patchInstructionImm,
+                                             const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                             StringCallSource &sourceOut,
+                                             bool &argvCheckedOut,
+                                             std::string &error) {
+  if (arg.kind != Expr::Kind::Call) {
+    return StringCallEmitResult::NotHandled;
+  }
+
+  std::string accessName;
+  if (resolveArrayAccessName(arg, accessName)) {
+    if (arg.args.size() != 2) {
+      error = accessName + " requires exactly two arguments";
+      return StringCallEmitResult::Error;
+    }
+    if (!isEntryArgsName(arg.args.front())) {
+      error = "native backend only supports entry argument indexing";
+      return StringCallEmitResult::Error;
+    }
+
+    StringIndexOps indexOps;
+    if (!resolveStringIndexOps(arg.args[1], accessName, indexOps, error)) {
+      return StringCallEmitResult::Error;
+    }
+
+    const int32_t argvIndexLocal = allocTempLocal();
+    if (!emitExpr(arg.args[1])) {
+      return StringCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(argvIndexLocal));
+
+    if (accessName == "at") {
+      if (!indexOps.skipNegativeCheck) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal));
+        emitInstruction(indexOps.pushZero, 0);
+        emitInstruction(indexOps.cmpLt, 0);
+        const size_t jumpNonNegative = getInstructionCount();
+        emitInstruction(IrOpcode::JumpIfZero, 0);
+        emitArrayIndexOutOfBounds();
+        const size_t nonNegativeIndex = getInstructionCount();
+        patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
+      }
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal));
+      emitInstruction(IrOpcode::PushArgc, 0);
+      emitInstruction(indexOps.cmpGe, 0);
+      const size_t jumpInRange = getInstructionCount();
+      emitInstruction(IrOpcode::JumpIfZero, 0);
+      emitArrayIndexOutOfBounds();
+      const size_t inRangeIndex = getInstructionCount();
+      patchInstructionImm(jumpInRange, static_cast<int32_t>(inRangeIndex));
+    }
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argvIndexLocal));
+    sourceOut = StringCallSource::ArgvIndex;
+    argvCheckedOut = (accessName == "at");
+    return StringCallEmitResult::Handled;
+  }
+
+  if (!inferCallReturnsString(arg)) {
+    error = "native backend requires string arguments to use string literals, bindings, or entry args";
+    return StringCallEmitResult::Error;
+  }
+  if (!emitExpr(arg)) {
+    return StringCallEmitResult::Error;
+  }
+  sourceOut = StringCallSource::RuntimeIndex;
+  return StringCallEmitResult::Handled;
+}
+
 } // namespace primec::ir_lowerer

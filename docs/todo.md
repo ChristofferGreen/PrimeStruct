@@ -19,7 +19,7 @@ Legend:
 - ◐ Continue IR lowerer unit split by extracting return/call fragments (`IrLowererLowerReturnInfo.h`, `IrLowererLowerInlineCalls.h`, `IrLowererLowerEmitExpr.h`) into compileable units (phase 1 extracted shared call resolution/argument ordering helpers to `IrLowererCallHelpers.{h,cpp}`).
 - ◐ Continue return/call split by moving Result/on_error and string-argument emission helpers out of `IrLowererLowerReturnInfo.h` into compileable units (phase 1 extracted `IrLowererFlowHelpers`, `IrLowererResultHelpers`, and `IrLowererStringCallHelpers`).
 - ✓ Continue return/call split by extracting `on_error` transform parsing/definition-map wiring out of `IrLowererLowerSetupLocals.h` into compileable units (`IrLowererOnErrorHelpers.{h,cpp}` now own transform parsing and definition wiring).
-- ○ Continue return/call split by extracting remaining call-expression string-argument emission paths (entry-arg indexing + runtime string calls) out of `IrLowererLowerReturnInfo.h`.
+- ✓ Continue return/call split by extracting remaining call-expression string-argument emission paths (entry-arg indexing + runtime string calls) out of `IrLowererLowerReturnInfo.h` (`IrLowererStringCallHelpers` now handles call-expression string lowering via shared helper APIs).
 - ○ Continue return/call split by moving return-type inference logic from `IrLowererLowerReturnInfo.h` into compileable units.
 - ○ Continue IR lowerer unit split by extracting operator fragments into compileable units with explicit interfaces.
 - ○ Continue IR lowerer unit split by extracting setup/statement fragments and removing include-only composition headers.

@@ -407,6 +407,131 @@ TEST_CASE("ir lowerer string call helpers surface errors and not-handled cases")
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer string call helpers handle call-expression paths") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  primec::Expr argvExpr;
+  argvExpr.kind = primec::Expr::Kind::Name;
+  argvExpr.name = "argv";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 2;
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.args = {argvExpr, indexExpr};
+
+  primec::ir_lowerer::StringCallSource source = primec::ir_lowerer::StringCallSource::None;
+  bool argvChecked = false;
+  std::string error;
+  int emittedIndexExprs = 0;
+
+  CHECK(primec::ir_lowerer::emitCallStringCallValue(
+            atCall,
+            [](const primec::Expr &callExpr, std::string &nameOut) {
+              if (callExpr.name == "at" || callExpr.name == "unchecked_at") {
+                nameOut = callExpr.name;
+                return true;
+              }
+              return false;
+            },
+            [](const primec::Expr &targetExpr) {
+              return targetExpr.kind == primec::Expr::Kind::Name && targetExpr.name == "argv";
+            },
+            [](const primec::Expr &, const std::string &, primec::ir_lowerer::StringIndexOps &ops, std::string &) {
+              ops.pushZero = primec::IrOpcode::PushI32;
+              ops.cmpLt = primec::IrOpcode::CmpLtI32;
+              ops.cmpGe = primec::IrOpcode::CmpGeI32;
+              ops.skipNegativeCheck = false;
+              return true;
+            },
+            [&](const primec::Expr &) {
+              emittedIndexExprs++;
+              emitInstruction(primec::IrOpcode::PushI32, 2);
+              return true;
+            },
+            [](const primec::Expr &) { return false; },
+            []() { return 11; },
+            emitInstruction,
+            getInstructionCount,
+            patchInstructionImm,
+            [&]() { emitInstruction(primec::IrOpcode::PushI32, 999); },
+            source,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Handled);
+  CHECK(error.empty());
+  CHECK(source == primec::ir_lowerer::StringCallSource::ArgvIndex);
+  CHECK(argvChecked);
+  CHECK(emittedIndexExprs == 1);
+  REQUIRE_FALSE(instructions.empty());
+  CHECK(instructions.back().op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions.back().imm == 11);
+
+  instructions.clear();
+  source = primec::ir_lowerer::StringCallSource::None;
+  argvChecked = true;
+  bool runtimeExprEmitted = false;
+  primec::Expr runtimeCall;
+  runtimeCall.kind = primec::Expr::Kind::Call;
+  runtimeCall.name = "build_string";
+  CHECK(primec::ir_lowerer::emitCallStringCallValue(
+            runtimeCall,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &, const std::string &, primec::ir_lowerer::StringIndexOps &, std::string &) {
+              return false;
+            },
+            [&](const primec::Expr &) {
+              runtimeExprEmitted = true;
+              emitInstruction(primec::IrOpcode::LoadLocal, 4);
+              return true;
+            },
+            [](const primec::Expr &) { return true; },
+            []() { return 0; },
+            emitInstruction,
+            getInstructionCount,
+            patchInstructionImm,
+            []() {},
+            source,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Handled);
+  CHECK(source == primec::ir_lowerer::StringCallSource::RuntimeIndex);
+  CHECK(runtimeExprEmitted);
+}
+
+TEST_CASE("ir lowerer string call helpers report call-expression diagnostics") {
+  primec::Expr badCall;
+  badCall.kind = primec::Expr::Kind::Call;
+  badCall.name = "bad";
+
+  primec::ir_lowerer::StringCallSource source = primec::ir_lowerer::StringCallSource::None;
+  bool argvChecked = true;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitCallStringCallValue(
+            badCall,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &, const std::string &, primec::ir_lowerer::StringIndexOps &, std::string &) {
+              return false;
+            },
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            []() { return 0; },
+            [](primec::IrOpcode, uint64_t) {},
+            []() { return size_t{0}; },
+            [](size_t, int32_t) {},
+            []() {},
+            source,
+            argvChecked,
+            error) == primec::ir_lowerer::StringCallEmitResult::Error);
+  CHECK(error == "native backend requires string arguments to use string literals, bindings, or entry args");
+}
+
 TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
   const std::vector<primec::IrOpcode> expected = {
       primec::IrOpcode::PushI32,
