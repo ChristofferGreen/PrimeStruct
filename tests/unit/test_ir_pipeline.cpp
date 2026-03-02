@@ -8,6 +8,7 @@
 #include "third_party/doctest.h"
 
 #include "primec/IrLowerer.h"
+#include "primec/IrInliner.h"
 #include "primec/IrSerializer.h"
 #include "primec/IrValidation.h"
 #include "primec/Lexer.h"

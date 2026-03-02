@@ -351,6 +351,111 @@ TEST_CASE("vm reports missing return in called function") {
   CHECK(error.find("missing return in IR function /helper") != std::string::npos);
 }
 
+TEST_CASE("ir inlining pass inlines straight-line call opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  std::string error;
+  REQUIRE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  REQUIRE(primec::inlineIrModuleCalls(module, error));
+  CHECK(error.empty());
+
+  bool sawCall = false;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::Call || inst.op == primec::IrOpcode::CallVoid) {
+      sawCall = true;
+      break;
+    }
+  }
+  CHECK_FALSE(sawCall);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
+TEST_CASE("ir inlining pass keeps recursive call opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction factFn;
+  factFn.name = "/fact";
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 7});
+  factFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  factFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(factFn));
+
+  std::string error;
+  REQUIRE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  REQUIRE(primec::inlineIrModuleCalls(module, error));
+  CHECK(error.empty());
+
+  bool sawRecursiveCall = false;
+  for (const auto &inst : module.functions[1].instructions) {
+    if (inst.op == primec::IrOpcode::Call && inst.imm == 1) {
+      sawRecursiveCall = true;
+      break;
+    }
+  }
+  CHECK(sawRecursiveCall);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 24);
+}
+
+TEST_CASE("ir inlining pass rejects invalid call targets") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  CHECK_FALSE(primec::inlineIrModuleCalls(module, error));
+  CHECK(error.find("invalid call target") != std::string::npos);
+}
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 namespace {
 std::string quoteIrPipelineShellArg(const std::string &value) {

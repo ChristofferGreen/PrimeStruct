@@ -11,7 +11,7 @@ Legend:
 - ✓ Lower non-entry callable definition bodies to executable IR (replace temporary typed return stubs used for table completeness).
 - ✓ Implement VM call stack/frame execution for callable IR and add recursion conformance tests.
 - ✓ Add native backend callable IR support (function labels/relocations) before optional inlining.
-- ○ Introduce an explicit inlining optimization pass after IR validation, gated by a flag.
+- ✓ Introduce an explicit inlining optimization pass after IR validation, gated by a flag.
 - ○ Unify `primec` and `primevm` argument parsing into a shared `OptionsParser` module.
 - ○ Replace `std::system` archive extraction/tool invocation with an injected process abstraction for testability.
 - ○ Add backend capability matrix tests specifically for call semantics (recursion, tail-call, indirect-call policy).

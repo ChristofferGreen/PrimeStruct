@@ -1,5 +1,6 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
+#include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrValidation.h"
 #include "primec/Options.h"
@@ -478,6 +479,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       auto effects = parseDefaultEffects(arg.substr(std::string("--default-effects=").size()));
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
+    } else if (arg == "--ir-inline") {
+      out.inlineIrCalls = true;
     } else if (!arg.empty() && arg[0] == '-') {
       error = "unknown option: " + arg;
       return false;
@@ -542,7 +545,7 @@ int main(int argc, char **argv) {
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
-                   "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] "
+                   "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
     }
     return 2;
@@ -636,6 +639,24 @@ int main(int argc, char **argv) {
                        error,
                        2,
                        {"backend: vm", "stage: ir-validate"});
+  }
+  if (options.inlineIrCalls) {
+    if (!primec::inlineIrModuleCalls(ir, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::LoweringError,
+                         "VM IR inlining error: ",
+                         error,
+                         2,
+                         {"backend: vm", "stage: ir-inline"});
+    }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::LoweringError,
+                         "VM IR validation error: ",
+                         error,
+                         2,
+                         {"backend: vm", "stage: ir-validate"});
+    }
   }
 
   primec::Vm vm;

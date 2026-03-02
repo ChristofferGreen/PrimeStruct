@@ -229,6 +229,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primecErr.find("Usage: primec") != std::string::npos);
   CHECK(primecErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
   CHECK(primecErr.find("[--text-transforms <list>]") != std::string::npos);
+  CHECK(primecErr.find("[--ir-inline]") != std::string::npos);
   CHECK(primecErr.find("--text-filters <list>") == std::string::npos);
 
   CHECK(runCommand("./primevm --unknown-option 2> " + quoteShellArg(primevmErrPath)) == 2);
@@ -236,7 +237,26 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primevmErr.find("Usage: primevm") != std::string::npos);
   CHECK(primevmErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
   CHECK(primevmErr.find("[--text-transforms <list>]") != std::string::npos);
+  CHECK(primevmErr.find("[--ir-inline]") != std::string::npos);
   CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
+}
+
+TEST_CASE("primec and primevm accept ir inline flag") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(7i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_ir_inline_flag.prime", source);
+  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_ir_inline_flag_exe").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --ir-inline";
+  const std::string runVmCmd = "./primevm " + srcPath + " --entry /main --ir-inline";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
+  CHECK(runCommand(runVmCmd) == 7);
 }
 
 TEST_CASE("defaults to native output with stem name") {

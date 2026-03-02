@@ -2,6 +2,7 @@
 #include "primec/Diagnostics.h"
 #include "primec/Emitter.h"
 #include "primec/GlslEmitter.h"
+#include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrSerializer.h"
 #include "primec/IrValidation.h"
@@ -677,6 +678,8 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       auto effects = parseDefaultEffects(arg.substr(std::string("--default-effects=").size()));
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
+    } else if (arg == "--ir-inline") {
+      out.inlineIrCalls = true;
     } else if (!arg.empty() && arg[0] == '-') {
       error = "unknown option: " + arg;
       return false;
@@ -860,7 +863,8 @@ int main(int argc, char **argv) {
                    "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
                    "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "
                    "[--no-transforms] [--out-dir <dir>] [--list-transforms] [--emit-diagnostics] "
-                   "[--default-effects <list>] [--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
+                   "[--default-effects <list>] [--ir-inline] "
+                   "[--dump-stage pre_ast|ast|ast-semantic|ir] [-- <program args...>]\n";
     }
     return 2;
   }
@@ -951,6 +955,24 @@ int main(int argc, char **argv) {
                          2,
                          {"backend: vm", "stage: ir-validate"});
     }
+    if (options.inlineIrCalls) {
+      if (!primec::inlineIrModuleCalls(ir, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::LoweringError,
+                           "VM IR inlining error: ",
+                           error,
+                           2,
+                           {"backend: vm", "stage: ir-inline"});
+      }
+      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Vm, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::LoweringError,
+                           "VM IR validation error: ",
+                           error,
+                           2,
+                           {"backend: vm", "stage: ir-validate"});
+      }
+    }
     primec::Vm vm;
     std::vector<std::string_view> args;
     args.reserve(1 + options.programArgs.size());
@@ -993,6 +1015,24 @@ int main(int argc, char **argv) {
                          2,
                          {"backend: native", "stage: ir-validate"});
     }
+    if (options.inlineIrCalls) {
+      if (!primec::inlineIrModuleCalls(ir, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::LoweringError,
+                           "Native IR inlining error: ",
+                           error,
+                           2,
+                           {"backend: native", "stage: ir-inline"});
+      }
+      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Native, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::LoweringError,
+                           "Native IR validation error: ",
+                           error,
+                           2,
+                           {"backend: native", "stage: ir-validate"});
+      }
+    }
     primec::NativeEmitter nativeEmitter;
     if (!nativeEmitter.emitExecutable(ir, options.outputPath, error)) {
       return emitFailure(options, primec::DiagnosticCode::EmitError, "Native emit error: ", error, 2, {"backend: native"});
@@ -1018,6 +1058,24 @@ int main(int argc, char **argv) {
                          error,
                          2,
                          {"backend: ir", "stage: ir-validate"});
+    }
+    if (options.inlineIrCalls) {
+      if (!primec::inlineIrModuleCalls(ir, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::IrSerializeError,
+                           "IR inlining error: ",
+                           error,
+                           2,
+                           {"backend: ir", "stage: ir-inline"});
+      }
+      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::IrSerializeError,
+                           "IR validation error: ",
+                           error,
+                           2,
+                           {"backend: ir", "stage: ir-validate"});
+      }
     }
     std::vector<uint8_t> data;
     if (!primec::serializeIr(ir, data, error)) {

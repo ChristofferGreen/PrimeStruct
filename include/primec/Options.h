@@ -14,6 +14,7 @@ struct Options {
   std::string outputPath;
   std::string outDir = ".";
   std::string entryPath = "/main";
+  bool inlineIrCalls = false;
   std::string dumpStage;
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};
   std::vector<TextTransformRule> textTransformRules;
