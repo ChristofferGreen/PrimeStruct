@@ -29,7 +29,7 @@ Legend:
 - ✓ Rename import pipeline internals away from `Include*` naming (`IncludeResolver`, `expandIncludes`, `includePaths`) to `Import*` naming and update call sites (migrated to `ImportResolver`, `expandImports`, and `importPaths` across headers/sources/tests, and renamed resolver header/source paths accordingly).
 - ✓ Rename import-stage diagnostics/enums away from `Include*` (`CompilePipelineErrorStage::Include`, `DiagnosticCode::IncludeError`) while preserving existing diagnostic code stability guarantees (renamed to import-focused enum values and added diagnostics-code regression coverage that locks `PSC1001` stability).
 - ✓ Rename include-focused test files/suites to import-focused names and keep coverage parity for import expansion, versions, privacy, and ordering (renamed resolver and compile-run suite/file names to `import*` across CMake + doctest registrations without dropping coverage cases).
-- ○ Update docs/changelog notes to mark the compatibility break: `include<...>` and `--include-path` removed, `import<...>` and `--import-path` required.
+- ✓ Update docs/changelog notes to mark the compatibility break: `include<...>` and `--include-path` removed, `import<...>` and `--import-path` required (added compatibility notes to README/design/spec docs and recorded the break in `docs/changelog.md`).
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
@@ -133,7 +133,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec (VM/native/GLSL effect+type matrix compile-run tests plus an IR opcode allowlist lock test).
 
 **Docs Alignment**
-- ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI help now advertises `--import-path` with `--include-path` as hidden compatibility alias; pipeline/include-resolver diagnostics and import-conformance tests/docs now use `import` wording).
+- ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).
 - ✓ Reconcile definition visibility: allow `[public]/[private]` on definitions and enforce import visibility.
 - ✓ Clarify VM/native string limits in `docs/PrimeStruct_SyntaxSpec.md`: count/indexing currently only work for string literals or bindings backed by literals (argv-derived bindings are print-only).
 - ✓ Clarify that `public`/`private` control import visibility only; private definitions remain callable within the same compilation unit.

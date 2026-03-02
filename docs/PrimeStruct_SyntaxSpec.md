@@ -162,6 +162,8 @@ import /ui/*, /util/*
 `import` brings the public symbols of the referenced path(s) into the current namespace. It also ensures
 the referenced sources are loaded into the compilation unit before transforms and inference.
 Imports must appear at the top level (not inside `namespace` blocks).
+Legacy `include<...>` syntax is not supported. Import roots must be configured
+with `--import-path` (or `-I`); `--include-path` is not supported.
 
 - `import<...>` loads source packages from the import path. Entries may be quoted strings or slash paths.
   Multiple paths may be listed in a single import; version selection follows `docs/PrimeStruct.md` and is optional.

@@ -209,6 +209,10 @@ Imports splice text inline before text transforms:
 
     import<"/std/io", version="1.2.0">
 
+Compatibility note: `include<...>` is no longer accepted. Use `import<...>`
+for source imports and `import /path/*` for namespace imports. Import roots
+must be passed with `--import-path` (or `-I`); `--include-path` was removed.
+
 Namespaces prefix enclosed names:
 
     namespace demo {
@@ -254,6 +258,7 @@ See `docs/PrimeStruct.md` for detailed backend constraints and effect allowlists
 
 - Language design overview: `docs/PrimeStruct.md`
 - Syntax spec: `docs/PrimeStruct_SyntaxSpec.md`
+- Changelog notes: `docs/changelog.md`
 
 ------------------------------------------------------------------------
 
