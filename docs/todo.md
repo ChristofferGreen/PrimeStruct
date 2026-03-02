@@ -24,6 +24,12 @@ Legend:
 - ✓ Add version-first regression coverage for legacy `include<...>` alias handling (`include<version=\"...\", ...>`) in resolver and compile-run flows (added resolver and compile-run tests for version-first alias ordering).
 - ✓ Add text-filter regression coverage for versioned legacy `include<...>` alias directives (including `version`-first ordering) so directive payload strings are never rewritten (added pipeline passthrough tests for both ordered forms).
 - ✓ Add text-filter regression coverage for single-quoted versioned legacy `include<...>` alias directives (including `version`-first ordering) so quote-style aliases stay rewrite-safe (added pipeline passthrough tests for both single-quoted ordered forms).
+- ○ Remove legacy `include<...>` compatibility aliases from resolver/text-filter parsing so only `import<...>` is accepted (convert compatibility tests into rejection diagnostics).
+- ○ Remove legacy `--include-path` CLI aliases from `primec` and `primevm` so `--import-path`/`-I` are the only supported import-root flags.
+- ○ Rename import pipeline internals away from `Include*` naming (`IncludeResolver`, `expandIncludes`, `includePaths`) to `Import*` naming and update call sites.
+- ○ Rename import-stage diagnostics/enums away from `Include*` (`CompilePipelineErrorStage::Include`, `DiagnosticCode::IncludeError`) while preserving existing diagnostic code stability guarantees.
+- ○ Rename include-focused test files/suites to import-focused names and keep coverage parity for import expansion, versions, privacy, and ordering.
+- ○ Update docs/changelog notes to mark the compatibility break: `include<...>` and `--include-path` removed, `import<...>` and `--import-path` required.
 - ✓ Extract a shared compile pipeline abstraction for `primec` and `primevm` so parse/import/transform/semantics steps run through one codepath.
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
