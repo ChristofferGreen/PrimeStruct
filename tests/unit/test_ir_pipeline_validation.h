@@ -58,6 +58,84 @@ TEST_CASE("ir lowerer effects unit rejects software numeric envelopes") {
   CHECK(error == "native backend does not support software numeric types: decimal");
 }
 
+TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
+  auto resolver = [](const primec::Expr &) { return std::string("/callee"); };
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "callee";
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(directCall, defMap, resolver) == &callee);
+
+  primec::Expr methodCall = directCall;
+  methodCall.isMethodCall = true;
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(methodCall, defMap, resolver) == nullptr);
+
+  primec::Expr bindingCall = directCall;
+  bindingCall.isBinding = true;
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(bindingCall, defMap, resolver) == nullptr);
+}
+
+TEST_CASE("ir lowerer call helpers order positional named and default args") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "demo";
+  primec::Expr argA;
+  argA.kind = primec::Expr::Kind::Literal;
+  argA.literalValue = 1;
+  primec::Expr argC;
+  argC.kind = primec::Expr::Kind::Literal;
+  argC.literalValue = 3;
+  callExpr.args = {argA, argC};
+  callExpr.argNames = {std::nullopt, std::make_optional<std::string>("c")};
+
+  primec::Expr paramA;
+  paramA.name = "a";
+  primec::Expr paramB;
+  paramB.name = "b";
+  primec::Expr defaultB;
+  defaultB.kind = primec::Expr::Kind::Literal;
+  defaultB.literalValue = 2;
+  paramB.args.push_back(defaultB);
+  primec::Expr paramC;
+  paramC.name = "c";
+  const std::vector<primec::Expr> params = {paramA, paramB, paramC};
+
+  std::vector<const primec::Expr *> ordered;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOrderedCallArguments(callExpr, params, ordered, error));
+  CHECK(error.empty());
+  REQUIRE(ordered.size() == 3);
+  REQUIRE(ordered[0] != nullptr);
+  CHECK(ordered[0]->literalValue == 1);
+  REQUIRE(ordered[1] != nullptr);
+  CHECK(ordered[1]->literalValue == 2);
+  REQUIRE(ordered[2] != nullptr);
+  CHECK(ordered[2]->literalValue == 3);
+}
+
+TEST_CASE("ir lowerer call helpers reject unknown named arg") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "demo";
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Literal;
+  arg.literalValue = 1;
+  callExpr.args = {arg};
+  callExpr.argNames = {std::make_optional<std::string>("missing")};
+
+  primec::Expr param;
+  param.name = "a";
+  const std::vector<primec::Expr> params = {param};
+
+  std::vector<const primec::Expr *> ordered;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::buildOrderedCallArguments(callExpr, params, ordered, error));
+  CHECK(error == "unknown named argument: missing");
+}
+
 TEST_CASE("ir opcode allowlist matches vm/native support matrix") {
   const std::vector<primec::IrOpcode> expected = {
       primec::IrOpcode::PushI32,

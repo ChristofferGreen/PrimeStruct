@@ -22,6 +22,7 @@ add_library(primec_lib
   src/glsl_emitter/GlslEmitterStatements.cpp
   src/ImportResolver.cpp
   src/IrInliner.cpp
+  src/ir_lowerer/IrLowererCallHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererLowerEffects.cpp
   src/ir_lowerer/IrLowererLower.cpp

@@ -3,6 +3,7 @@
 #include "primec/Parser.h"
 #include "primec/StringLiteral.h"
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererLowerEffects.h"
 
