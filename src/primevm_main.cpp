@@ -550,7 +550,7 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primevm <input.prime> [--entry /path] [--import-path <dir>] [--text-filters <list>] "
+      std::cerr << "Usage: primevm <input.prime> [--entry /path] [--import-path <dir>] [-I <dir>] "
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "

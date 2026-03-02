@@ -218,6 +218,27 @@ main() {
   CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
 }
 
+TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
+  const std::string primecErrPath =
+      (std::filesystem::temp_directory_path() / "primec_usage_modern_flags_err.txt").string();
+  const std::string primevmErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_usage_modern_flags_err.txt").string();
+
+  CHECK(runCommand("./primec --unknown-option 2> " + quoteShellArg(primecErrPath)) == 2);
+  const std::string primecErr = readFile(primecErrPath);
+  CHECK(primecErr.find("Usage: primec") != std::string::npos);
+  CHECK(primecErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
+  CHECK(primecErr.find("[--text-transforms <list>]") != std::string::npos);
+  CHECK(primecErr.find("--text-filters <list>") == std::string::npos);
+
+  CHECK(runCommand("./primevm --unknown-option 2> " + quoteShellArg(primevmErrPath)) == 2);
+  const std::string primevmErr = readFile(primevmErrPath);
+  CHECK(primevmErr.find("Usage: primevm") != std::string::npos);
+  CHECK(primevmErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
+  CHECK(primevmErr.find("[--text-transforms <list>]") != std::string::npos);
+  CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]

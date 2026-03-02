@@ -867,7 +867,7 @@ int main(int argc, char **argv) {
         std::cerr << "Argument error: " << argError << "\n";
       }
       std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv] <input.prime> [-o <output>] "
-                   "[--entry /path] [--import-path <dir>] [--text-filters <list>] "
+                   "[--entry /path] [--import-path <dir>] [-I <dir>] "
                    "[--text-transforms <list>] [--text-transform-rules <rules>] "
                    "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
                    "[--transform-list <list>] [--no-text-transforms] [--no-semantic-transforms] "

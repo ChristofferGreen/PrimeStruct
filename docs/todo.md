@@ -34,6 +34,7 @@ Legend:
 - ✓ Make import/archive expansion ordering deterministic across platforms (normalize path ordering before expansion and keep duplicate handling stable).
 - ✓ Add `--list-transforms` CLI output (transform name, phase, aliases, and availability) for faster transform discovery.
 - ✓ Add a post-semantics AST dump stage (`--dump-stage ast-semantic`, alias `ast_semantic`) to inspect canonicalized AST after rewrites/inference.
+- ✓ Update `primec`/`primevm` usage text to prefer `--text-transforms` and `--import-path`/`-I` while keeping legacy `--text-filters` parsing compatibility (usage strings now advertise modern flags only; compile-run regression coverage locks the help text for both CLIs).
 
 **Syntax & Surface Features**
 - ✓ Treat semicolons as optional separators everywhere the SyntaxSpec allows them (top-level/bodies, transform/template/param/arg lists, import lists); currently hard errors.
