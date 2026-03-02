@@ -19,7 +19,12 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[0].name == "/main");
+  CHECK(module.functions[1].name == "/addOne");
+  REQUIRE(module.functions[1].instructions.size() == 2);
+  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(module.functions[1].instructions[1].op == primec::IrOpcode::ReturnI32);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -49,7 +54,12 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[0].name == "/main");
+  CHECK(module.functions[1].name == "/sum3");
+  REQUIRE(module.functions[1].instructions.size() == 2);
+  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(module.functions[1].instructions[1].op == primec::IrOpcode::ReturnI32);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -79,13 +89,52 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[0].name == "/main");
+  CHECK(module.functions[1].name == "/touch");
+  REQUIRE(module.functions[1].instructions.size() == 1);
+  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::ReturnVoid);
 
   primec::Vm vm;
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 7);
+}
+
+TEST_CASE("ir emits callable function table entries and skips structs") {
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32] left
+  [i32] right
+}
+
+[return<f64>]
+helper() {
+  return(1.5f64)
+}
+
+[return<int>]
+main() {
+  return(convert<int>(helper()))
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[0].name == "/main");
+  CHECK(module.functions[1].name == "/helper");
+  REQUIRE(module.functions[1].instructions.size() == 2);
+  CHECK(module.functions[1].instructions[0].op == primec::IrOpcode::PushF64);
+  CHECK(module.functions[1].instructions[1].op == primec::IrOpcode::ReturnF64);
 }
 
 TEST_CASE("native backend rejects recursive definition calls") {

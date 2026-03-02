@@ -634,10 +634,10 @@ sum_two_files([string] a, [string] b) {
   ```
 
 ## Runtime Stack Model
-- **Frames:** VM/native lowering currently emits a single entry frame; user-defined calls are inlined, so there is no runtime call stack or captures in PSIR v16. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
+- **Frames:** VM/native lowering emits entry instructions in a single active frame; user-defined calls are still inlined for execution, so there is no runtime call stack or captures in PSIR v16. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
 - **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)` unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit `return(void)` fires if a definition body reaches the end.
 - **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
-- **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the single frame.
+- **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right argument evaluation inside the active frame.
 - **Resource handles:** handles live inside frame slots as opaque values; lifetimes follow lexical scope.
 - **Tail execution:** lowering marks tail-position calls in metadata; backends may reuse frames when the tail flag is set. VM/native currently ignore the hint; GPU backends may require tail-safe forms for determinism.
 - **Effect annotations:** purity by default; explicit `[effects(...)]` opt-ins. Effects are validated during lowering; runtime enforcement is limited to builtin checks.
@@ -1091,11 +1091,11 @@ bad_use_after_take() {
   `PrintU64`, `PrintString`, `PrintArgv`, `PrintArgvUnsafe`, `LoadStringByte`, `FileOpenRead`, `FileOpenWrite`,
   `FileOpenAppend`, `FileClose`, `FileFlush`, `FileWriteI32`, `FileWriteI64`, `FileWriteU64`, `FileWriteString`,
   `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`, `Call`, `CallVoid`.
-- **Call-opcode status:** `Call` and `CallVoid` are now serialized/validated opcode forms, but current lowering still inlines definition calls for VM/native execution.
+- **Call-opcode status:** `Call` and `CallVoid` are serialized/validated opcode forms. Current lowering emits callable function-table entries for the entry definition plus non-struct definitions reached by inlined calls, but execution still inlines definition calls and does not emit call opcodes yet.
 - **GLSL note:** GLSL emission bypasses PSIR and lowers from the canonical AST directly; PSIR opcode validation only applies to VM/native consumers.
 - **PSIR versioning:** current portable IR is PSIR v16 (adds function-call opcodes `Call`/`CallVoid` on top of v15’s execution metadata, v14’s float return opcodes, v13’s float arithmetic/compare/convert opcodes, and v12’s struct field visibility/static metadata, `LoadStringByte`, `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** a single entry frame stores locals in 16-byte slots; the operand stack stores raw `u64` values interpreted by opcode (ints, floats as bits, and indices). Indirect addresses are byte offsets into the local slot space and must be 16-byte aligned.
-- **Module layout:** `IrModule` bundles functions, string table, and struct layouts; the VM executes only the `entryIndex` function because user-defined calls are inlined during lowering (recursion is rejected).
+- **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions plus reachable non-entry callable stubs so function names/metadata survive serialization. The VM still executes from `entryIndex`, and user-defined calls remain inlined during lowering (recursion is rejected).
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it. File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via lowering.
 - **Memory/GC:** there is no heap or GC in the VM today. Arrays/vectors are inline locals with fixed-capacity headers (count/capacity) plus element slots; native output mirrors this with stack storage and OS handles. No reference counting is performed.
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.

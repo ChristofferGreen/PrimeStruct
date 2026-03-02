@@ -67,6 +67,7 @@
       error = "native backend does not support recursive calls: " + callee.fullPath;
       return false;
     }
+    loweredCallTargets.insert(callee.fullPath);
     std::optional<OnErrorHandler> scopedOnError;
     auto onErrorIt = onErrorByDef.find(callee.fullPath);
     if (onErrorIt != onErrorByDef.end()) {

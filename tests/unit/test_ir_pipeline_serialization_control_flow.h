@@ -336,7 +336,7 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 1);
+  REQUIRE(module.functions.size() == 2);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
 }
 

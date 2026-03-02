@@ -198,6 +198,7 @@
   int32_t nextLocal = 0;
   int32_t onErrorTempCounter = 0;
   std::vector<std::string> stringTable;
+  std::unordered_set<std::string> loweredCallTargets;
   std::vector<std::vector<int32_t>> fileScopeStack;
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;

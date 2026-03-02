@@ -268,8 +268,79 @@
     }
   }
 
+  auto appendStubReturn = [&](IrFunction &stubFunction, const ReturnInfo &returnInfo) -> bool {
+    if (returnInfo.returnsVoid) {
+      stubFunction.instructions.push_back({IrOpcode::ReturnVoid, 0});
+      return true;
+    }
+    if (returnInfo.returnsArray || returnInfo.kind == LocalInfo::ValueKind::Int64 ||
+        returnInfo.kind == LocalInfo::ValueKind::UInt64 || returnInfo.kind == LocalInfo::ValueKind::String) {
+      stubFunction.instructions.push_back({IrOpcode::PushI64, 0});
+      stubFunction.instructions.push_back({IrOpcode::ReturnI64, 0});
+      return true;
+    }
+    if (returnInfo.kind == LocalInfo::ValueKind::Int32 || returnInfo.kind == LocalInfo::ValueKind::Bool) {
+      stubFunction.instructions.push_back({IrOpcode::PushI32, 0});
+      stubFunction.instructions.push_back({IrOpcode::ReturnI32, 0});
+      return true;
+    }
+    if (returnInfo.kind == LocalInfo::ValueKind::Float32) {
+      stubFunction.instructions.push_back({IrOpcode::PushF32, 0});
+      stubFunction.instructions.push_back({IrOpcode::ReturnF32, 0});
+      return true;
+    }
+    if (returnInfo.kind == LocalInfo::ValueKind::Float64) {
+      stubFunction.instructions.push_back({IrOpcode::PushF64, 0});
+      stubFunction.instructions.push_back({IrOpcode::ReturnF64, 0});
+      return true;
+    }
+    error = "native backend does not support return type on " + stubFunction.name;
+    return false;
+  };
+  auto hasTailExecutionCandidate = [&](const Definition &def, bool definitionReturnsVoid) {
+    if (def.statements.empty()) {
+      return false;
+    }
+    const Expr &lastStmt = def.statements.back();
+    if (isReturnCall(lastStmt) && lastStmt.args.size() == 1) {
+      return isTailCallCandidate(lastStmt.args.front());
+    }
+    return definitionReturnsVoid && isTailCallCandidate(lastStmt);
+  };
+
   out.functions.push_back(std::move(function));
   out.entryIndex = 0;
+
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == entryDef->fullPath || isStructDefinition(def) ||
+        loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
+      continue;
+    }
+    IrFunction stubFunction;
+    stubFunction.name = def.fullPath;
+    if (!resolveEffectMask(def.transforms, false, stubFunction.metadata.effectMask)) {
+      return false;
+    }
+    if (!resolveCapabilityMask(def.transforms, resolveActiveEffects(def.transforms, false),
+                               stubFunction.metadata.capabilityMask)) {
+      return false;
+    }
+    stubFunction.metadata.schedulingScope = IrSchedulingScope::Default;
+    stubFunction.metadata.instrumentationFlags = 0;
+
+    ReturnInfo returnInfo;
+    if (!getReturnInfo(def.fullPath, returnInfo)) {
+      return false;
+    }
+    if (hasTailExecutionCandidate(def, returnInfo.returnsVoid)) {
+      stubFunction.metadata.instrumentationFlags |= InstrumentationTailExecution;
+    }
+    if (!appendStubReturn(stubFunction, returnInfo)) {
+      return false;
+    }
+    out.functions.push_back(std::move(stubFunction));
+  }
+
   out.stringTable = std::move(stringTable);
   return true;
 }
