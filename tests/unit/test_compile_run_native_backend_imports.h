@@ -334,7 +334,7 @@ TEST_CASE("compiles and runs unquoted import expansion") {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("legacy include-path alias works in primec and primevm") {
+TEST_CASE("legacy include-path alias is rejected in primec and primevm") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_legacy_flag_alias";
   std::filesystem::remove_all(includeRoot);
@@ -349,20 +349,32 @@ TEST_CASE("legacy include-path alias works in primec and primevm") {
 
   const std::string source = "import</lib>\n[return<int>]\nmain(){ return(helper()) }\n";
   const std::string srcPath = writeTemp("compile_unquoted_include_legacy_flag.prime", source);
-  const std::string exePath = (std::filesystem::temp_directory_path() / "primec_unquoted_inc_legacy_flag_exe").string();
+  const std::string primecErrPath =
+      (std::filesystem::temp_directory_path() / "primec_include_path_legacy_err.txt").string();
+  const std::string primecVmErrPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_include_path_legacy_err.txt").string();
+  const std::string primevmErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_include_path_legacy_err.txt").string();
 
-  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o " + exePath +
+  const std::string compileCppCmd = "./primec --emit=exe " + srcPath + " -o /dev/null " +
                                     " --entry /main --include-path " + includeRoot.string();
-  CHECK(runCommand(compileCppCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  CHECK(runCommand(compileCppCmd + " 2> " + primecErrPath) == 2);
+  const std::string primecErr = readFile(primecErrPath);
+  CHECK(primecErr.find("Argument error: unknown option: --include-path\n") != std::string::npos);
 
   const std::string runVmViaPrimecCmd =
       "./primec --emit=vm " + srcPath + " --entry /main --include-path=" + includeRoot.string();
-  CHECK(runCommand(runVmViaPrimecCmd) == 12);
+  CHECK(runCommand(runVmViaPrimecCmd + " 2> " + primecVmErrPath) == 2);
+  const std::string primecVmErr = readFile(primecVmErrPath);
+  CHECK(primecVmErr.find("Argument error: unknown option: --include-path=" + includeRoot.string() + "\n") !=
+        std::string::npos);
 
   const std::string runPrimevmCmd =
       "./primevm " + srcPath + " --entry /main --include-path=" + includeRoot.string();
-  CHECK(runCommand(runPrimevmCmd) == 12);
+  CHECK(runCommand(runPrimevmCmd + " 2> " + primevmErrPath) == 2);
+  const std::string primevmErr = readFile(primevmErrPath);
+  CHECK(primevmErr.find("Argument error: unknown option: --include-path=" + includeRoot.string() + "\n") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs versioned import expansion") {

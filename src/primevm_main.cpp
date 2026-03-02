@@ -401,10 +401,6 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
       out.includePaths.push_back(argv[++i]);
     } else if (arg.rfind("--import-path=", 0) == 0) {
       out.includePaths.push_back(arg.substr(std::string("--import-path=").size()));
-    } else if (arg == "--include-path" && i + 1 < argc) {
-      out.includePaths.push_back(argv[++i]);
-    } else if (arg.rfind("--include-path=", 0) == 0) {
-      out.includePaths.push_back(arg.substr(std::string("--include-path=").size()));
     } else if (arg == "-I" && i + 1 < argc) {
       out.includePaths.push_back(argv[++i]);
     } else if (arg.rfind("-I", 0) == 0 && arg.size() > 2) {
