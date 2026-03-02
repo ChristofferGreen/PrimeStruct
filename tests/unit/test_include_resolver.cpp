@@ -1,4 +1,4 @@
-#include "primec/IncludeResolver.h"
+#include "primec/ImportResolver.h"
 
 #include "third_party/doctest.h"
 
@@ -64,8 +64,8 @@ TEST_CASE("expands single import") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("helper") != std::string::npos);
 }
@@ -75,8 +75,8 @@ TEST_CASE("rejects single legacy include alias") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
   CHECK(error == "legacy include<...> is no longer supported; use import<...>");
 }
 
@@ -87,8 +87,8 @@ TEST_CASE("expands import with whitespace") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find(marker) != std::string::npos);
 }
@@ -100,8 +100,8 @@ TEST_CASE("expands import with tight comment") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find(marker) != std::string::npos);
 }
@@ -119,8 +119,8 @@ TEST_CASE("expands import with bare slash path") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_BARE_PATH") != std::string::npos);
 }
@@ -139,8 +139,8 @@ TEST_CASE("expands bare slash imports with semicolons") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_BARE_SEMI_A") != std::string::npos);
   CHECK(source.find("INCLUDE_BARE_SEMI_B") != std::string::npos);
@@ -160,8 +160,8 @@ TEST_CASE("expands bare slash imports with whitespace separators") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_BARE_WS_A") != std::string::npos);
   CHECK(source.find("INCLUDE_BARE_WS_B") != std::string::npos);
@@ -181,8 +181,8 @@ TEST_CASE("bare slash import does not use absolute filesystem path") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(!resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(!resolver.expandImports(srcPath, source, error));
   CHECK(error.find("failed to read import") != std::string::npos);
 }
 
@@ -201,8 +201,8 @@ TEST_CASE("resolves versioned import with single quotes") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_SINGLE_QUOTE_123") != std::string::npos);
   CHECK(source.find("INCLUDE_SINGLE_QUOTE_120") == std::string::npos);
@@ -213,8 +213,8 @@ TEST_CASE("rejects versioned legacy include alias") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
   CHECK(error == "legacy include<...> is no longer supported; use import<...>");
 }
 
@@ -223,8 +223,8 @@ TEST_CASE("rejects version-first legacy include alias") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
   CHECK(error == "legacy include<...> is no longer supported; use import<...>");
 }
 
@@ -240,8 +240,8 @@ TEST_CASE("ignores duplicate imports") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   const auto first = source.find(marker);
   const auto second = source.find(marker, first == std::string::npos ? 0 : first + 1);
@@ -262,8 +262,8 @@ TEST_CASE("ignores duplicate imports with equivalent relative paths") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   const auto first = source.find("INCLUDE_DUPLICATE_RELATIVE");
   const auto second = source.find("INCLUDE_DUPLICATE_RELATIVE", first == std::string::npos ? 0 : first + 1);
@@ -275,8 +275,8 @@ TEST_CASE("missing import fails") {
   const std::string srcPath = writeTemp("main_c.prime", "import<\"/tmp/does_not_exist.prime\">\n");
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
   CHECK(error.find("failed to read import") != std::string::npos);
 }
 
@@ -291,8 +291,8 @@ TEST_CASE("ignores import directives inside string literals") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("import<\\\"/tmp/does_not_exist.prime\\\">") != std::string::npos);
 }
@@ -306,8 +306,8 @@ TEST_CASE("ignores import directives inside comments") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("import<\"/tmp/does_not_exist.prime\">") != std::string::npos);
 }
@@ -320,8 +320,8 @@ TEST_CASE("ignores import keyword within identifiers") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("ximport<\"/tmp/does_not_exist.prime\">") != std::string::npos);
   CHECK(source.find("importX<\"/tmp/does_not_exist.prime\">") != std::string::npos);
@@ -334,8 +334,8 @@ TEST_CASE("ignores import keyword after path separator") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("path/import<\"/tmp/does_not_exist.prime\">") != std::string::npos);
 }
@@ -353,8 +353,8 @@ TEST_CASE("resolves import from import path") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_ROOT_MARKER") != std::string::npos);
 }
@@ -372,8 +372,8 @@ TEST_CASE("resolves relative import from import path") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_RELATIVE_MARKER") != std::string::npos);
 }
@@ -388,8 +388,8 @@ TEST_CASE("supports semicolon separated imports") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find(markerA) != std::string::npos);
   CHECK(source.find(markerB) != std::string::npos);
@@ -410,8 +410,8 @@ TEST_CASE("allows comments around version attribute") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_COMMENT_VERSION") != std::string::npos);
 }
@@ -431,8 +431,8 @@ TEST_CASE("allows comments containing > in import list") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_COMMENT_BRACKET") != std::string::npos);
 }
@@ -452,8 +452,8 @@ TEST_CASE("resolves versioned absolute import from import path") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_VERSION_ABS_129") != std::string::npos);
   CHECK(source.find("INCLUDE_VERSION_ABS_120") == std::string::npos);
@@ -477,8 +477,8 @@ TEST_CASE("selects newest import version across roots") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRootA.string(), includeRootB.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRootA.string(), includeRootB.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_VERSION_MULTI_129") != std::string::npos);
   CHECK(source.find("INCLUDE_VERSION_MULTI_120") == std::string::npos);
@@ -502,8 +502,8 @@ TEST_CASE("rejects import version mismatch across paths") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath,
+  primec::ImportResolver resolver;
+  CHECK_FALSE(resolver.expandImports(srcPath,
                                       source,
                                       error,
                                       {includeRootA.string(), includeRootB.string()}));
@@ -525,8 +525,8 @@ TEST_CASE("resolves versioned relative import from import path") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("INCLUDE_VERSION_REL_210") != std::string::npos);
   CHECK(source.find("INCLUDE_VERSION_REL_200") == std::string::npos);
@@ -553,8 +553,8 @@ TEST_CASE("resolves versioned import from archive root") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("ZIP_MARKER") != std::string::npos);
 }
@@ -585,8 +585,8 @@ TEST_CASE("resolves versioned import from archives in stable order") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {includeRoot.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.empty());
   CHECK(source.find("ZIP_STABLE_A") != std::string::npos);
   CHECK(source.find("ZIP_STABLE_B") == std::string::npos);
@@ -613,8 +613,8 @@ TEST_CASE("resolves versioned import from zip root directly") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error, {archivePath.string()}));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error, {archivePath.string()}));
   CHECK(error.empty());
   CHECK(source.find("ZIP_DIRECT_MARKER") != std::string::npos);
 }
@@ -630,8 +630,8 @@ TEST_CASE("resolves versioned absolute import using base directory") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("BASE_DIR_MARKER") != std::string::npos);
 }
@@ -648,8 +648,8 @@ TEST_CASE("resolves exact import version") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("V120") != std::string::npos);
   CHECK(source.find("V121") == std::string::npos);
@@ -668,8 +668,8 @@ TEST_CASE("selects newest matching import version") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("V125") != std::string::npos);
   CHECK(source.find("V130") == std::string::npos);
@@ -687,8 +687,8 @@ TEST_CASE("expands directory import contents") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   const auto first = source.find("DIR_A");
   const auto second = source.find("DIR_B");
@@ -709,8 +709,8 @@ TEST_CASE("skips private subdirectories in directory import") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("PUBLIC") != std::string::npos);
   CHECK(source.find("SECRET") == std::string::npos);
@@ -727,8 +727,8 @@ TEST_CASE("rejects private import root directory") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK_FALSE(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK_FALSE(resolver.expandImports(srcPath, source, error));
   CHECK(error.find("private folder") != std::string::npos);
 }
 

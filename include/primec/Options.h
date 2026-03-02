@@ -24,6 +24,6 @@ struct Options {
   std::vector<std::string> defaultEffects = {"io_out"};
   std::vector<std::string> entryDefaultEffects = {"io_out"};
   std::vector<std::string> programArgs;
-  std::vector<std::string> includePaths;
+  std::vector<std::string> importPaths;
 };
 } // namespace primec

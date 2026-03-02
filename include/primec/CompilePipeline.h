@@ -31,7 +31,7 @@ struct CompilePipelineDiagnosticInfo {
   bool hasPrimarySpan = false;
 };
 
-void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &includePaths);
+void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths);
 
 bool runCompilePipeline(const Options &options,
                         CompilePipelineOutput &output,

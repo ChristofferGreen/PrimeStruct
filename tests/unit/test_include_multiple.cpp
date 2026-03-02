@@ -1,4 +1,4 @@
-#include "primec/IncludeResolver.h"
+#include "primec/ImportResolver.h"
 
 #include "third_party/doctest.h"
 
@@ -30,8 +30,8 @@ TEST_CASE("expands multiple import paths") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("LIB_A") != std::string::npos);
   CHECK(source.find("LIB_B") != std::string::npos);
@@ -45,8 +45,8 @@ TEST_CASE("expands whitespace-separated import paths") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   CHECK(source.find("LIB_WS_A") != std::string::npos);
   CHECK(source.find("LIB_WS_B") != std::string::npos);
@@ -68,8 +68,8 @@ TEST_CASE("ignores nested duplicate imports") {
 
   std::string source;
   std::string error;
-  primec::IncludeResolver resolver;
-  CHECK(resolver.expandIncludes(srcPath, source, error));
+  primec::ImportResolver resolver;
+  CHECK(resolver.expandImports(srcPath, source, error));
   CHECK(error.empty());
   const auto first = source.find(marker);
   const auto second = source.find(marker, first == std::string::npos ? 0 : first + 1);

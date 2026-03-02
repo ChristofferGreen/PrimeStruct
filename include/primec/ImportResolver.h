@@ -7,19 +7,19 @@
 
 namespace primec {
 
-class IncludeResolver {
+class ImportResolver {
 public:
-  bool expandIncludes(const std::string &inputPath,
+  bool expandImports(const std::string &inputPath,
                       std::string &source,
                       std::string &error,
-                      const std::vector<std::string> &includePaths = {});
+                      const std::vector<std::string> &importPaths = {});
 
 private:
-  bool expandIncludesInternal(const std::string &baseDir,
+  bool expandImportsInternal(const std::string &baseDir,
                               std::string &source,
                               std::unordered_set<std::string> &expanded,
                               std::string &error,
-                              const std::vector<std::filesystem::path> &includeRoots);
+                              const std::vector<std::filesystem::path> &importRoots);
 };
 
 } // namespace primec

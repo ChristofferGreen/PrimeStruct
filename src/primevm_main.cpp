@@ -398,13 +398,13 @@ bool parseArgs(int argc, char **argv, primec::Options &out, std::string &error) 
     } else if (arg.rfind("--dump-stage=", 0) == 0) {
       out.dumpStage = arg.substr(std::string("--dump-stage=").size());
     } else if (arg == "--import-path" && i + 1 < argc) {
-      out.includePaths.push_back(argv[++i]);
+      out.importPaths.push_back(argv[++i]);
     } else if (arg.rfind("--import-path=", 0) == 0) {
-      out.includePaths.push_back(arg.substr(std::string("--import-path=").size()));
+      out.importPaths.push_back(arg.substr(std::string("--import-path=").size()));
     } else if (arg == "-I" && i + 1 < argc) {
-      out.includePaths.push_back(argv[++i]);
+      out.importPaths.push_back(argv[++i]);
     } else if (arg.rfind("-I", 0) == 0 && arg.size() > 2) {
-      out.includePaths.push_back(arg.substr(2));
+      out.importPaths.push_back(arg.substr(2));
     } else if (arg == "--text-filters" && i + 1 < argc) {
       if (!parseTransformListForPhase(argv[++i], defaultTextFilters(), true, out.textFilters, error)) {
         return false;
@@ -564,7 +564,7 @@ int main(int argc, char **argv) {
     return 0;
   }
   std::string error;
-  primec::addDefaultStdlibInclude(options.inputPath, options.includePaths);
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   primec::CompilePipelineOutput pipelineOutput;
   primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;

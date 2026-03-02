@@ -1,4 +1,4 @@
-#include "primec/IncludeResolver.h"
+#include "primec/ImportResolver.h"
 
 #include <algorithm>
 #include <cctype>
@@ -636,10 +636,10 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
 
 } // namespace
 
-bool IncludeResolver::expandIncludes(const std::string &inputPath,
+bool ImportResolver::expandImports(const std::string &inputPath,
                                      std::string &source,
                                      std::string &error,
-                                     const std::vector<std::string> &includePaths) {
+                                     const std::vector<std::string> &importPaths) {
   std::filesystem::path input = std::filesystem::absolute(inputPath);
   std::string content;
   if (!readFile(input.string(), content)) {
@@ -648,27 +648,27 @@ bool IncludeResolver::expandIncludes(const std::string &inputPath,
   }
   source = std::move(content);
   std::string baseDir = input.parent_path().string();
-  std::vector<std::filesystem::path> includeRoots;
-  includeRoots.reserve(includePaths.size());
-  for (const auto &path : includePaths) {
+  std::vector<std::filesystem::path> importRoots;
+  importRoots.reserve(importPaths.size());
+  for (const auto &path : importPaths) {
     if (path.empty()) {
       continue;
     }
-    includeRoots.push_back(std::filesystem::absolute(path));
+    importRoots.push_back(std::filesystem::absolute(path));
   }
   std::vector<std::filesystem::path> expandedRoots;
-  if (!appendArchiveRoots(includeRoots, expandedRoots, error)) {
+  if (!appendArchiveRoots(importRoots, expandedRoots, error)) {
     return false;
   }
   std::unordered_set<std::string> expanded;
-  return expandIncludesInternal(baseDir, source, expanded, error, expandedRoots);
+  return expandImportsInternal(baseDir, source, expanded, error, expandedRoots);
 }
 
-bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
+bool ImportResolver::expandImportsInternal(const std::string &baseDir,
                                              std::string &source,
                                              std::unordered_set<std::string> &expanded,
                                              std::string &error,
-                                             const std::vector<std::filesystem::path> &includeRoots) {
+                                             const std::vector<std::filesystem::path> &importRoots) {
   bool changed = true;
 
   while (changed) {
@@ -817,10 +817,10 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             std::vector<std::filesystem::path> roots;
             if (!isLogical) {
               if (isAbsolute) {
-                roots = includeRoots;
+                roots = importRoots;
               } else {
                 roots.push_back(std::filesystem::path(baseDir));
-                for (const auto &root : includeRoots) {
+                for (const auto &root : importRoots) {
                   roots.push_back(root);
                 }
               }
@@ -828,7 +828,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
                 roots.push_back(std::filesystem::path(baseDir));
               }
             } else {
-              roots = includeRoots;
+              roots = importRoots;
               if (roots.empty()) {
                 std::ostringstream requestedText;
                 for (size_t i = 0; i < requestedVersion->size(); ++i) {
@@ -896,7 +896,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           }
 
           if (isLogical) {
-            for (const auto &root : includeRoots) {
+            for (const auto &root : importRoots) {
               std::filesystem::path candidate = root / logicalPath;
               if (std::filesystem::exists(candidate)) {
                 if (isPrivatePath(candidate)) {
@@ -920,7 +920,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
               resolved = std::filesystem::absolute(candidate);
               return true;
             }
-            for (const auto &root : includeRoots) {
+            for (const auto &root : importRoots) {
               candidate = root / requested;
               if (std::filesystem::exists(candidate)) {
                 if (isPrivatePath(candidate)) {
@@ -943,7 +943,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
             resolved = std::filesystem::absolute(requested);
             return true;
           }
-          for (const auto &root : includeRoots) {
+          for (const auto &root : importRoots) {
             std::filesystem::path candidate = root / logicalPath;
             if (std::filesystem::exists(candidate)) {
               if (isPrivatePath(candidate)) {
@@ -959,7 +959,7 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
         };
 
         std::optional<std::string> selectedVersion;
-        std::vector<std::filesystem::path> allIncludeFiles;
+        std::vector<std::filesystem::path> allImportFiles;
         for (const auto &path : paths) {
           std::filesystem::path resolved;
           std::optional<std::string> resolvedVersion;
@@ -982,21 +982,21 @@ bool IncludeResolver::expandIncludesInternal(const std::string &baseDir,
           if (!collectPrimeFiles(resolved, includeFiles, error)) {
             return false;
           }
-          allIncludeFiles.insert(allIncludeFiles.end(), includeFiles.begin(), includeFiles.end());
+          allImportFiles.insert(allImportFiles.end(), includeFiles.begin(), includeFiles.end());
         }
-        for (const auto &includeFile : allIncludeFiles) {
-          const std::string expandedKey = normalizePathKey(includeFile);
+        for (const auto &importFile : allImportFiles) {
+          const std::string expandedKey = normalizePathKey(importFile);
           if (expanded.count(expandedKey) > 0) {
             continue;
           }
-          std::string resolvedText = includeFile.string();
+          std::string resolvedText = importFile.string();
           std::string included;
           if (!readFile(resolvedText, included)) {
             error = "failed to read import: " + resolvedText;
             return false;
           }
           expanded.insert(expandedKey);
-          if (!expandIncludesInternal(includeFile.parent_path().string(), included, expanded, error, includeRoots)) {
+          if (!expandImportsInternal(importFile.parent_path().string(), included, expanded, error, importRoots)) {
             return false;
           }
           result.append(included);

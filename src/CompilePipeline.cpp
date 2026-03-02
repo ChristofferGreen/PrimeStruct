@@ -1,7 +1,7 @@
 #include "primec/CompilePipeline.h"
 
 #include "primec/AstPrinter.h"
-#include "primec/IncludeResolver.h"
+#include "primec/ImportResolver.h"
 #include "primec/IrPrinter.h"
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
@@ -62,13 +62,13 @@ bool shouldAutoIncludeStdlib(const std::string &source) {
   return false;
 }
 
-bool appendStdlibSources(const std::vector<std::string> &includePaths,
+bool appendStdlibSources(const std::vector<std::string> &importPaths,
                          std::string &source,
                          std::string &error) {
   std::error_code ec;
   std::unordered_set<std::string> seen;
   bool appended = false;
-  for (const auto &pathText : includePaths) {
+  for (const auto &pathText : importPaths) {
     std::filesystem::path root(pathText);
     if (root.filename() != "stdlib") {
       continue;
@@ -116,7 +116,7 @@ bool appendStdlibSources(const std::vector<std::string> &includePaths,
 
 } // namespace
 
-void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &includePaths) {
+void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths) {
   auto addFromBase = [&](const std::filesystem::path &base) -> bool {
     std::error_code ec;
     std::filesystem::path dir = base;
@@ -128,7 +128,7 @@ void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::stri
       if (std::filesystem::exists(candidate, ec) && std::filesystem::is_directory(candidate, ec)) {
         std::filesystem::path absoluteCandidate = std::filesystem::absolute(candidate, ec);
         std::string candidateText = absoluteCandidate.string();
-        for (const auto &path : includePaths) {
+        for (const auto &path : importPaths) {
           std::filesystem::path existing = std::filesystem::absolute(path, ec);
           if (!ec && std::filesystem::equivalent(existing, absoluteCandidate, ec)) {
             return true;
@@ -137,7 +137,7 @@ void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::stri
             return true;
           }
         }
-        includePaths.push_back(candidateText);
+        importPaths.push_back(candidateText);
         return true;
       }
       if (current == current.root_path()) {
@@ -178,14 +178,14 @@ bool runCompilePipeline(const Options &options,
   }
 
   std::string source;
-  IncludeResolver includeResolver;
-  if (!includeResolver.expandIncludes(options.inputPath, source, error, options.includePaths)) {
+  ImportResolver importResolver;
+  if (!importResolver.expandImports(options.inputPath, source, error, options.importPaths)) {
     errorStage = CompilePipelineErrorStage::Include;
     return false;
   }
 
   if (shouldAutoIncludeStdlib(source)) {
-    if (!appendStdlibSources(options.includePaths, source, error)) {
+    if (!appendStdlibSources(options.importPaths, source, error)) {
       errorStage = CompilePipelineErrorStage::Include;
       return false;
     }
