@@ -408,6 +408,69 @@ TEST_CASE("legacy include-path alias is rejected in primec and primevm") {
         std::string::npos);
 }
 
+TEST_CASE("emit-diagnostics reports argument payload for removed include-path option") {
+  const std::filesystem::path includeRoot =
+      std::filesystem::temp_directory_path() / "primec_tests" / "include_root_legacy_flag_diagnostics";
+  std::filesystem::remove_all(includeRoot);
+  std::filesystem::create_directories(includeRoot);
+
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("emit_diagnostics_include_path_removed.prime", source);
+  const std::string primecErrPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_include_path_removed_err.json").string();
+  const std::string primecBareErrPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_include_path_removed_bare_err.json")
+          .string();
+  const std::string primevmErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_include_path_removed_err.json").string();
+  const std::string primevmBareErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_include_path_removed_bare_err.json")
+          .string();
+
+  const std::string primecCmd = "./primec " + quoteShellArg(srcPath) + " --emit-diagnostics --include-path=" +
+                                includeRoot.string() + " 2> " + quoteShellArg(primecErrPath);
+  CHECK(runCommand(primecCmd) == 2);
+  const std::string primecDiagnostics = readFile(primecErrPath);
+  CHECK(primecDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("\"message\":\"unknown option: --include-path=" + includeRoot.string() + "\"") !=
+        std::string::npos);
+  CHECK(primecDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("Usage: primec") == std::string::npos);
+
+  const std::string primecBareCmd = "./primec " + quoteShellArg(srcPath) +
+                                    " --emit-diagnostics --include-path 2> " + quoteShellArg(primecBareErrPath);
+  CHECK(runCommand(primecBareCmd) == 2);
+  const std::string primecBareDiagnostics = readFile(primecBareErrPath);
+  CHECK(primecBareDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primecBareDiagnostics.find("\"message\":\"unknown option: --include-path\"") != std::string::npos);
+  CHECK(primecBareDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primecBareDiagnostics.find("Usage: primec") == std::string::npos);
+
+  const std::string primevmCmd = "./primevm " + quoteShellArg(srcPath) + " --emit-diagnostics --include-path=" +
+                                 includeRoot.string() + " 2> " + quoteShellArg(primevmErrPath);
+  CHECK(runCommand(primevmCmd) == 2);
+  const std::string primevmDiagnostics = readFile(primevmErrPath);
+  CHECK(primevmDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("\"message\":\"unknown option: --include-path=" + includeRoot.string() + "\"") !=
+        std::string::npos);
+  CHECK(primevmDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("Usage: primevm") == std::string::npos);
+
+  const std::string primevmBareCmd = "./primevm " + quoteShellArg(srcPath) +
+                                     " --emit-diagnostics --include-path 2> " + quoteShellArg(primevmBareErrPath);
+  CHECK(runCommand(primevmBareCmd) == 2);
+  const std::string primevmBareDiagnostics = readFile(primevmBareErrPath);
+  CHECK(primevmBareDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primevmBareDiagnostics.find("\"message\":\"unknown option: --include-path\"") != std::string::npos);
+  CHECK(primevmBareDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primevmBareDiagnostics.find("Usage: primevm") == std::string::npos);
+}
+
 TEST_CASE("compiles and runs versioned import expansion") {
   const std::filesystem::path includeRoot =
       std::filesystem::temp_directory_path() / "primec_tests" / "include_root_versioned";
