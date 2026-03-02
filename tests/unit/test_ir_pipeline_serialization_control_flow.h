@@ -351,6 +351,128 @@ TEST_CASE("vm reports missing return in called function") {
   CHECK(error.find("missing return in IR function /helper") != std::string::npos);
 }
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+namespace {
+std::string quoteIrPipelineShellArg(const std::string &value) {
+  std::string quoted = "'";
+  for (char c : value) {
+    if (c == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += c;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+int runIrPipelineNativeBinary(const std::string &path) {
+  int code = std::system(quoteIrPipelineShellArg(path).c_str());
+  if (code == -1) {
+    return -1;
+  }
+  if (WIFEXITED(code)) {
+    return WEXITSTATUS(code);
+  }
+  if (WIFSIGNALED(code)) {
+    return 128 + WTERMSIG(code);
+  }
+  return -1;
+}
+} // namespace
+
+TEST_CASE("native backend executes call and callvoid opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction valueFn;
+  valueFn.name = "/value";
+  valueFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  valueFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction ignoredFn;
+  ignoredFn.name = "/ignored";
+  ignoredFn.instructions.push_back({primec::IrOpcode::PushI32, 999});
+  ignoredFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(valueFn));
+  module.functions.push_back(std::move(ignoredFn));
+
+  primec::NativeEmitter emitter;
+  std::string error;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_call_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exePath, error));
+  CHECK(error.empty());
+  CHECK(runIrPipelineNativeBinary(exePath) == 7);
+}
+
+TEST_CASE("native backend executes recursive call opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction factFn;
+  factFn.name = "/fact";
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 7});
+  factFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  factFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  factFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  factFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  factFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(factFn));
+
+  primec::NativeEmitter emitter;
+  std::string error;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_recursive_call_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exePath, error));
+  CHECK(error.empty());
+  CHECK(runIrPipelineNativeBinary(exePath) == 24);
+}
+
+TEST_CASE("native backend rejects invalid callable IR target") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  primec::NativeEmitter emitter;
+  std::string error;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_invalid_call_exec").string();
+  CHECK_FALSE(emitter.emitExecutable(module, exePath, error));
+  CHECK(error.find("invalid call target") != std::string::npos);
+}
+#endif
+
 TEST_CASE("ir serializes execution metadata") {
   primec::IrModule module;
   module.entryIndex = 0;

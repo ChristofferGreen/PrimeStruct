@@ -1,6 +1,8 @@
 #include <algorithm>
+#include <cstdlib>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 
 #include "third_party/doctest.h"
@@ -9,9 +11,14 @@
 #include "primec/IrSerializer.h"
 #include "primec/IrValidation.h"
 #include "primec/Lexer.h"
+#include "primec/NativeEmitter.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/Vm.h"
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/wait.h>
+#endif
 
 namespace {
 bool parseAndValidate(const std::string &source,

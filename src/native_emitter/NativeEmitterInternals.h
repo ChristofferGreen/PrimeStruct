@@ -48,22 +48,33 @@ class Arm64Emitter {
  public:
   static constexpr uint32_t MaxLdrStrOffsetBytes = 0xFFFu * 8u;
 
-  bool beginFunction(uint64_t frameSize, std::string &error) {
+  bool beginFunction(uint64_t frameSize, bool resetValueStack, std::string &error) {
     (void)error;
     frameSize_ = frameSize;
     if (frameSize_ > 0) {
       emitAdjustSp(frameSize_, false);
     }
     emit(encodeAddRegImm(27, 31, 0));
-    if (frameSize_ == 0) {
-      emit(encodeAddRegImm(28, 27, 0));
-    } else if (frameSize_ <= 4095) {
-      emit(encodeAddRegImm(28, 27, static_cast<uint16_t>(frameSize_)));
-    } else {
-      emitMovImm64(9, frameSize_);
-      emit(encodeAddReg(28, 27, 9));
+    if (resetValueStack) {
+      if (frameSize_ == 0) {
+        emit(encodeAddRegImm(28, 27, 0));
+      } else if (frameSize_ <= 4095) {
+        emit(encodeAddRegImm(28, 27, static_cast<uint16_t>(frameSize_)));
+      } else {
+        emitMovImm64(9, frameSize_);
+        emit(encodeAddReg(28, 27, 9));
+      }
     }
     return true;
+  }
+
+  void emitCaptureEntryArgs() {
+    emitMovReg(19, 0);
+    emitMovReg(20, 1);
+  }
+
+  void emitMovRegPublic(uint8_t rd, uint8_t rn) {
+    emitMovReg(rd, rn);
   }
 
   void emitPushI32(int32_t value) {
@@ -370,6 +381,12 @@ class Arm64Emitter {
     return index;
   }
 
+  size_t emitCallPlaceholder() {
+    size_t index = currentWordIndex();
+    emit(encodeBl(0));
+    return index;
+  }
+
   size_t emitJumpIfZeroPlaceholder() {
     emitPopReg(0);
     emitCompareRegZero(0);
@@ -380,8 +397,16 @@ class Arm64Emitter {
     patchWord(index, encodeB(offsetWords));
   }
 
+  void patchCall(size_t index, int32_t offsetWords) {
+    patchWord(index, encodeBl(offsetWords));
+  }
+
   void patchJumpIfZero(size_t index, int32_t offsetWords) {
     patchCondBranch(index, offsetWords, CondCode::Eq);
+  }
+
+  void emitPushReg0() {
+    emitPushReg(0);
   }
 
   size_t currentWordIndex() const {
@@ -398,6 +423,44 @@ class Arm64Emitter {
 
   void emitReturnVoid() {
     emitMovImm64(0, 0);
+    if (frameSize_ > 0) {
+      emitAdjustSp(frameSize_, true);
+    }
+    emit(encodeRet());
+  }
+
+  void emitReturnWithLink(uint32_t linkLocalIndex) {
+    emitPopReg(0);
+    emitLoadLocalToReg(30, linkLocalIndex);
+    if (frameSize_ > 0) {
+      emitAdjustSp(frameSize_, true);
+    }
+    emit(encodeRet());
+  }
+
+  void emitReturnVoidWithLink(uint32_t linkLocalIndex) {
+    emitMovImm64(0, 0);
+    emitLoadLocalToReg(30, linkLocalIndex);
+    if (frameSize_ > 0) {
+      emitAdjustSp(frameSize_, true);
+    }
+    emit(encodeRet());
+  }
+
+  void emitReturnWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex) {
+    emitPopReg(0);
+    emitLoadLocalToReg(30, linkLocalIndex);
+    emitLoadLocalToReg(27, frameLocalIndex);
+    if (frameSize_ > 0) {
+      emitAdjustSp(frameSize_, true);
+    }
+    emit(encodeRet());
+  }
+
+  void emitReturnVoidWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex) {
+    emitMovImm64(0, 0);
+    emitLoadLocalToReg(30, linkLocalIndex);
+    emitLoadLocalToReg(27, frameLocalIndex);
     if (frameSize_ > 0) {
       emitAdjustSp(frameSize_, true);
     }
@@ -1181,6 +1244,11 @@ class Arm64Emitter {
   static uint32_t encodeB(int32_t imm26) {
     uint32_t imm = static_cast<uint32_t>(imm26) & 0x03FFFFFFu;
     return 0x14000000 | imm;
+  }
+
+  static uint32_t encodeBl(int32_t imm26) {
+    uint32_t imm = static_cast<uint32_t>(imm26) & 0x03FFFFFFu;
+    return 0x94000000 | imm;
   }
 
   static uint32_t encodeBCond(int32_t imm19, uint8_t cond) {

@@ -23,68 +23,87 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     return false;
   }
 
-  const IrFunction &fn = module.functions[static_cast<size_t>(module.entryIndex)];
-  Arm64Emitter emitter;
-  size_t localCount = 0;
-  int64_t maxStack = 0;
-  bool needsPrintScratch = false;
-  bool needsArgc = false;
-  bool needsArgv = false;
-  for (const auto &inst : fn.instructions) {
-    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
-        inst.op == IrOpcode::AddressOfLocal) {
-      localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+  constexpr uint64_t ValueStackBytes = 1024ull * 1024ull;
+  const size_t entryIndex = static_cast<size_t>(module.entryIndex);
+
+  struct FunctionLayout {
+    size_t localCount = 0;
+    bool needsPrintScratch = false;
+    bool needsArgc = false;
+    bool needsArgv = false;
+    uint32_t argcLocalIndex = 0;
+    uint32_t argvLocalIndex = 0;
+    uint32_t framePointerLocalIndex = 0;
+    uint32_t linkLocalIndex = 0;
+    uint32_t scratchSlots = 0;
+    uint32_t scratchBytes = 0;
+    uint32_t scratchOffset = 0;
+    uint64_t localsSize = 0;
+    uint64_t frameSize = 0;
+  };
+  std::vector<FunctionLayout> layouts(module.functions.size());
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    const IrFunction &fn = module.functions[functionIndex];
+    FunctionLayout &layout = layouts[functionIndex];
+    for (const auto &inst : fn.instructions) {
+      if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+          inst.op == IrOpcode::AddressOfLocal) {
+        layout.localCount = std::max(layout.localCount, static_cast<size_t>(inst.imm) + 1);
+      }
+      if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
+          inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintStringDynamic ||
+          inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe ||
+          inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 ||
+          inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteByte ||
+          inst.op == IrOpcode::FileWriteNewline) {
+        layout.needsPrintScratch = true;
+      }
+      if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
+        layout.needsArgc = true;
+        layout.needsArgv = true;
+      }
+      if (inst.op == IrOpcode::PushArgc) {
+        layout.needsArgc = true;
+      }
     }
-    if (inst.op == IrOpcode::PrintI32 || inst.op == IrOpcode::PrintI64 || inst.op == IrOpcode::PrintU64 ||
-        inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintStringDynamic ||
-        inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe ||
-        inst.op == IrOpcode::FileWriteI32 || inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 ||
-        inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
-      needsPrintScratch = true;
+    if (functionIndex == entryIndex) {
+      int64_t maxStack = 0;
+      if (!computeMaxStackDepth(fn, maxStack, error)) {
+        return false;
+      }
     }
-    if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
-      needsArgc = true;
-      needsArgv = true;
+    if (layout.needsArgc) {
+      layout.argcLocalIndex = static_cast<uint32_t>(layout.localCount);
+      layout.localCount += 1;
     }
-    if (inst.op == IrOpcode::PushArgc) {
-      needsArgc = true;
+    if (layout.needsArgv) {
+      layout.argvLocalIndex = static_cast<uint32_t>(layout.localCount);
+      layout.localCount += 1;
     }
-  }
-  if (!computeMaxStackDepth(fn, maxStack, error)) {
-    return false;
-  }
-  uint32_t argcLocalIndex = 0;
-  uint32_t argvLocalIndex = 0;
-  if (needsArgc) {
-    argcLocalIndex = static_cast<uint32_t>(localCount);
-    localCount += 1;
-  }
-  if (needsArgv) {
-    argvLocalIndex = static_cast<uint32_t>(localCount);
-    localCount += 1;
-  }
-  uint32_t scratchSlots = needsPrintScratch ? PrintScratchSlots : 0;
-  uint32_t scratchBytes = scratchSlots * 16;
-  uint32_t scratchOffset = static_cast<uint32_t>(localCount) * 16;
-  uint64_t localsSize = static_cast<uint64_t>(localCount + scratchSlots) * 16;
-  uint64_t stackSize = static_cast<uint64_t>(maxStack) * 16;
-  uint64_t frameSize = alignTo(localsSize + stackSize, 16);
-  if (!emitter.beginFunction(frameSize, error)) {
-    return false;
-  }
-  if (needsArgc) {
-    emitter.emitStoreLocalFromReg(argcLocalIndex, 0);
-  }
-  if (needsArgv) {
-    emitter.emitStoreLocalFromReg(argvLocalIndex, 1);
+    layout.framePointerLocalIndex = static_cast<uint32_t>(layout.localCount);
+    layout.localCount += 1;
+    layout.linkLocalIndex = static_cast<uint32_t>(layout.localCount);
+    layout.localCount += 1;
+    layout.scratchSlots = layout.needsPrintScratch ? PrintScratchSlots : 0;
+    layout.scratchBytes = layout.scratchSlots * 16;
+    layout.scratchOffset = static_cast<uint32_t>(layout.localCount) * 16;
+    layout.localsSize = static_cast<uint64_t>(layout.localCount + layout.scratchSlots) * 16;
+    layout.frameSize = alignTo(layout.localsSize, 16);
   }
 
+  Arm64Emitter emitter;
   struct BranchFixup {
     size_t codeIndex = 0;
+    size_t functionIndex = 0;
     size_t targetInst = 0;
     bool isConditional = false;
   };
-  std::vector<BranchFixup> fixups;
+  std::vector<BranchFixup> branchFixups;
+  struct CallFixup {
+    size_t codeIndex = 0;
+    size_t targetFunctionIndex = 0;
+  };
+  std::vector<CallFixup> callFixups;
   struct StringFixup {
     size_t codeIndex = 0;
     uint32_t stringIndex = 0;
@@ -105,12 +124,47 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
                                      static_cast<uint64_t>(stringData.size());
   const uint64_t stringTableOffsetDelta = static_cast<uint64_t>(stringData.size()) + stringDataPadding;
   const uint64_t stringOffsetTableSize = static_cast<uint64_t>(module.stringTable.size()) * sizeof(uint64_t);
-  std::vector<size_t> instOffsets(fn.instructions.size() + 1, 0);
+  std::vector<size_t> functionOffsets(module.functions.size(), 0);
+  std::vector<std::vector<size_t>> instOffsets(module.functions.size());
+  std::vector<size_t> emitOrder;
+  emitOrder.reserve(module.functions.size());
+  emitOrder.push_back(entryIndex);
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    if (functionIndex != entryIndex) {
+      emitOrder.push_back(functionIndex);
+    }
+  }
 
-  for (size_t index = 0; index < fn.instructions.size(); ++index) {
-    const auto &inst = fn.instructions[index];
-    instOffsets[index] = emitter.currentWordIndex();
-    switch (inst.op) {
+  for (size_t functionIndex : emitOrder) {
+    const IrFunction &fn = module.functions[functionIndex];
+    const FunctionLayout &layout = layouts[functionIndex];
+    const bool isEntryFunction = functionIndex == entryIndex;
+    uint64_t frameSize = layout.frameSize;
+    if (isEntryFunction) {
+      frameSize = alignTo(layout.localsSize + ValueStackBytes, 16);
+    }
+    functionOffsets[functionIndex] = emitter.currentWordIndex();
+    emitter.emitMovRegPublic(21, 27);
+    if (!emitter.beginFunction(frameSize, isEntryFunction, error)) {
+      return false;
+    }
+    if (isEntryFunction) {
+      emitter.emitCaptureEntryArgs();
+    }
+    if (layout.needsArgc) {
+      emitter.emitStoreLocalFromReg(layout.argcLocalIndex, 19);
+    }
+    if (layout.needsArgv) {
+      emitter.emitStoreLocalFromReg(layout.argvLocalIndex, 20);
+    }
+    emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21);
+    emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30);
+    instOffsets[functionIndex].assign(fn.instructions.size() + 1, 0);
+
+    for (size_t index = 0; index < fn.instructions.size(); ++index) {
+      const auto &inst = fn.instructions[index];
+      instOffsets[functionIndex][index] = emitter.currentWordIndex();
+      switch (inst.op) {
       case IrOpcode::PushI32:
         emitter.emitPushI32(static_cast<int32_t>(inst.imm));
         break;
@@ -124,7 +178,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         emitter.emitPushF64(inst.imm);
         break;
       case IrOpcode::PushArgc:
-        emitter.emitLoadLocal(argcLocalIndex);
+        emitter.emitLoadLocal(layout.argcLocalIndex);
         break;
       case IrOpcode::LoadLocal:
         emitter.emitLoadLocal(static_cast<uint32_t>(inst.imm));
@@ -339,57 +393,72 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       case IrOpcode::JumpIfZero: {
         BranchFixup fixup;
         fixup.codeIndex = emitter.emitJumpIfZeroPlaceholder();
+        fixup.functionIndex = functionIndex;
         fixup.targetInst = static_cast<size_t>(inst.imm);
         fixup.isConditional = true;
-        fixups.push_back(fixup);
+        branchFixups.push_back(fixup);
         break;
       }
       case IrOpcode::Jump: {
         BranchFixup fixup;
         fixup.codeIndex = emitter.emitJumpPlaceholder();
+        fixup.functionIndex = functionIndex;
         fixup.targetInst = static_cast<size_t>(inst.imm);
         fixup.isConditional = false;
-        fixups.push_back(fixup);
+        branchFixups.push_back(fixup);
         break;
       }
-      case IrOpcode::Call:
-      case IrOpcode::CallVoid:
-        error = "native backend does not support call opcodes yet";
-        return false;
+      case IrOpcode::Call: {
+        if (inst.imm >= module.functions.size()) {
+          error = "native backend detected invalid call target";
+          return false;
+        }
+        callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
+        emitter.emitPushReg0();
+        break;
+      }
+      case IrOpcode::CallVoid: {
+        if (inst.imm >= module.functions.size()) {
+          error = "native backend detected invalid call target";
+          return false;
+        }
+        callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
+        break;
+      }
       case IrOpcode::ReturnVoid:
-        emitter.emitReturnVoid();
+        emitter.emitReturnVoidWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::ReturnI32:
-        emitter.emitReturn();
+        emitter.emitReturnWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::ReturnI64:
-        emitter.emitReturn();
+        emitter.emitReturnWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::ReturnF32:
-        emitter.emitReturn();
+        emitter.emitReturnWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::ReturnF64:
-        emitter.emitReturn();
+        emitter.emitReturnWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::PrintI32: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
-        emitter.emitPrintSigned(scratchOffset, scratchBytes, newline, fd);
+        emitter.emitPrintSigned(layout.scratchOffset, layout.scratchBytes, newline, fd);
         break;
       }
       case IrOpcode::PrintI64: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
-        emitter.emitPrintSigned(scratchOffset, scratchBytes, newline, fd);
+        emitter.emitPrintSigned(layout.scratchOffset, layout.scratchBytes, newline, fd);
         break;
       }
       case IrOpcode::PrintU64: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
-        emitter.emitPrintUnsigned(scratchOffset, scratchBytes, newline, fd);
+        emitter.emitPrintUnsigned(layout.scratchOffset, layout.scratchBytes, newline, fd);
         break;
       }
       case IrOpcode::PrintString: {
@@ -402,7 +471,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
         size_t fixupIndex = emitter.emitPrintStringPlaceholder(
-            module.stringTable[static_cast<size_t>(stringIndex)].size(), scratchOffset, newline, fd);
+            module.stringTable[static_cast<size_t>(stringIndex)].size(), layout.scratchOffset, newline, fd);
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(stringIndex)});
         break;
       }
@@ -411,8 +480,8 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
         size_t fixupIndex =
-            emitter.emitPrintStringDynamicPlaceholder(stringTableOffsetDelta, stringOffsetTableSize, scratchOffset,
-                                                      newline, fd);
+            emitter.emitPrintStringDynamicPlaceholder(stringTableOffsetDelta, stringOffsetTableSize,
+                                                      layout.scratchOffset, newline, fd);
         stringTableFixups.push_back(fixupIndex);
         break;
       }
@@ -450,13 +519,13 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
         emitter.emitFileFlush();
         break;
       case IrOpcode::FileWriteI32:
-        emitter.emitFileWriteI32(scratchOffset, scratchBytes);
+        emitter.emitFileWriteI32(layout.scratchOffset, layout.scratchBytes);
         break;
       case IrOpcode::FileWriteI64:
-        emitter.emitFileWriteI64(scratchOffset, scratchBytes);
+        emitter.emitFileWriteI64(layout.scratchOffset, layout.scratchBytes);
         break;
       case IrOpcode::FileWriteU64:
-        emitter.emitFileWriteU64(scratchOffset, scratchBytes);
+        emitter.emitFileWriteU64(layout.scratchOffset, layout.scratchBytes);
         break;
       case IrOpcode::FileWriteString: {
         if (inst.imm >= module.stringTable.size()) {
@@ -464,28 +533,28 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
           return false;
         }
         size_t fixupIndex = emitter.emitFileWriteStringPlaceholder(
-            module.stringTable[static_cast<size_t>(inst.imm)].size(), scratchOffset);
+            module.stringTable[static_cast<size_t>(inst.imm)].size(), layout.scratchOffset);
         stringFixups.push_back({fixupIndex, static_cast<uint32_t>(inst.imm)});
         break;
       }
       case IrOpcode::FileWriteByte:
-        emitter.emitFileWriteByte(scratchOffset);
+        emitter.emitFileWriteByte(layout.scratchOffset);
         break;
       case IrOpcode::FileWriteNewline:
-        emitter.emitFileWriteNewline(scratchOffset);
+        emitter.emitFileWriteNewline(layout.scratchOffset);
         break;
       case IrOpcode::PrintArgv: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
-        emitter.emitPrintArgv(argcLocalIndex, argvLocalIndex, scratchOffset, newline, fd);
+        emitter.emitPrintArgv(layout.argcLocalIndex, layout.argvLocalIndex, layout.scratchOffset, newline, fd);
         break;
       }
       case IrOpcode::PrintArgvUnsafe: {
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
-        emitter.emitPrintArgv(argcLocalIndex, argvLocalIndex, scratchOffset, newline, fd);
+        emitter.emitPrintArgv(layout.argcLocalIndex, layout.argvLocalIndex, layout.scratchOffset, newline, fd);
         break;
       }
       case IrOpcode::LoadStringByte: {
@@ -500,19 +569,21 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       default:
         error = "unsupported IR opcode for native backend";
         return false;
+      }
     }
-  }
 
-  instOffsets[fn.instructions.size()] = emitter.currentWordIndex();
+    instOffsets[functionIndex][fn.instructions.size()] = emitter.currentWordIndex();
+  }
 
   constexpr int64_t kImm26Min = -(1LL << 25);
   constexpr int64_t kImm26Max = (1LL << 25) - 1;
-  for (const auto &fixup : fixups) {
+  for (const auto &fixup : branchFixups) {
+    const IrFunction &fn = module.functions[fixup.functionIndex];
     if (fixup.targetInst > fn.instructions.size()) {
       error = "native backend detected invalid jump target";
       return false;
     }
-    int64_t targetOffset = static_cast<int64_t>(instOffsets[fixup.targetInst]);
+    int64_t targetOffset = static_cast<int64_t>(instOffsets[fixup.functionIndex][fixup.targetInst]);
     int64_t branchOffset = static_cast<int64_t>(fixup.codeIndex);
     int64_t delta = targetOffset - branchOffset;
     if (fixup.isConditional) {
@@ -528,6 +599,20 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       }
       emitter.patchJump(fixup.codeIndex, static_cast<int32_t>(delta));
     }
+  }
+  for (const auto &fixup : callFixups) {
+    if (fixup.targetFunctionIndex >= module.functions.size()) {
+      error = "native backend detected invalid call target";
+      return false;
+    }
+    int64_t targetOffset = static_cast<int64_t>(functionOffsets[fixup.targetFunctionIndex]);
+    int64_t branchOffset = static_cast<int64_t>(fixup.codeIndex);
+    int64_t delta = targetOffset - branchOffset;
+    if (delta < kImm26Min || delta > kImm26Max) {
+      error = "native backend call offset out of range";
+      return false;
+    }
+    emitter.patchCall(fixup.codeIndex, static_cast<int32_t>(delta));
   }
 
   uint32_t codeBaseOffset = 0;
