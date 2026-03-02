@@ -287,6 +287,38 @@ main() {
   CHECK(diagnostics.find("\"notes\":[\"backend: vm\"]") != std::string::npos);
 }
 
+TEST_CASE("emit-diagnostics reports argument payload for removed text-filters option") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("emit_diagnostics_text_filters_removed.prime", source);
+  const std::string primecErrPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_diagnostics_text_filters_removed_err.json").string();
+  const std::string primevmErrPath =
+      (std::filesystem::temp_directory_path() / "primevm_emit_diagnostics_text_filters_removed_err.json").string();
+
+  const std::string primecCmd = "./primec " + quoteShellArg(srcPath) +
+                                " --emit-diagnostics --text-filters=none 2> " + quoteShellArg(primecErrPath);
+  CHECK(runCommand(primecCmd) == 2);
+  const std::string primecDiagnostics = readFile(primecErrPath);
+  CHECK(primecDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("\"message\":\"unknown option: --text-filters=none\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primecDiagnostics.find("Usage: primec") == std::string::npos);
+
+  const std::string primevmCmd = "./primevm " + quoteShellArg(srcPath) +
+                                 " --emit-diagnostics --text-filters=none 2> " + quoteShellArg(primevmErrPath);
+  CHECK(runCommand(primevmCmd) == 2);
+  const std::string primevmDiagnostics = readFile(primevmErrPath);
+  CHECK(primevmDiagnostics.find("\"code\":\"PSC0001\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("\"message\":\"unknown option: --text-filters=none\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("\"severity\":\"error\"") != std::string::npos);
+  CHECK(primevmDiagnostics.find("Usage: primevm") == std::string::npos);
+}
+
 TEST_CASE("primec list transforms prints metadata") {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_list_transforms.txt").string();
