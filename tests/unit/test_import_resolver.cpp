@@ -1,11 +1,14 @@
 #include "primec/ImportResolver.h"
+#include "primec/ProcessRunner.h"
 
 #include "third_party/doctest.h"
 
+#include <functional>
 #include <filesystem>
 #include <fstream>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 namespace {
 std::string writeTemp(const std::string &name, const std::string &contents) {
@@ -54,6 +57,25 @@ bool createZip(const std::filesystem::path &zipPath, const std::filesystem::path
                         quoteShellArg(zipPath.string()) + " .";
   return runCommand(command);
 }
+
+class RecordingProcessRunner final : public primec::ProcessRunner {
+public:
+  explicit RecordingProcessRunner(std::function<int(const std::string &)> handler = {})
+      : handler_(std::move(handler)) {}
+
+  int run(const std::string &command) const override {
+    commands.push_back(command);
+    if (handler_) {
+      return handler_(command);
+    }
+    return 1;
+  }
+
+  mutable std::vector<std::string> commands;
+
+private:
+  std::function<int(const std::string &)> handler_;
+};
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.imports.resolver");
@@ -730,6 +752,54 @@ TEST_CASE("rejects private import root directory") {
   primec::ImportResolver resolver;
   CHECK_FALSE(resolver.expandImports(srcPath, source, error));
   CHECK(error.find("private folder") != std::string::npos);
+}
+
+TEST_CASE("import resolver uses injected process runner for archive extraction errors") {
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_injected_runner_fail";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(baseDir);
+
+  const std::filesystem::path archivePath = baseDir / "fake_archive.zip";
+  writeFile(archivePath, "not-a-real-zip");
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.0\">\n");
+
+  RecordingProcessRunner runner([](const std::string &) { return 1; });
+  primec::ImportResolver resolver(&runner);
+  std::string source;
+  std::string error;
+  CHECK_FALSE(resolver.expandImports(srcPath, source, error, {archivePath.string()}));
+  CHECK(error.find("failed to extract archive:") == 0);
+  REQUIRE(runner.commands.size() == 1);
+  CHECK(runner.commands.front().find("unzip -q -o ") == 0);
+}
+
+TEST_CASE("import resolver supports injected process runner success path") {
+  if (!hasZipTools()) {
+    return;
+  }
+  auto baseDir = std::filesystem::temp_directory_path() / "primec_tests" / "include_injected_runner_ok";
+  auto archiveRoot = baseDir / "archive_root";
+  auto archiveSource = archiveRoot / "archive_src";
+  std::filesystem::remove_all(baseDir);
+  std::filesystem::create_directories(archiveSource);
+
+  writeFile(archiveSource / "1.2.0" / "lib.prime", "// INJECTED_RUNNER_OK\n");
+  const std::filesystem::path archivePath = archiveRoot / "lib.zip";
+  CHECK(createZip(archivePath, archiveSource));
+
+  const std::string srcPath = writeFile(baseDir / "main.prime", "import<\"/lib.prime\", version=\"1.2\">\n");
+  RecordingProcessRunner runner([](const std::string &command) {
+    return primec::systemProcessRunner().run(command);
+  });
+  primec::ImportResolver resolver(&runner);
+
+  std::string source;
+  std::string error;
+  CHECK(resolver.expandImports(srcPath, source, error, {archivePath.string()}));
+  CHECK(error.empty());
+  CHECK(source.find("INJECTED_RUNNER_OK") != std::string::npos);
+  REQUIRE_FALSE(runner.commands.empty());
+  CHECK(runner.commands.front().find("unzip -q -o ") == 0);
 }
 
 TEST_SUITE_END();

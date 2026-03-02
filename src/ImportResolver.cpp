@@ -1,4 +1,5 @@
 #include "primec/ImportResolver.h"
+#include "primec/ProcessRunner.h"
 
 #include <algorithm>
 #include <cctype>
@@ -341,6 +342,7 @@ std::string quoteShellArg(const std::string &value) {
 }
 
 bool extractArchive(const std::filesystem::path &archive,
+                    const ProcessRunner &processRunner,
                     std::filesystem::path &outDir,
                     std::string &error) {
   std::string absPath = std::filesystem::absolute(archive).string();
@@ -354,7 +356,7 @@ bool extractArchive(const std::filesystem::path &archive,
   }
   std::string command =
       "unzip -q -o " + quoteShellArg(absPath) + " -d " + quoteShellArg(outDir.string());
-  if (std::system(command.c_str()) != 0) {
+  if (processRunner.run(command) != 0) {
     error = "failed to extract archive: " + absPath;
     return false;
   }
@@ -362,6 +364,7 @@ bool extractArchive(const std::filesystem::path &archive,
 }
 
 bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
+                        const ProcessRunner &processRunner,
                         std::vector<std::filesystem::path> &expanded,
                         std::string &error) {
   expanded.clear();
@@ -394,7 +397,7 @@ bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
     }
     if (std::filesystem::is_regular_file(rootPath) && rootPath.extension() == ".zip") {
       std::filesystem::path extracted;
-      if (!extractArchive(rootPath, extracted, error)) {
+      if (!extractArchive(rootPath, processRunner, extracted, error)) {
         return false;
       }
       pushUniqueRoot(extracted);
@@ -418,7 +421,7 @@ bool appendArchiveRoots(const std::vector<std::filesystem::path> &roots,
     });
     for (const auto &archive : archives) {
       std::filesystem::path extracted;
-      if (!extractArchive(archive, extracted, error)) {
+      if (!extractArchive(archive, processRunner, extracted, error)) {
         return false;
       }
       pushUniqueRoot(extracted);
@@ -636,6 +639,9 @@ bool selectVersionDirectory(const std::filesystem::path &baseDir,
 
 } // namespace
 
+ImportResolver::ImportResolver(const ProcessRunner *processRunner)
+    : processRunner_(processRunner != nullptr ? processRunner : &systemProcessRunner()) {}
+
 bool ImportResolver::expandImports(const std::string &inputPath,
                                      std::string &source,
                                      std::string &error,
@@ -657,7 +663,7 @@ bool ImportResolver::expandImports(const std::string &inputPath,
     importRoots.push_back(std::filesystem::absolute(path));
   }
   std::vector<std::filesystem::path> expandedRoots;
-  if (!appendArchiveRoots(importRoots, expandedRoots, error)) {
+  if (!appendArchiveRoots(importRoots, *processRunner_, expandedRoots, error)) {
     return false;
   }
   std::unordered_set<std::string> expanded;

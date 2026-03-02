@@ -11,6 +11,7 @@ add_library(primec_lib
   src/AstPrinter.cpp
   src/CompilePipeline.cpp
   src/Diagnostics.cpp
+  src/ExternalTooling.cpp
   src/emitter/EmitterEmit.cpp
   src/emitter/EmitterExpr.cpp
   src/emitter/EmitterHelpersBuiltins.cpp
@@ -32,6 +33,7 @@ add_library(primec_lib
   src/native_emitter/NativeEmitterHelpers.cpp
   src/native_emitter/NativeEmitterEmit.cpp
   src/OptionsParser.cpp
+  src/ProcessRunner.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserExpr.cpp
   src/parser/ParserHelpers.cpp

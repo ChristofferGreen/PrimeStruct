@@ -1,6 +1,7 @@
 #include "primec/CompilePipeline.h"
 #include "primec/Diagnostics.h"
 #include "primec/Emitter.h"
+#include "primec/ExternalTooling.h"
 #include "primec/GlslEmitter.h"
 #include "primec/IrInliner.h"
 #include "primec/IrLowerer.h"
@@ -14,7 +15,6 @@
 
 #include <cctype>
 #include <chrono>
-#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <fstream>
@@ -294,10 +294,6 @@ bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &conten
   return file.good();
 }
 
-bool runCommand(const std::string &command) {
-  return std::system(command.c_str()) == 0;
-}
-
 std::string injectComputeLayout(const std::string &glslSource) {
   const std::string layoutLine = "layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;\n";
   size_t versionPos = glslSource.find("#version");
@@ -309,32 +305,6 @@ std::string injectComputeLayout(const std::string &glslSource) {
     return glslSource + "\n" + layoutLine;
   }
   return glslSource.substr(0, lineEnd + 1) + layoutLine + glslSource.substr(lineEnd + 1);
-}
-
-bool findSpirvCompiler(std::string &toolName) {
-  if (runCommand("glslangValidator -v > /dev/null 2>&1")) {
-    toolName = "glslangValidator";
-    return true;
-  }
-  if (runCommand("glslc --version > /dev/null 2>&1")) {
-    toolName = "glslc";
-    return true;
-  }
-  return false;
-}
-
-std::string quotePath(const std::filesystem::path &path) {
-  std::string text = path.string();
-  std::string quoted = "\"";
-  for (char c : text) {
-    if (c == '\"') {
-      quoted += "\\\"";
-    } else {
-      quoted += c;
-    }
-  }
-  quoted += "\"";
-  return quoted;
 }
 
 int emitFailure(const primec::Options &options,
@@ -400,6 +370,7 @@ int main(int argc, char **argv) {
     printTransformList(std::cout);
     return 0;
   }
+  const primec::ProcessRunner &processRunner = primec::systemProcessRunner();
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
@@ -643,7 +614,7 @@ int main(int argc, char **argv) {
     }
     std::string spirvSource = injectComputeLayout(glslSource);
     std::string toolName;
-    if (!findSpirvCompiler(toolName)) {
+    if (!primec::findSpirvCompiler(processRunner, toolName)) {
       return emitFailure(options,
                          primec::DiagnosticCode::EmitError,
                          "SPIR-V emit error: ",
@@ -663,13 +634,7 @@ int main(int argc, char **argv) {
                          2);
     }
 
-    std::string command;
-    if (toolName == "glslangValidator") {
-      command = "glslangValidator -V -S comp " + quotePath(tempPath) + " -o " + quotePath(options.outputPath);
-    } else {
-      command = "glslc -fshader-stage=compute " + quotePath(tempPath) + " -o " + quotePath(options.outputPath);
-    }
-    bool ok = runCommand(command);
+    bool ok = primec::compileSpirv(processRunner, toolName, tempPath, options.outputPath);
     std::error_code ec;
     std::filesystem::remove(tempPath, ec);
     if (!ok) {
@@ -717,9 +682,7 @@ int main(int argc, char **argv) {
                        2);
   }
 
-  std::string command =
-      "clang++ -std=c++23 -O2 " + quotePath(cppPath) + " -o " + quotePath(outputPath);
-  if (!runCommand(command)) {
+  if (!primec::compileCppExecutable(processRunner, cppPath, outputPath)) {
     return emitFailure(options,
                        primec::DiagnosticCode::EmitError,
                        "",

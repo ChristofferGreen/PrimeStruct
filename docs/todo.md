@@ -13,7 +13,7 @@ Legend:
 - ✓ Add native backend callable IR support (function labels/relocations) before optional inlining.
 - ✓ Introduce an explicit inlining optimization pass after IR validation, gated by a flag.
 - ✓ Unify `primec` and `primevm` argument parsing into a shared `OptionsParser` module.
-- ○ Replace `std::system` archive extraction/tool invocation with an injected process abstraction for testability.
+- ✓ Replace `std::system` archive extraction/tool invocation with an injected process abstraction for testability.
 - ○ Add backend capability matrix tests specifically for call semantics (recursion, tail-call, indirect-call policy).
 - ○ Split IR lowerer fragment headers into compileable units with explicit interfaces and ownership boundaries.
 - ○ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit).

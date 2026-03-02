@@ -6,9 +6,12 @@
 #include <vector>
 
 namespace primec {
+class ProcessRunner;
 
 class ImportResolver {
 public:
+  explicit ImportResolver(const ProcessRunner *processRunner = nullptr);
+
   bool expandImports(const std::string &inputPath,
                       std::string &source,
                       std::string &error,
@@ -20,6 +23,8 @@ private:
                               std::unordered_set<std::string> &expanded,
                               std::string &error,
                               const std::vector<std::filesystem::path> &importRoots);
+
+  const ProcessRunner *processRunner_ = nullptr;
 };
 
 } // namespace primec
