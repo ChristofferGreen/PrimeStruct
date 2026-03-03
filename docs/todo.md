@@ -27,8 +27,8 @@ Legend:
 - ✓ Continue operator fragment split by extracting `ClampMinMaxTrig` lowering into compileable helpers.
 - ✓ Continue operator fragment split by extracting `ArcHyperbolic` lowering into compileable helpers.
 - ✓ Continue operator fragment split by extracting `PowAbsSign` lowering into compileable helpers.
-- ◐ Continue operator fragment split by extracting `ConversionsAndCalls` lowering into compileable helpers (phase 1 extracted convert/pointer/collection/mutation-call lowering to `IrLowererOperatorConversionsAndCallsHelpers.{h,cpp}`).
-- ○ Continue operator fragment split by extracting the remaining `ConversionsAndCalls` block/match/if expression-call lowering tail into compileable helpers.
+- ✓ Continue operator fragment split by extracting `ConversionsAndCalls` lowering into compileable helpers (phase 1 extracted convert/pointer/collection/mutation-call lowering to `IrLowererOperatorConversionsAndCallsHelpers.{h,cpp}`; phase 2 extracted block/match/if expression-call lowering tail into the same compileable unit).
+- ✓ Continue operator fragment split by extracting the remaining `ConversionsAndCalls` block/match/if expression-call lowering tail into compileable helpers.
 - ○ Continue IR lowerer unit split by extracting setup/statement fragments and removing include-only composition headers.
 - ○ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit).
 
