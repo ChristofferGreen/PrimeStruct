@@ -262,4 +262,21 @@ std::string inferStructReturnPathFromDefinition(
   return "";
 }
 
+std::string inferStructPathFromCallTarget(
+    const Expr &expr,
+    const InferStructExprPathFn &resolveExprPath,
+    const IsKnownStructPathFn &isKnownStructPath,
+    const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isFieldAccess) {
+    return "";
+  }
+
+  const std::string resolved = resolveExprPath(expr);
+  if (isKnownStructPath(resolved)) {
+    return resolved;
+  }
+
+  return inferDefinitionStructReturnPath(resolved);
+}
+
 } // namespace primec::ir_lowerer

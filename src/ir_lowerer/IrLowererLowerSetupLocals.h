@@ -387,14 +387,13 @@
   std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferDefinitionStructReturnPathImpl;
   std::function<std::string(const Expr &, std::unordered_set<std::string> &)> inferStructReturnExprPath;
   inferStructReturnExprPath = [&](const Expr &candidate, std::unordered_set<std::string> &visitedDefs) -> std::string {
-    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isFieldAccess) {
-      return "";
-    }
-    std::string resolved = resolveExprPath(candidate);
-    if (structFieldInfoByName.count(resolved) > 0) {
-      return resolved;
-    }
-    return inferDefinitionStructReturnPathImpl(resolved, visitedDefs);
+    return ir_lowerer::inferStructPathFromCallTarget(
+        candidate,
+        resolveExprPath,
+        [&](const std::string &resolvedPath) { return structFieldInfoByName.count(resolvedPath) > 0; },
+        [&](const std::string &resolvedPath) {
+          return inferDefinitionStructReturnPathImpl(resolvedPath, visitedDefs);
+        });
   };
   inferDefinitionStructReturnPathImpl = [&](const std::string &defPath,
                                             std::unordered_set<std::string> &visitedDefs) -> std::string {
@@ -438,16 +437,11 @@
         }
         return fieldInfo.structPath;
       }
-      if (!expr.isMethodCall) {
-        std::string resolved = resolveExprPath(expr);
-        if (structFieldInfoByName.count(resolved) > 0) {
-          return resolved;
-        }
-        std::string returnStruct = inferDefinitionStructReturnPath(resolved);
-        if (!returnStruct.empty()) {
-          return returnStruct;
-        }
-      }
+      return ir_lowerer::inferStructPathFromCallTarget(
+          expr,
+          resolveExprPath,
+          [&](const std::string &resolvedPath) { return structFieldInfoByName.count(resolvedPath) > 0; },
+          inferDefinitionStructReturnPath);
     }
     return "";
   };

@@ -516,6 +516,59 @@ TEST_CASE("ir lowerer struct type helpers infer struct return paths") {
   CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(unresolvedDef, resolveStruct, inferExpr).empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers infer call target struct paths") {
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.name == "Ctor") {
+      return std::string("/pkg/Ctor");
+    }
+    if (expr.name == "factory") {
+      return std::string("/pkg/factory");
+    }
+    return std::string("/pkg/unknown");
+  };
+  auto isKnownStructPath = [](const std::string &path) { return path == "/pkg/Ctor"; };
+  auto inferDefinitionStructReturnPath = [](const std::string &path) {
+    if (path == "/pkg/factory") {
+      return std::string("/pkg/FromDef");
+    }
+    return std::string();
+  };
+
+  primec::Expr ctorCall;
+  ctorCall.kind = primec::Expr::Kind::Call;
+  ctorCall.name = "Ctor";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTarget(
+            ctorCall, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath) == "/pkg/Ctor");
+
+  primec::Expr factoryCall;
+  factoryCall.kind = primec::Expr::Kind::Call;
+  factoryCall.name = "factory";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTarget(
+            factoryCall, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath) == "/pkg/FromDef");
+
+  primec::Expr unknownCall;
+  unknownCall.kind = primec::Expr::Kind::Call;
+  unknownCall.name = "unknown";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTarget(
+            unknownCall, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath).empty());
+
+  primec::Expr methodCall = ctorCall;
+  methodCall.isMethodCall = true;
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTarget(
+            methodCall, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath).empty());
+
+  primec::Expr fieldAccessCall = ctorCall;
+  fieldAccessCall.isFieldAccess = true;
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTarget(
+            fieldAccessCall, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath).empty());
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "Ctor";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTarget(
+            nameExpr, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath).empty());
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve struct array info from path") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   auto valueKindFromTypeName = [](const std::string &typeName) {
