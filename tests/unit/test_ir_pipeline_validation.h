@@ -744,6 +744,78 @@ TEST_CASE("ir lowerer string literal helper parses and validates encoding") {
   CHECK(error == "string literal requires utf8/ascii/raw_utf8/raw_ascii suffix");
 }
 
+TEST_CASE("ir lowerer string literal helper resolves string table targets") {
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) {
+    for (size_t i = 0; i < stringTable.size(); ++i) {
+      if (stringTable[i] == text) {
+        return static_cast<int32_t>(i);
+      }
+    }
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::StringLiteral;
+  literalExpr.stringValue = "\"hello\"utf8";
+
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveStringTableTarget(
+      literalExpr, primec::ir_lowerer::LocalMap{}, stringTable, internString, stringIndex, length, error));
+  CHECK(stringIndex == 0);
+  CHECK(length == 5);
+  CHECK(stringTable.size() == 1);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo local;
+  local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  local.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
+  local.stringIndex = 0;
+  locals.emplace("name", local);
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "name";
+  REQUIRE(primec::ir_lowerer::resolveStringTableTarget(
+      nameExpr, locals, stringTable, internString, stringIndex, length, error));
+  CHECK(stringIndex == 0);
+  CHECK(length == 5);
+}
+
+TEST_CASE("ir lowerer string literal helper reports table-target diagnostics") {
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) {
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo local;
+  local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  local.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
+  local.stringIndex = -1;
+  locals.emplace("bad", local);
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "bad";
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::resolveStringTableTarget(
+      nameExpr, locals, stringTable, internString, stringIndex, length, error));
+  CHECK(error == "native backend missing string table data for: bad");
+
+  error.clear();
+  locals["bad"].stringIndex = 42;
+  CHECK_FALSE(primec::ir_lowerer::resolveStringTableTarget(
+      nameExpr, locals, stringTable, internString, stringIndex, length, error));
+  CHECK(error == "native backend encountered invalid string table index");
+}
+
 TEST_CASE("ir lowerer template type parse helper splits nested template args") {
   std::vector<std::string> args;
   REQUIRE(primec::ir_lowerer::splitTemplateArgs(" i32 , map<string, array<i64>> , Result<bool, FileError> ", args));
