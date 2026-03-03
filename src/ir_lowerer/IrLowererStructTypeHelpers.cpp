@@ -290,6 +290,17 @@ std::string inferStructPathFromCallTarget(
   return inferDefinitionStructReturnPath(resolved);
 }
 
+std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind != Expr::Kind::Name) {
+    return "";
+  }
+  auto localIt = localsIn.find(expr.name);
+  if (localIt == localsIn.end()) {
+    return "";
+  }
+  return localIt->second.structTypeName;
+}
+
 std::string inferStructPathFromFieldAccessCall(
     const Expr &expr,
     const LocalMap &localsIn,

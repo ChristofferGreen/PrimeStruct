@@ -569,6 +569,26 @@ TEST_CASE("ir lowerer struct type helpers infer call target struct paths") {
             nameExpr, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath).empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers infer name-expression struct paths") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo structInfo;
+  structInfo.structTypeName = "/pkg/Point";
+  locals.emplace("point", structInfo);
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "point";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals) == "/pkg/Point");
+
+  nameExpr.name = "missing";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals).empty());
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "point";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(callExpr, locals).empty());
+}
+
 TEST_CASE("ir lowerer struct type helpers infer field-access struct paths") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo receiverInfo;

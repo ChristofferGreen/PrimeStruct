@@ -86,6 +86,7 @@ std::string inferStructPathFromCallTarget(
     const InferStructExprPathFn &resolveExprPath,
     const IsKnownStructPathFn &isKnownStructPath,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
+std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &localsIn);
 std::string inferStructPathFromFieldAccessCall(
     const Expr &expr,
     const LocalMap &localsIn,

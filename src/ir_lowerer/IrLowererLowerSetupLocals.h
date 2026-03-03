@@ -424,12 +424,9 @@
     return inferDefinitionStructReturnPathImpl(defPath, visitedDefs);
   };
   inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
-    if (expr.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.name);
-      if (it != localsIn.end()) {
-        return it->second.structTypeName;
-      }
-      return "";
+    const std::string nameStructPath = ir_lowerer::inferStructPathFromNameExpr(expr, localsIn);
+    if (!nameStructPath.empty() || expr.kind == Expr::Kind::Name) {
+      return nameStructPath;
     }
     if (expr.kind == Expr::Kind::Call) {
       const std::string fieldAccessStruct = ir_lowerer::inferStructPathFromFieldAccessCall(
