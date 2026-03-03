@@ -46,6 +46,8 @@ using ResolveUninitializedFieldTypeInfoFn =
     std::function<bool(const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out)>;
 using InferStructReturnExprWithVisitedFn =
     std::function<std::string(const Expr &, std::unordered_set<std::string> &)>;
+using InferDefinitionStructReturnPathWithVisitedFn =
+    std::function<std::string(const std::string &, std::unordered_set<std::string> &)>;
 
 struct UninitializedFieldStorageTypeInfo {
   const LocalInfo *receiver = nullptr;
@@ -97,6 +99,12 @@ std::string inferStructPathFromCallTargetWithFieldBindingIndex(
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
+std::string inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
+    const Expr &expr,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const InferDefinitionStructReturnPathWithVisitedFn &inferDefinitionStructReturnPath,
+    std::unordered_set<std::string> &visitedDefs);
 std::string inferStructReturnPathFromDefinitionMapWithVisited(
     const std::string &defPath,
     const std::unordered_map<std::string, const Definition *> &defMap,

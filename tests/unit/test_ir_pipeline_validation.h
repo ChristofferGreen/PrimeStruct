@@ -1154,6 +1154,47 @@ TEST_CASE("ir lowerer uninitialized type helpers infer call target struct paths 
             unknownCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath).empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer call target struct paths with visited field index callbacks") {
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          1,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Ctor", {"slot", "uninitialized", "i64", false});
+          });
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.name == "Ctor") {
+      return std::string("/pkg/Ctor");
+    }
+    if (expr.name == "factory") {
+      return std::string("/pkg/factory");
+    }
+    return std::string("/pkg/unknown");
+  };
+  auto inferDefinitionStructReturnPath = [](const std::string &path, std::unordered_set<std::string> &visitedDefs) {
+    if (path == "/pkg/factory" && visitedDefs.insert(path).second) {
+      return std::string("/pkg/FromDef");
+    }
+    return std::string();
+  };
+
+  std::unordered_set<std::string> visitedDefs;
+  primec::Expr factoryCall;
+  factoryCall.kind = primec::Expr::Kind::Call;
+  factoryCall.name = "factory";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
+            factoryCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath, visitedDefs) == "/pkg/FromDef");
+  CHECK(visitedDefs.count("/pkg/factory") == 1);
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
+            factoryCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath, visitedDefs)
+            .empty());
+
+  primec::Expr ctorCall;
+  ctorCall.kind = primec::Expr::Kind::Call;
+  ctorCall.name = "Ctor";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
+            ctorCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath, visitedDefs) == "/pkg/Ctor");
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths with visited map lookups") {
   primec::Definition factoryDef;
   factoryDef.fullPath = "/pkg/factory";

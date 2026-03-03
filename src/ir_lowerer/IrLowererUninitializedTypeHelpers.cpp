@@ -178,6 +178,21 @@ std::string inferStructPathFromCallTargetWithFieldBindingIndex(
       inferDefinitionStructReturnPath);
 }
 
+std::string inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
+    const Expr &expr,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const InferDefinitionStructReturnPathWithVisitedFn &inferDefinitionStructReturnPath,
+    std::unordered_set<std::string> &visitedDefs) {
+  return inferStructPathFromCallTargetWithFieldBindingIndex(
+      expr,
+      resolveExprPath,
+      fieldIndex,
+      [&](const std::string &resolvedPath) {
+        return inferDefinitionStructReturnPath(resolvedPath, visitedDefs);
+      });
+}
+
 std::string inferStructReturnPathFromDefinitionMapWithVisited(
     const std::string &defPath,
     const std::unordered_map<std::string, const Definition *> &defMap,

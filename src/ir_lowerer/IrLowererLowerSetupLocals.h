@@ -352,13 +352,12 @@
   std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferDefinitionStructReturnPathImpl;
   std::function<std::string(const Expr &, std::unordered_set<std::string> &)> inferStructReturnExprPath;
   inferStructReturnExprPath = [&](const Expr &candidate, std::unordered_set<std::string> &visitedDefs) -> std::string {
-    return ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndex(
+    return ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
         candidate,
         resolveExprPath,
         uninitializedFieldBindingIndex,
-        [&](const std::string &resolvedPath) {
-          return inferDefinitionStructReturnPathImpl(resolvedPath, visitedDefs);
-        });
+        inferDefinitionStructReturnPathImpl,
+        visitedDefs);
   };
   inferDefinitionStructReturnPathImpl = [&](const std::string &defPath,
                                             std::unordered_set<std::string> &visitedDefs) -> std::string {
