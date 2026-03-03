@@ -349,35 +349,13 @@
   };
 
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
-  std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferDefinitionStructReturnPathImpl;
-  std::function<std::string(const Expr &, std::unordered_set<std::string> &)> inferStructReturnExprPath;
-  inferStructReturnExprPath = [&](const Expr &candidate, std::unordered_set<std::string> &visitedDefs) -> std::string {
-    return ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
-        candidate,
-        resolveExprPath,
-        uninitializedFieldBindingIndex,
-        inferDefinitionStructReturnPathImpl,
-        visitedDefs);
-  };
-  inferDefinitionStructReturnPathImpl = [&](const std::string &defPath,
-                                            std::unordered_set<std::string> &visitedDefs) -> std::string {
-    return ir_lowerer::inferStructReturnPathFromDefinitionMapWithVisited(
-        defPath,
-        defMap,
-        resolveStructTypeName,
-        [&](const Expr &expr, std::unordered_set<std::string> &visitedIn) {
-          return inferStructReturnExprPath(expr, visitedIn);
-        },
-        visitedDefs);
-  };
   auto inferDefinitionStructReturnPath = [&](const std::string &defPath) -> std::string {
-    return ir_lowerer::inferStructReturnPathFromDefinitionMap(
+    return ir_lowerer::inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
         defPath,
         defMap,
         resolveStructTypeName,
-        [&](const Expr &expr, std::unordered_set<std::string> &visitedIn) {
-          return inferStructReturnExprPath(expr, visitedIn);
-        });
+        resolveExprPath,
+        uninitializedFieldBindingIndex);
   };
   inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
     const std::string nameStructPath = ir_lowerer::inferStructPathFromNameExpr(expr, localsIn);

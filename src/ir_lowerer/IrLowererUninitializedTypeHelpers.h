@@ -116,6 +116,19 @@ std::string inferStructReturnPathFromDefinitionMap(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const InferStructReturnExprWithVisitedFn &inferStructReturnExprPath);
+std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWithVisited(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    std::unordered_set<std::string> &visitedDefs);
+std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

@@ -1256,6 +1256,72 @@ TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths f
             .empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths by call target field index") {
+  primec::Definition factoryDef;
+  factoryDef.fullPath = "/pkg/factory";
+  factoryDef.namespacePrefix = "/pkg";
+  primec::Expr stepExpr;
+  stepExpr.kind = primec::Expr::Kind::Call;
+  stepExpr.name = "step";
+  factoryDef.returnExpr = stepExpr;
+
+  primec::Definition stepDef;
+  stepDef.fullPath = "/pkg/step";
+  stepDef.namespacePrefix = "/pkg";
+  primec::Expr ctorExpr;
+  ctorExpr.kind = primec::Expr::Kind::Call;
+  ctorExpr.name = "Ctor";
+  stepDef.returnExpr = ctorExpr;
+
+  primec::Definition cycleADef;
+  cycleADef.fullPath = "/pkg/cycleA";
+  cycleADef.namespacePrefix = "/pkg";
+  primec::Expr cycleBExpr;
+  cycleBExpr.kind = primec::Expr::Kind::Call;
+  cycleBExpr.name = "cycleB";
+  cycleADef.returnExpr = cycleBExpr;
+
+  primec::Definition cycleBDef;
+  cycleBDef.fullPath = "/pkg/cycleB";
+  cycleBDef.namespacePrefix = "/pkg";
+  primec::Expr cycleAExpr;
+  cycleAExpr.kind = primec::Expr::Kind::Call;
+  cycleAExpr.name = "cycleA";
+  cycleBDef.returnExpr = cycleAExpr;
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/factory", &factoryDef},
+      {"/pkg/step", &stepDef},
+      {"/pkg/cycleA", &cycleADef},
+      {"/pkg/cycleB", &cycleBDef},
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          1,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Ctor", {"slot", "uninitialized", "i64", false});
+          });
+
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind != primec::Expr::Kind::Call) {
+      return std::string();
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+            "/pkg/factory", defMap, resolveStructTypeName, resolveExprPath, fieldIndex) == "/pkg/Ctor");
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+            "/pkg/cycleA", defMap, resolveStructTypeName, resolveExprPath, fieldIndex)
+            .empty());
+
+  std::unordered_set<std::string> visitedDefs = {"/pkg/factory"};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWithVisited(
+            "/pkg/factory", defMap, resolveStructTypeName, resolveExprPath, fieldIndex, visitedDefs)
+            .empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});

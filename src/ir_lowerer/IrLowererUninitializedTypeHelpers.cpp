@@ -225,6 +225,42 @@ std::string inferStructReturnPathFromDefinitionMap(
       defPath, defMap, resolveStructTypeName, inferStructReturnExprPath, visitedDefs);
 }
 
+std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWithVisited(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    std::unordered_set<std::string> &visitedDefs) {
+  return inferStructReturnPathFromDefinitionMapWithVisited(
+      defPath,
+      defMap,
+      resolveStructTypeName,
+      [&](const Expr &expr, std::unordered_set<std::string> &visitedIn) {
+        return inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
+            expr,
+            resolveExprPath,
+            fieldIndex,
+            [&](const std::string &nestedDefPath, std::unordered_set<std::string> &nestedVisited) {
+              return inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWithVisited(
+                  nestedDefPath, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, nestedVisited);
+            },
+            visitedIn);
+      },
+      visitedDefs);
+}
+
+std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex) {
+  std::unordered_set<std::string> visitedDefs;
+  return inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWithVisited(
+      defPath, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, visitedDefs);
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {
