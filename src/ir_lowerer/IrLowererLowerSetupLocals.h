@@ -327,57 +327,62 @@
       }
       return true;
     }
-    if (!storage.isFieldAccess || storage.args.size() != 1) {
+    const LocalInfo *receiver = nullptr;
+    std::string structPath;
+    std::string fieldTypeTemplateArg;
+    if (!ir_lowerer::resolveUninitializedFieldStorageCandidate(
+            storage,
+            localsIn,
+            [&](const std::string &candidateStructPath,
+                const std::string &fieldName,
+                std::string &typeTemplateArgOut) -> bool {
+              auto fieldIt = structFieldInfoByName.find(candidateStructPath);
+              if (fieldIt == structFieldInfoByName.end()) {
+                return false;
+              }
+              for (const auto &field : fieldIt->second) {
+                if (field.isStatic) {
+                  continue;
+                }
+                if (field.name != fieldName) {
+                  continue;
+                }
+                if (field.binding.typeName != "uninitialized" || field.binding.typeTemplateArg.empty()) {
+                  return false;
+                }
+                typeTemplateArgOut = field.binding.typeTemplateArg;
+                return true;
+              }
+              return false;
+            },
+            receiver,
+            structPath,
+            fieldTypeTemplateArg)) {
       return true;
     }
-    const Expr &receiver = storage.args.front();
-    if (receiver.kind != Expr::Kind::Name) {
-      return true;
+
+    UninitializedTypeInfo info;
+    auto defIt = defMap.find(structPath);
+    std::string namespacePrefix;
+    if (defIt != defMap.end() && defIt->second) {
+      namespacePrefix = defIt->second->namespacePrefix;
     }
-    auto recvIt = localsIn.find(receiver.name);
-    if (recvIt == localsIn.end() || recvIt->second.structTypeName.empty()) {
-      return true;
+    if (!resolveUninitializedTypeInfo(fieldTypeTemplateArg, namespacePrefix, info)) {
+      if (error.empty()) {
+        error = "native backend does not support uninitialized storage for type: " + fieldTypeTemplateArg;
+      }
+      return false;
     }
-    const std::string &structPath = recvIt->second.structTypeName;
-    auto fieldIt = structFieldInfoByName.find(structPath);
-    if (fieldIt == structFieldInfoByName.end()) {
-      return true;
+    StructSlotFieldInfo slot;
+    if (!resolveStructFieldSlot(structPath, storage.name, slot)) {
+      return false;
     }
-    for (const auto &field : fieldIt->second) {
-      if (field.isStatic) {
-        continue;
-      }
-      if (field.name != storage.name) {
-        continue;
-      }
-      if (field.binding.typeName != "uninitialized" || field.binding.typeTemplateArg.empty()) {
-        return true;
-      }
-      UninitializedTypeInfo info;
-      auto defIt = defMap.find(structPath);
-      std::string namespacePrefix;
-      if (defIt != defMap.end() && defIt->second) {
-        namespacePrefix = defIt->second->namespacePrefix;
-      }
-      if (!resolveUninitializedTypeInfo(field.binding.typeTemplateArg, namespacePrefix, info)) {
-        if (error.empty()) {
-          error = "native backend does not support uninitialized storage for type: " +
-                  field.binding.typeTemplateArg;
-        }
-        return false;
-      }
-      StructSlotFieldInfo slot;
-      if (!resolveStructFieldSlot(structPath, field.name, slot)) {
-        return false;
-      }
-      out = UninitializedStorageAccess{};
-      out.location = UninitializedStorageAccess::Location::Field;
-      out.receiver = &recvIt->second;
-      out.fieldSlot = slot;
-      out.typeInfo = info;
-      resolved = true;
-      return true;
-    }
+    out = UninitializedStorageAccess{};
+    out.location = UninitializedStorageAccess::Location::Field;
+    out.receiver = receiver;
+    out.fieldSlot = slot;
+    out.typeInfo = info;
+    resolved = true;
     return true;
   };
 

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "IrLowererSharedTypes.h"
+#include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
 
@@ -17,6 +18,8 @@ struct UninitializedTypeInfo {
 
 using ResolveStructTypePathFn =
     std::function<bool(const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut)>;
+using FindUninitializedFieldTemplateArgFn =
+    std::function<bool(const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut)>;
 
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
@@ -24,5 +27,11 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   UninitializedTypeInfo &out,
                                   std::string &error);
 bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, UninitializedTypeInfo &out);
+bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
+                                               const LocalMap &localsIn,
+                                               const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+                                               const LocalInfo *&receiverOut,
+                                               std::string &structPathOut,
+                                               std::string &typeTemplateArgOut);
 
 } // namespace primec::ir_lowerer

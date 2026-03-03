@@ -702,6 +702,53 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata"
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve field storage candidates") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo receiver;
+  receiver.structTypeName = "/pkg/Container";
+  locals.emplace("self", receiver);
+  const auto receiverIt = locals.find("self");
+  REQUIRE(receiverIt != locals.end());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "self";
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Call;
+  storageExpr.isFieldAccess = true;
+  storageExpr.name = "slot";
+  storageExpr.args.push_back(receiverExpr);
+
+  auto findField = [](const std::string &structPath,
+                      const std::string &fieldName,
+                      std::string &typeTemplateArgOut) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      typeTemplateArgOut = "i64";
+      return true;
+    }
+    return false;
+  };
+
+  const primec::ir_lowerer::LocalInfo *receiverOut = nullptr;
+  std::string structPathOut;
+  std::string typeTemplateArgOut;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedFieldStorageCandidate(
+      storageExpr, locals, findField, receiverOut, structPathOut, typeTemplateArgOut));
+  CHECK(receiverOut == &receiverIt->second);
+  CHECK(structPathOut == "/pkg/Container");
+  CHECK(typeTemplateArgOut == "i64");
+
+  storageExpr.name = "missing";
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldStorageCandidate(
+      storageExpr, locals, findField, receiverOut, structPathOut, typeTemplateArgOut));
+
+  storageExpr.name = "slot";
+  storageExpr.isFieldAccess = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldStorageCandidate(
+      storageExpr, locals, findField, receiverOut, structPathOut, typeTemplateArgOut));
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));

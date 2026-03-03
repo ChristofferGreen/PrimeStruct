@@ -102,4 +102,34 @@ bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, Uninit
   return true;
 }
 
+bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
+                                               const LocalMap &localsIn,
+                                               const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+                                               const LocalInfo *&receiverOut,
+                                               std::string &structPathOut,
+                                               std::string &typeTemplateArgOut) {
+  receiverOut = nullptr;
+  structPathOut.clear();
+  typeTemplateArgOut.clear();
+  if (!storage.isFieldAccess || storage.args.size() != 1) {
+    return false;
+  }
+  const Expr &receiverExpr = storage.args.front();
+  if (receiverExpr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto recvIt = localsIn.find(receiverExpr.name);
+  if (recvIt == localsIn.end() || recvIt->second.structTypeName.empty()) {
+    return false;
+  }
+  std::string typeTemplateArg;
+  if (!findFieldTemplateArg(recvIt->second.structTypeName, storage.name, typeTemplateArg)) {
+    return false;
+  }
+  receiverOut = &recvIt->second;
+  structPathOut = recvIt->second.structTypeName;
+  typeTemplateArgOut = std::move(typeTemplateArg);
+  return true;
+}
+
 } // namespace primec::ir_lowerer
