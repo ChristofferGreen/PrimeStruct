@@ -1068,6 +1068,37 @@ TEST_CASE("ir lowerer uninitialized type helpers collect field bindings from ind
       fieldIndex, "/pkg/Missing", fieldsOut));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers build field binding index") {
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          2,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Container", {"slot", "uninitialized", "i64", false});
+            appendFieldBinding("/pkg/Container", {"static_slot", "uninitialized", "i32", true});
+            appendFieldBinding("/pkg/Other", {"value", "i64", "", false});
+          });
+
+  REQUIRE(fieldIndex.size() == 2);
+
+  std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fieldsOut;
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      fieldIndex, "/pkg/Container", fieldsOut));
+  REQUIRE(fieldsOut.size() == 2);
+  CHECK(fieldsOut[0].name == "slot");
+  CHECK(fieldsOut[0].typeTemplateArg == "i64");
+  CHECK(fieldsOut[1].name == "static_slot");
+  CHECK(fieldsOut[1].isStatic);
+
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      fieldIndex, "/pkg/Other", fieldsOut));
+  REQUIRE(fieldsOut.size() == 1);
+  CHECK(fieldsOut[0].name == "value");
+
+  const primec::ir_lowerer::UninitializedFieldBindingIndex emptyIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(4, {});
+  CHECK(emptyIndex.empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});

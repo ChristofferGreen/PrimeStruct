@@ -144,6 +144,21 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
   return true;
 }
 
+UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
+    std::size_t structReserveHint,
+    const EnumerateUninitializedFieldBindingsFn &enumerateFieldBindings) {
+  UninitializedFieldBindingIndex fieldIndex;
+  fieldIndex.reserve(structReserveHint);
+  if (!enumerateFieldBindings) {
+    return fieldIndex;
+  }
+  enumerateFieldBindings(
+      [&](const std::string &structPath, const UninitializedFieldBindingInfo &fieldBinding) {
+        fieldIndex[structPath].push_back(fieldBinding);
+      });
+  return fieldIndex;
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {

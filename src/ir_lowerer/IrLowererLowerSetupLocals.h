@@ -309,21 +309,21 @@
   };
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
-  ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex;
-  uninitializedFieldBindingIndex.reserve(structFieldInfoByName.size());
-  for (const auto &entry : structFieldInfoByName) {
-    std::vector<ir_lowerer::UninitializedFieldBindingInfo> fieldBindings;
-    fieldBindings.reserve(entry.second.size());
-    for (const auto &field : entry.second) {
-      ir_lowerer::UninitializedFieldBindingInfo info;
-      info.name = field.name;
-      info.typeName = field.binding.typeName;
-      info.typeTemplateArg = field.binding.typeTemplateArg;
-      info.isStatic = field.isStatic;
-      fieldBindings.push_back(std::move(info));
-    }
-    uninitializedFieldBindingIndex.emplace(entry.first, std::move(fieldBindings));
-  }
+  ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex =
+      ir_lowerer::buildUninitializedFieldBindingIndex(
+          structFieldInfoByName.size(),
+          [&](const ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            for (const auto &entry : structFieldInfoByName) {
+              for (const auto &field : entry.second) {
+                ir_lowerer::UninitializedFieldBindingInfo info;
+                info.name = field.name;
+                info.typeName = field.binding.typeName;
+                info.typeTemplateArg = field.binding.typeTemplateArg;
+                info.isStatic = field.isStatic;
+                appendFieldBinding(entry.first, info);
+              }
+            }
+          });
 
   auto resolveUninitializedStorage = [&](const Expr &storage,
                                          const LocalMap &localsIn,
