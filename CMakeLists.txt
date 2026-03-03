@@ -28,6 +28,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererLowerEffects.cpp
   src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp
+  src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp
   src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.cpp
   src/ir_lowerer/IrLowererOperatorComparisonHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp

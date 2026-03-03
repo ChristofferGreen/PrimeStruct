@@ -645,6 +645,96 @@ TEST_CASE("ir lowerer clamp helper ignores non clamp builtins") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer arc helper emits exp2 float multiply opcode") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::FloatLiteral;
+  arg.floatValue = "1.0";
+  arg.floatWidth = 64;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "exp2";
+  expr.args = {arg};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitArcHyperbolicOperatorExpr(
+      expr,
+      {},
+      true,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushF64, 0});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArcHyperbolicEmitResult::Handled);
+  CHECK(error.empty());
+  CHECK(instructions.size() > 10);
+  CHECK(std::any_of(instructions.begin(),
+                    instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::MulF64; }));
+}
+
+TEST_CASE("ir lowerer arc helper rejects non-float arc operands") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::BoolLiteral;
+  arg.boolValue = true;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "asin";
+  expr.args = {arg};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitArcHyperbolicOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArcHyperbolicEmitResult::Error);
+  CHECK(error == "asin requires float argument");
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer arc helper ignores non arc builtins") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "clamp";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitArcHyperbolicOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArcHyperbolicEmitResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";
