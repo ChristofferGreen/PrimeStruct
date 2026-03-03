@@ -313,6 +313,41 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
+  primec::Definition entryDef;
+  primec::Transform resultReturn;
+  resultReturn.name = "return";
+  resultReturn.templateArgs = {"Result<i64, FileError>"};
+  entryDef.transforms.push_back(resultReturn);
+
+  primec::ir_lowerer::EntryReturnConfig out;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::analyzeEntryReturnTransforms(entryDef, "/main", out, error));
+  CHECK(error.empty());
+  CHECK(out.hasReturnTransform);
+  CHECK_FALSE(out.returnsVoid);
+  CHECK(out.hasResultInfo);
+  CHECK(out.resultInfo.isResult);
+  CHECK(out.resultInfo.hasValue);
+}
+
+TEST_CASE("ir lowerer return inference helper handles void and diagnostics") {
+  primec::Definition noReturnDef;
+  primec::ir_lowerer::EntryReturnConfig out;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::analyzeEntryReturnTransforms(noReturnDef, "/main", out, error));
+  CHECK(out.returnsVoid);
+  CHECK_FALSE(out.hasReturnTransform);
+
+  primec::Definition invalidReturnDef;
+  primec::Transform arrayStringReturn;
+  arrayStringReturn.name = "return";
+  arrayStringReturn.templateArgs = {"array<string>"};
+  invalidReturnDef.transforms.push_back(arrayStringReturn);
+  CHECK_FALSE(primec::ir_lowerer::analyzeEntryReturnTransforms(invalidReturnDef, "/main", out, error));
+  CHECK(error == "native backend does not support string array return types on /main");
+}
+
 TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int32) == ValueKind::Int32);

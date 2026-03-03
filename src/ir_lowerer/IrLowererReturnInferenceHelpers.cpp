@@ -1,10 +1,52 @@
 #include "IrLowererReturnInferenceHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <functional>
 
 namespace primec::ir_lowerer {
+
+bool analyzeEntryReturnTransforms(const Definition &entryDef,
+                                  const std::string &entryPath,
+                                  EntryReturnConfig &out,
+                                  std::string &error) {
+  out = EntryReturnConfig{};
+  for (const auto &transform : entryDef.transforms) {
+    if (transform.name != "return") {
+      continue;
+    }
+    out.hasReturnTransform = true;
+    if (transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
+      out.returnsVoid = true;
+    }
+    if (transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string &typeName = transform.templateArgs.front();
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+      if (valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
+        error = "native backend does not support string array return types on " + entryPath;
+        return false;
+      }
+    }
+    bool resultHasValue = false;
+    LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+    std::string resultErrorType;
+    if (parseResultTypeName(typeName, resultHasValue, resultValueKind, resultErrorType)) {
+      out.resultInfo.isResult = true;
+      out.resultInfo.hasValue = resultHasValue;
+      out.hasResultInfo = true;
+    }
+  }
+  if (!out.hasReturnTransform && !entryDef.returnExpr.has_value()) {
+    out.returnsVoid = true;
+  }
+  return true;
+}
 
 bool inferDefinitionReturnType(const Definition &def,
                                LocalMap localsForInference,

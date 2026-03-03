@@ -4,41 +4,16 @@
 
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
-  bool hasReturnTransform = false;
   bool returnsVoid = false;
   ResultReturnInfo entryResultInfo;
   bool entryHasResultInfo = false;
-  for (const auto &transform : entryDef->transforms) {
-    if (transform.name != "return") {
-      continue;
-    }
-    hasReturnTransform = true;
-    if (transform.templateArgs.size() == 1 && transform.templateArgs.front() == "void") {
-      returnsVoid = true;
-    }
-    if (transform.templateArgs.size() == 1) {
-      const std::string &typeName = transform.templateArgs.front();
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
-        if (valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
-          error = "native backend does not support string array return types on " + entryPath;
-          return false;
-        }
-      }
-      bool resultHasValue = false;
-      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-      std::string resultErrorType;
-      if (parseResultTypeName(typeName, resultHasValue, resultValueKind, resultErrorType)) {
-        entryResultInfo.isResult = true;
-        entryResultInfo.hasValue = resultHasValue;
-        entryHasResultInfo = true;
-      }
-    }
+  EntryReturnConfig entryReturnConfig;
+  if (!ir_lowerer::analyzeEntryReturnTransforms(*entryDef, entryPath, entryReturnConfig, error)) {
+    return false;
   }
-  if (!hasReturnTransform && !entryDef->returnExpr.has_value()) {
-    returnsVoid = true;
-  }
+  returnsVoid = entryReturnConfig.returnsVoid;
+  entryResultInfo = entryReturnConfig.resultInfo;
+  entryHasResultInfo = entryReturnConfig.hasResultInfo;
 
   IrFunction function;
   function.name = entryPath;
