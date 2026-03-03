@@ -702,6 +702,21 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata"
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
+  std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
+  fields.push_back({"skip_static", "uninitialized", "i64", true});
+  fields.push_back({"wrong_type", "i64", "", false});
+  fields.push_back({"slot", "uninitialized", "map<i32, f64>", false});
+
+  std::string typeTemplateArg;
+  REQUIRE(primec::ir_lowerer::findUninitializedFieldTemplateArg(fields, "slot", typeTemplateArg));
+  CHECK(typeTemplateArg == "map<i32, f64>");
+
+  CHECK_FALSE(primec::ir_lowerer::findUninitializedFieldTemplateArg(fields, "missing", typeTemplateArg));
+  CHECK_FALSE(primec::ir_lowerer::findUninitializedFieldTemplateArg(fields, "wrong_type", typeTemplateArg));
+  CHECK_FALSE(primec::ir_lowerer::findUninitializedFieldTemplateArg(fields, "skip_static", typeTemplateArg));
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers resolve field storage candidates") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo receiver;

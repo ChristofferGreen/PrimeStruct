@@ -102,6 +102,25 @@ bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, Uninit
   return true;
 }
 
+bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
+                                       const std::string &fieldName,
+                                       std::string &typeTemplateArgOut) {
+  for (const auto &field : fields) {
+    if (field.isStatic) {
+      continue;
+    }
+    if (field.name != fieldName) {
+      continue;
+    }
+    if (field.typeName != "uninitialized" || field.typeTemplateArg.empty()) {
+      return false;
+    }
+    typeTemplateArgOut = field.typeTemplateArg;
+    return true;
+  }
+  return false;
+}
+
 bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
                                                const LocalMap &localsIn,
                                                const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,

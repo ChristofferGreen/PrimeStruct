@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
@@ -16,6 +17,13 @@ struct UninitializedTypeInfo {
   std::string structPath;
 };
 
+struct UninitializedFieldBindingInfo {
+  std::string name;
+  std::string typeName;
+  std::string typeTemplateArg;
+  bool isStatic = false;
+};
+
 using ResolveStructTypePathFn =
     std::function<bool(const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut)>;
 using FindUninitializedFieldTemplateArgFn =
@@ -27,6 +35,9 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   UninitializedTypeInfo &out,
                                   std::string &error);
 bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, UninitializedTypeInfo &out);
+bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
+                                       const std::string &fieldName,
+                                       std::string &typeTemplateArgOut);
 bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
                                                const LocalMap &localsIn,
                                                const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,

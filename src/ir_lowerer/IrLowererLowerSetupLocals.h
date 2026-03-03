@@ -340,20 +340,17 @@
               if (fieldIt == structFieldInfoByName.end()) {
                 return false;
               }
+              std::vector<ir_lowerer::UninitializedFieldBindingInfo> fields;
+              fields.reserve(fieldIt->second.size());
               for (const auto &field : fieldIt->second) {
-                if (field.isStatic) {
-                  continue;
-                }
-                if (field.name != fieldName) {
-                  continue;
-                }
-                if (field.binding.typeName != "uninitialized" || field.binding.typeTemplateArg.empty()) {
-                  return false;
-                }
-                typeTemplateArgOut = field.binding.typeTemplateArg;
-                return true;
+                ir_lowerer::UninitializedFieldBindingInfo info;
+                info.name = field.name;
+                info.typeName = field.binding.typeName;
+                info.typeTemplateArg = field.binding.typeTemplateArg;
+                info.isStatic = field.isStatic;
+                fields.push_back(std::move(info));
               }
-              return false;
+              return ir_lowerer::findUninitializedFieldTemplateArg(fields, fieldName, typeTemplateArgOut);
             },
             receiver,
             structPath,
