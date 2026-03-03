@@ -372,8 +372,13 @@
         visitedDefs);
   };
   auto inferDefinitionStructReturnPath = [&](const std::string &defPath) -> std::string {
-    std::unordered_set<std::string> visitedDefs;
-    return inferDefinitionStructReturnPathImpl(defPath, visitedDefs);
+    return ir_lowerer::inferStructReturnPathFromDefinitionMap(
+        defPath,
+        defMap,
+        resolveStructTypeName,
+        [&](const Expr &expr, std::unordered_set<std::string> &visitedIn) {
+          return inferStructReturnExprPath(expr, visitedIn);
+        });
   };
   inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
     const std::string nameStructPath = ir_lowerer::inferStructPathFromNameExpr(expr, localsIn);

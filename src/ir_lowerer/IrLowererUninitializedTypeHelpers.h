@@ -103,6 +103,11 @@ std::string inferStructReturnPathFromDefinitionMapWithVisited(
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const InferStructReturnExprWithVisitedFn &inferStructReturnExprPath,
     std::unordered_set<std::string> &visitedDefs);
+std::string inferStructReturnPathFromDefinitionMap(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructReturnExprWithVisitedFn &inferStructReturnExprPath);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

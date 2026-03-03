@@ -200,6 +200,16 @@ std::string inferStructReturnPathFromDefinitionMapWithVisited(
       [&](const Expr &expr) { return inferStructReturnExprPath(expr, visitedDefs); });
 }
 
+std::string inferStructReturnPathFromDefinitionMap(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructReturnExprWithVisitedFn &inferStructReturnExprPath) {
+  std::unordered_set<std::string> visitedDefs;
+  return inferStructReturnPathFromDefinitionMapWithVisited(
+      defPath, defMap, resolveStructTypeName, inferStructReturnExprPath, visitedDefs);
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {
