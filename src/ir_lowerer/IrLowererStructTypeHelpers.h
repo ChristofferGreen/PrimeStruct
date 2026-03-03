@@ -28,6 +28,14 @@ struct StructArrayTypeInfo {
 
 using CollectStructArrayFieldsFn = std::function<bool(const std::string &, std::vector<StructArrayFieldInfo> &)>;
 
+struct StructSlotFieldInfo {
+  std::string name;
+  int32_t slotOffset = -1;
+  int32_t slotCount = 0;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  std::string structPath;
+};
+
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
 bool resolveStructTypePathFromScope(
@@ -50,6 +58,9 @@ void applyStructArrayInfoFromBinding(const Expr &expr,
                                      const CollectStructArrayFieldsFn &collectStructArrayFields,
                                      const ValueKindFromTypeNameFn &valueKindFromTypeName,
                                      LocalInfo &info);
+bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
+                                  const std::string &fieldName,
+                                  StructSlotFieldInfo &out);
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info);

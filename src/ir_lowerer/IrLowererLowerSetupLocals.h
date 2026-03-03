@@ -181,13 +181,7 @@
   };
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
-  struct StructSlotFieldInfo {
-    std::string name;
-    int32_t slotOffset = -1;
-    int32_t slotCount = 0;
-    LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-    std::string structPath;
-  };
+  using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
   struct StructSlotLayout {
     std::string structPath;
     int32_t totalSlots = 0;
@@ -318,13 +312,7 @@
     if (!resolveStructSlotLayout(structPath, layout)) {
       return false;
     }
-    for (const auto &field : layout.fields) {
-      if (field.name == fieldName) {
-        out = field;
-        return true;
-      }
-    }
-    return false;
+    return ir_lowerer::resolveStructSlotFieldByName(layout.fields, fieldName, out);
   };
 
   struct UninitializedStorageAccess {

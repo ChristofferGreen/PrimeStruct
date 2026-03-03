@@ -528,6 +528,23 @@ TEST_CASE("ir lowerer struct type helpers apply struct array info") {
   CHECK(pointerInfo.structTypeName.empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers resolve struct slot field by name") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const std::vector<primec::ir_lowerer::StructSlotFieldInfo> fields = {
+      {"x", 1, 1, ValueKind::Int32, ""},
+      {"nested", 2, 3, ValueKind::Unknown, "/pkg/Nested"},
+  };
+
+  primec::ir_lowerer::StructSlotFieldInfo out;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotFieldByName(fields, "nested", out));
+  CHECK(out.name == "nested");
+  CHECK(out.slotOffset == 2);
+  CHECK(out.slotCount == 3);
+  CHECK(out.structPath == "/pkg/Nested");
+
+  CHECK_FALSE(primec::ir_lowerer::resolveStructSlotFieldByName(fields, "missing", out));
+}
+
 TEST_CASE("ir lowerer struct type helpers apply struct value info") {
   auto resolveStruct = [](const std::string &typeName,
                           const std::string &namespacePrefix,

@@ -145,6 +145,18 @@ void applyStructArrayInfoFromBinding(const Expr &expr,
   info.structFieldCount = structInfo.fieldCount;
 }
 
+bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
+                                  const std::string &fieldName,
+                                  StructSlotFieldInfo &out) {
+  for (const auto &field : fields) {
+    if (field.name == fieldName) {
+      out = field;
+      return true;
+    }
+  }
+  return false;
+}
+
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {
