@@ -11,11 +11,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
-  auto it = defMap.find(resolved);
-  if (it == defMap.end()) {
-    return nullptr;
-  }
-  return it->second;
+  return resolveDefinitionByPath(defMap, resolved);
 }
 
 std::string resolveCallPathFromScope(
@@ -50,7 +46,7 @@ bool isTailCallCandidate(const Expr &expr,
     return false;
   }
   const std::string targetPath = resolveExprPath(expr);
-  return defMap.find(targetPath) != defMap.end();
+  return resolveDefinitionByPath(defMap, targetPath) != nullptr;
 }
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
@@ -121,11 +117,21 @@ bool buildOrderedCallArguments(const Expr &callExpr,
 std::string resolveDefinitionNamespacePrefix(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &definitionPath) {
-  auto defIt = defMap.find(definitionPath);
-  if (defIt == defMap.end() || defIt->second == nullptr) {
+  const Definition *definition = resolveDefinitionByPath(defMap, definitionPath);
+  if (definition == nullptr) {
     return "";
   }
-  return defIt->second->namespacePrefix;
+  return definition->namespacePrefix;
+}
+
+const Definition *resolveDefinitionByPath(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::string &definitionPath) {
+  auto defIt = defMap.find(definitionPath);
+  if (defIt == defMap.end()) {
+    return nullptr;
+  }
+  return defIt->second;
 }
 
 } // namespace primec::ir_lowerer

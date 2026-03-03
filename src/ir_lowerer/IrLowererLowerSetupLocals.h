@@ -118,7 +118,7 @@
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
   auto definitionExists = [&](const std::string &path) {
-    return defMap.find(path) != defMap.end();
+    return ir_lowerer::resolveDefinitionByPath(defMap, path) != nullptr;
   };
   OnErrorByDefinition onErrorByDef;
   if (!ir_lowerer::buildOnErrorByDefinition(program, resolveExprPath, definitionExists, onErrorByDef, error)) {
@@ -215,8 +215,8 @@
       error = "recursive struct layout not supported: " + structPath;
       return false;
     }
-    auto defIt = defMap.find(structPath);
-    if (defIt == defMap.end() || !defIt->second) {
+    const Definition *structDef = ir_lowerer::resolveDefinitionByPath(defMap, structPath);
+    if (structDef == nullptr) {
       error = "native backend cannot resolve struct layout: " + structPath;
       structSlotLayoutStack.erase(structPath);
       return false;
@@ -231,7 +231,7 @@
     layout.structPath = structPath;
     int32_t offset = 1;
     layout.fields.reserve(fieldIt->second.size());
-    const std::string &namespacePrefix = defIt->second->namespacePrefix;
+    const std::string &namespacePrefix = structDef->namespacePrefix;
     for (const auto &field : fieldIt->second) {
       if (field.isStatic) {
         continue;
@@ -404,11 +404,11 @@
     if (!visitedDefs.insert(defPath).second) {
       return "";
     }
-    auto defIt = defMap.find(defPath);
-    if (defIt == defMap.end() || !defIt->second) {
+    const Definition *resolvedDef = ir_lowerer::resolveDefinitionByPath(defMap, defPath);
+    if (resolvedDef == nullptr) {
       return "";
     }
-    const Definition &def = *defIt->second;
+    const Definition &def = *resolvedDef;
     for (const auto &transform : def.transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;

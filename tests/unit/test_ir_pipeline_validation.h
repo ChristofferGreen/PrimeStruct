@@ -78,6 +78,19 @@ TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
   CHECK(primec::ir_lowerer::resolveDefinitionCall(bindingCall, defMap, resolver) == nullptr);
 }
 
+TEST_CASE("ir lowerer call helpers resolve definition paths") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/callee", &callee},
+      {"/null", nullptr},
+  };
+
+  CHECK(primec::ir_lowerer::resolveDefinitionByPath(defMap, "/callee") == &callee);
+  CHECK(primec::ir_lowerer::resolveDefinitionByPath(defMap, "/missing") == nullptr);
+  CHECK(primec::ir_lowerer::resolveDefinitionByPath(defMap, "/null") == nullptr);
+}
+
 TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
   primec::Definition scopedDef;
   scopedDef.fullPath = "/pkg/foo";
@@ -121,10 +134,12 @@ TEST_CASE("ir lowerer call helpers resolve definition namespace prefixes") {
   namespacedDef.namespacePrefix = "/pkg";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {"/pkg/foo", &namespacedDef},
+      {"/pkg/null", nullptr},
   };
 
   CHECK(primec::ir_lowerer::resolveDefinitionNamespacePrefix(defMap, "/pkg/foo") == "/pkg");
   CHECK(primec::ir_lowerer::resolveDefinitionNamespacePrefix(defMap, "/pkg/missing").empty());
+  CHECK(primec::ir_lowerer::resolveDefinitionNamespacePrefix(defMap, "/pkg/null").empty());
 }
 
 TEST_CASE("ir lowerer call helpers classify tail call candidates") {
