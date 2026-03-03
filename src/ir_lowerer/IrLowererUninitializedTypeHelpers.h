@@ -4,6 +4,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
@@ -43,6 +44,8 @@ using CollectUninitializedFieldBindingsFn =
 using ResolveDefinitionNamespacePrefixFn = std::function<std::string(const std::string &structPath)>;
 using ResolveUninitializedFieldTypeInfoFn =
     std::function<bool(const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out)>;
+using InferStructReturnExprWithVisitedFn =
+    std::function<std::string(const Expr &, std::unordered_set<std::string> &)>;
 
 struct UninitializedFieldStorageTypeInfo {
   const LocalInfo *receiver = nullptr;
@@ -94,6 +97,12 @@ std::string inferStructPathFromCallTargetWithFieldBindingIndex(
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
+std::string inferStructReturnPathFromDefinitionMapWithVisited(
+    const std::string &defPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructReturnExprWithVisitedFn &inferStructReturnExprPath,
+    std::unordered_set<std::string> &visitedDefs);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

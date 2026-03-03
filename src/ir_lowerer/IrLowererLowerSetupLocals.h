@@ -362,21 +362,14 @@
   };
   inferDefinitionStructReturnPathImpl = [&](const std::string &defPath,
                                             std::unordered_set<std::string> &visitedDefs) -> std::string {
-    if (defPath.empty()) {
-      return "";
-    }
-    if (!visitedDefs.insert(defPath).second) {
-      return "";
-    }
-    const Definition *resolvedDef = ir_lowerer::resolveDefinitionByPath(defMap, defPath);
-    if (resolvedDef == nullptr) {
-      return "";
-    }
-    const Definition &def = *resolvedDef;
-    return ir_lowerer::inferStructReturnPathFromDefinition(
-        def,
+    return ir_lowerer::inferStructReturnPathFromDefinitionMapWithVisited(
+        defPath,
+        defMap,
         resolveStructTypeName,
-        [&](const Expr &expr) { return inferStructReturnExprPath(expr, visitedDefs); });
+        [&](const Expr &expr, std::unordered_set<std::string> &visitedIn) {
+          return inferStructReturnExprPath(expr, visitedIn);
+        },
+        visitedDefs);
   };
   auto inferDefinitionStructReturnPath = [&](const std::string &defPath) -> std::string {
     std::unordered_set<std::string> visitedDefs;

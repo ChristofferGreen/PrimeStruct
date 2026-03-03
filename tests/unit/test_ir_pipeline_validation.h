@@ -1154,6 +1154,40 @@ TEST_CASE("ir lowerer uninitialized type helpers infer call target struct paths 
             unknownCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath).empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths with visited map lookups") {
+  primec::Definition factoryDef;
+  factoryDef.fullPath = "/pkg/factory";
+  factoryDef.namespacePrefix = "/pkg";
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "inner";
+  factoryDef.returnExpr = returnExpr;
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/factory", &factoryDef},
+  };
+
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto inferStructReturnExprPath = [](const primec::Expr &expr, std::unordered_set<std::string> &visitedDefs) {
+    if (expr.name == "inner" && visitedDefs.count("/pkg/factory") > 0) {
+      return std::string("/pkg/FromExpr");
+    }
+    return std::string();
+  };
+
+  std::unordered_set<std::string> visitedDefs;
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinitionMapWithVisited(
+            "/pkg/factory", defMap, resolveStructTypeName, inferStructReturnExprPath, visitedDefs) ==
+        "/pkg/FromExpr");
+  CHECK(visitedDefs.count("/pkg/factory") == 1);
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinitionMapWithVisited(
+            "/pkg/missing", defMap, resolveStructTypeName, inferStructReturnExprPath, visitedDefs)
+            .empty());
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinitionMapWithVisited(
+            "/pkg/factory", defMap, resolveStructTypeName, inferStructReturnExprPath, visitedDefs)
+            .empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});
