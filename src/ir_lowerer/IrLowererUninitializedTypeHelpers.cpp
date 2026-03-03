@@ -171,4 +171,40 @@ bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
   return true;
 }
 
+bool resolveUninitializedFieldStorageTypeInfo(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    UninitializedFieldStorageTypeInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  out = UninitializedFieldStorageTypeInfo{};
+  resolvedOut = false;
+
+  const LocalInfo *receiver = nullptr;
+  std::string structPath;
+  std::string typeTemplateArg;
+  if (!resolveUninitializedFieldStorageCandidate(
+          storage, localsIn, findFieldTemplateArg, receiver, structPath, typeTemplateArg)) {
+    return true;
+  }
+
+  UninitializedTypeInfo typeInfo;
+  const std::string namespacePrefix = resolveDefinitionNamespacePrefix(structPath);
+  if (!resolveUninitializedTypeInfo(typeTemplateArg, namespacePrefix, typeInfo)) {
+    if (error.empty()) {
+      error = "native backend does not support uninitialized storage for type: " + typeTemplateArg;
+    }
+    return false;
+  }
+
+  out.receiver = receiver;
+  out.structPath = std::move(structPath);
+  out.typeInfo = typeInfo;
+  resolvedOut = true;
+  return true;
+}
+
 } // namespace primec::ir_lowerer

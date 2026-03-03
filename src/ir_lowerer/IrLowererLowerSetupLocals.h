@@ -333,10 +333,8 @@
       }
       return true;
     }
-    const LocalInfo *receiver = nullptr;
-    std::string structPath;
-    std::string fieldTypeTemplateArg;
-    if (!ir_lowerer::resolveUninitializedFieldStorageCandidate(
+    ir_lowerer::UninitializedFieldStorageTypeInfo fieldStorage;
+    if (!ir_lowerer::resolveUninitializedFieldStorageTypeInfo(
             storage,
             localsIn,
             [&](const std::string &candidateStructPath,
@@ -358,29 +356,28 @@
               }
               return ir_lowerer::findUninitializedFieldTemplateArg(fields, fieldName, typeTemplateArgOut);
             },
-            receiver,
-            structPath,
-            fieldTypeTemplateArg)) {
+            [&](const std::string &candidateStructPath) {
+              return ir_lowerer::resolveDefinitionNamespacePrefix(defMap, candidateStructPath);
+            },
+            resolveUninitializedTypeInfo,
+            fieldStorage,
+            resolved,
+            error)) {
+      return false;
+    }
+    if (!resolved) {
       return true;
     }
 
-    UninitializedTypeInfo info;
-    const std::string namespacePrefix = ir_lowerer::resolveDefinitionNamespacePrefix(defMap, structPath);
-    if (!resolveUninitializedTypeInfo(fieldTypeTemplateArg, namespacePrefix, info)) {
-      if (error.empty()) {
-        error = "native backend does not support uninitialized storage for type: " + fieldTypeTemplateArg;
-      }
-      return false;
-    }
     StructSlotFieldInfo slot;
-    if (!resolveStructFieldSlot(structPath, storage.name, slot)) {
+    if (!resolveStructFieldSlot(fieldStorage.structPath, storage.name, slot)) {
       return false;
     }
     out = UninitializedStorageAccess{};
     out.location = UninitializedStorageAccess::Location::Field;
-    out.receiver = receiver;
+    out.receiver = fieldStorage.receiver;
     out.fieldSlot = slot;
-    out.typeInfo = info;
+    out.typeInfo = fieldStorage.typeInfo;
     resolved = true;
     return true;
   };

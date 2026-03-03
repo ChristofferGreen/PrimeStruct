@@ -28,6 +28,15 @@ using ResolveStructTypePathFn =
     std::function<bool(const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut)>;
 using FindUninitializedFieldTemplateArgFn =
     std::function<bool(const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut)>;
+using ResolveDefinitionNamespacePrefixFn = std::function<std::string(const std::string &structPath)>;
+using ResolveUninitializedFieldTypeInfoFn =
+    std::function<bool(const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out)>;
+
+struct UninitializedFieldStorageTypeInfo {
+  const LocalInfo *receiver = nullptr;
+  std::string structPath;
+  UninitializedTypeInfo typeInfo;
+};
 
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
@@ -49,5 +58,14 @@ bool resolveUninitializedFieldStorageCandidate(const Expr &storage,
                                                const LocalInfo *&receiverOut,
                                                std::string &structPathOut,
                                                std::string &typeTemplateArgOut);
+bool resolveUninitializedFieldStorageTypeInfo(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    UninitializedFieldStorageTypeInfo &out,
+    bool &resolvedOut,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

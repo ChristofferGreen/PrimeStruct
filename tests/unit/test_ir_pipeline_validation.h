@@ -1055,6 +1055,83 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve field storage candidate
       storageExpr, locals, findField, receiverOut, structPathOut, typeTemplateArgOut));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve field storage type info") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo receiver;
+  receiver.structTypeName = "/pkg/Container";
+  locals.emplace("self", receiver);
+  const auto receiverIt = locals.find("self");
+  REQUIRE(receiverIt != locals.end());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "self";
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Call;
+  storageExpr.isFieldAccess = true;
+  storageExpr.name = "slot";
+  storageExpr.args.push_back(receiverExpr);
+
+  auto findField = [](const std::string &structPath,
+                      const std::string &fieldName,
+                      std::string &typeTemplateArgOut) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      typeTemplateArgOut = "i64";
+      return true;
+    }
+    return false;
+  };
+  auto resolveNamespacePrefix = [](const std::string &structPath) {
+    if (structPath == "/pkg/Container") {
+      return std::string("/pkg");
+    }
+    return std::string();
+  };
+  auto resolveTypeInfo = [](const std::string &typeText,
+                            const std::string &namespacePrefix,
+                            primec::ir_lowerer::UninitializedTypeInfo &out) {
+    const auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
+    std::string error;
+    return primec::ir_lowerer::resolveUninitializedTypeInfo(typeText, namespacePrefix, resolveStruct, out, error);
+  };
+
+  primec::ir_lowerer::UninitializedFieldStorageTypeInfo out;
+  bool resolved = false;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedFieldStorageTypeInfo(
+      storageExpr, locals, findField, resolveNamespacePrefix, resolveTypeInfo, out, resolved, error));
+  CHECK(resolved);
+  CHECK(error.empty());
+  CHECK(out.receiver == &receiverIt->second);
+  CHECK(out.structPath == "/pkg/Container");
+  CHECK(out.typeInfo.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  storageExpr.name = "missing";
+  REQUIRE(primec::ir_lowerer::resolveUninitializedFieldStorageTypeInfo(
+      storageExpr, locals, findField, resolveNamespacePrefix, resolveTypeInfo, out, resolved, error));
+  CHECK_FALSE(resolved);
+
+  storageExpr.name = "slot";
+  auto findUnsupportedField = [](const std::string &structPath,
+                                 const std::string &fieldName,
+                                 std::string &typeTemplateArgOut) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      typeTemplateArgOut = "Thing<i32>";
+      return true;
+    }
+    return false;
+  };
+  auto resolveTypeInfoFail = [](const std::string &, const std::string &, primec::ir_lowerer::UninitializedTypeInfo &) {
+    return false;
+  };
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldStorageTypeInfo(
+      storageExpr, locals, findUnsupportedField, resolveNamespacePrefix, resolveTypeInfoFail, out, resolved, error));
+  CHECK(error == "native backend does not support uninitialized storage for type: Thing<i32>");
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));
