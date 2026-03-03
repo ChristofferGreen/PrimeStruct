@@ -314,7 +314,7 @@
                                          const LocalMap &localsIn,
                                          UninitializedStorageAccess &out,
                                          bool &resolved) -> bool {
-    if (!ir_lowerer::resolveUninitializedStorageAccessWithFieldBindings(
+    if (!ir_lowerer::resolveUninitializedStorageAccessFromDefinitions(
             storage,
             localsIn,
             [&](const std::string &structPath,
@@ -335,9 +335,7 @@
               }
               return true;
             },
-            [&](const std::string &candidateStructPath) {
-              return ir_lowerer::resolveDefinitionNamespacePrefix(defMap, candidateStructPath);
-            },
+            defMap,
             resolveUninitializedTypeInfo,
             resolveStructFieldSlot,
             out,

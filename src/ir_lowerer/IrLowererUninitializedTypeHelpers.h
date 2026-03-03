@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
@@ -121,6 +122,16 @@ bool resolveUninitializedStorageAccessWithFieldBindings(
     const LocalMap &localsIn,
     const CollectUninitializedFieldBindingsFn &collectFieldBindings,
     const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error);
+bool resolveUninitializedStorageAccessFromDefinitions(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     UninitializedStorageAccessInfo &out,

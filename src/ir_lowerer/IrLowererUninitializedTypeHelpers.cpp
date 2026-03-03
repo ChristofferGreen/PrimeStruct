@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererCallHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -341,6 +342,28 @@ bool resolveUninitializedStorageAccessWithFieldBindings(
         return resolveUninitializedFieldTemplateArg(structPath, fieldName, collectFieldBindings, typeTemplateArgOut);
       },
       resolveDefinitionNamespacePrefix,
+      resolveUninitializedTypeInfo,
+      resolveStructFieldSlot,
+      out,
+      resolvedOut,
+      error);
+}
+
+bool resolveUninitializedStorageAccessFromDefinitions(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  return resolveUninitializedStorageAccessWithFieldBindings(
+      storage,
+      localsIn,
+      collectFieldBindings,
+      [&](const std::string &structPath) { return resolveDefinitionNamespacePrefix(defMap, structPath); },
       resolveUninitializedTypeInfo,
       resolveStructFieldSlot,
       out,

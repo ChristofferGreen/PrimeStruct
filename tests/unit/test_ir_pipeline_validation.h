@@ -1495,6 +1495,104 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage with fi
   CHECK_FALSE(resolved);
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage from definitions") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localStorage;
+  localStorage.isUninitializedStorage = true;
+  localStorage.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  localStorage.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("slot", localStorage);
+  const auto localIt = locals.find("slot");
+  REQUIRE(localIt != locals.end());
+
+  primec::ir_lowerer::LocalInfo receiver;
+  receiver.structTypeName = "/pkg/Container";
+  locals.emplace("self", receiver);
+  const auto receiverIt = locals.find("self");
+  REQUIRE(receiverIt != locals.end());
+
+  primec::Definition containerDef;
+  containerDef.fullPath = "/pkg/Container";
+  containerDef.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/Container", &containerDef},
+  };
+
+  auto collectFields = [](const std::string &structPath,
+                          std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> &fieldsOut) {
+    if (structPath != "/pkg/Container") {
+      return false;
+    }
+    fieldsOut.clear();
+    fieldsOut.push_back({"slot", "uninitialized", "MyStruct", false});
+    return true;
+  };
+  auto resolveTypeInfo = [](const std::string &typeText,
+                            const std::string &namespacePrefix,
+                            primec::ir_lowerer::UninitializedTypeInfo &out) {
+    out = primec::ir_lowerer::UninitializedTypeInfo{};
+    if (typeText == "MyStruct" && namespacePrefix == "/pkg") {
+      out.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+      out.structPath = "/pkg/MyStruct";
+      return true;
+    }
+    return false;
+  };
+  auto resolveSlot = [](const std::string &structPath,
+                        const std::string &fieldName,
+                        primec::ir_lowerer::StructSlotFieldInfo &out) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      out.name = "slot";
+      out.slotOffset = 4;
+      out.slotCount = 1;
+      return true;
+    }
+    return false;
+  };
+
+  primec::ir_lowerer::UninitializedStorageAccessInfo out;
+  bool resolved = false;
+  std::string error;
+
+  primec::Expr localExpr;
+  localExpr.kind = primec::Expr::Kind::Name;
+  localExpr.name = "slot";
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccessFromDefinitions(localExpr,
+                                                                                locals,
+                                                                                collectFields,
+                                                                                defMap,
+                                                                                resolveTypeInfo,
+                                                                                resolveSlot,
+                                                                                out,
+                                                                                resolved,
+                                                                                error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local);
+  CHECK(out.local == &localIt->second);
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "self";
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "slot";
+  fieldExpr.args.push_back(receiverExpr);
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccessFromDefinitions(fieldExpr,
+                                                                                locals,
+                                                                                collectFields,
+                                                                                defMap,
+                                                                                resolveTypeInfo,
+                                                                                resolveSlot,
+                                                                                out,
+                                                                                resolved,
+                                                                                error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Field);
+  CHECK(out.receiver == &receiverIt->second);
+  CHECK(out.typeInfo.structPath == "/pkg/MyStruct");
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));
