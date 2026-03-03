@@ -514,6 +514,41 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer binding type helpers mark reference-to-array metadata") {
+  primec::Expr referenceArrayExpr;
+  primec::Transform referenceArrayTransform;
+  referenceArrayTransform.name = "Reference";
+  referenceArrayTransform.templateArgs = {"array<i64>"};
+  referenceArrayExpr.transforms.push_back(referenceArrayTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  primec::ir_lowerer::setReferenceArrayInfoFromTransforms(referenceArrayExpr, info);
+  CHECK(info.referenceToArray);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr referenceScalarExpr;
+  primec::Transform referenceScalarTransform;
+  referenceScalarTransform.name = "Reference";
+  referenceScalarTransform.templateArgs = {"i64"};
+  referenceScalarExpr.transforms.push_back(referenceScalarTransform);
+
+  primec::ir_lowerer::LocalInfo scalarInfo;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  scalarInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  primec::ir_lowerer::setReferenceArrayInfoFromTransforms(referenceScalarExpr, scalarInfo);
+  CHECK_FALSE(scalarInfo.referenceToArray);
+  CHECK(scalarInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::ir_lowerer::LocalInfo presetInfo;
+  presetInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  presetInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  primec::ir_lowerer::setReferenceArrayInfoFromTransforms(referenceArrayExpr, presetInfo);
+  CHECK(presetInfo.referenceToArray);
+  CHECK(presetInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
   primec::ir_lowerer::LocalMap locals;
   primec::Expr entryName;

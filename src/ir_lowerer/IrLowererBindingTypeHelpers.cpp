@@ -1,7 +1,9 @@
 #include "IrLowererBindingTypeHelpers.h"
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -105,6 +107,27 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
     return LocalInfo::ValueKind::Unknown;
   }
   return LocalInfo::ValueKind::Int32;
+}
+
+void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
+  if (info.kind != LocalInfo::Kind::Reference) {
+    return;
+  }
+  for (const auto &transform : expr.transforms) {
+    if (transform.name != "Reference" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "array") {
+      return;
+    }
+    info.referenceToArray = true;
+    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+      info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    }
+    return;
+  }
 }
 
 } // namespace primec::ir_lowerer

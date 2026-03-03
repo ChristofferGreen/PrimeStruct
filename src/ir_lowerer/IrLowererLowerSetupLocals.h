@@ -229,24 +229,7 @@
   };
 
   auto setReferenceArrayInfo = [&](const Expr &expr, LocalInfo &info) {
-    if (info.kind != LocalInfo::Kind::Reference) {
-      return;
-    }
-    for (const auto &transform : expr.transforms) {
-      if (transform.name != "Reference" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      std::string base;
-      std::string arg;
-      if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "array") {
-        return;
-      }
-      info.referenceToArray = true;
-      if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
-      }
-      return;
-    }
+    ir_lowerer::setReferenceArrayInfoFromTransforms(expr, info);
   };
 
   auto bindingKind = [&](const Expr &expr) -> LocalInfo::Kind {

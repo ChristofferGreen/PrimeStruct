@@ -12,5 +12,6 @@ bool isStringTypeName(const std::string &name);
 bool isStringBindingType(const Expr &expr);
 bool isFileErrorBindingType(const Expr &expr);
 LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo::Kind kind);
+void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info);
 
 } // namespace primec::ir_lowerer
