@@ -204,32 +204,10 @@
   };
 
   auto resolveExprPath = [&](const Expr &expr) -> std::string {
-    if (!expr.name.empty() && expr.name[0] == '/') {
-      return expr.name;
-    }
-    if (!expr.namespacePrefix.empty()) {
-      std::string scoped = expr.namespacePrefix + "/" + expr.name;
-      if (defMap.count(scoped) > 0) {
-        return scoped;
-      }
-      auto importIt = importAliases.find(expr.name);
-      if (importIt != importAliases.end()) {
-        return importIt->second;
-      }
-      return scoped;
-    }
-    auto importIt = importAliases.find(expr.name);
-    if (importIt != importAliases.end()) {
-      return importIt->second;
-    }
-    return "/" + expr.name;
+    return ir_lowerer::resolveCallPathFromScope(expr, defMap, importAliases);
   };
   auto isTailCallCandidate = [&](const Expr &expr) -> bool {
-    if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
-      return false;
-    }
-    const std::string targetPath = resolveExprPath(expr);
-    return defMap.find(targetPath) != defMap.end();
+    return ir_lowerer::isTailCallCandidate(expr, defMap, resolveExprPath);
   };
   bool sawTailExecution = false;
   if (!entryDef->statements.empty()) {

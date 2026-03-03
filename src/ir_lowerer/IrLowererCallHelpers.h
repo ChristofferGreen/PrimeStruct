@@ -13,6 +13,15 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
                                         const std::function<std::string(const Expr &)> &resolveExprPath);
 
+std::string resolveCallPathFromScope(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases);
+
+bool isTailCallCandidate(const Expr &expr,
+                         const std::unordered_map<std::string, const Definition *> &defMap,
+                         const std::function<std::string(const Expr &)> &resolveExprPath);
+
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,

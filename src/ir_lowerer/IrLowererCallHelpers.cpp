@@ -16,6 +16,41 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
   return it->second;
 }
 
+std::string resolveCallPathFromScope(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  if (!expr.name.empty() && expr.name[0] == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix + "/" + expr.name;
+    if (defMap.count(scoped) > 0) {
+      return scoped;
+    }
+    auto importIt = importAliases.find(expr.name);
+    if (importIt != importAliases.end()) {
+      return importIt->second;
+    }
+    return scoped;
+  }
+  auto importIt = importAliases.find(expr.name);
+  if (importIt != importAliases.end()) {
+    return importIt->second;
+  }
+  return "/" + expr.name;
+}
+
+bool isTailCallCandidate(const Expr &expr,
+                         const std::unordered_map<std::string, const Definition *> &defMap,
+                         const std::function<std::string(const Expr &)> &resolveExprPath) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  const std::string targetPath = resolveExprPath(expr);
+  return defMap.find(targetPath) != defMap.end();
+}
+
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,

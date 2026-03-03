@@ -78,6 +78,71 @@ TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
   CHECK(primec::ir_lowerer::resolveDefinitionCall(bindingCall, defMap, resolver) == nullptr);
 }
 
+TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
+  primec::Definition scopedDef;
+  scopedDef.fullPath = "/pkg/foo";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/pkg/foo", &scopedDef}};
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"foo", "/import/foo"},
+      {"bar", "/import/bar"},
+  };
+
+  primec::Expr absolute;
+  absolute.name = "/absolute";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(absolute, defMap, importAliases) == "/absolute");
+
+  primec::Expr namespacedScoped;
+  namespacedScoped.name = "foo";
+  namespacedScoped.namespacePrefix = "/pkg";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(namespacedScoped, defMap, importAliases) == "/pkg/foo");
+
+  primec::Expr namespacedAlias;
+  namespacedAlias.name = "bar";
+  namespacedAlias.namespacePrefix = "/pkg";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(namespacedAlias, defMap, importAliases) == "/import/bar");
+
+  primec::Expr namespacedFallback;
+  namespacedFallback.name = "baz";
+  namespacedFallback.namespacePrefix = "/pkg";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(namespacedFallback, defMap, importAliases) == "/pkg/baz");
+
+  primec::Expr rootAlias;
+  rootAlias.name = "foo";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(rootAlias, defMap, importAliases) == "/import/foo");
+
+  primec::Expr rootFallback;
+  rootFallback.name = "main";
+  CHECK(primec::ir_lowerer::resolveCallPathFromScope(rootFallback, defMap, importAliases) == "/main");
+}
+
+TEST_CASE("ir lowerer call helpers classify tail call candidates") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
+  const std::unordered_map<std::string, std::string> importAliases = {};
+  auto resolveExprPath = [&](const primec::Expr &expr) {
+    return primec::ir_lowerer::resolveCallPathFromScope(expr, defMap, importAliases);
+  };
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  CHECK(primec::ir_lowerer::isTailCallCandidate(callExpr, defMap, resolveExprPath));
+
+  primec::Expr methodCall = callExpr;
+  methodCall.isMethodCall = true;
+  CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(methodCall, defMap, resolveExprPath));
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "callee";
+  CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(nameExpr, defMap, resolveExprPath));
+
+  primec::Expr unknownCall = callExpr;
+  unknownCall.name = "missing";
+  CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(unknownCall, defMap, resolveExprPath));
+}
+
 TEST_CASE("ir lowerer call helpers order positional named and default args") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
