@@ -144,6 +144,17 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
   return true;
 }
 
+bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
+                                                const std::string &structPath,
+                                                std::vector<UninitializedFieldBindingInfo> &fieldsOut) {
+  auto fieldIt = fieldIndex.find(structPath);
+  if (fieldIt == fieldIndex.end()) {
+    return false;
+  }
+  fieldsOut = fieldIt->second;
+  return true;
+}
+
 bool resolveUninitializedFieldTemplateArg(const std::string &structPath,
                                           const std::string &fieldName,
                                           const CollectUninitializedFieldBindingsFn &collectFieldBindings,
@@ -364,6 +375,30 @@ bool resolveUninitializedStorageAccessFromDefinitions(
       localsIn,
       collectFieldBindings,
       [&](const std::string &structPath) { return resolveDefinitionNamespacePrefix(defMap, structPath); },
+      resolveUninitializedTypeInfo,
+      resolveStructFieldSlot,
+      out,
+      resolvedOut,
+      error);
+}
+
+bool resolveUninitializedStorageAccessFromDefinitionFieldIndex(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  return resolveUninitializedStorageAccessFromDefinitions(
+      storage,
+      localsIn,
+      [&](const std::string &structPath, std::vector<UninitializedFieldBindingInfo> &fieldsOut) {
+        return collectUninitializedFieldBindingsFromIndex(fieldIndex, structPath, fieldsOut);
+      },
+      defMap,
       resolveUninitializedTypeInfo,
       resolveStructFieldSlot,
       out,

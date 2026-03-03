@@ -309,32 +309,30 @@
   };
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
+  ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex;
+  uninitializedFieldBindingIndex.reserve(structFieldInfoByName.size());
+  for (const auto &entry : structFieldInfoByName) {
+    std::vector<ir_lowerer::UninitializedFieldBindingInfo> fieldBindings;
+    fieldBindings.reserve(entry.second.size());
+    for (const auto &field : entry.second) {
+      ir_lowerer::UninitializedFieldBindingInfo info;
+      info.name = field.name;
+      info.typeName = field.binding.typeName;
+      info.typeTemplateArg = field.binding.typeTemplateArg;
+      info.isStatic = field.isStatic;
+      fieldBindings.push_back(std::move(info));
+    }
+    uninitializedFieldBindingIndex.emplace(entry.first, std::move(fieldBindings));
+  }
 
   auto resolveUninitializedStorage = [&](const Expr &storage,
                                          const LocalMap &localsIn,
                                          UninitializedStorageAccess &out,
                                          bool &resolved) -> bool {
-    if (!ir_lowerer::resolveUninitializedStorageAccessFromDefinitions(
+    if (!ir_lowerer::resolveUninitializedStorageAccessFromDefinitionFieldIndex(
             storage,
             localsIn,
-            [&](const std::string &structPath,
-                std::vector<ir_lowerer::UninitializedFieldBindingInfo> &fieldsOut) -> bool {
-              auto fieldIt = structFieldInfoByName.find(structPath);
-              if (fieldIt == structFieldInfoByName.end()) {
-                return false;
-              }
-              fieldsOut.clear();
-              fieldsOut.reserve(fieldIt->second.size());
-              for (const auto &field : fieldIt->second) {
-                ir_lowerer::UninitializedFieldBindingInfo info;
-                info.name = field.name;
-                info.typeName = field.binding.typeName;
-                info.typeTemplateArg = field.binding.typeTemplateArg;
-                info.isStatic = field.isStatic;
-                fieldsOut.push_back(std::move(info));
-              }
-              return true;
-            },
+            uninitializedFieldBindingIndex,
             defMap,
             resolveUninitializedTypeInfo,
             resolveStructFieldSlot,

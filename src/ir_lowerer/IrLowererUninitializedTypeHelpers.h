@@ -26,6 +26,9 @@ struct UninitializedFieldBindingInfo {
   bool isStatic = false;
 };
 
+using UninitializedFieldBindingIndex =
+    std::unordered_map<std::string, std::vector<UninitializedFieldBindingInfo>>;
+
 using ResolveStructTypePathFn =
     std::function<bool(const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut)>;
 using FindUninitializedFieldTemplateArgFn =
@@ -76,6 +79,9 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
                                             const LocalMap &localsIn,
                                             UninitializedLocalStorageAccessInfo &out,
                                             bool &resolvedOut);
+bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
+                                                const std::string &structPath,
+                                                std::vector<UninitializedFieldBindingInfo> &fieldsOut);
 bool resolveUninitializedFieldTemplateArg(const std::string &structPath,
                                           const std::string &fieldName,
                                           const CollectUninitializedFieldBindingsFn &collectFieldBindings,
@@ -131,6 +137,16 @@ bool resolveUninitializedStorageAccessFromDefinitions(
     const Expr &storage,
     const LocalMap &localsIn,
     const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error);
+bool resolveUninitializedStorageAccessFromDefinitionFieldIndex(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,

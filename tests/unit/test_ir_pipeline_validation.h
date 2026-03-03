@@ -1050,6 +1050,24 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve field template args by 
       "/pkg/Container", "wrong_type", collectFields, typeTemplateArg));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers collect field bindings from index") {
+  primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  fieldIndex["/pkg/Container"] = {
+      {"slot", "uninitialized", "i64", false},
+      {"ignored", "i64", "", false},
+  };
+
+  std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fieldsOut;
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      fieldIndex, "/pkg/Container", fieldsOut));
+  REQUIRE(fieldsOut.size() == 2);
+  CHECK(fieldsOut[0].name == "slot");
+  CHECK(fieldsOut[0].typeTemplateArg == "i64");
+
+  CHECK_FALSE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      fieldIndex, "/pkg/Missing", fieldsOut));
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});
@@ -1590,6 +1608,82 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage from de
   CHECK(resolved);
   CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Field);
   CHECK(out.receiver == &receiverIt->second);
+  CHECK(out.typeInfo.structPath == "/pkg/MyStruct");
+}
+
+TEST_CASE("ir lowerer uninitialized type helpers resolve unified storage from definition field index") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localStorage;
+  localStorage.isUninitializedStorage = true;
+  localStorage.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  localStorage.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("slot", localStorage);
+
+  primec::ir_lowerer::LocalInfo receiver;
+  receiver.structTypeName = "/pkg/Container";
+  locals.emplace("self", receiver);
+  const auto receiverIt = locals.find("self");
+  REQUIRE(receiverIt != locals.end());
+
+  primec::Definition containerDef;
+  containerDef.fullPath = "/pkg/Container";
+  containerDef.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/Container", &containerDef},
+  };
+  primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  fieldIndex["/pkg/Container"] = {
+      {"slot", "uninitialized", "MyStruct", false},
+  };
+
+  auto resolveTypeInfo = [](const std::string &typeText,
+                            const std::string &namespacePrefix,
+                            primec::ir_lowerer::UninitializedTypeInfo &out) {
+    out = primec::ir_lowerer::UninitializedTypeInfo{};
+    if (typeText == "MyStruct" && namespacePrefix == "/pkg") {
+      out.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+      out.structPath = "/pkg/MyStruct";
+      return true;
+    }
+    return false;
+  };
+  auto resolveSlot = [](const std::string &structPath,
+                        const std::string &fieldName,
+                        primec::ir_lowerer::StructSlotFieldInfo &out) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      out.name = "slot";
+      out.slotOffset = 3;
+      out.slotCount = 1;
+      return true;
+    }
+    return false;
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "self";
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "slot";
+  fieldExpr.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::UninitializedStorageAccessInfo out;
+  bool resolved = false;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccessFromDefinitionFieldIndex(fieldExpr,
+                                                                                         locals,
+                                                                                         fieldIndex,
+                                                                                         defMap,
+                                                                                         resolveTypeInfo,
+                                                                                         resolveSlot,
+                                                                                         out,
+                                                                                         resolved,
+                                                                                         error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Field);
+  CHECK(out.receiver == &receiverIt->second);
+  CHECK(out.fieldSlot.slotOffset == 3);
   CHECK(out.typeInfo.structPath == "/pkg/MyStruct");
 }
 
