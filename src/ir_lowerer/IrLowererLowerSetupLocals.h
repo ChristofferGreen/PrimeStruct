@@ -314,34 +314,26 @@
                                          const LocalMap &localsIn,
                                          UninitializedStorageAccess &out,
                                          bool &resolved) -> bool {
-    if (!ir_lowerer::resolveUninitializedStorageAccess(
+    if (!ir_lowerer::resolveUninitializedStorageAccessWithFieldBindings(
             storage,
             localsIn,
-            [&](const std::string &candidateStructPath,
-                const std::string &fieldName,
-                std::string &typeTemplateArgOut) -> bool {
-              return ir_lowerer::resolveUninitializedFieldTemplateArg(
-                  candidateStructPath,
-                  fieldName,
-                  [&](const std::string &structPath,
-                      std::vector<ir_lowerer::UninitializedFieldBindingInfo> &fieldsOut) -> bool {
-                    auto fieldIt = structFieldInfoByName.find(structPath);
-                    if (fieldIt == structFieldInfoByName.end()) {
-                      return false;
-                    }
-                    fieldsOut.clear();
-                    fieldsOut.reserve(fieldIt->second.size());
-                    for (const auto &field : fieldIt->second) {
-                      ir_lowerer::UninitializedFieldBindingInfo info;
-                      info.name = field.name;
-                      info.typeName = field.binding.typeName;
-                      info.typeTemplateArg = field.binding.typeTemplateArg;
-                      info.isStatic = field.isStatic;
-                      fieldsOut.push_back(std::move(info));
-                    }
-                    return true;
-                  },
-                  typeTemplateArgOut);
+            [&](const std::string &structPath,
+                std::vector<ir_lowerer::UninitializedFieldBindingInfo> &fieldsOut) -> bool {
+              auto fieldIt = structFieldInfoByName.find(structPath);
+              if (fieldIt == structFieldInfoByName.end()) {
+                return false;
+              }
+              fieldsOut.clear();
+              fieldsOut.reserve(fieldIt->second.size());
+              for (const auto &field : fieldIt->second) {
+                ir_lowerer::UninitializedFieldBindingInfo info;
+                info.name = field.name;
+                info.typeName = field.binding.typeName;
+                info.typeTemplateArg = field.binding.typeTemplateArg;
+                info.isStatic = field.isStatic;
+                fieldsOut.push_back(std::move(info));
+              }
+              return true;
             },
             [&](const std::string &candidateStructPath) {
               return ir_lowerer::resolveDefinitionNamespacePrefix(defMap, candidateStructPath);

@@ -324,4 +324,28 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
   return true;
 }
 
+bool resolveUninitializedStorageAccessWithFieldBindings(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  return resolveUninitializedStorageAccess(
+      storage,
+      localsIn,
+      [&](const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut) {
+        return resolveUninitializedFieldTemplateArg(structPath, fieldName, collectFieldBindings, typeTemplateArgOut);
+      },
+      resolveDefinitionNamespacePrefix,
+      resolveUninitializedTypeInfo,
+      resolveStructFieldSlot,
+      out,
+      resolvedOut,
+      error);
+}
+
 } // namespace primec::ir_lowerer

@@ -116,5 +116,15 @@ bool resolveUninitializedStorageAccess(const Expr &storage,
                                        UninitializedStorageAccessInfo &out,
                                        bool &resolvedOut,
                                        std::string &error);
+bool resolveUninitializedStorageAccessWithFieldBindings(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error);
 
 } // namespace primec::ir_lowerer
