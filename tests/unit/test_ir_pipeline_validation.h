@@ -250,6 +250,85 @@ TEST_CASE("ir lowerer template type parse helper parses Result return type names
   CHECK_FALSE(primec::ir_lowerer::parseResultTypeName("Result<i64, FileError, Extra>", hasValue, valueKind, errorType));
 }
 
+TEST_CASE("ir lowerer runtime error helpers emit print-and-return sequence") {
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) -> int32_t {
+    for (size_t i = 0; i < stringTable.size(); ++i) {
+      if (stringTable[i] == text) {
+        return static_cast<int32_t>(i);
+      }
+    }
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+
+  primec::ir_lowerer::emitArrayIndexOutOfBounds(function, internString);
+  REQUIRE(function.instructions.size() == 3);
+  CHECK(function.instructions[0].op == primec::IrOpcode::PrintString);
+  CHECK(primec::decodePrintFlags(function.instructions[0].imm) == primec::encodePrintFlags(true, true));
+  CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 0);
+  CHECK(function.instructions[1].op == primec::IrOpcode::PushI32);
+  CHECK(function.instructions[1].imm == 3);
+  CHECK(function.instructions[2].op == primec::IrOpcode::ReturnI32);
+  CHECK(function.instructions[2].imm == 0);
+  REQUIRE(stringTable.size() == 1);
+  CHECK(stringTable[0] == "array index out of bounds");
+
+  primec::ir_lowerer::emitArrayIndexOutOfBounds(function, internString);
+  REQUIRE(function.instructions.size() == 6);
+  CHECK(primec::decodePrintStringIndex(function.instructions[3].imm) == 0);
+  REQUIRE(stringTable.size() == 1);
+}
+
+TEST_CASE("ir lowerer runtime error helpers map each helper to expected message") {
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) -> int32_t {
+    for (size_t i = 0; i < stringTable.size(); ++i) {
+      if (stringTable[i] == text) {
+        return static_cast<int32_t>(i);
+      }
+    }
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+
+  primec::ir_lowerer::emitStringIndexOutOfBounds(function, internString);
+  primec::ir_lowerer::emitMapKeyNotFound(function, internString);
+  primec::ir_lowerer::emitVectorIndexOutOfBounds(function, internString);
+  primec::ir_lowerer::emitVectorPopOnEmpty(function, internString);
+  primec::ir_lowerer::emitVectorCapacityExceeded(function, internString);
+  primec::ir_lowerer::emitVectorReserveNegative(function, internString);
+  primec::ir_lowerer::emitVectorReserveExceeded(function, internString);
+  primec::ir_lowerer::emitLoopCountNegative(function, internString);
+  primec::ir_lowerer::emitPowNegativeExponent(function, internString);
+  primec::ir_lowerer::emitFloatToIntNonFinite(function, internString);
+
+  const std::vector<std::string> expectedMessages = {"string index out of bounds",
+                                                     "map key not found",
+                                                     "vector index out of bounds",
+                                                     "vector pop on empty",
+                                                     "vector capacity exceeded",
+                                                     "vector reserve expects non-negative capacity",
+                                                     "vector reserve exceeds capacity",
+                                                     "loop count must be non-negative",
+                                                     "pow exponent must be non-negative",
+                                                     "float to int conversion requires finite value"};
+  CHECK(stringTable == expectedMessages);
+
+  REQUIRE(function.instructions.size() == expectedMessages.size() * 3);
+  for (size_t i = 0; i < expectedMessages.size(); ++i) {
+    const size_t base = i * 3;
+    CHECK(function.instructions[base].op == primec::IrOpcode::PrintString);
+    CHECK(primec::decodePrintStringIndex(function.instructions[base].imm) == i);
+    CHECK(function.instructions[base + 1].op == primec::IrOpcode::PushI32);
+    CHECK(function.instructions[base + 1].imm == 3);
+    CHECK(function.instructions[base + 2].op == primec::IrOpcode::ReturnI32);
+    CHECK(function.instructions[base + 2].imm == 0);
+  }
+}
+
 TEST_CASE("ir lowerer index kind helpers normalize and validate supported kinds") {
   CHECK(primec::ir_lowerer::normalizeIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Bool) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);

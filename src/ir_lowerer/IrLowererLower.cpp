@@ -18,6 +18,7 @@
 #include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"

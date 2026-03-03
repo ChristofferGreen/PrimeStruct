@@ -88,102 +88,47 @@
   };
 
   auto emitArrayIndexOutOfBounds = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("array index out of bounds");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitArrayIndexOutOfBounds(function, internString);
   };
 
   auto emitStringIndexOutOfBounds = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("string index out of bounds");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitStringIndexOutOfBounds(function, internString);
   };
 
   auto emitMapKeyNotFound = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("map key not found");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitMapKeyNotFound(function, internString);
   };
 
   auto emitVectorIndexOutOfBounds = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("vector index out of bounds");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitVectorIndexOutOfBounds(function, internString);
   };
 
   auto emitVectorPopOnEmpty = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("vector pop on empty");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitVectorPopOnEmpty(function, internString);
   };
 
   auto emitVectorCapacityExceeded = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("vector capacity exceeded");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitVectorCapacityExceeded(function, internString);
   };
 
   auto emitVectorReserveNegative = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("vector reserve expects non-negative capacity");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitVectorReserveNegative(function, internString);
   };
 
   auto emitVectorReserveExceeded = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("vector reserve exceeds capacity");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitVectorReserveExceeded(function, internString);
   };
 
   auto emitLoopCountNegative = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("loop count must be non-negative");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitLoopCountNegative(function, internString);
   };
 
   auto emitPowNegativeExponent = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("pow exponent must be non-negative");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitPowNegativeExponent(function, internString);
   };
 
   auto emitFloatToIntNonFinite = [&]() {
-    uint64_t flags = encodePrintFlags(true, true);
-    int32_t msgIndex = internString("float to int conversion requires finite value");
-    function.instructions.push_back(
-        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
-    function.instructions.push_back({IrOpcode::PushI32, 3});
-    function.instructions.push_back({IrOpcode::ReturnI32, 0});
+    ir_lowerer::emitFloatToIntNonFinite(function, internString);
   };
 
   auto parseStringLiteral = [&](const std::string &text, std::string &decoded) -> bool {

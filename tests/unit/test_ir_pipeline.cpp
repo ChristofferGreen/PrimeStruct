@@ -30,6 +30,7 @@
 #include "src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "src/ir_lowerer/IrLowererReturnInferenceHelpers.h"
 #include "src/ir_lowerer/IrLowererResultHelpers.h"
+#include "src/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererSetupMathHelpers.h"
 #include "src/ir_lowerer/IrLowererStatementBindingHelpers.h"
 #include "src/ir_lowerer/IrLowererSetupTypeHelpers.h"
