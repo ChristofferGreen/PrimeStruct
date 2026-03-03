@@ -321,15 +321,13 @@
                                          UninitializedStorageAccess &out,
                                          bool &resolved) -> bool {
     resolved = false;
-    const LocalInfo *localStorage = nullptr;
-    UninitializedTypeInfo localTypeInfo;
-    if (ir_lowerer::resolveUninitializedLocalStorageCandidate(
-            storage, localsIn, localStorage, localTypeInfo, resolved)) {
+    ir_lowerer::UninitializedLocalStorageAccessInfo localStorage;
+    if (ir_lowerer::resolveUninitializedLocalStorageAccess(storage, localsIn, localStorage, resolved)) {
       if (resolved) {
         out = UninitializedStorageAccess{};
         out.location = UninitializedStorageAccess::Location::Local;
-        out.local = localStorage;
-        out.typeInfo = localTypeInfo;
+        out.local = localStorage.local;
+        out.typeInfo = localStorage.typeInfo;
       }
       return true;
     }

@@ -45,6 +45,11 @@ struct UninitializedFieldStorageAccessInfo {
   UninitializedTypeInfo typeInfo;
 };
 
+struct UninitializedLocalStorageAccessInfo {
+  const LocalInfo *local = nullptr;
+  UninitializedTypeInfo typeInfo;
+};
+
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
                                   const ResolveStructTypePathFn &resolveStructTypePath,
@@ -56,6 +61,10 @@ bool resolveUninitializedLocalStorageCandidate(const Expr &storage,
                                                const LocalInfo *&localOut,
                                                UninitializedTypeInfo &typeInfoOut,
                                                bool &resolvedOut);
+bool resolveUninitializedLocalStorageAccess(const Expr &storage,
+                                            const LocalMap &localsIn,
+                                            UninitializedLocalStorageAccessInfo &out,
+                                            bool &resolvedOut);
 bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
                                        const std::string &fieldName,
                                        std::string &typeTemplateArgOut);
