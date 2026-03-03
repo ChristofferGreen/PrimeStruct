@@ -131,19 +131,6 @@
     ir_lowerer::emitFloatToIntNonFinite(function, internString);
   };
 
-  auto parseStringLiteral = [&](const std::string &text, std::string &decoded) -> bool {
-    ParsedStringLiteral parsed;
-    if (!parseStringLiteralToken(text, parsed, error)) {
-      return false;
-    }
-    if (parsed.encoding == StringEncoding::Ascii && !isAsciiText(parsed.decoded)) {
-      error = "ascii string literal contains non-ASCII characters";
-      return false;
-    }
-    decoded = std::move(parsed.decoded);
-    return true;
-  };
-
   bool hasEntryArgs = false;
   std::string entryArgsName;
   if (!entryDef->parameters.empty()) {
@@ -230,7 +217,7 @@
     lengthOut = 0;
     if (expr.kind == Expr::Kind::StringLiteral) {
       std::string decoded;
-      if (!parseStringLiteral(expr.stringValue, decoded)) {
+      if (!ir_lowerer::parseLowererStringLiteral(expr.stringValue, decoded, error)) {
         return false;
       }
       stringIndexOut = internString(decoded);

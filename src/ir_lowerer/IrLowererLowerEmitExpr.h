@@ -112,7 +112,7 @@
       case Expr::Kind::StringLiteral:
         {
           std::string decoded;
-          if (!parseStringLiteral(expr.stringValue, decoded)) {
+          if (!ir_lowerer::parseLowererStringLiteral(expr.stringValue, decoded, error)) {
             return false;
           }
           int32_t index = internString(decoded);

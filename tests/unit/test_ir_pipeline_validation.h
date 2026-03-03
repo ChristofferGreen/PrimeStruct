@@ -289,6 +289,24 @@ TEST_CASE("ir lowerer binding transform helpers detect entry args params") {
   CHECK_FALSE(primec::ir_lowerer::isEntryArgsParam(param));
 }
 
+TEST_CASE("ir lowerer string literal helper parses and validates encoding") {
+  std::string decoded;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::parseLowererStringLiteral("\"line\\n\"utf8", decoded, error));
+  CHECK(decoded == "line\n");
+  CHECK(error.empty());
+
+  std::string asciiToken = "\"";
+  asciiToken.push_back(static_cast<char>(0xC3));
+  asciiToken.push_back(static_cast<char>(0xA5));
+  asciiToken += "\"ascii";
+  CHECK_FALSE(primec::ir_lowerer::parseLowererStringLiteral(asciiToken, decoded, error));
+  CHECK(error == "ascii string literal contains non-ASCII characters");
+
+  CHECK_FALSE(primec::ir_lowerer::parseLowererStringLiteral("\"missing_suffix\"", decoded, error));
+  CHECK(error == "string literal requires utf8/ascii/raw_utf8/raw_ascii suffix");
+}
+
 TEST_CASE("ir lowerer template type parse helper splits nested template args") {
   std::vector<std::string> args;
   REQUIRE(primec::ir_lowerer::splitTemplateArgs(" i32 , map<string, array<i64>> , Result<bool, FileError> ", args));

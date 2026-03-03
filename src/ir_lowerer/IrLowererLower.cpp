@@ -23,6 +23,7 @@
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStringCallHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"

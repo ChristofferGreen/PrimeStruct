@@ -139,7 +139,7 @@
         bool emittedValue = false;
         if (init.kind == Expr::Kind::StringLiteral) {
           std::string decoded;
-          if (!parseStringLiteral(init.stringValue, decoded)) {
+          if (!ir_lowerer::parseLowererStringLiteral(init.stringValue, decoded, error)) {
             return false;
           }
           index = internString(decoded);
