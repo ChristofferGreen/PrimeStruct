@@ -31,7 +31,7 @@ Legend:
 - ✓ Continue operator fragment split by extracting the remaining `ConversionsAndCalls` block/match/if expression-call lowering tail into compileable helpers.
 - ◐ Continue IR lowerer unit split by extracting setup/statement fragments and removing include-only composition headers (phase 1 extracted setup type-name mapping into `IrLowererSetupTypeHelpers.{h,cpp}` and removed setup/statement composition headers `IrLowererLowerSetup.h` + `IrLowererLowerStatements.h` from `IrLowererLower.cpp` include flow).
 - ◐ Continue setup/statement split by extracting setup inference/locals and statement lowering fragments into compileable helpers with explicit interfaces (phase 1 extracted setup math symbol resolution into `IrLowererSetupMathHelpers.{h,cpp}` and rewired setup locals/inference users to helper-backed APIs).
-- ○ Continue setup/statement split by extracting statement expression/binding lowering fragments into compileable helpers with explicit interfaces.
+- ◐ Continue setup/statement split by extracting statement expression/binding lowering fragments into compileable helpers with explicit interfaces (phase 1 extracted statement-binding kind/value inference plus uninitialized-zero opcode selection to `IrLowererStatementBindingHelpers.{h,cpp}`).
 - ○ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit).
 
 **Pipeline & CLI**

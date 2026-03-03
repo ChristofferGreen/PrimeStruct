@@ -49,106 +49,21 @@
         info.index = nextLocal++;
         IrOpcode zeroOp = IrOpcode::PushI32;
         uint64_t zeroImm = 0;
-        if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-            info.kind == LocalInfo::Kind::Map || info.kind == LocalInfo::Kind::Buffer) {
-          zeroOp = IrOpcode::PushI64;
-        } else {
-          switch (info.valueKind) {
-            case LocalInfo::ValueKind::Int64:
-            case LocalInfo::ValueKind::UInt64:
-              zeroOp = IrOpcode::PushI64;
-              break;
-            case LocalInfo::ValueKind::Float32:
-              zeroOp = IrOpcode::PushF32;
-              break;
-            case LocalInfo::ValueKind::Float64:
-              zeroOp = IrOpcode::PushF64;
-              break;
-            case LocalInfo::ValueKind::Int32:
-            case LocalInfo::ValueKind::Bool:
-              zeroOp = IrOpcode::PushI32;
-              break;
-            case LocalInfo::ValueKind::String:
-              zeroOp = IrOpcode::PushI64;
-              break;
-            default:
-              error = "native backend requires a concrete uninitialized storage type on " + stmt.name;
-              return false;
-          }
+        if (!selectUninitializedStorageZeroInstruction(
+                info.kind, info.valueKind, stmt.name, zeroOp, zeroImm, error)) {
+          return false;
         }
         function.instructions.push_back({zeroOp, zeroImm});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
         localsIn.emplace(stmt.name, info);
         return true;
       }
-      LocalInfo::Kind kind = bindingKind(stmt);
-      if (!hasExplicitBindingTypeTransform(stmt) && kind == LocalInfo::Kind::Value) {
-        if (init.kind == Expr::Kind::Name) {
-          auto it = localsIn.find(init.name);
-          if (it != localsIn.end()) {
-            kind = it->second.kind;
-          }
-        } else if (init.kind == Expr::Kind::Call) {
-          std::string collection;
-          if (getBuiltinCollectionName(init, collection)) {
-            if (collection == "array") {
-              kind = LocalInfo::Kind::Array;
-            } else if (collection == "vector") {
-              kind = LocalInfo::Kind::Vector;
-            } else if (collection == "map") {
-              kind = LocalInfo::Kind::Map;
-            }
-          }
-        }
-      }
-      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-      LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
-      LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
-      if (kind == LocalInfo::Kind::Map) {
-        if (hasExplicitBindingTypeTransform(stmt)) {
-          for (const auto &transform : stmt.transforms) {
-            if (transform.name == "map" && transform.templateArgs.size() == 2) {
-              mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
-              mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
-              break;
-            }
-          }
-        } else if (init.kind == Expr::Kind::Name) {
-          auto it = localsIn.find(init.name);
-          if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
-            mapKeyKind = it->second.mapKeyKind;
-            mapValueKind = it->second.mapValueKind;
-          }
-        } else if (init.kind == Expr::Kind::Call) {
-          std::string collection;
-          if (getBuiltinCollectionName(init, collection) && collection == "map" && init.templateArgs.size() == 2) {
-            mapKeyKind = valueKindFromTypeName(init.templateArgs[0]);
-            mapValueKind = valueKindFromTypeName(init.templateArgs[1]);
-          }
-        }
-        valueKind = mapValueKind;
-      } else if (hasExplicitBindingTypeTransform(stmt)) {
-        valueKind = bindingValueKind(stmt, kind);
-      } else if (kind == LocalInfo::Kind::Value) {
-        valueKind = inferExprKind(init, localsIn);
-        if (valueKind == LocalInfo::ValueKind::Unknown) {
-          valueKind = LocalInfo::ValueKind::Int32;
-        }
-      } else if (kind == LocalInfo::Kind::Array || kind == LocalInfo::Kind::Vector) {
-        if (init.kind == Expr::Kind::Name) {
-          auto it = localsIn.find(init.name);
-          if (it != localsIn.end() &&
-              (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
-            valueKind = it->second.valueKind;
-          }
-        } else if (init.kind == Expr::Kind::Call) {
-          std::string collection;
-          if (getBuiltinCollectionName(init, collection) && (collection == "array" || collection == "vector") &&
-              init.templateArgs.size() == 1) {
-            valueKind = valueKindFromTypeName(init.templateArgs.front());
-          }
-        }
-      }
+      const StatementBindingTypeInfo bindingTypeInfo = inferStatementBindingTypeInfo(
+          stmt, init, localsIn, hasExplicitBindingTypeTransform, bindingKind, bindingValueKind, inferExprKind);
+      LocalInfo::Kind kind = bindingTypeInfo.kind;
+      LocalInfo::ValueKind valueKind = bindingTypeInfo.valueKind;
+      LocalInfo::ValueKind mapKeyKind = bindingTypeInfo.mapKeyKind;
+      LocalInfo::ValueKind mapValueKind = bindingTypeInfo.mapValueKind;
       LocalInfo info;
       info.isMutable = isBindingMutable(stmt);
       info.kind = kind;

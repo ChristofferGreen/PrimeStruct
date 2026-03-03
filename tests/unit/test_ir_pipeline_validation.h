@@ -247,6 +247,108 @@ TEST_CASE("ir lowerer setup math helper resolves constants only for supported na
   CHECK_FALSE(primec::ir_lowerer::getSetupMathConstantName("phi", true, constantName));
 }
 
+TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
+  primec::Expr stmt;
+  stmt.name = "values";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "vector";
+  init.templateArgs = {"i64"};
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer statement binding helper inherits map metadata from named source binding") {
+  primec::Expr stmt;
+  stmt.name = "dst";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Name;
+  init.name = "srcMap";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  sourceInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  sourceInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  locals.emplace("srcMap", sourceInfo);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+}
+
+TEST_CASE("ir lowerer statement binding helper selects uninitialized zero opcodes") {
+  primec::IrOpcode mapZeroOp = primec::IrOpcode::PushI32;
+  uint64_t mapZeroImm = 123;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::selectUninitializedStorageZeroInstruction(
+      primec::ir_lowerer::LocalInfo::Kind::Map,
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown,
+      "mapStorage",
+      mapZeroOp,
+      mapZeroImm,
+      error));
+  CHECK(mapZeroOp == primec::IrOpcode::PushI64);
+  CHECK(mapZeroImm == 0);
+  CHECK(error.empty());
+
+  primec::IrOpcode floatZeroOp = primec::IrOpcode::PushI32;
+  uint64_t floatZeroImm = 99;
+  REQUIRE(primec::ir_lowerer::selectUninitializedStorageZeroInstruction(
+      primec::ir_lowerer::LocalInfo::Kind::Value,
+      primec::ir_lowerer::LocalInfo::ValueKind::Float32,
+      "floatStorage",
+      floatZeroOp,
+      floatZeroImm,
+      error));
+  CHECK(floatZeroOp == primec::IrOpcode::PushF32);
+  CHECK(floatZeroImm == 0);
+}
+
+TEST_CASE("ir lowerer statement binding helper rejects unknown uninitialized value kind") {
+  primec::IrOpcode zeroOp = primec::IrOpcode::PushI32;
+  uint64_t zeroImm = 0;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::selectUninitializedStorageZeroInstruction(
+      primec::ir_lowerer::LocalInfo::Kind::Value,
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown,
+      "storageSlot",
+      zeroOp,
+      zeroImm,
+      error));
+  CHECK(error == "native backend requires a concrete uninitialized storage type on storageSlot");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;
