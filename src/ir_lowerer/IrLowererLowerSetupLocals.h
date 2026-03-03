@@ -252,45 +252,6 @@
     function.instructions.push_back({IrOpcode::ReturnI32, 0});
   };
 
-  auto normalizeIndexKind = [](LocalInfo::ValueKind kind) {
-    return (kind == LocalInfo::ValueKind::Bool) ? LocalInfo::ValueKind::Int32 : kind;
-  };
-
-  auto isSupportedIndexKind = [](LocalInfo::ValueKind kind) {
-    return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-           kind == LocalInfo::ValueKind::UInt64;
-  };
-
-  auto pushZeroForIndex = [&](LocalInfo::ValueKind kind) {
-    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
-  };
-
-  auto cmpLtForIndex = [&](LocalInfo::ValueKind kind) {
-    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::CmpLtI32 : IrOpcode::CmpLtI64;
-  };
-
-  auto cmpGeForIndex = [&](LocalInfo::ValueKind kind) {
-    if (kind == LocalInfo::ValueKind::Int32) {
-      return IrOpcode::CmpGeI32;
-    }
-    if (kind == LocalInfo::ValueKind::Int64) {
-      return IrOpcode::CmpGeI64;
-    }
-    return IrOpcode::CmpGeU64;
-  };
-
-  auto pushOneForIndex = [&](LocalInfo::ValueKind kind) {
-    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
-  };
-
-  auto addForIndex = [&](LocalInfo::ValueKind kind) {
-    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::AddI32 : IrOpcode::AddI64;
-  };
-
-  auto mulForIndex = [&](LocalInfo::ValueKind kind) {
-    return (kind == LocalInfo::ValueKind::Int32) ? IrOpcode::MulI32 : IrOpcode::MulI64;
-  };
-
   auto parseStringLiteral = [&](const std::string &text, std::string &decoded) -> bool {
     ParsedStringLiteral parsed;
     if (!parseStringLiteralToken(text, parsed, error)) {

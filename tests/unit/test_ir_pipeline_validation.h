@@ -219,6 +219,63 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer index kind helpers normalize and validate supported kinds") {
+  CHECK(primec::ir_lowerer::normalizeIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Bool) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::normalizeIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  CHECK(primec::ir_lowerer::isSupportedIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Int32));
+  CHECK(primec::ir_lowerer::isSupportedIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Int64));
+  CHECK(primec::ir_lowerer::isSupportedIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::UInt64));
+  CHECK_FALSE(primec::ir_lowerer::isSupportedIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Bool));
+  CHECK_FALSE(primec::ir_lowerer::isSupportedIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Unknown));
+}
+
+TEST_CASE("ir lowerer index kind helpers map index opcodes by kind") {
+  CHECK(primec::ir_lowerer::pushZeroForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int32) ==
+        primec::IrOpcode::PushI32);
+  CHECK(primec::ir_lowerer::pushZeroForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::IrOpcode::PushI64);
+  CHECK(primec::ir_lowerer::pushZeroForIndex(primec::ir_lowerer::LocalInfo::ValueKind::UInt64) ==
+        primec::IrOpcode::PushI64);
+
+  CHECK(primec::ir_lowerer::cmpLtForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int32) ==
+        primec::IrOpcode::CmpLtI32);
+  CHECK(primec::ir_lowerer::cmpLtForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::IrOpcode::CmpLtI64);
+  CHECK(primec::ir_lowerer::cmpLtForIndex(primec::ir_lowerer::LocalInfo::ValueKind::UInt64) ==
+        primec::IrOpcode::CmpLtI64);
+
+  CHECK(primec::ir_lowerer::cmpGeForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int32) ==
+        primec::IrOpcode::CmpGeI32);
+  CHECK(primec::ir_lowerer::cmpGeForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::IrOpcode::CmpGeI64);
+  CHECK(primec::ir_lowerer::cmpGeForIndex(primec::ir_lowerer::LocalInfo::ValueKind::UInt64) ==
+        primec::IrOpcode::CmpGeU64);
+
+  CHECK(primec::ir_lowerer::pushOneForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int32) ==
+        primec::IrOpcode::PushI32);
+  CHECK(primec::ir_lowerer::pushOneForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::IrOpcode::PushI64);
+  CHECK(primec::ir_lowerer::pushOneForIndex(primec::ir_lowerer::LocalInfo::ValueKind::UInt64) ==
+        primec::IrOpcode::PushI64);
+
+  CHECK(primec::ir_lowerer::addForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int32) ==
+        primec::IrOpcode::AddI32);
+  CHECK(primec::ir_lowerer::addForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::IrOpcode::AddI64);
+  CHECK(primec::ir_lowerer::addForIndex(primec::ir_lowerer::LocalInfo::ValueKind::UInt64) ==
+        primec::IrOpcode::AddI64);
+
+  CHECK(primec::ir_lowerer::mulForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int32) ==
+        primec::IrOpcode::MulI32);
+  CHECK(primec::ir_lowerer::mulForIndex(primec::ir_lowerer::LocalInfo::ValueKind::Int64) ==
+        primec::IrOpcode::MulI64);
+  CHECK(primec::ir_lowerer::mulForIndex(primec::ir_lowerer::LocalInfo::ValueKind::UInt64) ==
+        primec::IrOpcode::MulI64);
+}
+
 TEST_CASE("ir lowerer setup math helper resolves namespaced builtins") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;

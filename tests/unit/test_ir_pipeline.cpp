@@ -18,6 +18,7 @@
 #include "primec/Vm.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
 #include "src/ir_lowerer/IrLowererFlowHelpers.h"
+#include "src/ir_lowerer/IrLowererIndexKindHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"

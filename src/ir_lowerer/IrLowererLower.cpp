@@ -6,6 +6,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererIndexKindHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
