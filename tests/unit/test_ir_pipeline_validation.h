@@ -1024,6 +1024,32 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve local storage access") 
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedLocalStorageAccess(callExpr, locals, out, resolved));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve field template args by struct path") {
+  auto collectFields = [](const std::string &structPath,
+                          std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> &fieldsOut) {
+    if (structPath != "/pkg/Container") {
+      return false;
+    }
+    fieldsOut.clear();
+    fieldsOut.push_back({"skip_static", "uninitialized", "i64", true});
+    fieldsOut.push_back({"wrong_type", "i64", "", false});
+    fieldsOut.push_back({"slot", "uninitialized", "map<i32, f64>", false});
+    return true;
+  };
+
+  std::string typeTemplateArg;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedFieldTemplateArg(
+      "/pkg/Container", "slot", collectFields, typeTemplateArg));
+  CHECK(typeTemplateArg == "map<i32, f64>");
+
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldTemplateArg(
+      "/pkg/Missing", "slot", collectFields, typeTemplateArg));
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldTemplateArg(
+      "/pkg/Container", "missing", collectFields, typeTemplateArg));
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldTemplateArg(
+      "/pkg/Container", "wrong_type", collectFields, typeTemplateArg));
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});

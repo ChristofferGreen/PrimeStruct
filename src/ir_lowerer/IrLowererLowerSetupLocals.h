@@ -320,21 +320,28 @@
             [&](const std::string &candidateStructPath,
                 const std::string &fieldName,
                 std::string &typeTemplateArgOut) -> bool {
-              auto fieldIt = structFieldInfoByName.find(candidateStructPath);
-              if (fieldIt == structFieldInfoByName.end()) {
-                return false;
-              }
-              std::vector<ir_lowerer::UninitializedFieldBindingInfo> fields;
-              fields.reserve(fieldIt->second.size());
-              for (const auto &field : fieldIt->second) {
-                ir_lowerer::UninitializedFieldBindingInfo info;
-                info.name = field.name;
-                info.typeName = field.binding.typeName;
-                info.typeTemplateArg = field.binding.typeTemplateArg;
-                info.isStatic = field.isStatic;
-                fields.push_back(std::move(info));
-              }
-              return ir_lowerer::findUninitializedFieldTemplateArg(fields, fieldName, typeTemplateArgOut);
+              return ir_lowerer::resolveUninitializedFieldTemplateArg(
+                  candidateStructPath,
+                  fieldName,
+                  [&](const std::string &structPath,
+                      std::vector<ir_lowerer::UninitializedFieldBindingInfo> &fieldsOut) -> bool {
+                    auto fieldIt = structFieldInfoByName.find(structPath);
+                    if (fieldIt == structFieldInfoByName.end()) {
+                      return false;
+                    }
+                    fieldsOut.clear();
+                    fieldsOut.reserve(fieldIt->second.size());
+                    for (const auto &field : fieldIt->second) {
+                      ir_lowerer::UninitializedFieldBindingInfo info;
+                      info.name = field.name;
+                      info.typeName = field.binding.typeName;
+                      info.typeTemplateArg = field.binding.typeTemplateArg;
+                      info.isStatic = field.isStatic;
+                      fieldsOut.push_back(std::move(info));
+                    }
+                    return true;
+                  },
+                  typeTemplateArgOut);
             },
             [&](const std::string &candidateStructPath) {
               return ir_lowerer::resolveDefinitionNamespacePrefix(defMap, candidateStructPath);

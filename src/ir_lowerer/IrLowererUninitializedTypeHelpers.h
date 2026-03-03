@@ -29,6 +29,8 @@ using ResolveStructTypePathFn =
     std::function<bool(const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut)>;
 using FindUninitializedFieldTemplateArgFn =
     std::function<bool(const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut)>;
+using CollectUninitializedFieldBindingsFn =
+    std::function<bool(const std::string &structPath, std::vector<UninitializedFieldBindingInfo> &fieldsOut)>;
 using ResolveDefinitionNamespacePrefixFn = std::function<std::string(const std::string &structPath)>;
 using ResolveUninitializedFieldTypeInfoFn =
     std::function<bool(const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out)>;
@@ -73,6 +75,10 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
                                             const LocalMap &localsIn,
                                             UninitializedLocalStorageAccessInfo &out,
                                             bool &resolvedOut);
+bool resolveUninitializedFieldTemplateArg(const std::string &structPath,
+                                          const std::string &fieldName,
+                                          const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+                                          std::string &typeTemplateArgOut);
 bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
                                        const std::string &fieldName,
                                        std::string &typeTemplateArgOut);

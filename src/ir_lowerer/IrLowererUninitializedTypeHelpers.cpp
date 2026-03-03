@@ -143,6 +143,17 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
   return true;
 }
 
+bool resolveUninitializedFieldTemplateArg(const std::string &structPath,
+                                          const std::string &fieldName,
+                                          const CollectUninitializedFieldBindingsFn &collectFieldBindings,
+                                          std::string &typeTemplateArgOut) {
+  std::vector<UninitializedFieldBindingInfo> fields;
+  if (!collectFieldBindings(structPath, fields)) {
+    return false;
+  }
+  return findUninitializedFieldTemplateArg(fields, fieldName, typeTemplateArgOut);
+}
+
 bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
                                        const std::string &fieldName,
                                        std::string &typeTemplateArgOut) {
