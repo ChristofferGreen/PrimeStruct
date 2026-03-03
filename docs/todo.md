@@ -168,6 +168,70 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add an IR validation pass immediately before backend emission to reject malformed/unsupported canonical IR earlier (`validateIrModule` now runs after IR lowering for VM/native/IR emit paths in `primec` and `primevm`, with dedicated IR pipeline validation tests).
 - ✓ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec (VM/native/GLSL effect+type matrix compile-run tests plus an IR opcode allowlist lock test).
 
+**VM Debugger & Introspection**
+- ○ Define VM debug session state model and stop-reason enum (`Breakpoint`, `Step`, `Pause`, `Fault`, `Exit`) shared by CLI/tooling. Testing: unit tests for state transition legality and stop-reason coverage.
+- ○ Add a first-class VM debug session API (separate from `Vm::execute`) with deterministic controls: `step`, `continue`, and `pause`. Testing: golden step transcripts for representative IR programs.
+- ○ Add VM runtime debug hook plumbing (`beforeInstruction`, `afterInstruction`, `callPush`, `callPop`, `fault`). Testing: hook coverage tests for every event kind.
+- ○ Make debug event ordering deterministic and document ordering guarantees. Testing: event-sequence snapshot tests and deterministic replay equivalence checks.
+- ○ Add IR-level breakpoints keyed by `(functionIndex, ip)`. Testing: compile-run suites with single/multiple breakpoints and branch-path coverage.
+- ○ Add `primevm --debug-json` NDJSON event streaming mode. Testing: CLI integration tests validating NDJSON schema and field stability.
+- ○ Add on-demand snapshot payloads (call stack, current frame locals, operand stack, instruction pointer) to debug JSON mode. Testing: snapshot shape/value assertions across step boundaries.
+- ○ Extend IR debug metadata with local slot names/types (no runtime semantic change). Testing: IR serialize/deserialize round-trip tests and malformed-metadata rejection tests.
+- ○ Extend IR debug metadata with instruction debug IDs for source-map linkage. Testing: ID stability snapshots across deterministic builds.
+- ○ Implement source-map plumbing (AST/token span -> canonical AST -> IR instruction). Testing: source-map golden tests and transform-provenance assertions.
+- ○ Add source-level breakpoint resolution on top of IR/source maps. Testing: breakpoint mapping tests (single/multi-hit and ambiguous-span diagnostics).
+- ○ Map runtime stack traces back to source spans in VM diagnostics. Testing: stack-trace mapping assertions for nested calls and faults.
+- ○ Add a DAP/LSP debug adapter that translates VM debug events into debugger primitives (threads/stack frames/scopes/variables/breakpoints). Testing: protocol transcript tests and adapter integration smoke tests.
+- ○ Add optional deterministic trace capture (event log) behind an explicit debug flag. Testing: trace completeness/ordering regression tests.
+- ○ Add checkpointed replay/time-travel on top of trace capture. Testing: checkpoint/restore equivalence tests and replay determinism regression suites.
+
+**WebAssembly Emitter**
+- ○ Add a new `WasmEmitter` backend entrypoint that consumes canonical `IrModule` (no AST-side Wasm lowering path). Testing: unit tests that emit/validate minimal Wasm modules.
+- ○ Add Wasm module section encoders (type/function/code/data/import/export) with deterministic emission order. Testing: binary snapshot tests and validator-based structural checks.
+- ○ Add `--emit=wasm` CLI support in `primec` (option parsing + diagnostics parity). Testing: options-parser regression tests and diagnostics-mode argument tests.
+- ○ Add default `.wasm` output extension and usage/help text updates. Testing: usage-text lock tests and output-path default tests.
+- ○ Add `IrValidationTarget::Wasm` with explicit opcode/effect/capability allowlist. Testing: positive/negative IR validation suites for Wasm constraints.
+- ○ Implement `wasm32-wasi` codegen for integer/control-flow/local ops. Testing: compile-run tests under a Wasm runtime (for example `wasmtime`) for control-flow/math programs.
+- ○ Implement `wasm32-wasi` codegen for float ops and numeric conversions. Testing: float/conversion conformance corpus with tolerance checks.
+- ○ Implement call/return lowering for callable IR in Wasm backend. Testing: direct/recursive call parity tests where semantics permit recursion.
+- ○ Implement WASI import mapping for stdout/stderr/argv paths (`wasi_snapshot_preview1`). Testing: integration tests for argv and output parity.
+- ○ Implement WASI import mapping for file operations. Testing: file behavior integration tests (open/write/flush/close/error paths).
+- ○ Add deterministic compile-run parity tests comparing VM vs Wasm behavior for supported programs. Testing: locked parity corpus with stable outputs and exit codes.
+- ○ Add negative conformance tests rejecting unsupported IR features in Wasm mode with stable diagnostics. Testing: diagnostics snapshot tests with code + notes + stage metadata.
+- ○ Split Wasm backend profiles (`wasm-wasi` and `wasm-browser`) and gate unsupported operations per profile. Testing: profile-matrix compile tests (accept/reject) for effects/opcodes.
+- ○ Document Wasm backend limits (memory model, imports, unsupported ops/effects) in `docs/PrimeStruct.md` and syntax/spec references. Testing: doc-linked conformance cases that exercise every documented limit.
+- ○ Add tooling/CI hooks to optionally execute Wasm outputs when a runtime is available. Testing: CI coverage with runtime-detected execution and explicit skip assertions when unavailable.
+
+**Web + Native + Metal 3D Target (Spinning Cube)**
+- ○ Add shared spinning-cube PrimeStruct simulation source and data layout (`cube.prime`) used by all hosts. Testing: compile-time smoke tests across all target profiles.
+- ○ Add browser host sample assets (`index.html`, `main.js`) under `examples/web/spinning_cube/`. Testing: sample-presence smoke tests plus browser build pipeline checks.
+- ○ Define minimal browser graphics profile (`wasm-browser` + WebGPU shader path) with compile-time gating. Testing: positive/negative compile suites for browser profile rules.
+- ○ Add native desktop host target for the same sample (shared simulation logic + native host glue). Testing: native build-and-run integration test on supported CI runners.
+- ○ Add Apple Metal shader/output path for macOS (`metal-osx` profile) with compile-time gating. Testing: macOS shader compile tests (`xcrun metal`/`metallib`) and profile rejection tests.
+- ○ Add minimal macOS Metal host glue for drawing the cube using generated shader artifacts. Testing: macOS runtime smoke test with frame-render assertion.
+- ○ Implement deterministic fixed-step simulation loop shared by browser/native/Metal hosts. Testing: deterministic tick-state tests with golden angle/transform snapshots.
+- ○ Add transform/rotation math parity tests across VM/native/Wasm/Metal-hosted paths. Testing: backend parity corpus with tolerance-checked numeric outputs.
+- ○ Add integration coverage that builds all sample targets and validates generated artifacts (`.wasm`, native binary, shader outputs, loader assets). Testing: artifact existence + hash/schema checks in CI.
+- ○ Add optional visual smoke checks for sample startup (headless where possible, interactive otherwise). Testing: automated startup checks with explicit skip rules per runner capability.
+- ○ Document sample build/run instructions and expected runtime behavior for browser + native + macOS Metal targets (startup, controls, FPS/diagnostic overlay). Testing: scripted doc-command smoke checks to prevent instruction drift.
+
+**Native Register Allocation & Scheduling**
+- ○ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
+- ○ Add deterministic counter/debug dump output for instrumentation and optimization phases. Testing: dump-format snapshot tests with stable ordering.
+- ○ Add baseline performance/size benchmarks for representative IR workloads before allocator/scheduler changes. Testing: benchmark harness regression in CI with stored baseline artifacts.
+- ○ Implement top-of-stack register cache for arm64 integer stack values (spill only on pressure). Testing: runtime parity tests plus instruction-count and spill-count deltas.
+- ○ Implement top-of-stack register cache handling for float lanes (`f32`/`f64`) without semantic drift. Testing: float-heavy compile-run parity corpus.
+- ○ Add an emitter flag to toggle register cache for A/B comparisons and bisecting. Testing: dual-mode parity tests (`cache on/off` identical outputs).
+- ○ Add correctness regressions for mixed int/float ops, calls/returns, branches, and conversions under register-cache mode. Testing: expanded compile-run matrix with branch/call depth coverage.
+- ○ Lower stack-form IR to block-local virtual-register form (no semantic change). Testing: translation equivalence tests against interpreter/native baseline.
+- ○ Add liveness interval construction for virtual registers with deterministic tie-break ordering. Testing: liveness golden tests for representative control-flow graphs.
+- ○ Implement deterministic linear-scan register allocator with explicit spill policy. Testing: allocator golden tests for deterministic allocation/spill placement.
+- ○ Implement spill/reload insertion pass from allocator decisions. Testing: verifier-backed tests for spill correctness across branch edges/calls.
+- ○ Implement block-local instruction scheduling (latency-aware, dependency-safe) after allocation. Testing: dependency-safety tests and deterministic-order snapshots.
+- ○ Add verifier checks ensuring scheduled/allocation output preserves stack/SSA-equivalent behavior and branch-edge value agreement. Testing: negative tests with intentionally invalid schedules plus verifier pass coverage.
+- ○ Add conformance and perf-gate tests comparing pre/post optimization outputs (correctness parity required; measurable push/pop/spill reductions expected). Testing: CI perf gates with explicit thresholds and parity locks.
+- ○ Document allocator/scheduler design, heuristics, and debug dump formats in `docs/PrimeStruct.md`. Testing: doc-linked dump examples validated by snapshot tests.
+
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).
 - ✓ Reconcile definition visibility: allow `[public]/[private]` on definitions and enforce import visibility.
