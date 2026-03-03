@@ -23,5 +23,6 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const ResolveStructTypePathFn &resolveStructTypePath,
                                   UninitializedTypeInfo &out,
                                   std::string &error);
+bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, UninitializedTypeInfo &out);
 
 } // namespace primec::ir_lowerer

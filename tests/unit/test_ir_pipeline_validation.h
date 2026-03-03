@@ -681,6 +681,27 @@ TEST_CASE("ir lowerer uninitialized type helpers report diagnostics") {
   CHECK(error == "native backend does not support uninitialized storage for type: Thing<i32>");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata") {
+  primec::ir_lowerer::LocalInfo local;
+  local.isUninitializedStorage = true;
+  local.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  local.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  local.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  local.structTypeName = "/pkg/MyStruct";
+
+  primec::ir_lowerer::UninitializedTypeInfo out;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
+  CHECK(out.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(out.structPath == "/pkg/MyStruct");
+
+  local.isUninitializedStorage = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));

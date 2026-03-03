@@ -316,15 +316,13 @@
     resolved = false;
     if (storage.kind == Expr::Kind::Name) {
       auto it = localsIn.find(storage.name);
-      if (it != localsIn.end() && it->second.isUninitializedStorage) {
+      UninitializedTypeInfo localTypeInfo;
+      if (it != localsIn.end() &&
+          ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(it->second, localTypeInfo)) {
         out = UninitializedStorageAccess{};
         out.location = UninitializedStorageAccess::Location::Local;
         out.local = &it->second;
-        out.typeInfo.kind = it->second.kind;
-        out.typeInfo.valueKind = it->second.valueKind;
-        out.typeInfo.mapKeyKind = it->second.mapKeyKind;
-        out.typeInfo.mapValueKind = it->second.mapValueKind;
-        out.typeInfo.structPath = it->second.structTypeName;
+        out.typeInfo = localTypeInfo;
         resolved = true;
       }
       return true;

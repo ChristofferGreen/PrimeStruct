@@ -89,4 +89,17 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
   return false;
 }
 
+bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, UninitializedTypeInfo &out) {
+  out = UninitializedTypeInfo{};
+  if (!local.isUninitializedStorage) {
+    return false;
+  }
+  out.kind = local.kind;
+  out.valueKind = local.valueKind;
+  out.mapKeyKind = local.mapKeyKind;
+  out.mapValueKind = local.mapValueKind;
+  out.structPath = local.structTypeName;
+  return true;
+}
+
 } // namespace primec::ir_lowerer
