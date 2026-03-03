@@ -1132,6 +1132,107 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve field storage type info
   CHECK(error == "native backend does not support uninitialized storage for type: Thing<i32>");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve field storage access") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo receiver;
+  receiver.structTypeName = "/pkg/Container";
+  locals.emplace("self", receiver);
+  const auto receiverIt = locals.find("self");
+  REQUIRE(receiverIt != locals.end());
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "self";
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Call;
+  storageExpr.isFieldAccess = true;
+  storageExpr.name = "slot";
+  storageExpr.args.push_back(receiverExpr);
+
+  auto findField = [](const std::string &structPath,
+                      const std::string &fieldName,
+                      std::string &typeTemplateArgOut) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      typeTemplateArgOut = "i64";
+      return true;
+    }
+    return false;
+  };
+  auto resolveNamespacePrefix = [](const std::string &structPath) {
+    if (structPath == "/pkg/Container") {
+      return std::string("/pkg");
+    }
+    return std::string();
+  };
+  auto resolveTypeInfo = [](const std::string &typeText,
+                            const std::string &namespacePrefix,
+                            primec::ir_lowerer::UninitializedTypeInfo &out) {
+    const auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
+    std::string error;
+    return primec::ir_lowerer::resolveUninitializedTypeInfo(typeText, namespacePrefix, resolveStruct, out, error);
+  };
+  auto resolveSlot = [](const std::string &structPath,
+                        const std::string &fieldName,
+                        primec::ir_lowerer::StructSlotFieldInfo &out) {
+    if (structPath == "/pkg/Container" && fieldName == "slot") {
+      out.name = "slot";
+      out.slotOffset = 4;
+      out.slotCount = 1;
+      out.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      return true;
+    }
+    return false;
+  };
+
+  primec::ir_lowerer::UninitializedFieldStorageAccessInfo out;
+  bool resolved = false;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedFieldStorageAccess(
+      storageExpr,
+      locals,
+      findField,
+      resolveNamespacePrefix,
+      resolveTypeInfo,
+      resolveSlot,
+      out,
+      resolved,
+      error));
+  CHECK(resolved);
+  CHECK(error.empty());
+  CHECK(out.receiver == &receiverIt->second);
+  CHECK(out.fieldSlot.slotOffset == 4);
+  CHECK(out.typeInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  storageExpr.name = "missing";
+  REQUIRE(primec::ir_lowerer::resolveUninitializedFieldStorageAccess(
+      storageExpr,
+      locals,
+      findField,
+      resolveNamespacePrefix,
+      resolveTypeInfo,
+      resolveSlot,
+      out,
+      resolved,
+      error));
+  CHECK_FALSE(resolved);
+
+  storageExpr.name = "slot";
+  auto resolveMissingSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedFieldStorageAccess(
+      storageExpr,
+      locals,
+      findField,
+      resolveNamespacePrefix,
+      resolveTypeInfo,
+      resolveMissingSlot,
+      out,
+      resolved,
+      error));
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));

@@ -333,8 +333,8 @@
       }
       return true;
     }
-    ir_lowerer::UninitializedFieldStorageTypeInfo fieldStorage;
-    if (!ir_lowerer::resolveUninitializedFieldStorageTypeInfo(
+    ir_lowerer::UninitializedFieldStorageAccessInfo fieldStorage;
+    if (!ir_lowerer::resolveUninitializedFieldStorageAccess(
             storage,
             localsIn,
             [&](const std::string &candidateStructPath,
@@ -360,6 +360,7 @@
               return ir_lowerer::resolveDefinitionNamespacePrefix(defMap, candidateStructPath);
             },
             resolveUninitializedTypeInfo,
+            resolveStructFieldSlot,
             fieldStorage,
             resolved,
             error)) {
@@ -369,14 +370,10 @@
       return true;
     }
 
-    StructSlotFieldInfo slot;
-    if (!resolveStructFieldSlot(fieldStorage.structPath, storage.name, slot)) {
-      return false;
-    }
     out = UninitializedStorageAccess{};
     out.location = UninitializedStorageAccess::Location::Field;
     out.receiver = fieldStorage.receiver;
-    out.fieldSlot = slot;
+    out.fieldSlot = fieldStorage.fieldSlot;
     out.typeInfo = fieldStorage.typeInfo;
     resolved = true;
     return true;

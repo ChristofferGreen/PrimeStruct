@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -38,6 +39,12 @@ struct UninitializedFieldStorageTypeInfo {
   UninitializedTypeInfo typeInfo;
 };
 
+struct UninitializedFieldStorageAccessInfo {
+  const LocalInfo *receiver = nullptr;
+  StructSlotFieldInfo fieldSlot;
+  UninitializedTypeInfo typeInfo;
+};
+
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
                                   const ResolveStructTypePathFn &resolveStructTypePath,
@@ -65,6 +72,16 @@ bool resolveUninitializedFieldStorageTypeInfo(
     const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
     const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
     UninitializedFieldStorageTypeInfo &out,
+    bool &resolvedOut,
+    std::string &error);
+bool resolveUninitializedFieldStorageAccess(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedFieldStorageAccessInfo &out,
     bool &resolvedOut,
     std::string &error);
 

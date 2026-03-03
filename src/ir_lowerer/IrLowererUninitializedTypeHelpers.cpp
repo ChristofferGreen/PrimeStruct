@@ -207,4 +207,43 @@ bool resolveUninitializedFieldStorageTypeInfo(
   return true;
 }
 
+bool resolveUninitializedFieldStorageAccess(
+    const Expr &storage,
+    const LocalMap &localsIn,
+    const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+    const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    UninitializedFieldStorageAccessInfo &out,
+    bool &resolvedOut,
+    std::string &error) {
+  out = UninitializedFieldStorageAccessInfo{};
+  resolvedOut = false;
+
+  UninitializedFieldStorageTypeInfo typeInfo;
+  if (!resolveUninitializedFieldStorageTypeInfo(storage,
+                                                localsIn,
+                                                findFieldTemplateArg,
+                                                resolveDefinitionNamespacePrefix,
+                                                resolveUninitializedTypeInfo,
+                                                typeInfo,
+                                                resolvedOut,
+                                                error)) {
+    return false;
+  }
+  if (!resolvedOut) {
+    return true;
+  }
+
+  StructSlotFieldInfo slot;
+  if (!resolveStructFieldSlot(typeInfo.structPath, storage.name, slot)) {
+    return false;
+  }
+  out.receiver = typeInfo.receiver;
+  out.fieldSlot = slot;
+  out.typeInfo = typeInfo.typeInfo;
+  resolvedOut = true;
+  return true;
+}
+
 } // namespace primec::ir_lowerer
