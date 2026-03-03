@@ -2,19 +2,7 @@
     return ir_lowerer::valueKindFromTypeName(name);
   };
 
-  bool hasMathImport = false;
-  auto isMathImport = [](const std::string &path) -> bool {
-    if (path == "/std/math/*") {
-      return true;
-    }
-    return path.rfind("/std/math/", 0) == 0 && path.size() > 10;
-  };
-  for (const auto &importPath : program.imports) {
-    if (isMathImport(importPath)) {
-      hasMathImport = true;
-      break;
-    }
-  }
+  const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
   bool hasReturnTransform = false;
   bool returnsVoid = false;

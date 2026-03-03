@@ -26,6 +26,22 @@ bool parseMathName(const std::string &name, bool hasMathImport, std::string &out
 }
 } // namespace
 
+bool isMathImportPath(const std::string &path) {
+  if (path == "/std/math/*") {
+    return true;
+  }
+  return path.rfind("/std/math/", 0) == 0 && path.size() > 10;
+}
+
+bool hasProgramMathImport(const std::vector<std::string> &imports) {
+  for (const auto &importPath : imports) {
+    if (isMathImportPath(importPath)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &out) {
   if (expr.kind != Expr::Kind::Call) {
     return false;

@@ -326,6 +326,22 @@ TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Bool, ValueKind::Int32) == ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup math helper detects math imports") {
+  CHECK(primec::ir_lowerer::isMathImportPath("/std/math/*"));
+  CHECK(primec::ir_lowerer::isMathImportPath("/std/math/sin"));
+  CHECK_FALSE(primec::ir_lowerer::isMathImportPath("/std"));
+  CHECK_FALSE(primec::ir_lowerer::isMathImportPath("/std/math"));
+
+  const std::vector<std::string> importsA = {"/std/io/*", "/std/math/*"};
+  CHECK(primec::ir_lowerer::hasProgramMathImport(importsA));
+
+  const std::vector<std::string> importsB = {"/std/io/*", "/std/math/sin"};
+  CHECK(primec::ir_lowerer::hasProgramMathImport(importsB));
+
+  const std::vector<std::string> importsC = {"/std/io/*", "/pkg/demo"};
+  CHECK_FALSE(primec::ir_lowerer::hasProgramMathImport(importsC));
+}
+
 TEST_CASE("ir lowerer struct type helpers join template args text") {
   const std::vector<std::string> emptyArgs;
   CHECK(primec::ir_lowerer::joinTemplateArgsText(emptyArgs).empty());
