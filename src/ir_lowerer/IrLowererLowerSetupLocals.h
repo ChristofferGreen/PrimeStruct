@@ -172,10 +172,6 @@
     return ir_lowerer::bindingValueKindFromTransforms(expr, kind);
   };
 
-  auto joinTemplateArgsLocals = [](const std::vector<std::string> &args) {
-    return ir_lowerer::joinTemplateArgsText(args);
-  };
-
   auto resolveStructTypeName = [&](const std::string &typeName,
                                    const std::string &namespacePrefix,
                                    std::string &resolvedOut) -> bool {
@@ -190,11 +186,7 @@
         typeText, namespacePrefix, resolveStructTypeName, out, error);
   };
 
-  struct StructArrayInfo {
-    std::string structPath;
-    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-    int32_t fieldCount = 0;
-  };
+  using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   struct StructSlotFieldInfo {
     std::string name;
     int32_t slotOffset = -1;
@@ -208,109 +200,32 @@
     std::vector<StructSlotFieldInfo> fields;
   };
 
-  auto resolveStructArrayInfo = [&](const Expr &expr, StructArrayInfo &out) -> bool {
-    out = StructArrayInfo{};
-    std::string typeName;
-    std::string templateArg;
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      typeName = transform.name;
-      if (!transform.templateArgs.empty()) {
-        templateArg = joinTemplateArgsLocals(transform.templateArgs);
-      }
-      break;
-    }
-    if (typeName == "Reference" || typeName == "Pointer") {
-      return false;
-    }
-    std::string resolved;
-    if (!resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
-      return false;
-    }
-    auto fieldIt = structFieldInfoByName.find(resolved);
-    if (fieldIt == structFieldInfoByName.end()) {
-      return false;
-    }
-    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-    int32_t fieldCount = 0;
-    for (const auto &field : fieldIt->second) {
-      if (field.isStatic) {
-        continue;
-      }
-      if (!field.binding.typeTemplateArg.empty()) {
-        return false;
-      }
-      LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
-      if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
-        return false;
-      }
-      if (elementKind == LocalInfo::ValueKind::Unknown) {
-        elementKind = kind;
-      } else if (elementKind != kind) {
-        return false;
-      }
-      ++fieldCount;
-    }
-    if (fieldCount == 0 || elementKind == LocalInfo::ValueKind::Unknown) {
-      return false;
-    }
-    out.structPath = resolved;
-    out.elementKind = elementKind;
-    out.fieldCount = fieldCount;
-    return true;
-  };
-
-  auto resolveStructArrayInfoFromPath = [&](const std::string &structPath, StructArrayInfo &out) -> bool {
-    out = StructArrayInfo{};
+  auto collectStructArrayFields = [&](const std::string &structPath,
+                                      std::vector<ir_lowerer::StructArrayFieldInfo> &out) -> bool {
+    out.clear();
     auto fieldIt = structFieldInfoByName.find(structPath);
     if (fieldIt == structFieldInfoByName.end()) {
       return false;
     }
-    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
-    int32_t fieldCount = 0;
+    out.reserve(fieldIt->second.size());
     for (const auto &field : fieldIt->second) {
-      if (field.isStatic) {
-        continue;
-      }
-      if (!field.binding.typeTemplateArg.empty()) {
-        return false;
-      }
-      LocalInfo::ValueKind kind = valueKindFromTypeName(field.binding.typeName);
-      if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
-        return false;
-      }
-      if (elementKind == LocalInfo::ValueKind::Unknown) {
-        elementKind = kind;
-      } else if (elementKind != kind) {
-        return false;
-      }
-      ++fieldCount;
+      ir_lowerer::StructArrayFieldInfo info;
+      info.typeName = field.binding.typeName;
+      info.typeTemplateArg = field.binding.typeTemplateArg;
+      info.isStatic = field.isStatic;
+      out.push_back(std::move(info));
     }
-    if (fieldCount == 0 || elementKind == LocalInfo::ValueKind::Unknown) {
-      return false;
-    }
-    out.structPath = structPath;
-    out.elementKind = elementKind;
-    out.fieldCount = fieldCount;
     return true;
   };
 
+  auto resolveStructArrayInfoFromPath = [&](const std::string &structPath, StructArrayInfo &out) -> bool {
+    return ir_lowerer::resolveStructArrayTypeInfoFromPath(
+        structPath, collectStructArrayFields, valueKindFromTypeName, out);
+  };
+
   auto applyStructArrayInfo = [&](const Expr &expr, LocalInfo &info) {
-    StructArrayInfo structInfo;
-    if (resolveStructArrayInfo(expr, structInfo)) {
-      info.kind = LocalInfo::Kind::Array;
-      info.valueKind = structInfo.elementKind;
-      info.structTypeName = structInfo.structPath;
-      info.structFieldCount = structInfo.fieldCount;
-    }
+    ir_lowerer::applyStructArrayInfoFromBinding(
+        expr, resolveStructTypeName, collectStructArrayFields, valueKindFromTypeName, info);
   };
 
   std::unordered_map<std::string, StructSlotLayout> structSlotLayoutCache;

@@ -60,6 +60,91 @@ bool resolveStructTypePathFromScope(
   return false;
 }
 
+bool resolveStructArrayTypeInfoFromPath(const std::string &structPath,
+                                        const CollectStructArrayFieldsFn &collectStructArrayFields,
+                                        const ValueKindFromTypeNameFn &valueKindFromTypeName,
+                                        StructArrayTypeInfo &out) {
+  out = StructArrayTypeInfo{};
+  std::vector<StructArrayFieldInfo> fields;
+  if (!collectStructArrayFields(structPath, fields)) {
+    return false;
+  }
+  LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+  int32_t fieldCount = 0;
+  for (const auto &field : fields) {
+    if (field.isStatic) {
+      continue;
+    }
+    if (!field.typeTemplateArg.empty()) {
+      return false;
+    }
+    LocalInfo::ValueKind kind = valueKindFromTypeName(field.typeName);
+    if (kind == LocalInfo::ValueKind::Unknown || kind == LocalInfo::ValueKind::String) {
+      return false;
+    }
+    if (elementKind == LocalInfo::ValueKind::Unknown) {
+      elementKind = kind;
+    } else if (elementKind != kind) {
+      return false;
+    }
+    ++fieldCount;
+  }
+  if (fieldCount == 0 || elementKind == LocalInfo::ValueKind::Unknown) {
+    return false;
+  }
+  out.structPath = structPath;
+  out.elementKind = elementKind;
+  out.fieldCount = fieldCount;
+  return true;
+}
+
+bool resolveStructArrayTypeInfoFromBinding(const Expr &expr,
+                                           const ResolveStructTypeNameFn &resolveStructTypeName,
+                                           const CollectStructArrayFieldsFn &collectStructArrayFields,
+                                           const ValueKindFromTypeNameFn &valueKindFromTypeName,
+                                           StructArrayTypeInfo &out) {
+  out = StructArrayTypeInfo{};
+  std::string typeName;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    typeName = transform.name;
+    break;
+  }
+  if (typeName.empty() || typeName == "Reference" || typeName == "Pointer") {
+    return false;
+  }
+  std::string resolved;
+  if (!resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
+    return false;
+  }
+  return resolveStructArrayTypeInfoFromPath(
+      resolved, collectStructArrayFields, valueKindFromTypeName, out);
+}
+
+void applyStructArrayInfoFromBinding(const Expr &expr,
+                                     const ResolveStructTypeNameFn &resolveStructTypeName,
+                                     const CollectStructArrayFieldsFn &collectStructArrayFields,
+                                     const ValueKindFromTypeNameFn &valueKindFromTypeName,
+                                     LocalInfo &info) {
+  StructArrayTypeInfo structInfo;
+  if (!resolveStructArrayTypeInfoFromBinding(
+          expr, resolveStructTypeName, collectStructArrayFields, valueKindFromTypeName, structInfo)) {
+    return;
+  }
+  info.kind = LocalInfo::Kind::Array;
+  info.valueKind = structInfo.elementKind;
+  info.structTypeName = structInfo.structPath;
+  info.structFieldCount = structInfo.fieldCount;
+}
+
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {
