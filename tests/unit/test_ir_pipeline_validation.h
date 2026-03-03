@@ -754,6 +754,32 @@ TEST_CASE("ir lowerer struct type helpers resolve struct slot field by name") {
   CHECK_FALSE(primec::ir_lowerer::resolveStructSlotFieldByName(fields, "missing", out));
 }
 
+TEST_CASE("ir lowerer struct type helpers resolve field slot from layout") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  auto resolveStructSlotFields = [](const std::string &structPath,
+                                    std::vector<primec::ir_lowerer::StructSlotFieldInfo> &out) {
+    out.clear();
+    if (structPath == "/pkg/Container") {
+      out.push_back({"value", 1, 1, ValueKind::Int32, ""});
+      out.push_back({"nested", 2, 3, ValueKind::Unknown, "/pkg/Nested"});
+      return true;
+    }
+    return false;
+  };
+
+  primec::ir_lowerer::StructSlotFieldInfo out;
+  REQUIRE(primec::ir_lowerer::resolveStructFieldSlotFromLayout(
+      "/pkg/Container", "nested", resolveStructSlotFields, out));
+  CHECK(out.name == "nested");
+  CHECK(out.slotOffset == 2);
+  CHECK(out.structPath == "/pkg/Nested");
+
+  CHECK_FALSE(primec::ir_lowerer::resolveStructFieldSlotFromLayout(
+      "/pkg/Container", "missing", resolveStructSlotFields, out));
+  CHECK_FALSE(primec::ir_lowerer::resolveStructFieldSlotFromLayout(
+      "/pkg/Missing", "nested", resolveStructSlotFields, out));
+}
+
 TEST_CASE("ir lowerer struct type helpers apply struct value info") {
   auto resolveStruct = [](const std::string &typeName,
                           const std::string &namespacePrefix,

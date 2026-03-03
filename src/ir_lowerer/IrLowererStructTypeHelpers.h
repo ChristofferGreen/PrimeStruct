@@ -11,16 +11,12 @@
 
 namespace primec::ir_lowerer {
 
-struct StructSlotFieldInfo;
-
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using InferStructExprPathFn = std::function<std::string(const Expr &)>;
 using InferStructExprWithLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using IsKnownStructPathFn = std::function<bool(const std::string &)>;
 using InferDefinitionStructReturnPathFn = std::function<std::string(const std::string &)>;
-using ResolveStructFieldSlotFn =
-    std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>;
 
 struct StructArrayFieldInfo {
   std::string typeName;
@@ -43,6 +39,11 @@ struct StructSlotFieldInfo {
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   std::string structPath;
 };
+
+using ResolveStructFieldSlotFn =
+    std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>;
+using ResolveStructSlotFieldsFn =
+    std::function<bool(const std::string &, std::vector<StructSlotFieldInfo> &)>;
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
@@ -69,6 +70,10 @@ void applyStructArrayInfoFromBinding(const Expr &expr,
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
                                   const std::string &fieldName,
                                   StructSlotFieldInfo &out);
+bool resolveStructFieldSlotFromLayout(const std::string &structPath,
+                                      const std::string &fieldName,
+                                      const ResolveStructSlotFieldsFn &resolveStructSlotFields,
+                                      StructSlotFieldInfo &out);
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info);

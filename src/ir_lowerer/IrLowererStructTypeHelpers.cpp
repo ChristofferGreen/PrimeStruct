@@ -158,6 +158,17 @@ bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields
   return false;
 }
 
+bool resolveStructFieldSlotFromLayout(const std::string &structPath,
+                                      const std::string &fieldName,
+                                      const ResolveStructSlotFieldsFn &resolveStructSlotFields,
+                                      StructSlotFieldInfo &out) {
+  std::vector<StructSlotFieldInfo> fields;
+  if (!resolveStructSlotFields(structPath, fields)) {
+    return false;
+  }
+  return resolveStructSlotFieldByName(fields, fieldName, out);
+}
+
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {

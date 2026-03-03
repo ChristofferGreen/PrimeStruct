@@ -294,11 +294,18 @@
   auto resolveStructFieldSlot = [&](const std::string &structPath,
                                     const std::string &fieldName,
                                     StructSlotFieldInfo &out) -> bool {
-    StructSlotLayout layout;
-    if (!resolveStructSlotLayout(structPath, layout)) {
-      return false;
-    }
-    return ir_lowerer::resolveStructSlotFieldByName(layout.fields, fieldName, out);
+    return ir_lowerer::resolveStructFieldSlotFromLayout(
+        structPath,
+        fieldName,
+        [&](const std::string &candidateStructPath, std::vector<StructSlotFieldInfo> &fieldsOut) {
+          StructSlotLayout layout;
+          if (!resolveStructSlotLayout(candidateStructPath, layout)) {
+            return false;
+          }
+          fieldsOut = layout.fields;
+          return true;
+        },
+        out);
   };
 
   struct UninitializedStorageAccess {
