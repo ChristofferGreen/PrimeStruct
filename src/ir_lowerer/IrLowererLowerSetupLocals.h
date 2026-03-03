@@ -144,83 +144,8 @@
     return true;
   };
 
-  auto isBindingMutable = [](const Expr &expr) -> bool {
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "mut") {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  auto isBindingQualifierName = [](const std::string &name) -> bool {
-    return name == "public" || name == "private" || name == "static" || name == "mut" || name == "copy" ||
-           name == "restrict" || name == "align_bytes" || name == "align_kbytes";
-  };
-
-  auto hasExplicitBindingTypeTransform = [&](const Expr &expr) -> bool {
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      return true;
-    }
-    return false;
-  };
-
-  auto extractUninitializedTemplateArg = [&](const Expr &expr, std::string &typeTextOut) -> bool {
-    typeTextOut.clear();
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      if (transform.name != "uninitialized") {
-        continue;
-      }
-      if (transform.templateArgs.size() != 1) {
-        return false;
-      }
-      typeTextOut = transform.templateArgs.front();
-      return true;
-    }
-    return false;
-  };
-
   bool hasEntryArgs = false;
   std::string entryArgsName;
-  auto isEntryArgsParam = [&](const Expr &param) -> bool {
-    std::string typeName;
-    std::string templateArg;
-    bool hasTemplateArg = false;
-    for (const auto &transform : param.transforms) {
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      typeName = transform.name;
-      if (transform.templateArgs.size() == 1) {
-        templateArg = transform.templateArgs.front();
-        hasTemplateArg = true;
-      } else {
-        hasTemplateArg = false;
-      }
-    }
-    return typeName == "array" && hasTemplateArg && templateArg == "string";
-  };
   if (!entryDef->parameters.empty()) {
     if (entryDef->parameters.size() != 1) {
       error = "native backend only supports a single array<string> entry parameter";

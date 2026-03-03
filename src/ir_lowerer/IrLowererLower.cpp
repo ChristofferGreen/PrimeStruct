@@ -4,6 +4,7 @@
 #include "primec/StringLiteral.h"
 
 #include "IrLowererCallHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"

@@ -219,6 +219,76 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
+  CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
+  CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));
+  CHECK_FALSE(primec::ir_lowerer::isBindingQualifierName("array"));
+
+  primec::Expr bindingExpr;
+  primec::Transform mutTransform;
+  mutTransform.name = "mut";
+  bindingExpr.transforms.push_back(mutTransform);
+  CHECK(primec::ir_lowerer::isBindingMutable(bindingExpr));
+
+  bindingExpr.transforms.clear();
+  CHECK_FALSE(primec::ir_lowerer::isBindingMutable(bindingExpr));
+}
+
+TEST_CASE("ir lowerer binding transform helpers detect explicit binding types") {
+  primec::Expr expr;
+
+  primec::Transform effects;
+  effects.name = "effects";
+  effects.arguments = {"io_out"};
+  expr.transforms.push_back(effects);
+
+  primec::Transform qualifier;
+  qualifier.name = "public";
+  expr.transforms.push_back(qualifier);
+
+  CHECK_FALSE(primec::ir_lowerer::hasExplicitBindingTypeTransform(expr));
+
+  primec::Transform typed;
+  typed.name = "array";
+  typed.templateArgs = {"i64"};
+  expr.transforms.push_back(typed);
+  CHECK(primec::ir_lowerer::hasExplicitBindingTypeTransform(expr));
+}
+
+TEST_CASE("ir lowerer binding transform helpers extract uninitialized template args") {
+  primec::Expr expr;
+  primec::Transform uninitialized;
+  uninitialized.name = "uninitialized";
+  uninitialized.templateArgs = {"i64"};
+  expr.transforms.push_back(uninitialized);
+
+  std::string typeText;
+  CHECK(primec::ir_lowerer::extractUninitializedTemplateArg(expr, typeText));
+  CHECK(typeText == "i64");
+
+  expr.transforms.clear();
+  uninitialized.templateArgs = {"i64", "i32"};
+  expr.transforms.push_back(uninitialized);
+  CHECK_FALSE(primec::ir_lowerer::extractUninitializedTemplateArg(expr, typeText));
+}
+
+TEST_CASE("ir lowerer binding transform helpers detect entry args params") {
+  primec::Expr param;
+  primec::Transform mutTransform;
+  mutTransform.name = "mut";
+  param.transforms.push_back(mutTransform);
+
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  param.transforms.push_back(arrayTransform);
+  CHECK(primec::ir_lowerer::isEntryArgsParam(param));
+
+  arrayTransform.templateArgs = {"i64"};
+  param.transforms.back() = arrayTransform;
+  CHECK_FALSE(primec::ir_lowerer::isEntryArgsParam(param));
+}
+
 TEST_CASE("ir lowerer template type parse helper splits nested template args") {
   std::vector<std::string> args;
   REQUIRE(primec::ir_lowerer::splitTemplateArgs(" i32 , map<string, array<i64>> , Result<bool, FileError> ", args));

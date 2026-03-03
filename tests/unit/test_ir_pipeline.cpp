@@ -17,6 +17,7 @@
 #include "primec/Semantics.h"
 #include "primec/Vm.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
+#include "src/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "src/ir_lowerer/IrLowererFlowHelpers.h"
 #include "src/ir_lowerer/IrLowererIndexKindHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"

@@ -23,6 +23,7 @@ add_library(primec_lib
   src/ImportResolver.cpp
   src/IrInliner.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
+  src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererIndexKindHelpers.cpp
