@@ -14,4 +14,3 @@
         if (arcHyperbolicResult == ir_lowerer::OperatorArcHyperbolicEmitResult::Handled) {
           return true;
         }
-        std::string powName;

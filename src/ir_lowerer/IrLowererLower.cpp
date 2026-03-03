@@ -12,6 +12,7 @@
 #include "IrLowererOperatorArcHyperbolicHelpers.h"
 #include "IrLowererOperatorClampMinMaxTrigHelpers.h"
 #include "IrLowererOperatorComparisonHelpers.h"
+#include "IrLowererOperatorPowAbsSignHelpers.h"
 #include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererResultHelpers.h"

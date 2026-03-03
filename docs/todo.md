@@ -23,10 +23,10 @@ Legend:
 - ✓ Continue return/call split by moving return-type inference logic from `IrLowererLowerReturnInfo.h` into compileable units (`IrLowererReturnInferenceHelpers.{h,cpp}` now own shared return-inference traversal and conflict checks).
 - ◐ Continue IR lowerer unit split by extracting operator fragments into compileable units with explicit interfaces (phase 1 extracted arithmetic operator lowering to `IrLowererOperatorArithmeticHelpers.{h,cpp}`).
 - ✓ Continue operator fragment split by extracting comparison/logical operator lowering from `IrLowererLowerOperatorsComparisons.h` into compileable helpers (`IrLowererOperatorComparisonHelpers.{h,cpp}` now owns comparison/logical lowering dispatch).
-- ◐ Continue operator fragment split by extracting remaining math/conversion operator fragments into compileable helpers (phase 1 extracted `SaturateRoundingRoots` lowering to `IrLowererOperatorSaturateRoundingRootsHelpers.{h,cpp}`; phase 2 extracted `ClampMinMaxTrig` lowering to `IrLowererOperatorClampMinMaxTrigHelpers.{h,cpp}`; phase 3 extracted `ArcHyperbolic` lowering to `IrLowererOperatorArcHyperbolicHelpers.{h,cpp}`).
+- ◐ Continue operator fragment split by extracting remaining math/conversion operator fragments into compileable helpers (phase 1 extracted `SaturateRoundingRoots` lowering to `IrLowererOperatorSaturateRoundingRootsHelpers.{h,cpp}`; phase 2 extracted `ClampMinMaxTrig` lowering to `IrLowererOperatorClampMinMaxTrigHelpers.{h,cpp}`; phase 3 extracted `ArcHyperbolic` lowering to `IrLowererOperatorArcHyperbolicHelpers.{h,cpp}`; phase 4 extracted `PowAbsSign` lowering to `IrLowererOperatorPowAbsSignHelpers.{h,cpp}`).
 - ✓ Continue operator fragment split by extracting `ClampMinMaxTrig` lowering into compileable helpers.
 - ✓ Continue operator fragment split by extracting `ArcHyperbolic` lowering into compileable helpers.
-- ○ Continue operator fragment split by extracting `PowAbsSign` lowering into compileable helpers.
+- ✓ Continue operator fragment split by extracting `PowAbsSign` lowering into compileable helpers.
 - ○ Continue operator fragment split by extracting `ConversionsAndCalls` lowering into compileable helpers.
 - ○ Continue IR lowerer unit split by extracting setup/statement fragments and removing include-only composition headers.
 - ○ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit).

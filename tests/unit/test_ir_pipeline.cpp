@@ -24,6 +24,7 @@
 #include "src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorComparisonHelpers.h"
+#include "src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "src/ir_lowerer/IrLowererReturnInferenceHelpers.h"
 #include "src/ir_lowerer/IrLowererResultHelpers.h"

@@ -735,6 +735,113 @@ TEST_CASE("ir lowerer arc helper ignores non arc builtins") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer pow helper emits integer multiply opcode") {
+  primec::Expr base;
+  base.kind = primec::Expr::Kind::Literal;
+  base.literalValue = 2;
+  primec::Expr exponent;
+  exponent.kind = primec::Expr::Kind::Literal;
+  exponent.literalValue = 3;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "pow";
+  expr.args = {base, exponent};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitPowAbsSignOperatorExpr(
+      expr,
+      {},
+      true,
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(arg.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      []() {},
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorPowAbsSignEmitResult::Handled);
+  CHECK(error.empty());
+  CHECK(std::any_of(instructions.begin(),
+                    instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::MulI32; }));
+}
+
+TEST_CASE("ir lowerer pow helper rejects mixed signed unsigned operands") {
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Literal;
+  left.literalValue = 1;
+  left.isUnsigned = true;
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Literal;
+  right.literalValue = 2;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "pow";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitPowAbsSignOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      []() {},
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorPowAbsSignEmitResult::Error);
+  CHECK(error == "pow requires numeric arguments of the same type");
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer pow helper ignores non pow/abs/sign builtins") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "clamp";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitPowAbsSignOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      []() {},
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorPowAbsSignEmitResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";
