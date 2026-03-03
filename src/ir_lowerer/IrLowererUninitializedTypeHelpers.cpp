@@ -102,6 +102,26 @@ bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, Uninit
   return true;
 }
 
+bool resolveUninitializedLocalStorageCandidate(const Expr &storage,
+                                               const LocalMap &localsIn,
+                                               const LocalInfo *&localOut,
+                                               UninitializedTypeInfo &typeInfoOut,
+                                               bool &resolvedOut) {
+  localOut = nullptr;
+  typeInfoOut = UninitializedTypeInfo{};
+  resolvedOut = false;
+  if (storage.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto localIt = localsIn.find(storage.name);
+  if (localIt != localsIn.end() &&
+      resolveUninitializedTypeInfoFromLocalStorage(localIt->second, typeInfoOut)) {
+    localOut = &localIt->second;
+    resolvedOut = true;
+  }
+  return true;
+}
+
 bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
                                        const std::string &fieldName,
                                        std::string &typeTemplateArgOut) {

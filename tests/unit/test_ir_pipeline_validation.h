@@ -937,6 +937,42 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve local storage metadata"
   CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfoFromLocalStorage(local, out));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers resolve local storage candidates") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localInfo;
+  localInfo.isUninitializedStorage = true;
+  localInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  localInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("slot", localInfo);
+  auto localIt = locals.find("slot");
+  REQUIRE(localIt != locals.end());
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  const primec::ir_lowerer::LocalInfo *localOut = nullptr;
+  primec::ir_lowerer::UninitializedTypeInfo typeInfoOut;
+  bool resolved = false;
+  REQUIRE(primec::ir_lowerer::resolveUninitializedLocalStorageCandidate(
+      storageExpr, locals, localOut, typeInfoOut, resolved));
+  CHECK(resolved);
+  CHECK(localOut == &localIt->second);
+  CHECK(typeInfoOut.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(typeInfoOut.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  storageExpr.name = "missing";
+  REQUIRE(primec::ir_lowerer::resolveUninitializedLocalStorageCandidate(
+      storageExpr, locals, localOut, typeInfoOut, resolved));
+  CHECK_FALSE(resolved);
+  CHECK(localOut == nullptr);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedLocalStorageCandidate(
+      callExpr, locals, localOut, typeInfoOut, resolved));
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});

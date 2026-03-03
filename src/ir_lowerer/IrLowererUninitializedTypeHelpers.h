@@ -35,6 +35,11 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   UninitializedTypeInfo &out,
                                   std::string &error);
 bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, UninitializedTypeInfo &out);
+bool resolveUninitializedLocalStorageCandidate(const Expr &storage,
+                                               const LocalMap &localsIn,
+                                               const LocalInfo *&localOut,
+                                               UninitializedTypeInfo &typeInfoOut,
+                                               bool &resolvedOut);
 bool findUninitializedFieldTemplateArg(const std::vector<UninitializedFieldBindingInfo> &fields,
                                        const std::string &fieldName,
                                        std::string &typeTemplateArgOut);
