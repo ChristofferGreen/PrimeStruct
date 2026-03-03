@@ -842,6 +842,146 @@ TEST_CASE("ir lowerer pow helper ignores non pow/abs/sign builtins") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Literal;
+  arg.literalValue = 7;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "convert";
+  expr.templateArgs = {"f32"};
+  expr.args = {arg};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      {},
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &typeName) {
+        if (typeName == "f32") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, int32_t &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  CHECK(std::any_of(instructions.begin(),
+                    instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::ConvertI32ToF32; }));
+}
+
+TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
+  primec::Expr target;
+  target.kind = primec::Expr::Kind::Name;
+  target.name = "x";
+  primec::Expr value;
+  value.kind = primec::Expr::Kind::Literal;
+  value.literalValue = 3;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "assign";
+  expr.args = {target, value};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  info.index = 0;
+  info.isMutable = false;
+  locals.emplace("x", info);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, int32_t &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK_FALSE(ok);
+  CHECK(handled);
+  CHECK(error == "assign target must be mutable: x");
+}
+
+TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "pow";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = true;
+  int32_t nextLocal = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      {},
+      nextLocal,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, int32_t &) { return false; },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK_FALSE(handled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";
