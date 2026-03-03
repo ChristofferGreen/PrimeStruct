@@ -23,6 +23,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStringCallHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <algorithm>
 #include <cerrno>

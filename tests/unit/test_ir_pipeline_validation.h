@@ -219,6 +219,37 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer template type parse helper splits nested template args") {
+  std::vector<std::string> args;
+  REQUIRE(primec::ir_lowerer::splitTemplateArgs(" i32 , map<string, array<i64>> , Result<bool, FileError> ", args));
+  REQUIRE(args.size() == 3);
+  CHECK(args[0] == "i32");
+  CHECK(args[1] == "map<string, array<i64>>");
+  CHECK(args[2] == "Result<bool, FileError>");
+
+  CHECK_FALSE(primec::ir_lowerer::splitTemplateArgs("i32, map<string, i64", args));
+  CHECK_FALSE(primec::ir_lowerer::splitTemplateArgs("i32>", args));
+}
+
+TEST_CASE("ir lowerer template type parse helper parses Result return type names") {
+  bool hasValue = false;
+  primec::ir_lowerer::LocalInfo::ValueKind valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  std::string errorType;
+
+  REQUIRE(primec::ir_lowerer::parseResultTypeName("Result<FileError>", hasValue, valueKind, errorType));
+  CHECK_FALSE(hasValue);
+  CHECK(valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(errorType == "FileError");
+
+  REQUIRE(primec::ir_lowerer::parseResultTypeName("Result< i64 , FileError >", hasValue, valueKind, errorType));
+  CHECK(hasValue);
+  CHECK(valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(errorType == "FileError");
+
+  CHECK_FALSE(primec::ir_lowerer::parseResultTypeName("array<i64>", hasValue, valueKind, errorType));
+  CHECK_FALSE(primec::ir_lowerer::parseResultTypeName("Result<i64, FileError, Extra>", hasValue, valueKind, errorType));
+}
+
 TEST_CASE("ir lowerer index kind helpers normalize and validate supported kinds") {
   CHECK(primec::ir_lowerer::normalizeIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Bool) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);

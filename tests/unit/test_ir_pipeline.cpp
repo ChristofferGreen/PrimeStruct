@@ -35,6 +35,7 @@
 #include "src/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "src/ir_lowerer/IrLowererSharedTypes.h"
 #include "src/ir_lowerer/IrLowererStringCallHelpers.h"
+#include "src/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>

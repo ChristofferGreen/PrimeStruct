@@ -1,71 +1,5 @@
-  auto trimText = [](const std::string &text) {
-    size_t start = 0;
-    while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
-      start++;
-    }
-    size_t end = text.size();
-    while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
-      end--;
-    }
-    return text.substr(start, end - start);
-  };
-  auto splitTemplateArgs = [&](const std::string &text, std::vector<std::string> &out) -> bool {
-    out.clear();
-    int depth = 0;
-    size_t start = 0;
-    for (size_t i = 0; i < text.size(); ++i) {
-      char c = text[i];
-      if (c == '<') {
-        depth++;
-        continue;
-      }
-      if (c == '>') {
-        if (depth == 0) {
-          return false;
-        }
-        depth--;
-        continue;
-      }
-      if (c == ',' && depth == 0) {
-        out.push_back(trimText(text.substr(start, i - start)));
-        start = i + 1;
-      }
-    }
-    if (depth != 0) {
-      return false;
-    }
-    out.push_back(trimText(text.substr(start)));
-    return true;
-  };
   auto valueKindFromTypeName = [&](const std::string &name) -> LocalInfo::ValueKind {
     return ir_lowerer::valueKindFromTypeName(name);
-  };
-  auto parseResultTypeName = [&](const std::string &typeName,
-                                 bool &hasValue,
-                                 LocalInfo::ValueKind &valueKind,
-                                 std::string &errorType) -> bool {
-    std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
-      return false;
-    }
-    std::vector<std::string> args;
-    if (!splitTemplateArgs(arg, args)) {
-      return false;
-    }
-    if (args.size() == 1) {
-      hasValue = false;
-      valueKind = LocalInfo::ValueKind::Unknown;
-      errorType = args.front();
-      return true;
-    }
-    if (args.size() == 2) {
-      hasValue = true;
-      valueKind = valueKindFromTypeName(args.front());
-      errorType = args.back();
-      return true;
-    }
-    return false;
   };
 
   struct UninitializedTypeInfo {
@@ -108,7 +42,7 @@
       std::string base;
       std::string arg;
       if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
-        if (valueKindFromTypeName(trimText(arg)) == LocalInfo::ValueKind::String) {
+        if (valueKindFromTypeName(trimTemplateTypeText(arg)) == LocalInfo::ValueKind::String) {
           error = "native backend does not support string array return types on " + entryPath;
           return false;
         }
@@ -547,7 +481,7 @@
       }
       info.referenceToArray = true;
       if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-        info.valueKind = valueKindFromTypeName(trimText(arg));
+        info.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
       }
       return;
     }
@@ -724,7 +658,7 @@
           error = "native backend requires " + base + " to have exactly one template argument";
           return false;
         }
-        LocalInfo::ValueKind elemKind = valueKindFromTypeName(trimText(args.front()));
+        LocalInfo::ValueKind elemKind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
         if (!isSupportedNumeric(elemKind)) {
           error = "native backend only supports numeric/bool uninitialized " + base + " storage";
           return false;
@@ -739,8 +673,8 @@
           error = "native backend requires map to have exactly two template arguments";
           return false;
         }
-        LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimText(args.front()));
-        LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimText(args.back()));
+        LocalInfo::ValueKind keyKind = valueKindFromTypeName(trimTemplateTypeText(args.front()));
+        LocalInfo::ValueKind valueKind = valueKindFromTypeName(trimTemplateTypeText(args.back()));
         if (keyKind == LocalInfo::ValueKind::Unknown || valueKind == LocalInfo::ValueKind::Unknown ||
             valueKind == LocalInfo::ValueKind::String) {
           error = "native backend only supports numeric/bool map values for uninitialized storage";
