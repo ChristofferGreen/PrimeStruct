@@ -569,6 +569,59 @@ TEST_CASE("ir lowerer struct type helpers infer call target struct paths") {
             nameExpr, resolveExprPath, isKnownStructPath, inferDefinitionStructReturnPath).empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers infer field-access struct paths") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo receiverInfo;
+  receiverInfo.structTypeName = "/pkg/Container";
+  locals.emplace("self", receiverInfo);
+
+  auto inferStructExprPath = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    if (expr.kind != primec::Expr::Kind::Name) {
+      return std::string();
+    }
+    auto it = localsIn.find(expr.name);
+    if (it == localsIn.end()) {
+      return std::string();
+    }
+    return it->second.structTypeName;
+  };
+  auto resolveStructFieldSlot =
+      [](const std::string &structPath, const std::string &fieldName, primec::ir_lowerer::StructSlotFieldInfo &out) {
+        if (structPath == "/pkg/Container" && fieldName == "nested") {
+          out.structPath = "/pkg/Nested";
+          return true;
+        }
+        return false;
+      };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "self";
+
+  primec::Expr fieldAccess;
+  fieldAccess.kind = primec::Expr::Kind::Call;
+  fieldAccess.isFieldAccess = true;
+  fieldAccess.name = "nested";
+  fieldAccess.args = {receiverExpr};
+  CHECK(primec::ir_lowerer::inferStructPathFromFieldAccessCall(
+            fieldAccess, locals, inferStructExprPath, resolveStructFieldSlot) == "/pkg/Nested");
+
+  primec::Expr missingReceiver = fieldAccess;
+  missingReceiver.args.front().name = "missing";
+  CHECK(primec::ir_lowerer::inferStructPathFromFieldAccessCall(
+            missingReceiver, locals, inferStructExprPath, resolveStructFieldSlot).empty());
+
+  primec::Expr missingField = fieldAccess;
+  missingField.name = "missing";
+  CHECK(primec::ir_lowerer::inferStructPathFromFieldAccessCall(
+            missingField, locals, inferStructExprPath, resolveStructFieldSlot).empty());
+
+  primec::Expr notFieldAccess = fieldAccess;
+  notFieldAccess.isFieldAccess = false;
+  CHECK(primec::ir_lowerer::inferStructPathFromFieldAccessCall(
+            notFieldAccess, locals, inferStructExprPath, resolveStructFieldSlot).empty());
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve struct array info from path") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   auto valueKindFromTypeName = [](const std::string &typeName) {

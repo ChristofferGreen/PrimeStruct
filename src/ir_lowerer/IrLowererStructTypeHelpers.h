@@ -11,11 +11,16 @@
 
 namespace primec::ir_lowerer {
 
+struct StructSlotFieldInfo;
+
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using InferStructExprPathFn = std::function<std::string(const Expr &)>;
+using InferStructExprWithLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using IsKnownStructPathFn = std::function<bool(const std::string &)>;
 using InferDefinitionStructReturnPathFn = std::function<std::string(const std::string &)>;
+using ResolveStructFieldSlotFn =
+    std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>;
 
 struct StructArrayFieldInfo {
   std::string typeName;
@@ -76,5 +81,10 @@ std::string inferStructPathFromCallTarget(
     const InferStructExprPathFn &resolveExprPath,
     const IsKnownStructPathFn &isKnownStructPath,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
+std::string inferStructPathFromFieldAccessCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferStructExprWithLocalsFn &inferStructExprPath,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot);
 
 } // namespace primec::ir_lowerer

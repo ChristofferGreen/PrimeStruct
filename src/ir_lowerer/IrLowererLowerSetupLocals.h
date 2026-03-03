@@ -426,16 +426,10 @@
       return "";
     }
     if (expr.kind == Expr::Kind::Call) {
-      if (expr.isFieldAccess && expr.args.size() == 1) {
-        std::string receiverStruct = inferStructExprPath(expr.args.front(), localsIn);
-        if (receiverStruct.empty()) {
-          return "";
-        }
-        StructSlotFieldInfo fieldInfo;
-        if (!resolveStructFieldSlot(receiverStruct, expr.name, fieldInfo)) {
-          return "";
-        }
-        return fieldInfo.structPath;
+      const std::string fieldAccessStruct = ir_lowerer::inferStructPathFromFieldAccessCall(
+          expr, localsIn, inferStructExprPath, resolveStructFieldSlot);
+      if (!fieldAccessStruct.empty() || expr.isFieldAccess) {
+        return fieldAccessStruct;
       }
       return ir_lowerer::inferStructPathFromCallTarget(
           expr,
