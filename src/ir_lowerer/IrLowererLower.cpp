@@ -26,6 +26,7 @@
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererUninitializedTypeHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStringCallHelpers.h"

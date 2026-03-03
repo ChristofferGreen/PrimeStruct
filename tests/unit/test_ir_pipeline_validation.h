@@ -320,6 +320,67 @@ TEST_CASE("ir lowerer struct type helpers resolve scoped struct paths") {
       "Missing", "/pkg", structNames, importAliases, resolved));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
+  auto resolveStruct = [](const std::string &typeName,
+                          const std::string &,
+                          std::string &resolvedOut) {
+    if (typeName == "MyStruct") {
+      resolvedOut = "/pkg/MyStruct";
+      return true;
+    }
+    return false;
+  };
+
+  primec::ir_lowerer::UninitializedTypeInfo info;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("array<i64>", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("vector<bool>", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("map<i32, f64>", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("Pointer<i32>", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("MyStruct", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.structPath == "/pkg/MyStruct");
+
+  REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("string", "/pkg", resolveStruct, info, error));
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
+TEST_CASE("ir lowerer uninitialized type helpers report diagnostics") {
+  auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
+
+  primec::ir_lowerer::UninitializedTypeInfo info;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(
+      "array<i32, i64>", "/pkg", resolveStruct, info, error));
+  CHECK(error == "native backend requires array to have exactly one template argument");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(
+      "map<i32, string>", "/pkg", resolveStruct, info, error));
+  CHECK(error == "native backend only supports numeric/bool map values for uninitialized storage");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveUninitializedTypeInfo(
+      "Thing<i32>", "/pkg", resolveStruct, info, error));
+  CHECK(error == "native backend does not support uninitialized storage for type: Thing<i32>");
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));

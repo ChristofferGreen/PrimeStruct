@@ -45,6 +45,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererStatementBindingHelpers.cpp
   src/ir_lowerer/IrLowererStructTypeHelpers.cpp
   src/ir_lowerer/IrLowererSetupTypeHelpers.cpp
+  src/ir_lowerer/IrLowererUninitializedTypeHelpers.cpp
   src/ir_lowerer/IrLowererStringLiteralHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp
   src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp
