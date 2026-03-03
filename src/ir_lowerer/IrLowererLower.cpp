@@ -17,6 +17,7 @@
 #include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStringCallHelpers.h"
 
@@ -33,9 +34,15 @@
 namespace primec {
 using namespace ir_lowerer;
 
-#include "IrLowererLowerSetup.h"
+#include "IrLowererLowerSetupEntryEffects.h"
+#include "IrLowererLowerSetupImportsStructs.h"
+#include "IrLowererLowerSetupLocals.h"
+#include "IrLowererLowerSetupInference.h"
 #include "IrLowererLowerReturnAndCalls.h"
 #include "IrLowererLowerOperators.h"
-#include "IrLowererLowerStatements.h"
+#include "IrLowererLowerStatementsExpr.h"
+#include "IrLowererLowerStatementsBindings.h"
+#include "IrLowererLowerStatementsLoops.h"
+#include "IrLowererLowerStatementsCalls.h"
 
 } // namespace primec
