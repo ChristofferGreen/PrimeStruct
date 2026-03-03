@@ -151,62 +151,13 @@
     entryArgsName = param.name;
   }
   auto isEntryArgsName = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    if (!hasEntryArgs || expr.kind != Expr::Kind::Name || expr.name != entryArgsName) {
-      return false;
-    }
-    return localsIn.count(entryArgsName) == 0;
+    return ir_lowerer::isEntryArgsName(expr, localsIn, hasEntryArgs, entryArgsName);
   };
   auto isArrayCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    if (!isSimpleCallName(expr, "count") || expr.args.size() != 1) {
-      return false;
-    }
-    const Expr &target = expr.args.front();
-    if (isEntryArgsName(target, localsIn)) {
-      return true;
-    }
-    if (target.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(target.name);
-      if (it == localsIn.end()) {
-        return false;
-      }
-      if (it->second.kind == LocalInfo::Kind::Reference) {
-        return it->second.referenceToArray;
-      }
-      return it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector ||
-             it->second.kind == LocalInfo::Kind::Map;
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string collection;
-      if (!getBuiltinCollectionName(target, collection)) {
-        return false;
-      }
-      if (collection == "array" || collection == "vector") {
-        return target.templateArgs.size() == 1;
-      }
-      if (collection == "map") {
-        return target.templateArgs.size() == 2;
-      }
-      return false;
-    }
-    return false;
+    return ir_lowerer::isArrayCountCall(expr, localsIn, hasEntryArgs, entryArgsName);
   };
   auto isVectorCapacityCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    if (!isSimpleCallName(expr, "capacity") || expr.args.size() != 1) {
-      return false;
-    }
-    const Expr &target = expr.args.front();
-    if (target.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(target.name);
-      return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
-    }
-    if (target.kind == Expr::Kind::Call) {
-      std::string collection;
-      if (!getBuiltinCollectionName(target, collection)) {
-        return false;
-      }
-      return collection == "vector" && target.templateArgs.size() == 1;
-    }
-    return false;
+    return ir_lowerer::isVectorCapacityCall(expr, localsIn);
   };
 
   auto resolveStringTableTarget = [&](const Expr &expr,
@@ -249,18 +200,7 @@
   };
 
   auto isStringCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    if (!isSimpleCallName(expr, "count") || expr.args.size() != 1) {
-      return false;
-    }
-    const Expr &target = expr.args.front();
-    if (target.kind == Expr::Kind::StringLiteral) {
-      return true;
-    }
-    if (target.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(target.name);
-      return it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String;
-    }
-    return false;
+    return ir_lowerer::isStringCountCall(expr, localsIn);
   };
 
   auto isStringTypeName = [](const std::string &name) -> bool {

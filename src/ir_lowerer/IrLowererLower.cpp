@@ -8,6 +8,7 @@
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"

@@ -289,6 +289,90 @@ TEST_CASE("ir lowerer binding transform helpers detect entry args params") {
   CHECK_FALSE(primec::ir_lowerer::isEntryArgsParam(param));
 }
 
+TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::Expr entryName;
+  entryName.kind = primec::Expr::Kind::Name;
+  entryName.name = "argv";
+  CHECK(primec::ir_lowerer::isEntryArgsName(entryName, locals, true, "argv"));
+
+  primec::ir_lowerer::LocalInfo shadowed;
+  shadowed.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  locals.emplace("argv", shadowed);
+  CHECK_FALSE(primec::ir_lowerer::isEntryArgsName(entryName, locals, true, "argv"));
+  locals.erase("argv");
+
+  primec::Expr countEntry;
+  countEntry.kind = primec::Expr::Kind::Call;
+  countEntry.name = "count";
+  countEntry.args = {entryName};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, true, "argv"));
+
+  primec::ir_lowerer::LocalInfo arrayInfo;
+  arrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  locals.emplace("arr", arrayInfo);
+  primec::Expr arrayName;
+  arrayName.kind = primec::Expr::Kind::Name;
+  arrayName.name = "arr";
+  countEntry.args = {arrayName};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+
+  primec::ir_lowerer::LocalInfo refInfo;
+  refInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  refInfo.referenceToArray = true;
+  locals.emplace("arrRef", refInfo);
+  primec::Expr refName;
+  refName.kind = primec::Expr::Kind::Name;
+  refName.name = "arrRef";
+  countEntry.args = {refName};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+
+  primec::Expr vectorCall;
+  vectorCall.kind = primec::Expr::Kind::Call;
+  vectorCall.name = "vector";
+  vectorCall.templateArgs = {"i64"};
+  countEntry.args = {vectorCall};
+  CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
+}
+
+TEST_CASE("ir lowerer count access helpers classify capacity and string count") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vecInfo;
+  vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", vecInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args = {valuesName};
+  CHECK(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr stringCount;
+  stringCount.kind = primec::Expr::Kind::Call;
+  stringCount.name = "count";
+  primec::Expr literal;
+  literal.kind = primec::Expr::Kind::StringLiteral;
+  literal.stringValue = "\"ok\"utf8";
+  stringCount.args = {literal};
+  CHECK(primec::ir_lowerer::isStringCountCall(stringCount, locals));
+
+  primec::ir_lowerer::LocalInfo stringInfo;
+  stringInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  locals.emplace("text", stringInfo);
+  primec::Expr textName;
+  textName.kind = primec::Expr::Kind::Name;
+  textName.name = "text";
+  stringCount.args = {textName};
+  CHECK(primec::ir_lowerer::isStringCountCall(stringCount, locals));
+
+  capacityCall.name = "count";
+  CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
+}
+
 TEST_CASE("ir lowerer string literal helper parses and validates encoding") {
   std::string decoded;
   std::string error;
