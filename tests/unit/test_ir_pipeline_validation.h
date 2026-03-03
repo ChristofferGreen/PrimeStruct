@@ -284,6 +284,19 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int32) == ValueKind::Int32);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int64) == ValueKind::Int64);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::UInt64, ValueKind::UInt64) == ValueKind::UInt64);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Float32, ValueKind::Float32) == ValueKind::Float32);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Float64, ValueKind::Float64) == ValueKind::Float64);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Unknown, ValueKind::Int32) == ValueKind::Unknown);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Float32, ValueKind::Float64) == ValueKind::Unknown);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::String, ValueKind::Int32) == ValueKind::Unknown);
+  CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Bool, ValueKind::Int32) == ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer struct type helpers join template args text") {
   const std::vector<std::string> emptyArgs;
   CHECK(primec::ir_lowerer::joinTemplateArgsText(emptyArgs).empty());
