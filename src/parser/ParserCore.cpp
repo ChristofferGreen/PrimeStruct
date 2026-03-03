@@ -114,9 +114,17 @@ bool isBindingParamBracket(const std::vector<Token> &tokens, size_t index) {
 Parser::Parser(std::vector<Token> tokens, bool allowSurfaceSyntax)
     : tokens_(std::move(tokens)), allowSurfaceSyntax_(allowSurfaceSyntax) {}
 
-bool Parser::parse(Program &program, std::string &error, ErrorInfo *errorInfo) {
+bool Parser::parse(Program &program,
+                   std::string &error,
+                   ErrorInfo *errorInfo,
+                   std::vector<ErrorInfo> *errorInfos) {
   error_ = &error;
+  error.clear();
   lastErrorInfo_ = {};
+  errorInfos_ = errorInfos;
+  if (errorInfos_ != nullptr) {
+    errorInfos_->clear();
+  }
   mathImportAll_ = false;
   mathImports_.clear();
   for (size_t scan = 0; scan < tokens_.size(); ++scan) {
@@ -155,45 +163,73 @@ bool Parser::parse(Program &program, std::string &error, ErrorInfo *errorInfo) {
       break;
     }
   }
+  bool hadError = false;
+  auto handleParseError = [&](size_t startPos) {
+    hadError = true;
+    if (errorInfos_ == nullptr) {
+      if (errorInfo != nullptr) {
+        *errorInfo = lastErrorInfo_;
+      }
+      errorInfos_ = nullptr;
+      return false;
+    }
+    recoverToTopLevel(startPos);
+    return true;
+  };
+
   while (!match(TokenKind::End)) {
+    const size_t startPos = pos_;
     if (match(TokenKind::Semicolon)) {
       expect(TokenKind::Semicolon, "expected ';'");
       continue;
     }
     if (match(TokenKind::KeywordImport)) {
       if (!parseImport(program)) {
-        if (errorInfo != nullptr) {
-          *errorInfo = lastErrorInfo_;
+        if (!handleParseError(startPos)) {
+          return false;
         }
-        return false;
+        continue;
       }
       continue;
     }
     if (match(TokenKind::KeywordNamespace)) {
       if (!parseNamespace(program.definitions, program.executions)) {
-        if (errorInfo != nullptr) {
-          *errorInfo = lastErrorInfo_;
+        if (!handleParseError(startPos)) {
+          return false;
         }
-        return false;
+        continue;
       }
     } else {
       if (!parseDefinitionOrExecution(program.definitions, program.executions)) {
-        if (errorInfo != nullptr) {
-          *errorInfo = lastErrorInfo_;
+        if (!handleParseError(startPos)) {
+          return false;
         }
-        return false;
+        continue;
       }
     }
+  }
+  if (hadError) {
+    if (errorInfo != nullptr) {
+      if (errorInfos_ != nullptr && !errorInfos_->empty()) {
+        *errorInfo = errorInfos_->front();
+      } else {
+        *errorInfo = lastErrorInfo_;
+      }
+    }
+    errorInfos_ = nullptr;
+    return false;
   }
   if (errorInfo != nullptr) {
     *errorInfo = {};
   }
+  errorInfos_ = nullptr;
   return true;
 }
 
 bool Parser::parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error, ErrorInfo *errorInfo) {
   error_ = &error;
   lastErrorInfo_ = {};
+  errorInfos_ = nullptr;
   error.clear();
   if (!parseExpr(expr, namespacePrefix)) {
     if (errorInfo != nullptr) {
@@ -1188,9 +1224,40 @@ bool Parser::fail(const std::string &message) {
       lastErrorInfo_.message = message;
     }
     out << lastErrorInfo_.message << " at " << token.line << ":" << token.column;
-    *error_ = out.str();
+    if (errorInfos_ != nullptr) {
+      errorInfos_->push_back(lastErrorInfo_);
+      if (error_->empty()) {
+        *error_ = out.str();
+      }
+    } else {
+      *error_ = out.str();
+    }
   }
   return false;
+}
+
+void Parser::recoverToTopLevel(size_t startPos) {
+  if (tokens_.empty()) {
+    return;
+  }
+  if (pos_ <= startPos && pos_ < tokens_.size()) {
+    ++pos_;
+  }
+  while (pos_ < tokens_.size()) {
+    const TokenKind kind = tokens_[pos_].kind;
+    if (kind == TokenKind::End) {
+      return;
+    }
+    if (kind == TokenKind::Semicolon) {
+      ++pos_;
+      return;
+    }
+    if (kind == TokenKind::KeywordImport || kind == TokenKind::KeywordNamespace || kind == TokenKind::LBracket ||
+        kind == TokenKind::Identifier) {
+      return;
+    }
+    ++pos_;
+  }
 }
 
 } // namespace primec

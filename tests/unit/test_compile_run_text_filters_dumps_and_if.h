@@ -240,6 +240,86 @@ main() {
   CHECK(diagnostics.find("\"related_spans\":[]") != std::string::npos);
 }
 
+TEST_CASE("primec collect-diagnostics emits stable multi-parse payload") {
+  const std::string source = R"(
+import bad
+import /std/math
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_parse.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_parse_err.json").string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1003\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"import path must be a slash path\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"") !=
+        std::string::npos);
+
+  size_t parseCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1003\"", scan)) != std::string::npos) {
+    ++parseCount;
+    scan += 16;
+  }
+  CHECK(parseCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"import path must be a slash path\"");
+  const size_t secondMessage = diagnostics.find(
+      "\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits stable multi-parse payload") {
+  const std::string source = R"(
+import bad
+import /std/math
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_collect_diagnostics_parse.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_parse_err.json").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1003\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"import path must be a slash path\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"") !=
+        std::string::npos);
+
+  size_t parseCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1003\"", scan)) != std::string::npos) {
+    ++parseCount;
+    scan += 16;
+  }
+  CHECK(parseCount == 2);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"import path must be a slash path\"");
+  const size_t secondMessage = diagnostics.find(
+      "\"message\":\"import /std/math is not supported; use import /std/math/* or /std/math/<name>\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
 TEST_CASE("primevm emit-diagnostics reports structured semantic payload") {
   const std::string source = R"(
 [return<int>]

@@ -10,6 +10,7 @@ struct Options {
   std::string emitKind;
   bool listTransforms = false;
   bool emitDiagnostics = false;
+  bool collectDiagnostics = false;
   std::string inputPath;
   std::string outputPath;
   std::string outDir = ".";

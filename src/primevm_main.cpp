@@ -58,23 +58,37 @@ int emitFailure(const primec::Options &options,
                 const std::vector<std::string> &notes = {},
                 const primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
   if (options.emitDiagnostics) {
-    std::string diagnosticMessage = message;
-    primec::DiagnosticSpan primarySpanStorage;
-    const primec::DiagnosticSpan *primarySpan = nullptr;
-    std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
-    if (diagnosticInfo != nullptr) {
-      if (!diagnosticInfo->normalizedMessage.empty()) {
-        diagnosticMessage = diagnosticInfo->normalizedMessage;
+    std::vector<primec::DiagnosticRecord> diagnostics;
+    if (diagnosticInfo != nullptr && !diagnosticInfo->records.empty()) {
+      diagnostics.reserve(diagnosticInfo->records.size());
+      for (const auto &recordInfo : diagnosticInfo->records) {
+        std::string diagnosticMessage = recordInfo.normalizedMessage.empty() ? message : recordInfo.normalizedMessage;
+        const primec::DiagnosticSpan *primarySpan = nullptr;
+        if (recordInfo.hasPrimarySpan) {
+          primarySpan = &recordInfo.primarySpan;
+        }
+        diagnostics.push_back(primec::makeDiagnosticRecord(
+            code, diagnosticMessage, options.inputPath, notes, primarySpan, recordInfo.relatedSpans));
       }
-      if (diagnosticInfo->hasPrimarySpan) {
-        primarySpanStorage = diagnosticInfo->primarySpan;
-        primarySpan = &primarySpanStorage;
+    } else {
+      std::string diagnosticMessage = message;
+      primec::DiagnosticSpan primarySpanStorage;
+      const primec::DiagnosticSpan *primarySpan = nullptr;
+      std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
+      if (diagnosticInfo != nullptr) {
+        if (!diagnosticInfo->normalizedMessage.empty()) {
+          diagnosticMessage = diagnosticInfo->normalizedMessage;
+        }
+        if (diagnosticInfo->hasPrimarySpan) {
+          primarySpanStorage = diagnosticInfo->primarySpan;
+          primarySpan = &primarySpanStorage;
+        }
+        relatedSpans = diagnosticInfo->relatedSpans;
       }
-      relatedSpans = diagnosticInfo->relatedSpans;
+      diagnostics.push_back(
+          primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans));
     }
-    const primec::DiagnosticRecord diagnostic =
-        primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans);
-    std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
+    std::cerr << primec::encodeDiagnosticsJson(diagnostics) << "\n";
     return exitCode;
   }
   std::cerr << plainPrefix << message << "\n";
@@ -101,6 +115,7 @@ int main(int argc, char **argv) {
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
+                   "[--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
     }

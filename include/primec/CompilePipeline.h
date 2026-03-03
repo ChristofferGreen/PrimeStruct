@@ -25,10 +25,18 @@ struct CompilePipelineOutput {
 };
 
 struct CompilePipelineDiagnosticInfo {
+  struct RecordInfo {
+    std::string normalizedMessage;
+    DiagnosticSpan primarySpan;
+    std::vector<DiagnosticRelatedSpan> relatedSpans;
+    bool hasPrimarySpan = false;
+  };
+
   std::string normalizedMessage;
   DiagnosticSpan primarySpan;
   std::vector<DiagnosticRelatedSpan> relatedSpans;
   bool hasPrimarySpan = false;
+  std::vector<RecordInfo> records;
 };
 
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths);

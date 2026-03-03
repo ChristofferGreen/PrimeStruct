@@ -392,6 +392,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "--emit-diagnostics") {
       out.emitDiagnostics = true;
+    } else if (arg == "--collect-diagnostics") {
+      out.collectDiagnostics = true;
     } else if (arg == "--list-transforms") {
       out.listTransforms = true;
     } else if (isPrimecMode && arg == "-o" && i + 1 < argc) {

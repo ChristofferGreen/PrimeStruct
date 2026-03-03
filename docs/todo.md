@@ -32,7 +32,7 @@ Legend:
 - ◐ Continue IR lowerer unit split by extracting setup/statement fragments and removing include-only composition headers (phase 1 extracted setup type-name mapping into `IrLowererSetupTypeHelpers.{h,cpp}` and removed setup/statement composition headers `IrLowererLowerSetup.h` + `IrLowererLowerStatements.h` from `IrLowererLower.cpp` include flow).
 - ◐ Continue setup/statement split by extracting setup inference/locals and statement lowering fragments into compileable helpers with explicit interfaces (phase 1 extracted setup math symbol resolution into `IrLowererSetupMathHelpers.{h,cpp}` and rewired setup locals/inference users to helper-backed APIs).
 - ◐ Continue setup/statement split by extracting statement expression/binding lowering fragments into compileable helpers with explicit interfaces (phase 1 extracted statement-binding kind/value inference plus uninitialized-zero opcode selection to `IrLowererStatementBindingHelpers.{h,cpp}`).
-- ○ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit).
+- ◐ Extend diagnostics to support multi-error collection mode with stable ordering (not just first-error exit) (phase 1 added `--collect-diagnostics` parse-stage collection with stable location ordering and multi-record JSON emission in `primec`/`primevm`).
 
 **Pipeline & CLI**
 - ✓ Implement semantic transform phase and registry (`--semantic-transforms`, `--no-semantic-transforms`) and the `text(...)` / `semantic(...)` grouping syntax in transform lists.

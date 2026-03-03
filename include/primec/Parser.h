@@ -19,7 +19,10 @@ public:
 
   explicit Parser(std::vector<Token> tokens, bool allowSurfaceSyntax = true);
 
-  bool parse(Program &program, std::string &error, ErrorInfo *errorInfo = nullptr);
+  bool parse(Program &program,
+             std::string &error,
+             ErrorInfo *errorInfo = nullptr,
+             std::vector<ErrorInfo> *errorInfos = nullptr);
   bool parseExpression(Expr &expr, const std::string &namespacePrefix, std::string &error, ErrorInfo *errorInfo = nullptr);
 
 private:
@@ -141,6 +144,7 @@ private:
   bool expect(TokenKind kind, const std::string &message);
   Token consume(TokenKind kind, const std::string &message);
   bool fail(const std::string &message);
+  void recoverToTopLevel(size_t startPos);
 
   std::vector<Token> tokens_;
   size_t pos_ = 0;
@@ -158,6 +162,7 @@ private:
   std::unordered_set<std::string> mathImports_;
   bool allowSurfaceSyntax_ = true;
   ErrorInfo lastErrorInfo_;
+  std::vector<ErrorInfo> *errorInfos_ = nullptr;
 };
 
 } // namespace primec

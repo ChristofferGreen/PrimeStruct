@@ -9,9 +9,11 @@
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRules.h"
 
+#include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <unordered_set>
 
@@ -114,6 +116,25 @@ bool appendStdlibSources(const std::vector<std::string> &importPaths,
   return true;
 }
 
+void sortParserErrorsForStableOrdering(std::vector<Parser::ErrorInfo> &errors) {
+  auto normalize = [](int value) -> int {
+    return value > 0 ? value : std::numeric_limits<int>::max();
+  };
+  std::stable_sort(errors.begin(), errors.end(), [&](const Parser::ErrorInfo &left, const Parser::ErrorInfo &right) {
+    const int leftLine = normalize(left.line);
+    const int rightLine = normalize(right.line);
+    if (leftLine != rightLine) {
+      return leftLine < rightLine;
+    }
+    const int leftColumn = normalize(left.column);
+    const int rightColumn = normalize(right.column);
+    if (leftColumn != rightColumn) {
+      return leftColumn < rightColumn;
+    }
+    return left.message < right.message;
+  });
+}
+
 } // namespace
 
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths) {
@@ -213,17 +234,55 @@ bool runCompilePipeline(const Options &options,
   Lexer lexer(output.filteredSource);
   Parser parser(lexer.tokenize(), !options.requireCanonicalSyntax);
   Parser::ErrorInfo parserErrorInfo;
-  if (!parser.parse(output.program, error, &parserErrorInfo)) {
+  std::vector<Parser::ErrorInfo> parserErrors;
+  if (!parser.parse(
+          output.program, error, &parserErrorInfo, options.collectDiagnostics ? &parserErrors : nullptr)) {
     errorStage = CompilePipelineErrorStage::Parse;
+    if (options.collectDiagnostics) {
+      if (parserErrors.empty() && !parserErrorInfo.message.empty()) {
+        parserErrors.push_back(parserErrorInfo);
+      }
+      sortParserErrorsForStableOrdering(parserErrors);
+      if (!parserErrors.empty()) {
+        const Parser::ErrorInfo &first = parserErrors.front();
+        if (!first.message.empty()) {
+          if (first.line > 0 && first.column > 0) {
+            error = first.message + " at " + std::to_string(first.line) + ":" + std::to_string(first.column);
+          } else {
+            error = first.message;
+          }
+        }
+      }
+    }
     if (diagnosticInfo != nullptr) {
-      diagnosticInfo->normalizedMessage = parserErrorInfo.message;
-      if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
-        diagnosticInfo->primarySpan.file = options.inputPath;
-        diagnosticInfo->primarySpan.line = parserErrorInfo.line;
-        diagnosticInfo->primarySpan.column = parserErrorInfo.column;
-        diagnosticInfo->primarySpan.endLine = parserErrorInfo.line;
-        diagnosticInfo->primarySpan.endColumn = parserErrorInfo.column;
-        diagnosticInfo->hasPrimarySpan = true;
+      if (!parserErrors.empty()) {
+        diagnosticInfo->records.reserve(parserErrors.size());
+        for (const auto &item : parserErrors) {
+          CompilePipelineDiagnosticInfo::RecordInfo record;
+          record.normalizedMessage = item.message;
+          if (item.line > 0 && item.column > 0) {
+            record.primarySpan.file = options.inputPath;
+            record.primarySpan.line = item.line;
+            record.primarySpan.column = item.column;
+            record.primarySpan.endLine = item.line;
+            record.primarySpan.endColumn = item.column;
+            record.hasPrimarySpan = true;
+          }
+          diagnosticInfo->records.push_back(std::move(record));
+        }
+        diagnosticInfo->normalizedMessage = diagnosticInfo->records.front().normalizedMessage;
+        diagnosticInfo->primarySpan = diagnosticInfo->records.front().primarySpan;
+        diagnosticInfo->hasPrimarySpan = diagnosticInfo->records.front().hasPrimarySpan;
+      } else {
+        diagnosticInfo->normalizedMessage = parserErrorInfo.message;
+        if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
+          diagnosticInfo->primarySpan.file = options.inputPath;
+          diagnosticInfo->primarySpan.line = parserErrorInfo.line;
+          diagnosticInfo->primarySpan.column = parserErrorInfo.column;
+          diagnosticInfo->primarySpan.endLine = parserErrorInfo.line;
+          diagnosticInfo->primarySpan.endColumn = parserErrorInfo.column;
+          diagnosticInfo->hasPrimarySpan = true;
+        }
       }
     }
     return false;
