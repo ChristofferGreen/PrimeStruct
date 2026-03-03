@@ -1099,6 +1099,19 @@ TEST_CASE("ir lowerer uninitialized type helpers build field binding index") {
   CHECK(emptyIndex.empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers check field index struct path") {
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          2,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Container", {"slot", "uninitialized", "i64", false});
+          });
+  CHECK(primec::ir_lowerer::hasUninitializedFieldBindingsForStructPath(
+      fieldIndex, "/pkg/Container"));
+  CHECK_FALSE(primec::ir_lowerer::hasUninitializedFieldBindingsForStructPath(
+      fieldIndex, "/pkg/Missing"));
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});

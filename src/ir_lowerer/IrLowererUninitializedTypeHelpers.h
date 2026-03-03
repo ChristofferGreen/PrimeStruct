@@ -87,6 +87,8 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
 UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
     std::size_t structReserveHint,
     const EnumerateUninitializedFieldBindingsFn &enumerateFieldBindings);
+bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingIndex &fieldIndex,
+                                                const std::string &structPath);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

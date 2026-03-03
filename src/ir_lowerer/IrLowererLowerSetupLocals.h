@@ -347,6 +347,10 @@
   auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
     ir_lowerer::applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
   };
+  auto hasStructPathInFieldBindingIndex = [&](const std::string &resolvedPath) {
+    return ir_lowerer::hasUninitializedFieldBindingsForStructPath(
+        uninitializedFieldBindingIndex, resolvedPath);
+  };
 
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
   std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferDefinitionStructReturnPathImpl;
@@ -355,7 +359,7 @@
     return ir_lowerer::inferStructPathFromCallTarget(
         candidate,
         resolveExprPath,
-        [&](const std::string &resolvedPath) { return structFieldInfoByName.count(resolvedPath) > 0; },
+        hasStructPathInFieldBindingIndex,
         [&](const std::string &resolvedPath) {
           return inferDefinitionStructReturnPathImpl(resolvedPath, visitedDefs);
         });
@@ -396,7 +400,7 @@
       return ir_lowerer::inferStructPathFromCallTarget(
           expr,
           resolveExprPath,
-          [&](const std::string &resolvedPath) { return structFieldInfoByName.count(resolvedPath) > 0; },
+          hasStructPathInFieldBindingIndex,
           inferDefinitionStructReturnPath);
     }
     return "";

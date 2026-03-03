@@ -159,6 +159,11 @@ UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
   return fieldIndex;
 }
 
+bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingIndex &fieldIndex,
+                                                const std::string &structPath) {
+  return fieldIndex.count(structPath) > 0;
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {
