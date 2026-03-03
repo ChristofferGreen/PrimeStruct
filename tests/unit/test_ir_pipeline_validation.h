@@ -219,6 +219,34 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup math helper resolves namespaced builtins") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/math/sin";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getSetupMathBuiltinName(callExpr, false, builtinName));
+  CHECK(builtinName == "sin");
+}
+
+TEST_CASE("ir lowerer setup math helper requires import for bare names") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "sin";
+
+  std::string builtinName;
+  CHECK_FALSE(primec::ir_lowerer::getSetupMathBuiltinName(callExpr, false, builtinName));
+  CHECK(primec::ir_lowerer::getSetupMathBuiltinName(callExpr, true, builtinName));
+  CHECK(builtinName == "sin");
+}
+
+TEST_CASE("ir lowerer setup math helper resolves constants only for supported names") {
+  std::string constantName;
+  CHECK(primec::ir_lowerer::getSetupMathConstantName("/std/math/pi", false, constantName));
+  CHECK(constantName == "pi");
+  CHECK_FALSE(primec::ir_lowerer::getSetupMathConstantName("phi", true, constantName));
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;
