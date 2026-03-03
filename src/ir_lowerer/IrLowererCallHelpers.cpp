@@ -1,5 +1,7 @@
 #include "IrLowererCallHelpers.h"
 
+#include "IrLowererHelpers.h"
+
 namespace primec::ir_lowerer {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
@@ -49,6 +51,19 @@ bool isTailCallCandidate(const Expr &expr,
   }
   const std::string targetPath = resolveExprPath(expr);
   return defMap.find(targetPath) != defMap.end();
+}
+
+bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
+                               bool definitionReturnsVoid,
+                               const std::function<bool(const Expr &)> &isTailCallCandidateFn) {
+  if (statements.empty()) {
+    return false;
+  }
+  const Expr &lastStmt = statements.back();
+  if (isReturnCall(lastStmt) && lastStmt.args.size() == 1) {
+    return isTailCallCandidateFn(lastStmt.args.front());
+  }
+  return definitionReturnsVoid && isTailCallCandidateFn(lastStmt);
 }
 
 bool buildOrderedCallArguments(const Expr &callExpr,

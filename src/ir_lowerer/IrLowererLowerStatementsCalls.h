@@ -293,17 +293,6 @@
     error = "native backend does not support return type on " + defPath;
     return false;
   };
-  auto hasTailExecutionCandidate = [&](const Definition &def, bool definitionReturnsVoid) {
-    if (def.statements.empty()) {
-      return false;
-    }
-    const Expr &lastStmt = def.statements.back();
-    if (isReturnCall(lastStmt) && lastStmt.args.size() == 1) {
-      return isTailCallCandidate(lastStmt.args.front());
-    }
-    return definitionReturnsVoid && isTailCallCandidate(lastStmt);
-  };
-
   out.functions.push_back(std::move(function));
   out.entryIndex = 0;
 
@@ -327,7 +316,7 @@
     }
     function.metadata.schedulingScope = IrSchedulingScope::Default;
     function.metadata.instrumentationFlags = 0;
-    if (hasTailExecutionCandidate(def, returnInfo.returnsVoid)) {
+    if (ir_lowerer::hasTailExecutionCandidate(def.statements, returnInfo.returnsVoid, isTailCallCandidate)) {
       function.metadata.instrumentationFlags |= InstrumentationTailExecution;
     }
 

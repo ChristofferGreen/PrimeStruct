@@ -22,6 +22,10 @@ bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
                          const std::function<std::string(const Expr &)> &resolveExprPath);
 
+bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
+                               bool definitionReturnsVoid,
+                               const std::function<bool(const Expr &)> &isTailCallCandidate);
+
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,

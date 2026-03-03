@@ -143,6 +143,35 @@ TEST_CASE("ir lowerer call helpers classify tail call candidates") {
   CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(unknownCall, defMap, resolveExprPath));
 }
 
+TEST_CASE("ir lowerer call helpers detect tail execution candidates from statements") {
+  auto isTailCandidate = [](const primec::Expr &expr) {
+    return expr.kind == primec::Expr::Kind::Call && expr.name == "callee";
+  };
+
+  std::vector<primec::Expr> statements;
+  CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
+
+  primec::Expr directTail;
+  directTail.kind = primec::Expr::Kind::Call;
+  directTail.name = "callee";
+  statements = {directTail};
+  CHECK(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
+  CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, false, isTailCandidate));
+
+  primec::Expr returnCall;
+  returnCall.kind = primec::Expr::Kind::Call;
+  returnCall.name = "return";
+  returnCall.args = {directTail};
+  statements = {returnCall};
+  CHECK(primec::ir_lowerer::hasTailExecutionCandidate(statements, false, isTailCandidate));
+
+  primec::Expr nonTail;
+  nonTail.kind = primec::Expr::Kind::Name;
+  nonTail.name = "value";
+  statements = {nonTail};
+  CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
+}
+
 TEST_CASE("ir lowerer call helpers order positional named and default args") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;

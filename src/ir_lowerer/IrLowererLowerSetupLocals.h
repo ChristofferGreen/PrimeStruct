@@ -200,15 +200,8 @@
   auto isTailCallCandidate = [&](const Expr &expr) -> bool {
     return ir_lowerer::isTailCallCandidate(expr, defMap, resolveExprPath);
   };
-  bool sawTailExecution = false;
-  if (!entryDef->statements.empty()) {
-    const Expr &lastStmt = entryDef->statements.back();
-    if (isReturnCall(lastStmt) && lastStmt.args.size() == 1) {
-      sawTailExecution = isTailCallCandidate(lastStmt.args.front());
-    } else if (returnsVoid && isTailCallCandidate(lastStmt)) {
-      sawTailExecution = true;
-    }
-  }
+  const bool sawTailExecution =
+      ir_lowerer::hasTailExecutionCandidate(entryDef->statements, returnsVoid, isTailCallCandidate);
   if (sawTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
