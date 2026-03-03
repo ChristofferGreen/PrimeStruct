@@ -541,6 +541,110 @@ TEST_CASE("ir lowerer saturate helper ignores non saturate builtins") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer clamp helper emits radians multiply opcode") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::FloatLiteral;
+  arg.floatValue = "1.0";
+  arg.floatWidth = 64;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "radians";
+  expr.args = {arg};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitClampMinMaxTrigOperatorExpr(
+      expr,
+      {},
+      true,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushF64, 0});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorClampMinMaxTrigEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions.back().op == primec::IrOpcode::MulF64);
+}
+
+TEST_CASE("ir lowerer clamp helper rejects mixed signed unsigned clamp args") {
+  primec::Expr value;
+  value.kind = primec::Expr::Kind::Literal;
+  value.literalValue = 1;
+  value.isUnsigned = true;
+  primec::Expr minValue;
+  minValue.kind = primec::Expr::Kind::Literal;
+  minValue.literalValue = 0;
+  primec::Expr maxValue;
+  maxValue.kind = primec::Expr::Kind::Literal;
+  maxValue.literalValue = 2;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "clamp";
+  expr.args = {value, minValue, maxValue};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitClampMinMaxTrigOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorClampMinMaxTrigEmitResult::Error);
+  CHECK(error == "clamp requires numeric arguments of the same type");
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer clamp helper ignores non clamp builtins") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "saturate";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitClampMinMaxTrigOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorClampMinMaxTrigEmitResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";

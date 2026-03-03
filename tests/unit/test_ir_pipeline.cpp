@@ -21,6 +21,7 @@
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
+#include "src/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorComparisonHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "src/ir_lowerer/IrLowererReturnInferenceHelpers.h"
