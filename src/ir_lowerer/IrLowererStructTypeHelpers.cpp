@@ -1,5 +1,7 @@
 #include "IrLowererStructTypeHelpers.h"
 
+#include "IrLowererBindingTransformHelpers.h"
+
 namespace primec::ir_lowerer {
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args) {
@@ -56,6 +58,56 @@ bool resolveStructTypePathFromScope(
     return true;
   }
   return false;
+}
+
+void applyStructValueInfoFromBinding(const Expr &expr,
+                                     const ResolveStructTypeNameFn &resolveStructTypeName,
+                                     LocalInfo &info) {
+  if (!info.structTypeName.empty()) {
+    return;
+  }
+
+  std::string typeName;
+  std::string typeTemplateArg;
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    typeName = transform.name;
+    if (!transform.templateArgs.empty()) {
+      typeTemplateArg = joinTemplateArgsText(transform.templateArgs);
+    }
+    break;
+  }
+
+  if (typeName.empty()) {
+    return;
+  }
+
+  if (typeName == "Reference" || typeName == "Pointer") {
+    if (!typeTemplateArg.empty()) {
+      std::string resolved;
+      if (resolveStructTypeName(typeTemplateArg, expr.namespacePrefix, resolved)) {
+        info.structTypeName = resolved;
+      }
+    }
+    return;
+  }
+
+  if (info.kind != LocalInfo::Kind::Value) {
+    return;
+  }
+
+  std::string resolved;
+  if (resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
+    info.structTypeName = resolved;
+  }
 }
 
 } // namespace primec::ir_lowerer

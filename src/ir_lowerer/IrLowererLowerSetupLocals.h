@@ -501,46 +501,7 @@
   };
 
   auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
-    if (!info.structTypeName.empty()) {
-      return;
-    }
-    std::string typeName;
-    std::string typeTemplateArg;
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      typeName = transform.name;
-      if (!transform.templateArgs.empty()) {
-        typeTemplateArg = joinTemplateArgsLocals(transform.templateArgs);
-      }
-      break;
-    }
-    if (typeName.empty()) {
-      return;
-    }
-    if (typeName == "Reference" || typeName == "Pointer") {
-      if (!typeTemplateArg.empty()) {
-        std::string resolved;
-        if (resolveStructTypeName(typeTemplateArg, expr.namespacePrefix, resolved)) {
-          info.structTypeName = resolved;
-        }
-      }
-      return;
-    }
-    if (info.kind != LocalInfo::Kind::Value) {
-      return;
-    }
-    std::string resolved;
-    if (resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
-      info.structTypeName = resolved;
-    }
+    ir_lowerer::applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
   };
 
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;

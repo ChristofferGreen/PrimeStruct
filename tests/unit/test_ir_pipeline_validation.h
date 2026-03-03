@@ -413,6 +413,81 @@ TEST_CASE("ir lowerer struct type helpers resolve scoped struct paths") {
       "Missing", "/pkg", structNames, importAliases, resolved));
 }
 
+TEST_CASE("ir lowerer struct type helpers apply struct value info") {
+  auto resolveStruct = [](const std::string &typeName,
+                          const std::string &namespacePrefix,
+                          std::string &resolvedOut) {
+    if (typeName == "Foo" && namespacePrefix == "/pkg") {
+      resolvedOut = "/pkg/Foo";
+      return true;
+    }
+    return false;
+  };
+
+  primec::Expr typedBinding;
+  typedBinding.namespacePrefix = "/pkg";
+  primec::Transform qualifier;
+  qualifier.name = "mut";
+  typedBinding.transforms.push_back(qualifier);
+  primec::Transform typed;
+  typed.name = "Foo";
+  typedBinding.transforms.push_back(typed);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  primec::ir_lowerer::applyStructValueInfoFromBinding(typedBinding, resolveStruct, info);
+  CHECK(info.structTypeName == "/pkg/Foo");
+
+  primec::Expr pointerBinding;
+  pointerBinding.namespacePrefix = "/pkg";
+  primec::Transform pointerType;
+  pointerType.name = "Pointer";
+  pointerType.templateArgs = {"Foo"};
+  pointerBinding.transforms.push_back(pointerType);
+
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  primec::ir_lowerer::applyStructValueInfoFromBinding(pointerBinding, resolveStruct, pointerInfo);
+  CHECK(pointerInfo.structTypeName == "/pkg/Foo");
+
+  primec::ir_lowerer::LocalInfo alreadyTyped;
+  alreadyTyped.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  alreadyTyped.structTypeName = "/already/Set";
+  primec::ir_lowerer::applyStructValueInfoFromBinding(typedBinding, resolveStruct, alreadyTyped);
+  CHECK(alreadyTyped.structTypeName == "/already/Set");
+}
+
+TEST_CASE("ir lowerer struct type helpers skip unsupported struct value paths") {
+  auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
+
+  primec::Expr typedBinding;
+  typedBinding.namespacePrefix = "/pkg";
+  primec::Transform typed;
+  typed.name = "Foo";
+  typedBinding.transforms.push_back(typed);
+
+  primec::ir_lowerer::LocalInfo unresolvedInfo;
+  unresolvedInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  primec::ir_lowerer::applyStructValueInfoFromBinding(typedBinding, resolveStruct, unresolvedInfo);
+  CHECK(unresolvedInfo.structTypeName.empty());
+
+  primec::ir_lowerer::LocalInfo nonValueInfo;
+  nonValueInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  primec::ir_lowerer::applyStructValueInfoFromBinding(typedBinding, resolveStruct, nonValueInfo);
+  CHECK(nonValueInfo.structTypeName.empty());
+
+  primec::Expr pointerWithoutTemplate;
+  pointerWithoutTemplate.namespacePrefix = "/pkg";
+  primec::Transform pointerType;
+  pointerType.name = "Pointer";
+  pointerWithoutTemplate.transforms.push_back(pointerType);
+
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  primec::ir_lowerer::applyStructValueInfoFromBinding(pointerWithoutTemplate, resolveStruct, pointerInfo);
+  CHECK(pointerInfo.structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
   auto resolveStruct = [](const std::string &typeName,
                           const std::string &,
