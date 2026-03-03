@@ -284,6 +284,42 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer struct type helpers join template args text") {
+  const std::vector<std::string> emptyArgs;
+  CHECK(primec::ir_lowerer::joinTemplateArgsText(emptyArgs).empty());
+
+  const std::vector<std::string> oneArg = {"i64"};
+  CHECK(primec::ir_lowerer::joinTemplateArgsText(oneArg) == "i64");
+
+  const std::vector<std::string> manyArgs = {"i64", "vector<f32>", "map<i32, bool>"};
+  CHECK(primec::ir_lowerer::joinTemplateArgsText(manyArgs) == "i64, vector<f32>, map<i32, bool>");
+}
+
+TEST_CASE("ir lowerer struct type helpers resolve scoped struct paths") {
+  const std::unordered_set<std::string> structNames = {"/pkg/Foo", "/imports/Bar", "/Baz"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"Bar", "/imports/Bar"}};
+  std::string resolved;
+
+  REQUIRE(primec::ir_lowerer::resolveStructTypePathFromScope(
+      "/pkg/Foo", "", structNames, importAliases, resolved));
+  CHECK(resolved == "/pkg/Foo");
+
+  REQUIRE(primec::ir_lowerer::resolveStructTypePathFromScope(
+      "Foo", "/pkg", structNames, importAliases, resolved));
+  CHECK(resolved == "/pkg/Foo");
+
+  REQUIRE(primec::ir_lowerer::resolveStructTypePathFromScope(
+      "Bar", "/pkg", structNames, importAliases, resolved));
+  CHECK(resolved == "/imports/Bar");
+
+  REQUIRE(primec::ir_lowerer::resolveStructTypePathFromScope(
+      "Baz", "", structNames, importAliases, resolved));
+  CHECK(resolved == "/Baz");
+
+  CHECK_FALSE(primec::ir_lowerer::resolveStructTypePathFromScope(
+      "Missing", "/pkg", structNames, importAliases, resolved));
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));

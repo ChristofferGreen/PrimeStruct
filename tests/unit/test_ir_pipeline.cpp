@@ -36,6 +36,7 @@
 #include "src/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererSetupMathHelpers.h"
 #include "src/ir_lowerer/IrLowererStatementBindingHelpers.h"
+#include "src/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "src/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "src/ir_lowerer/IrLowererStringLiteralHelpers.h"
 #include "src/ir_lowerer/IrLowererSharedTypes.h"

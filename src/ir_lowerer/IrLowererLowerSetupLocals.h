@@ -274,55 +274,14 @@
   };
 
   auto joinTemplateArgsLocals = [](const std::vector<std::string> &args) {
-    std::string out;
-    for (size_t i = 0; i < args.size(); ++i) {
-      if (i > 0) {
-        out += ", ";
-      }
-      out += args[i];
-    }
-    return out;
+    return ir_lowerer::joinTemplateArgsText(args);
   };
 
   auto resolveStructTypeName = [&](const std::string &typeName,
                                    const std::string &namespacePrefix,
                                    std::string &resolvedOut) -> bool {
-    if (typeName.empty()) {
-      return false;
-    }
-    if (!typeName.empty() && typeName[0] == '/') {
-      if (structNames.count(typeName) > 0) {
-        resolvedOut = typeName;
-        return true;
-      }
-      return false;
-    }
-    if (!namespacePrefix.empty()) {
-      if (namespacePrefix.size() > typeName.size() &&
-          namespacePrefix.compare(namespacePrefix.size() - typeName.size() - 1, typeName.size() + 1,
-                                  "/" + typeName) == 0) {
-        if (structNames.count(namespacePrefix) > 0) {
-          resolvedOut = namespacePrefix;
-          return true;
-        }
-      }
-      std::string candidate = namespacePrefix + "/" + typeName;
-      if (structNames.count(candidate) > 0) {
-        resolvedOut = candidate;
-        return true;
-      }
-    }
-    auto importIt = importAliases.find(typeName);
-    if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
-      resolvedOut = importIt->second;
-      return true;
-    }
-    std::string root = "/" + typeName;
-    if (structNames.count(root) > 0) {
-      resolvedOut = root;
-      return true;
-    }
-    return false;
+    return ir_lowerer::resolveStructTypePathFromScope(
+        typeName, namespacePrefix, structNames, importAliases, resolvedOut);
   };
 
   auto resolveUninitializedTypeInfo = [&](const std::string &typeText,

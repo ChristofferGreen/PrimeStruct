@@ -24,6 +24,7 @@
 #include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererSharedTypes.h"
