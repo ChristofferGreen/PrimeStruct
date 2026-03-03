@@ -24,6 +24,7 @@ add_library(primec_lib
   src/IrInliner.cpp
   src/ir_lowerer/IrLowererCallHelpers.cpp
   src/ir_lowerer/IrLowererBindingTransformHelpers.cpp
+  src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp

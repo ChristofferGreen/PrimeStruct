@@ -289,6 +289,69 @@ TEST_CASE("ir lowerer binding transform helpers detect entry args params") {
   CHECK_FALSE(primec::ir_lowerer::isEntryArgsParam(param));
 }
 
+TEST_CASE("ir lowerer binding type helpers classify binding kind and string/fileerror types") {
+  primec::Expr vectorExpr;
+  primec::Transform vectorTransform;
+  vectorTransform.name = "vector";
+  vectorTransform.templateArgs = {"i64"};
+  vectorExpr.transforms.push_back(vectorTransform);
+  CHECK(primec::ir_lowerer::bindingKindFromTransforms(vectorExpr) == primec::ir_lowerer::LocalInfo::Kind::Vector);
+
+  primec::Expr defaultExpr;
+  CHECK(primec::ir_lowerer::bindingKindFromTransforms(defaultExpr) == primec::ir_lowerer::LocalInfo::Kind::Value);
+
+  primec::Expr stringExpr;
+  primec::Transform qualifier;
+  qualifier.name = "mut";
+  stringExpr.transforms.push_back(qualifier);
+  primec::Transform stringTransform;
+  stringTransform.name = "string";
+  stringExpr.transforms.push_back(stringTransform);
+  CHECK(primec::ir_lowerer::isStringBindingType(stringExpr));
+
+  primec::Expr fileErrorExpr;
+  fileErrorExpr.transforms.push_back(qualifier);
+  primec::Transform fileErrorTransform;
+  fileErrorTransform.name = "FileError";
+  fileErrorExpr.transforms.push_back(fileErrorTransform);
+  CHECK(primec::ir_lowerer::isFileErrorBindingType(fileErrorExpr));
+  CHECK_FALSE(primec::ir_lowerer::isFileErrorBindingType(stringExpr));
+  CHECK(primec::ir_lowerer::isStringTypeName("string"));
+  CHECK_FALSE(primec::ir_lowerer::isStringTypeName("i64"));
+}
+
+TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms") {
+  primec::Expr pointerExpr;
+  primec::Transform pointerTransform;
+  pointerTransform.name = "Pointer";
+  pointerTransform.templateArgs = {"i64"};
+  pointerExpr.transforms.push_back(pointerTransform);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(pointerExpr, primec::ir_lowerer::LocalInfo::Kind::Pointer) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr mapExpr;
+  primec::Transform mapTransform;
+  mapTransform.name = "map";
+  mapTransform.templateArgs = {"bool", "f64"};
+  mapExpr.transforms.push_back(mapTransform);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::Expr resultExpr;
+  primec::Transform resultTransform;
+  resultTransform.name = "Result";
+  resultTransform.templateArgs = {"i64", "FileError"};
+  resultExpr.transforms.push_back(resultTransform);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(resultExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr defaultExpr;
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(defaultExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(defaultExpr, primec::ir_lowerer::LocalInfo::Kind::Array) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
   primec::ir_lowerer::LocalMap locals;
   primec::Expr entryName;

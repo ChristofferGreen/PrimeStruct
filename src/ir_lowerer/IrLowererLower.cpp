@@ -5,6 +5,7 @@
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"

@@ -203,10 +203,6 @@
     return ir_lowerer::isStringCountCall(expr, localsIn);
   };
 
-  auto isStringTypeName = [](const std::string &name) -> bool {
-    return name == "string";
-  };
-
   auto resolveExprPath = [&](const Expr &expr) -> std::string {
     if (!expr.name.empty() && expr.name[0] == '/') {
       return expr.name;
@@ -284,101 +280,19 @@
     }
   };
 
-  auto bindingKind = [](const Expr &expr) -> LocalInfo::Kind {
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "Reference") {
-        return LocalInfo::Kind::Reference;
-      }
-      if (transform.name == "Pointer") {
-        return LocalInfo::Kind::Pointer;
-      }
-      if (transform.name == "array") {
-        return LocalInfo::Kind::Array;
-      }
-      if (transform.name == "vector") {
-        return LocalInfo::Kind::Vector;
-      }
-      if (transform.name == "map") {
-        return LocalInfo::Kind::Map;
-      }
-      if (transform.name == "Buffer") {
-        return LocalInfo::Kind::Buffer;
-      }
-    }
-    return LocalInfo::Kind::Value;
+  auto bindingKind = [&](const Expr &expr) -> LocalInfo::Kind {
+    return ir_lowerer::bindingKindFromTransforms(expr);
   };
 
   auto isStringBinding = [&](const Expr &expr) -> bool {
-    for (const auto &transform : expr.transforms) {
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (isStringTypeName(transform.name)) {
-        return true;
-      }
-      if ((transform.name == "Pointer" || transform.name == "Reference") && transform.templateArgs.size() == 1 &&
-          isStringTypeName(transform.templateArgs.front())) {
-        return true;
-      }
-    }
-    return false;
+    return ir_lowerer::isStringBindingType(expr);
   };
   auto isFileErrorBinding = [&](const Expr &expr) -> bool {
-    for (const auto &transform : expr.transforms) {
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (transform.name == "FileError") {
-        return true;
-      }
-    }
-    return false;
+    return ir_lowerer::isFileErrorBindingType(expr);
   };
 
   auto bindingValueKind = [&](const Expr &expr, LocalInfo::Kind kind) -> LocalInfo::ValueKind {
-    for (const auto &transform : expr.transforms) {
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (transform.name == "Pointer" || transform.name == "Reference") {
-        if (transform.templateArgs.size() == 1) {
-          return valueKindFromTypeName(transform.templateArgs.front());
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
-      if (transform.name == "array" || transform.name == "vector" || transform.name == "Buffer") {
-        if (transform.templateArgs.size() == 1) {
-          return valueKindFromTypeName(transform.templateArgs.front());
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
-      if (transform.name == "map") {
-        if (transform.templateArgs.size() == 2) {
-          return valueKindFromTypeName(transform.templateArgs[1]);
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
-      if (transform.name == "Result") {
-        if (transform.templateArgs.size() == 1) {
-          return LocalInfo::ValueKind::Int32;
-        }
-        if (transform.templateArgs.size() == 2) {
-          return LocalInfo::ValueKind::Int64;
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
-      if (transform.name == "File") {
-        return LocalInfo::ValueKind::Int64;
-      }
-      LocalInfo::ValueKind kindValue = valueKindFromTypeName(transform.name);
-      if (kindValue != LocalInfo::ValueKind::Unknown) {
-        return kindValue;
-      }
-    }
-    if (kind != LocalInfo::Kind::Value) {
-      return LocalInfo::ValueKind::Unknown;
-    }
-    return LocalInfo::ValueKind::Int32;
+    return ir_lowerer::bindingValueKindFromTransforms(expr, kind);
   };
 
   auto joinTemplateArgsLocals = [](const std::vector<std::string> &args) {
