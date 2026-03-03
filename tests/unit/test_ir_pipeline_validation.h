@@ -916,6 +916,16 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 }
 
+TEST_CASE("ir lowerer string literal helper interns string table values") {
+  std::vector<std::string> stringTable;
+  CHECK(primec::ir_lowerer::internLowererString("hello", stringTable) == 0);
+  CHECK(primec::ir_lowerer::internLowererString("world", stringTable) == 1);
+  CHECK(primec::ir_lowerer::internLowererString("hello", stringTable) == 0);
+  REQUIRE(stringTable.size() == 2);
+  CHECK(stringTable[0] == "hello");
+  CHECK(stringTable[1] == "world");
+}
+
 TEST_CASE("ir lowerer string literal helper parses and validates encoding") {
   std::string decoded;
   std::string error;

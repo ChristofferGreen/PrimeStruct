@@ -32,13 +32,7 @@
   std::optional<ResultReturnInfo> currentReturnResult;
 
   auto internString = [&](const std::string &text) -> int32_t {
-    for (size_t i = 0; i < stringTable.size(); ++i) {
-      if (stringTable[i] == text) {
-        return static_cast<int32_t>(i);
-      }
-    }
-    stringTable.push_back(text);
-    return static_cast<int32_t>(stringTable.size() - 1);
+    return ir_lowerer::internLowererString(text, stringTable);
   };
 
   auto emitArrayIndexOutOfBounds = [&]() {

@@ -6,6 +6,16 @@
 
 namespace primec::ir_lowerer {
 
+int32_t internLowererString(const std::string &text, std::vector<std::string> &stringTable) {
+  for (size_t i = 0; i < stringTable.size(); ++i) {
+    if (stringTable[i] == text) {
+      return static_cast<int32_t>(i);
+    }
+  }
+  stringTable.push_back(text);
+  return static_cast<int32_t>(stringTable.size() - 1);
+}
+
 bool parseLowererStringLiteral(const std::string &text, std::string &decoded, std::string &error) {
   ParsedStringLiteral parsed;
   if (!parseStringLiteralToken(text, parsed, error)) {
