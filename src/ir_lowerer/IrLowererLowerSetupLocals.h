@@ -409,50 +409,10 @@
       return "";
     }
     const Definition &def = *resolvedDef;
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      std::string resolved;
-      if (resolveStructTypeName(transform.templateArgs.front(), def.namespacePrefix, resolved)) {
-        return resolved;
-      }
-      break;
-    }
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (transform.name == "return") {
-        continue;
-      }
-      if (isBindingQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      std::string resolved;
-      if (resolveStructTypeName(transform.name, def.namespacePrefix, resolved)) {
-        return resolved;
-      }
-    }
-    if (def.returnExpr.has_value()) {
-      std::string inferred = inferStructReturnExprPath(*def.returnExpr, visitedDefs);
-      if (!inferred.empty()) {
-        return inferred;
-      }
-    }
-    for (const auto &stmt : def.statements) {
-      if (!isReturnCall(stmt) || stmt.args.size() != 1) {
-        continue;
-      }
-      std::string inferred = inferStructReturnExprPath(stmt.args.front(), visitedDefs);
-      if (!inferred.empty()) {
-        return inferred;
-      }
-    }
-    return "";
+    return ir_lowerer::inferStructReturnPathFromDefinition(
+        def,
+        resolveStructTypeName,
+        [&](const Expr &expr) { return inferStructReturnExprPath(expr, visitedDefs); });
   };
   auto inferDefinitionStructReturnPath = [&](const std::string &defPath) -> std::string {
     std::unordered_set<std::string> visitedDefs;

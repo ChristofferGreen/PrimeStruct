@@ -440,6 +440,82 @@ TEST_CASE("ir lowerer struct type helpers resolve scoped struct paths") {
       "Missing", "/pkg", structNames, importAliases, resolved));
 }
 
+TEST_CASE("ir lowerer struct type helpers infer struct return paths") {
+  auto resolveStruct = [](const std::string &typeName,
+                          const std::string &namespacePrefix,
+                          std::string &resolvedOut) {
+    if (namespacePrefix != "/pkg") {
+      return false;
+    }
+    if (typeName == "Foo") {
+      resolvedOut = "/pkg/Foo";
+      return true;
+    }
+    if (typeName == "Bar") {
+      resolvedOut = "/pkg/Bar";
+      return true;
+    }
+    return false;
+  };
+  auto inferExpr = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "factory") {
+      return std::string("/pkg/FromExpr");
+    }
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "mk") {
+      return std::string("/pkg/FromStmt");
+    }
+    return std::string();
+  };
+
+  primec::Definition returnTransformDef;
+  returnTransformDef.namespacePrefix = "/pkg";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"Foo"};
+  returnTransformDef.transforms.push_back(returnTransform);
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(returnTransformDef, resolveStruct, inferExpr) ==
+        "/pkg/Foo");
+
+  primec::Definition namedTransformDef;
+  namedTransformDef.namespacePrefix = "/pkg";
+  primec::Transform qualifier;
+  qualifier.name = "public";
+  namedTransformDef.transforms.push_back(qualifier);
+  primec::Transform namedType;
+  namedType.name = "Bar";
+  namedTransformDef.transforms.push_back(namedType);
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(namedTransformDef, resolveStruct, inferExpr) ==
+        "/pkg/Bar");
+
+  primec::Definition returnExprDef;
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "factory";
+  returnExprDef.returnExpr = returnExpr;
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(returnExprDef, resolveStruct, inferExpr) ==
+        "/pkg/FromExpr");
+
+  primec::Definition returnStmtDef;
+  primec::Expr nestedCall;
+  nestedCall.kind = primec::Expr::Kind::Call;
+  nestedCall.name = "mk";
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  returnStmt.args = {nestedCall};
+  returnStmtDef.statements.push_back(returnStmt);
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(returnStmtDef, resolveStruct, inferExpr) ==
+        "/pkg/FromStmt");
+
+  primec::Definition unresolvedDef;
+  unresolvedDef.namespacePrefix = "/pkg";
+  primec::Transform unresolvedReturn;
+  unresolvedReturn.name = "return";
+  unresolvedReturn.templateArgs = {"Missing"};
+  unresolvedDef.transforms.push_back(unresolvedReturn);
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(unresolvedDef, resolveStruct, inferExpr).empty());
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve struct array info from path") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   auto valueKindFromTypeName = [](const std::string &typeName) {

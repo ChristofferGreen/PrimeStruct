@@ -13,6 +13,7 @@ namespace primec::ir_lowerer {
 
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
+using InferStructExprPathFn = std::function<std::string(const Expr &)>;
 
 struct StructArrayFieldInfo {
   std::string typeName;
@@ -64,5 +65,9 @@ bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info);
+std::string inferStructReturnPathFromDefinition(
+    const Definition &def,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &inferStructExprPath);
 
 } // namespace primec::ir_lowerer

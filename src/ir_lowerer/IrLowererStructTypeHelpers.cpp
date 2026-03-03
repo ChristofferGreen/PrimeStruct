@@ -1,6 +1,7 @@
 #include "IrLowererStructTypeHelpers.h"
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -205,6 +206,60 @@ void applyStructValueInfoFromBinding(const Expr &expr,
   if (resolveStructTypeName(typeName, expr.namespacePrefix, resolved)) {
     info.structTypeName = resolved;
   }
+}
+
+std::string inferStructReturnPathFromDefinition(
+    const Definition &def,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &inferStructExprPath) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string resolved;
+    if (resolveStructTypeName(transform.templateArgs.front(), def.namespacePrefix, resolved)) {
+      return resolved;
+    }
+    break;
+  }
+
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (transform.name == "return") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    std::string resolved;
+    if (resolveStructTypeName(transform.name, def.namespacePrefix, resolved)) {
+      return resolved;
+    }
+  }
+
+  if (def.returnExpr.has_value()) {
+    std::string inferred = inferStructExprPath(*def.returnExpr);
+    if (!inferred.empty()) {
+      return inferred;
+    }
+  }
+
+  for (const auto &stmt : def.statements) {
+    if (!isReturnCall(stmt) || stmt.args.size() != 1) {
+      continue;
+    }
+    std::string inferred = inferStructExprPath(stmt.args.front());
+    if (!inferred.empty()) {
+      return inferred;
+    }
+  }
+
+  return "";
 }
 
 } // namespace primec::ir_lowerer
