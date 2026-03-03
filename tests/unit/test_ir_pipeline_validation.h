@@ -850,6 +850,50 @@ TEST_CASE("ir lowerer binding type helpers mark reference-to-array metadata") {
 }
 
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
+  primec::Definition entryDef;
+  bool hasEntryArgs = true;
+  std::string entryArgsName = "stale";
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveEntryArgsParameter(entryDef, hasEntryArgs, entryArgsName, error));
+  CHECK_FALSE(hasEntryArgs);
+  CHECK(entryArgsName.empty());
+  CHECK(error.empty());
+
+  primec::Expr entryParam;
+  entryParam.name = "argv";
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  entryParam.transforms.push_back(arrayTransform);
+  entryDef.parameters = {entryParam};
+  REQUIRE(primec::ir_lowerer::resolveEntryArgsParameter(entryDef, hasEntryArgs, entryArgsName, error));
+  CHECK(hasEntryArgs);
+  CHECK(entryArgsName == "argv");
+  CHECK(error.empty());
+
+  primec::Expr extraParam = entryParam;
+  extraParam.name = "extra";
+  entryDef.parameters = {entryParam, extraParam};
+  CHECK_FALSE(primec::ir_lowerer::resolveEntryArgsParameter(entryDef, hasEntryArgs, entryArgsName, error));
+  CHECK(error == "native backend only supports a single array<string> entry parameter");
+
+  error.clear();
+  primec::Expr badTypeParam;
+  badTypeParam.name = "argv";
+  primec::Transform badTypeTransform;
+  badTypeTransform.name = "array";
+  badTypeTransform.templateArgs = {"i64"};
+  badTypeParam.transforms.push_back(badTypeTransform);
+  entryDef.parameters = {badTypeParam};
+  CHECK_FALSE(primec::ir_lowerer::resolveEntryArgsParameter(entryDef, hasEntryArgs, entryArgsName, error));
+  CHECK(error == "native backend entry parameter must be array<string>");
+
+  error.clear();
+  entryParam.args.push_back(primec::Expr{});
+  entryDef.parameters = {entryParam};
+  CHECK_FALSE(primec::ir_lowerer::resolveEntryArgsParameter(entryDef, hasEntryArgs, entryArgsName, error));
+  CHECK(error == "native backend does not allow entry parameter defaults");
+
   primec::ir_lowerer::LocalMap locals;
   primec::Expr entryName;
   entryName.kind = primec::Expr::Kind::Name;

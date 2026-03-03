@@ -1,8 +1,36 @@
 #include "IrLowererCountAccessHelpers.h"
 
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
+
+bool resolveEntryArgsParameter(const Definition &entryDef,
+                               bool &hasEntryArgsOut,
+                               std::string &entryArgsNameOut,
+                               std::string &error) {
+  hasEntryArgsOut = false;
+  entryArgsNameOut.clear();
+  if (entryDef.parameters.empty()) {
+    return true;
+  }
+  if (entryDef.parameters.size() != 1) {
+    error = "native backend only supports a single array<string> entry parameter";
+    return false;
+  }
+  const Expr &param = entryDef.parameters.front();
+  if (!isEntryArgsParam(param)) {
+    error = "native backend entry parameter must be array<string>";
+    return false;
+  }
+  if (!param.args.empty()) {
+    error = "native backend does not allow entry parameter defaults";
+    return false;
+  }
+  hasEntryArgsOut = true;
+  entryArgsNameOut = param.name;
+  return true;
+}
 
 bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName) {
   if (!hasEntryArgs || expr.kind != Expr::Kind::Name || expr.name != entryArgsName) {

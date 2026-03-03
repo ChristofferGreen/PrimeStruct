@@ -81,22 +81,8 @@
 
   bool hasEntryArgs = false;
   std::string entryArgsName;
-  if (!entryDef->parameters.empty()) {
-    if (entryDef->parameters.size() != 1) {
-      error = "native backend only supports a single array<string> entry parameter";
-      return false;
-    }
-    const Expr &param = entryDef->parameters.front();
-    if (!isEntryArgsParam(param)) {
-      error = "native backend entry parameter must be array<string>";
-      return false;
-    }
-    if (!param.args.empty()) {
-      error = "native backend does not allow entry parameter defaults";
-      return false;
-    }
-    hasEntryArgs = true;
-    entryArgsName = param.name;
+  if (!ir_lowerer::resolveEntryArgsParameter(*entryDef, hasEntryArgs, entryArgsName, error)) {
+    return false;
   }
   auto isEntryArgsName = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
     return ir_lowerer::isEntryArgsName(expr, localsIn, hasEntryArgs, entryArgsName);

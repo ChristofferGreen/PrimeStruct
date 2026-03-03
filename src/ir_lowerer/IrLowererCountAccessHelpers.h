@@ -7,6 +7,10 @@
 
 namespace primec::ir_lowerer {
 
+bool resolveEntryArgsParameter(const Definition &entryDef,
+                               bool &hasEntryArgsOut,
+                               std::string &entryArgsNameOut,
+                               std::string &error);
 bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
 bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn);
