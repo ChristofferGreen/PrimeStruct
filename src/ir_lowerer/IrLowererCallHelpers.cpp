@@ -118,4 +118,14 @@ bool buildOrderedCallArguments(const Expr &callExpr,
   return true;
 }
 
+std::string resolveDefinitionNamespacePrefix(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::string &definitionPath) {
+  auto defIt = defMap.find(definitionPath);
+  if (defIt == defMap.end() || defIt->second == nullptr) {
+    return "";
+  }
+  return defIt->second->namespacePrefix;
+}
+
 } // namespace primec::ir_lowerer

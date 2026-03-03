@@ -30,5 +30,8 @@ bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,
                                std::string &error);
+std::string resolveDefinitionNamespacePrefix(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::string &definitionPath);
 
 } // namespace primec::ir_lowerer

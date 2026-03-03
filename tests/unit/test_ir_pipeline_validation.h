@@ -115,6 +115,18 @@ TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
   CHECK(primec::ir_lowerer::resolveCallPathFromScope(rootFallback, defMap, importAliases) == "/main");
 }
 
+TEST_CASE("ir lowerer call helpers resolve definition namespace prefixes") {
+  primec::Definition namespacedDef;
+  namespacedDef.fullPath = "/pkg/foo";
+  namespacedDef.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/foo", &namespacedDef},
+  };
+
+  CHECK(primec::ir_lowerer::resolveDefinitionNamespacePrefix(defMap, "/pkg/foo") == "/pkg");
+  CHECK(primec::ir_lowerer::resolveDefinitionNamespacePrefix(defMap, "/pkg/missing").empty());
+}
+
 TEST_CASE("ir lowerer call helpers classify tail call candidates") {
   primec::Definition callee;
   callee.fullPath = "/callee";

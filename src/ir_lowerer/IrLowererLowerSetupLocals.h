@@ -359,11 +359,7 @@
     }
 
     UninitializedTypeInfo info;
-    auto defIt = defMap.find(structPath);
-    std::string namespacePrefix;
-    if (defIt != defMap.end() && defIt->second) {
-      namespacePrefix = defIt->second->namespacePrefix;
-    }
+    const std::string namespacePrefix = ir_lowerer::resolveDefinitionNamespacePrefix(defMap, structPath);
     if (!resolveUninitializedTypeInfo(fieldTypeTemplateArg, namespacePrefix, info)) {
       if (error.empty()) {
         error = "native backend does not support uninitialized storage for type: " + fieldTypeTemplateArg;
