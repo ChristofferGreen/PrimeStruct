@@ -308,31 +308,13 @@
         out);
   };
 
-  struct UninitializedStorageAccess {
-    enum class Location { Local, Field } location = Location::Local;
-    const LocalInfo *local = nullptr;
-    const LocalInfo *receiver = nullptr;
-    StructSlotFieldInfo fieldSlot;
-    UninitializedTypeInfo typeInfo;
-  };
+  using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
 
   auto resolveUninitializedStorage = [&](const Expr &storage,
                                          const LocalMap &localsIn,
                                          UninitializedStorageAccess &out,
                                          bool &resolved) -> bool {
-    resolved = false;
-    ir_lowerer::UninitializedLocalStorageAccessInfo localStorage;
-    if (ir_lowerer::resolveUninitializedLocalStorageAccess(storage, localsIn, localStorage, resolved)) {
-      if (resolved) {
-        out = UninitializedStorageAccess{};
-        out.location = UninitializedStorageAccess::Location::Local;
-        out.local = localStorage.local;
-        out.typeInfo = localStorage.typeInfo;
-      }
-      return true;
-    }
-    ir_lowerer::UninitializedFieldStorageAccessInfo fieldStorage;
-    if (!ir_lowerer::resolveUninitializedFieldStorageAccess(
+    if (!ir_lowerer::resolveUninitializedStorageAccess(
             storage,
             localsIn,
             [&](const std::string &candidateStructPath,
@@ -359,21 +341,11 @@
             },
             resolveUninitializedTypeInfo,
             resolveStructFieldSlot,
-            fieldStorage,
+            out,
             resolved,
             error)) {
       return false;
     }
-    if (!resolved) {
-      return true;
-    }
-
-    out = UninitializedStorageAccess{};
-    out.location = UninitializedStorageAccess::Location::Field;
-    out.receiver = fieldStorage.receiver;
-    out.fieldSlot = fieldStorage.fieldSlot;
-    out.typeInfo = fieldStorage.typeInfo;
-    resolved = true;
     return true;
   };
 

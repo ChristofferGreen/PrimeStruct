@@ -267,4 +267,50 @@ bool resolveUninitializedFieldStorageAccess(
   return true;
 }
 
+bool resolveUninitializedStorageAccess(const Expr &storage,
+                                       const LocalMap &localsIn,
+                                       const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+                                       const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+                                       const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+                                       const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+                                       UninitializedStorageAccessInfo &out,
+                                       bool &resolvedOut,
+                                       std::string &error) {
+  out = UninitializedStorageAccessInfo{};
+  resolvedOut = false;
+
+  UninitializedLocalStorageAccessInfo localStorage;
+  if (resolveUninitializedLocalStorageAccess(storage, localsIn, localStorage, resolvedOut)) {
+    if (resolvedOut) {
+      out.location = UninitializedStorageAccessInfo::Location::Local;
+      out.local = localStorage.local;
+      out.typeInfo = localStorage.typeInfo;
+    }
+    return true;
+  }
+
+  UninitializedFieldStorageAccessInfo fieldStorage;
+  if (!resolveUninitializedFieldStorageAccess(storage,
+                                              localsIn,
+                                              findFieldTemplateArg,
+                                              resolveDefinitionNamespacePrefix,
+                                              resolveUninitializedTypeInfo,
+                                              resolveStructFieldSlot,
+                                              fieldStorage,
+                                              resolvedOut,
+                                              error)) {
+    return false;
+  }
+  if (!resolvedOut) {
+    return true;
+  }
+
+  out.location = UninitializedStorageAccessInfo::Location::Field;
+  out.receiver = fieldStorage.receiver;
+  out.fieldSlot = fieldStorage.fieldSlot;
+  out.typeInfo = fieldStorage.typeInfo;
+  resolvedOut = true;
+  return true;
+}
+
 } // namespace primec::ir_lowerer

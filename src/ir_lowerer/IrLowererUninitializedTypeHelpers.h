@@ -45,6 +45,14 @@ struct UninitializedFieldStorageAccessInfo {
   UninitializedTypeInfo typeInfo;
 };
 
+struct UninitializedStorageAccessInfo {
+  enum class Location { Local, Field } location = Location::Local;
+  const LocalInfo *local = nullptr;
+  const LocalInfo *receiver = nullptr;
+  StructSlotFieldInfo fieldSlot;
+  UninitializedTypeInfo typeInfo;
+};
+
 struct UninitializedLocalStorageAccessInfo {
   const LocalInfo *local = nullptr;
   UninitializedTypeInfo typeInfo;
@@ -93,5 +101,14 @@ bool resolveUninitializedFieldStorageAccess(
     UninitializedFieldStorageAccessInfo &out,
     bool &resolvedOut,
     std::string &error);
+bool resolveUninitializedStorageAccess(const Expr &storage,
+                                       const LocalMap &localsIn,
+                                       const FindUninitializedFieldTemplateArgFn &findFieldTemplateArg,
+                                       const ResolveDefinitionNamespacePrefixFn &resolveDefinitionNamespacePrefix,
+                                       const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+                                       const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+                                       UninitializedStorageAccessInfo &out,
+                                       bool &resolvedOut,
+                                       std::string &error);
 
 } // namespace primec::ir_lowerer
