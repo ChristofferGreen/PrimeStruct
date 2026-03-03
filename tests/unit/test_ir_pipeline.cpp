@@ -22,6 +22,7 @@
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorComparisonHelpers.h"
+#include "src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "src/ir_lowerer/IrLowererReturnInferenceHelpers.h"
 #include "src/ir_lowerer/IrLowererResultHelpers.h"
 #include "src/ir_lowerer/IrLowererSharedTypes.h"

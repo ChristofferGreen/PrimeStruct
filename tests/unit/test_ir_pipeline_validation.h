@@ -447,6 +447,100 @@ TEST_CASE("ir lowerer comparison helper ignores non comparison calls") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer saturate helper emits is_nan predicate opcode") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::FloatLiteral;
+  arg.floatValue = "1.0";
+  arg.floatWidth = 32;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "is_nan";
+  expr.args = {arg};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitSaturateRoundingRootsOperatorExpr(
+      expr,
+      {},
+      true,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushF32, 0});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorSaturateRoundingRootsEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[4].op == primec::IrOpcode::CmpNeF32);
+}
+
+TEST_CASE("ir lowerer saturate helper rejects bool saturate operand") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::BoolLiteral;
+  arg.boolValue = true;
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "saturate";
+  expr.args = {arg};
+
+  std::vector<primec::IrInstruction> instructions;
+  bool emitted = false;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitSaturateRoundingRootsOperatorExpr(
+      expr,
+      {},
+      true,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        emitted = true;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorSaturateRoundingRootsEmitResult::Error);
+  CHECK(error == "saturate requires numeric argument");
+  CHECK_FALSE(emitted);
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer saturate helper ignores non saturate builtins") {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "plus";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int32_t nextLocal = 0;
+  auto result = primec::ir_lowerer::emitSaturateRoundingRootsOperatorExpr(
+      expr,
+      {},
+      true,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&]() { return nextLocal++; },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorSaturateRoundingRootsEmitResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";

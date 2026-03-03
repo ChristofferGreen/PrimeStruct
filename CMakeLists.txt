@@ -29,6 +29,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp
   src/ir_lowerer/IrLowererOperatorComparisonHelpers.cpp
+  src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
   src/ir_lowerer/IrLowererResultHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp

@@ -10,6 +10,7 @@
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorComparisonHelpers.h"
+#include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
 #include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSharedTypes.h"
