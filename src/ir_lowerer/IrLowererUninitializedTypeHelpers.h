@@ -89,6 +89,11 @@ UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
     const EnumerateUninitializedFieldBindingsFn &enumerateFieldBindings);
 bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath);
+std::string inferStructPathFromCallTargetWithFieldBindingIndex(
+    const Expr &expr,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

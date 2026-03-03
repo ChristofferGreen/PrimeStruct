@@ -164,6 +164,20 @@ bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingI
   return fieldIndex.count(structPath) > 0;
 }
 
+std::string inferStructPathFromCallTargetWithFieldBindingIndex(
+    const Expr &expr,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath) {
+  return inferStructPathFromCallTarget(
+      expr,
+      resolveExprPath,
+      [&](const std::string &resolvedPath) {
+        return hasUninitializedFieldBindingsForStructPath(fieldIndex, resolvedPath);
+      },
+      inferDefinitionStructReturnPath);
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {

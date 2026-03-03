@@ -1112,6 +1112,48 @@ TEST_CASE("ir lowerer uninitialized type helpers check field index struct path")
       fieldIndex, "/pkg/Missing"));
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer call target struct paths from field index") {
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          1,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Ctor", {"slot", "uninitialized", "i64", false});
+          });
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.name == "Ctor") {
+      return std::string("/pkg/Ctor");
+    }
+    if (expr.name == "factory") {
+      return std::string("/pkg/factory");
+    }
+    return std::string("/pkg/unknown");
+  };
+  auto inferDefinitionStructReturnPath = [](const std::string &path) {
+    if (path == "/pkg/factory") {
+      return std::string("/pkg/FromDef");
+    }
+    return std::string();
+  };
+
+  primec::Expr ctorCall;
+  ctorCall.kind = primec::Expr::Kind::Call;
+  ctorCall.name = "Ctor";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndex(
+            ctorCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath) == "/pkg/Ctor");
+
+  primec::Expr factoryCall;
+  factoryCall.kind = primec::Expr::Kind::Call;
+  factoryCall.name = "factory";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndex(
+            factoryCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath) == "/pkg/FromDef");
+
+  primec::Expr unknownCall;
+  unknownCall.kind = primec::Expr::Kind::Call;
+  unknownCall.name = "unknown";
+  CHECK(primec::ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndex(
+            unknownCall, resolveExprPath, fieldIndex, inferDefinitionStructReturnPath).empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});
