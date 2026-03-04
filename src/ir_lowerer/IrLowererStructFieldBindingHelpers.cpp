@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -28,6 +29,29 @@ const Expr *getEnvelopeValueExpr(const Expr &candidate, bool allowAnyName) {
     valueExpr = &bodyExpr;
   }
   return valueExpr;
+}
+
+bool extractExplicitLayoutFieldBinding(const Expr &expr, LayoutFieldBinding &bindingOut) {
+  bindingOut = {};
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isLayoutQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    bindingOut.typeName = transform.name;
+    if (!transform.templateArgs.empty()) {
+      bindingOut.typeTemplateArg = joinTemplateArgsText(transform.templateArgs);
+    } else {
+      bindingOut.typeTemplateArg.clear();
+    }
+    return true;
+  }
+  return false;
 }
 
 bool inferPrimitiveFieldBinding(const Expr &initializer,
@@ -98,6 +122,13 @@ bool inferPrimitiveFieldBinding(const Expr &initializer,
   };
 
   return infer(initializer, bindingOut);
+}
+
+std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding) {
+  if (binding.typeTemplateArg.empty()) {
+    return binding.typeName;
+  }
+  return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
 } // namespace primec::ir_lowerer

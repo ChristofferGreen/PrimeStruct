@@ -18,29 +18,6 @@
     return resolveStructTypePathCandidateFromScope(typeName, namespacePrefix, structNames, importAliases);
   };
   using FieldBinding = ir_lowerer::LayoutFieldBinding;
-  auto extractExplicitBindingTypeForLayout = [&](const Expr &expr, FieldBinding &bindingOut) -> bool {
-    bindingOut = {};
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (isLayoutQualifierName(transform.name)) {
-        continue;
-      }
-      if (!transform.arguments.empty()) {
-        continue;
-      }
-      if (!transform.templateArgs.empty()) {
-        bindingOut.typeName = transform.name;
-        bindingOut.typeTemplateArg = joinTemplateArgsText(transform.templateArgs);
-        return true;
-      }
-      bindingOut.typeName = transform.name;
-      bindingOut.typeTemplateArg.clear();
-      return true;
-    }
-    return false;
-  };
   auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
     return resolveStructLayoutExprPathFromScope(expr, defMap, importAliases);
   };
@@ -167,7 +144,7 @@
                                           const Expr &expr,
                                           const std::unordered_map<std::string, FieldBinding> &knownFields,
                                           FieldBinding &bindingOut) -> bool {
-    if (extractExplicitBindingTypeForLayout(expr, bindingOut)) {
+    if (ir_lowerer::extractExplicitLayoutFieldBinding(expr, bindingOut)) {
       return true;
     }
     const std::string fieldPath = def.fullPath + "/" + expr.name;
@@ -187,12 +164,6 @@
     }
     error = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
     return false;
-  };
-  auto formatEnvelope = [&](const FieldBinding &binding) -> std::string {
-    if (binding.typeTemplateArg.empty()) {
-      return binding.typeName;
-    }
-    return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
   struct StructFieldInfo {
     std::string name;
@@ -273,7 +244,7 @@
       if (fieldIsStatic) {
         IrStructField field;
         field.name = stmt.name;
-        field.envelope = formatEnvelope(binding);
+        field.envelope = ir_lowerer::formatLayoutFieldEnvelope(binding);
         field.offsetBytes = 0;
         field.sizeBytes = 0;
         field.alignmentBytes = 1;
@@ -305,7 +276,7 @@
       uint32_t alignedOffset = alignTo(activeOffset, fieldAlign);
       IrStructField field;
       field.name = stmt.name;
-      field.envelope = formatEnvelope(binding);
+      field.envelope = ir_lowerer::formatLayoutFieldEnvelope(binding);
       field.offsetBytes = alignedOffset;
       field.sizeBytes = typeLayout.sizeBytes;
       field.alignmentBytes = fieldAlign;

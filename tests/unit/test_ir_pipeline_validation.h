@@ -671,6 +671,51 @@ TEST_CASE("ir lowerer struct field binding helpers infer primitive bindings") {
   CHECK(inferred.typeName == "i64");
 }
 
+TEST_CASE("ir lowerer struct field binding helpers extract explicit envelopes") {
+  primec::Expr typedExpr;
+  primec::Transform effectTransform;
+  effectTransform.name = "effects";
+  effectTransform.arguments = {"io_out"};
+  primec::Transform publicTransform;
+  publicTransform.name = "public";
+  primec::Transform typeTransform;
+  typeTransform.name = "i32";
+  typedExpr.transforms = {effectTransform, publicTransform, typeTransform};
+
+  primec::ir_lowerer::LayoutFieldBinding binding;
+  CHECK(primec::ir_lowerer::extractExplicitLayoutFieldBinding(typedExpr, binding));
+  CHECK(binding.typeName == "i32");
+  CHECK(binding.typeTemplateArg.empty());
+
+  primec::Expr templatedExpr;
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"f32"};
+  templatedExpr.transforms = {publicTransform, arrayTransform};
+  CHECK(primec::ir_lowerer::extractExplicitLayoutFieldBinding(templatedExpr, binding));
+  CHECK(binding.typeName == "array");
+  CHECK(binding.typeTemplateArg == "f32");
+
+  primec::Expr qualifierOnlyExpr;
+  primec::Transform alignTransform;
+  alignTransform.name = "align_bytes";
+  alignTransform.arguments = {"16"};
+  qualifierOnlyExpr.transforms = {publicTransform, alignTransform};
+  CHECK_FALSE(primec::ir_lowerer::extractExplicitLayoutFieldBinding(
+      qualifierOnlyExpr, binding));
+}
+
+TEST_CASE("ir lowerer struct field binding helpers format envelopes") {
+  primec::ir_lowerer::LayoutFieldBinding plain;
+  plain.typeName = "i64";
+  CHECK(primec::ir_lowerer::formatLayoutFieldEnvelope(plain) == "i64");
+
+  primec::ir_lowerer::LayoutFieldBinding templated;
+  templated.typeName = "map";
+  templated.typeTemplateArg = "i32, bool";
+  CHECK(primec::ir_lowerer::formatLayoutFieldEnvelope(templated) == "map<i32, bool>");
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);
