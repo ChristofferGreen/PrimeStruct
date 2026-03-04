@@ -2802,6 +2802,63 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer call helpers resolve validated access index kind") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "idx";
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  Kind indexKind = Kind::Unknown;
+
+  int inferCalls = 0;
+  CHECK(primec::ir_lowerer::resolveValidatedAccessIndexKind(
+      indexExpr,
+      locals,
+      "at",
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Bool;
+      },
+      indexKind,
+      error));
+  CHECK(inferCalls == 1);
+  CHECK(indexKind == Kind::Int32);
+  CHECK(error.empty());
+
+  inferCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveValidatedAccessIndexKind(
+      indexExpr,
+      locals,
+      "index",
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::UInt64;
+      },
+      indexKind,
+      error));
+  CHECK(inferCalls == 1);
+  CHECK(indexKind == Kind::UInt64);
+  CHECK(error.empty());
+
+  inferCalls = 0;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveValidatedAccessIndexKind(
+      indexExpr,
+      locals,
+      "at",
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Float32;
+      },
+      indexKind,
+      error));
+  CHECK(inferCalls == 1);
+  CHECK(error == "native backend requires integer indices for at");
+}
+
 TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using primec::IrOpcode;

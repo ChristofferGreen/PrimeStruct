@@ -160,6 +160,13 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
+bool resolveValidatedAccessIndexKind(
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::string &accessName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    LocalInfo::ValueKind &indexKindOut,
+    std::string &error);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
 MapLookupStringKeyResult tryResolveMapLookupStringKey(
     LocalInfo::ValueKind mapKeyKind,

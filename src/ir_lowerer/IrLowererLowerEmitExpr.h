@@ -849,9 +849,16 @@
           int32_t stringIndex = -1;
           size_t stringLength = 0;
           if (resolveStringTableTarget(target, localsIn, stringIndex, stringLength)) {
-            LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
-            if (!isSupportedIndexKind(indexKind)) {
-              error = "native backend requires integer indices for " + accessName;
+            LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+            if (!ir_lowerer::resolveValidatedAccessIndexKind(
+                    expr.args[1],
+                    localsIn,
+                    accessName,
+                    [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                      return inferExprKind(lookupKeyExpr, localMap);
+                    },
+                    indexKind,
+                    error)) {
               return false;
             }
             if (stringLength > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
@@ -927,9 +934,16 @@
             return false;
           }
 
-          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
-          if (!isSupportedIndexKind(indexKind)) {
-            error = "native backend requires integer indices for " + accessName;
+          LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+          if (!ir_lowerer::resolveValidatedAccessIndexKind(
+                  expr.args[1],
+                  localsIn,
+                  accessName,
+                  [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                    return inferExprKind(lookupKeyExpr, localMap);
+                  },
+                  indexKind,
+                  error)) {
             return false;
           }
 

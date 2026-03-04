@@ -334,6 +334,21 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
   return MapAccessLookupEmitResult::Emitted;
 }
 
+bool resolveValidatedAccessIndexKind(
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::string &accessName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    LocalInfo::ValueKind &indexKindOut,
+    std::string &error) {
+  indexKindOut = normalizeIndexKind(inferExprKind(indexExpr, localsIn));
+  if (!isSupportedIndexKind(indexKindOut)) {
+    error = "native backend requires integer indices for " + accessName;
+    return false;
+  }
+  return true;
+}
+
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target, const LocalMap &localsIn) {
   ArrayVectorAccessTargetInfo info;
