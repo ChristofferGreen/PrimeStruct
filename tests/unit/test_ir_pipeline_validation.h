@@ -447,6 +447,16 @@ TEST_CASE("ir lowerer setup type helper builds value-kind adapters") {
   CHECK(combineNumericKinds(ValueKind::Float32, ValueKind::Float64) == ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup type helper builds bundled adapters") {
+  auto adapters = primec::ir_lowerer::makeSetupTypeAdapters();
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  CHECK(adapters.valueKindFromTypeName("i64") == ValueKind::Int64);
+  CHECK(adapters.valueKindFromTypeName("Vec3") == ValueKind::Unknown);
+  CHECK(adapters.combineNumericKinds(ValueKind::Int32, ValueKind::Int64) == ValueKind::Int64);
+  CHECK(adapters.combineNumericKinds(ValueKind::Float32, ValueKind::Float64) == ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup math helper detects math imports") {
   CHECK(primec::ir_lowerer::isMathImportPath("/std/math/*"));
   CHECK(primec::ir_lowerer::isMathImportPath("/std/math/sin"));

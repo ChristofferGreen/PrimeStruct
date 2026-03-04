@@ -1,4 +1,5 @@
-  auto valueKindFromTypeName = ir_lowerer::makeValueKindFromTypeName();
+  const auto setupTypeAdapters = ir_lowerer::makeSetupTypeAdapters();
+  auto valueKindFromTypeName = setupTypeAdapters.valueKindFromTypeName;
 
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
@@ -144,4 +145,4 @@
       defMap, resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, resolveStructFieldSlot);
 
 
-  auto combineNumericKinds = ir_lowerer::makeCombineNumericKinds();
+  auto combineNumericKinds = setupTypeAdapters.combineNumericKinds;

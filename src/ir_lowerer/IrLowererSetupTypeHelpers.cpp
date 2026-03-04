@@ -4,6 +4,13 @@
 
 namespace primec::ir_lowerer {
 
+SetupTypeAdapters makeSetupTypeAdapters() {
+  SetupTypeAdapters adapters;
+  adapters.valueKindFromTypeName = makeValueKindFromTypeName();
+  adapters.combineNumericKinds = makeCombineNumericKinds();
+  return adapters;
+}
+
 ValueKindFromTypeNameFn makeValueKindFromTypeName() {
   return [](const std::string &name) {
     return valueKindFromTypeName(name);

@@ -11,6 +11,12 @@ using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::st
 using CombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 
+struct SetupTypeAdapters {
+  ValueKindFromTypeNameFn valueKindFromTypeName;
+  CombineNumericKindsFn combineNumericKinds;
+};
+
+SetupTypeAdapters makeSetupTypeAdapters();
 ValueKindFromTypeNameFn makeValueKindFromTypeName();
 CombineNumericKindsFn makeCombineNumericKinds();
 
