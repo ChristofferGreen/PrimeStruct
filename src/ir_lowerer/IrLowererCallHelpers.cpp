@@ -39,7 +39,7 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {
-  return [&](const Expr &expr) {
+  return [defMap, importAliases](const Expr &expr) {
     return resolveCallPathFromScope(expr, defMap, importAliases);
   };
 }
@@ -47,14 +47,14 @@ ResolveExprPathFn makeResolveCallPathFromScope(
 IsTailCallCandidateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveExprPathFn &resolveExprPath) {
-  return [&](const Expr &expr) {
+  return [defMap, resolveExprPath](const Expr &expr) {
     return isTailCallCandidate(expr, defMap, resolveExprPath);
   };
 }
 
 DefinitionExistsFn makeDefinitionExistsByPath(
     const std::unordered_map<std::string, const Definition *> &defMap) {
-  return [&](const std::string &path) {
+  return [defMap](const std::string &path) {
     return resolveDefinitionByPath(defMap, path) != nullptr;
   };
 }

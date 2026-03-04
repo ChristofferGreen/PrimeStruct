@@ -87,6 +87,21 @@ struct UninitializedResolutionAdapters {
   InferStructExprWithLocalsFn inferStructExprPath;
 };
 
+struct StructAndUninitializedResolutionSetup {
+  StructAndUninitializedFieldIndexes fieldIndexes;
+  StructLayoutResolutionAdapters structLayoutResolutionAdapters;
+  UninitializedResolutionAdapters uninitializedResolutionAdapters;
+};
+
+bool buildStructAndUninitializedResolutionSetup(
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    StructAndUninitializedResolutionSetup &out,
+    std::string &error);
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const ResolveStructTypePathFn &resolveStructTypePath,
     const InferStructExprPathFn &resolveExprPath,

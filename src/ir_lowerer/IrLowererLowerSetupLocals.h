@@ -68,6 +68,7 @@
   }
   const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
   auto resolveExprPath = callResolutionAdapters.resolveExprPath;
+  auto isTailCallCandidate = callResolutionAdapters.isTailCallCandidate;
   if (entryCallOnErrorSetup.hasTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
@@ -90,7 +91,8 @@
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
-  const auto structAndUninitializedFieldIndexes = ir_lowerer::buildStructAndUninitializedFieldIndexes(
+  ir_lowerer::StructAndUninitializedResolutionSetup structAndUninitializedResolutionSetup;
+  if (!ir_lowerer::buildStructAndUninitializedResolutionSetup(
       structFieldInfoByName.size(),
       [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
         for (const auto &entry : structFieldInfoByName) {
@@ -103,11 +105,17 @@
             appendStructLayoutField(entry.first, info);
           }
         }
-      });
-  const auto &structLayoutFieldIndex = structAndUninitializedFieldIndexes.structLayoutFieldIndex;
-
-  const auto structLayoutResolutionAdapters = ir_lowerer::makeStructLayoutResolutionAdaptersWithOwnedSlotState(
-      structLayoutFieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, error);
+      },
+      defMap,
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      resolveExprPath,
+      structAndUninitializedResolutionSetup,
+      error)) {
+    return false;
+  }
+  const auto &structLayoutResolutionAdapters =
+      structAndUninitializedResolutionSetup.structLayoutResolutionAdapters;
   const auto &structArrayInfoAdapters = structLayoutResolutionAdapters.structArrayInfo;
   auto resolveStructArrayInfoFromPath = structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath;
   auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
@@ -118,11 +126,8 @@
   auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
-  const auto &uninitializedFieldBindingIndex =
-      structAndUninitializedFieldIndexes.uninitializedFieldBindingIndex;
-
-  const auto uninitializedResolutionAdapters = ir_lowerer::makeUninitializedResolutionAdapters(
-      resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, defMap, resolveStructFieldSlot, error);
+  const auto &uninitializedResolutionAdapters =
+      structAndUninitializedResolutionSetup.uninitializedResolutionAdapters;
   auto resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
   auto resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
   auto inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;

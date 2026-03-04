@@ -9,6 +9,34 @@
 
 namespace primec::ir_lowerer {
 
+bool buildStructAndUninitializedResolutionSetup(
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    StructAndUninitializedResolutionSetup &out,
+    std::string &error) {
+  out = StructAndUninitializedResolutionSetup{};
+  out.fieldIndexes =
+      buildStructAndUninitializedFieldIndexes(structReserveHint, enumerateStructLayoutFields);
+  out.structLayoutResolutionAdapters = makeStructLayoutResolutionAdaptersWithOwnedSlotState(
+      out.fieldIndexes.structLayoutFieldIndex,
+      defMap,
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      error);
+  out.uninitializedResolutionAdapters = makeUninitializedResolutionAdapters(
+      resolveStructTypeName,
+      resolveExprPath,
+      out.fieldIndexes.uninitializedFieldBindingIndex,
+      defMap,
+      out.structLayoutResolutionAdapters.structSlotResolution.resolveStructFieldSlot,
+      error);
+  return true;
+}
+
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const ResolveStructTypePathFn &resolveStructTypePath,
     const InferStructExprPathFn &resolveExprPath,
@@ -28,7 +56,8 @@ UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
 ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
     const ResolveStructTypePathFn &resolveStructTypePath,
     std::string &error) {
-  return [&](const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out) {
+  return [resolveStructTypePath, &error](
+             const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out) {
     return resolveUninitializedTypeInfo(typeText, namespacePrefix, resolveStructTypePath, out, error);
   };
 }
@@ -354,7 +383,8 @@ InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTarget
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
-  return [&](const Expr &expr, const LocalMap &localsIn) {
+  return [defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot](
+             const Expr &expr, const LocalMap &localsIn) {
     return inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         expr, localsIn, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
   };
@@ -629,7 +659,8 @@ makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
     const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     std::string &error) {
-  return [&](const Expr &storage, const LocalMap &localsIn, UninitializedStorageAccessInfo &out, bool &resolvedOut) {
+  return [fieldIndex, defMap, resolveUninitializedTypeInfo, resolveStructFieldSlot, &error](
+             const Expr &storage, const LocalMap &localsIn, UninitializedStorageAccessInfo &out, bool &resolvedOut) {
     return resolveUninitializedStorageAccessFromDefinitionFieldIndex(
         storage,
         localsIn,
