@@ -376,6 +376,32 @@ bool resolveStructSlotLayoutFromDefinitionFields(
   return true;
 }
 
+bool resolveStructSlotLayoutFromDefinitionFieldIndex(
+    const std::string &structPath,
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotLayoutInfo &out,
+    std::string &error) {
+  return resolveStructSlotLayoutFromDefinitionFields(
+      structPath,
+      [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {
+        return collectStructLayoutFieldsFromIndex(fieldIndex, structPathIn, fieldsOut);
+      },
+      [&](const std::string &defPathIn, std::string &namespacePrefixOut) {
+        return resolveDefinitionNamespacePrefixFromMap(defMap, defPathIn, namespacePrefixOut);
+      },
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      layoutCache,
+      layoutStack,
+      out,
+      error);
+}
+
 bool resolveStructFieldSlotFromDefinitionFields(
     const std::string &structPath,
     const std::string &fieldName,
@@ -400,6 +426,34 @@ bool resolveStructFieldSlotFromDefinitionFields(
     return false;
   }
   return resolveStructSlotFieldByName(layout.fields, fieldName, out);
+}
+
+bool resolveStructFieldSlotFromDefinitionFieldIndex(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotFieldInfo &out,
+    std::string &error) {
+  return resolveStructFieldSlotFromDefinitionFields(
+      structPath,
+      fieldName,
+      [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {
+        return collectStructLayoutFieldsFromIndex(fieldIndex, structPathIn, fieldsOut);
+      },
+      [&](const std::string &defPathIn, std::string &namespacePrefixOut) {
+        return resolveDefinitionNamespacePrefixFromMap(defMap, defPathIn, namespacePrefixOut);
+      },
+      resolveStructTypeName,
+      valueKindFromTypeName,
+      layoutCache,
+      layoutStack,
+      out,
+      error);
 }
 
 void applyStructValueInfoFromBinding(const Expr &expr,

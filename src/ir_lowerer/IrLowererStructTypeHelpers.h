@@ -137,11 +137,32 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     std::unordered_set<std::string> &layoutStack,
     StructSlotLayoutInfo &out,
     std::string &error);
+bool resolveStructSlotLayoutFromDefinitionFieldIndex(
+    const std::string &structPath,
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotLayoutInfo &out,
+    std::string &error);
 bool resolveStructFieldSlotFromDefinitionFields(
     const std::string &structPath,
     const std::string &fieldName,
     const CollectStructLayoutFieldsFn &collectStructLayoutFields,
     const ResolveDefinitionNamespacePrefixByPathFn &resolveDefinitionNamespacePrefix,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotFieldInfo &out,
+    std::string &error);
+bool resolveStructFieldSlotFromDefinitionFieldIndex(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     StructSlotLayoutCache &layoutCache,

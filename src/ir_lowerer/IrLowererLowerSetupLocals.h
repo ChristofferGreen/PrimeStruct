@@ -193,24 +193,14 @@
         expr, resolveStructTypeName, structLayoutFieldIndex, valueKindFromTypeName, info);
   };
 
-  auto collectStructLayoutFields = [&](const std::string &structPath,
-                                       std::vector<ir_lowerer::StructLayoutFieldInfo> &out) -> bool {
-    return ir_lowerer::collectStructLayoutFieldsFromIndex(structLayoutFieldIndex, structPath, out);
-  };
-
-  auto resolveDefinitionNamespacePrefix =
-      [&](const std::string &structPath, std::string &namespacePrefixOut) -> bool {
-    return ir_lowerer::resolveDefinitionNamespacePrefixFromMap(defMap, structPath, namespacePrefixOut);
-  };
-
   ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
   std::unordered_set<std::string> structSlotLayoutStack;
   using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
   auto resolveStructSlotLayout = [&](const std::string &structPath, StructSlotLayout &out) -> bool {
-    return ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
+    return ir_lowerer::resolveStructSlotLayoutFromDefinitionFieldIndex(
         structPath,
-        collectStructLayoutFields,
-        resolveDefinitionNamespacePrefix,
+        structLayoutFieldIndex,
+        defMap,
         resolveStructTypeName,
         valueKindFromTypeName,
         structSlotLayoutCache,
@@ -222,11 +212,11 @@
   auto resolveStructFieldSlot = [&](const std::string &structPath,
                                     const std::string &fieldName,
                                     StructSlotFieldInfo &out) -> bool {
-    return ir_lowerer::resolveStructFieldSlotFromDefinitionFields(
+    return ir_lowerer::resolveStructFieldSlotFromDefinitionFieldIndex(
         structPath,
         fieldName,
-        collectStructLayoutFields,
-        resolveDefinitionNamespacePrefix,
+        structLayoutFieldIndex,
+        defMap,
         resolveStructTypeName,
         valueKindFromTypeName,
         structSlotLayoutCache,
