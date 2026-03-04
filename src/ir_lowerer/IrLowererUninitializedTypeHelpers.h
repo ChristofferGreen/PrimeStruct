@@ -9,6 +9,7 @@
 
 #include "IrLowererSharedTypes.h"
 #include "IrLowererOnErrorHelpers.h"
+#include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
@@ -106,7 +107,25 @@ struct EntrySetupMathTypeStructAndUninitializedResolutionSetup {
   EntryCountCallOnErrorSetup entryCountCallOnErrorSetup;
   SetupMathTypeStructAndUninitializedResolutionSetup setupMathTypeStructAndUninitializedResolutionSetup;
 };
+struct RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup {
+  RuntimeErrorAndStringLiteralSetup runtimeErrorAndStringLiteralSetup;
+  EntrySetupMathTypeStructAndUninitializedResolutionSetup entrySetupMathTypeStructAndUninitializedResolutionSetup;
+};
 
+bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error);
 bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     const Program &program,
     const Definition &entryDef,

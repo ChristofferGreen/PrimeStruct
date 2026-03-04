@@ -27,27 +27,11 @@
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
 
-  const auto runtimeErrorAndStringLiteralSetup =
-      ir_lowerer::makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
-  const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
-  auto internString = stringLiteralHelpers.internString;
-
-  const auto &runtimeErrorEmitters = runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters;
-  auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
-  auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
-  auto emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;
-  auto emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
-  auto emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
-  auto emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
-  auto emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
-  auto emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
-  auto emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
-  auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
-  auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
-
-  ir_lowerer::EntrySetupMathTypeStructAndUninitializedResolutionSetup
-      entrySetupMathTypeStructAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+  ir_lowerer::RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
+  if (!ir_lowerer::buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
       program,
       *entryDef,
       returnsVoid,
@@ -68,10 +52,31 @@
           }
         }
       },
-      entrySetupMathTypeStructAndUninitializedResolutionSetup,
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
       error)) {
     return false;
   }
+  const auto &runtimeErrorAndStringLiteralSetup =
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup.runtimeErrorAndStringLiteralSetup;
+  const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
+  auto internString = stringLiteralHelpers.internString;
+
+  const auto &runtimeErrorEmitters = runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters;
+  auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
+  auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
+  auto emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;
+  auto emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
+  auto emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
+  auto emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
+  auto emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
+  auto emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
+  auto emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
+  auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
+  auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
+
+  const auto &entrySetupMathTypeStructAndUninitializedResolutionSetup =
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+          .entrySetupMathTypeStructAndUninitializedResolutionSetup;
   const auto &entryCountCallOnErrorSetup =
       entrySetupMathTypeStructAndUninitializedResolutionSetup.entryCountCallOnErrorSetup;
   const auto &entryCountAccessSetup = entryCountCallOnErrorSetup.countAccessSetup;
