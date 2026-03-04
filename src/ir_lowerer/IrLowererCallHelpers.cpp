@@ -371,6 +371,38 @@ bool emitMapLookupNonStringKeyLocal(
   return true;
 }
 
+bool emitMapLookupKeyLocal(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(int32_t)> &emitPushI32,
+    const std::function<void(int32_t)> &emitStoreLocal,
+    int32_t &keyLocalOut,
+    std::string &error) {
+  keyLocalOut = allocTempLocal();
+  const auto stringLookupKeyEmitResult = tryEmitMapLookupStringKeyLocal(
+      mapKeyKind,
+      lookupKeyExpr,
+      localsIn,
+      resolveStringTableTarget,
+      emitPushI32,
+      emitStoreLocal,
+      keyLocalOut,
+      error);
+  if (stringLookupKeyEmitResult == MapLookupKeyLocalEmitResult::Error) {
+    return false;
+  }
+  if (stringLookupKeyEmitResult == MapLookupKeyLocalEmitResult::Emitted) {
+    return true;
+  }
+  return emitMapLookupNonStringKeyLocal(
+      mapKeyKind, lookupKeyExpr, localsIn, inferExprKind, emitExpr, emitStoreLocal, keyLocalOut, error);
+}
+
 bool emitMapLookupTargetPointerLocal(
     const Expr &targetExpr,
     const LocalMap &localsIn,

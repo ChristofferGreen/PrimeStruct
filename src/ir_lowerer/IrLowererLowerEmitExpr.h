@@ -931,46 +931,33 @@
               return false;
             }
 
-            const int32_t keyLocal = allocTempLocal();
-            const auto stringLookupKeyEmitResult = ir_lowerer::tryEmitMapLookupStringKeyLocal(
-                mapKeyKind,
-                expr.args[1],
-                localsIn,
-                [&](const Expr &lookupKeyExpr,
-                    const ir_lowerer::LocalMap &localMap,
-                    int32_t &stringIndexOut,
-                    size_t &lengthOut) {
-                  return resolveStringTableTarget(lookupKeyExpr, localMap, stringIndexOut, lengthOut);
-                },
-                [&](int32_t stringIndex) {
-                  function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
-                },
-                [&](int32_t localIndex) {
-                  function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
-                },
-                keyLocal,
-                error);
-            if (stringLookupKeyEmitResult == ir_lowerer::MapLookupKeyLocalEmitResult::Error) {
+            int32_t keyLocal = -1;
+            if (!ir_lowerer::emitMapLookupKeyLocal(
+                    mapKeyKind,
+                    expr.args[1],
+                    localsIn,
+                    [&]() { return allocTempLocal(); },
+                    [&](const Expr &lookupKeyExpr,
+                        const ir_lowerer::LocalMap &localMap,
+                        int32_t &stringIndexOut,
+                        size_t &lengthOut) {
+                      return resolveStringTableTarget(lookupKeyExpr, localMap, stringIndexOut, lengthOut);
+                    },
+                    [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                      return inferExprKind(lookupKeyExpr, localMap);
+                    },
+                    [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                      return emitExpr(lookupKeyExpr, localMap);
+                    },
+                    [&](int32_t stringIndex) {
+                      function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                    },
+                    [&](int32_t localIndex) {
+                      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
+                    },
+                    keyLocal,
+                    error)) {
               return false;
-            }
-            if (stringLookupKeyEmitResult != ir_lowerer::MapLookupKeyLocalEmitResult::Emitted) {
-              if (!ir_lowerer::emitMapLookupNonStringKeyLocal(
-                      mapKeyKind,
-                      expr.args[1],
-                      localsIn,
-                      [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                        return inferExprKind(lookupKeyExpr, localMap);
-                      },
-                      [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                        return emitExpr(lookupKeyExpr, localMap);
-                      },
-                      [&](int32_t localIndex) {
-                        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
-                      },
-                      keyLocal,
-                      error)) {
-                return false;
-              }
             }
 
             const auto loopLocals = ir_lowerer::emitMapLookupLoopLocals(
