@@ -440,6 +440,22 @@ TEST_CASE("ir lowerer struct type helpers resolve scoped struct paths") {
       "Missing", "/pkg", structNames, importAliases, resolved));
 }
 
+TEST_CASE("ir lowerer struct type helpers build scoped struct path resolver") {
+  const std::unordered_set<std::string> structNames = {"/pkg/Foo", "/imports/Bar", "/Baz"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"Bar", "/imports/Bar"}};
+  auto resolveStructTypePath =
+      primec::ir_lowerer::makeResolveStructTypePathFromScope(structNames, importAliases);
+
+  std::string resolved;
+  REQUIRE(resolveStructTypePath("Foo", "/pkg", resolved));
+  CHECK(resolved == "/pkg/Foo");
+  REQUIRE(resolveStructTypePath("Bar", "/pkg", resolved));
+  CHECK(resolved == "/imports/Bar");
+  REQUIRE(resolveStructTypePath("Baz", "", resolved));
+  CHECK(resolved == "/Baz");
+  CHECK_FALSE(resolveStructTypePath("Missing", "/pkg", resolved));
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve definition namespace prefixes from map") {
   primec::Definition namespacedDef;
   namespacedDef.fullPath = "/pkg/Foo";
@@ -1436,6 +1452,28 @@ TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
   REQUIRE(primec::ir_lowerer::resolveUninitializedTypeInfo("string", "/pkg", resolveStruct, info, error));
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+}
+
+TEST_CASE("ir lowerer uninitialized type helpers build type resolver") {
+  auto resolveStruct = [](const std::string &typeName,
+                          const std::string &,
+                          std::string &resolvedOut) {
+    if (typeName == "MyStruct") {
+      resolvedOut = "/pkg/MyStruct";
+      return true;
+    }
+    return false;
+  };
+
+  std::string error;
+  auto resolveTypeInfo = primec::ir_lowerer::makeResolveUninitializedTypeInfo(resolveStruct, error);
+
+  primec::ir_lowerer::UninitializedTypeInfo info;
+  REQUIRE(resolveTypeInfo("MyStruct", "/pkg", info));
+  CHECK(info.structPath == "/pkg/MyStruct");
+
+  CHECK_FALSE(resolveTypeInfo("Thing<i32>", "/pkg", info));
+  CHECK(error == "native backend does not support uninitialized storage for type: Thing<i32>");
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers report diagnostics") {

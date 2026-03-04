@@ -16,6 +16,14 @@ std::string joinTemplateArgsText(const std::vector<std::string> &args) {
   return out;
 }
 
+ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  return [&](const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+    return resolveStructTypePathFromScope(typeName, namespacePrefix, structNames, importAliases, resolvedOut);
+  };
+}
+
 bool resolveStructTypePathFromScope(
     const std::string &typeName,
     const std::string &namespacePrefix,

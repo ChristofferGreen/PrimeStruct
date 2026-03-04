@@ -77,6 +77,9 @@ struct UninitializedLocalStorageAccessInfo {
 using ResolveUninitializedStorageAccessFromFieldIndexFn =
     std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
 
+ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
+    const ResolveStructTypePathFn &resolveStructTypePath,
+    std::string &error);
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
                                   const ResolveStructTypePathFn &resolveStructTypePath,

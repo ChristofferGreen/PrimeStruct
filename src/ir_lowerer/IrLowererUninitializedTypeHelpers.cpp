@@ -9,6 +9,14 @@
 
 namespace primec::ir_lowerer {
 
+ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
+    const ResolveStructTypePathFn &resolveStructTypePath,
+    std::string &error) {
+  return [&](const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out) {
+    return resolveUninitializedTypeInfo(typeText, namespacePrefix, resolveStructTypePath, out, error);
+  };
+}
+
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
                                   const ResolveStructTypePathFn &resolveStructTypePath,

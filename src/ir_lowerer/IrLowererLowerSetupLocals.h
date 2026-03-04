@@ -152,19 +152,9 @@
     return ir_lowerer::bindingValueKindFromTransforms(expr, kind);
   };
 
-  auto resolveStructTypeName = [&](const std::string &typeName,
-                                   const std::string &namespacePrefix,
-                                   std::string &resolvedOut) -> bool {
-    return ir_lowerer::resolveStructTypePathFromScope(
-        typeName, namespacePrefix, structNames, importAliases, resolvedOut);
-  };
+  auto resolveStructTypeName = ir_lowerer::makeResolveStructTypePathFromScope(structNames, importAliases);
 
-  auto resolveUninitializedTypeInfo = [&](const std::string &typeText,
-                                          const std::string &namespacePrefix,
-                                          UninitializedTypeInfo &out) -> bool {
-    return ir_lowerer::resolveUninitializedTypeInfo(
-        typeText, namespacePrefix, resolveStructTypeName, out, error);
-  };
+  auto resolveUninitializedTypeInfo = ir_lowerer::makeResolveUninitializedTypeInfo(resolveStructTypeName, error);
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
