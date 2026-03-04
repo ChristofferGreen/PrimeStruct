@@ -183,19 +183,14 @@
         }
       });
 
-  auto collectStructArrayFields = [&](const std::string &structPath,
-                                      std::vector<ir_lowerer::StructArrayFieldInfo> &out) -> bool {
-    return ir_lowerer::collectStructArrayFieldsFromLayoutIndex(structLayoutFieldIndex, structPath, out);
-  };
-
   auto resolveStructArrayInfoFromPath = [&](const std::string &structPath, StructArrayInfo &out) -> bool {
-    return ir_lowerer::resolveStructArrayTypeInfoFromPath(
-        structPath, collectStructArrayFields, valueKindFromTypeName, out);
+    return ir_lowerer::resolveStructArrayTypeInfoFromLayoutFieldIndex(
+        structPath, structLayoutFieldIndex, valueKindFromTypeName, out);
   };
 
   auto applyStructArrayInfo = [&](const Expr &expr, LocalInfo &info) {
-    ir_lowerer::applyStructArrayInfoFromBinding(
-        expr, resolveStructTypeName, collectStructArrayFields, valueKindFromTypeName, info);
+    ir_lowerer::applyStructArrayInfoFromBindingWithLayoutFieldIndex(
+        expr, resolveStructTypeName, structLayoutFieldIndex, valueKindFromTypeName, info);
   };
 
   auto collectStructLayoutFields = [&](const std::string &structPath,

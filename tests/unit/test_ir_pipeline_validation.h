@@ -752,6 +752,72 @@ TEST_CASE("ir lowerer struct type helpers resolve struct array info from path") 
       "/pkg/Missing", collectFields, valueKindFromTypeName, out));
 }
 
+TEST_CASE("ir lowerer struct type helpers resolve and apply struct array info from layout field index") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    if (typeName == "i64") {
+      return ValueKind::Int64;
+    }
+    if (typeName == "string") {
+      return ValueKind::String;
+    }
+    return ValueKind::Unknown;
+  };
+
+  const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =
+      primec::ir_lowerer::buildStructLayoutFieldIndex(
+          2,
+          [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+            appendStructLayoutField("/pkg/Foo", {"a", "i32", "", false});
+            appendStructLayoutField("/pkg/Foo", {"b", "i32", "", false});
+            appendStructLayoutField("/pkg/Templated", {"c", "array", "i32", false});
+          });
+
+  primec::ir_lowerer::StructArrayTypeInfo out;
+  REQUIRE(primec::ir_lowerer::resolveStructArrayTypeInfoFromLayoutFieldIndex(
+      "/pkg/Foo", fieldIndex, valueKindFromTypeName, out));
+  CHECK(out.structPath == "/pkg/Foo");
+  CHECK(out.elementKind == ValueKind::Int32);
+  CHECK(out.fieldCount == 2);
+  CHECK_FALSE(primec::ir_lowerer::resolveStructArrayTypeInfoFromLayoutFieldIndex(
+      "/pkg/Templated", fieldIndex, valueKindFromTypeName, out));
+  CHECK_FALSE(primec::ir_lowerer::resolveStructArrayTypeInfoFromLayoutFieldIndex(
+      "/pkg/Missing", fieldIndex, valueKindFromTypeName, out));
+
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &namespacePrefix,
+                                  std::string &resolvedOut) {
+    if (typeName == "Foo" && namespacePrefix == "/pkg") {
+      resolvedOut = "/pkg/Foo";
+      return true;
+    }
+    return false;
+  };
+
+  primec::Expr expr;
+  expr.namespacePrefix = "/pkg";
+  primec::Transform typed;
+  typed.name = "Foo";
+  expr.transforms.push_back(typed);
+
+  REQUIRE(primec::ir_lowerer::resolveStructArrayTypeInfoFromBindingWithLayoutFieldIndex(
+      expr, resolveStructTypeName, fieldIndex, valueKindFromTypeName, out));
+  CHECK(out.structPath == "/pkg/Foo");
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  info.valueKind = ValueKind::Unknown;
+  primec::ir_lowerer::applyStructArrayInfoFromBindingWithLayoutFieldIndex(
+      expr, resolveStructTypeName, fieldIndex, valueKindFromTypeName, info);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.valueKind == ValueKind::Int32);
+  CHECK(info.structTypeName == "/pkg/Foo");
+  CHECK(info.structFieldCount == 2);
+}
+
 TEST_CASE("ir lowerer struct type helpers apply struct array info") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   auto valueKindFromTypeName = [](const std::string &typeName) {

@@ -90,6 +90,16 @@ bool collectStructLayoutFieldsFromIndex(const StructLayoutFieldIndex &fieldIndex
 bool collectStructArrayFieldsFromLayoutIndex(const StructLayoutFieldIndex &fieldIndex,
                                              const std::string &structPath,
                                              std::vector<StructArrayFieldInfo> &out);
+bool resolveStructArrayTypeInfoFromLayoutFieldIndex(const std::string &structPath,
+                                                    const StructLayoutFieldIndex &fieldIndex,
+                                                    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+                                                    StructArrayTypeInfo &out);
+bool resolveStructArrayTypeInfoFromBindingWithLayoutFieldIndex(
+    const Expr &expr,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const StructLayoutFieldIndex &fieldIndex,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructArrayTypeInfo &out);
 bool resolveStructArrayTypeInfoFromPath(const std::string &structPath,
                                         const CollectStructArrayFieldsFn &collectStructArrayFields,
                                         const ValueKindFromTypeNameFn &valueKindFromTypeName,
@@ -104,6 +114,12 @@ void applyStructArrayInfoFromBinding(const Expr &expr,
                                      const CollectStructArrayFieldsFn &collectStructArrayFields,
                                      const ValueKindFromTypeNameFn &valueKindFromTypeName,
                                      LocalInfo &info);
+void applyStructArrayInfoFromBindingWithLayoutFieldIndex(
+    const Expr &expr,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const StructLayoutFieldIndex &fieldIndex,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    LocalInfo &info);
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
                                   const std::string &fieldName,
                                   StructSlotFieldInfo &out);
