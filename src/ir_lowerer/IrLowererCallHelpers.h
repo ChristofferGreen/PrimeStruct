@@ -9,9 +9,22 @@
 
 namespace primec::ir_lowerer {
 
+using ResolveExprPathFn = std::function<std::string(const Expr &)>;
+using IsTailCallCandidateFn = std::function<bool(const Expr &)>;
+using DefinitionExistsFn = std::function<bool(const std::string &)>;
+
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const std::function<std::string(const Expr &)> &resolveExprPath);
+                                        const ResolveExprPathFn &resolveExprPath);
+
+ResolveExprPathFn makeResolveCallPathFromScope(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases);
+IsTailCallCandidateFn makeIsTailCallCandidate(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveExprPathFn &resolveExprPath);
+DefinitionExistsFn makeDefinitionExistsByPath(
+    const std::unordered_map<std::string, const Definition *> &defMap);
 
 std::string resolveCallPathFromScope(
     const Expr &expr,
@@ -20,11 +33,11 @@ std::string resolveCallPathFromScope(
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
-                         const std::function<std::string(const Expr &)> &resolveExprPath);
+                         const ResolveExprPathFn &resolveExprPath);
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
-                               const std::function<bool(const Expr &)> &isTailCallCandidate);
+                               const IsTailCallCandidateFn &isTailCallCandidate);
 
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,

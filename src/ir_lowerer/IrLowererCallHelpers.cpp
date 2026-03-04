@@ -6,12 +6,35 @@ namespace primec::ir_lowerer {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const std::function<std::string(const Expr &)> &resolveExprPath) {
+                                        const ResolveExprPathFn &resolveExprPath) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isMethodCall) {
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
   return resolveDefinitionByPath(defMap, resolved);
+}
+
+ResolveExprPathFn makeResolveCallPathFromScope(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  return [&](const Expr &expr) {
+    return resolveCallPathFromScope(expr, defMap, importAliases);
+  };
+}
+
+IsTailCallCandidateFn makeIsTailCallCandidate(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveExprPathFn &resolveExprPath) {
+  return [&](const Expr &expr) {
+    return isTailCallCandidate(expr, defMap, resolveExprPath);
+  };
+}
+
+DefinitionExistsFn makeDefinitionExistsByPath(
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  return [&](const std::string &path) {
+    return resolveDefinitionByPath(defMap, path) != nullptr;
+  };
 }
 
 std::string resolveCallPathFromScope(
@@ -41,7 +64,7 @@ std::string resolveCallPathFromScope(
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
-                         const std::function<std::string(const Expr &)> &resolveExprPath) {
+                         const ResolveExprPathFn &resolveExprPath) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
     return false;
   }
@@ -51,7 +74,7 @@ bool isTailCallCandidate(const Expr &expr,
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
-                               const std::function<bool(const Expr &)> &isTailCallCandidateFn) {
+                               const IsTailCallCandidateFn &isTailCallCandidateFn) {
   if (statements.empty()) {
     return false;
   }

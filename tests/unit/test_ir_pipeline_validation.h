@@ -128,6 +128,27 @@ TEST_CASE("ir lowerer call helpers resolve scoped call paths") {
   CHECK(primec::ir_lowerer::resolveCallPathFromScope(rootFallback, defMap, importAliases) == "/main");
 }
 
+TEST_CASE("ir lowerer call helpers build scoped call path resolver") {
+  primec::Definition scopedDef;
+  scopedDef.fullPath = "/pkg/foo";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/pkg/foo", &scopedDef}};
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"foo", "/import/foo"},
+      {"bar", "/import/bar"},
+  };
+  auto resolveExprPath = primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
+
+  primec::Expr namespacedScoped;
+  namespacedScoped.name = "foo";
+  namespacedScoped.namespacePrefix = "/pkg";
+  CHECK(resolveExprPath(namespacedScoped) == "/pkg/foo");
+
+  primec::Expr namespacedAlias;
+  namespacedAlias.name = "bar";
+  namespacedAlias.namespacePrefix = "/pkg";
+  CHECK(resolveExprPath(namespacedAlias) == "/import/bar");
+}
+
 TEST_CASE("ir lowerer call helpers resolve definition namespace prefixes") {
   primec::Definition namespacedDef;
   namespacedDef.fullPath = "/pkg/foo";
@@ -168,6 +189,33 @@ TEST_CASE("ir lowerer call helpers classify tail call candidates") {
   primec::Expr unknownCall = callExpr;
   unknownCall.name = "missing";
   CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(unknownCall, defMap, resolveExprPath));
+}
+
+TEST_CASE("ir lowerer call helpers build tail-call and definition-exists adapters") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/callee", &callee},
+      {"/null", nullptr},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  auto resolveExprPath = primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
+  auto isTailCallCandidate = primec::ir_lowerer::makeIsTailCallCandidate(defMap, resolveExprPath);
+  auto definitionExists = primec::ir_lowerer::makeDefinitionExistsByPath(defMap);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  CHECK(isTailCallCandidate(callExpr));
+
+  primec::Expr unknownCall = callExpr;
+  unknownCall.name = "missing";
+  CHECK_FALSE(isTailCallCandidate(unknownCall));
+
+  CHECK(definitionExists("/callee"));
+  CHECK_FALSE(definitionExists("/missing"));
+  CHECK_FALSE(definitionExists("/null"));
 }
 
 TEST_CASE("ir lowerer call helpers detect tail execution candidates from statements") {

@@ -106,20 +106,14 @@
     return ir_lowerer::isStringCountCall(expr, localsIn);
   };
 
-  auto resolveExprPath = [&](const Expr &expr) -> std::string {
-    return ir_lowerer::resolveCallPathFromScope(expr, defMap, importAliases);
-  };
-  auto isTailCallCandidate = [&](const Expr &expr) -> bool {
-    return ir_lowerer::isTailCallCandidate(expr, defMap, resolveExprPath);
-  };
+  auto resolveExprPath = ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
+  auto isTailCallCandidate = ir_lowerer::makeIsTailCallCandidate(defMap, resolveExprPath);
   const bool sawTailExecution =
       ir_lowerer::hasTailExecutionCandidate(entryDef->statements, returnsVoid, isTailCallCandidate);
   if (sawTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
-  auto definitionExists = [&](const std::string &path) {
-    return ir_lowerer::resolveDefinitionByPath(defMap, path) != nullptr;
-  };
+  auto definitionExists = ir_lowerer::makeDefinitionExistsByPath(defMap);
   OnErrorByDefinition onErrorByDef;
   if (!ir_lowerer::buildOnErrorByDefinition(program, resolveExprPath, definitionExists, onErrorByDef, error)) {
     return false;
