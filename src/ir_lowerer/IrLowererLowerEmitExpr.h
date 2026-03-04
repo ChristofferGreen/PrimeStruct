@@ -637,35 +637,14 @@
                   error);
             };
             if (expr.name == "write" || expr.name == "write_line") {
-              const int32_t errorLocal = allocTempLocal();
-              function.instructions.push_back({IrOpcode::PushI32, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-              for (size_t i = 1; i < expr.args.size(); ++i) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-                function.instructions.push_back({IrOpcode::PushI64, 0});
-                function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-                size_t skipIndex = function.instructions.size();
-                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-                if (!emitWriteStep(expr.args[i], errorLocal)) {
-                  return false;
-                }
-                size_t afterIndex = function.instructions.size();
-                function.instructions[skipIndex].imm = static_cast<int32_t>(afterIndex);
-              }
-              if (expr.name == "write_line") {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-                function.instructions.push_back({IrOpcode::PushI64, 0});
-                function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-                size_t skipIndex = function.instructions.size();
-                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-                function.instructions.push_back({IrOpcode::FileWriteNewline, 0});
-                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-                size_t afterIndex = function.instructions.size();
-                function.instructions[skipIndex].imm = static_cast<int32_t>(afterIndex);
-              }
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-              return true;
+              return ir_lowerer::emitFileWriteCall(
+                  expr,
+                  handleIndex,
+                  emitWriteStep,
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  [&]() { return function.instructions.size(); },
+                  [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; });
             }
             if (expr.name == "write_byte") {
               if (expr.args.size() != 2) {

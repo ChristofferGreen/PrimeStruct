@@ -80,6 +80,44 @@ bool emitFileWriteStep(const Expr &arg,
   return true;
 }
 
+bool emitFileWriteCall(const Expr &expr,
+                       int32_t handleIndex,
+                       const EmitFileWriteStepFn &emitWriteStep,
+                       const AllocTempLocalForWriteFn &allocTempLocal,
+                       const EmitInstructionForWriteFn &emitInstruction,
+                       const GetInstructionCountForWriteFn &getInstructionCount,
+                       const PatchInstructionImmForWriteFn &patchInstructionImm) {
+  const int32_t errorLocal = allocTempLocal();
+  emitInstruction(IrOpcode::PushI32, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+  for (size_t i = 1; i < expr.args.size(); ++i) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpEqI64, 0);
+    const size_t skipIndex = getInstructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    if (!emitWriteStep(expr.args[i], errorLocal)) {
+      return false;
+    }
+    const size_t afterIndex = getInstructionCount();
+    patchInstructionImm(skipIndex, static_cast<int32_t>(afterIndex));
+  }
+  if (expr.name == "write_line") {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpEqI64, 0);
+    const size_t skipIndex = getInstructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+    emitInstruction(IrOpcode::FileWriteNewline, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+    const size_t afterIndex = getInstructionCount();
+    patchInstructionImm(skipIndex, static_cast<int32_t>(afterIndex));
+  }
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+  return true;
+}
+
 bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,

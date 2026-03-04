@@ -18,6 +18,7 @@ using EmitInstructionForWriteFn = std::function<void(IrOpcode, uint64_t)>;
 using AllocTempLocalForWriteFn = std::function<int32_t()>;
 using GetInstructionCountForWriteFn = std::function<size_t()>;
 using PatchInstructionImmForWriteFn = std::function<void(size_t, int32_t)>;
+using EmitFileWriteStepFn = std::function<bool(const Expr &, int32_t)>;
 
 bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut);
 bool emitFileOpenCall(const std::string &mode,
@@ -33,6 +34,13 @@ bool emitFileWriteStep(const Expr &arg,
                        const EmitExprForWriteFn &emitExpr,
                        const EmitInstructionForWriteFn &emitInstruction,
                        std::string &error);
+bool emitFileWriteCall(const Expr &expr,
+                       int32_t handleIndex,
+                       const EmitFileWriteStepFn &emitWriteStep,
+                       const AllocTempLocalForWriteFn &allocTempLocal,
+                       const EmitInstructionForWriteFn &emitInstruction,
+                       const GetInstructionCountForWriteFn &getInstructionCount,
+                       const PatchInstructionImmForWriteFn &patchInstructionImm);
 bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,

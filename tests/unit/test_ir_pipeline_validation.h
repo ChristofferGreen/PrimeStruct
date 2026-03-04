@@ -10177,6 +10177,108 @@ TEST_CASE("ir lowerer file write helpers emit write steps") {
   CHECK(instructions[0].imm == 4);
 }
 
+TEST_CASE("ir lowerer file write helpers emit write and write_line calls") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "file";
+  primec::Expr argA = receiver;
+  argA.name = "a";
+  primec::Expr argB = receiver;
+  argB.name = "b";
+
+  primec::Expr writeExpr;
+  writeExpr.kind = primec::Expr::Kind::Call;
+  writeExpr.name = "write";
+  writeExpr.args = {receiver, argA, argB};
+
+  int nextLocal = 20;
+  int writeStepCalls = 0;
+  CHECK(primec::ir_lowerer::emitFileWriteCall(
+      writeExpr,
+      5,
+      [&](const primec::Expr &, int32_t errorLocal) {
+        ++writeStepCalls;
+        CHECK(errorLocal == 20);
+        emitInstruction(primec::IrOpcode::PushI32, static_cast<uint64_t>(100 + writeStepCalls));
+        emitInstruction(primec::IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+        return true;
+      },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm));
+  CHECK(writeStepCalls == 2);
+  REQUIRE(instructions.size() == 15);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 20);
+  CHECK(instructions[5].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[5].imm == 8);
+  CHECK(instructions[11].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[11].imm == 14);
+  CHECK(instructions[14].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[14].imm == 20);
+
+  instructions.clear();
+  primec::Expr writeLineExpr;
+  writeLineExpr.kind = primec::Expr::Kind::Call;
+  writeLineExpr.name = "write_line";
+  writeLineExpr.args = {receiver};
+  nextLocal = 30;
+  writeStepCalls = 0;
+  CHECK(primec::ir_lowerer::emitFileWriteCall(
+      writeLineExpr,
+      7,
+      [&](const primec::Expr &, int32_t) {
+        ++writeStepCalls;
+        return true;
+      },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm));
+  CHECK(writeStepCalls == 0);
+  REQUIRE(instructions.size() == 10);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 30);
+  CHECK(instructions[5].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[5].imm == 9);
+  CHECK(instructions[6].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[6].imm == 7);
+  CHECK(instructions[7].op == primec::IrOpcode::FileWriteNewline);
+  CHECK(instructions[8].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[8].imm == 30);
+  CHECK(instructions[9].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[9].imm == 30);
+
+  instructions.clear();
+  primec::Expr failingWriteExpr;
+  failingWriteExpr.kind = primec::Expr::Kind::Call;
+  failingWriteExpr.name = "write";
+  failingWriteExpr.args = {receiver, argA};
+  nextLocal = 40;
+  CHECK_FALSE(primec::ir_lowerer::emitFileWriteCall(
+      failingWriteExpr,
+      9,
+      [](const primec::Expr &, int32_t) { return false; },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm));
+  REQUIRE(instructions.size() == 6);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 40);
+  CHECK(instructions[5].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[5].imm == 0);
+}
+
 TEST_CASE("ir lowerer file write helpers emit write-bytes loops") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
