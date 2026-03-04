@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 
@@ -54,5 +55,9 @@ bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t srcPtrLocal,
                          int32_t slotCount,
                          const std::function<int32_t()> &allocTempLocal);
+bool emitCompareToZero(std::vector<IrInstruction> &instructions,
+                       LocalInfo::ValueKind kind,
+                       bool equals,
+                       std::string &error);
 
 } // namespace primec::ir_lowerer

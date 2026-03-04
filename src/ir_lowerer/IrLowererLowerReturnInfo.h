@@ -244,28 +244,7 @@
   };
 
   auto emitCompareToZero = [&](LocalInfo::ValueKind kind, bool equals) -> bool {
-    if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64) {
-      function.instructions.push_back({IrOpcode::PushI64, 0});
-      function.instructions.push_back({equals ? IrOpcode::CmpEqI64 : IrOpcode::CmpNeI64, 0});
-      return true;
-    }
-    if (kind == LocalInfo::ValueKind::Float64) {
-      function.instructions.push_back({IrOpcode::PushF64, 0});
-      function.instructions.push_back({equals ? IrOpcode::CmpEqF64 : IrOpcode::CmpNeF64, 0});
-      return true;
-    }
-    if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
-      function.instructions.push_back({IrOpcode::PushI32, 0});
-      function.instructions.push_back({equals ? IrOpcode::CmpEqI32 : IrOpcode::CmpNeI32, 0});
-      return true;
-    }
-    if (kind == LocalInfo::ValueKind::Float32) {
-      function.instructions.push_back({IrOpcode::PushF32, 0});
-      function.instructions.push_back({equals ? IrOpcode::CmpEqF32 : IrOpcode::CmpNeF32, 0});
-      return true;
-    }
-    error = "boolean conversion requires numeric operand";
-    return false;
+    return ir_lowerer::emitCompareToZero(function.instructions, kind, equals, error);
   };
 
   auto resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);

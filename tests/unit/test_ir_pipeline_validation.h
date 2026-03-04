@@ -9563,6 +9563,37 @@ TEST_CASE("ir lowerer flow helpers emit struct copy sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers emit compare-to-zero sequences") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::emitCompareToZero(instructions, ValueKind::Int64, true, error));
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 0u);
+  CHECK(instructions[1].op == primec::IrOpcode::CmpEqI64);
+  CHECK(error.empty());
+
+  instructions.clear();
+  CHECK(primec::ir_lowerer::emitCompareToZero(instructions, ValueKind::Float32, false, error));
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushF32);
+  CHECK(instructions[1].op == primec::IrOpcode::CmpNeF32);
+  CHECK(error.empty());
+
+  instructions.clear();
+  CHECK(primec::ir_lowerer::emitCompareToZero(instructions, ValueKind::Bool, true, error));
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::CmpEqI32);
+
+  instructions.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitCompareToZero(instructions, ValueKind::String, false, error));
+  CHECK(error == "boolean conversion requires numeric operand");
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
