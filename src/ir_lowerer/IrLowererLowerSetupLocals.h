@@ -1,5 +1,3 @@
-  const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
-
   IrFunction function;
   function.name = entryPath;
   function.metadata.effectMask = entryEffectMask;
@@ -18,7 +16,7 @@
 
   ir_lowerer::EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
       entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+  if (!ir_lowerer::buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
       stringTable,
       function,
       program,
@@ -26,7 +24,6 @@
       entryPath,
       defMap,
       importAliases,
-      hasMathImport,
       structNames,
       structFieldInfoByName.size(),
       [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
