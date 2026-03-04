@@ -401,18 +401,19 @@
             return false;
           }
 
-          if (!emitExpr(expr.args[1], localsIn)) {
+          int32_t errorLocal = 0;
+          if (!ir_lowerer::emitResultWhyLocalsFromValueExpr(
+                  expr.args[1],
+                  localsIn,
+                  resultInfo.hasValue,
+                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                    return emitExpr(valueExpr, valueLocals);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  errorLocal)) {
             return false;
           }
-          const int32_t resultLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
-
-          const int32_t errorLocal = allocTempLocal();
-          ir_lowerer::emitResultWhyErrorLocalFromResult(
-              resultLocal,
-              resultInfo.hasValue,
-              errorLocal,
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           auto emitEmptyString = [&]() -> bool {
             return ir_lowerer::emitResultWhyEmptyString(

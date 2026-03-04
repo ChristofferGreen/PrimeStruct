@@ -12708,6 +12708,88 @@ TEST_CASE("ir lowerer result helpers emit Result.why error-local extraction") {
   CHECK(instructions[3].imm == 9);
 }
 
+TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "res";
+  primec::ir_lowerer::LocalMap locals;
+
+  std::vector<primec::IrInstruction> instructions;
+  int allocCounter = 0;
+  int32_t errorLocal = -1;
+  bool emitCalled = false;
+  CHECK(primec::ir_lowerer::emitResultWhyLocalsFromValueExpr(
+      valueExpr,
+      locals,
+      true,
+      [&](const primec::Expr &emittedExpr, const primec::ir_lowerer::LocalMap &emittedLocals) {
+        emitCalled = true;
+        CHECK(emittedExpr.name == "res");
+        CHECK(emittedLocals.empty());
+        return true;
+      },
+      [&]() {
+        ++allocCounter;
+        return allocCounter == 1 ? 13 : 17;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      errorLocal));
+  CHECK(emitCalled);
+  CHECK(errorLocal == 17);
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[0].imm == 13);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 13);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[2].imm == 4294967296ull);
+  CHECK(instructions[3].op == primec::IrOpcode::DivI64);
+  CHECK(instructions[3].imm == 0);
+  CHECK(instructions[4].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[4].imm == 17);
+
+  instructions.clear();
+  allocCounter = 0;
+  errorLocal = -1;
+  CHECK(primec::ir_lowerer::emitResultWhyLocalsFromValueExpr(
+      valueExpr,
+      locals,
+      false,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&]() {
+        ++allocCounter;
+        return allocCounter == 1 ? 20 : 21;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      errorLocal));
+  CHECK(errorLocal == 21);
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[0].imm == 20);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 20);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 21);
+
+  instructions.clear();
+  allocCounter = 0;
+  errorLocal = -1;
+  CHECK_FALSE(primec::ir_lowerer::emitResultWhyLocalsFromValueExpr(
+      valueExpr,
+      locals,
+      true,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() {
+        ++allocCounter;
+        return 99;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      errorLocal));
+  CHECK(allocCounter == 0);
+  CHECK(errorLocal == -1);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
   using EmitResult = primec::ir_lowerer::ResultWhyCallEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;

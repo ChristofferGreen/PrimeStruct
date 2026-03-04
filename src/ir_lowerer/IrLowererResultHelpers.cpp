@@ -140,6 +140,26 @@ bool resolveResultWhyCallInfo(const Expr &expr,
   return true;
 }
 
+bool emitResultWhyLocalsFromValueExpr(
+    const Expr &valueExpr,
+    const LocalMap &localsIn,
+    bool resultHasValue,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    int32_t &errorLocalOut) {
+  if (!emitExpr || !emitExpr(valueExpr, localsIn)) {
+    return false;
+  }
+
+  const int32_t resultLocal = allocTempLocal();
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal));
+  errorLocalOut = allocTempLocal();
+  emitResultWhyErrorLocalFromResult(
+      resultLocal, resultHasValue, errorLocalOut, emitInstruction);
+  return true;
+}
+
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;

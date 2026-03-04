@@ -56,6 +56,14 @@ bool resolveResultWhyCallInfo(const Expr &expr,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
                               ResultExprInfo &resultInfo,
                               std::string &error);
+bool emitResultWhyLocalsFromValueExpr(
+    const Expr &valueExpr,
+    const LocalMap &localsIn,
+    bool resultHasValue,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    int32_t &errorLocalOut);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(
