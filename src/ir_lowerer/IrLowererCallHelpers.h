@@ -179,6 +179,14 @@ bool emitMapLookupTargetPointerLocal(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t &ptrLocalOut);
+MapLookupLoopLocals emitMapLookupLoopSearchScaffold(
+    int32_t ptrLocal,
+    int32_t keyLocal,
+    LocalInfo::ValueKind mapKeyKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 MapLookupLoopLocals emitMapLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,

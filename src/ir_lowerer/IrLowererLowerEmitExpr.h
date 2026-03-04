@@ -960,40 +960,16 @@
               return false;
             }
 
-            const auto loopLocals = ir_lowerer::emitMapLookupLoopLocals(
+            const auto loopLocals = ir_lowerer::emitMapLookupLoopSearchScaffold(
                 ptrLocal,
-                [&]() { return allocTempLocal(); },
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-            const int32_t countLocal = loopLocals.countLocal;
-            const int32_t indexLocal = loopLocals.indexLocal;
-
-            const auto loopCondition = ir_lowerer::emitMapLookupLoopCondition(
-                indexLocal,
-                countLocal,
-                [&]() { return function.instructions.size(); },
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-            size_t loopStart = loopCondition.loopStart;
-            size_t jumpLoopEnd = loopCondition.jumpLoopEnd;
-
-            const auto loopMatch = ir_lowerer::emitMapLookupLoopMatchCheck(
-                ptrLocal,
-                indexLocal,
                 keyLocal,
                 mapKeyKind,
-                [&]() { return function.instructions.size(); },
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-            size_t jumpNotMatch = loopMatch.jumpNotMatch;
-            size_t jumpFound = loopMatch.jumpFound;
-
-            ir_lowerer::emitMapLookupLoopAdvanceAndPatch(
-                jumpNotMatch,
-                jumpLoopEnd,
-                jumpFound,
-                loopStart,
-                indexLocal,
+                [&]() { return allocTempLocal(); },
                 [&]() { return function.instructions.size(); },
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
+            const int32_t countLocal = loopLocals.countLocal;
+            const int32_t indexLocal = loopLocals.indexLocal;
 
             if (accessName == "at") {
               ir_lowerer::emitMapLookupAtKeyNotFoundGuard(

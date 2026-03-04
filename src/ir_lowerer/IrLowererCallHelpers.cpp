@@ -418,6 +418,31 @@ bool emitMapLookupTargetPointerLocal(
   return true;
 }
 
+MapLookupLoopLocals emitMapLookupLoopSearchScaffold(
+    int32_t ptrLocal,
+    int32_t keyLocal,
+    LocalInfo::ValueKind mapKeyKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+  const auto loopLocals = emitMapLookupLoopLocals(ptrLocal, allocTempLocal, emitInstruction);
+  const auto loopCondition = emitMapLookupLoopCondition(
+      loopLocals.indexLocal, loopLocals.countLocal, instructionCount, emitInstruction);
+  const auto loopMatch = emitMapLookupLoopMatchCheck(
+      ptrLocal, loopLocals.indexLocal, keyLocal, mapKeyKind, instructionCount, emitInstruction);
+  emitMapLookupLoopAdvanceAndPatch(
+      loopMatch.jumpNotMatch,
+      loopCondition.jumpLoopEnd,
+      loopMatch.jumpFound,
+      loopCondition.loopStart,
+      loopLocals.indexLocal,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm);
+  return loopLocals;
+}
+
 MapLookupLoopLocals emitMapLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,
