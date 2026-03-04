@@ -108,24 +108,11 @@
   auto getMathBuiltinName = ir_lowerer::makeGetSetupMathBuiltinName(hasMathImport);
   auto getMathConstantName = ir_lowerer::makeGetSetupMathConstantName(hasMathImport);
 
-  auto setReferenceArrayInfo = [&](const Expr &expr, LocalInfo &info) {
-    ir_lowerer::setReferenceArrayInfoFromTransforms(expr, info);
-  };
-
-  auto bindingKind = [&](const Expr &expr) -> LocalInfo::Kind {
-    return ir_lowerer::bindingKindFromTransforms(expr);
-  };
-
-  auto isStringBinding = [&](const Expr &expr) -> bool {
-    return ir_lowerer::isStringBindingType(expr);
-  };
-  auto isFileErrorBinding = [&](const Expr &expr) -> bool {
-    return ir_lowerer::isFileErrorBindingType(expr);
-  };
-
-  auto bindingValueKind = [&](const Expr &expr, LocalInfo::Kind kind) -> LocalInfo::ValueKind {
-    return ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-  };
+  auto setReferenceArrayInfo = ir_lowerer::makeSetReferenceArrayInfoFromTransforms();
+  auto bindingKind = ir_lowerer::makeBindingKindFromTransforms();
+  auto isStringBinding = ir_lowerer::makeIsStringBindingType();
+  auto isFileErrorBinding = ir_lowerer::makeIsFileErrorBindingType();
+  auto bindingValueKind = ir_lowerer::makeBindingValueKindFromTransforms();
 
   auto resolveStructTypeName = ir_lowerer::makeResolveStructTypePathFromScope(structNames, importAliases);
 
