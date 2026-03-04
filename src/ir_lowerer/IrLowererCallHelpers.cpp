@@ -5,6 +5,8 @@
 
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererIndexKindHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 

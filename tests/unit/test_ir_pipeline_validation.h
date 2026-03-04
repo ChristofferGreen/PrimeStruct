@@ -2600,8 +2600,8 @@ TEST_CASE("ir lowerer call helpers detect unsupported vector helper names") {
   callExpr.name = "push";
   callExpr.isMethodCall = true;
   helperName.clear();
-  CHECK_FALSE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
-  CHECK(helperName.empty());
+  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
+  CHECK(helperName == "push");
 }
 
 TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics") {
@@ -3039,7 +3039,7 @@ TEST_CASE("ir lowerer call helpers try emit map access lookup") {
   mapInfo.mapValueKind = Kind::Float64;
   locals.emplace(targetExpr.name, mapInfo);
 
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int nextLocal = 20;
   int emitExprCalls = 0;
   int inferCalls = 0;
@@ -3213,7 +3213,7 @@ TEST_CASE("ir lowerer call helpers emit string table access load") {
   indexExpr.name = "idx";
 
   primec::ir_lowerer::LocalMap locals;
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   std::string error = "stale";
 
   int allocCalls = 0;
@@ -3409,7 +3409,7 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
   vectorLocalInfo.valueKind = Kind::Int32;
   locals.emplace("vec", vectorLocalInfo);
 
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   std::string error;
 
   int inferCalls = 0;
@@ -3559,7 +3559,7 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   indexExpr.name = "idx";
 
   primec::ir_lowerer::LocalMap locals;
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   std::string error = "stale";
 
   primec::Expr stringLiteralTarget;
@@ -4079,7 +4079,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup key local") {
 TEST_CASE("ir lowerer call helpers emit map lookup loop search scaffold") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int nextLocal = 40;
   const auto loopLocals = primec::ir_lowerer::emitMapLookupLoopSearchScaffold(
       3,
@@ -4143,7 +4143,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop search scaffold") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup access epilogue") {
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int keyNotFoundCalls = 0;
   primec::ir_lowerer::emitMapLookupAccessEpilogue(
       "at",
@@ -4222,7 +4222,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   locals[targetExpr.name] = primec::ir_lowerer::LocalInfo{};
   locals[keyExpr.name] = primec::ir_lowerer::LocalInfo{};
 
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int nextLocal = 20;
   int emitExprCalls = 0;
   int inferCalls = 0;
@@ -4342,7 +4342,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
 TEST_CASE("ir lowerer call helpers emit string access load") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int stringIndexOutOfBoundsCalls = 0;
   primec::ir_lowerer::emitStringAccessLoad(
       "at",
@@ -4399,7 +4399,7 @@ TEST_CASE("ir lowerer call helpers emit string access load") {
 TEST_CASE("ir lowerer call helpers emit array vector access load") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int nextLocal = 30;
   int arrayIndexOutOfBoundsCalls = 0;
   primec::ir_lowerer::emitArrayVectorAccessLoad(
@@ -4479,7 +4479,7 @@ TEST_CASE("ir lowerer call helpers emit array vector access load") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   int nextLocal = 30;
   auto locals = primec::ir_lowerer::emitMapLookupLoopLocals(
       12,
@@ -4503,7 +4503,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop condition") {
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   auto anchors = primec::ir_lowerer::emitMapLookupLoopCondition(
       7,
       9,
@@ -4523,7 +4523,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop condition") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop match check") {
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   auto anchors = primec::ir_lowerer::emitMapLookupLoopMatchCheck(
       4,
       5,
@@ -4551,7 +4551,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop match check") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup loop advance patching") {
-  std::vector<primec::Instruction> instructions = {
+  std::vector<primec::IrInstruction> instructions = {
       {primec::IrOpcode::PushI32, 10},
       {primec::IrOpcode::JumpIfZero, 0},
       {primec::IrOpcode::PushI32, 12},
@@ -4586,7 +4586,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop advance patching") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup at key-not-found guard") {
-  std::vector<primec::Instruction> instructions = {
+  std::vector<primec::IrInstruction> instructions = {
       {primec::IrOpcode::PushI32, 7},
   };
   int notFoundCalls = 0;
@@ -4616,7 +4616,7 @@ TEST_CASE("ir lowerer call helpers emit map lookup at key-not-found guard") {
 }
 
 TEST_CASE("ir lowerer call helpers emit map lookup value load") {
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   primec::ir_lowerer::emitMapLookupValueLoad(
       21,
       22,
@@ -10042,7 +10042,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   callExpr.args = {targetName};
 
   primec::ir_lowerer::LocalMap locals;
-  std::vector<primec::Instruction> instructions;
+  std::vector<primec::IrInstruction> instructions;
   std::string error = "stale";
 
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
@@ -13035,7 +13035,11 @@ TEST_CASE("ir lowerer result helpers compose Result.why call ops") {
         resolveLayoutCalled = true;
         CHECK(structPath == "/ErrType");
         layoutOut = primec::ir_lowerer::StructSlotLayoutInfo{};
-        layoutOut.fields.push_back({0, ValueKind::Int32, ""});
+        primec::ir_lowerer::StructSlotFieldInfo field;
+        field.slotOffset = 0;
+        field.slotCount = 1;
+        field.valueKind = ValueKind::Int32;
+        layoutOut.fields.push_back(field);
         return true;
       },
       [&](const std::string &typeName) {
@@ -13111,7 +13115,7 @@ TEST_CASE("ir lowerer result helpers compose Result.why call ops") {
   primec::ir_lowerer::StructSlotLayoutInfo layout;
   CHECK(ops.resolveStructSlotLayout("/ErrType", layout));
   REQUIRE(layout.fields.size() == 1);
-  CHECK(layout.fields.front().slot == 0);
+  CHECK(layout.fields.front().slotOffset == 0);
   CHECK(layout.fields.front().valueKind == ValueKind::Int32);
   CHECK(resolveLayoutCalled);
 
@@ -13301,8 +13305,16 @@ TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
       return false;
     }
     layoutOut = primec::ir_lowerer::StructSlotLayoutInfo{};
-    layoutOut.fields.push_back({0, ValueKind::Int32, ""});
-    layoutOut.fields.push_back({1, ValueKind::Int32, ""});
+    primec::ir_lowerer::StructSlotFieldInfo first;
+    first.slotOffset = 0;
+    first.slotCount = 1;
+    first.valueKind = ValueKind::Int32;
+    layoutOut.fields.push_back(first);
+    primec::ir_lowerer::StructSlotFieldInfo second;
+    second.slotOffset = 1;
+    second.slotCount = 1;
+    second.valueKind = ValueKind::Int32;
+    layoutOut.fields.push_back(second);
     return true;
   };
   ops.valueKindFromTypeName = [](const std::string &typeName) {

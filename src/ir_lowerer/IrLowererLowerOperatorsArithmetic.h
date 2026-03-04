@@ -1,5 +1,3 @@
-          return true;
-        }
         ir_lowerer::OperatorArithmeticEmitResult arithmeticResult = ir_lowerer::emitArithmeticOperatorExpr(
             expr,
             localsIn,
