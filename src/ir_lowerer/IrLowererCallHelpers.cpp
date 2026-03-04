@@ -347,6 +347,30 @@ MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
   return MapLookupKeyLocalEmitResult::Emitted;
 }
 
+bool emitMapLookupNonStringKeyLocal(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(int32_t)> &emitStoreLocal,
+    int32_t keyLocal,
+    std::string &error) {
+  if (mapKeyKind == LocalInfo::ValueKind::String) {
+    error = "native backend requires map lookup key to be string literal or binding backed by literals";
+    return false;
+  }
+  const LocalInfo::ValueKind lookupKeyKind = inferExprKind(lookupKeyExpr, localsIn);
+  if (!validateMapLookupKeyKind(mapKeyKind, lookupKeyKind, error)) {
+    return false;
+  }
+  if (!emitExpr(lookupKeyExpr, localsIn)) {
+    return false;
+  }
+  emitStoreLocal(keyLocal);
+  return true;
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {

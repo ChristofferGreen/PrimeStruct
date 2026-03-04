@@ -2712,6 +2712,76 @@ TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
   CHECK(stored == 9);
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Name;
+  keyExpr.name = "k";
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  int32_t stored = -1;
+
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+      Kind::String,
+      keyExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&](int32_t local) { stored = local; },
+      3,
+      error));
+  CHECK(error == "native backend requires map lookup key to be string literal or binding backed by literals");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+      Kind::Int32,
+      keyExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&](int32_t local) { stored = local; },
+      4,
+      error));
+  CHECK(error == "native backend requires map lookup key to be numeric/bool");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+      Kind::Int64,
+      keyExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Float64; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&](int32_t local) { stored = local; },
+      5,
+      error));
+  CHECK(error == "native backend requires map lookup key type to match map key type");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+      Kind::Int32,
+      keyExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&](int32_t local) { stored = local; },
+      6,
+      error));
+
+  error.clear();
+  CHECK(primec::ir_lowerer::emitMapLookupNonStringKeyLocal(
+      Kind::Int32,
+      keyExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [&](int32_t local) { stored = local; },
+      7,
+      error));
+  CHECK(stored == 7);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

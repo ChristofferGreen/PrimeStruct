@@ -138,6 +138,15 @@ MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error);
+bool emitMapLookupNonStringKeyLocal(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(int32_t)> &emitStoreLocal,
+    int32_t keyLocal,
+    std::string &error);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);

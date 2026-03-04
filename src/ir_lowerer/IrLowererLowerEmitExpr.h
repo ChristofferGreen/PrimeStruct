@@ -945,15 +945,23 @@
               return false;
             }
             if (stringLookupKeyEmitResult != ir_lowerer::MapLookupKeyLocalEmitResult::Emitted) {
-              LocalInfo::ValueKind lookupKeyKind = inferExprKind(expr.args[1], localsIn);
-              if (!ir_lowerer::validateMapLookupKeyKind(
-                      mapKeyKind, lookupKeyKind, error)) {
+              if (!ir_lowerer::emitMapLookupNonStringKeyLocal(
+                      mapKeyKind,
+                      expr.args[1],
+                      localsIn,
+                      [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                        return inferExprKind(lookupKeyExpr, localMap);
+                      },
+                      [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                        return emitExpr(lookupKeyExpr, localMap);
+                      },
+                      [&](int32_t localIndex) {
+                        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
+                      },
+                      keyLocal,
+                      error)) {
                 return false;
               }
-              if (!emitExpr(expr.args[1], localsIn)) {
-                return false;
-              }
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
             }
 
             const int32_t countLocal = allocTempLocal();
