@@ -169,61 +169,20 @@
   typeLayoutForBinding = [&](const FieldBinding &binding,
                              const std::string &namespacePrefix,
                              TypeLayout &layoutOut) -> bool {
-    auto normalizeTypeName = [](const std::string &name) -> std::string {
-      if (name == "int") {
-        return "i32";
-      }
-      if (name == "float") {
-        return "f32";
-      }
-      return name;
-    };
-    const std::string normalized = normalizeTypeName(binding.typeName);
-    if (normalized == "i32" || normalized == "f32") {
-      layoutOut = {4u, 4u};
+    ir_lowerer::BindingTypeLayout bindingLayout;
+    std::string structTypeName;
+    if (!ir_lowerer::classifyBindingTypeLayout(binding, bindingLayout, structTypeName, error)) {
+      return false;
+    }
+    if (structTypeName.empty()) {
+      layoutOut.sizeBytes = bindingLayout.sizeBytes;
+      layoutOut.alignmentBytes = bindingLayout.alignmentBytes;
       return true;
     }
-    if (normalized == "i64" || normalized == "u64" || normalized == "f64") {
-      layoutOut = {8u, 8u};
-      return true;
-    }
-    if (normalized == "bool") {
-      layoutOut = {1u, 1u};
-      return true;
-    }
-    if (normalized == "string") {
-      layoutOut = {8u, 8u};
-      return true;
-    }
-    if (binding.typeName == "uninitialized") {
-      if (binding.typeTemplateArg.empty()) {
-        error = "uninitialized requires a template argument for layout";
-        return false;
-      }
-      std::string base;
-      std::string arg;
-      FieldBinding unwrapped = binding;
-      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
-        unwrapped.typeName = base;
-        unwrapped.typeTemplateArg = arg;
-      } else {
-        unwrapped.typeName = binding.typeTemplateArg;
-        unwrapped.typeTemplateArg.clear();
-      }
-      return typeLayoutForBinding(unwrapped, namespacePrefix, layoutOut);
-    }
-    if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
-      layoutOut = {8u, 8u};
-      return true;
-    }
-    if (binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "map") {
-      layoutOut = {8u, 8u};
-      return true;
-    }
-    std::string structPath = resolveStructTypePath(binding.typeName, namespacePrefix);
+    std::string structPath = resolveStructTypePath(structTypeName, namespacePrefix);
     auto defIt = defMap.find(structPath);
     if (defIt == defMap.end()) {
-      error = "unknown struct type for layout: " + binding.typeName;
+      error = "unknown struct type for layout: " + structTypeName;
       return false;
     }
     IrStructLayout nested;

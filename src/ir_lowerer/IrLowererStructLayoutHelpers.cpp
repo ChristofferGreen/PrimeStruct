@@ -3,7 +3,80 @@
 #include <cctype>
 #include <limits>
 
+#include "IrLowererStructTypeHelpers.h"
+
 namespace primec::ir_lowerer {
+
+namespace {
+
+std::string normalizeLayoutTypeName(const std::string &name) {
+  if (name == "int") {
+    return "i32";
+  }
+  if (name == "float") {
+    return "f32";
+  }
+  return name;
+}
+
+bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
+                                       BindingTypeLayout &layoutOut,
+                                       std::string &structTypeNameOut,
+                                       std::string &errorOut) {
+  const std::string normalized = normalizeLayoutTypeName(binding.typeName);
+  if (normalized == "i32" || normalized == "f32") {
+    layoutOut = {4u, 4u};
+    structTypeNameOut.clear();
+    return true;
+  }
+  if (normalized == "i64" || normalized == "u64" || normalized == "f64") {
+    layoutOut = {8u, 8u};
+    structTypeNameOut.clear();
+    return true;
+  }
+  if (normalized == "bool") {
+    layoutOut = {1u, 1u};
+    structTypeNameOut.clear();
+    return true;
+  }
+  if (normalized == "string") {
+    layoutOut = {8u, 8u};
+    structTypeNameOut.clear();
+    return true;
+  }
+  if (binding.typeName == "uninitialized") {
+    if (binding.typeTemplateArg.empty()) {
+      errorOut = "uninitialized requires a template argument for layout";
+      return false;
+    }
+    std::string base;
+    std::string arg;
+    LayoutFieldBinding unwrapped = binding;
+    if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
+      unwrapped.typeName = base;
+      unwrapped.typeTemplateArg = arg;
+    } else {
+      unwrapped.typeName = binding.typeTemplateArg;
+      unwrapped.typeTemplateArg.clear();
+    }
+    return classifyBindingTypeLayoutInternal(unwrapped, layoutOut, structTypeNameOut, errorOut);
+  }
+  if (binding.typeName == "Pointer" || binding.typeName == "Reference") {
+    layoutOut = {8u, 8u};
+    structTypeNameOut.clear();
+    return true;
+  }
+  if (binding.typeName == "array" || binding.typeName == "vector" || binding.typeName == "map") {
+    layoutOut = {8u, 8u};
+    structTypeNameOut.clear();
+    return true;
+  }
+
+  structTypeNameOut = normalized;
+  return true;
+}
+
+} // namespace
 
 uint32_t alignTo(uint32_t value, uint32_t alignment) {
   if (alignment == 0) {
@@ -78,6 +151,15 @@ bool extractAlignment(const std::vector<Transform> &transforms,
     hasAlignment = true;
   }
   return true;
+}
+
+bool classifyBindingTypeLayout(const LayoutFieldBinding &binding,
+                               BindingTypeLayout &layoutOut,
+                               std::string &structTypeNameOut,
+                               std::string &errorOut) {
+  structTypeNameOut.clear();
+  errorOut.clear();
+  return classifyBindingTypeLayoutInternal(binding, layoutOut, structTypeNameOut, errorOut);
 }
 
 bool isLayoutQualifierName(const std::string &name) {

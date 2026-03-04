@@ -1084,6 +1084,65 @@ TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transfor
   CHECK(error == "align_bytes requires a positive integer argument");
 }
 
+TEST_CASE("ir lowerer struct layout helpers classify binding type layout") {
+  primec::ir_lowerer::BindingTypeLayout layout;
+  std::string structTypeName;
+  std::string error;
+
+  primec::ir_lowerer::LayoutFieldBinding intAlias;
+  intAlias.typeName = "int";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(intAlias, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 4u);
+  CHECK(layout.alignmentBytes == 4u);
+  CHECK(structTypeName.empty());
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding pointerType;
+  pointerType.typeName = "Pointer";
+  pointerType.typeTemplateArg = "i32";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(pointerType, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 8u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(structTypeName.empty());
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding uninitPrimitive;
+  uninitPrimitive.typeName = "uninitialized";
+  uninitPrimitive.typeTemplateArg = "i64";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(uninitPrimitive, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 8u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(structTypeName.empty());
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding uninitCollection;
+  uninitCollection.typeName = "uninitialized";
+  uninitCollection.typeTemplateArg = "array<f32>";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(uninitCollection, layout, structTypeName, error));
+  CHECK(layout.sizeBytes == 8u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(structTypeName.empty());
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding uninitStruct;
+  uninitStruct.typeName = "uninitialized";
+  uninitStruct.typeTemplateArg = "Thing";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(uninitStruct, layout, structTypeName, error));
+  CHECK(structTypeName == "Thing");
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LayoutFieldBinding missingTemplate;
+  missingTemplate.typeName = "uninitialized";
+  CHECK_FALSE(primec::ir_lowerer::classifyBindingTypeLayout(missingTemplate, layout, structTypeName, error));
+  CHECK(error == "uninitialized requires a template argument for layout");
+
+  primec::ir_lowerer::LayoutFieldBinding structType;
+  structType.typeName = "MyStruct";
+  CHECK(primec::ir_lowerer::classifyBindingTypeLayout(structType, layout, structTypeName, error));
+  CHECK(structTypeName == "MyStruct");
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));
