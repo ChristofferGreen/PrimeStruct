@@ -10237,6 +10237,136 @@ TEST_CASE("ir lowerer runtime error helpers emit file-error why dispatch sequenc
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::Jump; }));
 }
 
+TEST_CASE("ir lowerer runtime error helpers emit FileError.why call paths") {
+  using Result = primec::ir_lowerer::FileErrorWhyCallEmitResult;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "noop";
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error = "stale";
+  int32_t emittedWhyLocal = -1;
+
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
+  CHECK(emittedWhyLocal == -1);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
+  primec::Expr fileErrorType;
+  fileErrorType.kind = primec::Expr::Kind::Name;
+  fileErrorType.name = "FileError";
+  primec::Expr errValue;
+  errValue.kind = primec::Expr::Kind::Name;
+  errValue.name = "err";
+  expr.name = "why";
+  expr.args = {fileErrorType, errValue};
+  int emitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 77});
+              return true;
+            },
+            []() { return 44; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  CHECK(emittedWhyLocal == 44);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 44);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
+  expr.args = {fileErrorType};
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 3; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::Error);
+  CHECK(error == "FileError.why requires exactly one argument");
+  CHECK(instructions.empty());
+  CHECK(emittedWhyLocal == -1);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
+  expr.args = {fileErrorType, errValue};
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            []() { return 5; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::Error);
+  CHECK(instructions.empty());
+  CHECK(emittedWhyLocal == -1);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
+  expr.args = {errValue};
+  primec::ir_lowerer::LocalInfo fileErrorInfo;
+  fileErrorInfo.index = 12;
+  fileErrorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  fileErrorInfo.isFileError = true;
+  locals.emplace("err", fileErrorInfo);
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            []() { return 9; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::Emitted);
+  CHECK(instructions.empty());
+  CHECK(emittedWhyLocal == 12);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
+  fileErrorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  fileErrorInfo.index = 33;
+  locals["err"] = fileErrorInfo;
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            []() { return 91; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::Emitted);
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 33);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 91);
+  CHECK(emittedWhyLocal == 91);
+}
+
 TEST_CASE("ir lowerer runtime error helpers build scoped emitters") {
   primec::IrFunction function;
   std::vector<std::string> stringTable;

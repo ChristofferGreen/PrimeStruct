@@ -4,7 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "IrLowererSharedTypes.h"
 #include "IrLowererStringLiteralHelpers.h"
+#include "primec/Ast.h"
 #include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
@@ -29,6 +31,11 @@ struct RuntimeErrorEmitters {
 struct RuntimeErrorAndStringLiteralSetup {
   StringLiteralHelperContext stringLiteralHelpers;
   RuntimeErrorEmitters runtimeErrorEmitters;
+};
+enum class FileErrorWhyCallEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
 };
 
 RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
@@ -67,5 +74,13 @@ void emitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringF
 void emitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitFloatToIntNonFinite(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRuntimeErrorStringFn &internString);
+FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(int32_t)> &emitFileErrorWhy,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

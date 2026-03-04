@@ -574,32 +574,21 @@
           }
           return emitEmptyString();
         }
-        if (expr.isMethodCall && expr.name == "why" && !expr.args.empty() &&
-            expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "FileError") {
-          if (expr.args.size() != 2) {
-            error = "FileError.why requires exactly one argument";
-            return false;
-          }
-          if (!emitExpr(expr.args[1], localsIn)) {
-            return false;
-          }
-          const int32_t errorLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-          return emitFileErrorWhy(errorLocal);
+        const auto fileErrorWhyResult = ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            localsIn,
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return emitExpr(valueExpr, localMap);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            [&](int32_t errorLocal) { emitFileErrorWhy(errorLocal); },
+            error);
+        if (fileErrorWhyResult == ir_lowerer::FileErrorWhyCallEmitResult::Emitted) {
+          return true;
         }
-        if (expr.isMethodCall && expr.name == "why" && expr.args.size() == 1 &&
-            expr.args.front().kind == Expr::Kind::Name) {
-          auto it = localsIn.find(expr.args.front().name);
-          if (it != localsIn.end() && it->second.isFileError) {
-            if (it->second.kind == LocalInfo::Kind::Reference) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-              const int32_t errorLocal = allocTempLocal();
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-              return emitFileErrorWhy(errorLocal);
-            }
-            return emitFileErrorWhy(it->second.index);
-          }
+        if (fileErrorWhyResult == ir_lowerer::FileErrorWhyCallEmitResult::Error) {
+          return false;
         }
         if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
           if (expr.templateArgs.size() != 1) {

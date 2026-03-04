@@ -259,4 +259,47 @@ void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRunt
   }
 }
 
+FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(int32_t)> &emitFileErrorWhyFn,
+    std::string &error) {
+  if (expr.isMethodCall && expr.name == "why" && !expr.args.empty() &&
+      expr.args.front().kind == Expr::Kind::Name && expr.args.front().name == "FileError") {
+    if (expr.args.size() != 2) {
+      error = "FileError.why requires exactly one argument";
+      return FileErrorWhyCallEmitResult::Error;
+    }
+    if (!emitExpr(expr.args[1], localsIn)) {
+      return FileErrorWhyCallEmitResult::Error;
+    }
+    const int32_t errorLocal = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+    emitFileErrorWhyFn(errorLocal);
+    return FileErrorWhyCallEmitResult::Emitted;
+  }
+
+  if (expr.isMethodCall && expr.name == "why" && expr.args.size() == 1 &&
+      expr.args.front().kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.args.front().name);
+    if (it != localsIn.end() && it->second.isFileError) {
+      if (it->second.kind == LocalInfo::Kind::Reference) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::LoadIndirect, 0);
+        const int32_t errorLocal = allocTempLocal();
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+        emitFileErrorWhyFn(errorLocal);
+        return FileErrorWhyCallEmitResult::Emitted;
+      }
+      emitFileErrorWhyFn(it->second.index);
+      return FileErrorWhyCallEmitResult::Emitted;
+    }
+  }
+
+  return FileErrorWhyCallEmitResult::NotHandled;
+}
+
 } // namespace primec::ir_lowerer
