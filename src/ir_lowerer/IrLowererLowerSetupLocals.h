@@ -68,9 +68,9 @@
   if (entryCallResolutionSetup.hasTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
-  auto definitionExists = callResolutionAdapters.definitionExists;
   OnErrorByDefinition onErrorByDef;
-  if (!ir_lowerer::buildOnErrorByDefinition(program, resolveExprPath, definitionExists, onErrorByDef, error)) {
+  if (!ir_lowerer::buildOnErrorByDefinitionFromCallResolutionAdapters(
+          program, callResolutionAdapters, onErrorByDef, error)) {
     return false;
   }
 

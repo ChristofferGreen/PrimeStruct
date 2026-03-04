@@ -414,6 +414,48 @@ TEST_CASE("ir lowerer on_error helpers wire definition handlers") {
   CHECK_FALSE(onErrorByDef.at("/handler").has_value());
 }
 
+TEST_CASE("ir lowerer on_error helpers wire definition handlers from call adapters") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.namespacePrefix = "";
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  onError.arguments = {"1i32"};
+  mainDef.transforms.push_back(onError);
+  program.definitions.push_back(mainDef);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/handler", &program.definitions[0]},
+      {"/main", &program.definitions[1]},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+  const auto callResolutionAdapters = primec::ir_lowerer::makeCallResolutionAdapters(defMap, importAliases);
+
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildOnErrorByDefinitionFromCallResolutionAdapters(
+      program, callResolutionAdapters, onErrorByDef, error));
+  CHECK(error.empty());
+
+  REQUIRE(onErrorByDef.count("/main") == 1);
+  REQUIRE(onErrorByDef.at("/main").has_value());
+  CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
+  REQUIRE(onErrorByDef.at("/main")->boundArgs.size() == 1);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().kind == primec::Expr::Kind::Literal);
+  CHECK(onErrorByDef.at("/main")->boundArgs.front().literalValue == 1);
+
+  REQUIRE(onErrorByDef.count("/handler") == 1);
+  CHECK_FALSE(onErrorByDef.at("/handler").has_value());
+}
+
 TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   primec::Transform onError;
   onError.name = "on_error";

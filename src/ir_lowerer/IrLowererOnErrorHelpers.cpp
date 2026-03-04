@@ -83,4 +83,16 @@ bool buildOnErrorByDefinition(const Program &program,
   return true;
 }
 
+bool buildOnErrorByDefinitionFromCallResolutionAdapters(
+    const Program &program,
+    const CallResolutionAdapters &callResolutionAdapters,
+    OnErrorByDefinition &out,
+    std::string &error) {
+  return buildOnErrorByDefinition(program,
+                                  callResolutionAdapters.resolveExprPath,
+                                  callResolutionAdapters.definitionExists,
+                                  out,
+                                  error);
+}
+
 } // namespace primec::ir_lowerer

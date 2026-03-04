@@ -6,13 +6,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
 
-using ResolveExprPathFn = std::function<std::string(const Expr &)>;
-using DefinitionExistsFn = std::function<bool(const std::string &)>;
 using OnErrorByDefinition = std::unordered_map<std::string, std::optional<OnErrorHandler>>;
 
 bool parseTransformArgumentExpr(const std::string &text,
@@ -33,5 +32,10 @@ bool buildOnErrorByDefinition(const Program &program,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error);
+bool buildOnErrorByDefinitionFromCallResolutionAdapters(
+    const Program &program,
+    const CallResolutionAdapters &callResolutionAdapters,
+    OnErrorByDefinition &out,
+    std::string &error);
 
 } // namespace primec::ir_lowerer
