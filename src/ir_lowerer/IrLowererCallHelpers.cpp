@@ -293,6 +293,47 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
   return true;
 }
 
+ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
+    const Expr &target, const LocalMap &localsIn) {
+  ArrayVectorAccessTargetInfo info;
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() &&
+        (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
+      info.isArrayOrVectorTarget = true;
+      info.elemKind = it->second.valueKind;
+      info.isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
+      return info;
+    }
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
+        it->second.referenceToArray) {
+      info.isArrayOrVectorTarget = true;
+      info.elemKind = it->second.valueKind;
+      return info;
+    }
+    return info;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+        target.templateArgs.size() == 1) {
+      info.isArrayOrVectorTarget = true;
+      info.elemKind = valueKindFromTypeName(target.templateArgs.front());
+      info.isVectorTarget = (collection == "vector");
+    }
+  }
+  return info;
+}
+
+bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error) {
+  if (!targetInfo.isArrayOrVectorTarget || targetInfo.elemKind == LocalInfo::ValueKind::Unknown ||
+      targetInfo.elemKind == LocalInfo::ValueKind::String) {
+    error = "native backend only supports at() on numeric/bool arrays or vectors";
+    return false;
+  }
+  return true;
+}
+
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind) {
   if (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64) {
     return IrOpcode::CmpEqI64;

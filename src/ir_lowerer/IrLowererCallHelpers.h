@@ -89,6 +89,11 @@ struct MapAccessTargetInfo {
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
 };
+struct ArrayVectorAccessTargetInfo {
+  bool isArrayOrVectorTarget = false;
+  LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+  bool isVectorTarget = false;
+};
 struct MapLookupLoopLocals {
   int32_t countLocal = -1;
   int32_t indexLocal = -1;
@@ -134,6 +139,8 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMa
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
+ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
+bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
 MapLookupStringKeyResult tryResolveMapLookupStringKey(
     LocalInfo::ValueKind mapKeyKind,

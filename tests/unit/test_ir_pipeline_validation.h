@@ -2605,6 +2605,81 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(error == "native backend only supports numeric/bool map values");
 }
 
+TEST_CASE("ir lowerer call helpers resolve and validate array vector access targets") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo arrayInfo;
+  arrayInfo.kind = LocalInfo::Kind::Array;
+  arrayInfo.valueKind = Kind::Int32;
+  locals.emplace("arr", arrayInfo);
+
+  LocalInfo vectorInfo;
+  vectorInfo.kind = LocalInfo::Kind::Vector;
+  vectorInfo.valueKind = Kind::Float64;
+  locals.emplace("vec", vectorInfo);
+
+  LocalInfo refArrayInfo;
+  refArrayInfo.kind = LocalInfo::Kind::Reference;
+  refArrayInfo.referenceToArray = true;
+  refArrayInfo.valueKind = Kind::Bool;
+  locals.emplace("refArr", refArrayInfo);
+
+  primec::Expr arrName;
+  arrName.kind = primec::Expr::Kind::Name;
+  arrName.name = "arr";
+  auto resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(arrName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK_FALSE(resolved.isVectorTarget);
+
+  primec::Expr vecName;
+  vecName.kind = primec::Expr::Kind::Name;
+  vecName.name = "vec";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(vecName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Float64);
+  CHECK(resolved.isVectorTarget);
+
+  primec::Expr refArrName;
+  refArrName.kind = primec::Expr::Kind::Name;
+  refArrName.name = "refArr";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(refArrName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Bool);
+  CHECK_FALSE(resolved.isVectorTarget);
+
+  primec::Expr vectorCtor;
+  vectorCtor.kind = primec::Expr::Kind::Call;
+  vectorCtor.name = "vector";
+  vectorCtor.templateArgs = {"u64"};
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(vectorCtor, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::UInt64);
+  CHECK(resolved.isVectorTarget);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  primec::Expr plain;
+  plain.kind = primec::Expr::Kind::Name;
+  plain.name = "other";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(plain, locals);
+  CHECK_FALSE(resolved.isArrayOrVectorTarget);
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error == "native backend only supports at() on numeric/bool arrays or vectors");
+
+  primec::ir_lowerer::ArrayVectorAccessTargetInfo stringElem;
+  stringElem.isArrayOrVectorTarget = true;
+  stringElem.elemKind = Kind::String;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(stringElem, error));
+  CHECK(error == "native backend only supports at() on numeric/bool arrays or vectors");
+}
+
 TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using primec::IrOpcode;

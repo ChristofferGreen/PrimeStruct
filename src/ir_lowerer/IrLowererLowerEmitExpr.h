@@ -927,28 +927,8 @@
             return true;
           }
 
-          LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-          bool isVectorTarget = false;
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end() &&
-                (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector)) {
-              elemKind = it->second.valueKind;
-              isVectorTarget = (it->second.kind == LocalInfo::Kind::Vector);
-            } else if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
-                       it->second.referenceToArray) {
-              elemKind = it->second.valueKind;
-            }
-          } else if (target.kind == Expr::Kind::Call) {
-            std::string collection;
-            if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
-                target.templateArgs.size() == 1) {
-              elemKind = valueKindFromTypeName(target.templateArgs.front());
-              isVectorTarget = (collection == "vector");
-            }
-          }
-          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-            error = "native backend only supports at() on numeric/bool arrays or vectors";
+          const auto arrayVectorTargetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(target, localsIn);
+          if (!ir_lowerer::validateArrayVectorAccessTargetInfo(arrayVectorTargetInfo, error)) {
             return false;
           }
 
@@ -958,7 +938,7 @@
             return false;
           }
 
-          const uint64_t headerSlots = isVectorTarget ? 2 : 1;
+          const uint64_t headerSlots = arrayVectorTargetInfo.isVectorTarget ? 2 : 1;
           const int32_t ptrLocal = allocTempLocal();
           if (!emitExpr(expr.args[0], localsIn)) {
             return false;
