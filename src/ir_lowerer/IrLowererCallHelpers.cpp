@@ -224,6 +224,34 @@ bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName) {
   return false;
 }
 
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+    const Expr &expr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error) {
+  if (isSimpleCallName(expr, "count")) {
+    error = "count requires array, vector, map, or string target";
+    return UnsupportedNativeCallResult::Error;
+  }
+  if (isSimpleCallName(expr, "capacity")) {
+    error = "capacity requires vector target";
+    return UnsupportedNativeCallResult::Error;
+  }
+
+  std::string vectorHelper;
+  if (getUnsupportedVectorHelperName(expr, vectorHelper)) {
+    error = "native backend does not support vector helper: " + vectorHelper;
+    return UnsupportedNativeCallResult::Error;
+  }
+
+  std::string printBuiltinName;
+  if (tryGetPrintBuiltinName(expr, printBuiltinName)) {
+    error = printBuiltinName + " is only supported as a statement in the native backend";
+    return UnsupportedNativeCallResult::Error;
+  }
+
+  return UnsupportedNativeCallResult::NotHandled;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

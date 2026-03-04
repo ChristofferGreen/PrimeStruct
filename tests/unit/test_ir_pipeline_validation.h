@@ -2501,6 +2501,55 @@ TEST_CASE("ir lowerer call helpers detect unsupported vector helper names") {
   CHECK(helperName.empty());
 }
 
+TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics") {
+  using Result = primec::ir_lowerer::UnsupportedNativeCallResult;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  std::string error;
+
+  callExpr.name = "count";
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &) { return false; },
+            error) == Result::Error);
+  CHECK(error == "count requires array, vector, map, or string target");
+
+  callExpr.name = "capacity";
+  error.clear();
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &) { return false; },
+            error) == Result::Error);
+  CHECK(error == "capacity requires vector target");
+
+  callExpr.name = "remove_at";
+  error.clear();
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &) { return false; },
+            error) == Result::Error);
+  CHECK(error == "native backend does not support vector helper: remove_at");
+
+  callExpr.name = "print";
+  error.clear();
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &builtinName) {
+              builtinName = "print";
+              return true;
+            },
+            error) == Result::Error);
+  CHECK(error == "print is only supported as a statement in the native backend");
+
+  callExpr.name = "plain";
+  error.clear();
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &) { return false; },
+            error) == Result::NotHandled);
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

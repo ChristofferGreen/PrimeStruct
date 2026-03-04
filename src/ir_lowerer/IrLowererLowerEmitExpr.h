@@ -820,23 +820,18 @@
           function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(length))});
           return true;
         }
-        if (isSimpleCallName(expr, "count")) {
-          error = "count requires array, vector, map, or string target";
-          return false;
-        }
-        if (isSimpleCallName(expr, "capacity")) {
-          error = "capacity requires vector target";
-          return false;
-        }
-        std::string vectorHelper;
-        ir_lowerer::getUnsupportedVectorHelperName(expr, vectorHelper);
-        if (!vectorHelper.empty()) {
-          error = "native backend does not support vector helper: " + vectorHelper;
-          return false;
-        }
-        PrintBuiltin printBuiltin;
-        if (getPrintBuiltin(expr, printBuiltin)) {
-          error = printBuiltin.name + " is only supported as a statement in the native backend";
+        const auto unsupportedCallResult = ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            expr,
+            [&](const Expr &callExpr, std::string &builtinName) {
+              PrintBuiltin printBuiltin;
+              if (!getPrintBuiltin(callExpr, printBuiltin)) {
+                return false;
+              }
+              builtinName = printBuiltin.name;
+              return true;
+            },
+            error);
+        if (unsupportedCallResult == ir_lowerer::UnsupportedNativeCallResult::Error) {
           return false;
         }
         std::string accessName;

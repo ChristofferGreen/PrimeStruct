@@ -77,6 +77,10 @@ enum class InlineCallDispatchResult {
   Emitted,
   Error,
 };
+enum class UnsupportedNativeCallResult {
+  NotHandled,
+  Error,
+};
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,
@@ -92,6 +96,10 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
 bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName);
+UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
+    const Expr &expr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
