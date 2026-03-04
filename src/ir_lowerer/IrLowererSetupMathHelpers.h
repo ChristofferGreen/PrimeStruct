@@ -23,6 +23,7 @@ struct SetupMathAndBindingAdapters {
 
 bool isMathImportPath(const std::string &path);
 bool hasProgramMathImport(const std::vector<std::string> &imports);
+bool isSupportedMathBuiltinName(const std::string &name);
 SetupMathResolvers makeSetupMathResolvers(bool hasMathImport);
 SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport);
 GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport);

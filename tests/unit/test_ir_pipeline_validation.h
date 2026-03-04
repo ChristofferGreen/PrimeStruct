@@ -8326,6 +8326,13 @@ TEST_CASE("ir lowerer setup math helper resolves namespaced builtins") {
   CHECK(builtinName == "sin");
 }
 
+TEST_CASE("ir lowerer setup math helper validates builtin support names") {
+  CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("sin"));
+  CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("is_finite"));
+  CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("copysign"));
+  CHECK_FALSE(primec::ir_lowerer::isSupportedMathBuiltinName("unknown_math"));
+}
+
 TEST_CASE("ir lowerer setup math helper requires import for bare names") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;

@@ -42,6 +42,20 @@ bool hasProgramMathImport(const std::vector<std::string> &imports) {
   return false;
 }
 
+bool isSupportedMathBuiltinName(const std::string &name) {
+  return name == "abs" || name == "sign" || name == "min" || name == "max" ||
+         name == "clamp" || name == "lerp" || name == "saturate" || name == "floor" ||
+         name == "ceil" || name == "round" || name == "trunc" || name == "fract" ||
+         name == "sqrt" || name == "cbrt" || name == "pow" || name == "exp" ||
+         name == "exp2" || name == "log" || name == "log2" || name == "log10" ||
+         name == "sin" || name == "cos" || name == "tan" || name == "asin" ||
+         name == "acos" || name == "atan" || name == "atan2" || name == "radians" ||
+         name == "degrees" || name == "sinh" || name == "cosh" || name == "tanh" ||
+         name == "asinh" || name == "acosh" || name == "atanh" || name == "fma" ||
+         name == "hypot" || name == "copysign" || name == "is_nan" ||
+         name == "is_inf" || name == "is_finite";
+}
+
 SetupMathResolvers makeSetupMathResolvers(bool hasMathImport) {
   SetupMathResolvers resolvers;
   resolvers.getMathBuiltinName = makeGetSetupMathBuiltinName(hasMathImport);
@@ -75,17 +89,7 @@ bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &
   if (!parseMathName(expr.name, hasMathImport, out)) {
     return false;
   }
-  if (out == "abs" || out == "sign" || out == "min" || out == "max" || out == "clamp" || out == "lerp" ||
-      out == "saturate" || out == "floor" || out == "ceil" || out == "round" || out == "trunc" ||
-      out == "fract" || out == "sqrt" || out == "cbrt" || out == "pow" || out == "exp" || out == "exp2" ||
-      out == "log" || out == "log2" || out == "log10" || out == "sin" || out == "cos" || out == "tan" ||
-      out == "asin" || out == "acos" || out == "atan" || out == "atan2" || out == "radians" ||
-      out == "degrees" || out == "sinh" || out == "cosh" || out == "tanh" || out == "asinh" ||
-      out == "acosh" || out == "atanh" || out == "fma" || out == "hypot" || out == "copysign" ||
-      out == "is_nan" || out == "is_inf" || out == "is_finite") {
-    return true;
-  }
-  return false;
+  return isSupportedMathBuiltinName(out);
 }
 
 bool getSetupMathConstantName(const std::string &name, bool hasMathImport, std::string &out) {
