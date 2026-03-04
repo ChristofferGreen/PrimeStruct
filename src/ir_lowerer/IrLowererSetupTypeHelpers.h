@@ -14,6 +14,8 @@ namespace primec::ir_lowerer {
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using CombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
+using InferReceiverExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+using ResolveReceiverExprPathFn = std::function<std::string(const Expr &)>;
 
 struct SetupTypeAdapters {
   ValueKindFromTypeNameFn valueKindFromTypeName;
@@ -50,5 +52,15 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
                                            std::string &typeNameOut,
                                            std::string &resolvedTypePathOut,
                                            std::string &errorOut);
+bool resolveMethodReceiverTarget(const Expr &receiverExpr,
+                                 const LocalMap &localsIn,
+                                 const std::string &methodName,
+                                 const std::unordered_map<std::string, std::string> &importAliases,
+                                 const std::unordered_set<std::string> &structNames,
+                                 const InferReceiverExprKindFn &inferExprKind,
+                                 const ResolveReceiverExprPathFn &resolveExprPath,
+                                 std::string &typeNameOut,
+                                 std::string &resolvedTypePathOut,
+                                 std::string &errorOut);
 
 } // namespace primec::ir_lowerer

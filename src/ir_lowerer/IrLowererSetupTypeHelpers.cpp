@@ -254,4 +254,34 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
   return true;
 }
 
+bool resolveMethodReceiverTarget(const Expr &receiverExpr,
+                                 const LocalMap &localsIn,
+                                 const std::string &methodName,
+                                 const std::unordered_map<std::string, std::string> &importAliases,
+                                 const std::unordered_set<std::string> &structNames,
+                                 const InferReceiverExprKindFn &inferExprKind,
+                                 const ResolveReceiverExprPathFn &resolveExprPath,
+                                 std::string &typeNameOut,
+                                 std::string &resolvedTypePathOut,
+                                 std::string &errorOut) {
+  typeNameOut.clear();
+  resolvedTypePathOut.clear();
+
+  if (receiverExpr.kind == Expr::Kind::Name) {
+    return resolveMethodReceiverTypeFromNameExpr(
+        receiverExpr, localsIn, methodName, typeNameOut, resolvedTypePathOut, errorOut);
+  }
+  if (receiverExpr.kind == Expr::Kind::Call) {
+    typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferExprKind(receiverExpr, localsIn));
+    if (typeNameOut.empty()) {
+      resolvedTypePathOut = resolveMethodReceiverStructTypePathFromCallExpr(
+          receiverExpr, resolveExprPath(receiverExpr), importAliases, structNames);
+    }
+    return true;
+  }
+
+  typeNameOut = typeNameForValueKind(inferExprKind(receiverExpr, localsIn));
+  return true;
+}
+
 } // namespace primec::ir_lowerer

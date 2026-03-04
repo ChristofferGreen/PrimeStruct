@@ -3260,6 +3260,80 @@ TEST_CASE("ir lowerer setup type helper reports name receiver diagnostics") {
   CHECK(error == "unknown method target for count");
 }
 
+TEST_CASE("ir lowerer setup type helper dispatches receiver target resolution") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo nameLocal;
+  nameLocal.kind = LocalInfo::Kind::Array;
+  locals.emplace("items", nameLocal);
+
+  primec::Expr nameReceiver;
+  nameReceiver.kind = primec::Expr::Kind::Name;
+  nameReceiver.name = "items";
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(nameReceiver,
+                                                        locals,
+                                                        "count",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+
+  primec::Expr callReceiver;
+  callReceiver.kind = primec::Expr::Kind::Call;
+  callReceiver.name = "/pkg/make";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(callReceiver,
+                                                        locals,
+                                                        "length",
+                                                        {},
+                                                        {"/pkg/Ctor"},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string("/pkg/Ctor"); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName.empty());
+  CHECK(resolvedTypePath == "/pkg/Ctor");
+}
+
+TEST_CASE("ir lowerer setup type helper dispatch reports missing name receiver diagnostics") {
+  primec::Expr nameReceiver;
+  nameReceiver.kind = primec::Expr::Kind::Name;
+  nameReceiver.name = "missing";
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTarget(nameReceiver,
+                                                               {},
+                                                               "count",
+                                                               {},
+                                                               {},
+                                                               [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                                 return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+                                                               },
+                                                               [](const primec::Expr &) { return std::string(); },
+                                                               typeName,
+                                                               resolvedTypePath,
+                                                               error));
+  CHECK(error == "native backend does not know identifier: missing");
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
   primec::Definition entryDef;
   primec::Transform resultReturn;

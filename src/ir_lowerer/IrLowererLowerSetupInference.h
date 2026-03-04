@@ -29,19 +29,17 @@
     }
     std::string typeName;
     std::string resolvedTypePath;
-    if (receiver.kind == Expr::Kind::Name) {
-      if (!resolveMethodReceiverTypeFromNameExpr(
-              receiver, localsIn, callExpr.name, typeName, resolvedTypePath, error)) {
-        return nullptr;
-      }
-    } else if (receiver.kind == Expr::Kind::Call) {
-      typeName = resolveMethodReceiverTypeNameFromCallExpr(receiver, inferExprKind(receiver, localsIn));
-      if (typeName.empty()) {
-        resolvedTypePath = resolveMethodReceiverStructTypePathFromCallExpr(
-            receiver, resolveExprPath(receiver), importAliases, structNames);
-      }
-    } else {
-      typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
+    if (!resolveMethodReceiverTarget(receiver,
+                                     localsIn,
+                                     callExpr.name,
+                                     importAliases,
+                                     structNames,
+                                     inferExprKind,
+                                     resolveExprPath,
+                                     typeName,
+                                     resolvedTypePath,
+                                     error)) {
+      return nullptr;
     }
     return resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, resolvedTypePath, defMap, error);
   };
