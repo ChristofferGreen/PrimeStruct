@@ -163,6 +163,41 @@ bool classifyBindingTypeLayout(const LayoutFieldBinding &binding,
   return classifyBindingTypeLayoutInternal(binding, layoutOut, structTypeNameOut, errorOut);
 }
 
+bool resolveBindingTypeLayout(
+    const LayoutFieldBinding &binding,
+    const std::string &namespacePrefix,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const Definition &, IrStructLayout &, std::string &)> &computeStructLayout,
+    BindingTypeLayout &layoutOut,
+    std::string &errorOut) {
+  BindingTypeLayout classifiedLayout;
+  std::string structTypeName;
+  if (!classifyBindingTypeLayout(binding, classifiedLayout, structTypeName, errorOut)) {
+    return false;
+  }
+  if (structTypeName.empty()) {
+    layoutOut = classifiedLayout;
+    return true;
+  }
+
+  const std::string structPath = resolveStructTypePath(structTypeName, namespacePrefix);
+  auto defIt = defMap.find(structPath);
+  if (defIt == defMap.end() || defIt->second == nullptr) {
+    errorOut = "unknown struct type for layout: " + structTypeName;
+    return false;
+  }
+
+  IrStructLayout nested;
+  if (!computeStructLayout(*defIt->second, nested, errorOut)) {
+    return false;
+  }
+
+  layoutOut.sizeBytes = nested.totalSizeBytes;
+  layoutOut.alignmentBytes = nested.alignmentBytes;
+  return true;
+}
+
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,
                              const LayoutFieldBinding &binding,

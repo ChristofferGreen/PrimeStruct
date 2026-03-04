@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "IrLowererStructFieldBindingHelpers.h"
@@ -27,6 +28,14 @@ bool classifyBindingTypeLayout(const LayoutFieldBinding &binding,
                                BindingTypeLayout &layoutOut,
                                std::string &structTypeNameOut,
                                std::string &errorOut);
+bool resolveBindingTypeLayout(
+    const LayoutFieldBinding &binding,
+    const std::string &namespacePrefix,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const Definition &, IrStructLayout &, std::string &)> &computeStructLayout,
+    BindingTypeLayout &layoutOut,
+    std::string &errorOut);
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,
                              const LayoutFieldBinding &binding,

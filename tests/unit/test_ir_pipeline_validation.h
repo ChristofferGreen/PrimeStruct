@@ -1375,6 +1375,88 @@ TEST_CASE("ir lowerer struct layout helpers append struct fields") {
   CHECK(error == "alignment requirement on field /pkg/S/bad is smaller than required alignment of 8");
 }
 
+TEST_CASE("ir lowerer struct layout helpers resolve binding type layout") {
+  primec::Definition nested;
+  nested.fullPath = "/pkg/Nested";
+  nested.namespacePrefix = "/pkg";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {nested.fullPath, &nested},
+  };
+  const auto resolveStructTypePath = [](const std::string &typeName, const std::string &namespacePrefix) {
+    return namespacePrefix + "/" + typeName;
+  };
+
+  int computeCalls = 0;
+  const auto computeStructLayout = [&](const primec::Definition &def, primec::IrStructLayout &layout, std::string &error) {
+    ++computeCalls;
+    if (def.fullPath == "/pkg/Fail") {
+      error = "layout failure";
+      return false;
+    }
+    layout.name = def.fullPath;
+    layout.totalSizeBytes = 24u;
+    layout.alignmentBytes = 8u;
+    return true;
+  };
+
+  primec::ir_lowerer::BindingTypeLayout layout;
+  std::string error;
+
+  const primec::ir_lowerer::LayoutFieldBinding primitive = {"i32", ""};
+  CHECK(primec::ir_lowerer::resolveBindingTypeLayout(primitive,
+                                                     "/pkg",
+                                                     resolveStructTypePath,
+                                                     defMap,
+                                                     computeStructLayout,
+                                                     layout,
+                                                     error));
+  CHECK(layout.sizeBytes == 4u);
+  CHECK(layout.alignmentBytes == 4u);
+  CHECK(computeCalls == 0);
+  CHECK(error.empty());
+
+  const primec::ir_lowerer::LayoutFieldBinding structBinding = {"Nested", ""};
+  CHECK(primec::ir_lowerer::resolveBindingTypeLayout(structBinding,
+                                                     "/pkg",
+                                                     resolveStructTypePath,
+                                                     defMap,
+                                                     computeStructLayout,
+                                                     layout,
+                                                     error));
+  CHECK(layout.sizeBytes == 24u);
+  CHECK(layout.alignmentBytes == 8u);
+  CHECK(computeCalls == 1);
+  CHECK(error.empty());
+
+  const primec::ir_lowerer::LayoutFieldBinding missingStruct = {"Missing", ""};
+  CHECK_FALSE(primec::ir_lowerer::resolveBindingTypeLayout(missingStruct,
+                                                           "/pkg",
+                                                           resolveStructTypePath,
+                                                           defMap,
+                                                           computeStructLayout,
+                                                           layout,
+                                                           error));
+  CHECK(error == "unknown struct type for layout: Missing");
+
+  primec::Definition failing;
+  failing.fullPath = "/pkg/Fail";
+  failing.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> failingMap = {
+      {failing.fullPath, &failing},
+  };
+  const primec::ir_lowerer::LayoutFieldBinding failingStruct = {"Fail", ""};
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBindingTypeLayout(failingStruct,
+                                                           "/pkg",
+                                                           resolveStructTypePath,
+                                                           failingMap,
+                                                           computeStructLayout,
+                                                           layout,
+                                                           error));
+  CHECK(error == "layout failure");
+}
+
 TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));

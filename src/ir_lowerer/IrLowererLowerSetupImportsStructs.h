@@ -34,7 +34,6 @@
   std::unordered_map<std::string, IrStructLayout> layoutCache;
   std::unordered_set<std::string> layoutStack;
   std::function<bool(const Definition &, IrStructLayout &)> computeStructLayout;
-  std::function<bool(const FieldBinding &, const std::string &, ir_lowerer::BindingTypeLayout &)> typeLayoutForBinding;
 
   computeStructLayout = [&](const Definition &def, IrStructLayout &layoutOut) -> bool {
     auto cached = layoutCache.find(def.fullPath);
@@ -72,11 +71,22 @@
       }
       const FieldBinding &binding = fieldInfoIt->second[fieldIndex];
       ++fieldIndex;
+      auto computeNestedStructLayout = [&](const Definition &nestedDef,
+                                           IrStructLayout &nestedLayout,
+                                           std::string &layoutError) -> bool {
+        (void)layoutError;
+        return computeStructLayout(nestedDef, nestedLayout);
+      };
       auto resolveFieldTypeLayout = [&](const FieldBinding &fieldBinding,
                                         ir_lowerer::BindingTypeLayout &fieldTypeLayout,
                                         std::string &layoutError) -> bool {
-        (void)layoutError;
-        return typeLayoutForBinding(fieldBinding, def.namespacePrefix, fieldTypeLayout);
+        return ir_lowerer::resolveBindingTypeLayout(fieldBinding,
+                                                    def.namespacePrefix,
+                                                    resolveStructTypePath,
+                                                    defMap,
+                                                    computeNestedStructLayout,
+                                                    fieldTypeLayout,
+                                                    layoutError);
       };
       if (!ir_lowerer::appendStructLayoutField(
               def.fullPath, stmt, binding, resolveFieldTypeLayout, offset, structAlign, layout, error)) {
@@ -94,33 +104,6 @@
     layoutCache.emplace(def.fullPath, layout);
     layoutStack.erase(def.fullPath);
     layoutOut = layout;
-    return true;
-  };
-
-  typeLayoutForBinding = [&](const FieldBinding &binding,
-                             const std::string &namespacePrefix,
-                             ir_lowerer::BindingTypeLayout &layoutOut) -> bool {
-    ir_lowerer::BindingTypeLayout bindingLayout;
-    std::string structTypeName;
-    if (!ir_lowerer::classifyBindingTypeLayout(binding, bindingLayout, structTypeName, error)) {
-      return false;
-    }
-    if (structTypeName.empty()) {
-      layoutOut = bindingLayout;
-      return true;
-    }
-    std::string structPath = resolveStructTypePath(structTypeName, namespacePrefix);
-    auto defIt = defMap.find(structPath);
-    if (defIt == defMap.end()) {
-      error = "unknown struct type for layout: " + structTypeName;
-      return false;
-    }
-    IrStructLayout nested;
-    if (!computeStructLayout(*defIt->second, nested)) {
-      return false;
-    }
-    layoutOut.sizeBytes = nested.totalSizeBytes;
-    layoutOut.alignmentBytes = nested.alignmentBytes;
     return true;
   };
 
