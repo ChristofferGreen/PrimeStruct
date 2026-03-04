@@ -41,6 +41,11 @@ struct StructTypeResolutionAdapters {
   ApplyStructValueInfoFn applyStructValueInfo;
 };
 
+struct StructArrayInfoAdapters {
+  ResolveStructArrayTypeInfoFn resolveStructArrayTypeInfoFromPath;
+  ApplyStructArrayInfoFn applyStructArrayInfo;
+};
+
 struct StructSlotFieldInfo {
   std::string name;
   int32_t slotOffset = -1;
@@ -83,6 +88,10 @@ std::string joinTemplateArgsText(const std::vector<std::string> &args);
 StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);
+StructArrayInfoAdapters makeStructArrayInfoAdapters(
+    const StructLayoutFieldIndex &fieldIndex,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName);
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);

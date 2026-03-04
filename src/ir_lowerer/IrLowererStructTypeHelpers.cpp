@@ -25,6 +25,18 @@ StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
   return adapters;
 }
 
+StructArrayInfoAdapters makeStructArrayInfoAdapters(
+    const StructLayoutFieldIndex &fieldIndex,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName) {
+  StructArrayInfoAdapters adapters;
+  adapters.resolveStructArrayTypeInfoFromPath =
+      makeResolveStructArrayTypeInfoFromLayoutFieldIndex(fieldIndex, valueKindFromTypeName);
+  adapters.applyStructArrayInfo = makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
+      resolveStructTypeName, fieldIndex, valueKindFromTypeName);
+  return adapters;
+}
+
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {

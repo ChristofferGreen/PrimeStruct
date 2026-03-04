@@ -105,11 +105,10 @@
         }
       });
 
-  auto resolveStructArrayInfoFromPath = ir_lowerer::makeResolveStructArrayTypeInfoFromLayoutFieldIndex(
-      structLayoutFieldIndex, valueKindFromTypeName);
-
-  auto applyStructArrayInfo = ir_lowerer::makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
-      resolveStructTypeName, structLayoutFieldIndex, valueKindFromTypeName);
+  const auto structArrayInfoAdapters = ir_lowerer::makeStructArrayInfoAdapters(
+      structLayoutFieldIndex, resolveStructTypeName, valueKindFromTypeName);
+  auto resolveStructArrayInfoFromPath = structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath;
+  auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
 
   ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
   std::unordered_set<std::string> structSlotLayoutStack;
