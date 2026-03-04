@@ -145,6 +145,64 @@ std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo:
   }
 }
 
+bool emitResultWhyEmptyString(
+    const std::function<int32_t(const std::string &)> &internString,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  const int32_t index = internString("");
+  emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(index));
+  return true;
+}
+
+Expr makeResultWhyErrorValueExpr(int32_t errorLocal,
+                                 LocalInfo::ValueKind valueKind,
+                                 const std::string &namespacePrefix,
+                                 int32_t tempOrdinal,
+                                 LocalMap &callLocals) {
+  std::string localName = "__result_why_err_" + std::to_string(tempOrdinal);
+  LocalInfo info;
+  info.index = errorLocal;
+  info.isMutable = false;
+  info.kind = LocalInfo::Kind::Value;
+  info.valueKind = valueKind;
+  callLocals.emplace(localName, info);
+
+  Expr errorExpr;
+  errorExpr.kind = Expr::Kind::Name;
+  errorExpr.name = std::move(localName);
+  errorExpr.namespacePrefix = namespacePrefix;
+  return errorExpr;
+}
+
+Expr makeResultWhyBoolErrorExpr(
+    int32_t errorLocal,
+    const std::string &namespacePrefix,
+    int32_t tempOrdinal,
+    LocalMap &callLocals,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  const int32_t boolLocal = allocTempLocal();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+  emitInstruction(IrOpcode::PushI64, 0);
+  emitInstruction(IrOpcode::CmpEqI64, 0);
+  emitInstruction(IrOpcode::PushI64, 0);
+  emitInstruction(IrOpcode::CmpEqI64, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(boolLocal));
+
+  std::string localName = "__result_why_bool_" + std::to_string(tempOrdinal);
+  LocalInfo info;
+  info.index = boolLocal;
+  info.isMutable = false;
+  info.kind = LocalInfo::Kind::Value;
+  info.valueKind = LocalInfo::ValueKind::Bool;
+  callLocals.emplace(localName, info);
+
+  Expr errorExpr;
+  errorExpr.kind = Expr::Kind::Name;
+  errorExpr.name = std::move(localName);
+  errorExpr.namespacePrefix = namespacePrefix;
+  return errorExpr;
+}
+
 ResultWhyCallEmitResult emitResolvedResultWhyCall(
     const Expr &expr,
     const ResultExprInfo &resultInfo,

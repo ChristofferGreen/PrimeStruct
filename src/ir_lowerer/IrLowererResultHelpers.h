@@ -9,6 +9,7 @@
 #include "IrLowererSharedTypes.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
+#include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
 
@@ -52,6 +53,21 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const LookupReturnInfoFn &lookupReturnInfo);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
+bool emitResultWhyEmptyString(
+    const std::function<int32_t(const std::string &)> &internString,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+Expr makeResultWhyErrorValueExpr(int32_t errorLocal,
+                                 LocalInfo::ValueKind valueKind,
+                                 const std::string &namespacePrefix,
+                                 int32_t tempOrdinal,
+                                 LocalMap &callLocals);
+Expr makeResultWhyBoolErrorExpr(
+    int32_t errorLocal,
+    const std::string &namespacePrefix,
+    int32_t tempOrdinal,
+    LocalMap &callLocals,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 enum class ResultWhyCallEmitResult {
   Emitted,
   Error,

@@ -423,47 +423,27 @@
           }
 
           auto emitEmptyString = [&]() -> bool {
-            int32_t index = internString("");
-            function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
-            return true;
+            return ir_lowerer::emitResultWhyEmptyString(
+                [&](const std::string &value) { return internString(value); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           };
 
           auto makeErrorValueExpr = [&](LocalMap &callLocals,
                                         LocalInfo::ValueKind valueKind) -> Expr {
-            std::string localName = "__result_why_err_" + std::to_string(onErrorTempCounter++);
-            LocalInfo info;
-            info.index = errorLocal;
-            info.isMutable = false;
-            info.kind = LocalInfo::Kind::Value;
-            info.valueKind = valueKind;
-            callLocals.emplace(localName, info);
-            Expr errorExpr;
-            errorExpr.kind = Expr::Kind::Name;
-            errorExpr.name = localName;
-            errorExpr.namespacePrefix = expr.namespacePrefix;
-            return errorExpr;
+            const int32_t tempOrdinal = onErrorTempCounter++;
+            return ir_lowerer::makeResultWhyErrorValueExpr(
+                errorLocal, valueKind, expr.namespacePrefix, tempOrdinal, callLocals);
           };
 
           auto makeBoolErrorExpr = [&](LocalMap &callLocals) -> Expr {
-            const int32_t boolLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-            function.instructions.push_back({IrOpcode::PushI64, 0});
-            function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-            function.instructions.push_back({IrOpcode::PushI64, 0});
-            function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(boolLocal)});
-            std::string localName = "__result_why_bool_" + std::to_string(onErrorTempCounter++);
-            LocalInfo info;
-            info.index = boolLocal;
-            info.isMutable = false;
-            info.kind = LocalInfo::Kind::Value;
-            info.valueKind = LocalInfo::ValueKind::Bool;
-            callLocals.emplace(localName, info);
-            Expr errorExpr;
-            errorExpr.kind = Expr::Kind::Name;
-            errorExpr.name = localName;
-            errorExpr.namespacePrefix = expr.namespacePrefix;
-            return errorExpr;
+            const int32_t tempOrdinal = onErrorTempCounter++;
+            return ir_lowerer::makeResultWhyBoolErrorExpr(
+                errorLocal,
+                expr.namespacePrefix,
+                tempOrdinal,
+                callLocals,
+                [&]() { return allocTempLocal(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           };
 
           ir_lowerer::ResultWhyCallOps resultWhyOps;
