@@ -111,17 +111,9 @@
   auto resolveStructArrayInfoFromPath = structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath;
   auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
 
-  ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
-  std::unordered_set<std::string> structSlotLayoutStack;
   using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
-  const auto structSlotResolutionAdapters = ir_lowerer::makeStructSlotResolutionAdapters(
-      structLayoutFieldIndex,
-      defMap,
-      resolveStructTypeName,
-      valueKindFromTypeName,
-      structSlotLayoutCache,
-      structSlotLayoutStack,
-      error);
+  const auto structSlotResolutionAdapters = ir_lowerer::makeStructSlotResolutionAdaptersWithOwnedState(
+      structLayoutFieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, error);
   auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
   auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 

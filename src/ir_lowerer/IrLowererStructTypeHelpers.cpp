@@ -1,5 +1,7 @@
 #include "IrLowererStructTypeHelpers.h"
 
+#include <memory>
+
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 
@@ -560,6 +562,63 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdapters(
       fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
   adapters.resolveStructFieldSlot = makeResolveStructFieldSlotFromDefinitionFieldIndex(
       fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+  return adapters;
+}
+
+StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    std::string &error) {
+  const auto *fieldIndexPtr = &fieldIndex;
+  const auto *defMapPtr = &defMap;
+  auto resolveStructTypeNameFn = resolveStructTypeName;
+  auto valueKindFromTypeNameFn = valueKindFromTypeName;
+  auto *errorPtr = &error;
+  auto layoutCache = std::make_shared<StructSlotLayoutCache>();
+  auto layoutStack = std::make_shared<std::unordered_set<std::string>>();
+
+  StructSlotResolutionAdapters adapters;
+  adapters.resolveStructSlotLayout = [fieldIndexPtr,
+                                      defMapPtr,
+                                      resolveStructTypeNameFn,
+                                      valueKindFromTypeNameFn,
+                                      errorPtr,
+                                      layoutCache,
+                                      layoutStack](
+                                         const std::string &structPath, StructSlotLayoutInfo &out) {
+    return resolveStructSlotLayoutFromDefinitionFieldIndex(structPath,
+                                                           *fieldIndexPtr,
+                                                           *defMapPtr,
+                                                           resolveStructTypeNameFn,
+                                                           valueKindFromTypeNameFn,
+                                                           *layoutCache,
+                                                           *layoutStack,
+                                                           out,
+                                                           *errorPtr);
+  };
+  adapters.resolveStructFieldSlot = [fieldIndexPtr,
+                                     defMapPtr,
+                                     resolveStructTypeNameFn,
+                                     valueKindFromTypeNameFn,
+                                     errorPtr,
+                                     layoutCache,
+                                     layoutStack](
+                                        const std::string &structPath,
+                                        const std::string &fieldName,
+                                        StructSlotFieldInfo &out) {
+    return resolveStructFieldSlotFromDefinitionFieldIndex(structPath,
+                                                          fieldName,
+                                                          *fieldIndexPtr,
+                                                          *defMapPtr,
+                                                          resolveStructTypeNameFn,
+                                                          valueKindFromTypeNameFn,
+                                                          *layoutCache,
+                                                          *layoutStack,
+                                                          out,
+                                                          *errorPtr);
+  };
   return adapters;
 }
 

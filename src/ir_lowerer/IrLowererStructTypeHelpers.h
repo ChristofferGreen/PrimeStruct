@@ -228,6 +228,12 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdapters(
     StructSlotLayoutCache &layoutCache,
     std::unordered_set<std::string> &layoutStack,
     std::string &error);
+StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    std::string &error);
 ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
     const ResolveStructTypeNameFn &resolveStructTypeName);
 void applyStructValueInfoFromBinding(const Expr &expr,
