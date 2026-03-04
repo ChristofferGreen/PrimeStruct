@@ -126,4 +126,42 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
   }
 }
 
+bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
+                                            std::string &typeNameOut,
+                                            std::string &resolvedTypePathOut) {
+  typeNameOut.clear();
+  resolvedTypePathOut.clear();
+
+  if (localInfo.kind == LocalInfo::Kind::Array) {
+    if (!localInfo.structTypeName.empty()) {
+      resolvedTypePathOut = localInfo.structTypeName;
+    } else {
+      typeNameOut = "array";
+    }
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Vector) {
+    typeNameOut = "vector";
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Map) {
+    typeNameOut = "map";
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Reference && localInfo.referenceToArray) {
+    if (!localInfo.structTypeName.empty()) {
+      resolvedTypePathOut = localInfo.structTypeName;
+    } else {
+      typeNameOut = "array";
+    }
+    return true;
+  }
+  if (localInfo.kind == LocalInfo::Kind::Pointer || localInfo.kind == LocalInfo::Kind::Reference) {
+    return false;
+  }
+
+  typeNameOut = typeNameForValueKind(localInfo.valueKind);
+  return true;
+}
+
 } // namespace primec::ir_lowerer

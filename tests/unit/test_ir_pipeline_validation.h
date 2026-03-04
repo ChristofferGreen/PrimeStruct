@@ -3022,6 +3022,83 @@ TEST_CASE("ir lowerer setup type helper returns empty name for unknown kind") {
   CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Unknown).empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves method receiver local targets") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  std::string typeName;
+  std::string resolvedTypePath;
+
+  LocalInfo arrayLocal;
+  arrayLocal.kind = LocalInfo::Kind::Array;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(arrayLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo structArrayLocal;
+  structArrayLocal.kind = LocalInfo::Kind::Array;
+  structArrayLocal.structTypeName = "/pkg/Vec3";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(structArrayLocal, typeName, resolvedTypePath));
+  CHECK(typeName.empty());
+  CHECK(resolvedTypePath == "/pkg/Vec3");
+
+  LocalInfo vectorLocal;
+  vectorLocal.kind = LocalInfo::Kind::Vector;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(vectorLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "vector");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo mapLocal;
+  mapLocal.kind = LocalInfo::Kind::Map;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(mapLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "map");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo referenceArrayLocal;
+  referenceArrayLocal.kind = LocalInfo::Kind::Reference;
+  referenceArrayLocal.referenceToArray = true;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(referenceArrayLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo valueLocal;
+  valueLocal.kind = LocalInfo::Kind::Value;
+  valueLocal.valueKind = LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(valueLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "i64");
+  CHECK(resolvedTypePath.empty());
+
+  LocalInfo unknownValueLocal;
+  unknownValueLocal.kind = LocalInfo::Kind::Value;
+  unknownValueLocal.valueKind = LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(
+      unknownValueLocal, typeName, resolvedTypePath));
+  CHECK(typeName.empty());
+  CHECK(resolvedTypePath.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper rejects pointer and non-array reference receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  std::string typeName = "stale";
+  std::string resolvedTypePath = "stale";
+
+  LocalInfo pointerLocal;
+  pointerLocal.kind = LocalInfo::Kind::Pointer;
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(
+      pointerLocal, typeName, resolvedTypePath));
+  CHECK(typeName.empty());
+  CHECK(resolvedTypePath.empty());
+
+  typeName = "stale";
+  resolvedTypePath = "stale";
+  LocalInfo referenceLocal;
+  referenceLocal.kind = LocalInfo::Kind::Reference;
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(
+      referenceLocal, typeName, resolvedTypePath));
+  CHECK(typeName.empty());
+  CHECK(resolvedTypePath.empty());
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
   primec::Definition entryDef;
   primec::Transform resultReturn;

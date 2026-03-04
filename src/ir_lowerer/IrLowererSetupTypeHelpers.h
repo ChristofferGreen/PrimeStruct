@@ -24,5 +24,8 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name);
 LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 LocalInfo::ValueKind comparisonKind(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 std::string typeNameForValueKind(LocalInfo::ValueKind kind);
+bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
+                                            std::string &typeNameOut,
+                                            std::string &resolvedTypePathOut);
 
 } // namespace primec::ir_lowerer

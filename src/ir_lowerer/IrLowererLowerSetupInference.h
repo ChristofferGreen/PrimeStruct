@@ -35,27 +35,9 @@
         error = "native backend does not know identifier: " + receiver.name;
         return nullptr;
       }
-      if (it->second.kind == LocalInfo::Kind::Array) {
-        if (!it->second.structTypeName.empty()) {
-          resolvedTypePath = it->second.structTypeName;
-        } else {
-          typeName = "array";
-        }
-      } else if (it->second.kind == LocalInfo::Kind::Vector) {
-        typeName = "vector";
-      } else if (it->second.kind == LocalInfo::Kind::Map) {
-        typeName = "map";
-      } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-        if (!it->second.structTypeName.empty()) {
-          resolvedTypePath = it->second.structTypeName;
-        } else {
-          typeName = "array";
-        }
-      } else if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
+      if (!resolveMethodReceiverTypeFromLocalInfo(it->second, typeName, resolvedTypePath)) {
         error = "unknown method target for " + callExpr.name;
         return nullptr;
-      } else {
-        typeName = typeNameForValueKind(it->second.valueKind);
       }
     } else if (receiver.kind == Expr::Kind::Call) {
       std::string collection;
