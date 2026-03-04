@@ -338,53 +338,21 @@
     for (const auto &param : def.parameters) {
       LocalInfo info;
       info.index = nextLocal++;
-      info.isMutable = isBindingMutable(param);
-      info.kind = bindingKind(param);
-      if (hasExplicitBindingTypeTransform(param)) {
-        info.valueKind = bindingValueKind(param, info.kind);
-      } else if (param.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
-        info.valueKind = inferExprKind(param.args.front(), definitionLocals);
-        if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-          info.valueKind = LocalInfo::ValueKind::Int32;
-        }
-      } else {
-        info.valueKind = bindingValueKind(param, info.kind);
-      }
-      if (info.kind == LocalInfo::Kind::Map) {
-        for (const auto &transform : param.transforms) {
-          if (transform.name == "map" && transform.templateArgs.size() == 2) {
-            info.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
-            info.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
-            break;
-          }
-        }
-      }
-      for (const auto &transform : param.transforms) {
-        if (transform.name == "File") {
-          info.isFileHandle = true;
-          info.valueKind = LocalInfo::ValueKind::Int64;
-        } else if (transform.name == "Result") {
-          info.isResult = true;
-          info.resultHasValue = (transform.templateArgs.size() == 2);
-          info.valueKind = info.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-          if (!transform.templateArgs.empty()) {
-            info.resultErrorType = transform.templateArgs.back();
-          }
-        }
-      }
-      info.isFileError = isFileErrorBinding(param);
-      setReferenceArrayInfo(param, info);
-      applyStructArrayInfo(param, info);
-      applyStructValueInfo(param, info);
-      if (isStringBinding(param)) {
-        if (info.kind != LocalInfo::Kind::Value) {
-          error = "native backend does not support string pointers or references";
-          return false;
-        }
-        info.valueKind = LocalInfo::ValueKind::String;
-        info.stringSource = LocalInfo::StringSource::RuntimeIndex;
-        info.stringIndex = -1;
-        info.argvChecked = true;
+      if (!ir_lowerer::inferCallParameterLocalInfo(param,
+                                                   definitionLocals,
+                                                   isBindingMutable,
+                                                   hasExplicitBindingTypeTransform,
+                                                   bindingKind,
+                                                   bindingValueKind,
+                                                   inferExprKind,
+                                                   isFileErrorBinding,
+                                                   setReferenceArrayInfo,
+                                                   applyStructArrayInfo,
+                                                   applyStructValueInfo,
+                                                   isStringBinding,
+                                                   info,
+                                                   error)) {
+        return false;
       }
       if (info.valueKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
         error = "native backend requires typed parameters on " + def.fullPath;

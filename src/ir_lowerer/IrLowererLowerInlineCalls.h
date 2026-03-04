@@ -123,51 +123,25 @@
       const Expr &param = callParams[i];
       LocalInfo paramInfo;
       paramInfo.index = nextLocal++;
-      paramInfo.isMutable = isBindingMutable(param);
-      paramInfo.kind = bindingKind(param);
-      if (hasExplicitBindingTypeTransform(param)) {
-        paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
-      } else if (param.args.size() == 1 && paramInfo.kind == LocalInfo::Kind::Value) {
-        paramInfo.valueKind = inferExprKind(param.args.front(), callerLocals);
-        if (paramInfo.valueKind == LocalInfo::ValueKind::Unknown) {
-          paramInfo.valueKind = LocalInfo::ValueKind::Int32;
-        }
-      } else {
-        paramInfo.valueKind = bindingValueKind(param, paramInfo.kind);
+      if (!ir_lowerer::inferCallParameterLocalInfo(param,
+                                                   callerLocals,
+                                                   isBindingMutable,
+                                                   hasExplicitBindingTypeTransform,
+                                                   bindingKind,
+                                                   bindingValueKind,
+                                                   inferExprKind,
+                                                   isFileErrorBinding,
+                                                   setReferenceArrayInfo,
+                                                   applyStructArrayInfo,
+                                                   applyStructValueInfo,
+                                                   isStringBinding,
+                                                   paramInfo,
+                                                   error)) {
+        inlineStack.erase(callee.fullPath);
+        return false;
       }
-      if (paramInfo.kind == LocalInfo::Kind::Map) {
-        for (const auto &transform : param.transforms) {
-          if (transform.name == "map" && transform.templateArgs.size() == 2) {
-            paramInfo.mapKeyKind = valueKindFromTypeName(transform.templateArgs[0]);
-            paramInfo.mapValueKind = valueKindFromTypeName(transform.templateArgs[1]);
-            break;
-          }
-        }
-      }
-      for (const auto &transform : param.transforms) {
-        if (transform.name == "File") {
-          paramInfo.isFileHandle = true;
-          paramInfo.valueKind = LocalInfo::ValueKind::Int64;
-        } else if (transform.name == "Result") {
-          paramInfo.isResult = true;
-          paramInfo.resultHasValue = (transform.templateArgs.size() == 2);
-          paramInfo.valueKind = paramInfo.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-          if (!transform.templateArgs.empty()) {
-            paramInfo.resultErrorType = transform.templateArgs.back();
-          }
-        }
-      }
-      paramInfo.isFileError = isFileErrorBinding(param);
-      setReferenceArrayInfo(param, paramInfo);
-      applyStructArrayInfo(param, paramInfo);
-      applyStructValueInfo(param, paramInfo);
 
       if (isStringBinding(param)) {
-        if (paramInfo.kind != LocalInfo::Kind::Value) {
-          error = "native backend does not support string pointers or references";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
         if (!orderedArgs[i]) {
           error = "argument count mismatch";
           inlineStack.erase(callee.fullPath);

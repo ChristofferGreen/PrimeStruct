@@ -8098,6 +8098,114 @@ TEST_CASE("ir lowerer statement binding helper inherits map metadata from named 
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
+TEST_CASE("ir lowerer statement binding helper infers call parameter local info") {
+  primec::Expr literalInit;
+  literalInit.kind = primec::Expr::Kind::Literal;
+  literalInit.literalValue = 7;
+
+  primec::Expr param;
+  param.name = "value";
+  param.args = {literalInit};
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 12;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Literal) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.index == 12);
+  CHECK(info.isMutable);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer statement binding helper sets string parameter defaults") {
+  primec::Expr literalInit;
+  literalInit.kind = primec::Expr::Kind::Literal;
+  literalInit.literalValue = 0;
+
+  primec::Expr param;
+  param.name = "label";
+  param.args = {literalInit};
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 3;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return true; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(info.stringSource == primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex);
+  CHECK(info.stringIndex == -1);
+  CHECK(info.argvChecked);
+}
+
+TEST_CASE("ir lowerer statement binding helper rejects string reference parameters") {
+  primec::Expr param;
+  param.name = "label";
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 4;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Reference; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return true; },
+      info,
+      error));
+  CHECK(error == "native backend does not support string pointers or references");
+}
+
 TEST_CASE("ir lowerer statement binding helper selects uninitialized zero opcodes") {
   primec::IrOpcode mapZeroOp = primec::IrOpcode::PushI32;
   uint64_t mapZeroImm = 123;

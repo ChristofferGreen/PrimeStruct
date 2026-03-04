@@ -14,6 +14,11 @@ using HasExplicitBindingTypeTransformFn = std::function<bool(const Expr &)>;
 using BindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
 using BindingValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
 using InferBindingExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+using IsBindingMutableFn = std::function<bool(const Expr &)>;
+using IsFileErrorBindingFn = std::function<bool(const Expr &)>;
+using SetReferenceArrayInfoForBindingFn = std::function<void(const Expr &, LocalInfo &)>;
+using ApplyStructBindingInfoFn = std::function<void(const Expr &, LocalInfo &)>;
+using IsStringBindingFn = std::function<bool(const Expr &)>;
 
 struct StatementBindingTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
@@ -36,5 +41,19 @@ bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
                                                IrOpcode &zeroOp,
                                                uint64_t &zeroImm,
                                                std::string &error);
+bool inferCallParameterLocalInfo(const Expr &param,
+                                 const LocalMap &localsForKindInference,
+                                 const IsBindingMutableFn &isBindingMutable,
+                                 const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                 const BindingKindFn &bindingKind,
+                                 const BindingValueKindFn &bindingValueKind,
+                                 const InferBindingExprKindFn &inferExprKind,
+                                 const IsFileErrorBindingFn &isFileErrorBinding,
+                                 const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfo,
+                                 const ApplyStructBindingInfoFn &applyStructArrayInfo,
+                                 const ApplyStructBindingInfoFn &applyStructValueInfo,
+                                 const IsStringBindingFn &isStringBinding,
+                                 LocalInfo &infoOut,
+                                 std::string &error);
 
 } // namespace primec::ir_lowerer
