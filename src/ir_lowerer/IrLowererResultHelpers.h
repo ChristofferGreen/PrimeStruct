@@ -51,6 +51,11 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo);
+bool resolveResultWhyCallInfo(const Expr &expr,
+                              const LocalMap &localsIn,
+                              const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+                              ResultExprInfo &resultInfo,
+                              std::string &error);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(

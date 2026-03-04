@@ -122,6 +122,24 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
   };
 }
 
+bool resolveResultWhyCallInfo(const Expr &expr,
+                              const LocalMap &localsIn,
+                              const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+                              ResultExprInfo &resultInfo,
+                              std::string &error) {
+  if (expr.args.size() != 2) {
+    error = "Result.why requires exactly one argument";
+    return false;
+  }
+  if (!resolveResultExprInfo ||
+      !resolveResultExprInfo(expr.args[1], localsIn, resultInfo) ||
+      !resultInfo.isResult) {
+    error = "Result.why requires Result argument";
+    return false;
+  }
+  return true;
+}
+
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;

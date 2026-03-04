@@ -395,13 +395,9 @@
         }
         if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
             expr.args.front().name == "Result" && expr.name == "why") {
-          if (expr.args.size() != 2) {
-            error = "Result.why requires exactly one argument";
-            return false;
-          }
           ResultExprInfo resultInfo;
-          if (!resolveResultExprInfo(expr.args[1], localsIn, resultInfo) || !resultInfo.isResult) {
-            error = "Result.why requires Result argument";
+          if (!ir_lowerer::resolveResultWhyCallInfo(
+                  expr, localsIn, resolveResultExprInfo, resultInfo, error)) {
             return false;
           }
 

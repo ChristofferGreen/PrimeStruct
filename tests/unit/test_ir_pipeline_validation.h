@@ -12549,6 +12549,54 @@ TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
   CHECK_FALSE(resolveResultExprInfo(unknownName, locals, out));
 }
 
+TEST_CASE("ir lowerer result helpers resolve Result.why call info") {
+  primec::Expr resultWhyExpr;
+  resultWhyExpr.kind = primec::Expr::Kind::Call;
+  resultWhyExpr.isMethodCall = true;
+  resultWhyExpr.name = "why";
+  resultWhyExpr.args.resize(2);
+  resultWhyExpr.args[0].kind = primec::Expr::Kind::Name;
+  resultWhyExpr.args[0].name = "Result";
+  resultWhyExpr.args[1].kind = primec::Expr::Kind::Name;
+  resultWhyExpr.args[1].name = "res";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::ResolveResultExprInfoWithLocalsFn resolveResultExprInfo =
+      [](const primec::Expr &valueExpr,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::ResultExprInfo &resultInfoOut) {
+        if (valueExpr.kind == primec::Expr::Kind::Name && valueExpr.name == "res") {
+          resultInfoOut = primec::ir_lowerer::ResultExprInfo{};
+          resultInfoOut.isResult = true;
+          resultInfoOut.hasValue = true;
+          resultInfoOut.errorType = "AnyError";
+          return true;
+        }
+        return false;
+      };
+
+  primec::ir_lowerer::ResultExprInfo resultInfo;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveResultWhyCallInfo(
+      resultWhyExpr, locals, resolveResultExprInfo, resultInfo, error));
+  CHECK(resultInfo.isResult);
+  CHECK(resultInfo.hasValue);
+  CHECK(resultInfo.errorType == "AnyError");
+
+  resultWhyExpr.args.resize(1);
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveResultWhyCallInfo(
+      resultWhyExpr, locals, resolveResultExprInfo, resultInfo, error));
+  CHECK(error == "Result.why requires exactly one argument");
+
+  resultWhyExpr.args.resize(2);
+  resultWhyExpr.args[1].name = "plainValue";
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveResultWhyCallInfo(
+      resultWhyExpr, locals, resolveResultExprInfo, resultInfo, error));
+  CHECK(error == "Result.why requires Result argument");
+}
+
 TEST_CASE("ir lowerer result helpers classify Result.why error kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Int32));
