@@ -892,38 +892,33 @@
             return false;
           }
 
-          const auto mapTargetInfo = ir_lowerer::resolveMapAccessTargetInfo(target, localsIn);
-          if (mapTargetInfo.isMapTarget) {
-            if (!ir_lowerer::validateMapAccessTargetInfo(mapTargetInfo, accessName, error)) {
-              return false;
-            }
-            const LocalInfo::ValueKind mapKeyKind = mapTargetInfo.mapKeyKind;
-            if (!ir_lowerer::emitMapLookupAccess(
-                    accessName,
-                    mapKeyKind,
-                    expr.args[0],
-                    expr.args[1],
-                    localsIn,
-                    [&]() { return allocTempLocal(); },
-                    [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
-                      return emitExpr(lookupExpr, localMap);
-                    },
-                    [&](const Expr &lookupKeyExpr,
-                        const ir_lowerer::LocalMap &localMap,
-                        int32_t &stringIndexOut,
-                        size_t &lengthOut) {
-                      return resolveStringTableTarget(lookupKeyExpr, localMap, stringIndexOut, lengthOut);
-                    },
-                    [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                      return inferExprKind(lookupKeyExpr, localMap);
-                    },
-                    [&]() { emitMapKeyNotFound(); },
-                    [&]() { return function.instructions.size(); },
-                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                    [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
-                    error)) {
-              return false;
-            }
+          const auto mapLookupResult = ir_lowerer::tryEmitMapAccessLookup(
+              accessName,
+              expr.args[0],
+              expr.args[1],
+              localsIn,
+              [&]() { return allocTempLocal(); },
+              [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
+                return emitExpr(lookupExpr, localMap);
+              },
+              [&](const Expr &lookupKeyExpr,
+                  const ir_lowerer::LocalMap &localMap,
+                  int32_t &stringIndexOut,
+                  size_t &lengthOut) {
+                return resolveStringTableTarget(lookupKeyExpr, localMap, stringIndexOut, lengthOut);
+              },
+              [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                return inferExprKind(lookupKeyExpr, localMap);
+              },
+              [&]() { emitMapKeyNotFound(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
+              error);
+          if (mapLookupResult == ir_lowerer::MapAccessLookupEmitResult::Error) {
+            return false;
+          }
+          if (mapLookupResult == ir_lowerer::MapAccessLookupEmitResult::Emitted) {
             return true;
           }
 

@@ -293,6 +293,47 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
   return true;
 }
 
+MapAccessLookupEmitResult tryEmitMapAccessLookup(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  const auto mapTargetInfo = resolveMapAccessTargetInfo(targetExpr, localsIn);
+  if (!mapTargetInfo.isMapTarget) {
+    return MapAccessLookupEmitResult::NotHandled;
+  }
+  if (!validateMapAccessTargetInfo(mapTargetInfo, accessName, error)) {
+    return MapAccessLookupEmitResult::Error;
+  }
+  if (!emitMapLookupAccess(
+          accessName,
+          mapTargetInfo.mapKeyKind,
+          targetExpr,
+          lookupKeyExpr,
+          localsIn,
+          allocTempLocal,
+          emitExpr,
+          resolveStringTableTarget,
+          inferExprKind,
+          emitMapKeyNotFound,
+          instructionCount,
+          emitInstruction,
+          patchInstructionImm,
+          error)) {
+    return MapAccessLookupEmitResult::Error;
+  }
+  return MapAccessLookupEmitResult::Emitted;
+}
+
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target, const LocalMap &localsIn) {
   ArrayVectorAccessTargetInfo info;

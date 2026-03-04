@@ -84,6 +84,11 @@ enum class UnsupportedNativeCallResult {
   NotHandled,
   Error,
 };
+enum class MapAccessLookupEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 struct MapAccessTargetInfo {
   bool isMapTarget = false;
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
@@ -141,6 +146,20 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  std::string &error);
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error);
+MapAccessLookupEmitResult tryEmitMapAccessLookup(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
 MapLookupStringKeyResult tryResolveMapLookupStringKey(
     LocalInfo::ValueKind mapKeyKind,
