@@ -829,19 +829,7 @@
           return false;
         }
         std::string vectorHelper;
-        if (isSimpleCallName(expr, "push")) {
-          vectorHelper = "push";
-        } else if (isSimpleCallName(expr, "pop")) {
-          vectorHelper = "pop";
-        } else if (isSimpleCallName(expr, "reserve")) {
-          vectorHelper = "reserve";
-        } else if (isSimpleCallName(expr, "clear")) {
-          vectorHelper = "clear";
-        } else if (isSimpleCallName(expr, "remove_at")) {
-          vectorHelper = "remove_at";
-        } else if (isSimpleCallName(expr, "remove_swap")) {
-          vectorHelper = "remove_swap";
-        }
+        ir_lowerer::getUnsupportedVectorHelperName(expr, vectorHelper);
         if (!vectorHelper.empty()) {
           error = "native backend does not support vector helper: " + vectorHelper;
           return false;

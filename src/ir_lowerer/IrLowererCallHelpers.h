@@ -91,6 +91,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
+bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

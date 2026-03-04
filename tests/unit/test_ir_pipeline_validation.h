@@ -2476,6 +2476,31 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer call helpers detect unsupported vector helper names") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  std::string helperName;
+
+  callExpr.name = "push";
+  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
+  CHECK(helperName == "push");
+
+  callExpr.name = "remove_swap";
+  REQUIRE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
+  CHECK(helperName == "remove_swap");
+
+  callExpr.name = "count";
+  helperName.clear();
+  CHECK_FALSE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
+  CHECK(helperName.empty());
+
+  callExpr.name = "push";
+  callExpr.isMethodCall = true;
+  helperName.clear();
+  CHECK_FALSE(primec::ir_lowerer::getUnsupportedVectorHelperName(callExpr, helperName));
+  CHECK(helperName.empty());
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

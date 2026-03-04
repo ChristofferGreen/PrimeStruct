@@ -196,6 +196,34 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   return InlineCallDispatchResult::NotHandled;
 }
 
+bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName) {
+  if (isSimpleCallName(expr, "push")) {
+    helperName = "push";
+    return true;
+  }
+  if (isSimpleCallName(expr, "pop")) {
+    helperName = "pop";
+    return true;
+  }
+  if (isSimpleCallName(expr, "reserve")) {
+    helperName = "reserve";
+    return true;
+  }
+  if (isSimpleCallName(expr, "clear")) {
+    helperName = "clear";
+    return true;
+  }
+  if (isSimpleCallName(expr, "remove_at")) {
+    helperName = "remove_at";
+    return true;
+  }
+  if (isSimpleCallName(expr, "remove_swap")) {
+    helperName = "remove_swap";
+    return true;
+  }
+  return false;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
