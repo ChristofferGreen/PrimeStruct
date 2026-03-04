@@ -111,4 +111,21 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
   return true;
 }
 
+void emitFileFlushCall(int32_t handleIndex, const EmitInstructionForWriteFn &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+  emitInstruction(IrOpcode::FileFlush, 0);
+}
+
+void emitFileCloseCall(int32_t handleIndex,
+                       const AllocTempLocalForWriteFn &allocTempLocal,
+                       const EmitInstructionForWriteFn &emitInstruction) {
+  const int32_t errorLocal = allocTempLocal();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+  emitInstruction(IrOpcode::FileClose, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+  emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(-1)));
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(handleIndex));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+}
+
 } // namespace primec::ir_lowerer

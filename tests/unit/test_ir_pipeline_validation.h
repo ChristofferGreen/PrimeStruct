@@ -10199,6 +10199,34 @@ TEST_CASE("ir lowerer file write helpers emit write-bytes loops") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer file write helpers emit flush and close calls") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+
+  primec::ir_lowerer::emitFileFlushCall(12, emitInstruction);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::FileFlush);
+
+  int nextLocal = 30;
+  primec::ir_lowerer::emitFileCloseCall(12, [&]() { return nextLocal++; }, emitInstruction);
+  REQUIRE(instructions.size() == 8);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 12);
+  CHECK(instructions[3].op == primec::IrOpcode::FileClose);
+  CHECK(instructions[4].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[4].imm == 30);
+  CHECK(instructions[5].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[5].imm == static_cast<uint64_t>(static_cast<int64_t>(-1)));
+  CHECK(instructions[6].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[6].imm == 12);
+  CHECK(instructions[7].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[7].imm == 30);
+}
+
 TEST_CASE("ir lowerer string call helpers emit values from locals") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

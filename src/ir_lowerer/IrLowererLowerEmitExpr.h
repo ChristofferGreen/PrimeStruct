@@ -703,18 +703,15 @@
                   [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; });
             }
             if (expr.name == "flush") {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-              function.instructions.push_back({IrOpcode::FileFlush, 0});
+              ir_lowerer::emitFileFlushCall(
+                  handleIndex, [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
               return true;
             }
             if (expr.name == "close") {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-              function.instructions.push_back({IrOpcode::FileClose, 0});
-              const int32_t errorLocal = allocTempLocal();
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-              function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(-1))});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(handleIndex)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
+              ir_lowerer::emitFileCloseCall(
+                  handleIndex,
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
               return true;
             }
           }

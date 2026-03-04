@@ -35,5 +35,9 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             const EmitInstructionForWriteFn &emitInstruction,
                             const GetInstructionCountForWriteFn &getInstructionCount,
                             const PatchInstructionImmForWriteFn &patchInstructionImm);
+void emitFileFlushCall(int32_t handleIndex, const EmitInstructionForWriteFn &emitInstruction);
+void emitFileCloseCall(int32_t handleIndex,
+                       const AllocTempLocalForWriteFn &allocTempLocal,
+                       const EmitInstructionForWriteFn &emitInstruction);
 
 } // namespace primec::ir_lowerer
