@@ -51,4 +51,64 @@ bool emitFileWriteStep(const Expr &arg,
   return true;
 }
 
+bool emitFileWriteBytesLoop(const Expr &bytesExpr,
+                            int32_t handleIndex,
+                            const EmitExprForWriteFn &emitExpr,
+                            const AllocTempLocalForWriteFn &allocTempLocal,
+                            const EmitInstructionForWriteFn &emitInstruction,
+                            const GetInstructionCountForWriteFn &getInstructionCount,
+                            const PatchInstructionImmForWriteFn &patchInstructionImm) {
+  const int32_t ptrLocal = allocTempLocal();
+  if (!emitExpr(bytesExpr)) {
+    return false;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
+  const int32_t countLocal = allocTempLocal();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
+  const int32_t indexLocal = allocTempLocal();
+  emitInstruction(IrOpcode::PushI32, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+  const int32_t errorLocal = allocTempLocal();
+  emitInstruction(IrOpcode::PushI32, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+
+  const size_t loopStart = getInstructionCount();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+  emitInstruction(IrOpcode::PushI64, 0);
+  emitInstruction(IrOpcode::CmpEqI64, 0);
+  const size_t jumpError = getInstructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emitInstruction(IrOpcode::CmpLtI32, 0);
+  const size_t jumpLoopEnd = getInstructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::PushI32, 1);
+  emitInstruction(IrOpcode::AddI32, 0);
+  emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
+  emitInstruction(IrOpcode::MulI32, 0);
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+  emitInstruction(IrOpcode::FileWriteByte, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::PushI32, 1);
+  emitInstruction(IrOpcode::AddI32, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::Jump, static_cast<uint64_t>(loopStart));
+
+  const size_t loopEnd = getInstructionCount();
+  patchInstructionImm(jumpError, static_cast<int32_t>(loopEnd));
+  patchInstructionImm(jumpLoopEnd, static_cast<int32_t>(loopEnd));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal));
+  return true;
+}
+
 } // namespace primec::ir_lowerer

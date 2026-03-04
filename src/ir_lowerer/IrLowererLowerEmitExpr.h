@@ -693,58 +693,14 @@
                 error = "write_bytes requires exactly one argument";
                 return false;
               }
-              const Expr &bytesExpr = expr.args[1];
-              const int32_t ptrLocal = allocTempLocal();
-              if (!emitExpr(bytesExpr, localsIn)) {
-                return false;
-              }
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-              const int32_t countLocal = allocTempLocal();
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
-              const int32_t indexLocal = allocTempLocal();
-              function.instructions.push_back({IrOpcode::PushI32, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-              const int32_t errorLocal = allocTempLocal();
-              function.instructions.push_back({IrOpcode::PushI32, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-
-              size_t loopStart = function.instructions.size();
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-              function.instructions.push_back({IrOpcode::PushI64, 0});
-              function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-              size_t jumpError = function.instructions.size();
-              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-              function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-              size_t jumpLoopEnd = function.instructions.size();
-              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-              function.instructions.push_back({IrOpcode::PushI32, 1});
-              function.instructions.push_back({IrOpcode::AddI32, 0});
-              function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
-              function.instructions.push_back({IrOpcode::MulI32, 0});
-              function.instructions.push_back({IrOpcode::AddI64, 0});
-              function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-              function.instructions.push_back({IrOpcode::FileWriteByte, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-              function.instructions.push_back({IrOpcode::PushI32, 1});
-              function.instructions.push_back({IrOpcode::AddI32, 0});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-              function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
-
-              size_t loopEnd = function.instructions.size();
-              function.instructions[jumpError].imm = static_cast<int32_t>(loopEnd);
-              function.instructions[jumpLoopEnd].imm = static_cast<int32_t>(loopEnd);
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
-              return true;
+              return ir_lowerer::emitFileWriteBytesLoop(
+                  expr.args[1],
+                  handleIndex,
+                  [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  [&]() { return function.instructions.size(); },
+                  [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; });
             }
             if (expr.name == "flush") {
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});

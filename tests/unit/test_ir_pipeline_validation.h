@@ -10144,6 +10144,61 @@ TEST_CASE("ir lowerer file write helpers emit write steps") {
   CHECK(instructions[0].imm == 4);
 }
 
+TEST_CASE("ir lowerer file write helpers emit write-bytes loops") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  primec::Expr bytesExpr;
+  bytesExpr.kind = primec::Expr::Kind::Name;
+  bytesExpr.name = "bytes";
+
+  int nextLocal = 10;
+  int emitExprCalls = 0;
+  CHECK(primec::ir_lowerer::emitFileWriteBytesLoop(
+      bytesExpr,
+      3,
+      [&](const primec::Expr &) {
+        emitExprCalls++;
+        emitInstruction(primec::IrOpcode::PushI64, 55);
+        return true;
+      },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm));
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 34);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 10);
+  CHECK(instructions[12].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[12].imm == 33);
+  CHECK(instructions[16].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[16].imm == 33);
+  CHECK(instructions[17].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[17].imm == 3);
+  CHECK(instructions[32].op == primec::IrOpcode::Jump);
+  CHECK(instructions[32].imm == 9);
+  CHECK(instructions[33].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[33].imm == 13);
+
+  instructions.clear();
+  nextLocal = 40;
+  CHECK_FALSE(primec::ir_lowerer::emitFileWriteBytesLoop(
+      bytesExpr,
+      7,
+      [](const primec::Expr &) { return false; },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm));
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit values from locals") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

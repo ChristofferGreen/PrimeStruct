@@ -15,6 +15,9 @@ using ResolveStringTableTargetForWriteFn = std::function<bool(const Expr &, int3
 using InferExprKindForWriteFn = std::function<LocalInfo::ValueKind(const Expr &)>;
 using EmitExprForWriteFn = std::function<bool(const Expr &)>;
 using EmitInstructionForWriteFn = std::function<void(IrOpcode, uint64_t)>;
+using AllocTempLocalForWriteFn = std::function<int32_t()>;
+using GetInstructionCountForWriteFn = std::function<size_t()>;
+using PatchInstructionImmForWriteFn = std::function<void(size_t, int32_t)>;
 
 bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut);
 bool emitFileWriteStep(const Expr &arg,
@@ -25,5 +28,12 @@ bool emitFileWriteStep(const Expr &arg,
                        const EmitExprForWriteFn &emitExpr,
                        const EmitInstructionForWriteFn &emitInstruction,
                        std::string &error);
+bool emitFileWriteBytesLoop(const Expr &bytesExpr,
+                            int32_t handleIndex,
+                            const EmitExprForWriteFn &emitExpr,
+                            const AllocTempLocalForWriteFn &allocTempLocal,
+                            const EmitInstructionForWriteFn &emitInstruction,
+                            const GetInstructionCountForWriteFn &getInstructionCount,
+                            const PatchInstructionImmForWriteFn &patchInstructionImm);
 
 } // namespace primec::ir_lowerer
