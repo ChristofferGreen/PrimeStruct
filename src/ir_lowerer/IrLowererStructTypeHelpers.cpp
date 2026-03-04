@@ -60,6 +60,55 @@ ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
   };
 }
 
+bool isWildcardImportPath(const std::string &path, std::string &prefixOut) {
+  if (path.size() >= 2 && path.compare(path.size() - 2, 2, "/*") == 0) {
+    prefixOut = path.substr(0, path.size() - 2);
+    return true;
+  }
+  if (path.find('/', 1) == std::string::npos) {
+    prefixOut = path;
+    return true;
+  }
+  return false;
+}
+
+std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
+    const std::vector<std::string> &imports,
+    const std::vector<Definition> &definitions,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  std::unordered_map<std::string, std::string> importAliases;
+  for (const auto &importPath : imports) {
+    if (importPath.empty() || importPath[0] != '/') {
+      continue;
+    }
+    std::string prefix;
+    if (isWildcardImportPath(importPath, prefix)) {
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &def : definitions) {
+        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        importAliases.emplace(remainder, def.fullPath);
+      }
+      continue;
+    }
+    auto defIt = defMap.find(importPath);
+    if (defIt == defMap.end()) {
+      continue;
+    }
+    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+    if (remainder.empty()) {
+      continue;
+    }
+    importAliases.emplace(remainder, importPath);
+  }
+  return importAliases;
+}
+
 bool resolveStructTypePathFromScope(
     const std::string &typeName,
     const std::string &namespacePrefix,
@@ -103,6 +152,74 @@ bool resolveStructTypePathFromScope(
     return true;
   }
   return false;
+}
+
+std::string resolveStructTypePathCandidateFromScope(
+    const std::string &typeName,
+    const std::string &namespacePrefix,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  if (!typeName.empty() && typeName[0] == '/') {
+    return typeName;
+  }
+  std::string resolved = namespacePrefix.empty() ? ("/" + typeName) : (namespacePrefix + "/" + typeName);
+  if (structNames.count(resolved) > 0) {
+    return resolved;
+  }
+  auto importIt = importAliases.find(typeName);
+  if (importIt != importAliases.end()) {
+    return importIt->second;
+  }
+  return resolved;
+}
+
+std::string resolveStructLayoutExprPathFromScope(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  if (expr.name.empty()) {
+    return "";
+  }
+  if (expr.name[0] == '/') {
+    return expr.name;
+  }
+  if (expr.name.find('/') != std::string::npos) {
+    return "/" + expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    const size_t lastSlash = expr.namespacePrefix.find_last_of('/');
+    const std::string suffix = lastSlash == std::string::npos ? expr.namespacePrefix
+                                                               : expr.namespacePrefix.substr(lastSlash + 1);
+    if (suffix == expr.name && defMap.count(expr.namespacePrefix) > 0) {
+      return expr.namespacePrefix;
+    }
+    std::string prefix = expr.namespacePrefix;
+    while (!prefix.empty()) {
+      std::string candidate = prefix + "/" + expr.name;
+      if (defMap.count(candidate) > 0) {
+        return candidate;
+      }
+      const size_t slash = prefix.find_last_of('/');
+      if (slash == std::string::npos) {
+        break;
+      }
+      prefix = prefix.substr(0, slash);
+    }
+    auto importIt = importAliases.find(expr.name);
+    if (importIt != importAliases.end()) {
+      return importIt->second;
+    }
+    return expr.namespacePrefix + "/" + expr.name;
+  }
+  std::string root = "/" + expr.name;
+  if (defMap.count(root) > 0) {
+    return root;
+  }
+  auto importIt = importAliases.find(expr.name);
+  if (importIt != importAliases.end()) {
+    return importIt->second;
+  }
+  return root;
 }
 
 bool resolveDefinitionNamespacePrefixFromMap(

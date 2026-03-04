@@ -113,12 +113,26 @@ StructArrayInfoAdapters makeStructArrayInfoAdapters(
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);
+bool isWildcardImportPath(const std::string &path, std::string &prefixOut);
+std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
+    const std::vector<std::string> &imports,
+    const std::vector<Definition> &definitions,
+    const std::unordered_map<std::string, const Definition *> &defMap);
 bool resolveStructTypePathFromScope(
     const std::string &typeName,
     const std::string &namespacePrefix,
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases,
     std::string &resolvedOut);
+std::string resolveStructTypePathCandidateFromScope(
+    const std::string &typeName,
+    const std::string &namespacePrefix,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases);
+std::string resolveStructLayoutExprPathFromScope(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases);
 bool resolveDefinitionNamespacePrefixFromMap(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &defPath,

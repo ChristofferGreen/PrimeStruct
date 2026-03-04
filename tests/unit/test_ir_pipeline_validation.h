@@ -466,6 +466,118 @@ TEST_CASE("ir lowerer call helpers classify struct definitions") {
   CHECK_FALSE(primec::ir_lowerer::isStructDefinition(mixedDef));
 }
 
+TEST_CASE("ir lowerer struct type helpers build setup import aliases") {
+  std::string prefix;
+  CHECK(primec::ir_lowerer::isWildcardImportPath("/pkg/*", prefix));
+  CHECK(prefix == "/pkg");
+  CHECK(primec::ir_lowerer::isWildcardImportPath("/single", prefix));
+  CHECK(prefix == "/single");
+  CHECK_FALSE(primec::ir_lowerer::isWildcardImportPath("/pkg/nested", prefix));
+
+  primec::Definition foo;
+  foo.fullPath = "/pkg/foo";
+  primec::Definition bar;
+  bar.fullPath = "/pkg/bar";
+  primec::Definition nested;
+  nested.fullPath = "/pkg/nested/baz";
+  primec::Definition single;
+  single.fullPath = "/single";
+  const std::vector<primec::Definition> definitions = {foo, bar, nested, single};
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  for (const auto &def : definitions) {
+    defMap.emplace(def.fullPath, &def);
+  }
+
+  const std::vector<std::string> imports = {
+      "/pkg/*",
+      "/single",
+      "/missing",
+      "relative",
+      "/pkg/bar",
+  };
+  const auto aliases =
+      primec::ir_lowerer::buildImportAliasesFromProgram(imports, definitions, defMap);
+  CHECK(aliases.size() == 3);
+  CHECK(aliases.at("foo") == "/pkg/foo");
+  CHECK(aliases.at("bar") == "/pkg/bar");
+  CHECK(aliases.at("single") == "/single");
+  CHECK(aliases.count("baz") == 0);
+}
+
+TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/Foo",
+      "/alias/Foo",
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"AliasFoo", "/alias/Foo"},
+      {"Thing", "/pkg/Thing"},
+  };
+
+  CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+            "/external/Type", "/pkg", structNames, importAliases) == "/external/Type");
+  CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+            "Foo", "/pkg", structNames, importAliases) == "/pkg/Foo");
+  CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+            "AliasFoo", "", structNames, importAliases) == "/alias/Foo");
+  CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+            "Missing", "/pkg", structNames, importAliases) == "/pkg/Missing");
+
+  primec::Definition thingDef;
+  thingDef.fullPath = "/pkg/Thing";
+  primec::Definition rootDef;
+  rootDef.fullPath = "/root";
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {thingDef.fullPath, &thingDef},
+      {rootDef.fullPath, &rootDef},
+  };
+
+  primec::Expr scopedExpr;
+  scopedExpr.kind = primec::Expr::Kind::Name;
+  scopedExpr.name = "Thing";
+  scopedExpr.namespacePrefix = "/pkg/sub";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            scopedExpr, defMap, importAliases) == "/pkg/Thing");
+
+  primec::Expr aliasExpr = scopedExpr;
+  aliasExpr.name = "Thing";
+  aliasExpr.namespacePrefix = "/other";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            aliasExpr, defMap, importAliases) == "/pkg/Thing");
+
+  primec::Expr rootExpr;
+  rootExpr.kind = primec::Expr::Kind::Name;
+  rootExpr.name = "root";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            rootExpr, defMap, importAliases) == "/root");
+
+  primec::Expr unresolvedExpr;
+  unresolvedExpr.kind = primec::Expr::Kind::Name;
+  unresolvedExpr.name = "missing";
+  unresolvedExpr.namespacePrefix = "/pkg";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            unresolvedExpr, defMap, importAliases) == "/pkg/missing");
+
+  primec::Expr suffixExpr;
+  suffixExpr.kind = primec::Expr::Kind::Name;
+  suffixExpr.name = "Thing";
+  suffixExpr.namespacePrefix = "/pkg/Thing";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            suffixExpr, defMap, importAliases) == "/pkg/Thing");
+
+  primec::Expr absoluteExpr;
+  absoluteExpr.kind = primec::Expr::Kind::Name;
+  absoluteExpr.name = "/explicit/Thing";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            absoluteExpr, defMap, importAliases) == "/explicit/Thing");
+
+  primec::Expr slashExpr;
+  slashExpr.kind = primec::Expr::Kind::Name;
+  slashExpr.name = "pkg/Thing";
+  CHECK(primec::ir_lowerer::resolveStructLayoutExprPathFromScope(
+            slashExpr, defMap, importAliases) == "/pkg/Thing");
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);
