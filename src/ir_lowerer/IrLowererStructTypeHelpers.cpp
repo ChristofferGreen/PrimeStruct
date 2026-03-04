@@ -54,7 +54,8 @@ StructArrayInfoAdapters makeStructArrayInfoAdapters(
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {
-  return [&](const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut) {
+  return [structNames, importAliases](
+             const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut) {
     return resolveStructTypePathFromScope(typeName, namespacePrefix, structNames, importAliases, resolvedOut);
   };
 }
@@ -192,7 +193,7 @@ bool resolveStructArrayTypeInfoFromBindingWithLayoutFieldIndex(
 ResolveStructArrayTypeInfoFn makeResolveStructArrayTypeInfoFromLayoutFieldIndex(
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName) {
-  return [&](const std::string &structPath, StructArrayTypeInfo &out) {
+  return [fieldIndex, valueKindFromTypeName](const std::string &structPath, StructArrayTypeInfo &out) {
     return resolveStructArrayTypeInfoFromLayoutFieldIndex(
         structPath, fieldIndex, valueKindFromTypeName, out);
   };
@@ -303,7 +304,7 @@ ApplyStructArrayInfoFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName) {
-  return [&](const Expr &expr, LocalInfo &info) {
+  return [resolveStructTypeName, fieldIndex, valueKindFromTypeName](const Expr &expr, LocalInfo &info) {
     applyStructArrayInfoFromBindingWithLayoutFieldIndex(
         expr, resolveStructTypeName, fieldIndex, valueKindFromTypeName, info);
   };
@@ -526,16 +527,29 @@ ResolveStructSlotLayoutFn makeResolveStructSlotLayoutFromDefinitionFieldIndex(
     StructSlotLayoutCache &layoutCache,
     std::unordered_set<std::string> &layoutStack,
     std::string &error) {
-  return [&](const std::string &structPath, StructSlotLayoutInfo &out) {
+  const auto *fieldIndexPtr = &fieldIndex;
+  const auto *defMapPtr = &defMap;
+  const auto *resolveStructTypeNamePtr = &resolveStructTypeName;
+  const auto *valueKindFromTypeNamePtr = &valueKindFromTypeName;
+  auto *layoutCachePtr = &layoutCache;
+  auto *layoutStackPtr = &layoutStack;
+  auto *errorPtr = &error;
+  return [fieldIndexPtr,
+          defMapPtr,
+          resolveStructTypeNamePtr,
+          valueKindFromTypeNamePtr,
+          layoutCachePtr,
+          layoutStackPtr,
+          errorPtr](const std::string &structPath, StructSlotLayoutInfo &out) {
     return resolveStructSlotLayoutFromDefinitionFieldIndex(structPath,
-                                                           fieldIndex,
-                                                           defMap,
-                                                           resolveStructTypeName,
-                                                           valueKindFromTypeName,
-                                                           layoutCache,
-                                                           layoutStack,
+                                                           *fieldIndexPtr,
+                                                           *defMapPtr,
+                                                           *resolveStructTypeNamePtr,
+                                                           *valueKindFromTypeNamePtr,
+                                                           *layoutCachePtr,
+                                                           *layoutStackPtr,
                                                            out,
-                                                           error);
+                                                           *errorPtr);
   };
 }
 
@@ -547,17 +561,30 @@ ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
     StructSlotLayoutCache &layoutCache,
     std::unordered_set<std::string> &layoutStack,
     std::string &error) {
-  return [&](const std::string &structPath, const std::string &fieldName, StructSlotFieldInfo &out) {
+  const auto *fieldIndexPtr = &fieldIndex;
+  const auto *defMapPtr = &defMap;
+  const auto *resolveStructTypeNamePtr = &resolveStructTypeName;
+  const auto *valueKindFromTypeNamePtr = &valueKindFromTypeName;
+  auto *layoutCachePtr = &layoutCache;
+  auto *layoutStackPtr = &layoutStack;
+  auto *errorPtr = &error;
+  return [fieldIndexPtr,
+          defMapPtr,
+          resolveStructTypeNamePtr,
+          valueKindFromTypeNamePtr,
+          layoutCachePtr,
+          layoutStackPtr,
+          errorPtr](const std::string &structPath, const std::string &fieldName, StructSlotFieldInfo &out) {
     return resolveStructFieldSlotFromDefinitionFieldIndex(structPath,
                                                           fieldName,
-                                                          fieldIndex,
-                                                          defMap,
-                                                          resolveStructTypeName,
-                                                          valueKindFromTypeName,
-                                                          layoutCache,
-                                                          layoutStack,
+                                                          *fieldIndexPtr,
+                                                          *defMapPtr,
+                                                          *resolveStructTypeNamePtr,
+                                                          *valueKindFromTypeNamePtr,
+                                                          *layoutCachePtr,
+                                                          *layoutStackPtr,
                                                           out,
-                                                          error);
+                                                          *errorPtr);
   };
 }
 
@@ -650,7 +677,7 @@ StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotSt
 
 ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
     const ResolveStructTypeNameFn &resolveStructTypeName) {
-  return [&](const Expr &expr, LocalInfo &info) {
+  return [resolveStructTypeName](const Expr &expr, LocalInfo &info) {
     applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
   };
 }

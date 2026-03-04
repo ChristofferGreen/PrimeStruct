@@ -40,75 +40,97 @@ RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const Intern
 
 EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitArrayIndexOutOfBounds(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitArrayIndexOutOfBounds(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitStringIndexOutOfBounds(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitStringIndexOutOfBounds(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitMapKeyNotFound(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitMapKeyNotFound(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitVectorIndexOutOfBounds(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitVectorIndexOutOfBounds(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitVectorPopOnEmpty(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitVectorPopOnEmpty(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitVectorCapacityExceeded(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitVectorCapacityExceeded(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitVectorCapacityExceeded(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitVectorReserveNegative(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitVectorReserveNegative(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitVectorReserveNegative(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitVectorReserveExceeded(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitVectorReserveExceeded(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitVectorReserveExceeded(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitLoopCountNegative(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitLoopCountNegative(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitPowNegativeExponent(IrFunction &function,
                                                const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitPowNegativeExponent(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitPowNegativeExponent(*functionPtr, internStringFn);
   };
 }
 
 EmitRuntimeErrorFn makeEmitFloatToIntNonFinite(IrFunction &function,
                                                 const InternRuntimeErrorStringFn &internString) {
-  return [&function, &internString]() {
-    emitFloatToIntNonFinite(function, internString);
+  auto *functionPtr = &function;
+  auto internStringFn = internString;
+  return [functionPtr, internStringFn]() {
+    emitFloatToIntNonFinite(*functionPtr, internStringFn);
   };
 }
 

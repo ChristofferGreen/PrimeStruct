@@ -13,6 +13,7 @@
   std::vector<std::vector<int32_t>> fileScopeStack;
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
+  const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
   ir_lowerer::EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
       entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;

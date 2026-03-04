@@ -37,16 +37,22 @@ StringLiteralHelperContext makeStringLiteralHelperContext(std::vector<std::strin
 }
 
 InternStringLiteralFn makeInternLowererString(std::vector<std::string> &stringTable) {
-  return [&stringTable](const std::string &text) {
-    return internLowererString(text, stringTable);
+  auto *stringTablePtr = &stringTable;
+  return [stringTablePtr](const std::string &text) {
+    return internLowererString(text, *stringTablePtr);
   };
 }
 
 ResolveStringTableTargetFn makeResolveStringTableTarget(const std::vector<std::string> &stringTable,
                                                         const InternStringLiteralFn &internString,
                                                         std::string &error) {
-  return [&](const Expr &expr, const LocalMap &localsIn, int32_t &stringIndexOut, size_t &lengthOut) {
-    return resolveStringTableTarget(expr, localsIn, stringTable, internString, stringIndexOut, lengthOut, error);
+  const auto *stringTablePtr = &stringTable;
+  auto internStringFn = internString;
+  auto *errorPtr = &error;
+  return [stringTablePtr, internStringFn, errorPtr](
+             const Expr &expr, const LocalMap &localsIn, int32_t &stringIndexOut, size_t &lengthOut) {
+    return resolveStringTableTarget(
+        expr, localsIn, *stringTablePtr, internStringFn, stringIndexOut, lengthOut, *errorPtr);
   };
 }
 
