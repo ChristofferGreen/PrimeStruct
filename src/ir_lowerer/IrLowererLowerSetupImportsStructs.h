@@ -36,75 +36,66 @@
   std::function<bool(const Definition &, IrStructLayout &)> computeStructLayout;
 
   computeStructLayout = [&](const Definition &def, IrStructLayout &layoutOut) -> bool {
-    auto cached = layoutCache.find(def.fullPath);
-    if (cached != layoutCache.end()) {
-      layoutOut = cached->second;
+    auto computeUncachedLayout = [&](IrStructLayout &layout, std::string &layoutError) -> bool {
+      layout.name = def.fullPath;
+      uint32_t structAlign = 1;
+      uint32_t explicitStructAlign = 1;
+      bool hasStructAlign = false;
+      if (!extractAlignment(
+              def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, layoutError)) {
+        return false;
+      }
+      uint32_t offset = 0;
+      auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
+      if (fieldInfoIt == structFieldInfoByName.end()) {
+        layoutError = "internal error: missing struct field info for " + def.fullPath;
+        return false;
+      }
+      size_t fieldIndex = 0;
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding) {
+          continue;
+        }
+        if (fieldIndex >= fieldInfoIt->second.size()) {
+          layoutError = "internal error: mismatched struct field info for " + def.fullPath;
+          return false;
+        }
+        const FieldBinding &binding = fieldInfoIt->second[fieldIndex];
+        ++fieldIndex;
+        auto computeNestedStructLayout = [&](const Definition &nestedDef,
+                                             IrStructLayout &nestedLayout,
+                                             std::string &nestedError) -> bool {
+          (void)nestedError;
+          return computeStructLayout(nestedDef, nestedLayout);
+        };
+        auto resolveFieldTypeLayout = [&](const FieldBinding &fieldBinding,
+                                          ir_lowerer::BindingTypeLayout &fieldTypeLayout,
+                                          std::string &fieldError) -> bool {
+          return ir_lowerer::resolveBindingTypeLayout(fieldBinding,
+                                                      def.namespacePrefix,
+                                                      resolveStructTypePath,
+                                                      defMap,
+                                                      computeNestedStructLayout,
+                                                      fieldTypeLayout,
+                                                      fieldError);
+        };
+        if (!ir_lowerer::appendStructLayoutField(
+                def.fullPath, stmt, binding, resolveFieldTypeLayout, offset, structAlign, layout, layoutError)) {
+          return false;
+        }
+      }
+      if (hasStructAlign && explicitStructAlign < structAlign) {
+        layoutError = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +
+                      std::to_string(structAlign);
+        return false;
+      }
+      structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
+      layout.alignmentBytes = structAlign;
+      layout.totalSizeBytes = alignTo(offset, structAlign);
       return true;
-    }
-    if (!layoutStack.insert(def.fullPath).second) {
-      error = "recursive struct layout not supported: " + def.fullPath;
-      return false;
-    }
-    IrStructLayout layout;
-    layout.name = def.fullPath;
-    uint32_t structAlign = 1;
-    uint32_t explicitStructAlign = 1;
-    bool hasStructAlign = false;
-    if (!extractAlignment(
-            def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, error)) {
-      return false;
-    }
-    uint32_t offset = 0;
-    auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
-    if (fieldInfoIt == structFieldInfoByName.end()) {
-      error = "internal error: missing struct field info for " + def.fullPath;
-      return false;
-    }
-    size_t fieldIndex = 0;
-    for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
-        continue;
-      }
-      if (fieldIndex >= fieldInfoIt->second.size()) {
-        error = "internal error: mismatched struct field info for " + def.fullPath;
-        return false;
-      }
-      const FieldBinding &binding = fieldInfoIt->second[fieldIndex];
-      ++fieldIndex;
-      auto computeNestedStructLayout = [&](const Definition &nestedDef,
-                                           IrStructLayout &nestedLayout,
-                                           std::string &layoutError) -> bool {
-        (void)layoutError;
-        return computeStructLayout(nestedDef, nestedLayout);
-      };
-      auto resolveFieldTypeLayout = [&](const FieldBinding &fieldBinding,
-                                        ir_lowerer::BindingTypeLayout &fieldTypeLayout,
-                                        std::string &layoutError) -> bool {
-        return ir_lowerer::resolveBindingTypeLayout(fieldBinding,
-                                                    def.namespacePrefix,
-                                                    resolveStructTypePath,
-                                                    defMap,
-                                                    computeNestedStructLayout,
-                                                    fieldTypeLayout,
-                                                    layoutError);
-      };
-      if (!ir_lowerer::appendStructLayoutField(
-              def.fullPath, stmt, binding, resolveFieldTypeLayout, offset, structAlign, layout, error)) {
-        return false;
-      }
-    }
-    if (hasStructAlign && explicitStructAlign < structAlign) {
-      error = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +
-              std::to_string(structAlign);
-      return false;
-    }
-    structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
-    layout.alignmentBytes = structAlign;
-    layout.totalSizeBytes = alignTo(offset, structAlign);
-    layoutCache.emplace(def.fullPath, layout);
-    layoutStack.erase(def.fullPath);
-    layoutOut = layout;
-    return true;
+    };
+    return ir_lowerer::computeStructLayoutWithCache(
+        def.fullPath, layoutCache, layoutStack, computeUncachedLayout, layoutOut, error);
   };
 
   for (const auto &def : program.definitions) {

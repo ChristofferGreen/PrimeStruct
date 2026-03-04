@@ -198,6 +198,35 @@ bool resolveBindingTypeLayout(
   return true;
 }
 
+bool computeStructLayoutWithCache(
+    const std::string &structPath,
+    std::unordered_map<std::string, IrStructLayout> &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    const std::function<bool(IrStructLayout &, std::string &)> &computeUncachedLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut) {
+  auto cached = layoutCache.find(structPath);
+  if (cached != layoutCache.end()) {
+    layoutOut = cached->second;
+    return true;
+  }
+  if (!layoutStack.insert(structPath).second) {
+    errorOut = "recursive struct layout not supported: " + structPath;
+    return false;
+  }
+
+  IrStructLayout computed;
+  if (!computeUncachedLayout(computed, errorOut)) {
+    layoutStack.erase(structPath);
+    return false;
+  }
+
+  layoutCache.emplace(structPath, computed);
+  layoutStack.erase(structPath);
+  layoutOut = std::move(computed);
+  return true;
+}
+
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,
                              const LayoutFieldBinding &binding,

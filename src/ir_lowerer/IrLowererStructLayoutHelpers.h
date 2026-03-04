@@ -4,6 +4,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "IrLowererStructFieldBindingHelpers.h"
@@ -35,6 +36,13 @@ bool resolveBindingTypeLayout(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const Definition &, IrStructLayout &, std::string &)> &computeStructLayout,
     BindingTypeLayout &layoutOut,
+    std::string &errorOut);
+bool computeStructLayoutWithCache(
+    const std::string &structPath,
+    std::unordered_map<std::string, IrStructLayout> &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    const std::function<bool(IrStructLayout &, std::string &)> &computeUncachedLayout,
+    IrStructLayout &layoutOut,
     std::string &errorOut);
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,

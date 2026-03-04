@@ -1457,6 +1457,66 @@ TEST_CASE("ir lowerer struct layout helpers resolve binding type layout") {
   CHECK(error == "layout failure");
 }
 
+TEST_CASE("ir lowerer struct layout helpers compute with cache") {
+  std::unordered_map<std::string, primec::IrStructLayout> layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  std::string error;
+  primec::IrStructLayout out;
+
+  int computeCalls = 0;
+  const auto computeLayout = [&](primec::IrStructLayout &layout, std::string &computeError) {
+    (void)computeError;
+    ++computeCalls;
+    layout.name = "/pkg/S";
+    layout.totalSizeBytes = 16u;
+    layout.alignmentBytes = 8u;
+    return true;
+  };
+
+  CHECK(primec::ir_lowerer::computeStructLayoutWithCache(
+      "/pkg/S", layoutCache, layoutStack, computeLayout, out, error));
+  CHECK(computeCalls == 1);
+  CHECK(layoutCache.count("/pkg/S") == 1u);
+  CHECK(layoutStack.empty());
+  CHECK(out.totalSizeBytes == 16u);
+  CHECK(out.alignmentBytes == 8u);
+
+  int cacheMissCalls = 0;
+  const auto shouldNotRun = [&](primec::IrStructLayout &, std::string &) {
+    ++cacheMissCalls;
+    return false;
+  };
+  CHECK(primec::ir_lowerer::computeStructLayoutWithCache(
+      "/pkg/S", layoutCache, layoutStack, shouldNotRun, out, error));
+  CHECK(cacheMissCalls == 0);
+
+  layoutStack.insert("/pkg/Recursive");
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutWithCache(
+      "/pkg/Recursive", layoutCache, layoutStack, computeLayout, out, error));
+  CHECK(error == "recursive struct layout not supported: /pkg/Recursive");
+  layoutStack.erase("/pkg/Recursive");
+
+  const auto failingCompute = [&](primec::IrStructLayout &, std::string &computeError) {
+    computeError = "layout failure";
+    return false;
+  };
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutWithCache(
+      "/pkg/Fail", layoutCache, layoutStack, failingCompute, out, error));
+  CHECK(error == "layout failure");
+  CHECK(layoutStack.count("/pkg/Fail") == 0u);
+
+  const auto retryCompute = [&](primec::IrStructLayout &layout, std::string &) {
+    layout.name = "/pkg/Fail";
+    layout.totalSizeBytes = 4u;
+    layout.alignmentBytes = 4u;
+    return true;
+  };
+  CHECK(primec::ir_lowerer::computeStructLayoutWithCache(
+      "/pkg/Fail", layoutCache, layoutStack, retryCompute, out, error));
+  CHECK(out.totalSizeBytes == 4u);
+  CHECK(out.alignmentBytes == 4u);
+}
+
 TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));
