@@ -77,6 +77,10 @@ bool resolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases,
     std::string &resolvedOut);
+bool resolveDefinitionNamespacePrefixFromMap(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::string &defPath,
+    std::string &namespacePrefixOut);
 StructLayoutFieldIndex buildStructLayoutFieldIndex(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields);

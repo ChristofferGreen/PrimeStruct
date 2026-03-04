@@ -61,6 +61,18 @@ bool resolveStructTypePathFromScope(
   return false;
 }
 
+bool resolveDefinitionNamespacePrefixFromMap(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::string &defPath,
+    std::string &namespacePrefixOut) {
+  auto defIt = defMap.find(defPath);
+  if (defIt == defMap.end() || defIt->second == nullptr) {
+    return false;
+  }
+  namespacePrefixOut = defIt->second->namespacePrefix;
+  return true;
+}
+
 StructLayoutFieldIndex buildStructLayoutFieldIndex(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields) {

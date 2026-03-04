@@ -440,6 +440,26 @@ TEST_CASE("ir lowerer struct type helpers resolve scoped struct paths") {
       "Missing", "/pkg", structNames, importAliases, resolved));
 }
 
+TEST_CASE("ir lowerer struct type helpers resolve definition namespace prefixes from map") {
+  primec::Definition namespacedDef;
+  namespacedDef.fullPath = "/pkg/Foo";
+  namespacedDef.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/Foo", &namespacedDef},
+      {"/pkg/Null", nullptr},
+  };
+
+  std::string namespacePrefixOut;
+  REQUIRE(primec::ir_lowerer::resolveDefinitionNamespacePrefixFromMap(
+      defMap, "/pkg/Foo", namespacePrefixOut));
+  CHECK(namespacePrefixOut == "/pkg");
+
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionNamespacePrefixFromMap(
+      defMap, "/pkg/Missing", namespacePrefixOut));
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionNamespacePrefixFromMap(
+      defMap, "/pkg/Null", namespacePrefixOut));
+}
+
 TEST_CASE("ir lowerer struct type helpers infer struct return paths") {
   auto resolveStruct = [](const std::string &typeName,
                           const std::string &namespacePrefix,

@@ -205,12 +205,7 @@
 
   auto resolveDefinitionNamespacePrefix =
       [&](const std::string &structPath, std::string &namespacePrefixOut) -> bool {
-    const Definition *structDef = ir_lowerer::resolveDefinitionByPath(defMap, structPath);
-    if (structDef == nullptr) {
-      return false;
-    }
-    namespacePrefixOut = structDef->namespacePrefix;
-    return true;
+    return ir_lowerer::resolveDefinitionNamespacePrefixFromMap(defMap, structPath, namespacePrefixOut);
   };
 
   ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
