@@ -48,26 +48,7 @@
     } else {
       typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
     }
-    if (!resolvedTypePath.empty()) {
-      const std::string resolved = resolvedTypePath + "/" + callExpr.name;
-      auto defIt = defMap.find(resolved);
-      if (defIt == defMap.end()) {
-        error = "unknown method: " + resolved;
-        return nullptr;
-      }
-      return defIt->second;
-    }
-    if (typeName.empty()) {
-      error = "unknown method target for " + callExpr.name;
-      return nullptr;
-    }
-    const std::string resolved = "/" + typeName + "/" + callExpr.name;
-    auto defIt = defMap.find(resolved);
-    if (defIt == defMap.end()) {
-      error = "unknown method: " + resolved;
-      return nullptr;
-    }
-    return defIt->second;
+    return resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, resolvedTypePath, defMap, error);
   };
 
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;

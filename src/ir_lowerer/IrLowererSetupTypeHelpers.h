@@ -38,5 +38,11 @@ std::string resolveMethodReceiverStructTypePathFromCallExpr(
     const std::string &resolvedReceiverPath,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_set<std::string> &structNames);
+const Definition *resolveMethodDefinitionFromReceiverTarget(
+    const std::string &methodName,
+    const std::string &typeName,
+    const std::string &resolvedTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut);
 
 } // namespace primec::ir_lowerer

@@ -201,4 +201,34 @@ std::string resolveMethodReceiverStructTypePathFromCallExpr(
   return "";
 }
 
+const Definition *resolveMethodDefinitionFromReceiverTarget(
+    const std::string &methodName,
+    const std::string &typeName,
+    const std::string &resolvedTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
+  if (!resolvedTypePath.empty()) {
+    const std::string resolved = resolvedTypePath + "/" + methodName;
+    auto defIt = defMap.find(resolved);
+    if (defIt == defMap.end()) {
+      errorOut = "unknown method: " + resolved;
+      return nullptr;
+    }
+    return defIt->second;
+  }
+
+  if (typeName.empty()) {
+    errorOut = "unknown method target for " + methodName;
+    return nullptr;
+  }
+
+  const std::string resolved = "/" + typeName + "/" + methodName;
+  auto defIt = defMap.find(resolved);
+  if (defIt == defMap.end()) {
+    errorOut = "unknown method: " + resolved;
+    return nullptr;
+  }
+  return defIt->second;
+}
+
 } // namespace primec::ir_lowerer
