@@ -20,10 +20,17 @@ struct CountAccessClassifiers {
   IsStringCountCallFn isStringCountCall;
 };
 
+struct EntryCountAccessSetup {
+  bool hasEntryArgs = false;
+  std::string entryArgsName;
+  CountAccessClassifiers classifiers;
+};
+
 bool resolveEntryArgsParameter(const Definition &entryDef,
                                bool &hasEntryArgsOut,
                                std::string &entryArgsNameOut,
                                std::string &error);
+bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error);
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName);
 IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName);
 IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName);

@@ -32,6 +32,15 @@ bool resolveEntryArgsParameter(const Definition &entryDef,
   return true;
 }
 
+bool buildEntryCountAccessSetup(const Definition &entryDef, EntryCountAccessSetup &out, std::string &error) {
+  out = EntryCountAccessSetup{};
+  if (!resolveEntryArgsParameter(entryDef, out.hasEntryArgs, out.entryArgsName, error)) {
+    return false;
+  }
+  out.classifiers = makeCountAccessClassifiers(out.hasEntryArgs, out.entryArgsName);
+  return true;
+}
+
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName) {
   CountAccessClassifiers classifiers;
   classifiers.isEntryArgsName = makeIsEntryArgsName(hasEntryArgs, entryArgsName);

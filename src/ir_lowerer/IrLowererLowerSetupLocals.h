@@ -46,12 +46,13 @@
   auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
   auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
-  bool hasEntryArgs = false;
-  std::string entryArgsName;
-  if (!ir_lowerer::resolveEntryArgsParameter(*entryDef, hasEntryArgs, entryArgsName, error)) {
+  ir_lowerer::EntryCountAccessSetup entryCountAccessSetup;
+  if (!ir_lowerer::buildEntryCountAccessSetup(*entryDef, entryCountAccessSetup, error)) {
     return false;
   }
-  const auto countAccessClassifiers = ir_lowerer::makeCountAccessClassifiers(hasEntryArgs, entryArgsName);
+  const bool hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
+  const std::string &entryArgsName = entryCountAccessSetup.entryArgsName;
+  const auto &countAccessClassifiers = entryCountAccessSetup.classifiers;
   auto isEntryArgsName = countAccessClassifiers.isEntryArgsName;
   auto isArrayCountCall = countAccessClassifiers.isArrayCountCall;
   auto isVectorCapacityCall = countAccessClassifiers.isVectorCapacityCall;

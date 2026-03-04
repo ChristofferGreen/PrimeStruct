@@ -3569,6 +3569,47 @@ TEST_CASE("ir lowerer count access helpers classify entry args and count calls")
   CHECK(primec::ir_lowerer::isArrayCountCall(countEntry, locals, false, "argv"));
 }
 
+TEST_CASE("ir lowerer count access helpers build bundled entry count setup") {
+  primec::Definition entryDef;
+  primec::ir_lowerer::EntryCountAccessSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, setup, error));
+  CHECK_FALSE(setup.hasEntryArgs);
+  CHECK(setup.entryArgsName.empty());
+
+  primec::Expr entryName;
+  entryName.kind = primec::Expr::Kind::Name;
+  entryName.name = "argv";
+  primec::ir_lowerer::LocalMap locals;
+  CHECK_FALSE(setup.classifiers.isEntryArgsName(entryName, locals));
+
+  primec::Expr entryParam;
+  entryParam.name = "argv";
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  entryParam.transforms.push_back(arrayTransform);
+  entryDef.parameters = {entryParam};
+
+  error.clear();
+  REQUIRE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, setup, error));
+  CHECK(setup.hasEntryArgs);
+  CHECK(setup.entryArgsName == "argv");
+  CHECK(setup.classifiers.isEntryArgsName(entryName, locals));
+
+  primec::Expr countEntry;
+  countEntry.kind = primec::Expr::Kind::Call;
+  countEntry.name = "count";
+  countEntry.args = {entryName};
+  CHECK(setup.classifiers.isArrayCountCall(countEntry, locals));
+
+  primec::Expr extraParam = entryParam;
+  extraParam.name = "extra";
+  entryDef.parameters = {entryParam, extraParam};
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCountAccessSetup(entryDef, setup, error));
+  CHECK(error == "native backend only supports a single array<string> entry parameter");
+}
+
 TEST_CASE("ir lowerer count access helpers classify capacity and string count") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo vecInfo;
