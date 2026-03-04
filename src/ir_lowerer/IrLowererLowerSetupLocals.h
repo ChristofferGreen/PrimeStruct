@@ -106,14 +106,14 @@
       });
   const auto &structLayoutFieldIndex = structAndUninitializedFieldIndexes.structLayoutFieldIndex;
 
-  const auto structArrayInfoAdapters = ir_lowerer::makeStructArrayInfoAdapters(
-      structLayoutFieldIndex, resolveStructTypeName, valueKindFromTypeName);
+  const auto structLayoutResolutionAdapters = ir_lowerer::makeStructLayoutResolutionAdaptersWithOwnedSlotState(
+      structLayoutFieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, error);
+  const auto &structArrayInfoAdapters = structLayoutResolutionAdapters.structArrayInfo;
   auto resolveStructArrayInfoFromPath = structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath;
   auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
 
   using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
-  const auto structSlotResolutionAdapters = ir_lowerer::makeStructSlotResolutionAdaptersWithOwnedState(
-      structLayoutFieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, error);
+  const auto &structSlotResolutionAdapters = structLayoutResolutionAdapters.structSlotResolution;
   auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
   auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 

@@ -622,6 +622,20 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
   return adapters;
 }
 
+StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotState(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    std::string &error) {
+  StructLayoutResolutionAdapters adapters;
+  adapters.structArrayInfo =
+      makeStructArrayInfoAdapters(fieldIndex, resolveStructTypeName, valueKindFromTypeName);
+  adapters.structSlotResolution = makeStructSlotResolutionAdaptersWithOwnedState(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, error);
+  return adapters;
+}
+
 ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
     const ResolveStructTypeNameFn &resolveStructTypeName) {
   return [&](const Expr &expr, LocalInfo &info) {

@@ -76,6 +76,10 @@ struct StructSlotResolutionAdapters {
   ResolveStructSlotLayoutFn resolveStructSlotLayout;
   ResolveStructFieldSlotFn resolveStructFieldSlot;
 };
+struct StructLayoutResolutionAdapters {
+  StructArrayInfoAdapters structArrayInfo;
+  StructSlotResolutionAdapters structSlotResolution;
+};
 using CollectStructLayoutFieldsFn =
     std::function<bool(const std::string &, std::vector<StructLayoutFieldInfo> &)>;
 using ResolveDefinitionNamespacePrefixByPathFn =
@@ -229,6 +233,12 @@ StructSlotResolutionAdapters makeStructSlotResolutionAdapters(
     std::unordered_set<std::string> &layoutStack,
     std::string &error);
 StructSlotResolutionAdapters makeStructSlotResolutionAdaptersWithOwnedState(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    std::string &error);
+StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotState(
     const StructLayoutFieldIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
