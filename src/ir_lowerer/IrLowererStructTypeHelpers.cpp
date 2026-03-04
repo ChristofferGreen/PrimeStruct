@@ -16,6 +16,15 @@ std::string joinTemplateArgsText(const std::vector<std::string> &args) {
   return out;
 }
 
+StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  StructTypeResolutionAdapters adapters;
+  adapters.resolveStructTypeName = makeResolveStructTypePathFromScope(structNames, importAliases);
+  adapters.applyStructValueInfo = makeApplyStructValueInfoFromBinding(adapters.resolveStructTypeName);
+  return adapters;
+}
+
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {

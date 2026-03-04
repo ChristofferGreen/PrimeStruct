@@ -1501,6 +1501,27 @@ TEST_CASE("ir lowerer struct type helpers build struct value info applier") {
   CHECK(info.structTypeName == "/pkg/Foo");
 }
 
+TEST_CASE("ir lowerer struct type helpers build bundled struct-type resolution adapters") {
+  const std::unordered_set<std::string> structNames = {"/pkg/Foo"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"Foo", "/pkg/Foo"}};
+  auto adapters = primec::ir_lowerer::makeStructTypeResolutionAdapters(structNames, importAliases);
+
+  std::string resolved;
+  REQUIRE(adapters.resolveStructTypeName("Foo", "/pkg", resolved));
+  CHECK(resolved == "/pkg/Foo");
+
+  primec::Expr typedBinding;
+  typedBinding.namespacePrefix = "/pkg";
+  primec::Transform typed;
+  typed.name = "Foo";
+  typedBinding.transforms.push_back(typed);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  adapters.applyStructValueInfo(typedBinding, info);
+  CHECK(info.structTypeName == "/pkg/Foo");
+}
+
 TEST_CASE("ir lowerer struct type helpers skip unsupported struct value paths") {
   auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
 

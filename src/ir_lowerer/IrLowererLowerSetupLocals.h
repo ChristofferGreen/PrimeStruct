@@ -85,7 +85,8 @@
   auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
   auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
 
-  auto resolveStructTypeName = ir_lowerer::makeResolveStructTypePathFromScope(structNames, importAliases);
+  const auto structTypeResolutionAdapters = ir_lowerer::makeStructTypeResolutionAdapters(structNames, importAliases);
+  auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
 
   auto resolveUninitializedTypeInfo = ir_lowerer::makeResolveUninitializedTypeInfo(resolveStructTypeName, error);
 
@@ -140,7 +141,7 @@
   auto resolveUninitializedStorage = ir_lowerer::makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
       uninitializedFieldBindingIndex, defMap, resolveUninitializedTypeInfo, resolveStructFieldSlot, error);
 
-  auto applyStructValueInfo = ir_lowerer::makeApplyStructValueInfoFromBinding(resolveStructTypeName);
+  auto applyStructValueInfo = structTypeResolutionAdapters.applyStructValueInfo;
 
   auto inferStructExprPath = ir_lowerer::makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       defMap, resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, resolveStructFieldSlot);

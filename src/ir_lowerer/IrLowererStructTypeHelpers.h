@@ -36,6 +36,11 @@ using ApplyStructArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using ApplyStructValueInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using CollectStructArrayFieldsFn = std::function<bool(const std::string &, std::vector<StructArrayFieldInfo> &)>;
 
+struct StructTypeResolutionAdapters {
+  ResolveStructTypeNameFn resolveStructTypeName;
+  ApplyStructValueInfoFn applyStructValueInfo;
+};
+
 struct StructSlotFieldInfo {
   std::string name;
   int32_t slotOffset = -1;
@@ -75,6 +80,9 @@ using EnumerateStructLayoutFieldsFn =
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
+StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases);
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);
