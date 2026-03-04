@@ -2617,6 +2617,50 @@ TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
   CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Float64) == IrOpcode::CmpEqF64);
 }
 
+TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Result = primec::ir_lowerer::MapLookupStringKeyResult;
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Name;
+  keyExpr.name = "k";
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  int32_t stringIndex = -1;
+
+  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+            Kind::Int32,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return true; },
+            stringIndex,
+            error) == Result::NotHandled);
+
+  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+            Kind::String,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            stringIndex,
+            error) == Result::Error);
+  CHECK(error == "native backend requires map lookup key to be string literal or binding backed by literals");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryResolveMapLookupStringKey(
+            Kind::String,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &indexOut, size_t &lengthOut) {
+              indexOut = 17;
+              lengthOut = 3;
+              return true;
+            },
+            stringIndex,
+            error) == Result::Resolved);
+  CHECK(stringIndex == 17);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

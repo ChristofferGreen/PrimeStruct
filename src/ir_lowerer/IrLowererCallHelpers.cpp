@@ -306,6 +306,24 @@ IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind) {
   return IrOpcode::CmpEqI32;
 }
 
+MapLookupStringKeyResult tryResolveMapLookupStringKey(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    int32_t &stringIndexOut,
+    std::string &error) {
+  if (mapKeyKind != LocalInfo::ValueKind::String) {
+    return MapLookupStringKeyResult::NotHandled;
+  }
+  size_t length = 0;
+  if (!resolveStringTableTarget(lookupKeyExpr, localsIn, stringIndexOut, length)) {
+    error = "native backend requires map lookup key to be string literal or binding backed by literals";
+    return MapLookupStringKeyResult::Error;
+  }
+  return MapLookupStringKeyResult::Resolved;
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {

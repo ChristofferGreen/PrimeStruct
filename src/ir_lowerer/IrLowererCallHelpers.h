@@ -88,6 +88,11 @@ struct MapAccessTargetInfo {
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
 };
+enum class MapLookupStringKeyResult {
+  NotHandled,
+  Resolved,
+  Error,
+};
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,
@@ -112,6 +117,13 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
+MapLookupStringKeyResult tryResolveMapLookupStringKey(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    int32_t &stringIndexOut,
+    std::string &error);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);
