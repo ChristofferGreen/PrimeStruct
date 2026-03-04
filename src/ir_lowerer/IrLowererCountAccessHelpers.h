@@ -7,6 +7,7 @@
 
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
+#include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
 
@@ -32,6 +33,11 @@ enum class StringCountCallEmitResult {
   Emitted,
   Error,
 };
+enum class CountAccessCallEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 
 bool resolveEntryArgsParameter(const Definition &entryDef,
                                bool &hasEntryArgsOut,
@@ -53,6 +59,17 @@ StringCountCallEmitResult tryEmitStringCountCall(
     const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<void(int32_t)> &emitPushI32,
+    std::string &error);
+CountAccessCallEmitResult tryEmitCountAccessCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
 
 } // namespace primec::ir_lowerer

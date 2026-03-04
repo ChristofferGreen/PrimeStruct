@@ -782,31 +782,20 @@
             return false;
           }
         }
-        if (isArrayCountCall(expr, localsIn)) {
-          if (isEntryArgsName(expr.args.front(), localsIn)) {
-            function.instructions.push_back({IrOpcode::PushArgc, 0});
-            return true;
-          }
-          if (!emitExpr(expr.args.front(), localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-          return true;
-        }
-        if (isVectorCapacityCall(expr, localsIn)) {
-          if (!emitExpr(expr.args.front(), localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
-          function.instructions.push_back({IrOpcode::AddI64, 0});
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-          return true;
-        }
-        const auto stringCountResult = ir_lowerer::tryEmitStringCountCall(
+        const auto countAccessResult = ir_lowerer::tryEmitCountAccessCall(
             expr,
             localsIn,
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return isArrayCountCall(callExpr, localMap);
+            },
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return isVectorCapacityCall(callExpr, localMap);
+            },
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return isStringCountCall(callExpr, localMap);
+            },
+            [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
+              return isEntryArgsName(targetExpr, localMap);
             },
             [&](const Expr &targetExpr,
                 const ir_lowerer::LocalMap &localMap,
@@ -814,14 +803,15 @@
                 size_t &lengthOut) {
               return resolveStringTableTarget(targetExpr, localMap, stringIndexOut, lengthOut);
             },
-            [&](int32_t length) {
-              function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(length)});
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return emitExpr(valueExpr, localMap);
             },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             error);
-        if (stringCountResult == ir_lowerer::StringCountCallEmitResult::Emitted) {
+        if (countAccessResult == ir_lowerer::CountAccessCallEmitResult::Emitted) {
           return true;
         }
-        if (stringCountResult == ir_lowerer::StringCountCallEmitResult::Error) {
+        if (countAccessResult == ir_lowerer::CountAccessCallEmitResult::Error) {
           return false;
         }
         const auto unsupportedCallResult = ir_lowerer::emitUnsupportedNativeCallDiagnostic(

@@ -179,4 +179,54 @@ StringCountCallEmitResult tryEmitStringCountCall(
   return StringCountCallEmitResult::Emitted;
 }
 
+CountAccessCallEmitResult tryEmitCountAccessCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsNameFn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  if (isArrayCountCallFn(expr, localsIn)) {
+    if (isEntryArgsNameFn(expr.args.front(), localsIn)) {
+      emitInstruction(IrOpcode::PushArgc, 0);
+      return CountAccessCallEmitResult::Emitted;
+    }
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
+  if (isVectorCapacityCallFn(expr, localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
+  const auto stringCountResult = tryEmitStringCountCall(
+      expr,
+      localsIn,
+      isStringCountCallFn,
+      resolveStringTableTarget,
+      [&](int32_t length) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(length)); },
+      error);
+  if (stringCountResult == StringCountCallEmitResult::Error) {
+    return CountAccessCallEmitResult::Error;
+  }
+  if (stringCountResult == StringCountCallEmitResult::Emitted) {
+    return CountAccessCallEmitResult::Emitted;
+  }
+
+  return CountAccessCallEmitResult::NotHandled;
+}
+
 } // namespace primec::ir_lowerer
