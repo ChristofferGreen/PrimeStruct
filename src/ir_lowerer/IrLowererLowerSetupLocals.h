@@ -48,13 +48,14 @@
   if (!ir_lowerer::resolveEntryArgsParameter(*entryDef, hasEntryArgs, entryArgsName, error)) {
     return false;
   }
-  auto isEntryArgsName = ir_lowerer::makeIsEntryArgsName(hasEntryArgs, entryArgsName);
-  auto isArrayCountCall = ir_lowerer::makeIsArrayCountCall(hasEntryArgs, entryArgsName);
-  auto isVectorCapacityCall = ir_lowerer::makeIsVectorCapacityCall();
+  const auto countAccessClassifiers = ir_lowerer::makeCountAccessClassifiers(hasEntryArgs, entryArgsName);
+  auto isEntryArgsName = countAccessClassifiers.isEntryArgsName;
+  auto isArrayCountCall = countAccessClassifiers.isArrayCountCall;
+  auto isVectorCapacityCall = countAccessClassifiers.isVectorCapacityCall;
 
   auto resolveStringTableTarget = ir_lowerer::makeResolveStringTableTarget(stringTable, internString, error);
 
-  auto isStringCountCall = ir_lowerer::makeIsStringCountCall();
+  auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
   auto resolveExprPath = ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
   auto isTailCallCandidate = ir_lowerer::makeIsTailCallCandidate(defMap, resolveExprPath);

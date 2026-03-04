@@ -32,6 +32,15 @@ bool resolveEntryArgsParameter(const Definition &entryDef,
   return true;
 }
 
+CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName) {
+  CountAccessClassifiers classifiers;
+  classifiers.isEntryArgsName = makeIsEntryArgsName(hasEntryArgs, entryArgsName);
+  classifiers.isArrayCountCall = makeIsArrayCountCall(hasEntryArgs, entryArgsName);
+  classifiers.isVectorCapacityCall = makeIsVectorCapacityCall();
+  classifiers.isStringCountCall = makeIsStringCountCall();
+  return classifiers;
+}
+
 IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName) {
   return [=](const Expr &expr, const LocalMap &localsIn) {
     return isEntryArgsName(expr, localsIn, hasEntryArgs, entryArgsName);

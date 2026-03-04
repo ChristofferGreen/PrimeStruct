@@ -3191,6 +3191,35 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   CHECK(isStringCountCall(stringCount, locals));
 }
 
+TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
+  primec::ir_lowerer::LocalMap locals;
+  auto classifiers = primec::ir_lowerer::makeCountAccessClassifiers(true, "argv");
+
+  primec::Expr entryName;
+  entryName.kind = primec::Expr::Kind::Name;
+  entryName.name = "argv";
+  CHECK(classifiers.isEntryArgsName(entryName, locals));
+
+  primec::Expr countEntry;
+  countEntry.kind = primec::Expr::Kind::Call;
+  countEntry.name = "count";
+  countEntry.args = {entryName};
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
+
+  primec::ir_lowerer::LocalInfo vecInfo;
+  vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", vecInfo);
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args = {valuesName};
+  CHECK(classifiers.isVectorCapacityCall(capacityCall, locals));
+  CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
+}
+
 TEST_CASE("ir lowerer string literal helper interns string table values") {
   std::vector<std::string> stringTable;
   CHECK(primec::ir_lowerer::internLowererString("hello", stringTable) == 0);

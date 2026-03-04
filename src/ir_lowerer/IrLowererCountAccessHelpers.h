@@ -13,10 +13,18 @@ using IsArrayCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsVectorCapacityCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsStringCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 
+struct CountAccessClassifiers {
+  IsEntryArgsNameFn isEntryArgsName;
+  IsArrayCountCallFn isArrayCountCall;
+  IsVectorCapacityCallFn isVectorCapacityCall;
+  IsStringCountCallFn isStringCountCall;
+};
+
 bool resolveEntryArgsParameter(const Definition &entryDef,
                                bool &hasEntryArgsOut,
                                std::string &entryArgsNameOut,
                                std::string &error);
+CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::string &entryArgsName);
 IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName);
 IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName);
 IsVectorCapacityCallFn makeIsVectorCapacityCall();
