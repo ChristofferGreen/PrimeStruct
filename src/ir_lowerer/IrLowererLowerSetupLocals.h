@@ -88,8 +88,6 @@
   const auto structTypeResolutionAdapters = ir_lowerer::makeStructTypeResolutionAdapters(structNames, importAliases);
   auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
 
-  auto resolveUninitializedTypeInfo = ir_lowerer::makeResolveUninitializedTypeInfo(resolveStructTypeName, error);
-
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
   ir_lowerer::StructLayoutFieldIndex structLayoutFieldIndex = ir_lowerer::buildStructLayoutFieldIndex(
@@ -138,8 +136,10 @@
   ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex =
       ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(structLayoutFieldIndex);
 
-  auto resolveUninitializedStorage = ir_lowerer::makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
-      uninitializedFieldBindingIndex, defMap, resolveUninitializedTypeInfo, resolveStructFieldSlot, error);
+  const auto uninitializedResolutionAdapters = ir_lowerer::makeUninitializedResolutionAdapters(
+      resolveStructTypeName, uninitializedFieldBindingIndex, defMap, resolveStructFieldSlot, error);
+  auto resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
+  auto resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
 
   auto applyStructValueInfo = structTypeResolutionAdapters.applyStructValueInfo;
 

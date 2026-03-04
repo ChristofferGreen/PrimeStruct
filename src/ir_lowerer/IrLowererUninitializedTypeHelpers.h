@@ -77,6 +77,17 @@ struct UninitializedLocalStorageAccessInfo {
 using ResolveUninitializedStorageAccessFromFieldIndexFn =
     std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
 
+struct UninitializedResolutionAdapters {
+  ResolveUninitializedFieldTypeInfoFn resolveUninitializedTypeInfo;
+  ResolveUninitializedStorageAccessFromFieldIndexFn resolveUninitializedStorage;
+};
+
+UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
+    const ResolveStructTypePathFn &resolveStructTypePath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    std::string &error);
 ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
     const ResolveStructTypePathFn &resolveStructTypePath,
     std::string &error);
