@@ -35,6 +35,12 @@ bool validateActiveEffects(const std::vector<Transform> &transforms,
                            const std::vector<std::string> &entryDefaultEffects,
                            std::string &error);
 
+bool validateProgramEffects(const Program &program,
+                            const std::string &entryPath,
+                            const std::vector<std::string> &defaultEffects,
+                            const std::vector<std::string> &entryDefaultEffects,
+                            std::string &error);
+
 bool resolveEffectMask(const std::vector<Transform> &transforms,
                        bool isEntry,
                        const std::vector<std::string> &defaultEffects,

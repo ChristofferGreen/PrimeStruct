@@ -58,6 +58,74 @@ TEST_CASE("ir lowerer effects unit rejects software numeric envelopes") {
   CHECK(error == "native backend does not support software numeric types: decimal");
 }
 
+TEST_CASE("ir lowerer effects unit validates program effect traversal") {
+  auto makeEffectsTransform = [](const std::vector<std::string> &effects) {
+    primec::Transform transform;
+    transform.name = "effects";
+    transform.arguments = effects;
+    return transform;
+  };
+
+  primec::Program program;
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.transforms.push_back(makeEffectsTransform({"io_out"}));
+
+  primec::Expr parameterExpr;
+  parameterExpr.transforms.push_back(makeEffectsTransform({"io_err"}));
+  primec::Expr nestedParameterArg;
+  nestedParameterArg.transforms.push_back(makeEffectsTransform({"heap_alloc"}));
+  parameterExpr.args.push_back(nestedParameterArg);
+  entryDef.parameters.push_back(parameterExpr);
+
+  primec::Expr statementExpr;
+  primec::Expr nestedBodyArg;
+  nestedBodyArg.transforms.push_back(makeEffectsTransform({"file_write"}));
+  statementExpr.bodyArguments.push_back(nestedBodyArg);
+  entryDef.statements.push_back(statementExpr);
+
+  primec::Expr returnExpr;
+  returnExpr.transforms.push_back(makeEffectsTransform({"gpu_dispatch"}));
+  entryDef.returnExpr = returnExpr;
+  program.definitions.push_back(entryDef);
+
+  primec::Execution execution;
+  execution.fullPath = "/run";
+  execution.transforms.push_back(makeEffectsTransform({"pathspace_notify"}));
+  primec::Expr execArg;
+  execArg.transforms.push_back(makeEffectsTransform({"pathspace_insert"}));
+  execution.arguments.push_back(execArg);
+  primec::Expr execBodyArg;
+  execBodyArg.transforms.push_back(makeEffectsTransform({"pathspace_take"}));
+  execution.bodyArguments.push_back(execBodyArg);
+  program.executions.push_back(execution);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateProgramEffects(program, "/main", {}, {}, error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer effects unit rejects unsupported nested expression effects") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Expr statementExpr;
+  primec::Expr nestedArg;
+  primec::Transform badEffects;
+  badEffects.name = "effects";
+  badEffects.arguments = {"unsupported_effect"};
+  nestedArg.transforms.push_back(badEffects);
+  statementExpr.args.push_back(nestedArg);
+  entryDef.statements.push_back(statementExpr);
+  program.definitions.push_back(entryDef);
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateProgramEffects(program, "/main", {}, {}, error));
+  CHECK(error == "native backend does not support effect: unsupported_effect on /main");
+}
+
 TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
   primec::Definition callee;
   callee.fullPath = "/callee";

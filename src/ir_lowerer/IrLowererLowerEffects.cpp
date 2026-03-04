@@ -304,6 +304,67 @@ bool validateActiveEffects(const std::vector<Transform> &transforms,
   return true;
 }
 
+bool validateProgramEffects(const Program &program,
+                            const std::string &entryPath,
+                            const std::vector<std::string> &defaultEffects,
+                            const std::vector<std::string> &entryDefaultEffects,
+                            std::string &error) {
+  const auto validateExprEffects = [&](const auto &self, const Expr &expr, const std::string &context) -> bool {
+    if (!validateEffectsTransforms(expr.transforms, context, error)) {
+      return false;
+    }
+    for (const auto &arg : expr.args) {
+      if (!self(self, arg, context)) {
+        return false;
+      }
+    }
+    for (const auto &bodyArg : expr.bodyArguments) {
+      if (!self(self, bodyArg, context)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  for (const auto &def : program.definitions) {
+    if (!validateActiveEffects(def.transforms, def.fullPath, def.fullPath == entryPath, defaultEffects, entryDefaultEffects,
+                               error)) {
+      return false;
+    }
+    for (const auto &param : def.parameters) {
+      if (!validateExprEffects(validateExprEffects, param, def.fullPath)) {
+        return false;
+      }
+    }
+    for (const auto &stmt : def.statements) {
+      if (!validateExprEffects(validateExprEffects, stmt, def.fullPath)) {
+        return false;
+      }
+    }
+    if (def.returnExpr.has_value() && !validateExprEffects(validateExprEffects, *def.returnExpr, def.fullPath)) {
+      return false;
+    }
+  }
+
+  for (const auto &exec : program.executions) {
+    if (!validateActiveEffects(exec.transforms, exec.fullPath, false, defaultEffects, entryDefaultEffects, error)) {
+      return false;
+    }
+    for (const auto &arg : exec.arguments) {
+      if (!validateExprEffects(validateExprEffects, arg, exec.fullPath)) {
+        return false;
+      }
+    }
+    for (const auto &bodyArg : exec.bodyArguments) {
+      if (!validateExprEffects(validateExprEffects, bodyArg, exec.fullPath)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 bool resolveEffectMask(const std::vector<Transform> &transforms,
                        bool isEntry,
                        const std::vector<std::string> &defaultEffects,
