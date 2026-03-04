@@ -3002,6 +3002,73 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop search scaffold") {
   CHECK(instructions[27].imm == 5);
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup access epilogue") {
+  std::vector<primec::Instruction> instructions;
+  int keyNotFoundCalls = 0;
+  primec::ir_lowerer::emitMapLookupAccessEpilogue(
+      "at",
+      5,
+      6,
+      7,
+      [&]() { ++keyNotFoundCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
+  CHECK(keyNotFoundCalls == 1);
+  REQUIRE(instructions.size() == 14);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 6);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 7);
+  CHECK(instructions[2].op == primec::IrOpcode::CmpEqI32);
+  CHECK(instructions[3].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[3].imm == 4);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 5);
+  CHECK(instructions[5].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[5].imm == 6);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[6].imm == 2);
+  CHECK(instructions[7].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[8].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[8].imm == 2);
+  CHECK(instructions[9].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[10].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[10].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[11].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[12].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[13].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  keyNotFoundCalls = 0;
+  primec::ir_lowerer::emitMapLookupAccessEpilogue(
+      "find",
+      5,
+      6,
+      7,
+      [&]() { ++keyNotFoundCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
+  CHECK(keyNotFoundCalls == 0);
+  REQUIRE(instructions.size() == 10);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 5);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 6);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 2);
+  CHECK(instructions[3].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[4].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[4].imm == 2);
+  CHECK(instructions[5].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[6].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[7].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[8].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[9].op == primec::IrOpcode::LoadIndirect);
+}
+
 TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
   std::vector<primec::Instruction> instructions;
   int nextLocal = 30;

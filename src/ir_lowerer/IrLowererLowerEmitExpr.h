@@ -971,20 +971,15 @@
             const int32_t countLocal = loopLocals.countLocal;
             const int32_t indexLocal = loopLocals.indexLocal;
 
-            if (accessName == "at") {
-              ir_lowerer::emitMapLookupAtKeyNotFoundGuard(
-                  indexLocal,
-                  countLocal,
-                  [&]() { emitMapKeyNotFound(); },
-                  [&]() { return function.instructions.size(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
-            }
-
-            ir_lowerer::emitMapLookupValueLoad(
+            ir_lowerer::emitMapLookupAccessEpilogue(
+                accessName,
                 ptrLocal,
                 indexLocal,
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+                countLocal,
+                [&]() { emitMapKeyNotFound(); },
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
             return true;
           }
 

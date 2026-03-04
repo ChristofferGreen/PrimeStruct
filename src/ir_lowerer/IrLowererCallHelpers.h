@@ -187,6 +187,15 @@ MapLookupLoopLocals emitMapLookupLoopSearchScaffold(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+void emitMapLookupAccessEpilogue(
+    const std::string &accessName,
+    int32_t ptrLocal,
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 MapLookupLoopLocals emitMapLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,
