@@ -758,58 +758,21 @@
               [&]() { return allocTempLocal(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
         }
-        const auto firstCountFallbackResult = ir_lowerer::tryEmitNonMethodCountFallback(
+        const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallWithCountFallbacks(
             expr,
             [&](const Expr &callExpr) { return isArrayCountCall(callExpr, localsIn); },
             [&](const Expr &callExpr) { return isStringCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return isVectorCapacityCall(callExpr, localsIn); },
             [&](const Expr &callExpr) { return resolveMethodCallDefinition(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
             [&](const Expr &callExpr, const Definition &callee) {
               return emitInlineDefinitionCall(callExpr, callee, localsIn, true);
             },
             error);
-        if (firstCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Emitted) {
+        if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Emitted) {
           return true;
         }
-        if (firstCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Error) {
-          return false;
-        }
-        if (expr.isMethodCall && !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn) &&
-            !isVectorCapacityCall(expr, localsIn)) {
-          const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
-          const auto emitResult = ir_lowerer::emitResolvedInlineDefinitionCall(
-              expr,
-              callee,
-              [&](const Expr &callExpr, const Definition &resolvedCallee) {
-                return emitInlineDefinitionCall(callExpr, resolvedCallee, localsIn, true);
-              },
-              error);
-          if (emitResult == ir_lowerer::ResolvedInlineCallResult::NoCallee) {
-            return false;
-          }
-          return emitResult == ir_lowerer::ResolvedInlineCallResult::Emitted;
-        }
-        if (const Definition *callee = resolveDefinitionCall(expr)) {
-          return ir_lowerer::emitResolvedInlineDefinitionCall(
-                     expr,
-                     callee,
-                     [&](const Expr &callExpr, const Definition &resolvedCallee) {
-                       return emitInlineDefinitionCall(callExpr, resolvedCallee, localsIn, true);
-                     },
-                     error) == ir_lowerer::ResolvedInlineCallResult::Emitted;
-        }
-        const auto secondCountFallbackResult = ir_lowerer::tryEmitNonMethodCountFallback(
-            expr,
-            [&](const Expr &callExpr) { return isArrayCountCall(callExpr, localsIn); },
-            [&](const Expr &callExpr) { return isStringCountCall(callExpr, localsIn); },
-            [&](const Expr &callExpr) { return resolveMethodCallDefinition(callExpr, localsIn); },
-            [&](const Expr &callExpr, const Definition &callee) {
-              return emitInlineDefinitionCall(callExpr, callee, localsIn, true);
-            },
-            error);
-        if (secondCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Emitted) {
-          return true;
-        }
-        if (secondCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Error) {
+        if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
           return false;
         }
         std::string mathName;

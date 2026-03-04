@@ -135,6 +135,67 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
   return ResolvedInlineCallResult::Emitted;
 }
 
+InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
+    const Expr &expr,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall,
+    const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error) {
+  const auto firstCountFallbackResult = tryEmitNonMethodCountFallback(
+      expr,
+      isArrayCountCall,
+      isStringCountCall,
+      resolveMethodCallDefinition,
+      emitInlineDefinitionCall,
+      error);
+  if (firstCountFallbackResult == CountMethodFallbackResult::Emitted) {
+    return InlineCallDispatchResult::Emitted;
+  }
+  if (firstCountFallbackResult == CountMethodFallbackResult::Error) {
+    return InlineCallDispatchResult::Error;
+  }
+
+  if (expr.isMethodCall && !isArrayCountCall(expr) && !isStringCountCall(expr) &&
+      !isVectorCapacityCall(expr)) {
+    const Definition *callee = resolveMethodCallDefinition(expr);
+    const auto emitResult = emitResolvedInlineDefinitionCall(
+        expr, callee, emitInlineDefinitionCall, error);
+    if (emitResult == ResolvedInlineCallResult::NoCallee) {
+      return InlineCallDispatchResult::Error;
+    }
+    return emitResult == ResolvedInlineCallResult::Emitted
+               ? InlineCallDispatchResult::Emitted
+               : InlineCallDispatchResult::Error;
+  }
+
+  if (const Definition *callee = resolveDefinitionCall(expr)) {
+    const auto emitResult = emitResolvedInlineDefinitionCall(
+        expr, callee, emitInlineDefinitionCall, error);
+    return emitResult == ResolvedInlineCallResult::Emitted
+               ? InlineCallDispatchResult::Emitted
+               : InlineCallDispatchResult::Error;
+  }
+
+  const auto secondCountFallbackResult = tryEmitNonMethodCountFallback(
+      expr,
+      isArrayCountCall,
+      isStringCountCall,
+      resolveMethodCallDefinition,
+      emitInlineDefinitionCall,
+      error);
+  if (secondCountFallbackResult == CountMethodFallbackResult::Emitted) {
+    return InlineCallDispatchResult::Emitted;
+  }
+  if (secondCountFallbackResult == CountMethodFallbackResult::Error) {
+    return InlineCallDispatchResult::Error;
+  }
+
+  return InlineCallDispatchResult::NotHandled;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

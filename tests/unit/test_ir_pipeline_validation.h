@@ -2337,6 +2337,145 @@ TEST_CASE("ir lowerer call helpers emit resolved inline definition call") {
   CHECK(error == "emit failed");
 }
 
+TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Definition callee;
+  callee.fullPath = "/pkg/helper";
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  primec::Expr countArg;
+  countArg.kind = primec::Expr::Kind::Name;
+  countArg.name = "items";
+  countCall.args.push_back(countArg);
+
+  std::string error;
+
+  int firstResolveMethodCalls = 0;
+  int firstResolveDefinitionCalls = 0;
+  int firstEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++firstResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++firstResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++firstEmitCalls;
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(firstResolveMethodCalls == 1);
+  CHECK(firstResolveDefinitionCalls == 0);
+  CHECK(firstEmitCalls == 1);
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "helper";
+  methodCall.isMethodCall = true;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            methodCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::Error);
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "helper";
+  int directEmitCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            directCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return &callee; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++directEmitCalls;
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(directEmitCalls == 1);
+
+  int secondResolveMethodCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++secondResolveMethodCalls;
+              return secondResolveMethodCalls == 1 ? nullptr : &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &, const primec::Definition &) { return true; },
+            error) == Result::Emitted);
+  CHECK(secondResolveMethodCalls == 2);
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            directCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return &callee; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              error = "emit failed";
+              return false;
+            },
+            error) == Result::Error);
+  CHECK(error == "emit failed");
+
+  primec::Expr plainCall;
+  plainCall.kind = primec::Expr::Kind::Call;
+  plainCall.name = "plain";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            plainCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

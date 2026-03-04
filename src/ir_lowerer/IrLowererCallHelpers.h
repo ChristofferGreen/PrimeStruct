@@ -72,9 +72,23 @@ enum class ResolvedInlineCallResult {
   Emitted,
   Error,
 };
+enum class InlineCallDispatchResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error);
+InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
+    const Expr &expr,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall,
+    const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
