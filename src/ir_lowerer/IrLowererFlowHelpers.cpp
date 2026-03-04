@@ -299,4 +299,32 @@ bool resolveBufferLoadInfo(
   return true;
 }
 
+bool emitBufferLoadCall(const Expr &expr,
+                        LocalInfo::ValueKind indexKind,
+                        const std::function<bool(const Expr &)> &emitExpr,
+                        const std::function<int32_t()> &allocTempLocal,
+                        const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  const int32_t ptrLocal = allocTempLocal();
+  if (!emitExpr(expr.args[0])) {
+    return false;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
+
+  const int32_t indexLocal = allocTempLocal();
+  if (!emitExpr(expr.args[1])) {
+    return false;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(pushOneForIndex(indexKind), 1);
+  emitInstruction(addForIndex(indexKind), 0);
+  emitInstruction(pushOneForIndex(indexKind), IrSlotBytesI32);
+  emitInstruction(mulForIndex(indexKind), 0);
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+  return true;
+}
+
 } // namespace primec::ir_lowerer

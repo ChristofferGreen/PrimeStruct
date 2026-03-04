@@ -10246,6 +10246,71 @@ TEST_CASE("ir lowerer flow helpers resolve buffer load info") {
   CHECK(error == "buffer_load requires integer index");
 }
 
+TEST_CASE("ir lowerer flow helpers emit buffer load calls") {
+  primec::Expr bufferLoadExpr;
+  bufferLoadExpr.kind = primec::Expr::Kind::Call;
+  bufferLoadExpr.name = "buffer_load";
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "buf";
+  bufferLoadExpr.args.push_back(targetExpr);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 2;
+  bufferLoadExpr.args.push_back(indexExpr);
+
+  std::vector<primec::IrInstruction> instructions;
+  int emitStep = 0;
+  int nextLocal = 40;
+  CHECK(primec::ir_lowerer::emitBufferLoadCall(
+      bufferLoadExpr,
+      primec::ir_lowerer::LocalInfo::ValueKind::Int32,
+      [&](const primec::Expr &) {
+        if (emitStep == 0) {
+          instructions.push_back({primec::IrOpcode::PushI64, 123});
+        } else {
+          instructions.push_back({primec::IrOpcode::PushI32, 7});
+        }
+        ++emitStep;
+        return true;
+      },
+      [&]() { return nextLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); }));
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 40);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 41);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[5].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[7].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[8].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[9].op == primec::IrOpcode::MulI32);
+  CHECK(instructions[10].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[11].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  emitStep = 0;
+  nextLocal = 10;
+  CHECK_FALSE(primec::ir_lowerer::emitBufferLoadCall(
+      bufferLoadExpr,
+      primec::ir_lowerer::LocalInfo::ValueKind::Int32,
+      [&](const primec::Expr &) {
+        ++emitStep;
+        return false;
+      },
+      [&]() { return nextLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); }));
+  CHECK(emitStep == 1);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

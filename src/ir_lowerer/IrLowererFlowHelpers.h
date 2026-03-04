@@ -99,5 +99,10 @@ bool resolveBufferLoadInfo(
     const std::function<LocalInfo::ValueKind(const Expr &)> &inferExprKind,
     BufferLoadInfo &out,
     std::string &error);
+bool emitBufferLoadCall(const Expr &expr,
+                        LocalInfo::ValueKind indexKind,
+                        const std::function<bool(const Expr &)> &emitExpr,
+                        const std::function<int32_t()> &allocTempLocal,
+                        const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 
 } // namespace primec::ir_lowerer

@@ -751,25 +751,12 @@
                   error)) {
             return false;
           }
-          const int32_t ptrLocal = allocTempLocal();
-          if (!emitExpr(expr.args[0], localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-          const int32_t indexLocal = allocTempLocal();
-          if (!emitExpr(expr.args[1], localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({pushOneForIndex(loadInfo.indexKind), 1});
-          function.instructions.push_back({addForIndex(loadInfo.indexKind), 0});
-          function.instructions.push_back({pushOneForIndex(loadInfo.indexKind), IrSlotBytesI32});
-          function.instructions.push_back({mulForIndex(loadInfo.indexKind), 0});
-          function.instructions.push_back({IrOpcode::AddI64, 0});
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-          return true;
+          return ir_lowerer::emitBufferLoadCall(
+              expr,
+              loadInfo.indexKind,
+              [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
+              [&]() { return allocTempLocal(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
         }
         if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
             !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
