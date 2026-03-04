@@ -13,6 +13,7 @@
 #include "primec/TransformRegistry.h"
 #include "primec/Vm.h"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <filesystem>
@@ -313,41 +314,52 @@ int emitFailure(const primec::Options &options,
                 const std::string &message,
                 int exitCode,
                 const std::vector<std::string> &notes = {},
-                const primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
-  if (options.emitDiagnostics) {
-    std::vector<primec::DiagnosticRecord> diagnostics;
-    if (diagnosticInfo != nullptr && !diagnosticInfo->records.empty()) {
-      diagnostics.reserve(diagnosticInfo->records.size());
-      for (const auto &recordInfo : diagnosticInfo->records) {
-        std::string diagnosticMessage = recordInfo.normalizedMessage.empty() ? message : recordInfo.normalizedMessage;
-        const primec::DiagnosticSpan *primarySpan = nullptr;
-        if (recordInfo.hasPrimarySpan) {
-          primarySpan = &recordInfo.primarySpan;
-        }
-        diagnostics.push_back(primec::makeDiagnosticRecord(
-            code, diagnosticMessage, options.inputPath, notes, primarySpan, recordInfo.relatedSpans));
-      }
-    } else {
-      std::string diagnosticMessage = message;
-      primec::DiagnosticSpan primarySpanStorage;
+                const primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr,
+                const std::string *sourceText = nullptr) {
+  std::vector<primec::DiagnosticRecord> diagnostics;
+  if (diagnosticInfo != nullptr && !diagnosticInfo->records.empty()) {
+    diagnostics.reserve(diagnosticInfo->records.size());
+    for (const auto &recordInfo : diagnosticInfo->records) {
+      std::string diagnosticMessage = recordInfo.normalizedMessage.empty() ? message : recordInfo.normalizedMessage;
       const primec::DiagnosticSpan *primarySpan = nullptr;
-      std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
-      if (diagnosticInfo != nullptr) {
-        if (!diagnosticInfo->normalizedMessage.empty()) {
-          diagnosticMessage = diagnosticInfo->normalizedMessage;
-        }
-        if (diagnosticInfo->hasPrimarySpan) {
-          primarySpanStorage = diagnosticInfo->primarySpan;
-          primarySpan = &primarySpanStorage;
-        }
-        relatedSpans = diagnosticInfo->relatedSpans;
+      if (recordInfo.hasPrimarySpan) {
+        primarySpan = &recordInfo.primarySpan;
       }
-      diagnostics.push_back(
-          primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans));
+      diagnostics.push_back(primec::makeDiagnosticRecord(
+          code, diagnosticMessage, options.inputPath, notes, primarySpan, recordInfo.relatedSpans));
     }
+  } else {
+    std::string diagnosticMessage = message;
+    primec::DiagnosticSpan primarySpanStorage;
+    const primec::DiagnosticSpan *primarySpan = nullptr;
+    std::vector<primec::DiagnosticRelatedSpan> relatedSpans;
+    if (diagnosticInfo != nullptr) {
+      if (!diagnosticInfo->normalizedMessage.empty()) {
+        diagnosticMessage = diagnosticInfo->normalizedMessage;
+      }
+      if (diagnosticInfo->hasPrimarySpan) {
+        primarySpanStorage = diagnosticInfo->primarySpan;
+        primarySpan = &primarySpanStorage;
+      }
+      relatedSpans = diagnosticInfo->relatedSpans;
+    }
+    diagnostics.push_back(
+        primec::makeDiagnosticRecord(code, diagnosticMessage, options.inputPath, notes, primarySpan, relatedSpans));
+  }
+
+  if (options.emitDiagnostics) {
     std::cerr << primec::encodeDiagnosticsJson(diagnostics) << "\n";
     return exitCode;
   }
+
+  const bool hasLocation = std::any_of(diagnostics.begin(), diagnostics.end(), [](const auto &record) {
+    return record.primarySpan.line > 0 && record.primarySpan.column > 0;
+  });
+  if (hasLocation) {
+    std::cerr << primec::formatDiagnosticsText(diagnostics, plainPrefix, sourceText);
+    return exitCode;
+  }
+
   std::cerr << plainPrefix << message << "\n";
   return exitCode;
 }
@@ -415,7 +427,8 @@ int main(int argc, char **argv) {
                            error,
                            2,
                            {"stage: parse"},
-                           &pipelineDiagnosticInfo);
+                           &pipelineDiagnosticInfo,
+                           &pipelineOutput.filteredSource);
       case primec::CompilePipelineErrorStage::UnsupportedDumpStage:
         return emitFailure(options,
                            primec::DiagnosticCode::UnsupportedDumpStage,
@@ -430,7 +443,8 @@ int main(int argc, char **argv) {
                            error,
                            2,
                            {"stage: semantic"},
-                           &pipelineDiagnosticInfo);
+                           &pipelineDiagnosticInfo,
+                           &pipelineOutput.filteredSource);
       default:
         return emitFailure(options,
                            primec::DiagnosticCode::EmitError,

@@ -305,7 +305,10 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main --default-effects=default 2> " +
       errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Semantic error: print_line_error requires io_err effect\n");
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Semantic error: print_line_error requires io_err effect") != std::string::npos);
+  CHECK(err.find(": error: Semantic error: print_line_error requires io_err effect") != std::string::npos);
+  CHECK(err.find("^") != std::string::npos);
 }
 
 TEST_CASE("default effects token enables vm output") {

@@ -418,8 +418,12 @@ main([array<string>] args) {
       (std::filesystem::temp_directory_path() / "primec_native_argv_binding_count_err.txt").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
+        std::string::npos);
+  CHECK(err.find(": error: Semantic error: entry argument strings are only supported in print calls or string "
+                 "bindings") != std::string::npos);
+  CHECK(err.find("^") != std::string::npos);
 }
 
 TEST_CASE("native argv string binding index fails") {
@@ -435,8 +439,12 @@ main([array<string>] args) {
       (std::filesystem::temp_directory_path() / "primec_native_argv_binding_index_err.txt").string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
+        std::string::npos);
+  CHECK(err.find(": error: Semantic error: entry argument strings are only supported in print calls or string "
+                 "bindings") != std::string::npos);
+  CHECK(err.find("^") != std::string::npos);
 }
 
 TEST_CASE("rejects native argv call argument unsafe") {
@@ -458,8 +466,12 @@ main([array<string>] args) {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) ==
-        "Semantic error: entry argument strings are only supported in print calls or string bindings\n");
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
+        std::string::npos);
+  CHECK(err.find(": error: Semantic error: entry argument strings are only supported in print calls or string "
+                 "bindings") != std::string::npos);
+  CHECK(err.find("^") != std::string::npos);
 }
 
 TEST_SUITE_END();

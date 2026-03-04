@@ -52,4 +52,12 @@ DiagnosticRecord makeDiagnosticRecord(DiagnosticCode code,
 
 std::string encodeDiagnosticsJson(const std::vector<DiagnosticRecord> &diagnostics);
 
+std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
+                                 const std::string &messagePrefix = {},
+                                 const std::string *sourceText = nullptr);
+
+std::string formatDiagnosticsText(const std::vector<DiagnosticRecord> &diagnostics,
+                                  const std::string &messagePrefix = {},
+                                  const std::string *sourceText = nullptr);
+
 } // namespace primec

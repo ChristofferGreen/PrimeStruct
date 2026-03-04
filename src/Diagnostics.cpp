@@ -98,6 +98,72 @@ void appendSpanJson(std::ostringstream &out, const DiagnosticSpan &span) {
       << ",\"end_line\":" << span.endLine << ",\"end_column\":" << span.endColumn << "}";
 }
 
+bool spanHasLocation(const DiagnosticSpan &span) {
+  return span.line > 0 && span.column > 0;
+}
+
+std::string spanFileText(const DiagnosticSpan &span) {
+  if (!span.file.empty()) {
+    return span.file;
+  }
+  return "<input>";
+}
+
+bool lineTextAt(const std::string &sourceText, int lineNumber, std::string &lineOut) {
+  if (lineNumber <= 0) {
+    return false;
+  }
+
+  int currentLine = 1;
+  size_t lineStart = 0;
+  for (size_t i = 0; i <= sourceText.size(); ++i) {
+    if (i < sourceText.size() && sourceText[i] != '\n') {
+      continue;
+    }
+    if (currentLine == lineNumber) {
+      size_t lineEnd = i;
+      if (lineEnd > lineStart && sourceText[lineEnd - 1] == '\r') {
+        --lineEnd;
+      }
+      lineOut = sourceText.substr(lineStart, lineEnd - lineStart);
+      return true;
+    }
+    ++currentLine;
+    lineStart = i + 1;
+  }
+
+  return false;
+}
+
+std::string caretMarkerForSpan(const DiagnosticSpan &span) {
+  const int column = span.column > 0 ? span.column : 1;
+  int endColumn = span.endColumn > 0 ? span.endColumn : column;
+  if (endColumn < column) {
+    endColumn = column;
+  }
+  const int squiggles = endColumn - column;
+
+  std::string marker(static_cast<size_t>(column - 1), ' ');
+  marker.push_back('^');
+  marker.append(static_cast<size_t>(squiggles), '~');
+  return marker;
+}
+
+void appendSpanSnippet(std::ostringstream &out, const DiagnosticSpan &span, const std::string *sourceText) {
+  if (!spanHasLocation(span) || sourceText == nullptr) {
+    return;
+  }
+
+  std::string lineText;
+  if (!lineTextAt(*sourceText, span.line, lineText)) {
+    return;
+  }
+
+  const std::string lineNumber = std::to_string(span.line);
+  out << " " << lineNumber << " | " << lineText << "\n";
+  out << " " << std::string(lineNumber.size(), ' ') << " | " << caretMarkerForSpan(span) << "\n";
+}
+
 } // namespace
 
 std::string diagnosticCodeString(DiagnosticCode code) {
@@ -208,6 +274,62 @@ std::string encodeDiagnosticsJson(const std::vector<DiagnosticRecord> &diagnosti
     out << "]}";
   }
   out << "]}";
+  return out.str();
+}
+
+std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
+                                 const std::string &messagePrefix,
+                                 const std::string *sourceText) {
+  std::ostringstream out;
+  const std::string severity = diagnostic.severity.empty() ? "error" : diagnostic.severity;
+  const std::string message = messagePrefix + diagnostic.message;
+
+  if (spanHasLocation(diagnostic.primarySpan)) {
+    out << spanFileText(diagnostic.primarySpan) << ":" << diagnostic.primarySpan.line << ":"
+        << diagnostic.primarySpan.column << ": " << severity << ": " << message;
+    if (!diagnostic.code.empty()) {
+      out << " [" << diagnostic.code << "]";
+    }
+    out << "\n";
+    appendSpanSnippet(out, diagnostic.primarySpan, sourceText);
+  } else {
+    out << message << "\n";
+  }
+
+  for (const auto &related : diagnostic.relatedSpans) {
+    if (spanHasLocation(related.span)) {
+      out << spanFileText(related.span) << ":" << related.span.line << ":" << related.span.column << ": note";
+      if (!related.label.empty()) {
+        out << ": " << related.label;
+      }
+      out << "\n";
+      appendSpanSnippet(out, related.span, sourceText);
+      continue;
+    }
+    if (!related.label.empty()) {
+      out << "note: " << related.label << "\n";
+    }
+  }
+
+  for (const auto &note : diagnostic.notes) {
+    if (!note.empty()) {
+      out << "note: " << note << "\n";
+    }
+  }
+
+  return out.str();
+}
+
+std::string formatDiagnosticsText(const std::vector<DiagnosticRecord> &diagnostics,
+                                  const std::string &messagePrefix,
+                                  const std::string *sourceText) {
+  std::ostringstream out;
+  for (size_t i = 0; i < diagnostics.size(); ++i) {
+    if (i != 0) {
+      out << "\n";
+    }
+    out << formatDiagnosticText(diagnostics[i], messagePrefix, sourceText);
+  }
   return out.str();
 }
 

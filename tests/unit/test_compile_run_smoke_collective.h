@@ -545,12 +545,18 @@ main() {
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runVmCmd) == 2);
-  CHECK(readFile(errPath) == "Semantic error: at requires map key type i32\n");
+  const std::string vmErr = readFile(errPath);
+  CHECK(vmErr.find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(vmErr.find(": error: Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(vmErr.find("^") != std::string::npos);
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileNativeCmd) == 2);
-  CHECK(readFile(errPath) == "Semantic error: at requires map key type i32\n");
+  const std::string nativeErr = readFile(errPath);
+  CHECK(nativeErr.find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(nativeErr.find(": error: Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(nativeErr.find("^") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs binding inference feeding method call") {

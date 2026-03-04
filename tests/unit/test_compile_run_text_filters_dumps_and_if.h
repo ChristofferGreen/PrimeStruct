@@ -215,6 +215,46 @@ main() {
   CHECK(readFile(errPath).find("Unsupported dump stage: bananas") != std::string::npos);
 }
 
+TEST_CASE("primec plain parse diagnostics include file line and caret") {
+  const std::string source = R"(
+[return<int>]
+main( {
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_plain_parse_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_plain_parse_diagnostic_err.txt").string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(srcPath + ":3:7: error: Parse error:") != std::string::npos);
+  CHECK(diagnostics.find("3 | main( {") != std::string::npos);
+  CHECK(diagnostics.find("^") != std::string::npos);
+}
+
+TEST_CASE("primevm plain semantic diagnostics include file line and note") {
+  const std::string source =
+      "[return<int>]\n"
+      "main() {\n"
+      "  return(nope(1i32))\n"
+      "}\n";
+  const std::string srcPath = writeTemp("primevm_plain_semantic_diagnostic.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_plain_semantic_diagnostic_err.txt").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(srcPath + ":3:") != std::string::npos);
+  CHECK(diagnostics.find(": error: Semantic error: unknown call target: nope") != std::string::npos);
+  CHECK(diagnostics.find("3 |   return(nope(1i32))") != std::string::npos);
+  CHECK(diagnostics.find("note: definition: /main") != std::string::npos);
+}
+
 TEST_CASE("primec emit-diagnostics reports structured parse payload") {
   const std::string source = R"(
 [return<int>]
