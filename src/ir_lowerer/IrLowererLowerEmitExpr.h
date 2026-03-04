@@ -908,33 +908,13 @@
             return false;
           }
 
-          bool isMapTarget = false;
-          LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
-          LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
-              isMapTarget = true;
-              mapKeyKind = it->second.mapKeyKind;
-              mapValueKind = it->second.mapValueKind;
-            }
-          } else if (target.kind == Expr::Kind::Call) {
-            std::string collection;
-            if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
-              isMapTarget = true;
-              mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
-              mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
-            }
-          }
-          if (isMapTarget) {
-            if (mapKeyKind == LocalInfo::ValueKind::Unknown || mapValueKind == LocalInfo::ValueKind::Unknown) {
-              error = "native backend requires typed map bindings for " + accessName;
+          const auto mapTargetInfo = ir_lowerer::resolveMapAccessTargetInfo(target, localsIn);
+          if (mapTargetInfo.isMapTarget) {
+            if (!ir_lowerer::validateMapAccessTargetInfo(mapTargetInfo, accessName, error)) {
               return false;
             }
-            if (mapValueKind == LocalInfo::ValueKind::String) {
-              error = "native backend only supports numeric/bool map values";
-              return false;
-            }
+            const LocalInfo::ValueKind mapKeyKind = mapTargetInfo.mapKeyKind;
+            const LocalInfo::ValueKind mapValueKind = mapTargetInfo.mapValueKind;
 
             const int32_t ptrLocal = allocTempLocal();
             if (!emitExpr(expr.args[0], localsIn)) {

@@ -2550,6 +2550,61 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  locals.emplace("items", mapInfo);
+
+  primec::Expr mapName;
+  mapName.kind = primec::Expr::Kind::Name;
+  mapName.name = "items";
+  auto resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(mapName, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateMapAccessTargetInfo(resolved, "at", error));
+  CHECK(error.empty());
+
+  primec::Expr mapCtor;
+  mapCtor.kind = primec::Expr::Kind::Call;
+  mapCtor.name = "map";
+  mapCtor.templateArgs = {"bool", "i32"};
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(mapCtor, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr plain;
+  plain.kind = primec::Expr::Kind::Name;
+  plain.name = "other";
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(plain, locals);
+  CHECK_FALSE(resolved.isMapTarget);
+  error = "stale";
+  CHECK(primec::ir_lowerer::validateMapAccessTargetInfo(resolved, "get", error));
+  CHECK(error == "stale");
+
+  primec::ir_lowerer::MapAccessTargetInfo untyped;
+  untyped.isMapTarget = true;
+  untyped.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  untyped.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateMapAccessTargetInfo(untyped, "at", error));
+  CHECK(error == "native backend requires typed map bindings for at");
+
+  primec::ir_lowerer::MapAccessTargetInfo stringValue;
+  stringValue.isMapTarget = true;
+  stringValue.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  stringValue.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateMapAccessTargetInfo(stringValue, "at", error));
+  CHECK(error == "native backend only supports numeric/bool map values");
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

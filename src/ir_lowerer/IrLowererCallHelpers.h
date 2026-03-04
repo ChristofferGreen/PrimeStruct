@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -81,6 +82,11 @@ enum class UnsupportedNativeCallResult {
   NotHandled,
   Error,
 };
+struct MapAccessTargetInfo {
+  bool isMapTarget = false;
+  LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
+};
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,
@@ -100,6 +106,10 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error);
+MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
+bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
+                                 const std::string &accessName,
+                                 std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

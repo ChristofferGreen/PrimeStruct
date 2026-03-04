@@ -252,6 +252,47 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
   return UnsupportedNativeCallResult::NotHandled;
 }
 
+MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
+  MapAccessTargetInfo info;
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+      info.isMapTarget = true;
+      info.mapKeyKind = it->second.mapKeyKind;
+      info.mapValueKind = it->second.mapValueKind;
+    }
+    return info;
+  }
+  if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && collection == "map" &&
+        target.templateArgs.size() == 2) {
+      info.isMapTarget = true;
+      info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
+      info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
+    }
+  }
+  return info;
+}
+
+bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
+                                 const std::string &accessName,
+                                 std::string &error) {
+  if (!targetInfo.isMapTarget) {
+    return true;
+  }
+  if (targetInfo.mapKeyKind == LocalInfo::ValueKind::Unknown ||
+      targetInfo.mapValueKind == LocalInfo::ValueKind::Unknown) {
+    error = "native backend requires typed map bindings for " + accessName;
+    return false;
+  }
+  if (targetInfo.mapValueKind == LocalInfo::ValueKind::String) {
+    error = "native backend only supports numeric/bool map values";
+    return false;
+  }
+  return true;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
