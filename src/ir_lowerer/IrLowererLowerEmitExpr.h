@@ -884,18 +884,17 @@
                 [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
             return true;
           }
-          if (target.kind == Expr::Kind::StringLiteral) {
+          const auto nonLiteralStringTargetResult = ir_lowerer::validateNonLiteralStringAccessTarget(
+              target,
+              localsIn,
+              [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
+                return isEntryArgsName(targetExpr, localMap);
+              },
+              error);
+          if (nonLiteralStringTargetResult == ir_lowerer::NonLiteralStringAccessTargetResult::Stop) {
             return false;
           }
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
-              error = "native backend only supports indexing into string literals or string bindings";
-              return false;
-            }
-          }
-          if (isEntryArgsName(target, localsIn)) {
-            error = "native backend only supports entry argument indexing in print calls or string bindings";
+          if (nonLiteralStringTargetResult == ir_lowerer::NonLiteralStringAccessTargetResult::Error) {
             return false;
           }
 

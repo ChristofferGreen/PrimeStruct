@@ -334,6 +334,28 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
   return MapAccessLookupEmitResult::Emitted;
 }
 
+NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
+    const Expr &targetExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    std::string &error) {
+  if (targetExpr.kind == Expr::Kind::StringLiteral) {
+    return NonLiteralStringAccessTargetResult::Stop;
+  }
+  if (targetExpr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(targetExpr.name);
+    if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+      error = "native backend only supports indexing into string literals or string bindings";
+      return NonLiteralStringAccessTargetResult::Error;
+    }
+  }
+  if (isEntryArgsName(targetExpr, localsIn)) {
+    error = "native backend only supports entry argument indexing in print calls or string bindings";
+    return NonLiteralStringAccessTargetResult::Error;
+  }
+  return NonLiteralStringAccessTargetResult::Continue;
+}
+
 bool resolveValidatedAccessIndexKind(
     const Expr &indexExpr,
     const LocalMap &localsIn,

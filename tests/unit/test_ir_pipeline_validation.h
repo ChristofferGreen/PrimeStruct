@@ -2859,6 +2859,60 @@ TEST_CASE("ir lowerer call helpers resolve validated access index kind") {
   CHECK(error == "native backend requires integer indices for at");
 }
 
+TEST_CASE("ir lowerer call helpers validate non literal string access target") {
+  using Result = primec::ir_lowerer::NonLiteralStringAccessTargetResult;
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error = "stale";
+
+  primec::Expr stringLiteralTarget;
+  stringLiteralTarget.kind = primec::Expr::Kind::StringLiteral;
+  stringLiteralTarget.stringValue = "abc";
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            stringLiteralTarget,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error) == Result::Stop);
+  CHECK(error == "stale");
+
+  primec::ir_lowerer::LocalInfo stringLocalInfo;
+  stringLocalInfo.valueKind = Kind::String;
+  locals.emplace("s", stringLocalInfo);
+  primec::Expr stringNameTarget;
+  stringNameTarget.kind = primec::Expr::Kind::Name;
+  stringNameTarget.name = "s";
+  error.clear();
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            stringNameTarget,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error) == Result::Error);
+  CHECK(error == "native backend only supports indexing into string literals or string bindings");
+
+  primec::Expr entryArgsTarget;
+  entryArgsTarget.kind = primec::Expr::Kind::Name;
+  entryArgsTarget.name = "argv";
+  error.clear();
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            entryArgsTarget,
+            locals,
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) { return expr.name == "argv"; },
+            error) == Result::Error);
+  CHECK(error == "native backend only supports entry argument indexing in print calls or string bindings");
+
+  primec::Expr otherTarget;
+  otherTarget.kind = primec::Expr::Kind::Name;
+  otherTarget.name = "arr";
+  error = "unchanged";
+  CHECK(primec::ir_lowerer::validateNonLiteralStringAccessTarget(
+            otherTarget,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            error) == Result::Continue);
+  CHECK(error == "unchanged");
+}
+
 TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using primec::IrOpcode;

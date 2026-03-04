@@ -89,6 +89,11 @@ enum class MapAccessLookupEmitResult {
   Emitted,
   Error,
 };
+enum class NonLiteralStringAccessTargetResult {
+  Continue,
+  Stop,
+  Error,
+};
 struct MapAccessTargetInfo {
   bool isMapTarget = false;
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
@@ -159,6 +164,11 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
+NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
+    const Expr &targetExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
     std::string &error);
 bool resolveValidatedAccessIndexKind(
     const Expr &indexExpr,
