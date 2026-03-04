@@ -4,6 +4,7 @@
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -24,6 +25,17 @@ StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
   StructTypeResolutionAdapters adapters;
   adapters.resolveStructTypeName = makeResolveStructTypePathFromScope(structNames, importAliases);
   adapters.applyStructValueInfo = makeApplyStructValueInfoFromBinding(adapters.resolveStructTypeName);
+  return adapters;
+}
+
+SetupTypeAndStructTypeAdapters makeSetupTypeAndStructTypeAdapters(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  SetupTypeAndStructTypeAdapters adapters;
+  const SetupTypeAdapters setupTypeAdapters = makeSetupTypeAdapters();
+  adapters.valueKindFromTypeName = setupTypeAdapters.valueKindFromTypeName;
+  adapters.combineNumericKinds = setupTypeAdapters.combineNumericKinds;
+  adapters.structTypeResolutionAdapters = makeStructTypeResolutionAdapters(structNames, importAliases);
   return adapters;
 }
 

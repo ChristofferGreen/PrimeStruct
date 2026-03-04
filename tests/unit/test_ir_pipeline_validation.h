@@ -1974,6 +1974,32 @@ TEST_CASE("ir lowerer struct type helpers build bundled struct-type resolution a
   CHECK(info.structTypeName == "/pkg/Foo");
 }
 
+TEST_CASE("ir lowerer struct type helpers build bundled setup-type and struct-type adapters") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const std::unordered_set<std::string> structNames = {"/pkg/Foo"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"Foo", "/pkg/Foo"}};
+  const auto adapters = primec::ir_lowerer::makeSetupTypeAndStructTypeAdapters(structNames, importAliases);
+
+  CHECK(adapters.valueKindFromTypeName("i64") == ValueKind::Int64);
+  CHECK(adapters.combineNumericKinds(ValueKind::Int32, ValueKind::Int64) == ValueKind::Int64);
+
+  std::string resolved;
+  REQUIRE(adapters.structTypeResolutionAdapters.resolveStructTypeName("Foo", "/pkg", resolved));
+  CHECK(resolved == "/pkg/Foo");
+  CHECK_FALSE(adapters.structTypeResolutionAdapters.resolveStructTypeName("Missing", "/pkg", resolved));
+
+  primec::Expr typedBinding;
+  typedBinding.namespacePrefix = "/pkg";
+  primec::Transform typed;
+  typed.name = "Foo";
+  typedBinding.transforms.push_back(typed);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  adapters.structTypeResolutionAdapters.applyStructValueInfo(typedBinding, info);
+  CHECK(info.structTypeName == "/pkg/Foo");
+}
+
 TEST_CASE("ir lowerer struct type helpers skip unsupported struct value paths") {
   auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
 

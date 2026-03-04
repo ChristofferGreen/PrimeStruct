@@ -1,6 +1,3 @@
-  const auto setupTypeAdapters = ir_lowerer::makeSetupTypeAdapters();
-  auto valueKindFromTypeName = setupTypeAdapters.valueKindFromTypeName;
-
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
   bool returnsVoid = false;
@@ -86,7 +83,10 @@
   auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
   auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
 
-  const auto structTypeResolutionAdapters = ir_lowerer::makeStructTypeResolutionAdapters(structNames, importAliases);
+  const auto setupTypeAndStructTypeAdapters = ir_lowerer::makeSetupTypeAndStructTypeAdapters(
+      structNames, importAliases);
+  auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
+  const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
   auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
@@ -135,4 +135,4 @@
   auto applyStructValueInfo = structTypeResolutionAdapters.applyStructValueInfo;
 
 
-  auto combineNumericKinds = setupTypeAdapters.combineNumericKinds;
+  auto combineNumericKinds = setupTypeAndStructTypeAdapters.combineNumericKinds;

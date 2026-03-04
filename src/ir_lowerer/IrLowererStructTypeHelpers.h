@@ -40,6 +40,13 @@ struct StructTypeResolutionAdapters {
   ResolveStructTypeNameFn resolveStructTypeName;
   ApplyStructValueInfoFn applyStructValueInfo;
 };
+using SetupCombineNumericKindsFn =
+    std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
+struct SetupTypeAndStructTypeAdapters {
+  ValueKindFromTypeNameFn valueKindFromTypeName;
+  SetupCombineNumericKindsFn combineNumericKinds;
+  StructTypeResolutionAdapters structTypeResolutionAdapters;
+};
 
 struct StructArrayInfoAdapters {
   ResolveStructArrayTypeInfoFn resolveStructArrayTypeInfoFromPath;
@@ -94,6 +101,9 @@ using EnumerateStructLayoutFieldsFn =
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
 StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases);
+SetupTypeAndStructTypeAdapters makeSetupTypeAndStructTypeAdapters(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);
 StructArrayInfoAdapters makeStructArrayInfoAdapters(
