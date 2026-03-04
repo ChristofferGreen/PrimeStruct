@@ -88,6 +88,10 @@ struct MapAccessTargetInfo {
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
 };
+struct MapLookupLoopLocals {
+  int32_t countLocal = -1;
+  int32_t indexLocal = -1;
+};
 enum class MapLookupStringKeyResult {
   NotHandled,
   Resolved,
@@ -147,6 +151,10 @@ bool emitMapLookupNonStringKeyLocal(
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error);
+MapLookupLoopLocals emitMapLookupLoopLocals(
+    int32_t ptrLocal,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);

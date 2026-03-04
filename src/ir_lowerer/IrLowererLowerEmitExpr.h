@@ -964,14 +964,12 @@
               }
             }
 
-            const int32_t countLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
-
-            const int32_t indexLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::PushI32, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+            const auto loopLocals = ir_lowerer::emitMapLookupLoopLocals(
+                ptrLocal,
+                [&]() { return allocTempLocal(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+            const int32_t countLocal = loopLocals.countLocal;
+            const int32_t indexLocal = loopLocals.indexLocal;
 
             size_t loopStart = function.instructions.size();
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});

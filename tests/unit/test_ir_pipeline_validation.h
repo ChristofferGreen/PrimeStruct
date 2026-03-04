@@ -2782,6 +2782,30 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
+  std::vector<primec::Instruction> instructions;
+  int nextLocal = 30;
+  auto locals = primec::ir_lowerer::emitMapLookupLoopLocals(
+      12,
+      [&]() { return nextLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) {
+        instructions.push_back({op, imm});
+      });
+
+  CHECK(locals.countLocal == 30);
+  CHECK(locals.indexLocal == 31);
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 12);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 30);
+  CHECK(instructions[3].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[3].imm == 0);
+  CHECK(instructions[4].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[4].imm == 31);
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

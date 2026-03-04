@@ -371,6 +371,22 @@ bool emitMapLookupNonStringKeyLocal(
   return true;
 }
 
+MapLookupLoopLocals emitMapLookupLoopLocals(
+    int32_t ptrLocal,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  MapLookupLoopLocals locals;
+  locals.countLocal = allocTempLocal();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(locals.countLocal));
+
+  locals.indexLocal = allocTempLocal();
+  emitInstruction(IrOpcode::PushI32, 0);
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(locals.indexLocal));
+  return locals;
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {
