@@ -269,29 +269,7 @@
   }
 
   auto appendReturnForDefinition = [&](const std::string &defPath, const ReturnInfo &returnInfo) -> bool {
-    if (returnInfo.returnsVoid) {
-      function.instructions.push_back({IrOpcode::ReturnVoid, 0});
-      return true;
-    }
-    if (returnInfo.returnsArray || returnInfo.kind == LocalInfo::ValueKind::Int64 ||
-        returnInfo.kind == LocalInfo::ValueKind::UInt64 || returnInfo.kind == LocalInfo::ValueKind::String) {
-      function.instructions.push_back({IrOpcode::ReturnI64, 0});
-      return true;
-    }
-    if (returnInfo.kind == LocalInfo::ValueKind::Int32 || returnInfo.kind == LocalInfo::ValueKind::Bool) {
-      function.instructions.push_back({IrOpcode::ReturnI32, 0});
-      return true;
-    }
-    if (returnInfo.kind == LocalInfo::ValueKind::Float32) {
-      function.instructions.push_back({IrOpcode::ReturnF32, 0});
-      return true;
-    }
-    if (returnInfo.kind == LocalInfo::ValueKind::Float64) {
-      function.instructions.push_back({IrOpcode::ReturnF64, 0});
-      return true;
-    }
-    error = "native backend does not support return type on " + defPath;
-    return false;
+    return ir_lowerer::emitReturnForDefinition(function.instructions, defPath, returnInfo, error);
   };
   out.functions.push_back(std::move(function));
   out.entryIndex = 0;

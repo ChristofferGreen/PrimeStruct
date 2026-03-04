@@ -9627,6 +9627,56 @@ TEST_CASE("ir lowerer flow helpers emit float literal sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers emit return for definition") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  primec::ir_lowerer::ReturnInfo info;
+  info.returnsVoid = true;
+  CHECK(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/voidFn", info, error));
+  REQUIRE(instructions.size() == 1u);
+  CHECK(instructions.back().op == primec::IrOpcode::ReturnVoid);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  info.kind = ValueKind::Int32;
+  CHECK(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/i32Fn", info, error));
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions.back().op == primec::IrOpcode::ReturnI32);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  info.kind = ValueKind::Int64;
+  CHECK(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/i64Fn", info, error));
+  REQUIRE(instructions.size() == 3u);
+  CHECK(instructions.back().op == primec::IrOpcode::ReturnI64);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  info.kind = ValueKind::Float32;
+  CHECK(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/f32Fn", info, error));
+  REQUIRE(instructions.size() == 4u);
+  CHECK(instructions.back().op == primec::IrOpcode::ReturnF32);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  info.kind = ValueKind::Float64;
+  CHECK(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/f64Fn", info, error));
+  REQUIRE(instructions.size() == 5u);
+  CHECK(instructions.back().op == primec::IrOpcode::ReturnF64);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  info.returnsArray = true;
+  info.kind = ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/arrayFn", info, error));
+  REQUIRE(instructions.size() == 6u);
+  CHECK(instructions.back().op == primec::IrOpcode::ReturnI64);
+
+  const size_t beforeFailure = instructions.size();
+  info = primec::ir_lowerer::ReturnInfo{};
+  info.kind = ValueKind::Unknown;
+  CHECK_FALSE(primec::ir_lowerer::emitReturnForDefinition(instructions, "/pkg/badFn", info, error));
+  CHECK(error == "native backend does not support return type on /pkg/badFn");
+  CHECK(instructions.size() == beforeFailure);
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

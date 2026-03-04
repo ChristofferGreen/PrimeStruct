@@ -136,4 +136,33 @@ bool emitFloatLiteral(std::vector<IrInstruction> &instructions, const Expr &expr
   return true;
 }
 
+bool emitReturnForDefinition(std::vector<IrInstruction> &instructions,
+                             const std::string &defPath,
+                             const ReturnInfo &returnInfo,
+                             std::string &error) {
+  if (returnInfo.returnsVoid) {
+    instructions.push_back({IrOpcode::ReturnVoid, 0});
+    return true;
+  }
+  if (returnInfo.returnsArray || returnInfo.kind == LocalInfo::ValueKind::Int64 ||
+      returnInfo.kind == LocalInfo::ValueKind::UInt64 || returnInfo.kind == LocalInfo::ValueKind::String) {
+    instructions.push_back({IrOpcode::ReturnI64, 0});
+    return true;
+  }
+  if (returnInfo.kind == LocalInfo::ValueKind::Int32 || returnInfo.kind == LocalInfo::ValueKind::Bool) {
+    instructions.push_back({IrOpcode::ReturnI32, 0});
+    return true;
+  }
+  if (returnInfo.kind == LocalInfo::ValueKind::Float32) {
+    instructions.push_back({IrOpcode::ReturnF32, 0});
+    return true;
+  }
+  if (returnInfo.kind == LocalInfo::ValueKind::Float64) {
+    instructions.push_back({IrOpcode::ReturnF64, 0});
+    return true;
+  }
+  error = "native backend does not support return type on " + defPath;
+  return false;
+}
+
 } // namespace primec::ir_lowerer

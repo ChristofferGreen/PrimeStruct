@@ -60,5 +60,9 @@ bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        bool equals,
                        std::string &error);
 bool emitFloatLiteral(std::vector<IrInstruction> &instructions, const Expr &expr, std::string &error);
+bool emitReturnForDefinition(std::vector<IrInstruction> &instructions,
+                             const std::string &defPath,
+                             const ReturnInfo &returnInfo,
+                             std::string &error);
 
 } // namespace primec::ir_lowerer
