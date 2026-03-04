@@ -213,27 +213,11 @@
     function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
     return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
   };
-  auto emitFileCloseIfValid = [&](int32_t localIndex) {
-    function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIndex)});
-    function.instructions.push_back({IrOpcode::PushI64, 0});
-    function.instructions.push_back({IrOpcode::CmpGeI64, 0});
-    size_t jumpSkip = function.instructions.size();
-    function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-    function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIndex)});
-    function.instructions.push_back({IrOpcode::FileClose, 0});
-    function.instructions.push_back({IrOpcode::Pop, 0});
-    size_t skipIndex = function.instructions.size();
-    function.instructions[jumpSkip].imm = static_cast<int32_t>(skipIndex);
-  };
   auto emitFileScopeCleanup = [&](const std::vector<int32_t> &scope) {
-    for (auto it = scope.rbegin(); it != scope.rend(); ++it) {
-      emitFileCloseIfValid(*it);
-    }
+    ir_lowerer::emitFileScopeCleanup(function.instructions, scope);
   };
   auto emitFileScopeCleanupAll = [&]() {
-    for (auto it = fileScopeStack.rbegin(); it != fileScopeStack.rend(); ++it) {
-      emitFileScopeCleanup(*it);
-    }
+    ir_lowerer::emitAllFileScopeCleanup(function.instructions, fileScopeStack);
   };
   auto pushFileScope = [&]() { fileScopeStack.emplace_back(); };
   auto popFileScope = [&]() { fileScopeStack.pop_back(); };

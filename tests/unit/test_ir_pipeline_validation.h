@@ -6878,6 +6878,48 @@ TEST_CASE("ir lowerer flow helpers restore scoped state") {
   CHECK_FALSE(resultInfo->hasValue);
 }
 
+TEST_CASE("ir lowerer flow helpers emit file scope cleanup sequences") {
+  auto checkCloseBlock = [](const std::vector<primec::IrInstruction> &instructions,
+                            size_t start,
+                            int32_t localIndex,
+                            int32_t jumpImm) {
+    REQUIRE(instructions.size() >= start + 7);
+    CHECK(instructions[start + 0].op == primec::IrOpcode::LoadLocal);
+    CHECK(instructions[start + 0].imm == static_cast<uint64_t>(localIndex));
+    CHECK(instructions[start + 1].op == primec::IrOpcode::PushI64);
+    CHECK(instructions[start + 1].imm == 0);
+    CHECK(instructions[start + 2].op == primec::IrOpcode::CmpGeI64);
+    CHECK(instructions[start + 3].op == primec::IrOpcode::JumpIfZero);
+    CHECK(instructions[start + 3].imm == static_cast<uint64_t>(jumpImm));
+    CHECK(instructions[start + 4].op == primec::IrOpcode::LoadLocal);
+    CHECK(instructions[start + 4].imm == static_cast<uint64_t>(localIndex));
+    CHECK(instructions[start + 5].op == primec::IrOpcode::FileClose);
+    CHECK(instructions[start + 6].op == primec::IrOpcode::Pop);
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  primec::ir_lowerer::emitFileCloseIfValid(instructions, 5);
+  REQUIRE(instructions.size() == 7);
+  checkCloseBlock(instructions, 0, 5, 7);
+
+  instructions.clear();
+  primec::ir_lowerer::emitFileScopeCleanup(instructions, {4, 9});
+  REQUIRE(instructions.size() == 14);
+  checkCloseBlock(instructions, 0, 9, 7);
+  checkCloseBlock(instructions, 7, 4, 14);
+
+  instructions.clear();
+  primec::ir_lowerer::emitAllFileScopeCleanup(instructions, {{1}, {2, 3}});
+  REQUIRE(instructions.size() == 21);
+  checkCloseBlock(instructions, 0, 3, 7);
+  checkCloseBlock(instructions, 7, 2, 14);
+  checkCloseBlock(instructions, 14, 1, 21);
+
+  instructions.clear();
+  primec::ir_lowerer::emitFileScopeCleanup(instructions, {});
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

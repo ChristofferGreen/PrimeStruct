@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "primec/Ast.h"
+#include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
 
@@ -37,5 +39,10 @@ class ResultReturnScope {
   std::optional<ResultReturnInfo> &target;
   std::optional<ResultReturnInfo> previous;
 };
+
+void emitFileCloseIfValid(std::vector<IrInstruction> &instructions, int32_t localIndex);
+void emitFileScopeCleanup(std::vector<IrInstruction> &instructions, const std::vector<int32_t> &scope);
+void emitAllFileScopeCleanup(std::vector<IrInstruction> &instructions,
+                             const std::vector<std::vector<int32_t>> &fileScopeStack);
 
 } // namespace primec::ir_lowerer
