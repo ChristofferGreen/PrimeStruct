@@ -9251,6 +9251,96 @@ TEST_CASE("ir lowerer conversions control-tail helper ignores unrelated calls") 
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer return inference helpers infer parameter locals") {
+  primec::Expr bindingExpr;
+  bindingExpr.name = "param";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      true,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &) { return false; },
+      error));
+  CHECK(error.empty());
+  REQUIRE(locals.count("param") == 1u);
+  CHECK(locals.at("param").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer return inference helpers report untyped bindings") {
+  primec::Expr bindingExpr;
+  bindingExpr.name = "tmp";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      false,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &) { return false; },
+      error));
+  CHECK(error == "native backend requires typed bindings on /pkg/fn");
+  CHECK(locals.empty());
+}
+
+TEST_CASE("ir lowerer return inference helpers reject string references") {
+  primec::Expr bindingExpr;
+  bindingExpr.name = "label";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      true,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Reference; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &) { return true; },
+      error));
+  CHECK(error == "native backend does not support string pointers or references");
+}
+
 TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   primec::Definition def;
   def.fullPath = "/main";

@@ -48,6 +48,64 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
   return true;
 }
 
+bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
+                                           bool isParameter,
+                                           const std::string &definitionPath,
+                                           LocalMap &activeLocals,
+                                           const IsBindingMutableForInferenceFn &isBindingMutable,
+                                           const BindingKindForInferenceFn &bindingKind,
+                                           const HasExplicitBindingTypeTransformForInferenceFn
+                                               &hasExplicitBindingTypeTransform,
+                                           const BindingValueKindForInferenceFn &bindingValueKind,
+                                           const InferValueKindFromLocalsFn &inferExprKindFromLocals,
+                                           const IsFileErrorBindingForInferenceFn &isFileErrorBinding,
+                                           const ApplyStructInfoForInferenceFn &applyStructArrayInfo,
+                                           const ApplyStructInfoForInferenceFn &applyStructValueInfo,
+                                           const InferStructExprPathFromLocalsFn &inferStructExprPathFromLocals,
+                                           const IsStringBindingForInferenceFn &isStringBinding,
+                                           std::string &error) {
+  LocalInfo bindingInfo;
+  bindingInfo.index = 0;
+  bindingInfo.isMutable = isBindingMutable(bindingExpr);
+  bindingInfo.kind = bindingKind(bindingExpr);
+  if (hasExplicitBindingTypeTransform(bindingExpr)) {
+    bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
+  } else if (bindingExpr.args.size() == 1 && bindingInfo.kind == LocalInfo::Kind::Value) {
+    bindingInfo.valueKind = inferExprKindFromLocals(bindingExpr.args.front(), activeLocals);
+    if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+      bindingInfo.valueKind = LocalInfo::ValueKind::Int32;
+    }
+  } else if (isParameter) {
+    bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
+  } else {
+    bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
+  }
+  bindingInfo.isFileError = isFileErrorBinding(bindingExpr);
+  applyStructArrayInfo(bindingExpr, bindingInfo);
+  applyStructValueInfo(bindingExpr, bindingInfo);
+  if (!isParameter && bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
+      bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingExpr.args.size() == 1) {
+    std::string inferredStruct = inferStructExprPathFromLocals(bindingExpr.args.front(), activeLocals);
+    if (!inferredStruct.empty()) {
+      bindingInfo.structTypeName = inferredStruct;
+    }
+  }
+  if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value) {
+    error = "native backend does not support string pointers or references";
+    return false;
+  }
+  if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingInfo.structTypeName.empty()) {
+    if (isParameter) {
+      error = "native backend requires typed parameters on " + definitionPath;
+    } else {
+      error = "native backend requires typed bindings on " + definitionPath;
+    }
+    return false;
+  }
+  activeLocals.emplace(bindingExpr.name, bindingInfo);
+  return true;
+}
+
 bool inferDefinitionReturnType(const Definition &def,
                                LocalMap localsForInference,
                                const InferBindingIntoLocalsFn &inferBindingIntoLocals,

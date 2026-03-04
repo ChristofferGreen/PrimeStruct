@@ -63,46 +63,21 @@
                                       bool isParameter,
                                       LocalMap &activeLocals,
                                       std::string &inferError) -> bool {
-      LocalInfo bindingInfo;
-      bindingInfo.index = 0;
-      bindingInfo.isMutable = isBindingMutable(bindingExpr);
-      bindingInfo.kind = bindingKind(bindingExpr);
-      if (hasExplicitBindingTypeTransform(bindingExpr)) {
-        bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
-      } else if (bindingExpr.args.size() == 1 && bindingInfo.kind == LocalInfo::Kind::Value) {
-        bindingInfo.valueKind = inferExprKind(bindingExpr.args.front(), activeLocals);
-        if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
-          bindingInfo.valueKind = LocalInfo::ValueKind::Int32;
-        }
-      } else if (isParameter) {
-        bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
-      } else {
-        bindingInfo.valueKind = LocalInfo::ValueKind::Unknown;
-      }
-      bindingInfo.isFileError = isFileErrorBinding(bindingExpr);
-      applyStructArrayInfo(bindingExpr, bindingInfo);
-      applyStructValueInfo(bindingExpr, bindingInfo);
-      if (!isParameter && bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
-          bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingExpr.args.size() == 1) {
-        std::string inferredStruct = inferStructExprPath(bindingExpr.args.front(), activeLocals);
-        if (!inferredStruct.empty()) {
-          bindingInfo.structTypeName = inferredStruct;
-        }
-      }
-      if (isStringBinding(bindingExpr) && bindingInfo.kind != LocalInfo::Kind::Value) {
-        inferError = "native backend does not support string pointers or references";
-        return false;
-      }
-      if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown && bindingInfo.structTypeName.empty()) {
-        if (isParameter) {
-          inferError = "native backend requires typed parameters on " + def.fullPath;
-        } else {
-          inferError = "native backend requires typed bindings on " + def.fullPath;
-        }
-        return false;
-      }
-      activeLocals.emplace(bindingExpr.name, bindingInfo);
-      return true;
+      return ir_lowerer::inferReturnInferenceBindingIntoLocals(bindingExpr,
+                                                               isParameter,
+                                                               def.fullPath,
+                                                               activeLocals,
+                                                               isBindingMutable,
+                                                               bindingKind,
+                                                               hasExplicitBindingTypeTransform,
+                                                               bindingValueKind,
+                                                               inferExprKind,
+                                                               isFileErrorBinding,
+                                                               applyStructArrayInfo,
+                                                               applyStructValueInfo,
+                                                               inferStructExprPath,
+                                                               isStringBinding,
+                                                               inferError);
     };
 
     if (hasReturnTransformLocal) {

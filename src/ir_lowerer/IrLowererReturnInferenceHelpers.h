@@ -26,6 +26,14 @@ struct EntryReturnConfig {
 using InferBindingIntoLocalsFn = std::function<bool(const Expr &, bool, LocalMap &, std::string &)>;
 using InferValueKindFromLocalsFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using ExpandMatchToIfFn = std::function<bool(const Expr &, Expr &, std::string &)>;
+using IsBindingMutableForInferenceFn = std::function<bool(const Expr &)>;
+using BindingKindForInferenceFn = std::function<LocalInfo::Kind(const Expr &)>;
+using HasExplicitBindingTypeTransformForInferenceFn = std::function<bool(const Expr &)>;
+using BindingValueKindForInferenceFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
+using IsFileErrorBindingForInferenceFn = std::function<bool(const Expr &)>;
+using ApplyStructInfoForInferenceFn = std::function<void(const Expr &, LocalInfo &)>;
+using InferStructExprPathFromLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
+using IsStringBindingForInferenceFn = std::function<bool(const Expr &)>;
 
 bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
@@ -41,5 +49,21 @@ bool inferDefinitionReturnType(const Definition &def,
                                const ReturnInferenceOptions &options,
                                ReturnInfo &outInfo,
                                std::string &error);
+bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
+                                           bool isParameter,
+                                           const std::string &definitionPath,
+                                           LocalMap &activeLocals,
+                                           const IsBindingMutableForInferenceFn &isBindingMutable,
+                                           const BindingKindForInferenceFn &bindingKind,
+                                           const HasExplicitBindingTypeTransformForInferenceFn
+                                               &hasExplicitBindingTypeTransform,
+                                           const BindingValueKindForInferenceFn &bindingValueKind,
+                                           const InferValueKindFromLocalsFn &inferExprKindFromLocals,
+                                           const IsFileErrorBindingForInferenceFn &isFileErrorBinding,
+                                           const ApplyStructInfoForInferenceFn &applyStructArrayInfo,
+                                           const ApplyStructInfoForInferenceFn &applyStructValueInfo,
+                                           const InferStructExprPathFromLocalsFn &inferStructExprPathFromLocals,
+                                           const IsStringBindingForInferenceFn &isStringBinding,
+                                           std::string &error);
 
 } // namespace primec::ir_lowerer
