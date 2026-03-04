@@ -3070,6 +3070,19 @@ TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Bool, ValueKind::Int32) == ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup type helper normalizes bool comparison kinds") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::comparisonKind(ValueKind::Bool, ValueKind::Bool) == ValueKind::Int32);
+  CHECK(primec::ir_lowerer::comparisonKind(ValueKind::Bool, ValueKind::Int64) == ValueKind::Int64);
+  CHECK(primec::ir_lowerer::comparisonKind(ValueKind::Int32, ValueKind::Bool) == ValueKind::Int32);
+}
+
+TEST_CASE("ir lowerer setup type helper rejects mixed bool float comparison kinds") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::comparisonKind(ValueKind::Bool, ValueKind::Float32) == ValueKind::Unknown);
+  CHECK(primec::ir_lowerer::comparisonKind(ValueKind::Float64, ValueKind::Bool) == ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup type helper builds value-kind adapters") {
   auto valueKindFromTypeName = primec::ir_lowerer::makeValueKindFromTypeName();
   auto combineNumericKinds = primec::ir_lowerer::makeCombineNumericKinds();

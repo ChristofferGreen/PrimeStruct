@@ -95,6 +95,16 @@ LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::V
   return LocalInfo::ValueKind::Unknown;
 }
 
+LocalInfo::ValueKind comparisonKind(LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+  if (left == LocalInfo::ValueKind::Bool) {
+    left = LocalInfo::ValueKind::Int32;
+  }
+  if (right == LocalInfo::ValueKind::Bool) {
+    right = LocalInfo::ValueKind::Int32;
+  }
+  return combineNumericKinds(left, right);
+}
+
 std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
   switch (kind) {
     case LocalInfo::ValueKind::Int32:

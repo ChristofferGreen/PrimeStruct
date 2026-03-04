@@ -1,14 +1,4 @@
 
-  auto comparisonKind = [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) -> LocalInfo::ValueKind {
-    if (left == LocalInfo::ValueKind::Bool) {
-      left = LocalInfo::ValueKind::Int32;
-    }
-    if (right == LocalInfo::ValueKind::Bool) {
-      right = LocalInfo::ValueKind::Int32;
-    }
-    return combineNumericKinds(left, right);
-  };
-
   std::unordered_map<std::string, ReturnInfo> returnInfoCache;
   std::unordered_set<std::string> returnInferenceStack;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
