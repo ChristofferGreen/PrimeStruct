@@ -42,6 +42,18 @@ bool hasProgramMathImport(const std::vector<std::string> &imports) {
   return false;
 }
 
+GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport) {
+  return [hasMathImport](const Expr &expr, std::string &out) {
+    return getSetupMathBuiltinName(expr, hasMathImport, out);
+  };
+}
+
+GetSetupMathConstantNameFn makeGetSetupMathConstantName(bool hasMathImport) {
+  return [hasMathImport](const std::string &name, std::string &out) {
+    return getSetupMathConstantName(name, hasMathImport, out);
+  };
+}
+
 bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &out) {
   if (expr.kind != Expr::Kind::Call) {
     return false;

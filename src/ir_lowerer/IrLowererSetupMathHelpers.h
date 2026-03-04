@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -7,8 +8,13 @@
 
 namespace primec::ir_lowerer {
 
+using GetSetupMathBuiltinNameFn = std::function<bool(const Expr &, std::string &)>;
+using GetSetupMathConstantNameFn = std::function<bool(const std::string &, std::string &)>;
+
 bool isMathImportPath(const std::string &path);
 bool hasProgramMathImport(const std::vector<std::string> &imports);
+GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport);
+GetSetupMathConstantNameFn makeGetSetupMathConstantName(bool hasMathImport);
 bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &out);
 bool getSetupMathConstantName(const std::string &name, bool hasMathImport, std::string &out);
 

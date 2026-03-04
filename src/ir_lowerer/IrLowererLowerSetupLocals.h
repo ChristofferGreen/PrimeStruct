@@ -105,13 +105,8 @@
     return false;
   }
 
-  auto getMathBuiltinName = [&](const Expr &expr, std::string &out) -> bool {
-    return ir_lowerer::getSetupMathBuiltinName(expr, hasMathImport, out);
-  };
-
-  auto getMathConstantName = [&](const std::string &name, std::string &out) -> bool {
-    return ir_lowerer::getSetupMathConstantName(name, hasMathImport, out);
-  };
+  auto getMathBuiltinName = ir_lowerer::makeGetSetupMathBuiltinName(hasMathImport);
+  auto getMathConstantName = ir_lowerer::makeGetSetupMathConstantName(hasMathImport);
 
   auto setReferenceArrayInfo = [&](const Expr &expr, LocalInfo &info) {
     ir_lowerer::setReferenceArrayInfoFromTransforms(expr, info);
