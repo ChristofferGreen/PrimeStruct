@@ -6809,6 +6809,43 @@ TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups
       unknownName, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
 }
 
+TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localResult;
+  localResult.isResult = true;
+  localResult.resultHasValue = false;
+  localResult.resultErrorType = "LocalError";
+  locals.emplace("resultLocal", localResult);
+
+  primec::Expr localNameExpr;
+  localNameExpr.kind = primec::Expr::Kind::Name;
+  localNameExpr.name = "resultLocal";
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+
+  const auto resolveResultExprInfo = primec::ir_lowerer::makeResolveResultExprInfoFromLocals(
+      resolveMethodCall, resolveDefinitionCall, lookupReturnInfo);
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(resolveResultExprInfo(localNameExpr, locals, out));
+  CHECK(out.isResult);
+  CHECK_FALSE(out.hasValue);
+  CHECK(out.errorType == "LocalError");
+
+  primec::Expr unknownName;
+  unknownName.kind = primec::Expr::Kind::Name;
+  unknownName.name = "missing";
+  CHECK_FALSE(resolveResultExprInfo(unknownName, locals, out));
+}
+
 TEST_CASE("ir lowerer flow helpers restore scoped state") {
   std::optional<primec::ir_lowerer::OnErrorHandler> onError;
   primec::ir_lowerer::OnErrorHandler initialHandler;

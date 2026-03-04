@@ -111,4 +111,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
 }
 
+ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
+    const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const LookupReturnInfoFn &lookupReturnInfo) {
+  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo](
+             const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) {
+    return resolveResultExprInfoFromLocals(
+        expr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out);
+  };
+}
+
 } // namespace primec::ir_lowerer

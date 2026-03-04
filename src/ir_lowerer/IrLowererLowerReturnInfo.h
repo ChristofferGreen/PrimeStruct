@@ -306,19 +306,14 @@
   };
 
   auto resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
-  auto resolveResultExprInfo = [&](const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) -> bool {
-    return ir_lowerer::resolveResultExprInfoFromLocals(
-        expr,
-        localsIn,
-        [&](const Expr &callExpr, const LocalMap &localsForCall) -> const Definition * {
-          return resolveMethodCallDefinition(callExpr, localsForCall);
-        },
-        resolveDefinitionCall,
-        [&](const std::string &path, ReturnInfo &info) -> bool {
-          return getReturnInfo && getReturnInfo(path, info);
-        },
-        out);
-  };
+  auto resolveResultExprInfo = ir_lowerer::makeResolveResultExprInfoFromLocals(
+      [&](const Expr &callExpr, const LocalMap &localsForCall) -> const Definition * {
+        return resolveMethodCallDefinition(callExpr, localsForCall);
+      },
+      resolveDefinitionCall,
+      [&](const std::string &path, ReturnInfo &info) -> bool {
+        return getReturnInfo && getReturnInfo(path, info);
+      });
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
                                        const std::vector<Expr> &params,
                                        std::vector<const Expr *> &ordered) -> bool {

@@ -28,6 +28,8 @@ using ResolveCallDefinitionFn = std::function<const Definition *(const Expr &)>;
 using LookupDefinitionResultInfoFn = std::function<bool(const std::string &, ResultExprInfo &)>;
 using ResolveMethodCallWithLocalsFn = std::function<const Definition *(const Expr &, const LocalMap &)>;
 using LookupReturnInfoFn = std::function<bool(const std::string &, ReturnInfo &)>;
+using ResolveResultExprInfoWithLocalsFn =
+    std::function<bool(const Expr &, const LocalMap &, ResultExprInfo &)>;
 
 bool resolveResultExprInfo(const Expr &expr,
                            const LookupLocalResultInfoFn &lookupLocal,
@@ -41,5 +43,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      ResultExprInfo &out);
+ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
+    const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const LookupReturnInfoFn &lookupReturnInfo);
 
 } // namespace primec::ir_lowerer
