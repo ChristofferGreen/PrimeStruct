@@ -306,6 +306,21 @@ IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind) {
   return IrOpcode::CmpEqI32;
 }
 
+bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
+                              LocalInfo::ValueKind lookupKeyKind,
+                              std::string &error) {
+  if (lookupKeyKind == LocalInfo::ValueKind::Unknown ||
+      lookupKeyKind == LocalInfo::ValueKind::String) {
+    error = "native backend requires map lookup key to be numeric/bool";
+    return false;
+  }
+  if (lookupKeyKind != mapKeyKind) {
+    error = "native backend requires map lookup key type to match map key type";
+    return false;
+  }
+  return true;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

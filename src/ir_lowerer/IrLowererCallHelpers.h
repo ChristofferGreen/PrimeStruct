@@ -112,6 +112,9 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
+bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
+                              LocalInfo::ValueKind lookupKeyKind,
+                              std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

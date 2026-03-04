@@ -2617,6 +2617,25 @@ TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
   CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Float64) == IrOpcode::CmpEqF64);
 }
 
+TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int32, Kind::Int32, error));
+  CHECK(error.empty());
+
+  CHECK_FALSE(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int32, Kind::Unknown, error));
+  CHECK(error == "native backend requires map lookup key to be numeric/bool");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int32, Kind::String, error));
+  CHECK(error == "native backend requires map lookup key to be numeric/bool");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateMapLookupKeyKind(Kind::Int64, Kind::Float64, error));
+  CHECK(error == "native backend requires map lookup key type to match map key type");
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

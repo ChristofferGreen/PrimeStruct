@@ -935,12 +935,8 @@
               function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
             } else {
               LocalInfo::ValueKind lookupKeyKind = inferExprKind(expr.args[1], localsIn);
-              if (lookupKeyKind == LocalInfo::ValueKind::Unknown || lookupKeyKind == LocalInfo::ValueKind::String) {
-                error = "native backend requires map lookup key to be numeric/bool";
-                return false;
-              }
-              if (lookupKeyKind != mapKeyKind) {
-                error = "native backend requires map lookup key type to match map key type";
+              if (!ir_lowerer::validateMapLookupKeyKind(
+                      mapKeyKind, lookupKeyKind, error)) {
                 return false;
               }
               if (!emitExpr(expr.args[1], localsIn)) {
