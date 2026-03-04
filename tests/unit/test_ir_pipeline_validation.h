@@ -3206,6 +3206,44 @@ TEST_CASE("ir lowerer string literal helper resolves string table targets") {
   CHECK(length == 5);
 }
 
+TEST_CASE("ir lowerer string literal helper builds string table target resolver") {
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) {
+    for (size_t i = 0; i < stringTable.size(); ++i) {
+      if (stringTable[i] == text) {
+        return static_cast<int32_t>(i);
+      }
+    }
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+  std::string error;
+  auto resolveStringTableTarget =
+      primec::ir_lowerer::makeResolveStringTableTarget(stringTable, internString, error);
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::StringLiteral;
+  literalExpr.stringValue = "\"hello\"utf8";
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  REQUIRE(resolveStringTableTarget(literalExpr, primec::ir_lowerer::LocalMap{}, stringIndex, length));
+  CHECK(stringIndex == 0);
+  CHECK(length == 5);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo local;
+  local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  local.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
+  local.stringIndex = 0;
+  locals.emplace("name", local);
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "name";
+  REQUIRE(resolveStringTableTarget(nameExpr, locals, stringIndex, length));
+  CHECK(stringIndex == 0);
+  CHECK(length == 5);
+}
+
 TEST_CASE("ir lowerer string literal helper reports table-target diagnostics") {
   std::vector<std::string> stringTable;
   auto internString = [&](const std::string &text) {

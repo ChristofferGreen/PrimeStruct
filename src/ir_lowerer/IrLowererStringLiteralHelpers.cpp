@@ -29,6 +29,14 @@ bool parseLowererStringLiteral(const std::string &text, std::string &decoded, st
   return true;
 }
 
+ResolveStringTableTargetFn makeResolveStringTableTarget(const std::vector<std::string> &stringTable,
+                                                        const InternStringLiteralFn &internString,
+                                                        std::string &error) {
+  return [&](const Expr &expr, const LocalMap &localsIn, int32_t &stringIndexOut, size_t &lengthOut) {
+    return resolveStringTableTarget(expr, localsIn, stringTable, internString, stringIndexOut, lengthOut, error);
+  };
+}
+
 bool resolveStringTableTarget(const Expr &expr,
                               const LocalMap &localsIn,
                               const std::vector<std::string> &stringTable,

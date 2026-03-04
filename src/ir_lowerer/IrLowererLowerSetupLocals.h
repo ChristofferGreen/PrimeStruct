@@ -88,13 +88,7 @@
   auto isArrayCountCall = ir_lowerer::makeIsArrayCountCall(hasEntryArgs, entryArgsName);
   auto isVectorCapacityCall = ir_lowerer::makeIsVectorCapacityCall();
 
-  auto resolveStringTableTarget = [&](const Expr &expr,
-                                      const LocalMap &localsIn,
-                                      int32_t &stringIndexOut,
-                                      size_t &lengthOut) -> bool {
-    return ir_lowerer::resolveStringTableTarget(
-        expr, localsIn, stringTable, internString, stringIndexOut, lengthOut, error);
-  };
+  auto resolveStringTableTarget = ir_lowerer::makeResolveStringTableTarget(stringTable, internString, error);
 
   auto isStringCountCall = ir_lowerer::makeIsStringCountCall();
 

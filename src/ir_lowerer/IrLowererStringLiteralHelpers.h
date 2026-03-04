@@ -12,9 +12,14 @@
 namespace primec::ir_lowerer {
 
 using InternStringLiteralFn = std::function<int32_t(const std::string &)>;
+using ResolveStringTableTargetFn =
+    std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)>;
 
 int32_t internLowererString(const std::string &text, std::vector<std::string> &stringTable);
 bool parseLowererStringLiteral(const std::string &text, std::string &decoded, std::string &error);
+ResolveStringTableTargetFn makeResolveStringTableTarget(const std::vector<std::string> &stringTable,
+                                                        const InternStringLiteralFn &internString,
+                                                        std::string &error);
 bool resolveStringTableTarget(const Expr &expr,
                               const LocalMap &localsIn,
                               const std::vector<std::string> &stringTable,
