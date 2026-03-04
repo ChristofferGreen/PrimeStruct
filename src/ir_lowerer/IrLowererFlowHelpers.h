@@ -70,5 +70,9 @@ bool emitGpuBuiltinLoad(
     const std::function<std::optional<int32_t>(const char *)> &resolveLocalIndex,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error);
+bool emitUnaryPassthroughCall(const Expr &expr,
+                              const std::string &callName,
+                              const std::function<bool(const Expr &)> &emitExpr,
+                              std::string &error);
 
 } // namespace primec::ir_lowerer

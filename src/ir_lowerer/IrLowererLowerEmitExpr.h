@@ -694,18 +694,18 @@
               error);
         }
         if (isSimpleCallName(expr, "upload")) {
-          if (expr.args.size() != 1) {
-            error = "upload requires exactly one argument";
-            return false;
-          }
-          return emitExpr(expr.args.front(), localsIn);
+          return ir_lowerer::emitUnaryPassthroughCall(
+              expr,
+              "upload",
+              [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
+              error);
         }
         if (isSimpleCallName(expr, "readback")) {
-          if (expr.args.size() != 1) {
-            error = "readback requires exactly one argument";
-            return false;
-          }
-          return emitExpr(expr.args.front(), localsIn);
+          return ir_lowerer::emitUnaryPassthroughCall(
+              expr,
+              "readback",
+              [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
+              error);
         }
         if (isSimpleCallName(expr, "buffer")) {
           if (expr.templateArgs.size() != 1) {

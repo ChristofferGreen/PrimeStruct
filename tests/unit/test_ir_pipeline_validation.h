@@ -10015,6 +10015,59 @@ TEST_CASE("ir lowerer flow helpers resolve and emit gpu builtins") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers emit unary passthrough calls") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "upload";
+
+  primec::Expr argExpr;
+  argExpr.kind = primec::Expr::Kind::Literal;
+  argExpr.intWidth = 32;
+  argExpr.literalValue = 7;
+  callExpr.args.push_back(argExpr);
+
+  bool emitCalled = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitUnaryPassthroughCall(
+      callExpr,
+      "upload",
+      [&](const primec::Expr &forwardedExpr) {
+        emitCalled = true;
+        CHECK(forwardedExpr.kind == primec::Expr::Kind::Literal);
+        CHECK(forwardedExpr.literalValue == 7u);
+        return true;
+      },
+      error));
+  CHECK(emitCalled);
+  CHECK(error.empty());
+
+  primec::Expr wrongArityExpr = callExpr;
+  wrongArityExpr.args.push_back(argExpr);
+  emitCalled = false;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitUnaryPassthroughCall(
+      wrongArityExpr,
+      "readback",
+      [&](const primec::Expr &) {
+        emitCalled = true;
+        return true;
+      },
+      error));
+  CHECK_FALSE(emitCalled);
+  CHECK(error == "readback requires exactly one argument");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitUnaryPassthroughCall(
+      callExpr,
+      "upload",
+      [&](const primec::Expr &) {
+        error = "emit failure";
+        return false;
+      },
+      error));
+  CHECK(error == "emit failure");
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
