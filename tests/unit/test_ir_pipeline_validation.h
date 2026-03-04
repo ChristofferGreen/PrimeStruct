@@ -3069,6 +3069,136 @@ TEST_CASE("ir lowerer call helpers emit map lookup access epilogue") {
   CHECK(instructions[9].op == primec::IrOpcode::LoadIndirect);
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup access") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "mapTarget";
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Name;
+  keyExpr.name = "mapKey";
+  primec::ir_lowerer::LocalMap locals;
+  locals[targetExpr.name] = primec::ir_lowerer::LocalInfo{};
+  locals[keyExpr.name] = primec::ir_lowerer::LocalInfo{};
+
+  std::vector<primec::Instruction> instructions;
+  int nextLocal = 20;
+  int emitExprCalls = 0;
+  int inferCalls = 0;
+  int keyNotFoundCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitMapLookupAccess(
+      "at",
+      Kind::Int32,
+      targetExpr,
+      keyExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { ++keyNotFoundCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(emitExprCalls == 2);
+  CHECK(inferCalls == 1);
+  CHECK(keyNotFoundCalls == 1);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 44);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[0].imm == 20);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 21);
+  CHECK(instructions[10].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[10].imm == 30);
+  CHECK(instructions[23].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[23].imm == 25);
+  CHECK(instructions[24].op == primec::IrOpcode::Jump);
+  CHECK(instructions[24].imm == 30);
+  CHECK(instructions[33].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[33].imm == 34);
+  CHECK(instructions[34].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[34].imm == 20);
+  CHECK(instructions[43].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  nextLocal = 40;
+  emitExprCalls = 0;
+  inferCalls = 0;
+  keyNotFoundCalls = 0;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupAccess(
+      "at",
+      Kind::Int32,
+      targetExpr,
+      keyExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return false;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { ++keyNotFoundCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(emitExprCalls == 1);
+  CHECK(inferCalls == 0);
+  CHECK(keyNotFoundCalls == 0);
+  CHECK(instructions.empty());
+  CHECK(error.empty());
+
+  instructions.clear();
+  nextLocal = 50;
+  emitExprCalls = 0;
+  inferCalls = 0;
+  keyNotFoundCalls = 0;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupAccess(
+      "at",
+      Kind::String,
+      targetExpr,
+      keyExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { ++keyNotFoundCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(emitExprCalls == 1);
+  CHECK(inferCalls == 0);
+  CHECK(keyNotFoundCalls == 0);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[0].imm == 50);
+  CHECK(error == "native backend requires map lookup key to be string literal or binding backed by literals");
+}
+
 TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
   std::vector<primec::Instruction> instructions;
   int nextLocal = 30;
