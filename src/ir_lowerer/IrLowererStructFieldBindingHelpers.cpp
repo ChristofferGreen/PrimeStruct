@@ -202,6 +202,26 @@ bool collectStructLayoutFieldBindings(
   return true;
 }
 
+bool collectStructLayoutFieldBindingsFromProgramContext(
+    const Program &program,
+    const std::unordered_set<std::string> &structNames,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
+    std::string &errorOut) {
+  const auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
+    return resolveStructLayoutExprPathFromScope(expr, defMap, importAliases);
+  };
+  return collectStructLayoutFieldBindings(program,
+                                          structNames,
+                                          resolveStructTypePath,
+                                          resolveStructLayoutExprPath,
+                                          defMap,
+                                          fieldsByStructOut,
+                                          errorOut);
+}
+
 std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding) {
   if (binding.typeTemplateArg.empty()) {
     return binding.typeName;

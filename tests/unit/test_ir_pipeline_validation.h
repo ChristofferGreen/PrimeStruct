@@ -1043,6 +1043,86 @@ TEST_CASE("ir lowerer struct field binding helpers collect struct layout binding
   CHECK(error == "omitted struct field envelope requires exactly one initializer: /pkg/Bad/bad");
 }
 
+TEST_CASE("ir lowerer struct field binding helpers collect layout bindings from program context") {
+  primec::Program program;
+
+  primec::Definition structA;
+  structA.fullPath = "/pkg/A";
+  structA.namespacePrefix = "/pkg";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structA.transforms = {structTransform};
+
+  primec::Definition structS;
+  structS.fullPath = "/pkg/S";
+  structS.namespacePrefix = "/pkg";
+  structS.transforms = {structTransform};
+
+  primec::Expr typedField;
+  typedField.kind = primec::Expr::Kind::Call;
+  typedField.isBinding = true;
+  typedField.name = "typed";
+  primec::Transform typeI32;
+  typeI32.name = "i32";
+  typedField.transforms = {typeI32};
+
+  primec::Expr childCtor;
+  childCtor.kind = primec::Expr::Kind::Call;
+  childCtor.name = "/pkg/A";
+  primec::Expr childField;
+  childField.kind = primec::Expr::Kind::Call;
+  childField.isBinding = true;
+  childField.name = "child";
+  childField.args = {childCtor};
+
+  structS.statements = {typedField, childField};
+  program.definitions = {structA, structS};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  primec::ir_lowerer::buildDefinitionMapAndStructNames(program.definitions, defMap, structNames);
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> fieldsByStruct;
+  std::string error;
+  CHECK(primec::ir_lowerer::collectStructLayoutFieldBindingsFromProgramContext(
+      program, structNames, resolveStructTypePath, defMap, importAliases, fieldsByStruct, error));
+  CHECK(error.empty());
+  REQUIRE(fieldsByStruct.count("/pkg/S") == 1u);
+  REQUIRE(fieldsByStruct["/pkg/S"].size() == 2u);
+  CHECK(fieldsByStruct["/pkg/S"][0].typeName == "i32");
+  CHECK(fieldsByStruct["/pkg/S"][1].typeName == "/pkg/A");
+
+  primec::Program badProgram;
+  primec::Definition badStruct;
+  badStruct.fullPath = "/pkg/Bad";
+  badStruct.namespacePrefix = "/pkg";
+  badStruct.transforms = {structTransform};
+  primec::Expr badField;
+  badField.kind = primec::Expr::Kind::Call;
+  badField.isBinding = true;
+  badField.name = "bad";
+  badStruct.statements = {badField};
+  badProgram.definitions = {badStruct};
+
+  std::unordered_map<std::string, const primec::Definition *> badDefMap;
+  std::unordered_set<std::string> badStructNames;
+  primec::ir_lowerer::buildDefinitionMapAndStructNames(badProgram.definitions, badDefMap, badStructNames);
+  const auto badResolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, badStructNames, importAliases);
+  };
+  fieldsByStruct.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::collectStructLayoutFieldBindingsFromProgramContext(
+      badProgram, badStructNames, badResolveStructTypePath, badDefMap, importAliases, fieldsByStruct, error));
+  CHECK(error == "omitted struct field envelope requires exactly one initializer: /pkg/Bad/bad");
+}
+
 TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/A",

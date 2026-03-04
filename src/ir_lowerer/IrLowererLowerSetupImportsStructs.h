@@ -9,18 +9,9 @@
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     return resolveStructTypePathCandidateFromScope(typeName, namespacePrefix, structNames, importAliases);
   };
-  using FieldBinding = ir_lowerer::LayoutFieldBinding;
-  auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
-    return resolveStructLayoutExprPathFromScope(expr, defMap, importAliases);
-  };
-  std::unordered_map<std::string, std::vector<FieldBinding>> structFieldInfoByName;
-  if (!ir_lowerer::collectStructLayoutFieldBindings(program,
-                                                    structNames,
-                                                    resolveStructTypePath,
-                                                    resolveStructLayoutExprPath,
-                                                    defMap,
-                                                    structFieldInfoByName,
-                                                    error)) {
+  std::unordered_map<std::string, std::vector<ir_lowerer::LayoutFieldBinding>> structFieldInfoByName;
+  if (!ir_lowerer::collectStructLayoutFieldBindingsFromProgramContext(
+          program, structNames, resolveStructTypePath, defMap, importAliases, structFieldInfoByName, error)) {
     return false;
   }
   std::unordered_map<std::string, IrStructLayout> layoutCache;
