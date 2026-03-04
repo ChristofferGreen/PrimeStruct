@@ -66,13 +66,6 @@
         def.fullPath, layoutCache, layoutStack, computeUncachedLayout, layoutOut, error);
   };
 
-  for (const auto &def : program.definitions) {
-    if (!ir_lowerer::isStructDefinition(def)) {
-      continue;
-    }
-    IrStructLayout layout;
-    if (!computeStructLayout(def, layout)) {
-      return false;
-    }
-    out.structLayouts.push_back(std::move(layout));
+  if (!ir_lowerer::appendProgramStructLayouts(program, computeStructLayout, out.structLayouts, error)) {
+    return false;
   }

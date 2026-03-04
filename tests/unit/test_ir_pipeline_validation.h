@@ -1622,6 +1622,87 @@ TEST_CASE("ir lowerer struct layout helpers compute uncached diagnostics") {
   CHECK(error == "alignment requirement on struct /pkg/BadAlign is smaller than required alignment of 8");
 }
 
+TEST_CASE("ir lowerer struct layout helpers append program layouts") {
+  primec::Program program;
+
+  primec::Definition nonStruct;
+  nonStruct.fullPath = "/pkg/fn";
+  program.definitions.push_back(nonStruct);
+
+  primec::Definition structA;
+  structA.fullPath = "/pkg/A";
+  primec::Transform structTransformA;
+  structTransformA.name = "struct";
+  structA.transforms.push_back(structTransformA);
+  program.definitions.push_back(structA);
+
+  primec::Definition structB;
+  structB.fullPath = "/pkg/B";
+  primec::Transform structTransformB;
+  structTransformB.name = "struct";
+  structB.transforms.push_back(structTransformB);
+  program.definitions.push_back(structB);
+
+  std::vector<std::string> calls;
+  const auto computeStructLayout = [&](const primec::Definition &def, primec::IrStructLayout &layout) {
+    calls.push_back(def.fullPath);
+    layout.name = def.fullPath;
+    layout.totalSizeBytes = (def.fullPath == "/pkg/A") ? 4u : 8u;
+    layout.alignmentBytes = 4u;
+    return true;
+  };
+
+  std::vector<primec::IrStructLayout> layouts;
+  std::string error;
+  CHECK(primec::ir_lowerer::appendProgramStructLayouts(program, computeStructLayout, layouts, error));
+  CHECK(error.empty());
+  REQUIRE(calls.size() == 2u);
+  CHECK(calls[0] == "/pkg/A");
+  CHECK(calls[1] == "/pkg/B");
+  REQUIRE(layouts.size() == 2u);
+  CHECK(layouts[0].name == "/pkg/A");
+  CHECK(layouts[1].name == "/pkg/B");
+}
+
+TEST_CASE("ir lowerer struct layout helpers append program layout diagnostics") {
+  primec::Program program;
+  primec::Definition structA;
+  structA.fullPath = "/pkg/A";
+  primec::Transform structTransformA;
+  structTransformA.name = "struct";
+  structA.transforms.push_back(structTransformA);
+  program.definitions.push_back(structA);
+
+  primec::Definition structB;
+  structB.fullPath = "/pkg/B";
+  primec::Transform structTransformB;
+  structTransformB.name = "struct";
+  structB.transforms.push_back(structTransformB);
+  program.definitions.push_back(structB);
+
+  std::vector<primec::IrStructLayout> layouts;
+  std::string error;
+  const auto explicitError = [&](const primec::Definition &def, primec::IrStructLayout &layout) {
+    layout.name = def.fullPath;
+    if (def.fullPath == "/pkg/B") {
+      error = "layout failure: /pkg/B";
+      return false;
+    }
+    return true;
+  };
+  CHECK_FALSE(primec::ir_lowerer::appendProgramStructLayouts(program, explicitError, layouts, error));
+  CHECK(error == "layout failure: /pkg/B");
+  REQUIRE(layouts.size() == 1u);
+  CHECK(layouts[0].name == "/pkg/A");
+
+  layouts.clear();
+  error.clear();
+  const auto defaultError = [&](const primec::Definition &, primec::IrStructLayout &) { return false; };
+  CHECK_FALSE(primec::ir_lowerer::appendProgramStructLayouts(program, defaultError, layouts, error));
+  CHECK(error == "failed to compute struct layout: /pkg/A");
+  CHECK(layouts.empty());
+}
+
 TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));

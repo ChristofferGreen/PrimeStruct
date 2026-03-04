@@ -4,6 +4,7 @@
 #include <cctype>
 #include <limits>
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -270,6 +271,27 @@ bool computeStructLayoutUncached(
   structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
   layoutOut.alignmentBytes = structAlign;
   layoutOut.totalSizeBytes = alignTo(offset, structAlign);
+  return true;
+}
+
+bool appendProgramStructLayouts(
+    const Program &program,
+    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    std::vector<IrStructLayout> &layoutsOut,
+    std::string &errorOut) {
+  for (const auto &def : program.definitions) {
+    if (!isStructDefinition(def)) {
+      continue;
+    }
+    IrStructLayout layout;
+    if (!computeStructLayout(def, layout)) {
+      if (errorOut.empty()) {
+        errorOut = "failed to compute struct layout: " + def.fullPath;
+      }
+      return false;
+    }
+    layoutsOut.push_back(std::move(layout));
+  }
   return true;
 }
 
