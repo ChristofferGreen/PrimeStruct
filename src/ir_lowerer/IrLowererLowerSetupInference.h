@@ -9,27 +9,22 @@
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &localsIn) -> const Definition * {
-    if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || !callExpr.isMethodCall) {
+    const Expr *receiver = nullptr;
+    if (!resolveMethodCallReceiverExpr(callExpr,
+                                       localsIn,
+                                       isArrayCountCall,
+                                       isVectorCapacityCall,
+                                       isEntryArgsName,
+                                       receiver,
+                                       error)) {
       return nullptr;
     }
-    if (callExpr.args.empty()) {
-      error = "method call missing receiver";
-      return nullptr;
-    }
-    if (isArrayCountCall(callExpr, localsIn)) {
-      return nullptr;
-    }
-    if (isVectorCapacityCall(callExpr, localsIn)) {
-      return nullptr;
-    }
-    const Expr &receiver = callExpr.args.front();
-    if (isEntryArgsName(receiver, localsIn)) {
-      error = "unknown method target for " + callExpr.name;
+    if (receiver == nullptr) {
       return nullptr;
     }
     std::string typeName;
     std::string resolvedTypePath;
-    if (!resolveMethodReceiverTarget(receiver,
+    if (!resolveMethodReceiverTarget(*receiver,
                                      localsIn,
                                      callExpr.name,
                                      importAliases,

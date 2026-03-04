@@ -126,6 +126,38 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
   }
 }
 
+bool resolveMethodCallReceiverExpr(const Expr &callExpr,
+                                   const LocalMap &localsIn,
+                                   const IsMethodCallClassifierFn &isArrayCountCall,
+                                   const IsMethodCallClassifierFn &isVectorCapacityCall,
+                                   const IsMethodCallClassifierFn &isEntryArgsName,
+                                   const Expr *&receiverOut,
+                                   std::string &errorOut) {
+  receiverOut = nullptr;
+
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || !callExpr.isMethodCall) {
+    return false;
+  }
+  if (callExpr.args.empty()) {
+    errorOut = "method call missing receiver";
+    return false;
+  }
+  if (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) {
+    return false;
+  }
+  if (isVectorCapacityCall && isVectorCapacityCall(callExpr, localsIn)) {
+    return false;
+  }
+  const Expr &receiver = callExpr.args.front();
+  if (isEntryArgsName && isEntryArgsName(receiver, localsIn)) {
+    errorOut = "unknown method target for " + callExpr.name;
+    return false;
+  }
+
+  receiverOut = &receiver;
+  return true;
+}
+
 bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
                                             std::string &typeNameOut,
                                             std::string &resolvedTypePathOut) {

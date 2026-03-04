@@ -16,6 +16,7 @@ using CombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 using InferReceiverExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using ResolveReceiverExprPathFn = std::function<std::string(const Expr &)>;
+using IsMethodCallClassifierFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 struct SetupTypeAdapters {
   ValueKindFromTypeNameFn valueKindFromTypeName;
@@ -30,6 +31,13 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name);
 LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 LocalInfo::ValueKind comparisonKind(LocalInfo::ValueKind left, LocalInfo::ValueKind right);
 std::string typeNameForValueKind(LocalInfo::ValueKind kind);
+bool resolveMethodCallReceiverExpr(const Expr &callExpr,
+                                   const LocalMap &localsIn,
+                                   const IsMethodCallClassifierFn &isArrayCountCall,
+                                   const IsMethodCallClassifierFn &isVectorCapacityCall,
+                                   const IsMethodCallClassifierFn &isEntryArgsName,
+                                   const Expr *&receiverOut,
+                                   std::string &errorOut);
 bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
                                             std::string &typeNameOut,
                                             std::string &resolvedTypePathOut);
