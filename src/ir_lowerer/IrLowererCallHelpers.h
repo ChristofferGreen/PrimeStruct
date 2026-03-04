@@ -184,6 +184,19 @@ StringTableAccessEmitResult tryEmitStringTableAccessLoad(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
+bool emitArrayVectorIndexedAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const Expr &targetExpr,
     const LocalMap &localsIn,

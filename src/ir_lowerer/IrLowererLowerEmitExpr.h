@@ -919,45 +919,22 @@
             return true;
           }
 
-          const auto arrayVectorTargetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(target, localsIn);
-          if (!ir_lowerer::validateArrayVectorAccessTargetInfo(arrayVectorTargetInfo, error)) {
-            return false;
-          }
-
-          LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
-          if (!ir_lowerer::resolveValidatedAccessIndexKind(
+          if (!ir_lowerer::emitArrayVectorIndexedAccess(
+                  accessName,
+                  expr.args[0],
                   expr.args[1],
                   localsIn,
-                  accessName,
                   [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
                     return inferExprKind(lookupKeyExpr, localMap);
                   },
-                  indexKind,
+                  [&]() { return allocTempLocal(); },
+                  [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
+                    return emitExpr(lookupExpr, localMap);
+                  },
+                  [&]() { emitArrayIndexOutOfBounds(); },
+                  [&]() { return function.instructions.size(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
                   error)) {
             return false;
           }
-
-          const uint64_t headerSlots = arrayVectorTargetInfo.isVectorTarget ? 2 : 1;
-          const int32_t ptrLocal = allocTempLocal();
-          if (!emitExpr(expr.args[0], localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-
-          const int32_t indexLocal = allocTempLocal();
-          if (!emitExpr(expr.args[1], localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-
-          ir_lowerer::emitArrayVectorAccessLoad(
-              accessName,
-              ptrLocal,
-              indexLocal,
-              indexKind,
-              headerSlots,
-              [&]() { return allocTempLocal(); },
-              [&]() { emitArrayIndexOutOfBounds(); },
-              [&]() { return function.instructions.size(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });

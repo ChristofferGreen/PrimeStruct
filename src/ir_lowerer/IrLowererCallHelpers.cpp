@@ -461,6 +461,56 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
   return true;
 }
 
+bool emitArrayVectorIndexedAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  const auto arrayVectorTargetInfo = resolveArrayVectorAccessTargetInfo(targetExpr, localsIn);
+  if (!validateArrayVectorAccessTargetInfo(arrayVectorTargetInfo, error)) {
+    return false;
+  }
+
+  LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+  if (!resolveValidatedAccessIndexKind(indexExpr, localsIn, accessName, inferExprKind, indexKind, error)) {
+    return false;
+  }
+
+  const uint64_t headerSlots = arrayVectorTargetInfo.isVectorTarget ? 2 : 1;
+  const int32_t ptrLocal = allocTempLocal();
+  if (!emitExpr(targetExpr, localsIn)) {
+    return false;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal));
+
+  const int32_t indexLocal = allocTempLocal();
+  if (!emitExpr(indexExpr, localsIn)) {
+    return false;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+
+  emitArrayVectorAccessLoad(
+      accessName,
+      ptrLocal,
+      indexLocal,
+      indexKind,
+      headerSlots,
+      allocTempLocal,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm);
+  return true;
+}
+
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind) {
   if (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64) {
     return IrOpcode::CmpEqI64;

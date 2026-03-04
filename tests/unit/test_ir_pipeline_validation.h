@@ -3051,6 +3051,165 @@ TEST_CASE("ir lowerer call helpers emit string table access load") {
   CHECK(instructions[11].imm == 12);
 }
 
+TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "vec";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "idx";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorLocalInfo;
+  vectorLocalInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorLocalInfo.valueKind = Kind::Int32;
+  locals.emplace("vec", vectorLocalInfo);
+
+  std::vector<primec::Instruction> instructions;
+  std::string error;
+
+  int inferCalls = 0;
+  int allocCalls = 0;
+  int emitExprCalls = 0;
+  int arrayIndexOutOfBoundsCalls = 0;
+
+  error = "stale";
+  CHECK_FALSE(primec::ir_lowerer::emitArrayVectorIndexedAccess(
+      "at",
+      targetExpr,
+      indexExpr,
+      primec::ir_lowerer::LocalMap{},
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() {
+        ++allocCalls;
+        return 0;
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error == "native backend only supports at() on numeric/bool arrays or vectors");
+  CHECK(inferCalls == 0);
+  CHECK(allocCalls == 0);
+  CHECK(emitExprCalls == 0);
+  CHECK(arrayIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitArrayVectorIndexedAccess(
+      "at",
+      targetExpr,
+      indexExpr,
+      locals,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Float32;
+      },
+      [&]() {
+        ++allocCalls;
+        return 1;
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error == "native backend requires integer indices for at");
+  CHECK(inferCalls == 1);
+  CHECK(allocCalls == 0);
+  CHECK(emitExprCalls == 0);
+  CHECK(arrayIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitArrayVectorIndexedAccess(
+      "at",
+      targetExpr,
+      indexExpr,
+      locals,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { return 40 + allocCalls++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return false;
+      },
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(inferCalls == 2);
+  CHECK(allocCalls == 1);
+  CHECK(emitExprCalls == 1);
+  CHECK(arrayIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  inferCalls = 0;
+  allocCalls = 0;
+  emitExprCalls = 0;
+  arrayIndexOutOfBoundsCalls = 0;
+  CHECK(primec::ir_lowerer::emitArrayVectorIndexedAccess(
+      "at",
+      targetExpr,
+      indexExpr,
+      locals,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++inferCalls;
+        return Kind::Int32;
+      },
+      [&]() { return 50 + allocCalls++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        instructions.push_back({primec::IrOpcode::PushI32, emitExprCalls == 1 ? 101u : 3u});
+        return true;
+      },
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(inferCalls == 1);
+  CHECK(allocCalls == 3);
+  CHECK(emitExprCalls == 2);
+  CHECK(arrayIndexOutOfBoundsCalls == 2);
+  REQUIRE(instructions.size() == 23);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 101);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 50);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 3);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 51);
+  CHECK(instructions[17].op == primec::ir_lowerer::pushOneForIndex(Kind::Int32));
+  CHECK(instructions[17].imm == 2);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+}
+
 TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   using Result = primec::ir_lowerer::NonLiteralStringAccessTargetResult;
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
