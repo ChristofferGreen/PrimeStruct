@@ -387,6 +387,21 @@ MapLookupLoopLocals emitMapLookupLoopLocals(
   return locals;
 }
 
+MapLookupLoopConditionAnchors emitMapLookupLoopCondition(
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  MapLookupLoopConditionAnchors anchors;
+  anchors.loopStart = instructionCount();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emitInstruction(IrOpcode::CmpLtI32, 0);
+  anchors.jumpLoopEnd = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+  return anchors;
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {

@@ -2806,6 +2806,26 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
   CHECK(instructions[4].imm == 31);
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup loop condition") {
+  std::vector<primec::Instruction> instructions;
+  auto anchors = primec::ir_lowerer::emitMapLookupLoopCondition(
+      7,
+      9,
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+
+  CHECK(anchors.loopStart == 0);
+  CHECK(anchors.jumpLoopEnd == 3);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 9);
+  CHECK(instructions[2].op == primec::IrOpcode::CmpLtI32);
+  CHECK(instructions[3].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[3].imm == 0);
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

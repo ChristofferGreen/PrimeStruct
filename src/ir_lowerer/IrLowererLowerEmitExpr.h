@@ -971,12 +971,13 @@
             const int32_t countLocal = loopLocals.countLocal;
             const int32_t indexLocal = loopLocals.indexLocal;
 
-            size_t loopStart = function.instructions.size();
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-            size_t jumpLoopEnd = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            const auto loopCondition = ir_lowerer::emitMapLookupLoopCondition(
+                indexLocal,
+                countLocal,
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+            size_t loopStart = loopCondition.loopStart;
+            size_t jumpLoopEnd = loopCondition.jumpLoopEnd;
 
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});

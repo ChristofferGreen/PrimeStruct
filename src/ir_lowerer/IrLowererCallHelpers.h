@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -92,6 +93,10 @@ struct MapLookupLoopLocals {
   int32_t countLocal = -1;
   int32_t indexLocal = -1;
 };
+struct MapLookupLoopConditionAnchors {
+  size_t loopStart = 0;
+  size_t jumpLoopEnd = 0;
+};
 enum class MapLookupStringKeyResult {
   NotHandled,
   Resolved,
@@ -154,6 +159,11 @@ bool emitMapLookupNonStringKeyLocal(
 MapLookupLoopLocals emitMapLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+MapLookupLoopConditionAnchors emitMapLookupLoopCondition(
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
