@@ -4339,6 +4339,32 @@ TEST_CASE("ir lowerer setup math helper builds bundled name resolvers") {
   CHECK_FALSE(resolversWithoutImport.getMathConstantName("pi", constantName));
 }
 
+TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding adapters") {
+  const auto adapters = primec::ir_lowerer::makeSetupMathAndBindingAdapters(true);
+
+  primec::Expr mathCall;
+  mathCall.kind = primec::Expr::Kind::Call;
+  mathCall.name = "sin";
+  std::string builtinName;
+  CHECK(adapters.setupMathResolvers.getMathBuiltinName(mathCall, builtinName));
+  CHECK(builtinName == "sin");
+
+  primec::Expr stringExpr;
+  primec::Transform stringTransform;
+  stringTransform.name = "string";
+  stringExpr.transforms.push_back(stringTransform);
+  CHECK(adapters.bindingTypeAdapters.isStringBinding(stringExpr));
+  CHECK_FALSE(adapters.bindingTypeAdapters.isFileErrorBinding(stringExpr));
+
+  primec::Expr mapExpr;
+  primec::Transform mapTransform;
+  mapTransform.name = "map";
+  mapTransform.templateArgs = {"bool", "f64"};
+  mapExpr.transforms.push_back(mapTransform);
+  CHECK(adapters.bindingTypeAdapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

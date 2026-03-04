@@ -73,11 +73,12 @@
   }
   OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
-  const auto setupMathResolvers = ir_lowerer::makeSetupMathResolvers(hasMathImport);
+  const auto setupMathAndBindingAdapters = ir_lowerer::makeSetupMathAndBindingAdapters(hasMathImport);
+  const auto &setupMathResolvers = setupMathAndBindingAdapters.setupMathResolvers;
   auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
   auto getMathConstantName = setupMathResolvers.getMathConstantName;
 
-  const auto bindingTypeAdapters = ir_lowerer::makeBindingTypeAdapters();
+  const auto &bindingTypeAdapters = setupMathAndBindingAdapters.bindingTypeAdapters;
   auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
   auto bindingKind = bindingTypeAdapters.bindingKind;
   auto isStringBinding = bindingTypeAdapters.isStringBinding;

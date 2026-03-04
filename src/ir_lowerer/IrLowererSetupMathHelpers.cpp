@@ -49,6 +49,13 @@ SetupMathResolvers makeSetupMathResolvers(bool hasMathImport) {
   return resolvers;
 }
 
+SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport) {
+  SetupMathAndBindingAdapters adapters;
+  adapters.setupMathResolvers = makeSetupMathResolvers(hasMathImport);
+  adapters.bindingTypeAdapters = makeBindingTypeAdapters();
+  return adapters;
+}
+
 GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport) {
   return [hasMathImport](const Expr &expr, std::string &out) {
     return getSetupMathBuiltinName(expr, hasMathImport, out);

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -15,10 +16,15 @@ struct SetupMathResolvers {
   GetSetupMathBuiltinNameFn getMathBuiltinName;
   GetSetupMathConstantNameFn getMathConstantName;
 };
+struct SetupMathAndBindingAdapters {
+  SetupMathResolvers setupMathResolvers;
+  BindingTypeAdapters bindingTypeAdapters;
+};
 
 bool isMathImportPath(const std::string &path);
 bool hasProgramMathImport(const std::vector<std::string> &imports);
 SetupMathResolvers makeSetupMathResolvers(bool hasMathImport);
+SetupMathAndBindingAdapters makeSetupMathAndBindingAdapters(bool hasMathImport);
 GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport);
 GetSetupMathConstantNameFn makeGetSetupMathConstantName(bool hasMathImport);
 bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &out);
