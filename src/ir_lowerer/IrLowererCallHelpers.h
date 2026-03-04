@@ -185,6 +185,13 @@ void emitMapLookupLoopAdvanceAndPatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+void emitMapLookupAtKeyNotFoundGuard(
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);

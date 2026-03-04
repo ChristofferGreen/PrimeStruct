@@ -452,6 +452,23 @@ void emitMapLookupLoopAdvanceAndPatch(
   patchInstructionImm(jumpFound, static_cast<uint64_t>(loopEndIndex));
 }
 
+void emitMapLookupAtKeyNotFoundGuard(
+    int32_t indexLocal,
+    int32_t countLocal,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emitInstruction(IrOpcode::CmpEqI32, 0);
+  const size_t jumpKeyFound = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+  emitMapKeyNotFound();
+  const size_t keyFoundIndex = instructionCount();
+  patchInstructionImm(jumpKeyFound, static_cast<uint64_t>(keyFoundIndex));
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {

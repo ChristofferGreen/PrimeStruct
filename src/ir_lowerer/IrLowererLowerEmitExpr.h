@@ -1000,14 +1000,13 @@
                 [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
 
             if (accessName == "at") {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-              function.instructions.push_back({IrOpcode::CmpEqI32, 0});
-              size_t jumpKeyFound = function.instructions.size();
-              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-              emitMapKeyNotFound();
-              size_t keyFoundIndex = function.instructions.size();
-              function.instructions[jumpKeyFound].imm = static_cast<int32_t>(keyFoundIndex);
+              ir_lowerer::emitMapLookupAtKeyNotFoundGuard(
+                  indexLocal,
+                  countLocal,
+                  [&]() { emitMapKeyNotFound(); },
+                  [&]() { return function.instructions.size(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
             }
 
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
