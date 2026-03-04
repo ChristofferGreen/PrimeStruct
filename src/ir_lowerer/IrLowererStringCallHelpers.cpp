@@ -132,4 +132,107 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
   return StringCallEmitResult::Handled;
 }
 
+bool emitStringValueForCallFromLocals(const Expr &arg,
+                                      const LocalMap &callerLocals,
+                                      const InternStringFn &internString,
+                                      const EmitInstructionFn &emitInstruction,
+                                      const ResolveArrayAccessNameFn &resolveArrayAccessName,
+                                      const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                      const ResolveStringIndexOpsFn &resolveStringIndexOps,
+                                      const EmitExprFn &emitExpr,
+                                      const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const AllocTempLocalFn &allocTempLocal,
+                                      const GetInstructionCountFn &getInstructionCount,
+                                      const PatchInstructionImmFn &patchInstructionImm,
+                                      const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                      LocalInfo::StringSource &sourceOut,
+                                      int32_t &stringIndexOut,
+                                      bool &argvCheckedOut,
+                                      std::string &error) {
+  auto toHelperSource = [](LocalInfo::StringSource source) {
+    if (source == LocalInfo::StringSource::TableIndex) {
+      return StringCallSource::TableIndex;
+    }
+    if (source == LocalInfo::StringSource::ArgvIndex) {
+      return StringCallSource::ArgvIndex;
+    }
+    if (source == LocalInfo::StringSource::RuntimeIndex) {
+      return StringCallSource::RuntimeIndex;
+    }
+    return StringCallSource::None;
+  };
+  auto toLocalSource = [](StringCallSource source) {
+    if (source == StringCallSource::TableIndex) {
+      return LocalInfo::StringSource::TableIndex;
+    }
+    if (source == StringCallSource::ArgvIndex) {
+      return LocalInfo::StringSource::ArgvIndex;
+    }
+    if (source == StringCallSource::RuntimeIndex) {
+      return LocalInfo::StringSource::RuntimeIndex;
+    }
+    return LocalInfo::StringSource::None;
+  };
+
+  sourceOut = LocalInfo::StringSource::None;
+  stringIndexOut = -1;
+  argvCheckedOut = true;
+
+  StringCallSource helperSource = StringCallSource::None;
+  StringCallEmitResult helperResult = emitLiteralOrBindingStringCallValue(
+      arg,
+      internString,
+      emitInstruction,
+      [&](const std::string &name) -> StringBindingInfo {
+        StringBindingInfo binding;
+        auto it = callerLocals.find(name);
+        if (it == callerLocals.end()) {
+          return binding;
+        }
+        binding.found = true;
+        binding.isString = (it->second.valueKind == LocalInfo::ValueKind::String);
+        binding.localIndex = it->second.index;
+        binding.source = toHelperSource(it->second.stringSource);
+        binding.stringIndex = it->second.stringIndex;
+        binding.argvChecked = it->second.argvChecked;
+        return binding;
+      },
+      helperSource,
+      stringIndexOut,
+      argvCheckedOut,
+      error);
+  if (helperResult == StringCallEmitResult::Error) {
+    return false;
+  }
+  if (helperResult == StringCallEmitResult::Handled) {
+    sourceOut = toLocalSource(helperSource);
+    return true;
+  }
+
+  helperSource = StringCallSource::None;
+  helperResult = emitCallStringCallValue(arg,
+                                         resolveArrayAccessName,
+                                         isEntryArgsName,
+                                         resolveStringIndexOps,
+                                         emitExpr,
+                                         inferCallReturnsString,
+                                         allocTempLocal,
+                                         emitInstruction,
+                                         getInstructionCount,
+                                         patchInstructionImm,
+                                         emitArrayIndexOutOfBounds,
+                                         helperSource,
+                                         argvCheckedOut,
+                                         error);
+  if (helperResult == StringCallEmitResult::Error) {
+    return false;
+  }
+  if (helperResult == StringCallEmitResult::Handled) {
+    sourceOut = toLocalSource(helperSource);
+    return true;
+  }
+  error = "native backend requires string arguments to use string literals, bindings, or entry args";
+  return false;
+}
+
 } // namespace primec::ir_lowerer

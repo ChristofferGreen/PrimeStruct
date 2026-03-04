@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 
+#include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 #include "primec/Ir.h"
 
@@ -66,5 +67,22 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
                                              StringCallSource &sourceOut,
                                              bool &argvCheckedOut,
                                              std::string &error);
+bool emitStringValueForCallFromLocals(const Expr &arg,
+                                      const LocalMap &callerLocals,
+                                      const InternStringFn &internString,
+                                      const EmitInstructionFn &emitInstruction,
+                                      const ResolveArrayAccessNameFn &resolveArrayAccessName,
+                                      const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                      const ResolveStringIndexOpsFn &resolveStringIndexOps,
+                                      const EmitExprFn &emitExpr,
+                                      const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const AllocTempLocalFn &allocTempLocal,
+                                      const GetInstructionCountFn &getInstructionCount,
+                                      const PatchInstructionImmFn &patchInstructionImm,
+                                      const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                      LocalInfo::StringSource &sourceOut,
+                                      int32_t &stringIndexOut,
+                                      bool &argvCheckedOut,
+                                      std::string &error);
 
 } // namespace primec::ir_lowerer

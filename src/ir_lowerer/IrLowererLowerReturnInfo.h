@@ -325,58 +325,11 @@
                                     LocalInfo::StringSource &sourceOut,
                                     int32_t &stringIndexOut,
                                     bool &argvCheckedOut) -> bool {
-    sourceOut = LocalInfo::StringSource::None;
-    stringIndexOut = -1;
-    argvCheckedOut = true;
-    ir_lowerer::StringCallSource helperSource = ir_lowerer::StringCallSource::None;
-    ir_lowerer::StringCallEmitResult helperResult = ir_lowerer::emitLiteralOrBindingStringCallValue(
+    return ir_lowerer::emitStringValueForCallFromLocals(
         arg,
+        callerLocals,
         internString,
         [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-        [&](const std::string &name) -> ir_lowerer::StringBindingInfo {
-          ir_lowerer::StringBindingInfo binding;
-          auto it = callerLocals.find(name);
-          if (it == callerLocals.end()) {
-            return binding;
-          }
-          binding.found = true;
-          binding.isString = (it->second.valueKind == LocalInfo::ValueKind::String);
-          binding.localIndex = it->second.index;
-          if (it->second.stringSource == LocalInfo::StringSource::TableIndex) {
-            binding.source = ir_lowerer::StringCallSource::TableIndex;
-          } else if (it->second.stringSource == LocalInfo::StringSource::ArgvIndex) {
-            binding.source = ir_lowerer::StringCallSource::ArgvIndex;
-          } else if (it->second.stringSource == LocalInfo::StringSource::RuntimeIndex) {
-            binding.source = ir_lowerer::StringCallSource::RuntimeIndex;
-          } else {
-            binding.source = ir_lowerer::StringCallSource::None;
-          }
-          binding.stringIndex = it->second.stringIndex;
-          binding.argvChecked = it->second.argvChecked;
-          return binding;
-        },
-        helperSource,
-        stringIndexOut,
-        argvCheckedOut,
-        error);
-    if (helperResult == ir_lowerer::StringCallEmitResult::Error) {
-      return false;
-    }
-    if (helperResult == ir_lowerer::StringCallEmitResult::Handled) {
-      if (helperSource == ir_lowerer::StringCallSource::TableIndex) {
-        sourceOut = LocalInfo::StringSource::TableIndex;
-      } else if (helperSource == ir_lowerer::StringCallSource::ArgvIndex) {
-        sourceOut = LocalInfo::StringSource::ArgvIndex;
-      } else if (helperSource == ir_lowerer::StringCallSource::RuntimeIndex) {
-        sourceOut = LocalInfo::StringSource::RuntimeIndex;
-      } else {
-        sourceOut = LocalInfo::StringSource::None;
-      }
-      return true;
-    }
-    helperSource = ir_lowerer::StringCallSource::None;
-    helperResult = ir_lowerer::emitCallStringCallValue(
-        arg,
         [&](const Expr &callExpr, std::string &accessName) { return getBuiltinArrayAccessName(callExpr, accessName); },
         [&](const Expr &targetExpr) { return isEntryArgsName(targetExpr, callerLocals); },
         [&](const Expr &indexExpr,
@@ -397,28 +350,11 @@
         [&](const Expr &exprToEmit) { return emitExpr(exprToEmit, callerLocals); },
         [&](const Expr &callExpr) { return inferExprKind(callExpr, callerLocals) == LocalInfo::ValueKind::String; },
         [&]() { return allocTempLocal(); },
-        [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
         [&]() { return function.instructions.size(); },
         [&](size_t index, int32_t imm) { function.instructions.at(index).imm = imm; },
         [&]() { emitArrayIndexOutOfBounds(); },
-        helperSource,
+        sourceOut,
+        stringIndexOut,
         argvCheckedOut,
         error);
-    if (helperResult == ir_lowerer::StringCallEmitResult::Error) {
-      return false;
-    }
-    if (helperResult == ir_lowerer::StringCallEmitResult::Handled) {
-      if (helperSource == ir_lowerer::StringCallSource::TableIndex) {
-        sourceOut = LocalInfo::StringSource::TableIndex;
-      } else if (helperSource == ir_lowerer::StringCallSource::ArgvIndex) {
-        sourceOut = LocalInfo::StringSource::ArgvIndex;
-      } else if (helperSource == ir_lowerer::StringCallSource::RuntimeIndex) {
-        sourceOut = LocalInfo::StringSource::RuntimeIndex;
-      } else {
-        sourceOut = LocalInfo::StringSource::None;
-      }
-      return true;
-    }
-    error = "native backend requires string arguments to use string literals, bindings, or entry args";
-    return false;
   };

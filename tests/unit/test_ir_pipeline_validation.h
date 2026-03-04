@@ -6944,6 +6944,160 @@ TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   CHECK(instructions[0].imm == 42);
 }
 
+TEST_CASE("ir lowerer string call helpers emit values from locals") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto internString = [](const std::string &text) -> int32_t {
+    return text == "hello" ? 5 : 8;
+  };
+  auto resolveArrayAccessName = [](const primec::Expr &, std::string &) { return false; };
+  auto isEntryArgsName = [](const primec::Expr &) { return false; };
+  auto resolveStringIndexOps =
+      [](const primec::Expr &, const std::string &, primec::ir_lowerer::StringIndexOps &, std::string &) {
+        return false;
+      };
+  auto emitExpr = [](const primec::Expr &) { return true; };
+  auto inferCallReturnsString = [](const primec::Expr &) { return false; };
+  auto allocTempLocal = []() { return 0; };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+  auto emitArrayIndexOutOfBounds = []() {};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localString;
+  localString.index = 42;
+  localString.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  localString.stringSource = primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex;
+  localString.stringIndex = 11;
+  localString.argvChecked = true;
+  locals.emplace("text", localString);
+
+  primec::Expr nameArg;
+  nameArg.kind = primec::Expr::Kind::Name;
+  nameArg.name = "text";
+  primec::ir_lowerer::LocalInfo::StringSource sourceOut = primec::ir_lowerer::LocalInfo::StringSource::None;
+  int32_t stringIndexOut = -1;
+  bool argvCheckedOut = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitStringValueForCallFromLocals(nameArg,
+                                                              locals,
+                                                              internString,
+                                                              emitInstruction,
+                                                              resolveArrayAccessName,
+                                                              isEntryArgsName,
+                                                              resolveStringIndexOps,
+                                                              emitExpr,
+                                                              inferCallReturnsString,
+                                                              allocTempLocal,
+                                                              getInstructionCount,
+                                                              patchInstructionImm,
+                                                              emitArrayIndexOutOfBounds,
+                                                              sourceOut,
+                                                              stringIndexOut,
+                                                              argvCheckedOut,
+                                                              error));
+  CHECK(error.empty());
+  CHECK(sourceOut == primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex);
+  CHECK(stringIndexOut == 11);
+  CHECK(argvCheckedOut);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions.front().op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions.front().imm == 42);
+
+  instructions.clear();
+  primec::Expr badName = nameArg;
+  badName.name = "missing";
+  CHECK_FALSE(primec::ir_lowerer::emitStringValueForCallFromLocals(badName,
+                                                                    locals,
+                                                                    internString,
+                                                                    emitInstruction,
+                                                                    resolveArrayAccessName,
+                                                                    isEntryArgsName,
+                                                                    resolveStringIndexOps,
+                                                                    emitExpr,
+                                                                    inferCallReturnsString,
+                                                                    allocTempLocal,
+                                                                    getInstructionCount,
+                                                                    patchInstructionImm,
+                                                                    emitArrayIndexOutOfBounds,
+                                                                    sourceOut,
+                                                                    stringIndexOut,
+                                                                    argvCheckedOut,
+                                                                    error));
+  CHECK(error == "native backend does not know identifier: missing");
+}
+
+TEST_CASE("ir lowerer string call helpers emit entry-args call values from locals") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  primec::Expr argvExpr;
+  argvExpr.kind = primec::Expr::Kind::Name;
+  argvExpr.name = "argv";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 2;
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.args = {argvExpr, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::StringSource sourceOut = primec::ir_lowerer::LocalInfo::StringSource::None;
+  int32_t stringIndexOut = -1;
+  bool argvCheckedOut = false;
+  std::string error;
+  int emittedIndexExprs = 0;
+
+  CHECK(primec::ir_lowerer::emitStringValueForCallFromLocals(
+      atCall,
+      {},
+      [](const std::string &) { return 0; },
+      emitInstruction,
+      [](const primec::Expr &callExpr, std::string &nameOut) {
+        if (callExpr.name != "at" && callExpr.name != "unchecked_at") {
+          return false;
+        }
+        nameOut = callExpr.name;
+        return true;
+      },
+      [](const primec::Expr &targetExpr) {
+        return targetExpr.kind == primec::Expr::Kind::Name && targetExpr.name == "argv";
+      },
+      [](const primec::Expr &, const std::string &, primec::ir_lowerer::StringIndexOps &ops, std::string &) {
+        ops.pushZero = primec::IrOpcode::PushI32;
+        ops.cmpLt = primec::IrOpcode::CmpLtI32;
+        ops.cmpGe = primec::IrOpcode::CmpGeI32;
+        ops.skipNegativeCheck = false;
+        return true;
+      },
+      [&](const primec::Expr &) {
+        emittedIndexExprs++;
+        emitInstruction(primec::IrOpcode::PushI32, 2);
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      []() { return 11; },
+      getInstructionCount,
+      patchInstructionImm,
+      [&]() { emitInstruction(primec::IrOpcode::PushI32, 999); },
+      sourceOut,
+      stringIndexOut,
+      argvCheckedOut,
+      error));
+  CHECK(error.empty());
+  CHECK(sourceOut == primec::ir_lowerer::LocalInfo::StringSource::ArgvIndex);
+  CHECK(argvCheckedOut);
+  CHECK(emittedIndexExprs == 1);
+  REQUIRE_FALSE(instructions.empty());
+  CHECK(instructions.back().op == primec::IrOpcode::LoadLocal);
+}
+
 TEST_CASE("ir lowerer string call helpers surface errors and not-handled cases") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
