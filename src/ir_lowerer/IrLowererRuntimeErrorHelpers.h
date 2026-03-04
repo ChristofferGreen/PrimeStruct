@@ -8,6 +8,26 @@
 namespace primec::ir_lowerer {
 
 using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
+using EmitRuntimeErrorFn = std::function<void()>;
+
+EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
+                                                 const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
+                                                  const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
+                                                  const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitVectorCapacityExceeded(IrFunction &function,
+                                                  const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitVectorReserveNegative(IrFunction &function,
+                                                 const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitVectorReserveExceeded(IrFunction &function,
+                                                 const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+EmitRuntimeErrorFn makeEmitFloatToIntNonFinite(IrFunction &function,
+                                                const InternRuntimeErrorStringFn &internString);
 
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitStringIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);

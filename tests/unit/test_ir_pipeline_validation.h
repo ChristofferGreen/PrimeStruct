@@ -3439,6 +3439,38 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
   }
 }
 
+TEST_CASE("ir lowerer runtime error helpers build scoped emitters") {
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) -> int32_t {
+    for (size_t i = 0; i < stringTable.size(); ++i) {
+      if (stringTable[i] == text) {
+        return static_cast<int32_t>(i);
+      }
+    }
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+
+  auto emitArrayIndexOutOfBounds = primec::ir_lowerer::makeEmitArrayIndexOutOfBounds(function, internString);
+  auto emitMapKeyNotFound = primec::ir_lowerer::makeEmitMapKeyNotFound(function, internString);
+  auto emitFloatToIntNonFinite = primec::ir_lowerer::makeEmitFloatToIntNonFinite(function, internString);
+
+  emitArrayIndexOutOfBounds();
+  emitMapKeyNotFound();
+  emitFloatToIntNonFinite();
+  emitArrayIndexOutOfBounds();
+
+  const std::vector<std::string> expectedMessages = {
+      "array index out of bounds", "map key not found", "float to int conversion requires finite value"};
+  CHECK(stringTable == expectedMessages);
+  REQUIRE(function.instructions.size() == 12);
+  CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 0);
+  CHECK(primec::decodePrintStringIndex(function.instructions[3].imm) == 1);
+  CHECK(primec::decodePrintStringIndex(function.instructions[6].imm) == 2);
+  CHECK(primec::decodePrintStringIndex(function.instructions[9].imm) == 0);
+}
+
 TEST_CASE("ir lowerer index kind helpers normalize and validate supported kinds") {
   CHECK(primec::ir_lowerer::normalizeIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Bool) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);

@@ -33,49 +33,17 @@
     return ir_lowerer::internLowererString(text, stringTable);
   };
 
-  auto emitArrayIndexOutOfBounds = [&]() {
-    ir_lowerer::emitArrayIndexOutOfBounds(function, internString);
-  };
-
-  auto emitStringIndexOutOfBounds = [&]() {
-    ir_lowerer::emitStringIndexOutOfBounds(function, internString);
-  };
-
-  auto emitMapKeyNotFound = [&]() {
-    ir_lowerer::emitMapKeyNotFound(function, internString);
-  };
-
-  auto emitVectorIndexOutOfBounds = [&]() {
-    ir_lowerer::emitVectorIndexOutOfBounds(function, internString);
-  };
-
-  auto emitVectorPopOnEmpty = [&]() {
-    ir_lowerer::emitVectorPopOnEmpty(function, internString);
-  };
-
-  auto emitVectorCapacityExceeded = [&]() {
-    ir_lowerer::emitVectorCapacityExceeded(function, internString);
-  };
-
-  auto emitVectorReserveNegative = [&]() {
-    ir_lowerer::emitVectorReserveNegative(function, internString);
-  };
-
-  auto emitVectorReserveExceeded = [&]() {
-    ir_lowerer::emitVectorReserveExceeded(function, internString);
-  };
-
-  auto emitLoopCountNegative = [&]() {
-    ir_lowerer::emitLoopCountNegative(function, internString);
-  };
-
-  auto emitPowNegativeExponent = [&]() {
-    ir_lowerer::emitPowNegativeExponent(function, internString);
-  };
-
-  auto emitFloatToIntNonFinite = [&]() {
-    ir_lowerer::emitFloatToIntNonFinite(function, internString);
-  };
+  auto emitArrayIndexOutOfBounds = ir_lowerer::makeEmitArrayIndexOutOfBounds(function, internString);
+  auto emitStringIndexOutOfBounds = ir_lowerer::makeEmitStringIndexOutOfBounds(function, internString);
+  auto emitMapKeyNotFound = ir_lowerer::makeEmitMapKeyNotFound(function, internString);
+  auto emitVectorIndexOutOfBounds = ir_lowerer::makeEmitVectorIndexOutOfBounds(function, internString);
+  auto emitVectorPopOnEmpty = ir_lowerer::makeEmitVectorPopOnEmpty(function, internString);
+  auto emitVectorCapacityExceeded = ir_lowerer::makeEmitVectorCapacityExceeded(function, internString);
+  auto emitVectorReserveNegative = ir_lowerer::makeEmitVectorReserveNegative(function, internString);
+  auto emitVectorReserveExceeded = ir_lowerer::makeEmitVectorReserveExceeded(function, internString);
+  auto emitLoopCountNegative = ir_lowerer::makeEmitLoopCountNegative(function, internString);
+  auto emitPowNegativeExponent = ir_lowerer::makeEmitPowNegativeExponent(function, internString);
+  auto emitFloatToIntNonFinite = ir_lowerer::makeEmitFloatToIntNonFinite(function, internString);
 
   bool hasEntryArgs = false;
   std::string entryArgsName;

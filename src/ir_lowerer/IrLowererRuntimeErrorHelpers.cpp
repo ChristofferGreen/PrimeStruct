@@ -12,6 +12,80 @@ void emitRuntimeError(IrFunction &function, const std::string &message, const In
 }
 } // namespace
 
+EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
+                                                 const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitArrayIndexOutOfBounds(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
+                                                  const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitStringIndexOutOfBounds(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitMapKeyNotFound(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
+                                                  const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitVectorIndexOutOfBounds(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitVectorPopOnEmpty(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitVectorCapacityExceeded(IrFunction &function,
+                                                  const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitVectorCapacityExceeded(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitVectorReserveNegative(IrFunction &function,
+                                                 const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitVectorReserveNegative(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitVectorReserveExceeded(IrFunction &function,
+                                                 const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitVectorReserveExceeded(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitLoopCountNegative(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitPowNegativeExponent(IrFunction &function,
+                                               const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitPowNegativeExponent(function, internString);
+  };
+}
+
+EmitRuntimeErrorFn makeEmitFloatToIntNonFinite(IrFunction &function,
+                                                const InternRuntimeErrorStringFn &internString) {
+  return [&function, &internString]() {
+    emitFloatToIntNonFinite(function, internString);
+  };
+}
+
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "array index out of bounds", internString);
 }
