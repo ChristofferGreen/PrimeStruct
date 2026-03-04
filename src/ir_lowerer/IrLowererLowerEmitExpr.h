@@ -758,18 +758,20 @@
               [&]() { return allocTempLocal(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
         }
-        if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
-            !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
-          Expr methodExpr = expr;
-          methodExpr.isMethodCall = true;
-          const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-          if (callee) {
-            if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-              error = "native backend does not support block arguments on calls";
-              return false;
-            }
-            return emitInlineDefinitionCall(methodExpr, *callee, localsIn, true);
-          }
+        const auto firstCountFallbackResult = ir_lowerer::tryEmitNonMethodCountFallback(
+            expr,
+            [&](const Expr &callExpr) { return isArrayCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return isStringCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return resolveMethodCallDefinition(callExpr, localsIn); },
+            [&](const Expr &callExpr, const Definition &callee) {
+              return emitInlineDefinitionCall(callExpr, callee, localsIn, true);
+            },
+            error);
+        if (firstCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Emitted) {
+          return true;
+        }
+        if (firstCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Error) {
+          return false;
         }
         if (expr.isMethodCall && !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn) &&
             !isVectorCapacityCall(expr, localsIn)) {
@@ -790,18 +792,20 @@
           }
           return emitInlineDefinitionCall(expr, *callee, localsIn, true);
         }
-        if (!expr.isMethodCall && isSimpleCallName(expr, "count") && expr.args.size() == 1 &&
-            !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn)) {
-          Expr methodExpr = expr;
-          methodExpr.isMethodCall = true;
-          const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-          if (callee) {
-            if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-              error = "native backend does not support block arguments on calls";
-              return false;
-            }
-            return emitInlineDefinitionCall(methodExpr, *callee, localsIn, true);
-          }
+        const auto secondCountFallbackResult = ir_lowerer::tryEmitNonMethodCountFallback(
+            expr,
+            [&](const Expr &callExpr) { return isArrayCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return isStringCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return resolveMethodCallDefinition(callExpr, localsIn); },
+            [&](const Expr &callExpr, const Definition &callee) {
+              return emitInlineDefinitionCall(callExpr, callee, localsIn, true);
+            },
+            error);
+        if (secondCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Emitted) {
+          return true;
+        }
+        if (secondCountFallbackResult == ir_lowerer::CountMethodFallbackResult::Error) {
+          return false;
         }
         std::string mathName;
         if (getMathBuiltinName(expr, mathName)) {

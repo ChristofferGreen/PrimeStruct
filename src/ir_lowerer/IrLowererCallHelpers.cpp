@@ -117,6 +117,34 @@ bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
   return definitionReturnsVoid && isTailCallCandidateFn(lastStmt);
 }
 
+CountMethodFallbackResult tryEmitNonMethodCountFallback(
+    const Expr &expr,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall,
+    const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error) {
+  if (expr.isMethodCall || !isSimpleCallName(expr, "count") || expr.args.size() != 1 ||
+      isArrayCountCall(expr) || isStringCountCall(expr)) {
+    return CountMethodFallbackResult::NotHandled;
+  }
+
+  Expr methodExpr = expr;
+  methodExpr.isMethodCall = true;
+  const Definition *callee = resolveMethodCallDefinition(methodExpr);
+  if (!callee) {
+    return CountMethodFallbackResult::NoCallee;
+  }
+  if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+    error = "native backend does not support block arguments on calls";
+    return CountMethodFallbackResult::Error;
+  }
+  if (!emitInlineDefinitionCall(methodExpr, *callee)) {
+    return CountMethodFallbackResult::Error;
+  }
+  return CountMethodFallbackResult::Emitted;
+}
+
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,

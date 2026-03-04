@@ -2273,6 +2273,103 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
   CHECK(error == "argument count mismatch");
 }
 
+TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
+  using Result = primec::ir_lowerer::CountMethodFallbackResult;
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  primec::Expr targetArg;
+  targetArg.kind = primec::Expr::Kind::Name;
+  targetArg.name = "items";
+  countCall.args.push_back(targetArg);
+
+  primec::Definition callee;
+  callee.fullPath = "/pkg/items/count";
+
+  std::string error;
+  int resolveCalls = 0;
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++resolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &callee;
+            },
+            [&](const primec::Expr &methodExpr, const primec::Definition &resolvedCallee) {
+              ++emitCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/pkg/items/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(resolveCalls == 1);
+  CHECK(emitCalls == 1);
+
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NoCallee);
+
+  primec::Expr bodyArgExpr;
+  bodyArgExpr.kind = primec::Expr::Kind::Literal;
+  bodyArgExpr.intWidth = 32;
+  bodyArgExpr.literalValue = 1;
+  primec::Expr countWithBodyArgs = countCall;
+  countWithBodyArgs.hasBodyArguments = true;
+  countWithBodyArgs.bodyArguments.push_back(bodyArgExpr);
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countWithBodyArgs,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return &callee; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::Error);
+  CHECK(error == "native backend does not support block arguments on calls");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * { return &callee; },
+            [&](const primec::Expr &, const primec::Definition &) {
+              error = "emit failed";
+              return false;
+            },
+            error) == Result::Error);
+  CHECK(error == "emit failed");
+}
+
 TEST_CASE("ir lowerer on_error helpers wire definition handlers") {
   primec::Program program;
 

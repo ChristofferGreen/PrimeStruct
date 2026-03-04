@@ -61,6 +61,19 @@ bool isTailCallCandidate(const Expr &expr,
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
                                const IsTailCallCandidateFn &isTailCallCandidate);
+enum class CountMethodFallbackResult {
+  NotHandled,
+  NoCallee,
+  Emitted,
+  Error,
+};
+CountMethodFallbackResult tryEmitNonMethodCountFallback(
+    const Expr &expr,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall,
+    const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error);
 
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
