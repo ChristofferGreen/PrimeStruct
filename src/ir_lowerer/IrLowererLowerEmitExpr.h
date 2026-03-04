@@ -647,16 +647,12 @@
                   [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; });
             }
             if (expr.name == "write_byte") {
-              if (expr.args.size() != 2) {
-                error = "write_byte requires exactly one argument";
-                return false;
-              }
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-              if (!emitExpr(expr.args[1], localsIn)) {
-                return false;
-              }
-              function.instructions.push_back({IrOpcode::FileWriteByte, 0});
-              return true;
+              return ir_lowerer::emitFileWriteByteCall(
+                  expr,
+                  handleIndex,
+                  [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  error);
             }
             if (expr.name == "write_bytes") {
               if (expr.args.size() != 2) {

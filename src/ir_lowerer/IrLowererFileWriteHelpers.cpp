@@ -118,6 +118,23 @@ bool emitFileWriteCall(const Expr &expr,
   return true;
 }
 
+bool emitFileWriteByteCall(const Expr &expr,
+                           int32_t handleIndex,
+                           const EmitExprForWriteFn &emitExpr,
+                           const EmitInstructionForWriteFn &emitInstruction,
+                           std::string &error) {
+  if (expr.args.size() != 2) {
+    error = "write_byte requires exactly one argument";
+    return false;
+  }
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
+  if (!emitExpr(expr.args[1])) {
+    return false;
+  }
+  emitInstruction(IrOpcode::FileWriteByte, 0);
+  return true;
+}
+
 bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,

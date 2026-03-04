@@ -41,6 +41,11 @@ bool emitFileWriteCall(const Expr &expr,
                        const EmitInstructionForWriteFn &emitInstruction,
                        const GetInstructionCountForWriteFn &getInstructionCount,
                        const PatchInstructionImmForWriteFn &patchInstructionImm);
+bool emitFileWriteByteCall(const Expr &expr,
+                           int32_t handleIndex,
+                           const EmitExprForWriteFn &emitExpr,
+                           const EmitInstructionForWriteFn &emitInstruction,
+                           std::string &error);
 bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,
