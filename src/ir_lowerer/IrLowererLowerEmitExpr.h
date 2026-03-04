@@ -844,93 +844,29 @@
             error = accessName + " requires exactly two arguments";
             return false;
           }
-          const Expr &target = expr.args.front();
-
-          const auto stringTableAccessResult = ir_lowerer::tryEmitStringTableAccessLoad(
-              accessName,
-              target,
-              expr.args[1],
-              localsIn,
-              [&](const Expr &lookupExpr,
-                  const ir_lowerer::LocalMap &localMap,
-                  int32_t &stringIndexOut,
-                  size_t &lengthOut) {
-                return resolveStringTableTarget(lookupExpr, localMap, stringIndexOut, lengthOut);
-              },
-              [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                return inferExprKind(lookupKeyExpr, localMap);
-              },
-              [&]() { return allocTempLocal(); },
-              [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
-                return emitExpr(lookupExpr, localMap);
-              },
-              [&]() { emitStringIndexOutOfBounds(); },
-              [&]() { return function.instructions.size(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
-              error);
-          if (stringTableAccessResult == ir_lowerer::StringTableAccessEmitResult::Error) {
-            return false;
-          }
-          if (stringTableAccessResult == ir_lowerer::StringTableAccessEmitResult::Emitted) {
-            return true;
-          }
-          const auto nonLiteralStringTargetResult = ir_lowerer::validateNonLiteralStringAccessTarget(
-              target,
-              localsIn,
-              [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
-                return isEntryArgsName(targetExpr, localMap);
-              },
-              error);
-          if (nonLiteralStringTargetResult == ir_lowerer::NonLiteralStringAccessTargetResult::Stop) {
-            return false;
-          }
-          if (nonLiteralStringTargetResult == ir_lowerer::NonLiteralStringAccessTargetResult::Error) {
-            return false;
-          }
-
-          const auto mapLookupResult = ir_lowerer::tryEmitMapAccessLookup(
-              accessName,
-              expr.args[0],
-              expr.args[1],
-              localsIn,
-              [&]() { return allocTempLocal(); },
-              [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
-                return emitExpr(lookupExpr, localMap);
-              },
-              [&](const Expr &lookupKeyExpr,
-                  const ir_lowerer::LocalMap &localMap,
-                  int32_t &stringIndexOut,
-                  size_t &lengthOut) {
-                return resolveStringTableTarget(lookupKeyExpr, localMap, stringIndexOut, lengthOut);
-              },
-              [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                return inferExprKind(lookupKeyExpr, localMap);
-              },
-              [&]() { emitMapKeyNotFound(); },
-              [&]() { return function.instructions.size(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
-              error);
-          if (mapLookupResult == ir_lowerer::MapAccessLookupEmitResult::Error) {
-            return false;
-          }
-          if (mapLookupResult == ir_lowerer::MapAccessLookupEmitResult::Emitted) {
-            return true;
-          }
-
-          if (!ir_lowerer::emitArrayVectorIndexedAccess(
+          if (!ir_lowerer::emitBuiltinArrayAccess(
                   accessName,
                   expr.args[0],
                   expr.args[1],
                   localsIn,
+                  [&](const Expr &lookupExpr,
+                      const ir_lowerer::LocalMap &localMap,
+                      int32_t &stringIndexOut,
+                      size_t &lengthOut) {
+                    return resolveStringTableTarget(lookupExpr, localMap, stringIndexOut, lengthOut);
+                  },
                   [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
                     return inferExprKind(lookupKeyExpr, localMap);
+                  },
+                  [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
+                    return isEntryArgsName(targetExpr, localMap);
                   },
                   [&]() { return allocTempLocal(); },
                   [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
                     return emitExpr(lookupExpr, localMap);
                   },
+                  [&]() { emitStringIndexOutOfBounds(); },
+                  [&]() { emitMapKeyNotFound(); },
                   [&]() { emitArrayIndexOutOfBounds(); },
                   [&]() { return function.instructions.size(); },
                   [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },

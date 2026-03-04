@@ -511,6 +511,89 @@ bool emitArrayVectorIndexedAccess(
   return true;
 }
 
+bool emitBuiltinArrayAccess(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  const auto stringTableAccessResult = tryEmitStringTableAccessLoad(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      resolveStringTableTarget,
+      inferExprKind,
+      allocTempLocal,
+      emitExpr,
+      emitStringIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+  if (stringTableAccessResult == StringTableAccessEmitResult::Error) {
+    return false;
+  }
+  if (stringTableAccessResult == StringTableAccessEmitResult::Emitted) {
+    return true;
+  }
+
+  const auto nonLiteralStringTargetResult =
+      validateNonLiteralStringAccessTarget(targetExpr, localsIn, isEntryArgsName, error);
+  if (nonLiteralStringTargetResult == NonLiteralStringAccessTargetResult::Stop) {
+    return false;
+  }
+  if (nonLiteralStringTargetResult == NonLiteralStringAccessTargetResult::Error) {
+    return false;
+  }
+
+  const auto mapLookupResult = tryEmitMapAccessLookup(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      allocTempLocal,
+      emitExpr,
+      resolveStringTableTarget,
+      inferExprKind,
+      emitMapKeyNotFound,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+  if (mapLookupResult == MapAccessLookupEmitResult::Error) {
+    return false;
+  }
+  if (mapLookupResult == MapAccessLookupEmitResult::Emitted) {
+    return true;
+  }
+
+  return emitArrayVectorIndexedAccess(
+      accessName,
+      targetExpr,
+      indexExpr,
+      localsIn,
+      inferExprKind,
+      allocTempLocal,
+      emitExpr,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
+}
+
 IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind) {
   if (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64) {
     return IrOpcode::CmpEqI64;

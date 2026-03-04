@@ -3210,6 +3210,146 @@ TEST_CASE("ir lowerer call helpers emit array vector indexed access") {
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 }
 
+TEST_CASE("ir lowerer call helpers emit builtin array access") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "idx";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::Instruction> instructions;
+  std::string error = "stale";
+
+  primec::Expr stringLiteralTarget;
+  stringLiteralTarget.kind = primec::Expr::Kind::StringLiteral;
+  stringLiteralTarget.stringValue = "abc";
+
+  CHECK_FALSE(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      stringLiteralTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      []() { return 1; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      []() {},
+      []() {},
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error == "stale");
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  int emitExprCalls = 0;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      stringLiteralTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+        stringIndex = 4;
+        length = 3;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      []() { return 7; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        instructions.push_back({primec::IrOpcode::PushI32, 1});
+        return true;
+      },
+      []() {},
+      []() {},
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(emitExprCalls == 1);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions.back().imm == 4);
+
+  instructions.clear();
+  error.clear();
+  primec::Expr mapTarget;
+  mapTarget.kind = primec::Expr::Kind::Name;
+  mapTarget.name = "m";
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = Kind::Unknown;
+  mapInfo.mapValueKind = Kind::Int32;
+  locals.clear();
+  locals.emplace("m", mapInfo);
+  CHECK_FALSE(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      mapTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      []() { return 10; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      []() {},
+      []() {},
+      []() {},
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error == "native backend requires typed map bindings for at");
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  primec::Expr vectorTarget;
+  vectorTarget.kind = primec::Expr::Kind::Name;
+  vectorTarget.name = "v";
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorInfo.valueKind = Kind::Int32;
+  locals.clear();
+  locals.emplace("v", vectorInfo);
+  int arrayIndexOutOfBoundsCalls = 0;
+  int nextLocal = 20;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      vectorTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI32, 2});
+        return true;
+      },
+      []() {},
+      []() {},
+      [&]() { ++arrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(arrayIndexOutOfBoundsCalls == 2);
+  REQUIRE(instructions.size() >= 6);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+}
+
 TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   using Result = primec::ir_lowerer::NonLiteralStringAccessTargetResult;
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
