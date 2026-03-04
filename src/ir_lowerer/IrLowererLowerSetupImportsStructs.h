@@ -21,36 +21,6 @@
   auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
     return resolveStructLayoutExprPathFromScope(expr, defMap, importAliases);
   };
-  auto resolveFieldBindingForLayout = [&](const Definition &def,
-                                          const Expr &expr,
-                                          const std::unordered_map<std::string, FieldBinding> &knownFields,
-                                          FieldBinding &bindingOut) -> bool {
-    if (ir_lowerer::extractExplicitLayoutFieldBinding(expr, bindingOut)) {
-      return true;
-    }
-    const std::string fieldPath = def.fullPath + "/" + expr.name;
-    if (expr.args.size() != 1) {
-      error = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
-      return false;
-    }
-    if (ir_lowerer::inferPrimitiveFieldBinding(expr.args.front(), knownFields, bindingOut)) {
-      return true;
-    }
-    std::string inferredStruct = ir_lowerer::inferStructReturnPathFromExpr(
-        expr.args.front(),
-        knownFields,
-        structNames,
-        resolveStructTypePath,
-        resolveStructLayoutExprPath,
-        defMap);
-    if (!inferredStruct.empty()) {
-      bindingOut.typeName = std::move(inferredStruct);
-      bindingOut.typeTemplateArg.clear();
-      return true;
-    }
-    error = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
-    return false;
-  };
   struct StructFieldInfo {
     std::string name;
     FieldBinding binding;
@@ -69,7 +39,15 @@
         continue;
       }
       FieldBinding binding;
-      if (!resolveFieldBindingForLayout(def, stmt, knownFields, binding)) {
+      if (!ir_lowerer::resolveLayoutFieldBinding(def,
+                                                 stmt,
+                                                 knownFields,
+                                                 structNames,
+                                                 resolveStructTypePath,
+                                                 resolveStructLayoutExprPath,
+                                                 defMap,
+                                                 binding,
+                                                 error)) {
         return false;
       }
       StructFieldInfo field;

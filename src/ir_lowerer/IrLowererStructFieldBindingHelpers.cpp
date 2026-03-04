@@ -4,6 +4,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
+#include "IrLowererStructReturnPathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -122,6 +123,42 @@ bool inferPrimitiveFieldBinding(const Expr &initializer,
   };
 
   return infer(initializer, bindingOut);
+}
+
+bool resolveLayoutFieldBinding(
+    const Definition &def,
+    const Expr &expr,
+    const std::unordered_map<std::string, LayoutFieldBinding> &knownFields,
+    const std::unordered_set<std::string> &structNames,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    LayoutFieldBinding &bindingOut,
+    std::string &errorOut) {
+  if (extractExplicitLayoutFieldBinding(expr, bindingOut)) {
+    return true;
+  }
+
+  const std::string fieldPath = def.fullPath + "/" + expr.name;
+  if (expr.args.size() != 1) {
+    errorOut = "omitted struct field envelope requires exactly one initializer: " + fieldPath;
+    return false;
+  }
+
+  if (inferPrimitiveFieldBinding(expr.args.front(), knownFields, bindingOut)) {
+    return true;
+  }
+
+  std::string inferredStruct = inferStructReturnPathFromExpr(
+      expr.args.front(), knownFields, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap);
+  if (!inferredStruct.empty()) {
+    bindingOut.typeName = std::move(inferredStruct);
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  }
+
+  errorOut = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
+  return false;
 }
 
 std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding) {
