@@ -48,4 +48,41 @@ void emitAllFileScopeCleanup(std::vector<IrInstruction> &instructions,
   }
 }
 
+bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
+                            int32_t destPtrLocal,
+                            int32_t srcPtrLocal,
+                            int32_t slotCount) {
+  if (slotCount <= 0) {
+    return true;
+  }
+  for (int32_t i = 0; i < slotCount; ++i) {
+    const uint64_t offsetBytes = static_cast<uint64_t>(i * 16);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+    if (offsetBytes != 0) {
+      instructions.push_back({IrOpcode::PushI64, offsetBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+    if (offsetBytes != 0) {
+      instructions.push_back({IrOpcode::PushI64, offsetBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+  }
+  return true;
+}
+
+bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
+                         int32_t destBaseLocal,
+                         int32_t srcPtrLocal,
+                         int32_t slotCount,
+                         const std::function<int32_t()> &allocTempLocal) {
+  const int32_t destPtrLocal = allocTempLocal();
+  instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+  return emitStructCopyFromPtrs(instructions, destPtrLocal, srcPtrLocal, slotCount);
+}
+
 } // namespace primec::ir_lowerer

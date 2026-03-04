@@ -186,32 +186,11 @@
     return nextLocal++;
   };
   auto emitStructCopyFromPtrs = [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
-    if (slotCount <= 0) {
-      return true;
-    }
-    for (int32_t i = 0; i < slotCount; ++i) {
-      const uint64_t offsetBytes = static_cast<uint64_t>(i * 16);
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
-      if (offsetBytes != 0) {
-        function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
-        function.instructions.push_back({IrOpcode::AddI64, 0});
-      }
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
-      if (offsetBytes != 0) {
-        function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
-        function.instructions.push_back({IrOpcode::AddI64, 0});
-      }
-      function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-      function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-      function.instructions.push_back({IrOpcode::Pop, 0});
-    }
-    return true;
+    return ir_lowerer::emitStructCopyFromPtrs(function.instructions, destPtrLocal, srcPtrLocal, slotCount);
   };
   auto emitStructCopySlots = [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
-    const int32_t destPtrLocal = allocTempLocal();
-    function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal)});
-    function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
-    return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
+    return ir_lowerer::emitStructCopySlots(
+        function.instructions, destBaseLocal, srcPtrLocal, slotCount, [&]() { return allocTempLocal(); });
   };
   auto emitFileScopeCleanup = [&](const std::vector<int32_t> &scope) {
     ir_lowerer::emitFileScopeCleanup(function.instructions, scope);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -44,5 +45,14 @@ void emitFileCloseIfValid(std::vector<IrInstruction> &instructions, int32_t loca
 void emitFileScopeCleanup(std::vector<IrInstruction> &instructions, const std::vector<int32_t> &scope);
 void emitAllFileScopeCleanup(std::vector<IrInstruction> &instructions,
                              const std::vector<std::vector<int32_t>> &fileScopeStack);
+bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
+                            int32_t destPtrLocal,
+                            int32_t srcPtrLocal,
+                            int32_t slotCount);
+bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
+                         int32_t destBaseLocal,
+                         int32_t srcPtrLocal,
+                         int32_t slotCount,
+                         const std::function<int32_t()> &allocTempLocal);
 
 } // namespace primec::ir_lowerer

@@ -6920,6 +6920,62 @@ TEST_CASE("ir lowerer flow helpers emit file scope cleanup sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers emit struct copy sequences") {
+  std::vector<primec::IrInstruction> instructions;
+
+  CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 2));
+  REQUIRE(instructions.size() == 14);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 2);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 3);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[4].op == primec::IrOpcode::Pop);
+  CHECK(instructions[5].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[5].imm == 2);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[6].imm == 16);
+  CHECK(instructions[7].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[8].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[8].imm == 3);
+  CHECK(instructions[9].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[9].imm == 16);
+  CHECK(instructions[10].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[11].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[12].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[13].op == primec::IrOpcode::Pop);
+
+  instructions.clear();
+  int tempAllocs = 0;
+  CHECK(primec::ir_lowerer::emitStructCopySlots(
+      instructions,
+      7,
+      9,
+      1,
+      [&]() {
+        tempAllocs++;
+        return 11;
+      }));
+  CHECK(tempAllocs == 1);
+  REQUIRE(instructions.size() == 7);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 11);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 11);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[3].imm == 9);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[6].op == primec::IrOpcode::Pop);
+
+  instructions.clear();
+  CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 0));
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
