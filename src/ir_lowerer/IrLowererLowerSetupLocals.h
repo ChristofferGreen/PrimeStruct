@@ -76,11 +76,12 @@
   auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
   auto getMathConstantName = setupMathResolvers.getMathConstantName;
 
-  auto setReferenceArrayInfo = ir_lowerer::makeSetReferenceArrayInfoFromTransforms();
-  auto bindingKind = ir_lowerer::makeBindingKindFromTransforms();
-  auto isStringBinding = ir_lowerer::makeIsStringBindingType();
-  auto isFileErrorBinding = ir_lowerer::makeIsFileErrorBindingType();
-  auto bindingValueKind = ir_lowerer::makeBindingValueKindFromTransforms();
+  const auto bindingTypeAdapters = ir_lowerer::makeBindingTypeAdapters();
+  auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
+  auto bindingKind = bindingTypeAdapters.bindingKind;
+  auto isStringBinding = bindingTypeAdapters.isStringBinding;
+  auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
+  auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
 
   auto resolveStructTypeName = ir_lowerer::makeResolveStructTypePathFromScope(structNames, importAliases);
 

@@ -3023,6 +3023,44 @@ TEST_CASE("ir lowerer binding type helpers build setup adapter factories") {
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer binding type helpers build bundled setup adapters") {
+  auto adapters = primec::ir_lowerer::makeBindingTypeAdapters();
+
+  primec::Expr vectorExpr;
+  primec::Transform vectorTransform;
+  vectorTransform.name = "vector";
+  vectorTransform.templateArgs = {"i64"};
+  vectorExpr.transforms.push_back(vectorTransform);
+  CHECK(adapters.bindingKind(vectorExpr) == primec::ir_lowerer::LocalInfo::Kind::Vector);
+
+  primec::Expr stringExpr;
+  primec::Transform stringTransform;
+  stringTransform.name = "string";
+  stringExpr.transforms.push_back(stringTransform);
+  CHECK(adapters.isStringBinding(stringExpr));
+  CHECK_FALSE(adapters.isFileErrorBinding(stringExpr));
+
+  primec::Expr mapExpr;
+  primec::Transform mapTransform;
+  mapTransform.name = "map";
+  mapTransform.templateArgs = {"bool", "f64"};
+  mapExpr.transforms.push_back(mapTransform);
+  CHECK(adapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  primec::Expr referenceArrayExpr;
+  primec::Transform referenceArrayTransform;
+  referenceArrayTransform.name = "Reference";
+  referenceArrayTransform.templateArgs = {"array<i64>"};
+  referenceArrayExpr.transforms.push_back(referenceArrayTransform);
+  adapters.setReferenceArrayInfo(referenceArrayExpr, info);
+  CHECK(info.referenceToArray);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer count access helpers classify entry args and count calls") {
   primec::Definition entryDef;
   bool hasEntryArgs = true;

@@ -7,6 +7,16 @@
 
 namespace primec::ir_lowerer {
 
+BindingTypeAdapters makeBindingTypeAdapters() {
+  BindingTypeAdapters adapters;
+  adapters.bindingKind = makeBindingKindFromTransforms();
+  adapters.isStringBinding = makeIsStringBindingType();
+  adapters.isFileErrorBinding = makeIsFileErrorBindingType();
+  adapters.bindingValueKind = makeBindingValueKindFromTransforms();
+  adapters.setReferenceArrayInfo = makeSetReferenceArrayInfoFromTransforms();
+  return adapters;
+}
+
 BindingKindFromTransformsFn makeBindingKindFromTransforms() {
   return [](const Expr &expr) {
     return bindingKindFromTransforms(expr);

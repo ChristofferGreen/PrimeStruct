@@ -56,7 +56,7 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
 
 StringCallEmitResult emitCallStringCallValue(const Expr &arg,
                                              const ResolveArrayAccessNameFn &resolveArrayAccessName,
-                                             const IsEntryArgsNameFn &isEntryArgsName,
+                                             const IsStringCallEntryArgsNameFn &isEntryArgsName,
                                              const ResolveStringIndexOpsFn &resolveStringIndexOps,
                                              const EmitExprFn &emitExpr,
                                              const InferCallReturnsStringFn &inferCallReturnsString,

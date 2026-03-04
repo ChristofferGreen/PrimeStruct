@@ -14,6 +14,15 @@ using BindingValueKindFromTransformsFn =
     std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
 using SetReferenceArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 
+struct BindingTypeAdapters {
+  BindingKindFromTransformsFn bindingKind;
+  IsBindingTypeFn isStringBinding;
+  IsBindingTypeFn isFileErrorBinding;
+  BindingValueKindFromTransformsFn bindingValueKind;
+  SetReferenceArrayInfoFn setReferenceArrayInfo;
+};
+
+BindingTypeAdapters makeBindingTypeAdapters();
 BindingKindFromTransformsFn makeBindingKindFromTransforms();
 IsBindingTypeFn makeIsStringBindingType();
 IsBindingTypeFn makeIsFileErrorBindingType();

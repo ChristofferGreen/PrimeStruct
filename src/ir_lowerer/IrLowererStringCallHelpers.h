@@ -34,7 +34,7 @@ using InternStringFn = std::function<int32_t(const std::string &)>;
 using EmitInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 using LookupStringBindingFn = std::function<StringBindingInfo(const std::string &)>;
 using ResolveArrayAccessNameFn = std::function<bool(const Expr &, std::string &)>;
-using IsEntryArgsNameFn = std::function<bool(const Expr &)>;
+using IsStringCallEntryArgsNameFn = std::function<bool(const Expr &)>;
 using ResolveStringIndexOpsFn = std::function<bool(const Expr &, const std::string &, StringIndexOps &, std::string &)>;
 using EmitExprFn = std::function<bool(const Expr &)>;
 using InferCallReturnsStringFn = std::function<bool(const Expr &)>;
@@ -54,7 +54,7 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
 
 StringCallEmitResult emitCallStringCallValue(const Expr &arg,
                                              const ResolveArrayAccessNameFn &resolveArrayAccessName,
-                                             const IsEntryArgsNameFn &isEntryArgsName,
+                                             const IsStringCallEntryArgsNameFn &isEntryArgsName,
                                              const ResolveStringIndexOpsFn &resolveStringIndexOps,
                                              const EmitExprFn &emitExpr,
                                              const InferCallReturnsStringFn &inferCallReturnsString,
