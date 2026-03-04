@@ -466,6 +466,89 @@ TEST_CASE("ir lowerer call helpers classify struct definitions") {
   CHECK_FALSE(primec::ir_lowerer::isStructDefinition(mixedDef));
 }
 
+TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
+  CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
+  CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);
+  CHECK(primec::ir_lowerer::alignTo(13u, 0u) == 13u);
+
+  int parsed = 0;
+  CHECK(primec::ir_lowerer::parsePositiveInt("32i32", parsed));
+  CHECK(parsed == 32);
+  CHECK_FALSE(primec::ir_lowerer::parsePositiveInt("-1", parsed));
+  CHECK_FALSE(primec::ir_lowerer::parsePositiveInt("0", parsed));
+
+  std::vector<primec::Transform> transforms;
+  primec::Transform alignKbytes;
+  alignKbytes.name = "align_kbytes";
+  alignKbytes.arguments = {"2i32"};
+  transforms.push_back(alignKbytes);
+
+  uint32_t alignment = 0;
+  bool hasAlignment = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::extractAlignment(
+      transforms, "struct /pkg/S", alignment, hasAlignment, error));
+  CHECK(error.empty());
+  CHECK(hasAlignment);
+  CHECK(alignment == 2048u);
+
+  std::vector<primec::Transform> duplicateTransforms;
+  primec::Transform alignBytes;
+  alignBytes.name = "align_bytes";
+  alignBytes.arguments = {"4"};
+  duplicateTransforms.push_back(alignBytes);
+  duplicateTransforms.push_back(alignKbytes);
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::extractAlignment(
+      duplicateTransforms, "field /pkg/S/value", alignment, hasAlignment, error));
+  CHECK(error == "duplicate align_kbytes transform on field /pkg/S/value");
+
+  std::vector<primec::Transform> invalidTransforms;
+  primec::Transform invalidAlign;
+  invalidAlign.name = "align_bytes";
+  invalidAlign.arguments = {"0"};
+  invalidTransforms.push_back(invalidAlign);
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::extractAlignment(
+      invalidTransforms, "field /pkg/S/value", alignment, hasAlignment, error));
+  CHECK(error == "align_bytes requires a positive integer argument");
+}
+
+TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
+  CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
+  CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));
+  CHECK_FALSE(primec::ir_lowerer::isLayoutQualifierName("i32"));
+
+  primec::Expr podField;
+  primec::Transform podTransform;
+  podTransform.name = "pod";
+  primec::Transform privateTransform;
+  privateTransform.name = "private";
+  primec::Transform staticTransform;
+  staticTransform.name = "static";
+  podField.transforms = {podTransform, privateTransform, staticTransform};
+  CHECK(primec::ir_lowerer::fieldCategory(podField) == primec::IrStructFieldCategory::Pod);
+  CHECK(primec::ir_lowerer::fieldVisibility(podField) == primec::IrStructVisibility::Private);
+  CHECK(primec::ir_lowerer::isStaticField(podField));
+
+  primec::Expr handleField;
+  primec::Transform handleTransform;
+  handleTransform.name = "handle";
+  primec::Transform gpuLaneTransform;
+  gpuLaneTransform.name = "gpu_lane";
+  handleField.transforms = {gpuLaneTransform, handleTransform};
+  CHECK(primec::ir_lowerer::fieldCategory(handleField) == primec::IrStructFieldCategory::Handle);
+
+  primec::Expr publicField;
+  primec::Transform publicTransform;
+  publicTransform.name = "public";
+  publicField.transforms = {privateTransform, publicTransform};
+  CHECK(primec::ir_lowerer::fieldVisibility(publicField) == primec::IrStructVisibility::Public);
+  CHECK_FALSE(primec::ir_lowerer::isStaticField(publicField));
+}
+
 TEST_CASE("ir lowerer call helpers build this params and collect struct fields") {
   primec::Expr thisParam = primec::ir_lowerer::makeStructHelperThisParam("/pkg/MyStruct", true);
   CHECK(thisParam.kind == primec::Expr::Kind::Name);

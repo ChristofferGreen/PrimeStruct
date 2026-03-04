@@ -53,77 +53,6 @@
       structNames.insert(def.fullPath);
     }
   }
-  auto alignTo = [](uint32_t value, uint32_t alignment) -> uint32_t {
-    if (alignment == 0) {
-      return value;
-    }
-    uint32_t remainder = value % alignment;
-    if (remainder == 0) {
-      return value;
-    }
-    return value + (alignment - remainder);
-  };
-  auto parsePositiveInt = [](const std::string &text, int &valueOut) -> bool {
-    std::string digits = text;
-    if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
-      digits.resize(digits.size() - 3);
-    }
-    if (digits.empty()) {
-      return false;
-    }
-    int parsed = 0;
-    for (char c : digits) {
-      if (!std::isdigit(static_cast<unsigned char>(c))) {
-        return false;
-      }
-      int digit = c - '0';
-      if (parsed > (std::numeric_limits<int>::max() - digit) / 10) {
-        return false;
-      }
-      parsed = parsed * 10 + digit;
-    }
-    if (parsed <= 0) {
-      return false;
-    }
-    valueOut = parsed;
-    return true;
-  };
-  auto extractAlignment = [&](const std::vector<Transform> &transforms,
-                              const std::string &context,
-                              uint32_t &alignmentOut,
-                              bool &hasAlignment) -> bool {
-    alignmentOut = 1;
-    hasAlignment = false;
-    for (const auto &transform : transforms) {
-      if (transform.name != "align_bytes" && transform.name != "align_kbytes") {
-        continue;
-      }
-      if (hasAlignment) {
-        error = "duplicate " + transform.name + " transform on " + context;
-        return false;
-      }
-      if (transform.arguments.size() != 1 || !transform.templateArgs.empty()) {
-        error = transform.name + " requires exactly one integer argument";
-        return false;
-      }
-      int value = 0;
-      if (!parsePositiveInt(transform.arguments[0], value)) {
-        error = transform.name + " requires a positive integer argument";
-        return false;
-      }
-      uint64_t bytes = static_cast<uint64_t>(value);
-      if (transform.name == "align_kbytes") {
-        bytes *= 1024ull;
-      }
-      if (bytes > std::numeric_limits<uint32_t>::max()) {
-        error = transform.name + " alignment too large on " + context;
-        return false;
-      }
-      alignmentOut = static_cast<uint32_t>(bytes);
-      hasAlignment = true;
-    }
-    return true;
-  };
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     if (!typeName.empty() && typeName[0] == '/') {
       return typeName;
@@ -151,11 +80,6 @@
   struct FieldBinding {
     std::string typeName;
     std::string typeTemplateArg;
-  };
-  auto isLayoutQualifierName = [](const std::string &name) {
-    return name == "public" || name == "private" || name == "static" || name == "mut" || name == "copy" ||
-           name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "pod" ||
-           name == "handle" || name == "gpu_lane";
   };
   auto extractExplicitBindingTypeForLayout = [&](const Expr &expr, FieldBinding &bindingOut) -> bool {
     bindingOut = {};
@@ -467,49 +391,6 @@
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
-  auto fieldCategory = [&](const Expr &expr) -> IrStructFieldCategory {
-    bool hasPod = false;
-    bool hasHandle = false;
-    bool hasGpuLane = false;
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "pod") {
-        hasPod = true;
-      } else if (transform.name == "handle") {
-        hasHandle = true;
-      } else if (transform.name == "gpu_lane") {
-        hasGpuLane = true;
-      }
-    }
-    if (hasPod) {
-      return IrStructFieldCategory::Pod;
-    }
-    if (hasHandle) {
-      return IrStructFieldCategory::Handle;
-    }
-    if (hasGpuLane) {
-      return IrStructFieldCategory::GpuLane;
-    }
-    return IrStructFieldCategory::Default;
-  };
-  auto fieldVisibility = [&](const Expr &expr) -> IrStructVisibility {
-    IrStructVisibility visibility = IrStructVisibility::Public;
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "public") {
-        visibility = IrStructVisibility::Public;
-      } else if (transform.name == "private") {
-        visibility = IrStructVisibility::Private;
-      }
-    }
-    return visibility;
-  };
-  auto isStaticField = [&](const Expr &expr) {
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "static") {
-        return true;
-      }
-    }
-    return false;
-  };
   struct StructFieldInfo {
     std::string name;
     FieldBinding binding;
@@ -564,7 +445,8 @@
     uint32_t structAlign = 1;
     uint32_t explicitStructAlign = 1;
     bool hasStructAlign = false;
-    if (!extractAlignment(def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign)) {
+    if (!extractAlignment(
+            def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, error)) {
       return false;
     }
     uint32_t offset = 0;
@@ -606,7 +488,7 @@
       uint32_t explicitFieldAlign = 1;
       bool hasFieldAlign = false;
       const std::string fieldContext = "field " + def.fullPath + "/" + stmt.name;
-      if (!extractAlignment(stmt.transforms, fieldContext, explicitFieldAlign, hasFieldAlign)) {
+      if (!extractAlignment(stmt.transforms, fieldContext, explicitFieldAlign, hasFieldAlign, error)) {
         return false;
       }
       if (hasFieldAlign && explicitFieldAlign < typeLayout.alignmentBytes) {
