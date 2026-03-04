@@ -4,6 +4,18 @@
 
 namespace primec::ir_lowerer {
 
+ValueKindFromTypeNameFn makeValueKindFromTypeName() {
+  return [](const std::string &name) {
+    return valueKindFromTypeName(name);
+  };
+}
+
+CombineNumericKindsFn makeCombineNumericKinds() {
+  return [](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+    return combineNumericKinds(left, right);
+  };
+}
+
 LocalInfo::ValueKind valueKindFromTypeName(const std::string &name) {
   if (name == "int" || name == "i32") {
     return LocalInfo::ValueKind::Int32;

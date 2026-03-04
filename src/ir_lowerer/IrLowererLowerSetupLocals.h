@@ -1,6 +1,4 @@
-  auto valueKindFromTypeName = [&](const std::string &name) -> LocalInfo::ValueKind {
-    return ir_lowerer::valueKindFromTypeName(name);
-  };
+  auto valueKindFromTypeName = ir_lowerer::makeValueKindFromTypeName();
 
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
@@ -175,7 +173,4 @@
       defMap, resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, resolveStructFieldSlot);
 
 
-  auto combineNumericKinds = [&](LocalInfo::ValueKind left,
-                                 LocalInfo::ValueKind right) -> LocalInfo::ValueKind {
-    return ir_lowerer::combineNumericKinds(left, right);
-  };
+  auto combineNumericKinds = ir_lowerer::makeCombineNumericKinds();
