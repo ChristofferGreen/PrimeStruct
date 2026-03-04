@@ -30,10 +30,12 @@
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
 
-  const auto stringLiteralHelpers = ir_lowerer::makeStringLiteralHelperContext(stringTable, error);
+  const auto runtimeErrorAndStringLiteralSetup =
+      ir_lowerer::makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
+  const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
   auto internString = stringLiteralHelpers.internString;
 
-  const auto runtimeErrorEmitters = ir_lowerer::makeRuntimeErrorEmitters(function, internString);
+  const auto &runtimeErrorEmitters = runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters;
   auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
   auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
   auto emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;

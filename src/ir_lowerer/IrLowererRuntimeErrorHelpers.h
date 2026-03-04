@@ -2,7 +2,9 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
+#include "IrLowererStringLiteralHelpers.h"
 #include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
@@ -24,6 +26,15 @@ struct RuntimeErrorEmitters {
   EmitRuntimeErrorFn emitFloatToIntNonFinite;
 };
 
+struct RuntimeErrorAndStringLiteralSetup {
+  StringLiteralHelperContext stringLiteralHelpers;
+  RuntimeErrorEmitters runtimeErrorEmitters;
+};
+
+RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    std::string &error);
 RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);

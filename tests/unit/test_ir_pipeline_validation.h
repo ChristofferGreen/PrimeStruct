@@ -4317,6 +4317,35 @@ TEST_CASE("ir lowerer runtime error helpers build bundled emitters") {
   CHECK(primec::decodePrintStringIndex(function.instructions[9].imm) == 0);
 }
 
+TEST_CASE("ir lowerer runtime error helpers build bundled string-literal and emitters setup") {
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  std::string error;
+
+  const auto setup =
+      primec::ir_lowerer::makeRuntimeErrorAndStringLiteralSetup(stringTable, function, error);
+  CHECK(setup.stringLiteralHelpers.internString("hello") == 0);
+
+  setup.runtimeErrorEmitters.emitArrayIndexOutOfBounds();
+  REQUIRE(function.instructions.size() == 3);
+  CHECK(function.instructions[0].op == primec::IrOpcode::PrintString);
+  CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 1);
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::StringLiteral;
+  literalExpr.stringValue = "\"hello\"utf8";
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  REQUIRE(setup.stringLiteralHelpers.resolveStringTableTarget(
+      literalExpr, primec::ir_lowerer::LocalMap{}, stringIndex, length));
+  CHECK(stringIndex == 0);
+  CHECK(length == 5);
+
+  REQUIRE(stringTable.size() == 2);
+  CHECK(stringTable[0] == "hello");
+  CHECK(stringTable[1] == "array index out of bounds");
+}
+
 TEST_CASE("ir lowerer index kind helpers normalize and validate supported kinds") {
   CHECK(primec::ir_lowerer::normalizeIndexKind(primec::ir_lowerer::LocalInfo::ValueKind::Bool) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);

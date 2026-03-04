@@ -12,6 +12,16 @@ void emitRuntimeError(IrFunction &function, const std::string &message, const In
 }
 } // namespace
 
+RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    std::string &error) {
+  RuntimeErrorAndStringLiteralSetup setup;
+  setup.stringLiteralHelpers = makeStringLiteralHelperContext(stringTable, error);
+  setup.runtimeErrorEmitters = makeRuntimeErrorEmitters(function, setup.stringLiteralHelpers.internString);
+  return setup;
+}
+
 RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   RuntimeErrorEmitters emitters;
   emitters.emitArrayIndexOutOfBounds = makeEmitArrayIndexOutOfBounds(function, internString);
