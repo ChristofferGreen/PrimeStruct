@@ -716,6 +716,178 @@ TEST_CASE("ir lowerer struct field binding helpers format envelopes") {
   CHECK(primec::ir_lowerer::formatLayoutFieldEnvelope(templated) == "map<i32, bool>");
 }
 
+TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/A",
+      "/pkg/B",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition makeA;
+  makeA.fullPath = "/pkg/makeA";
+  makeA.namespacePrefix = "/pkg";
+  primec::Transform returnA;
+  returnA.name = "return";
+  returnA.templateArgs = {"A"};
+  makeA.transforms.push_back(returnA);
+
+  primec::Definition makeB;
+  makeB.fullPath = "/pkg/makeB";
+  makeB.namespacePrefix = "/pkg";
+  primec::Transform returnB;
+  returnB.name = "return";
+  returnB.templateArgs = {"B"};
+  makeB.transforms.push_back(returnB);
+
+  primec::Definition mixed;
+  mixed.fullPath = "/pkg/mixed";
+  mixed.namespacePrefix = "/pkg";
+
+  primec::Expr callA;
+  callA.kind = primec::Expr::Kind::Call;
+  callA.name = "makeA";
+
+  primec::Expr callB = callA;
+  callB.name = "makeB";
+
+  primec::Expr retA;
+  retA.kind = primec::Expr::Kind::Call;
+  retA.name = "return";
+  retA.args = {callA};
+
+  primec::Expr retB = retA;
+  retB.args = {callB};
+  mixed.statements = {retA, retB};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {makeA.fullPath, &makeA},
+      {makeB.fullPath, &makeB},
+      {mixed.fullPath, &mixed},
+  };
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(
+            "/pkg/makeA", structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap) == "/pkg/A");
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(
+            "/pkg/mixed", structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap).empty());
+}
+
+TEST_CASE("ir lowerer struct return path helpers infer from expressions") {
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/A",
+      "/pkg/B",
+      "/pkg/Receiver",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  primec::Definition makeA;
+  makeA.fullPath = "/pkg/makeA";
+  makeA.namespacePrefix = "/pkg";
+  primec::Transform returnA;
+  returnA.name = "return";
+  returnA.templateArgs = {"A"};
+  makeA.transforms.push_back(returnA);
+
+  primec::Definition makeB;
+  makeB.fullPath = "/pkg/makeB";
+  makeB.namespacePrefix = "/pkg";
+  primec::Transform returnB;
+  returnB.name = "return";
+  returnB.templateArgs = {"B"};
+  makeB.transforms.push_back(returnB);
+
+  primec::Definition receiverMethod;
+  receiverMethod.fullPath = "/pkg/Receiver/makeA";
+  receiverMethod.namespacePrefix = "/pkg/Receiver";
+  receiverMethod.transforms.push_back(returnA);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {makeA.fullPath, &makeA},
+      {makeB.fullPath, &makeB},
+      {receiverMethod.fullPath, &receiverMethod},
+  };
+
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields = {
+      {"recv", {"/pkg/Receiver", ""}},
+  };
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "recv";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "makeA";
+  methodCall.args = {receiverName};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(methodCall,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/A");
+
+  primec::Expr callA;
+  callA.kind = primec::Expr::Kind::Call;
+  callA.name = "makeA";
+  primec::Expr callB = callA;
+  callB.name = "makeB";
+
+  primec::Expr cond;
+  cond.kind = primec::Expr::Kind::BoolLiteral;
+  cond.boolValue = true;
+
+  primec::Expr ifExpr;
+  ifExpr.kind = primec::Expr::Kind::Call;
+  ifExpr.name = "if";
+  ifExpr.args = {cond, callA, callA};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(ifExpr,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap) == "/pkg/A");
+
+  ifExpr.args = {cond, callA, callB};
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromExpr(ifExpr,
+                                                          knownFields,
+                                                          structNames,
+                                                          resolveStructTypePath,
+                                                          resolveStructLayoutExprPath,
+                                                          defMap).empty());
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);

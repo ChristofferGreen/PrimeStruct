@@ -21,125 +21,6 @@
   auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
     return resolveStructLayoutExprPathFromScope(expr, defMap, importAliases);
   };
-  std::function<std::string(const std::string &, std::unordered_set<std::string> &)> inferStructReturnPathFromDefinition;
-  std::function<std::string(const Expr &,
-                            const std::unordered_map<std::string, FieldBinding> &,
-                            std::unordered_set<std::string> &)>
-      inferStructReturnPathFromExpr;
-  inferStructReturnPathFromExpr =
-      [&](const Expr &expr,
-          const std::unordered_map<std::string, FieldBinding> &knownFields,
-          std::unordered_set<std::string> &visitedDefs) -> std::string {
-    if (expr.kind == Expr::Kind::Name) {
-      auto fieldIt = knownFields.find(expr.name);
-      if (fieldIt == knownFields.end()) {
-        return "";
-      }
-      std::string fieldType = fieldIt->second.typeName;
-      if ((fieldType == "Reference" || fieldType == "Pointer") && !fieldIt->second.typeTemplateArg.empty()) {
-        fieldType = fieldIt->second.typeTemplateArg;
-      }
-      std::string resolved = resolveStructTypePath(fieldType, expr.namespacePrefix);
-      return structNames.count(resolved) > 0 ? resolved : "";
-    }
-    if (expr.kind != Expr::Kind::Call) {
-      return "";
-    }
-    if (isMatchCall(expr)) {
-      Expr lowered;
-      std::string loweredError;
-      if (!lowerMatchToIf(expr, lowered, loweredError)) {
-        return "";
-      }
-      return inferStructReturnPathFromExpr(lowered, knownFields, visitedDefs);
-    }
-    if (isIfCall(expr) && expr.args.size() == 3) {
-      const Expr *thenValue = ir_lowerer::getEnvelopeValueExpr(expr.args[1], true);
-      const Expr *elseValue = ir_lowerer::getEnvelopeValueExpr(expr.args[2], true);
-      const Expr &thenExpr = thenValue ? *thenValue : expr.args[1];
-      const Expr &elseExpr = elseValue ? *elseValue : expr.args[2];
-      std::string thenPath = inferStructReturnPathFromExpr(thenExpr, knownFields, visitedDefs);
-      if (thenPath.empty()) {
-        return "";
-      }
-      std::string elsePath = inferStructReturnPathFromExpr(elseExpr, knownFields, visitedDefs);
-      return thenPath == elsePath ? thenPath : "";
-    }
-    if (const Expr *valueExpr = ir_lowerer::getEnvelopeValueExpr(expr, false)) {
-      if (isReturnCall(*valueExpr) && !valueExpr->args.empty()) {
-        return inferStructReturnPathFromExpr(valueExpr->args.front(), knownFields, visitedDefs);
-      }
-      return inferStructReturnPathFromExpr(*valueExpr, knownFields, visitedDefs);
-    }
-    if (expr.isMethodCall) {
-      if (expr.args.empty()) {
-        return "";
-      }
-      std::string receiverStruct = inferStructReturnPathFromExpr(expr.args.front(), knownFields, visitedDefs);
-      if (receiverStruct.empty()) {
-        return "";
-      }
-      return inferStructReturnPathFromDefinition(receiverStruct + "/" + expr.name, visitedDefs);
-    }
-    std::string resolved = resolveStructLayoutExprPath(expr);
-    if (structNames.count(resolved) > 0) {
-      return resolved;
-    }
-    return inferStructReturnPathFromDefinition(resolved, visitedDefs);
-  };
-  inferStructReturnPathFromDefinition = [&](const std::string &defPath,
-                                            std::unordered_set<std::string> &visitedDefs) -> std::string {
-    if (defPath.empty()) {
-      return "";
-    }
-    if (!visitedDefs.insert(defPath).second) {
-      return "";
-    }
-    auto defIt = defMap.find(defPath);
-    if (defIt == defMap.end() || !defIt->second) {
-      return "";
-    }
-    const Definition &def = *defIt->second;
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      std::string resolved = resolveStructTypePath(transform.templateArgs.front(), def.namespacePrefix);
-      if (structNames.count(resolved) > 0) {
-        return resolved;
-      }
-      break;
-    }
-    auto inferFromReturnValue = [&](const Expr &valueExpr) -> std::string {
-      std::unordered_map<std::string, FieldBinding> noFields;
-      std::string inferred = inferStructReturnPathFromExpr(valueExpr, noFields, visitedDefs);
-      return inferred;
-    };
-    if (def.returnExpr.has_value()) {
-      std::string inferred = inferFromReturnValue(*def.returnExpr);
-      if (!inferred.empty()) {
-        return inferred;
-      }
-    }
-    std::string inferred;
-    for (const auto &stmt : def.statements) {
-      if (!isReturnCall(stmt) || stmt.args.size() != 1) {
-        continue;
-      }
-      std::string candidate = inferFromReturnValue(stmt.args.front());
-      if (candidate.empty()) {
-        continue;
-      }
-      if (inferred.empty()) {
-        inferred = std::move(candidate);
-        continue;
-      }
-      if (candidate != inferred) {
-        return "";
-      }
-    }
-    return inferred;
-  };
   auto resolveFieldBindingForLayout = [&](const Definition &def,
                                           const Expr &expr,
                                           const std::unordered_map<std::string, FieldBinding> &knownFields,
@@ -155,8 +36,13 @@
     if (ir_lowerer::inferPrimitiveFieldBinding(expr.args.front(), knownFields, bindingOut)) {
       return true;
     }
-    std::unordered_set<std::string> visitedDefs;
-    std::string inferredStruct = inferStructReturnPathFromExpr(expr.args.front(), knownFields, visitedDefs);
+    std::string inferredStruct = ir_lowerer::inferStructReturnPathFromExpr(
+        expr.args.front(),
+        knownFields,
+        structNames,
+        resolveStructTypePath,
+        resolveStructLayoutExprPath,
+        defMap);
     if (!inferredStruct.empty()) {
       bindingOut.typeName = std::move(inferredStruct);
       bindingOut.typeTemplateArg.clear();
