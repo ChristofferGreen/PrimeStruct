@@ -141,15 +141,16 @@
             return returnKind;
           }
         }
-        if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && !isArrayCountCall(expr, localsIn) &&
-            !isStringCountCall(expr, localsIn)) {
-          Expr methodExpr = expr;
-          methodExpr.isMethodCall = true;
-          LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-          if (resolveMethodCallReturnKind(
-                  methodExpr, localsIn, resolveMethodCallDefinition, getReturnInfo, true, returnKind)) {
-            return returnKind;
-          }
+        LocalInfo::ValueKind countMethodKind = LocalInfo::ValueKind::Unknown;
+        if (resolveCountMethodCallReturnKind(expr,
+                                             localsIn,
+                                             isArrayCountCall,
+                                             isStringCountCall,
+                                             resolveMethodCallDefinition,
+                                             getReturnInfo,
+                                             true,
+                                             countMethodKind)) {
+          return countMethodKind;
         }
       } else {
         LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
@@ -303,24 +304,21 @@
             }
             return LocalInfo::ValueKind::Unknown;
           }
-          if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && !isArrayCountCall(expr, localsIn) &&
-              !isStringCountCall(expr, localsIn)) {
-            Expr methodExpr = expr;
-            methodExpr.isMethodCall = true;
-            LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-            bool methodResolved = false;
-            if (resolveMethodCallReturnKind(methodExpr,
-                                            localsIn,
-                                            resolveMethodCallDefinition,
-                                            getReturnInfo,
-                                            false,
-                                            returnKind,
-                                            &methodResolved)) {
-              return returnKind;
-            }
-            if (methodResolved) {
-              return LocalInfo::ValueKind::Unknown;
-            }
+          LocalInfo::ValueKind countMethodKind = LocalInfo::ValueKind::Unknown;
+          bool countMethodResolved = false;
+          if (resolveCountMethodCallReturnKind(expr,
+                                               localsIn,
+                                               isArrayCountCall,
+                                               isStringCountCall,
+                                               resolveMethodCallDefinition,
+                                               getReturnInfo,
+                                               false,
+                                               countMethodKind,
+                                               &countMethodResolved)) {
+            return countMethodKind;
+          }
+          if (countMethodResolved) {
+            return LocalInfo::ValueKind::Unknown;
           }
         } else {
           LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;

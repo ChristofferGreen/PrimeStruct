@@ -315,6 +315,44 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
   return resolveReturnInfoKindForPath(callee->fullPath, getReturnInfo, requireArrayReturn, kindOut);
 }
 
+bool resolveCountMethodCallReturnKind(const Expr &callExpr,
+                                      const LocalMap &localsIn,
+                                      const IsMethodCallClassifierFn &isArrayCountCall,
+                                      const IsMethodCallClassifierFn &isStringCountCall,
+                                      const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
+                                      const GetReturnInfoForPathFn &getReturnInfo,
+                                      bool requireArrayReturn,
+                                      LocalInfo::ValueKind &kindOut,
+                                      bool *methodResolvedOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (methodResolvedOut != nullptr) {
+    *methodResolvedOut = false;
+  }
+
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+  if (!isSimpleCallName(callExpr, "count") || callExpr.args.size() != 1) {
+    return false;
+  }
+  if (isArrayCountCall && isArrayCountCall(callExpr, localsIn)) {
+    return false;
+  }
+  if (isStringCountCall && isStringCountCall(callExpr, localsIn)) {
+    return false;
+  }
+
+  Expr methodExpr = callExpr;
+  methodExpr.isMethodCall = true;
+  return resolveMethodCallReturnKind(methodExpr,
+                                     localsIn,
+                                     resolveMethodCallDefinition,
+                                     getReturnInfo,
+                                     requireArrayReturn,
+                                     kindOut,
+                                     methodResolvedOut);
+}
+
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,
