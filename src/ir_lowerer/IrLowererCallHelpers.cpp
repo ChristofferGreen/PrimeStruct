@@ -262,6 +262,18 @@ bool buildInlineCallParameterList(const Definition &callee,
   return true;
 }
 
+bool buildInlineCallOrderedArguments(const Expr &callExpr,
+                                     const Definition &callee,
+                                     const std::unordered_set<std::string> &structNames,
+                                     std::vector<Expr> &paramsOut,
+                                     std::vector<const Expr *> &orderedArgsOut,
+                                     std::string &error) {
+  if (!buildInlineCallParameterList(callee, structNames, paramsOut, error)) {
+    return false;
+  }
+  return buildOrderedCallArguments(callExpr, paramsOut, orderedArgsOut, error);
+}
+
 std::string resolveDefinitionNamespacePrefix(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &definitionPath) {

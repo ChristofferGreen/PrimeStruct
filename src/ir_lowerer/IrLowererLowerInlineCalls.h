@@ -29,13 +29,9 @@
     ResultReturnScope resultScope(currentReturnResult, scopedResult);
     pushFileScope();
     std::vector<Expr> callParams;
-    if (!ir_lowerer::buildInlineCallParameterList(callee, structNames, callParams, error)) {
-      inlineStack.erase(callee.fullPath);
-      return false;
-    }
-
     std::vector<const Expr *> orderedArgs;
-    if (!buildOrderedCallArguments(callExpr, callParams, orderedArgs)) {
+    if (!ir_lowerer::buildInlineCallOrderedArguments(
+            callExpr, callee, structNames, callParams, orderedArgs, error)) {
       inlineStack.erase(callee.fullPath);
       return false;
     }

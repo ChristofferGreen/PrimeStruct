@@ -516,6 +516,53 @@ TEST_CASE("ir lowerer call helpers build inline call parameter lists") {
   CHECK(error == "struct definitions may only contain field bindings: /pkg/MyStruct");
 }
 
+TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
+  const std::unordered_set<std::string> structNames = {"/pkg/MyStruct"};
+  std::vector<primec::Expr> paramsOut;
+  std::vector<const primec::Expr *> orderedArgs;
+  std::string error;
+
+  primec::Definition helperDef;
+  helperDef.isNested = true;
+  helperDef.fullPath = "/pkg/MyStruct/doThing";
+  primec::Expr valueParam;
+  valueParam.kind = primec::Expr::Kind::Name;
+  valueParam.isBinding = true;
+  valueParam.name = "value";
+  helperDef.parameters.push_back(valueParam);
+
+  primec::Expr receiverArg;
+  receiverArg.kind = primec::Expr::Kind::Name;
+  receiverArg.name = "obj";
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.literalValue = 42;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "doThing";
+  callExpr.args = {receiverArg, valueArg};
+  callExpr.argNames = {std::nullopt, std::nullopt};
+
+  REQUIRE(primec::ir_lowerer::buildInlineCallOrderedArguments(
+      callExpr, helperDef, structNames, paramsOut, orderedArgs, error));
+  CHECK(error.empty());
+  REQUIRE(paramsOut.size() == 2);
+  CHECK(paramsOut[0].name == "this");
+  CHECK(paramsOut[1].name == "value");
+  REQUIRE(orderedArgs.size() == 2);
+  REQUIRE(orderedArgs[0] != nullptr);
+  REQUIRE(orderedArgs[1] != nullptr);
+  CHECK(orderedArgs[0]->name == "obj");
+  CHECK(orderedArgs[1]->literalValue == 42);
+
+  primec::Expr badCall = callExpr;
+  badCall.args = {valueArg};
+  badCall.argNames = {std::nullopt};
+  CHECK_FALSE(primec::ir_lowerer::buildInlineCallOrderedArguments(
+      badCall, helperDef, structNames, paramsOut, orderedArgs, error));
+  CHECK(error == "argument count mismatch");
+}
+
 TEST_CASE("ir lowerer on_error helpers wire definition handlers") {
   primec::Program program;
 
