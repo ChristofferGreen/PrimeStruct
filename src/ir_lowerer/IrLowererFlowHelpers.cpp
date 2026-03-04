@@ -1,6 +1,7 @@
 #include "IrLowererFlowHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererIndexKindHelpers.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -256,6 +257,45 @@ bool resolveBufferInitInfo(const Expr &expr,
   } else if (elemKind == LocalInfo::ValueKind::Float32) {
     out.zeroOpcode = IrOpcode::PushF32;
   }
+  return true;
+}
+
+bool resolveBufferLoadInfo(
+    const Expr &expr,
+    const std::function<std::optional<LocalInfo::ValueKind>(const std::string &)> &resolveNamedBufferElemKind,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
+    const std::function<LocalInfo::ValueKind(const Expr &)> &inferExprKind,
+    BufferLoadInfo &out,
+    std::string &error) {
+  if (expr.args.size() != 2) {
+    error = "buffer_load requires buffer and index";
+    return false;
+  }
+
+  LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+  if (expr.args[0].kind == Expr::Kind::Name) {
+    const std::optional<LocalInfo::ValueKind> localKind = resolveNamedBufferElemKind(expr.args[0].name);
+    if (localKind.has_value()) {
+      elemKind = *localKind;
+    }
+  } else if (expr.args[0].kind == Expr::Kind::Call) {
+    if (isSimpleCallName(expr.args[0], "buffer") && expr.args[0].templateArgs.size() == 1) {
+      elemKind = resolveValueKind(expr.args[0].templateArgs.front());
+    }
+  }
+  if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+    error = "buffer_load requires numeric/bool buffer";
+    return false;
+  }
+
+  const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1]));
+  if (!isSupportedIndexKind(indexKind)) {
+    error = "buffer_load requires integer index";
+    return false;
+  }
+
+  out.elemKind = elemKind;
+  out.indexKind = indexKind;
   return true;
 }
 

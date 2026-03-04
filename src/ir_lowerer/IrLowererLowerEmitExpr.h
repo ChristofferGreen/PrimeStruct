@@ -735,28 +735,20 @@
           return true;
         }
         if (isSimpleCallName(expr, "buffer_load")) {
-          if (expr.args.size() != 2) {
-            error = "buffer_load requires buffer and index";
-            return false;
-          }
-          LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-          if (expr.args[0].kind == Expr::Kind::Name) {
-            auto it = localsIn.find(expr.args[0].name);
-            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
-              elemKind = it->second.valueKind;
-            }
-          } else if (expr.args[0].kind == Expr::Kind::Call) {
-            if (isSimpleCallName(expr.args[0], "buffer") && expr.args[0].templateArgs.size() == 1) {
-              elemKind = valueKindFromTypeName(expr.args[0].templateArgs.front());
-            }
-          }
-          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-            error = "buffer_load requires numeric/bool buffer";
-            return false;
-          }
-          LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(expr.args[1], localsIn));
-          if (!isSupportedIndexKind(indexKind)) {
-            error = "buffer_load requires integer index";
+          ir_lowerer::BufferLoadInfo loadInfo;
+          if (!ir_lowerer::resolveBufferLoadInfo(
+                  expr,
+                  [&](const std::string &name) -> std::optional<LocalInfo::ValueKind> {
+                    auto it = localsIn.find(name);
+                    if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
+                      return std::nullopt;
+                    }
+                    return it->second.valueKind;
+                  },
+                  [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
+                  [&](const Expr &indexExpr) { return inferExprKind(indexExpr, localsIn); },
+                  loadInfo,
+                  error)) {
             return false;
           }
           const int32_t ptrLocal = allocTempLocal();
@@ -771,10 +763,10 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({pushOneForIndex(indexKind), 1});
-          function.instructions.push_back({addForIndex(indexKind), 0});
-          function.instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
-          function.instructions.push_back({mulForIndex(indexKind), 0});
+          function.instructions.push_back({pushOneForIndex(loadInfo.indexKind), 1});
+          function.instructions.push_back({addForIndex(loadInfo.indexKind), 0});
+          function.instructions.push_back({pushOneForIndex(loadInfo.indexKind), IrSlotBytesI32});
+          function.instructions.push_back({mulForIndex(loadInfo.indexKind), 0});
           function.instructions.push_back({IrOpcode::AddI64, 0});
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;

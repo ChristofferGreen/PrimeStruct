@@ -88,5 +88,16 @@ bool resolveBufferInitInfo(const Expr &expr,
                            const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
                            BufferInitInfo &out,
                            std::string &error);
+struct BufferLoadInfo {
+  LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+};
+bool resolveBufferLoadInfo(
+    const Expr &expr,
+    const std::function<std::optional<LocalInfo::ValueKind>(const std::string &)> &resolveNamedBufferElemKind,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
+    const std::function<LocalInfo::ValueKind(const Expr &)> &inferExprKind,
+    BufferLoadInfo &out,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

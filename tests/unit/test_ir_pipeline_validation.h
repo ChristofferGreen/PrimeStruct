@@ -10156,6 +10156,96 @@ TEST_CASE("ir lowerer flow helpers resolve buffer init info") {
   CHECK(error == "buffer requires numeric/bool element type");
 }
 
+TEST_CASE("ir lowerer flow helpers resolve buffer load info") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr bufferLoadExpr;
+  bufferLoadExpr.kind = primec::Expr::Kind::Call;
+  bufferLoadExpr.name = "buffer_load";
+
+  primec::Expr bufferNameExpr;
+  bufferNameExpr.kind = primec::Expr::Kind::Name;
+  bufferNameExpr.name = "buf";
+  bufferLoadExpr.args.push_back(bufferNameExpr);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+  bufferLoadExpr.args.push_back(indexExpr);
+
+  primec::ir_lowerer::BufferLoadInfo info;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveBufferLoadInfo(
+      bufferLoadExpr,
+      [](const std::string &name) -> std::optional<ValueKind> {
+        if (name == "buf") {
+          return ValueKind::Int64;
+        }
+        return std::nullopt;
+      },
+      [](const std::string &) { return ValueKind::Unknown; },
+      [](const primec::Expr &) { return ValueKind::Int32; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.elemKind == ValueKind::Int64);
+  CHECK(info.indexKind == ValueKind::Int32);
+
+  primec::Expr inlineBufferExpr = bufferLoadExpr;
+  inlineBufferExpr.args.front().kind = primec::Expr::Kind::Call;
+  inlineBufferExpr.args.front().name = "buffer";
+  inlineBufferExpr.args.front().templateArgs = {"f32"};
+  CHECK(primec::ir_lowerer::resolveBufferLoadInfo(
+      inlineBufferExpr,
+      [](const std::string &) -> std::optional<ValueKind> { return std::nullopt; },
+      [](const std::string &typeName) {
+        if (typeName == "f32") {
+          return ValueKind::Float32;
+        }
+        return ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return ValueKind::UInt64; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.elemKind == ValueKind::Float32);
+  CHECK(info.indexKind == ValueKind::UInt64);
+
+  primec::Expr wrongArityExpr = bufferLoadExpr;
+  wrongArityExpr.args.pop_back();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBufferLoadInfo(
+      wrongArityExpr,
+      [](const std::string &) -> std::optional<ValueKind> { return std::nullopt; },
+      [](const std::string &) { return ValueKind::Unknown; },
+      [](const primec::Expr &) { return ValueKind::Int32; },
+      info,
+      error));
+  CHECK(error == "buffer_load requires buffer and index");
+
+  primec::Expr unknownBufferExpr = bufferLoadExpr;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBufferLoadInfo(
+      unknownBufferExpr,
+      [](const std::string &) -> std::optional<ValueKind> { return std::nullopt; },
+      [](const std::string &) { return ValueKind::Unknown; },
+      [](const primec::Expr &) { return ValueKind::Int32; },
+      info,
+      error));
+  CHECK(error == "buffer_load requires numeric/bool buffer");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBufferLoadInfo(
+      bufferLoadExpr,
+      [](const std::string &) -> std::optional<ValueKind> { return ValueKind::Int32; },
+      [](const std::string &) { return ValueKind::Unknown; },
+      [](const primec::Expr &) { return ValueKind::Float32; },
+      info,
+      error));
+  CHECK(error == "buffer_load requires integer index");
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
