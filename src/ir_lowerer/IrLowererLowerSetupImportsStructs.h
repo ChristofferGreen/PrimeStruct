@@ -37,30 +37,8 @@
 
   computeStructLayout = [&](const Definition &def, IrStructLayout &layoutOut) -> bool {
     auto computeUncachedLayout = [&](IrStructLayout &layout, std::string &layoutError) -> bool {
-      auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
-      if (fieldInfoIt == structFieldInfoByName.end()) {
-        layoutError = "internal error: missing struct field info for " + def.fullPath;
-        return false;
-      }
-      auto computeNestedStructLayout = [&](const Definition &nestedDef,
-                                           IrStructLayout &nestedLayout,
-                                           std::string &nestedError) -> bool {
-        (void)nestedError;
-        return computeStructLayout(nestedDef, nestedLayout);
-      };
-      auto resolveFieldTypeLayout = [&](const FieldBinding &fieldBinding,
-                                        ir_lowerer::BindingTypeLayout &fieldTypeLayout,
-                                        std::string &fieldError) -> bool {
-        return ir_lowerer::resolveBindingTypeLayout(fieldBinding,
-                                                    def.namespacePrefix,
-                                                    resolveStructTypePath,
-                                                    defMap,
-                                                    computeNestedStructLayout,
-                                                    fieldTypeLayout,
-                                                    fieldError);
-      };
-      return ir_lowerer::computeStructLayoutUncached(
-          def, fieldInfoIt->second, resolveFieldTypeLayout, layout, layoutError);
+      return ir_lowerer::computeStructLayoutFromFieldInfo(
+          def, structFieldInfoByName, resolveStructTypePath, defMap, computeStructLayout, layout, layoutError);
     };
     return ir_lowerer::computeStructLayoutWithCache(
         def.fullPath, layoutCache, layoutStack, computeUncachedLayout, layoutOut, error);

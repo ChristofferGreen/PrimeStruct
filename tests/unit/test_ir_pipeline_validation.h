@@ -1622,6 +1622,86 @@ TEST_CASE("ir lowerer struct layout helpers compute uncached diagnostics") {
   CHECK(error == "alignment requirement on struct /pkg/BadAlign is smaller than required alignment of 8");
 }
 
+TEST_CASE("ir lowerer struct layout helpers compute from field info") {
+  primec::Definition structDef;
+  structDef.fullPath = "/pkg/S";
+  structDef.namespacePrefix = "/pkg";
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Name;
+  fieldExpr.isBinding = true;
+  fieldExpr.name = "nested";
+  structDef.statements = {fieldExpr};
+
+  primec::Definition nestedDef;
+  nestedDef.fullPath = "/pkg/Nested";
+
+  const std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> structFieldInfoByName = {
+      {"/pkg/S", {{"Nested", ""}}},
+  };
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/Nested", &nestedDef},
+  };
+  const auto resolveStructTypePath = [](const std::string &typeName, const std::string &namespacePrefix) {
+    return namespacePrefix + "/" + typeName;
+  };
+
+  int nestedCalls = 0;
+  const auto computeStructLayout = [&](const primec::Definition &def, primec::IrStructLayout &layout) {
+    ++nestedCalls;
+    CHECK(def.fullPath == "/pkg/Nested");
+    layout.name = def.fullPath;
+    layout.totalSizeBytes = 24u;
+    layout.alignmentBytes = 8u;
+    return true;
+  };
+
+  primec::IrStructLayout layout;
+  std::string error;
+  CHECK(primec::ir_lowerer::computeStructLayoutFromFieldInfo(
+      structDef, structFieldInfoByName, resolveStructTypePath, defMap, computeStructLayout, layout, error));
+  CHECK(error.empty());
+  CHECK(nestedCalls == 1);
+  CHECK(layout.name == "/pkg/S");
+  CHECK(layout.totalSizeBytes == 24u);
+  CHECK(layout.alignmentBytes == 8u);
+  REQUIRE(layout.fields.size() == 1u);
+  CHECK(layout.fields[0].name == "nested");
+  CHECK(layout.fields[0].sizeBytes == 24u);
+  CHECK(layout.fields[0].alignmentBytes == 8u);
+}
+
+TEST_CASE("ir lowerer struct layout helpers compute from field info diagnostics") {
+  primec::Definition structDef;
+  structDef.fullPath = "/pkg/S";
+  structDef.namespacePrefix = "/pkg";
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Name;
+  fieldExpr.isBinding = true;
+  fieldExpr.name = "missing";
+  structDef.statements = {fieldExpr};
+
+  const auto resolveStructTypePath = [](const std::string &typeName, const std::string &namespacePrefix) {
+    return namespacePrefix + "/" + typeName;
+  };
+  const auto computeStructLayout = [](const primec::Definition &, primec::IrStructLayout &) { return true; };
+
+  primec::IrStructLayout layout;
+  std::string error;
+  const std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> noFieldInfo;
+  const std::unordered_map<std::string, const primec::Definition *> noDefs;
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutFromFieldInfo(
+      structDef, noFieldInfo, resolveStructTypePath, noDefs, computeStructLayout, layout, error));
+  CHECK(error == "internal error: missing struct field info for /pkg/S");
+
+  const std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> withFieldInfo = {
+      {"/pkg/S", {{"Missing", ""}}},
+  };
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutFromFieldInfo(
+      structDef, withFieldInfo, resolveStructTypePath, noDefs, computeStructLayout, layout, error));
+  CHECK(error == "unknown struct type for layout: Missing");
+}
+
 TEST_CASE("ir lowerer struct layout helpers append program layouts") {
   primec::Program program;
 

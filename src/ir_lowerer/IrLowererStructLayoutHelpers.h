@@ -50,6 +50,14 @@ bool computeStructLayoutUncached(
     const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
     IrStructLayout &layoutOut,
     std::string &errorOut);
+bool computeStructLayoutFromFieldInfo(
+    const Definition &def,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut);
 bool appendProgramStructLayouts(
     const Program &program,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,

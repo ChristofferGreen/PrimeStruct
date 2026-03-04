@@ -274,6 +274,40 @@ bool computeStructLayoutUncached(
   return true;
 }
 
+bool computeStructLayoutFromFieldInfo(
+    const Definition &def,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut) {
+  auto fieldInfoIt = structFieldInfoByName.find(def.fullPath);
+  if (fieldInfoIt == structFieldInfoByName.end()) {
+    errorOut = "internal error: missing struct field info for " + def.fullPath;
+    return false;
+  }
+
+  auto computeNestedStructLayout = [&](const Definition &nestedDef,
+                                       IrStructLayout &nestedLayout,
+                                       std::string &nestedError) -> bool {
+    (void)nestedError;
+    return computeStructLayout(nestedDef, nestedLayout);
+  };
+  auto resolveFieldTypeLayout = [&](const LayoutFieldBinding &fieldBinding,
+                                    BindingTypeLayout &fieldTypeLayout,
+                                    std::string &fieldError) -> bool {
+    return resolveBindingTypeLayout(fieldBinding,
+                                    def.namespacePrefix,
+                                    resolveStructTypePath,
+                                    defMap,
+                                    computeNestedStructLayout,
+                                    fieldTypeLayout,
+                                    fieldError);
+  };
+  return computeStructLayoutUncached(def, fieldInfoIt->second, resolveFieldTypeLayout, layoutOut, errorOut);
+}
+
 bool appendProgramStructLayouts(
     const Program &program,
     const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
