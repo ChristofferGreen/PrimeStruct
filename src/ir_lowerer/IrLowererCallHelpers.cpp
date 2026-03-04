@@ -117,6 +117,24 @@ bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
   return definitionReturnsVoid && isTailCallCandidateFn(lastStmt);
 }
 
+ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
+    const Expr &callExpr,
+    const Definition *callee,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error) {
+  if (!callee) {
+    return ResolvedInlineCallResult::NoCallee;
+  }
+  if (callExpr.hasBodyArguments || !callExpr.bodyArguments.empty()) {
+    error = "native backend does not support block arguments on calls";
+    return ResolvedInlineCallResult::Error;
+  }
+  if (!emitInlineDefinitionCall(callExpr, *callee)) {
+    return ResolvedInlineCallResult::Error;
+  }
+  return ResolvedInlineCallResult::Emitted;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
@@ -132,14 +150,12 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
   Expr methodExpr = expr;
   methodExpr.isMethodCall = true;
   const Definition *callee = resolveMethodCallDefinition(methodExpr);
-  if (!callee) {
+  const auto emitResult = emitResolvedInlineDefinitionCall(
+      methodExpr, callee, emitInlineDefinitionCall, error);
+  if (emitResult == ResolvedInlineCallResult::NoCallee) {
     return CountMethodFallbackResult::NoCallee;
   }
-  if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-    error = "native backend does not support block arguments on calls";
-    return CountMethodFallbackResult::Error;
-  }
-  if (!emitInlineDefinitionCall(methodExpr, *callee)) {
+  if (emitResult == ResolvedInlineCallResult::Error) {
     return CountMethodFallbackResult::Error;
   }
   return CountMethodFallbackResult::Emitted;

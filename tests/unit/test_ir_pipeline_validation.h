@@ -2273,6 +2273,70 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
   CHECK(error == "argument count mismatch");
 }
 
+TEST_CASE("ir lowerer call helpers emit resolved inline definition call") {
+  using Result = primec::ir_lowerer::ResolvedInlineCallResult;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "work";
+
+  primec::Definition callee;
+  callee.fullPath = "/pkg/work";
+
+  std::string error;
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::emitResolvedInlineDefinitionCall(
+            callExpr,
+            &callee,
+            [&](const primec::Expr &resolvedExpr, const primec::Definition &resolvedCallee) {
+              ++emitCalls;
+              CHECK(resolvedExpr.name == "work");
+              CHECK(resolvedCallee.fullPath == "/pkg/work");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalls == 1);
+
+  CHECK(primec::ir_lowerer::emitResolvedInlineDefinitionCall(
+            callExpr,
+            nullptr,
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NoCallee);
+
+  primec::Expr bodyArgExpr;
+  bodyArgExpr.kind = primec::Expr::Kind::Literal;
+  bodyArgExpr.intWidth = 32;
+  bodyArgExpr.literalValue = 5;
+  primec::Expr callWithBodyArgs = callExpr;
+  callWithBodyArgs.hasBodyArguments = true;
+  callWithBodyArgs.bodyArguments.push_back(bodyArgExpr);
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedInlineDefinitionCall(
+            callWithBodyArgs,
+            &callee,
+            [&](const primec::Expr &, const primec::Definition &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::Error);
+  CHECK(error == "native backend does not support block arguments on calls");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedInlineDefinitionCall(
+            callExpr,
+            &callee,
+            [&](const primec::Expr &, const primec::Definition &) {
+              error = "emit failed";
+              return false;
+            },
+            error) == Result::Error);
+  CHECK(error == "emit failed");
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

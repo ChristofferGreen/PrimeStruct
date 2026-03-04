@@ -776,21 +776,26 @@
         if (expr.isMethodCall && !isArrayCountCall(expr, localsIn) && !isStringCountCall(expr, localsIn) &&
             !isVectorCapacityCall(expr, localsIn)) {
           const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
-          if (!callee) {
+          const auto emitResult = ir_lowerer::emitResolvedInlineDefinitionCall(
+              expr,
+              callee,
+              [&](const Expr &callExpr, const Definition &resolvedCallee) {
+                return emitInlineDefinitionCall(callExpr, resolvedCallee, localsIn, true);
+              },
+              error);
+          if (emitResult == ir_lowerer::ResolvedInlineCallResult::NoCallee) {
             return false;
           }
-          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-            error = "native backend does not support block arguments on calls";
-            return false;
-          }
-          return emitInlineDefinitionCall(expr, *callee, localsIn, true);
+          return emitResult == ir_lowerer::ResolvedInlineCallResult::Emitted;
         }
         if (const Definition *callee = resolveDefinitionCall(expr)) {
-          if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-            error = "native backend does not support block arguments on calls";
-            return false;
-          }
-          return emitInlineDefinitionCall(expr, *callee, localsIn, true);
+          return ir_lowerer::emitResolvedInlineDefinitionCall(
+                     expr,
+                     callee,
+                     [&](const Expr &callExpr, const Definition &resolvedCallee) {
+                       return emitInlineDefinitionCall(callExpr, resolvedCallee, localsIn, true);
+                     },
+                     error) == ir_lowerer::ResolvedInlineCallResult::Emitted;
         }
         const auto secondCountFallbackResult = ir_lowerer::tryEmitNonMethodCountFallback(
             expr,

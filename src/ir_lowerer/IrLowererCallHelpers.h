@@ -67,6 +67,16 @@ enum class CountMethodFallbackResult {
   Emitted,
   Error,
 };
+enum class ResolvedInlineCallResult {
+  NoCallee,
+  Emitted,
+  Error,
+};
+ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
+    const Expr &callExpr,
+    const Definition *callee,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
