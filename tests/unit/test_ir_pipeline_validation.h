@@ -3099,6 +3099,46 @@ TEST_CASE("ir lowerer setup type helper rejects pointer and non-array reference 
   CHECK(resolvedTypePath.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves method receiver call targets") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr arrayCall;
+  arrayCall.kind = primec::Expr::Kind::Call;
+  arrayCall.name = "array";
+  arrayCall.templateArgs = {"i32"};
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(arrayCall, ValueKind::Unknown) == "array");
+
+  primec::Expr vectorCall;
+  vectorCall.kind = primec::Expr::Kind::Call;
+  vectorCall.name = "vector";
+  vectorCall.templateArgs = {"i32"};
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(vectorCall, ValueKind::Unknown) ==
+        "vector");
+
+  primec::Expr mapCall;
+  mapCall.kind = primec::Expr::Kind::Call;
+  mapCall.name = "map";
+  mapCall.templateArgs = {"i32", "i64"};
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(mapCall, ValueKind::Unknown) == "map");
+}
+
+TEST_CASE("ir lowerer setup type helper falls back for method receiver call targets") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr invalidArrayCall;
+  invalidArrayCall.kind = primec::Expr::Kind::Call;
+  invalidArrayCall.name = "array";
+  invalidArrayCall.templateArgs = {};
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(invalidArrayCall, ValueKind::Int64) ==
+        "i64");
+
+  primec::Expr userCall;
+  userCall.kind = primec::Expr::Kind::Call;
+  userCall.name = "/pkg/make";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(userCall, ValueKind::Float32) == "f32");
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(userCall, ValueKind::Unknown).empty());
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
   primec::Definition entryDef;
   primec::Transform resultReturn;

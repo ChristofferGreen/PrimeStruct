@@ -3,6 +3,8 @@
 #include <functional>
 #include <string>
 
+#include "primec/Ast.h"
+
 #include "IrLowererSharedTypes.h"
 
 namespace primec::ir_lowerer {
@@ -27,5 +29,7 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind);
 bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
                                             std::string &typeNameOut,
                                             std::string &resolvedTypePathOut);
+std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
+                                                      LocalInfo::ValueKind inferredKind);
 
 } // namespace primec::ir_lowerer

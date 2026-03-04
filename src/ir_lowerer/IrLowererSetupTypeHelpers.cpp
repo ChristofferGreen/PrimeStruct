@@ -164,4 +164,21 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
   return true;
 }
 
+std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
+                                                      LocalInfo::ValueKind inferredKind) {
+  std::string collection;
+  if (getBuiltinCollectionName(receiverCallExpr, collection)) {
+    if (collection == "array" && receiverCallExpr.templateArgs.size() == 1) {
+      return "array";
+    }
+    if (collection == "vector" && receiverCallExpr.templateArgs.size() == 1) {
+      return "vector";
+    }
+    if (collection == "map" && receiverCallExpr.templateArgs.size() == 2) {
+      return "map";
+    }
+  }
+  return typeNameForValueKind(inferredKind);
+}
+
 } // namespace primec::ir_lowerer

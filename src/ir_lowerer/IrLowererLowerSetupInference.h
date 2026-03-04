@@ -40,19 +40,7 @@
         return nullptr;
       }
     } else if (receiver.kind == Expr::Kind::Call) {
-      std::string collection;
-      if (getBuiltinCollectionName(receiver, collection)) {
-        if (collection == "array" && receiver.templateArgs.size() == 1) {
-          typeName = "array";
-        } else if (collection == "vector" && receiver.templateArgs.size() == 1) {
-          typeName = "vector";
-        } else if (collection == "map" && receiver.templateArgs.size() == 2) {
-          typeName = "map";
-        }
-      }
-      if (typeName.empty()) {
-        typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
-      }
+      typeName = resolveMethodReceiverTypeNameFromCallExpr(receiver, inferExprKind(receiver, localsIn));
       if (typeName.empty() && !receiver.isBinding && !receiver.isMethodCall) {
         std::string resolved = resolveExprPath(receiver);
         auto importIt = importAliases.find(receiver.name);
