@@ -17,6 +17,8 @@ using CombineNumericKindsFn =
 using InferReceiverExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using ResolveReceiverExprPathFn = std::function<std::string(const Expr &)>;
 using IsMethodCallClassifierFn = std::function<bool(const Expr &, const LocalMap &)>;
+using GetReturnInfoForPathFn = std::function<bool(const std::string &, ReturnInfo &)>;
+using ResolveMethodCallDefinitionFn = std::function<const Definition *(const Expr &, const LocalMap &)>;
 
 struct SetupTypeAdapters {
   ValueKindFromTypeNameFn valueKindFromTypeName;
@@ -54,6 +56,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string &resolvedTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
+bool resolveReturnInfoKindForPath(const std::string &path,
+                                  const GetReturnInfoForPathFn &getReturnInfo,
+                                  bool requireArrayReturn,
+                                  LocalInfo::ValueKind &kindOut);
+bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
+                                 const LocalMap &localsIn,
+                                 const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
+                                 const GetReturnInfoForPathFn &getReturnInfo,
+                                 bool requireArrayReturn,
+                                 LocalInfo::ValueKind &kindOut,
+                                 bool *methodResolvedOut = nullptr);
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,

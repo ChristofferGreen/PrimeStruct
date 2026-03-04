@@ -263,6 +263,58 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   return defIt->second;
 }
 
+bool resolveReturnInfoKindForPath(const std::string &path,
+                                  const GetReturnInfoForPathFn &getReturnInfo,
+                                  bool requireArrayReturn,
+                                  LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (!getReturnInfo) {
+    return false;
+  }
+
+  ReturnInfo info;
+  if (!getReturnInfo(path, info) || info.returnsVoid) {
+    return false;
+  }
+
+  if (requireArrayReturn) {
+    if (!info.returnsArray) {
+      return false;
+    }
+  } else if (info.returnsArray) {
+    return false;
+  }
+
+  kindOut = info.kind;
+  return true;
+}
+
+bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
+                                 const LocalMap &localsIn,
+                                 const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
+                                 const GetReturnInfoForPathFn &getReturnInfo,
+                                 bool requireArrayReturn,
+                                 LocalInfo::ValueKind &kindOut,
+                                 bool *methodResolvedOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (methodResolvedOut != nullptr) {
+    *methodResolvedOut = false;
+  }
+  if (!resolveMethodCallDefinition) {
+    return false;
+  }
+
+  const Definition *callee = resolveMethodCallDefinition(methodCallExpr, localsIn);
+  if (callee == nullptr) {
+    return false;
+  }
+
+  if (methodResolvedOut != nullptr) {
+    *methodResolvedOut = true;
+  }
+  return resolveReturnInfoKindForPath(callee->fullPath, getReturnInfo, requireArrayReturn, kindOut);
+}
+
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,

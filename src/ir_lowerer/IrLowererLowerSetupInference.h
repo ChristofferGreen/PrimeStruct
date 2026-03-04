@@ -136,30 +136,26 @@
         const std::string resolved = resolveExprPath(expr);
         auto defIt = defMap.find(resolved);
         if (defIt != defMap.end()) {
-          ReturnInfo info;
-          if (getReturnInfo && getReturnInfo(resolved, info) && !info.returnsVoid && info.returnsArray) {
-            return info.kind;
+          LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+          if (resolveReturnInfoKindForPath(resolved, getReturnInfo, true, returnKind)) {
+            return returnKind;
           }
         }
         if (isSimpleCallName(expr, "count") && expr.args.size() == 1 && !isArrayCountCall(expr, localsIn) &&
             !isStringCountCall(expr, localsIn)) {
           Expr methodExpr = expr;
           methodExpr.isMethodCall = true;
-          const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-          if (callee) {
-            ReturnInfo info;
-            if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid && info.returnsArray) {
-              return info.kind;
-            }
+          LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+          if (resolveMethodCallReturnKind(
+                  methodExpr, localsIn, resolveMethodCallDefinition, getReturnInfo, true, returnKind)) {
+            return returnKind;
           }
         }
       } else {
-        const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
-        if (callee) {
-          ReturnInfo info;
-          if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid && info.returnsArray) {
-            return info.kind;
-          }
+        LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+        if (resolveMethodCallReturnKind(
+                expr, localsIn, resolveMethodCallDefinition, getReturnInfo, true, returnKind)) {
+          return returnKind;
         }
       }
     }
@@ -301,12 +297,9 @@
           const std::string resolved = resolveExprPath(expr);
           auto defIt = defMap.find(resolved);
           if (defIt != defMap.end()) {
-            ReturnInfo info;
-            if (getReturnInfo && getReturnInfo(resolved, info) && !info.returnsVoid) {
-              if (info.returnsArray) {
-                return LocalInfo::ValueKind::Unknown;
-              }
-              return info.kind;
+            LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+            if (resolveReturnInfoKindForPath(resolved, getReturnInfo, false, returnKind)) {
+              return returnKind;
             }
             return LocalInfo::ValueKind::Unknown;
           }
@@ -314,28 +307,29 @@
               !isStringCountCall(expr, localsIn)) {
             Expr methodExpr = expr;
             methodExpr.isMethodCall = true;
-            const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-            if (callee) {
-              ReturnInfo info;
-              if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid) {
-                if (info.returnsArray) {
-                  return LocalInfo::ValueKind::Unknown;
-                }
-                return info.kind;
-              }
+            LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+            bool methodResolved = false;
+            if (resolveMethodCallReturnKind(methodExpr,
+                                            localsIn,
+                                            resolveMethodCallDefinition,
+                                            getReturnInfo,
+                                            false,
+                                            returnKind,
+                                            &methodResolved)) {
+              return returnKind;
+            }
+            if (methodResolved) {
               return LocalInfo::ValueKind::Unknown;
             }
           }
         } else {
-          const Definition *callee = resolveMethodCallDefinition(expr, localsIn);
-          if (callee) {
-            ReturnInfo info;
-            if (getReturnInfo && getReturnInfo(callee->fullPath, info) && !info.returnsVoid) {
-              if (info.returnsArray) {
-                return LocalInfo::ValueKind::Unknown;
-              }
-              return info.kind;
-            }
+          LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+          bool methodResolved = false;
+          if (resolveMethodCallReturnKind(
+                  expr, localsIn, resolveMethodCallDefinition, getReturnInfo, false, returnKind, &methodResolved)) {
+            return returnKind;
+          }
+          if (methodResolved) {
             return LocalInfo::ValueKind::Unknown;
           }
         }
