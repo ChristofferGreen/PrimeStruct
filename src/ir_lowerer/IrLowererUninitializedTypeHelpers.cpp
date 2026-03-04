@@ -9,6 +9,44 @@
 
 namespace primec::ir_lowerer {
 
+bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    const Program &program,
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
+  out = EntrySetupMathTypeStructAndUninitializedResolutionSetup{};
+  if (!buildEntryCountCallOnErrorSetup(program,
+                                        entryDef,
+                                        definitionReturnsVoid,
+                                        defMap,
+                                        importAliases,
+                                        out.entryCountCallOnErrorSetup,
+                                        error)) {
+    return false;
+  }
+  const auto &entryCallOnErrorSetup = out.entryCountCallOnErrorSetup.callOnErrorSetup;
+  if (!buildSetupMathTypeStructAndUninitializedResolutionSetup(
+          hasMathImport,
+          structNames,
+          importAliases,
+          structReserveHint,
+          enumerateStructLayoutFields,
+          defMap,
+          entryCallOnErrorSetup.callResolutionAdapters.resolveExprPath,
+          out.setupMathTypeStructAndUninitializedResolutionSetup,
+          error)) {
+    return false;
+  }
+  return true;
+}
+
 bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     bool hasMathImport,
     const std::unordered_set<std::string> &structNames,

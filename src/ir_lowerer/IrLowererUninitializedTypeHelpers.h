@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "IrLowererOnErrorHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
@@ -101,7 +102,23 @@ struct SetupMathTypeStructAndUninitializedResolutionSetup {
   SetupMathAndBindingAdapters setupMathAndBindingAdapters;
   SetupTypeStructAndUninitializedResolutionSetup setupTypeStructAndUninitializedResolutionSetup;
 };
+struct EntrySetupMathTypeStructAndUninitializedResolutionSetup {
+  EntryCountCallOnErrorSetup entryCountCallOnErrorSetup;
+  SetupMathTypeStructAndUninitializedResolutionSetup setupMathTypeStructAndUninitializedResolutionSetup;
+};
 
+bool buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    const Program &program,
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error);
 bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     bool hasMathImport,
     const std::unordered_set<std::string> &structNames,

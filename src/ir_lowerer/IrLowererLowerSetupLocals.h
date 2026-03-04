@@ -45,11 +45,35 @@
   auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
   auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
-  ir_lowerer::EntryCountCallOnErrorSetup entryCountCallOnErrorSetup;
-  if (!ir_lowerer::buildEntryCountCallOnErrorSetup(
-          program, *entryDef, returnsVoid, defMap, importAliases, entryCountCallOnErrorSetup, error)) {
+  ir_lowerer::EntrySetupMathTypeStructAndUninitializedResolutionSetup
+      entrySetupMathTypeStructAndUninitializedResolutionSetup;
+  if (!ir_lowerer::buildEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      program,
+      *entryDef,
+      returnsVoid,
+      defMap,
+      importAliases,
+      hasMathImport,
+      structNames,
+      structFieldInfoByName.size(),
+      [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+        for (const auto &entry : structFieldInfoByName) {
+          for (const auto &field : entry.second) {
+            ir_lowerer::StructLayoutFieldInfo info;
+            info.name = field.name;
+            info.typeName = field.binding.typeName;
+            info.typeTemplateArg = field.binding.typeTemplateArg;
+            info.isStatic = field.isStatic;
+            appendStructLayoutField(entry.first, info);
+          }
+        }
+      },
+      entrySetupMathTypeStructAndUninitializedResolutionSetup,
+      error)) {
     return false;
   }
+  const auto &entryCountCallOnErrorSetup =
+      entrySetupMathTypeStructAndUninitializedResolutionSetup.entryCountCallOnErrorSetup;
   const auto &entryCountAccessSetup = entryCountCallOnErrorSetup.countAccessSetup;
   const bool hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
   const std::string &entryArgsName = entryCountAccessSetup.entryArgsName;
@@ -71,31 +95,9 @@
   }
   OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
-  ir_lowerer::SetupMathTypeStructAndUninitializedResolutionSetup
-      setupMathTypeStructAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildSetupMathTypeStructAndUninitializedResolutionSetup(
-      hasMathImport,
-      structNames,
-      importAliases,
-      structFieldInfoByName.size(),
-      [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
-        for (const auto &entry : structFieldInfoByName) {
-          for (const auto &field : entry.second) {
-            ir_lowerer::StructLayoutFieldInfo info;
-            info.name = field.name;
-            info.typeName = field.binding.typeName;
-            info.typeTemplateArg = field.binding.typeTemplateArg;
-            info.isStatic = field.isStatic;
-            appendStructLayoutField(entry.first, info);
-          }
-        }
-      },
-      defMap,
-      resolveExprPath,
-      setupMathTypeStructAndUninitializedResolutionSetup,
-      error)) {
-    return false;
-  }
+  const auto &setupMathTypeStructAndUninitializedResolutionSetup =
+      entrySetupMathTypeStructAndUninitializedResolutionSetup
+          .setupMathTypeStructAndUninitializedResolutionSetup;
   const auto &setupMathAndBindingAdapters =
       setupMathTypeStructAndUninitializedResolutionSetup.setupMathAndBindingAdapters;
   const auto &setupMathResolvers = setupMathAndBindingAdapters.setupMathResolvers;
