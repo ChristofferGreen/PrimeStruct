@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
 
@@ -96,7 +97,21 @@ struct SetupTypeStructAndUninitializedResolutionSetup {
   SetupTypeAndStructTypeAdapters setupTypeAndStructTypeAdapters;
   StructAndUninitializedResolutionSetup structAndUninitializedResolutionSetup;
 };
+struct SetupMathTypeStructAndUninitializedResolutionSetup {
+  SetupMathAndBindingAdapters setupMathAndBindingAdapters;
+  SetupTypeStructAndUninitializedResolutionSetup setupTypeStructAndUninitializedResolutionSetup;
+};
 
+bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const InferStructExprPathFn &resolveExprPath,
+    SetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error);
 bool buildSetupTypeStructAndUninitializedResolutionSetup(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases,

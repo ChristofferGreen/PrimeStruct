@@ -2503,6 +2503,63 @@ TEST_CASE(
   CHECK(typeInfo.structPath == "/pkg/MyStruct");
 }
 
+TEST_CASE(
+    "ir lowerer uninitialized type helpers build bundled setup-math, setup-type, and uninitialized setup") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const std::unordered_set<std::string> structNames = {"/pkg/Container", "/pkg/MyStruct"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"MyStruct", "/pkg/MyStruct"}};
+
+  primec::Definition containerDef;
+  containerDef.fullPath = "/pkg/Container";
+  containerDef.namespacePrefix = "/pkg";
+  primec::Definition myStructDef;
+  myStructDef.fullPath = "/pkg/MyStruct";
+  myStructDef.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/Container", &containerDef},
+      {"/pkg/MyStruct", &myStructDef},
+  };
+
+  std::string error;
+  primec::ir_lowerer::SetupMathTypeStructAndUninitializedResolutionSetup setup;
+  REQUIRE(primec::ir_lowerer::buildSetupMathTypeStructAndUninitializedResolutionSetup(
+      true,
+      structNames,
+      importAliases,
+      2,
+      [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+        appendStructLayoutField("/pkg/MyStruct", {"value", "i32", "", false});
+        appendStructLayoutField("/pkg/Container", {"slot", "uninitialized", "MyStruct", false});
+      },
+      defMap,
+      [](const primec::Expr &) { return std::string(); },
+      setup,
+      error));
+  CHECK(error.empty());
+
+  primec::Expr mathCall;
+  mathCall.kind = primec::Expr::Kind::Call;
+  mathCall.name = "sin";
+  std::string builtinName;
+  CHECK(setup.setupMathAndBindingAdapters.setupMathResolvers.getMathBuiltinName(mathCall, builtinName));
+  CHECK(builtinName == "sin");
+
+  primec::Expr stringBinding;
+  primec::Transform stringType;
+  stringType.name = "string";
+  stringBinding.transforms.push_back(stringType);
+  CHECK(setup.setupMathAndBindingAdapters.bindingTypeAdapters.isStringBinding(stringBinding));
+  CHECK_FALSE(setup.setupMathAndBindingAdapters.bindingTypeAdapters.isFileErrorBinding(stringBinding));
+
+  CHECK(setup.setupTypeStructAndUninitializedResolutionSetup.setupTypeAndStructTypeAdapters.valueKindFromTypeName(
+            "i32") == ValueKind::Int32);
+  std::string resolvedStructPath;
+  REQUIRE(setup.setupTypeStructAndUninitializedResolutionSetup.setupTypeAndStructTypeAdapters
+              .structTypeResolutionAdapters.resolveStructTypeName("MyStruct", "/pkg", resolvedStructPath));
+  CHECK(resolvedStructPath == "/pkg/MyStruct");
+  CHECK_FALSE(setup.setupMathAndBindingAdapters.setupMathResolvers.getMathConstantName("phi", builtinName));
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers check field index struct path") {
   const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
       primec::ir_lowerer::buildUninitializedFieldBindingIndex(

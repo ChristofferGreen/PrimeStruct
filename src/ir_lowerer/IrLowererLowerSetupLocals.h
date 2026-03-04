@@ -71,21 +71,10 @@
   }
   OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
-  const auto setupMathAndBindingAdapters = ir_lowerer::makeSetupMathAndBindingAdapters(hasMathImport);
-  const auto &setupMathResolvers = setupMathAndBindingAdapters.setupMathResolvers;
-  auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
-  auto getMathConstantName = setupMathResolvers.getMathConstantName;
-
-  const auto &bindingTypeAdapters = setupMathAndBindingAdapters.bindingTypeAdapters;
-  auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
-  auto bindingKind = bindingTypeAdapters.bindingKind;
-  auto isStringBinding = bindingTypeAdapters.isStringBinding;
-  auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
-  auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
-
-  ir_lowerer::SetupTypeStructAndUninitializedResolutionSetup
-      setupTypeStructAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildSetupTypeStructAndUninitializedResolutionSetup(
+  ir_lowerer::SetupMathTypeStructAndUninitializedResolutionSetup
+      setupMathTypeStructAndUninitializedResolutionSetup;
+  if (!ir_lowerer::buildSetupMathTypeStructAndUninitializedResolutionSetup(
+      hasMathImport,
       structNames,
       importAliases,
       structFieldInfoByName.size(),
@@ -103,10 +92,25 @@
       },
       defMap,
       resolveExprPath,
-      setupTypeStructAndUninitializedResolutionSetup,
+      setupMathTypeStructAndUninitializedResolutionSetup,
       error)) {
     return false;
   }
+  const auto &setupMathAndBindingAdapters =
+      setupMathTypeStructAndUninitializedResolutionSetup.setupMathAndBindingAdapters;
+  const auto &setupMathResolvers = setupMathAndBindingAdapters.setupMathResolvers;
+  auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
+  auto getMathConstantName = setupMathResolvers.getMathConstantName;
+
+  const auto &bindingTypeAdapters = setupMathAndBindingAdapters.bindingTypeAdapters;
+  auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
+  auto bindingKind = bindingTypeAdapters.bindingKind;
+  auto isStringBinding = bindingTypeAdapters.isStringBinding;
+  auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
+  auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
+
+  const auto &setupTypeStructAndUninitializedResolutionSetup =
+      setupMathTypeStructAndUninitializedResolutionSetup.setupTypeStructAndUninitializedResolutionSetup;
   const auto &setupTypeAndStructTypeAdapters =
       setupTypeStructAndUninitializedResolutionSetup.setupTypeAndStructTypeAdapters;
   auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
