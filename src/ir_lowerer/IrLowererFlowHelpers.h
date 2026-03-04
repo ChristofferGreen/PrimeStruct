@@ -64,5 +64,11 @@ bool emitReturnForDefinition(std::vector<IrInstruction> &instructions,
                              const std::string &defPath,
                              const ReturnInfo &returnInfo,
                              std::string &error);
+const char *resolveGpuBuiltinLocalName(const std::string &gpuBuiltin);
+bool emitGpuBuiltinLoad(
+    const std::string &gpuBuiltin,
+    const std::function<std::optional<int32_t>(const char *)> &resolveLocalIndex,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

@@ -9967,6 +9967,54 @@ TEST_CASE("ir lowerer flow helpers emit return for definition") {
   CHECK(instructions.size() == beforeFailure);
 }
 
+TEST_CASE("ir lowerer flow helpers resolve and emit gpu builtins") {
+  CHECK(primec::ir_lowerer::resolveGpuBuiltinLocalName("global_id_x") != nullptr);
+  CHECK(std::string(primec::ir_lowerer::resolveGpuBuiltinLocalName("global_id_x")) == "__gpu_global_id_x");
+  CHECK(std::string(primec::ir_lowerer::resolveGpuBuiltinLocalName("global_id_y")) == "__gpu_global_id_y");
+  CHECK(std::string(primec::ir_lowerer::resolveGpuBuiltinLocalName("global_id_z")) == "__gpu_global_id_z");
+  CHECK(primec::ir_lowerer::resolveGpuBuiltinLocalName("global_id_w") == nullptr);
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::emitGpuBuiltinLoad(
+      "global_id_y",
+      [](const char *localName) -> std::optional<int32_t> {
+        if (std::string(localName) == "__gpu_global_id_y") {
+          return 42;
+        }
+        return std::nullopt;
+      },
+      emitInstruction,
+      error));
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 42);
+
+  instructions.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitGpuBuiltinLoad(
+      "global_id_w",
+      [](const char *) -> std::optional<int32_t> { return 0; },
+      emitInstruction,
+      error));
+  CHECK(error == "native backend does not support gpu builtin: global_id_w");
+  CHECK(instructions.empty());
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitGpuBuiltinLoad(
+      "global_id_x",
+      [](const char *) -> std::optional<int32_t> { return std::nullopt; },
+      emitInstruction,
+      error));
+  CHECK(error == "gpu builtin requires dispatch context: global_id_x");
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

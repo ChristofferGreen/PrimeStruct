@@ -681,25 +681,17 @@
         }
         std::string gpuBuiltin;
         if (getBuiltinGpuName(expr, gpuBuiltin)) {
-          const char *localName = nullptr;
-          if (gpuBuiltin == "global_id_x") {
-            localName = kGpuGlobalIdXName;
-          } else if (gpuBuiltin == "global_id_y") {
-            localName = kGpuGlobalIdYName;
-          } else if (gpuBuiltin == "global_id_z") {
-            localName = kGpuGlobalIdZName;
-          }
-          if (!localName) {
-            error = "native backend does not support gpu builtin: " + gpuBuiltin;
-            return false;
-          }
-          auto it = localsIn.find(localName);
-          if (it == localsIn.end()) {
-            error = "gpu builtin requires dispatch context: " + gpuBuiltin;
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-          return true;
+          return ir_lowerer::emitGpuBuiltinLoad(
+              gpuBuiltin,
+              [&](const char *localName) -> std::optional<int32_t> {
+                auto it = localsIn.find(localName);
+                if (it == localsIn.end()) {
+                  return std::nullopt;
+                }
+                return it->second.index;
+              },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              error);
         }
         if (isSimpleCallName(expr, "upload")) {
           if (expr.args.size() != 1) {

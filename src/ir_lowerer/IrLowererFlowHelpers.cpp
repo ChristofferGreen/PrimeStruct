@@ -1,5 +1,7 @@
 #include "IrLowererFlowHelpers.h"
 
+#include "IrLowererHelpers.h"
+
 #include <cstdlib>
 #include <cstring>
 #include <utility>
@@ -163,6 +165,40 @@ bool emitReturnForDefinition(std::vector<IrInstruction> &instructions,
   }
   error = "native backend does not support return type on " + defPath;
   return false;
+}
+
+const char *resolveGpuBuiltinLocalName(const std::string &gpuBuiltin) {
+  if (gpuBuiltin == "global_id_x") {
+    return kGpuGlobalIdXName;
+  }
+  if (gpuBuiltin == "global_id_y") {
+    return kGpuGlobalIdYName;
+  }
+  if (gpuBuiltin == "global_id_z") {
+    return kGpuGlobalIdZName;
+  }
+  return nullptr;
+}
+
+bool emitGpuBuiltinLoad(
+    const std::string &gpuBuiltin,
+    const std::function<std::optional<int32_t>(const char *)> &resolveLocalIndex,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  const char *localName = resolveGpuBuiltinLocalName(gpuBuiltin);
+  if (!localName) {
+    error = "native backend does not support gpu builtin: " + gpuBuiltin;
+    return false;
+  }
+
+  const std::optional<int32_t> localIndex = resolveLocalIndex(localName);
+  if (!localIndex.has_value()) {
+    error = "gpu builtin requires dispatch context: " + gpuBuiltin;
+    return false;
+  }
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(*localIndex));
+  return true;
 }
 
 } // namespace primec::ir_lowerer
