@@ -145,6 +145,19 @@ std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo:
   }
 }
 
+void emitResultWhyErrorLocalFromResult(
+    int32_t resultLocal,
+    bool resultHasValue,
+    int32_t errorLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+  if (resultHasValue) {
+    emitInstruction(IrOpcode::PushI64, 4294967296ull);
+    emitInstruction(IrOpcode::DivI64, 0);
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal));
+}
+
 bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {

@@ -53,6 +53,11 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const LookupReturnInfoFn &lookupReturnInfo);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
+void emitResultWhyErrorLocalFromResult(
+    int32_t resultLocal,
+    bool resultHasValue,
+    int32_t errorLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);

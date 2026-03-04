@@ -412,15 +412,11 @@
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
 
           const int32_t errorLocal = allocTempLocal();
-          if (resultInfo.hasValue) {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-            function.instructions.push_back({IrOpcode::DivI64, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-          } else {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-          }
+          ir_lowerer::emitResultWhyErrorLocalFromResult(
+              resultLocal,
+              resultInfo.hasValue,
+              errorLocal,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           auto emitEmptyString = [&]() -> bool {
             return ir_lowerer::emitResultWhyEmptyString(
