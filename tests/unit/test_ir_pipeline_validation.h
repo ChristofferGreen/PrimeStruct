@@ -1094,6 +1094,72 @@ TEST_CASE("ir lowerer struct type helpers resolve struct slots from definition f
   CHECK(error == "native backend cannot resolve struct layout: /pkg/Null");
 }
 
+TEST_CASE("ir lowerer struct type helpers build struct-slot resolvers from definition field index") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =
+      primec::ir_lowerer::buildStructLayoutFieldIndex(
+          2,
+          [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+            appendStructLayoutField("/pkg/Inner", {"x", "i32", "", false});
+            appendStructLayoutField("/pkg/Outer", {"id", "i64", "", false});
+            appendStructLayoutField("/pkg/Outer", {"payload", "uninitialized", "Inner", false});
+          });
+  primec::Definition innerDef;
+  innerDef.fullPath = "/pkg/Inner";
+  innerDef.namespacePrefix = "/pkg";
+  primec::Definition outerDef;
+  outerDef.fullPath = "/pkg/Outer";
+  outerDef.namespacePrefix = "/pkg";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/Inner", &innerDef},
+      {"/pkg/Outer", &outerDef},
+  };
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &namespacePrefix,
+                                  std::string &resolvedOut) {
+    if (namespacePrefix == "/pkg" && typeName == "Inner") {
+      resolvedOut = "/pkg/Inner";
+      return true;
+    }
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    if (typeName == "i64") {
+      return ValueKind::Int64;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  std::string error;
+
+  auto resolveStructSlotLayout = primec::ir_lowerer::makeResolveStructSlotLayoutFromDefinitionFieldIndex(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+  auto resolveStructFieldSlot = primec::ir_lowerer::makeResolveStructFieldSlotFromDefinitionFieldIndex(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  REQUIRE(resolveStructSlotLayout("/pkg/Outer", layout));
+  CHECK(layout.structPath == "/pkg/Outer");
+  CHECK(layout.totalSlots == 4);
+  REQUIRE(layout.fields.size() == 2);
+  CHECK(layout.fields[1].name == "payload");
+  CHECK(layout.fields[1].structPath == "/pkg/Inner");
+
+  primec::ir_lowerer::StructSlotFieldInfo slot;
+  REQUIRE(resolveStructFieldSlot("/pkg/Outer", "payload", slot));
+  CHECK(slot.slotOffset == 2);
+  CHECK(slot.slotCount == 2);
+  CHECK(slot.structPath == "/pkg/Inner");
+
+  CHECK_FALSE(resolveStructSlotLayout("/pkg/Missing", layout));
+  CHECK(error == "native backend cannot resolve struct layout: /pkg/Missing");
+}
+
 TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnostics") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   auto resolveDefinitionNamespacePrefix = [](const std::string &structPath, std::string &namespacePrefixOut) {

@@ -456,6 +456,49 @@ bool resolveStructFieldSlotFromDefinitionFieldIndex(
       error);
 }
 
+ResolveStructSlotLayoutFn makeResolveStructSlotLayoutFromDefinitionFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    std::string &error) {
+  return [&](const std::string &structPath, StructSlotLayoutInfo &out) {
+    return resolveStructSlotLayoutFromDefinitionFieldIndex(structPath,
+                                                           fieldIndex,
+                                                           defMap,
+                                                           resolveStructTypeName,
+                                                           valueKindFromTypeName,
+                                                           layoutCache,
+                                                           layoutStack,
+                                                           out,
+                                                           error);
+  };
+}
+
+ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    std::string &error) {
+  return [&](const std::string &structPath, const std::string &fieldName, StructSlotFieldInfo &out) {
+    return resolveStructFieldSlotFromDefinitionFieldIndex(structPath,
+                                                          fieldName,
+                                                          fieldIndex,
+                                                          defMap,
+                                                          resolveStructTypeName,
+                                                          valueKindFromTypeName,
+                                                          layoutCache,
+                                                          layoutStack,
+                                                          out,
+                                                          error);
+  };
+}
+
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {
