@@ -722,15 +722,24 @@
         if (bufferBuiltinResult != ir_lowerer::BufferBuiltinCallEmitResult::NotMatched) {
           return bufferBuiltinResult == ir_lowerer::BufferBuiltinCallEmitResult::Emitted;
         }
-        const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+        const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             expr,
-            [&](const Expr &callExpr) { return isArrayCountCall(callExpr, localsIn); },
-            [&](const Expr &callExpr) { return isStringCountCall(callExpr, localsIn); },
-            [&](const Expr &callExpr) { return isVectorCapacityCall(callExpr, localsIn); },
-            [&](const Expr &callExpr) { return resolveMethodCallDefinition(callExpr, localsIn); },
+            localsIn,
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return isArrayCountCall(callExpr, localMap);
+            },
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return isStringCountCall(callExpr, localMap);
+            },
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return isVectorCapacityCall(callExpr, localMap);
+            },
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return resolveMethodCallDefinition(callExpr, localMap);
+            },
             [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-            [&](const Expr &callExpr, const Definition &callee) {
-              return emitInlineDefinitionCall(callExpr, callee, localsIn, true);
+            [&](const Expr &callExpr, const Definition &callee, const ir_lowerer::LocalMap &localMap) {
+              return emitInlineDefinitionCall(callExpr, callee, localMap, true);
             },
             error);
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Emitted) {

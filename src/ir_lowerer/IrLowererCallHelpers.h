@@ -145,6 +145,16 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
+InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    std::string &error);
 bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName);
 UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,

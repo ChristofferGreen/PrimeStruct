@@ -2476,6 +2476,109 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo marker;
+  marker.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  marker.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("ctx", marker);
+
+  primec::Definition callee;
+  callee.fullPath = "/pkg/helper";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "helper";
+  methodCall.isMethodCall = true;
+
+  std::string error;
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &localMap) -> const primec::Definition * {
+              CHECK(localMap.count("ctx") == 1);
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &localMap) {
+              ++emitCalls;
+              CHECK(localMap.count("ctx") == 1);
+              CHECK(resolvedCallee.fullPath == "/pkg/helper");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(emitCalls == 1);
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::Error);
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "helper";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            directCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return &callee; },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              return true;
+            },
+            error) == Result::Emitted);
+
+  primec::Expr plainCall;
+  plainCall.kind = primec::Expr::Kind::Call;
+  plainCall.name = "plain";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            plainCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+}
+
 TEST_CASE("ir lowerer call helpers detect unsupported vector helper names") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;

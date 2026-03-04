@@ -197,6 +197,29 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   return InlineCallDispatchResult::NotHandled;
 }
 
+InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCallFn,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinitionFn,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCallFn,
+    std::string &error) {
+  return tryEmitInlineCallWithCountFallbacks(
+      expr,
+      [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },
+      [&](const Expr &callExpr) { return isStringCountCallFn(callExpr, localsIn); },
+      [&](const Expr &callExpr) { return isVectorCapacityCallFn(callExpr, localsIn); },
+      [&](const Expr &callExpr) { return resolveMethodCallDefinitionFn(callExpr, localsIn); },
+      [&](const Expr &callExpr) { return resolveDefinitionCallFn(callExpr); },
+      [&](const Expr &callExpr, const Definition &callee) {
+        return emitInlineDefinitionCallFn(callExpr, callee, localsIn);
+      },
+      error);
+}
+
 bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName) {
   if (isSimpleCallName(expr, "push")) {
     helperName = "push";
