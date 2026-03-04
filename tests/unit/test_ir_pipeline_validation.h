@@ -3097,6 +3097,46 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 }
 
+TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
+  primec::ir_lowerer::LocalMap locals;
+  auto isEntryArgsName = primec::ir_lowerer::makeIsEntryArgsName(true, "argv");
+  auto isArrayCountCall = primec::ir_lowerer::makeIsArrayCountCall(true, "argv");
+  auto isVectorCapacityCall = primec::ir_lowerer::makeIsVectorCapacityCall();
+  auto isStringCountCall = primec::ir_lowerer::makeIsStringCountCall();
+
+  primec::Expr entryName;
+  entryName.kind = primec::Expr::Kind::Name;
+  entryName.name = "argv";
+  CHECK(isEntryArgsName(entryName, locals));
+
+  primec::Expr countEntry;
+  countEntry.kind = primec::Expr::Kind::Call;
+  countEntry.name = "count";
+  countEntry.args = {entryName};
+  CHECK(isArrayCountCall(countEntry, locals));
+
+  primec::ir_lowerer::LocalInfo vecInfo;
+  vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", vecInfo);
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "capacity";
+  capacityCall.args = {valuesName};
+  CHECK(isVectorCapacityCall(capacityCall, locals));
+
+  primec::Expr stringCount;
+  stringCount.kind = primec::Expr::Kind::Call;
+  stringCount.name = "count";
+  primec::Expr literal;
+  literal.kind = primec::Expr::Kind::StringLiteral;
+  literal.stringValue = "\"ok\"utf8";
+  stringCount.args = {literal};
+  CHECK(isStringCountCall(stringCount, locals));
+}
+
 TEST_CASE("ir lowerer string literal helper interns string table values") {
   std::vector<std::string> stringTable;
   CHECK(primec::ir_lowerer::internLowererString("hello", stringTable) == 0);

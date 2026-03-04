@@ -84,15 +84,9 @@
   if (!ir_lowerer::resolveEntryArgsParameter(*entryDef, hasEntryArgs, entryArgsName, error)) {
     return false;
   }
-  auto isEntryArgsName = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    return ir_lowerer::isEntryArgsName(expr, localsIn, hasEntryArgs, entryArgsName);
-  };
-  auto isArrayCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    return ir_lowerer::isArrayCountCall(expr, localsIn, hasEntryArgs, entryArgsName);
-  };
-  auto isVectorCapacityCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    return ir_lowerer::isVectorCapacityCall(expr, localsIn);
-  };
+  auto isEntryArgsName = ir_lowerer::makeIsEntryArgsName(hasEntryArgs, entryArgsName);
+  auto isArrayCountCall = ir_lowerer::makeIsArrayCountCall(hasEntryArgs, entryArgsName);
+  auto isVectorCapacityCall = ir_lowerer::makeIsVectorCapacityCall();
 
   auto resolveStringTableTarget = [&](const Expr &expr,
                                       const LocalMap &localsIn,
@@ -102,9 +96,7 @@
         expr, localsIn, stringTable, internString, stringIndexOut, lengthOut, error);
   };
 
-  auto isStringCountCall = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
-    return ir_lowerer::isStringCountCall(expr, localsIn);
-  };
+  auto isStringCountCall = ir_lowerer::makeIsStringCountCall();
 
   auto resolveExprPath = ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
   auto isTailCallCandidate = ir_lowerer::makeIsTailCallCandidate(defMap, resolveExprPath);

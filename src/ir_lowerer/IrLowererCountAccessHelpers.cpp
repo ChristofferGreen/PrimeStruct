@@ -32,6 +32,30 @@ bool resolveEntryArgsParameter(const Definition &entryDef,
   return true;
 }
 
+IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName) {
+  return [=](const Expr &expr, const LocalMap &localsIn) {
+    return isEntryArgsName(expr, localsIn, hasEntryArgs, entryArgsName);
+  };
+}
+
+IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName) {
+  return [=](const Expr &expr, const LocalMap &localsIn) {
+    return isArrayCountCall(expr, localsIn, hasEntryArgs, entryArgsName);
+  };
+}
+
+IsVectorCapacityCallFn makeIsVectorCapacityCall() {
+  return [](const Expr &expr, const LocalMap &localsIn) {
+    return isVectorCapacityCall(expr, localsIn);
+  };
+}
+
+IsStringCountCallFn makeIsStringCountCall() {
+  return [](const Expr &expr, const LocalMap &localsIn) {
+    return isStringCountCall(expr, localsIn);
+  };
+}
+
 bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName) {
   if (!hasEntryArgs || expr.kind != Expr::Kind::Name || expr.name != entryArgsName) {
     return false;
