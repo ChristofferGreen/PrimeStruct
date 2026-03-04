@@ -133,13 +133,10 @@
         }
       }
       if (!expr.isMethodCall) {
-        const std::string resolved = resolveExprPath(expr);
-        auto defIt = defMap.find(resolved);
-        if (defIt != defMap.end()) {
-          LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-          if (resolveReturnInfoKindForPath(resolved, getReturnInfo, true, returnKind)) {
-            return returnKind;
-          }
+        LocalInfo::ValueKind directCallKind = LocalInfo::ValueKind::Unknown;
+        if (resolveDefinitionCallReturnKind(
+                expr, defMap, resolveExprPath, getReturnInfo, true, directCallKind)) {
+          return directCallKind;
         }
         LocalInfo::ValueKind countMethodKind = LocalInfo::ValueKind::Unknown;
         if (resolveCountMethodCallReturnKind(expr,
@@ -295,13 +292,13 @@
           }
         }
         if (!expr.isMethodCall) {
-          const std::string resolved = resolveExprPath(expr);
-          auto defIt = defMap.find(resolved);
-          if (defIt != defMap.end()) {
-            LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-            if (resolveReturnInfoKindForPath(resolved, getReturnInfo, false, returnKind)) {
-              return returnKind;
-            }
+          LocalInfo::ValueKind directCallKind = LocalInfo::ValueKind::Unknown;
+          bool definitionMatched = false;
+          if (resolveDefinitionCallReturnKind(
+                  expr, defMap, resolveExprPath, getReturnInfo, false, directCallKind, &definitionMatched)) {
+            return directCallKind;
+          }
+          if (definitionMatched) {
             return LocalInfo::ValueKind::Unknown;
           }
           LocalInfo::ValueKind countMethodKind = LocalInfo::ValueKind::Unknown;

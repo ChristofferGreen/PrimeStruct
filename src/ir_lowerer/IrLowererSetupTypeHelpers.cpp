@@ -315,6 +315,34 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
   return resolveReturnInfoKindForPath(callee->fullPath, getReturnInfo, requireArrayReturn, kindOut);
 }
 
+bool resolveDefinitionCallReturnKind(const Expr &callExpr,
+                                     const std::unordered_map<std::string, const Definition *> &defMap,
+                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const GetReturnInfoForPathFn &getReturnInfo,
+                                     bool requireArrayReturn,
+                                     LocalInfo::ValueKind &kindOut,
+                                     bool *definitionMatchedOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (definitionMatchedOut != nullptr) {
+    *definitionMatchedOut = false;
+  }
+
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
+    return false;
+  }
+
+  const std::string resolved = resolveExprPath(callExpr);
+  auto defIt = defMap.find(resolved);
+  if (defIt == defMap.end()) {
+    return false;
+  }
+
+  if (definitionMatchedOut != nullptr) {
+    *definitionMatchedOut = true;
+  }
+  return resolveReturnInfoKindForPath(resolved, getReturnInfo, requireArrayReturn, kindOut);
+}
+
 bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       const LocalMap &localsIn,
                                       const IsMethodCallClassifierFn &isArrayCountCall,

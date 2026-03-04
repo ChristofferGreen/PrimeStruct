@@ -3684,6 +3684,97 @@ TEST_CASE("ir lowerer setup type helper resolves method call return kinds") {
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup type helper resolves direct definition call return kinds") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::Definition directDef;
+  directDef.fullPath = "/pkg/value";
+  defMap.emplace("/pkg/value", &directDef);
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  primec::ir_lowerer::ReturnInfo scalarInfo;
+  scalarInfo.returnsVoid = false;
+  scalarInfo.returnsArray = false;
+  scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  infoByPath.emplace("/pkg/value", scalarInfo);
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "value";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  bool definitionMatched = false;
+  CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      callExpr,
+      defMap,
+      [](const primec::Expr &) { return std::string("/pkg/value"); },
+      getReturnInfo,
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  definitionMatched = false;
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      callExpr,
+      defMap,
+      [](const primec::Expr &) { return std::string("/pkg/value"); },
+      getReturnInfo,
+      true,
+      kindOut,
+      &definitionMatched));
+  CHECK(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer setup type helper skips unmatched direct definition call return kinds") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::Definition directDef;
+  directDef.fullPath = "/pkg/value";
+  defMap.emplace("/pkg/value", &directDef);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "value";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  bool definitionMatched = true;
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      callExpr,
+      defMap,
+      [](const primec::Expr &) { return std::string("/pkg/missing"); },
+      {},
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  callExpr.isMethodCall = true;
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  definitionMatched = true;
+  CHECK_FALSE(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+      callExpr,
+      defMap,
+      [](const primec::Expr &) { return std::string("/pkg/value"); },
+      {},
+      false,
+      kindOut,
+      &definitionMatched));
+  CHECK_FALSE(definitionMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup type helper resolves count call method return kinds") {
   primec::Definition methodDef;
   methodDef.fullPath = "/array/count";

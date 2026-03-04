@@ -67,6 +67,13 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
                                  bool requireArrayReturn,
                                  LocalInfo::ValueKind &kindOut,
                                  bool *methodResolvedOut = nullptr);
+bool resolveDefinitionCallReturnKind(const Expr &callExpr,
+                                     const std::unordered_map<std::string, const Definition *> &defMap,
+                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const GetReturnInfoForPathFn &getReturnInfo,
+                                     bool requireArrayReturn,
+                                     LocalInfo::ValueKind &kindOut,
+                                     bool *definitionMatchedOut = nullptr);
 bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       const LocalMap &localsIn,
                                       const IsMethodCallClassifierFn &isArrayCountCall,
