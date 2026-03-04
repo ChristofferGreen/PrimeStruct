@@ -200,6 +200,9 @@ bool isStructDefinition(const Definition &def) {
   if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
     return false;
   }
+  if (def.statements.empty()) {
+    return false;
+  }
   for (const auto &stmt : def.statements) {
     if (!stmt.isBinding) {
       return false;

@@ -29,12 +29,22 @@
       structFieldInfoByName.size(),
       [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
         for (const auto &entry : structFieldInfoByName) {
-          for (const auto &field : entry.second) {
+          auto defIt = defMap.find(entry.first);
+          if (defIt == defMap.end() || defIt->second == nullptr) {
+            continue;
+          }
+          const Definition &structDef = *defIt->second;
+          std::size_t fieldIndex = 0;
+          for (const auto &fieldStmt : structDef.statements) {
+            if (!fieldStmt.isBinding || fieldIndex >= entry.second.size()) {
+              continue;
+            }
+            const auto &field = entry.second[fieldIndex++];
             ir_lowerer::StructLayoutFieldInfo info;
-            info.name = field.name;
-            info.typeName = field.binding.typeName;
-            info.typeTemplateArg = field.binding.typeTemplateArg;
-            info.isStatic = field.isStatic;
+            info.name = fieldStmt.name;
+            info.typeName = field.typeName;
+            info.typeTemplateArg = field.typeTemplateArg;
+            info.isStatic = ir_lowerer::isStaticField(fieldStmt);
             appendStructLayoutField(entry.first, info);
           }
         }

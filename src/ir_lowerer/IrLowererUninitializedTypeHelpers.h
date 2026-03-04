@@ -43,8 +43,6 @@ using AppendUninitializedFieldBindingFn =
 using EnumerateUninitializedFieldBindingsFn =
     std::function<void(const AppendUninitializedFieldBindingFn &appendFieldBinding)>;
 
-using ResolveStructTypePathFn =
-    std::function<bool(const std::string &typeName, const std::string &namespacePrefix, std::string &resolvedOut)>;
 using FindUninitializedFieldTemplateArgFn =
     std::function<bool(const std::string &structPath, const std::string &fieldName, std::string &typeTemplateArgOut)>;
 using CollectUninitializedFieldBindingsFn =
@@ -200,18 +198,18 @@ bool buildStructAndUninitializedResolutionSetup(
     StructAndUninitializedResolutionSetup &out,
     std::string &error);
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
-    const ResolveStructTypePathFn &resolveStructTypePath,
+    const ResolveStructTypeNameFn &resolveStructTypePath,
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     std::string &error);
 ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
-    const ResolveStructTypePathFn &resolveStructTypePath,
+    const ResolveStructTypeNameFn &resolveStructTypePath,
     std::string &error);
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
-                                  const ResolveStructTypePathFn &resolveStructTypePath,
+                                  const ResolveStructTypeNameFn &resolveStructTypePath,
                                   UninitializedTypeInfo &out,
                                   std::string &error);
 bool resolveUninitializedTypeInfoFromLocalStorage(const LocalInfo &local, UninitializedTypeInfo &out);

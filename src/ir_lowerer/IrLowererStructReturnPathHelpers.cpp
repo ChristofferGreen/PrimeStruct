@@ -28,6 +28,13 @@ std::string inferStructReturnPathFromDefinitionInternal(
   if (!visitedDefs.insert(defPath).second) {
     return "";
   }
+  struct VisitedDefScope {
+    std::unordered_set<std::string> &visited;
+    std::string path;
+    ~VisitedDefScope() {
+      visited.erase(path);
+    }
+  } visitedScope{visitedDefs, defPath};
   auto defIt = defMap.find(defPath);
   if (defIt == defMap.end() || defIt->second == nullptr) {
     return "";
@@ -38,7 +45,23 @@ std::string inferStructReturnPathFromDefinitionInternal(
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
     }
-    const std::string resolved = resolveStructTypePath(transform.templateArgs.front(), def.namespacePrefix);
+    const std::string &returnTypeName = transform.templateArgs.front();
+    std::string resolved = resolveStructTypePath(returnTypeName, def.namespacePrefix);
+    if (structNames.count(resolved) == 0 && !returnTypeName.empty() && returnTypeName[0] != '/') {
+      const std::string rootResolved = resolveStructTypePath(returnTypeName, "");
+      if (structNames.count(rootResolved) > 0) {
+        resolved = rootResolved;
+      } else if (!def.namespacePrefix.empty()) {
+        const std::size_t slash = def.namespacePrefix.find_last_of('/');
+        if (slash != std::string::npos && slash > 0) {
+          const std::string parentNamespace = def.namespacePrefix.substr(0, slash);
+          const std::string parentResolved = resolveStructTypePath(returnTypeName, parentNamespace);
+          if (structNames.count(parentResolved) > 0) {
+            resolved = parentResolved;
+          }
+        }
+      }
+    }
     if (structNames.count(resolved) > 0) {
       return resolved;
     }

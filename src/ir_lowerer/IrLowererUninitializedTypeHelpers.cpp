@@ -227,7 +227,7 @@ bool buildStructAndUninitializedResolutionSetup(
 }
 
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
-    const ResolveStructTypePathFn &resolveStructTypePath,
+    const ResolveStructTypeNameFn &resolveStructTypePath,
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
@@ -243,7 +243,7 @@ UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
 }
 
 ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
-    const ResolveStructTypePathFn &resolveStructTypePath,
+    const ResolveStructTypeNameFn &resolveStructTypePath,
     std::string &error) {
   return [resolveStructTypePath, &error](
              const std::string &typeText, const std::string &namespacePrefix, UninitializedTypeInfo &out) {
@@ -253,7 +253,7 @@ ResolveUninitializedFieldTypeInfoFn makeResolveUninitializedTypeInfo(
 
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
-                                  const ResolveStructTypePathFn &resolveStructTypePath,
+                                  const ResolveStructTypeNameFn &resolveStructTypePath,
                                   UninitializedTypeInfo &out,
                                   std::string &error) {
   out = UninitializedTypeInfo{};

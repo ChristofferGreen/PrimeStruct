@@ -307,11 +307,15 @@
     }
     function = IrFunction{};
     function.name = def.fullPath;
-    if (!resolveEffectMask(def.transforms, false, function.metadata.effectMask)) {
+    if (!resolveEffectMask(
+            def.transforms, false, defaultEffects, entryDefaultEffects, function.metadata.effectMask, error)) {
       return false;
     }
-    if (!resolveCapabilityMask(def.transforms, resolveActiveEffects(def.transforms, false),
-                               function.metadata.capabilityMask)) {
+    if (!resolveCapabilityMask(def.transforms,
+                               resolveActiveEffects(def.transforms, false, defaultEffects, entryDefaultEffects),
+                               def.fullPath,
+                               function.metadata.capabilityMask,
+                               error)) {
       return false;
     }
     function.metadata.schedulingScope = IrSchedulingScope::Default;

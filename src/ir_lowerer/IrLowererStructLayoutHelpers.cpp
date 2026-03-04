@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "IrLowererCallHelpers.h"
+#include "IrLowererHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 
 namespace primec::ir_lowerer {

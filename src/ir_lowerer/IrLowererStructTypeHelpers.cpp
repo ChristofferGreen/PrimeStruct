@@ -98,8 +98,8 @@ std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
     if (importPath.empty() || importPath[0] != '/') {
       continue;
     }
-    std::string prefix;
-    if (isWildcardImportPath(importPath, prefix)) {
+    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+      std::string prefix = importPath.substr(0, importPath.size() - 2);
       const std::string scopedPrefix = prefix + "/";
       for (const auto &def : definitions) {
         if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
