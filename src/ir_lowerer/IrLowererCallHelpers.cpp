@@ -16,6 +16,14 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
   return resolveDefinitionByPath(defMap, resolved);
 }
 
+ResolveDefinitionCallFn makeResolveDefinitionCall(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveExprPathFn &resolveExprPath) {
+  return [defMap, resolveExprPath](const Expr &expr) {
+    return resolveDefinitionCall(expr, defMap, resolveExprPath);
+  };
+}
+
 CallResolutionAdapters makeCallResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {

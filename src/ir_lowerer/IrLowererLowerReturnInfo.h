@@ -305,9 +305,7 @@
     return false;
   };
 
-  auto resolveDefinitionCall = [&](const Expr &callExpr) -> const Definition * {
-    return ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath);
-  };
+  auto resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
   auto resolveResultExprInfo = [&](const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) -> bool {
     auto lookupLocal = [&](const std::string &name) -> ir_lowerer::LocalResultInfo {
       ir_lowerer::LocalResultInfo local;
