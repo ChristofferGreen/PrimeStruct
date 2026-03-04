@@ -307,34 +307,17 @@
 
   auto resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
   auto resolveResultExprInfo = [&](const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) -> bool {
-    auto lookupLocal = [&](const std::string &name) -> ir_lowerer::LocalResultInfo {
-      ir_lowerer::LocalResultInfo local;
-      auto it = localsIn.find(name);
-      if (it == localsIn.end()) {
-        return local;
-      }
-      local.found = true;
-      local.isResult = it->second.isResult;
-      local.resultHasValue = it->second.resultHasValue;
-      local.resultErrorType = it->second.resultErrorType;
-      local.isFileHandle = it->second.isFileHandle;
-      return local;
-    };
-    auto resolveMethodCall = [&](const Expr &callExpr) -> const Definition * {
-      return resolveMethodCallDefinition(callExpr, localsIn);
-    };
-    auto lookupDefinitionResult = [&](const std::string &path, ResultExprInfo &resultOut) -> bool {
-      ReturnInfo info;
-      if (!getReturnInfo || !getReturnInfo(path, info) || !info.isResult) {
-        return false;
-      }
-      resultOut.isResult = true;
-      resultOut.hasValue = info.resultHasValue;
-      resultOut.errorType = info.resultErrorType;
-      return true;
-    };
-    return ir_lowerer::resolveResultExprInfo(
-        expr, lookupLocal, resolveMethodCall, resolveDefinitionCall, lookupDefinitionResult, out);
+    return ir_lowerer::resolveResultExprInfoFromLocals(
+        expr,
+        localsIn,
+        [&](const Expr &callExpr, const LocalMap &localsForCall) -> const Definition * {
+          return resolveMethodCallDefinition(callExpr, localsForCall);
+        },
+        resolveDefinitionCall,
+        [&](const std::string &path, ReturnInfo &info) -> bool {
+          return getReturnInfo && getReturnInfo(path, info);
+        },
+        out);
   };
   auto buildOrderedCallArguments = [&](const Expr &callExpr,
                                        const std::vector<Expr> &params,

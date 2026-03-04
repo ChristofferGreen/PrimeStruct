@@ -75,4 +75,40 @@ bool resolveResultExprInfo(const Expr &expr,
   return false;
 }
 
+bool resolveResultExprInfoFromLocals(const Expr &expr,
+                                     const LocalMap &localsIn,
+                                     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                     const LookupReturnInfoFn &lookupReturnInfo,
+                                     ResultExprInfo &out) {
+  auto lookupLocal = [&](const std::string &name) -> LocalResultInfo {
+    LocalResultInfo local;
+    auto it = localsIn.find(name);
+    if (it == localsIn.end()) {
+      return local;
+    }
+    local.found = true;
+    local.isResult = it->second.isResult;
+    local.resultHasValue = it->second.resultHasValue;
+    local.resultErrorType = it->second.resultErrorType;
+    local.isFileHandle = it->second.isFileHandle;
+    return local;
+  };
+  auto resolveMethod = [&](const Expr &callExpr) -> const Definition * {
+    return resolveMethodCall(callExpr, localsIn);
+  };
+  auto lookupDefinitionResult = [&](const std::string &path, ResultExprInfo &resultOut) -> bool {
+    ReturnInfo info;
+    if (!lookupReturnInfo(path, info) || !info.isResult) {
+      return false;
+    }
+    resultOut.isResult = true;
+    resultOut.hasValue = info.resultHasValue;
+    resultOut.errorType = info.resultErrorType;
+    return true;
+  };
+  return resolveResultExprInfo(
+      expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
+}
+
 } // namespace primec::ir_lowerer

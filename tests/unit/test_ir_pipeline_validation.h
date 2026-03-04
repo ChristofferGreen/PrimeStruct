@@ -6749,6 +6749,66 @@ TEST_CASE("ir lowerer result helpers resolve definition result metadata") {
   CHECK(out.errorType == "FileError");
 }
 
+TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localResult;
+  localResult.isResult = true;
+  localResult.resultHasValue = true;
+  localResult.resultErrorType = "FileError";
+  locals.emplace("value", localResult);
+
+  primec::Expr localNameExpr;
+  localNameExpr.kind = primec::Expr::Kind::Name;
+  localNameExpr.name = "value";
+
+  primec::Definition methodDef;
+  methodDef.fullPath = "/method";
+  primec::Expr methodReceiver;
+  methodReceiver.kind = primec::Expr::Kind::Name;
+  methodReceiver.name = "obj";
+  primec::Expr methodCallExpr;
+  methodCallExpr.kind = primec::Expr::Kind::Call;
+  methodCallExpr.isMethodCall = true;
+  methodCallExpr.name = "do_it";
+  methodCallExpr.args = {methodReceiver};
+
+  auto resolveMethodCall = [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return &methodDef;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+    if (path != "/method") {
+      return false;
+    }
+    info = primec::ir_lowerer::ReturnInfo{};
+    info.isResult = true;
+    info.resultHasValue = false;
+    info.resultErrorType = "MethodError";
+    return true;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      localNameExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.errorType == "FileError");
+
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      methodCallExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+  CHECK(out.isResult);
+  CHECK_FALSE(out.hasValue);
+  CHECK(out.errorType == "MethodError");
+
+  primec::Expr unknownName;
+  unknownName.kind = primec::Expr::Kind::Name;
+  unknownName.name = "missing";
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      unknownName, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, out));
+}
+
 TEST_CASE("ir lowerer flow helpers restore scoped state") {
   std::optional<primec::ir_lowerer::OnErrorHandler> onError;
   primec::ir_lowerer::OnErrorHandler initialHandler;
