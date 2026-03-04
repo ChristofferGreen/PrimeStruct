@@ -13,10 +13,19 @@ using ResolveExprPathFn = std::function<std::string(const Expr &)>;
 using IsTailCallCandidateFn = std::function<bool(const Expr &)>;
 using DefinitionExistsFn = std::function<bool(const std::string &)>;
 
+struct CallResolutionAdapters {
+  ResolveExprPathFn resolveExprPath;
+  IsTailCallCandidateFn isTailCallCandidate;
+  DefinitionExistsFn definitionExists;
+};
+
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
                                         const ResolveExprPathFn &resolveExprPath);
 
+CallResolutionAdapters makeCallResolutionAdapters(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases);
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);

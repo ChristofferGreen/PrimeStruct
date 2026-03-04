@@ -60,14 +60,15 @@
 
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
-  auto resolveExprPath = ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases);
-  auto isTailCallCandidate = ir_lowerer::makeIsTailCallCandidate(defMap, resolveExprPath);
+  const auto callResolutionAdapters = ir_lowerer::makeCallResolutionAdapters(defMap, importAliases);
+  auto resolveExprPath = callResolutionAdapters.resolveExprPath;
+  auto isTailCallCandidate = callResolutionAdapters.isTailCallCandidate;
   const bool sawTailExecution =
       ir_lowerer::hasTailExecutionCandidate(entryDef->statements, returnsVoid, isTailCallCandidate);
   if (sawTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
-  auto definitionExists = ir_lowerer::makeDefinitionExistsByPath(defMap);
+  auto definitionExists = callResolutionAdapters.definitionExists;
   OnErrorByDefinition onErrorByDef;
   if (!ir_lowerer::buildOnErrorByDefinition(program, resolveExprPath, definitionExists, onErrorByDef, error)) {
     return false;
