@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 
@@ -70,6 +71,22 @@ bool isWildcardImportPath(const std::string &path, std::string &prefixOut) {
     return true;
   }
   return false;
+}
+
+void buildDefinitionMapAndStructNames(
+    const std::vector<Definition> &definitions,
+    std::unordered_map<std::string, const Definition *> &defMapOut,
+    std::unordered_set<std::string> &structNamesOut) {
+  defMapOut.clear();
+  structNamesOut.clear();
+  defMapOut.reserve(definitions.size());
+  structNamesOut.reserve(definitions.size());
+  for (const auto &def : definitions) {
+    defMapOut.emplace(def.fullPath, &def);
+    if (isStructDefinition(def)) {
+      structNamesOut.insert(def.fullPath);
+    }
+  }
 }
 
 std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(

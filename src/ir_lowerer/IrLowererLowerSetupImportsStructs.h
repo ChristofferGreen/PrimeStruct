@@ -1,19 +1,11 @@
 
   std::unordered_map<std::string, const Definition *> defMap;
-  defMap.reserve(program.definitions.size());
-  for (const auto &def : program.definitions) {
-    defMap.emplace(def.fullPath, &def);
-  }
+  std::unordered_set<std::string> structNames;
+  ir_lowerer::buildDefinitionMapAndStructNames(program.definitions, defMap, structNames);
 
   std::unordered_map<std::string, std::string> importAliases =
       buildImportAliasesFromProgram(program.imports, program.definitions, defMap);
 
-  std::unordered_set<std::string> structNames;
-  for (const auto &def : program.definitions) {
-    if (ir_lowerer::isStructDefinition(def)) {
-      structNames.insert(def.fullPath);
-    }
-  }
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     return resolveStructTypePathCandidateFromScope(typeName, namespacePrefix, structNames, importAliases);
   };

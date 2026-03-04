@@ -504,6 +504,53 @@ TEST_CASE("ir lowerer struct type helpers build setup import aliases") {
   CHECK(aliases.count("baz") == 0);
 }
 
+TEST_CASE("ir lowerer struct type helpers build definition map and struct names") {
+  primec::Definition transformedStruct;
+  transformedStruct.fullPath = "/pkg/StructA";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  transformedStruct.transforms.push_back(structTransform);
+
+  primec::Definition implicitStruct;
+  implicitStruct.fullPath = "/pkg/StructB";
+  primec::Expr field;
+  field.kind = primec::Expr::Kind::Name;
+  field.isBinding = true;
+  field.name = "value";
+  implicitStruct.statements.push_back(field);
+
+  primec::Definition nonStruct;
+  nonStruct.fullPath = "/pkg/Func";
+  nonStruct.parameters.push_back(field);
+
+  const std::vector<primec::Definition> definitions = {
+      transformedStruct,
+      implicitStruct,
+      nonStruct,
+  };
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  primec::ir_lowerer::buildDefinitionMapAndStructNames(definitions, defMap, structNames);
+
+  CHECK(defMap.size() == 3u);
+  REQUIRE(defMap.count("/pkg/StructA") == 1u);
+  REQUIRE(defMap.count("/pkg/StructB") == 1u);
+  REQUIRE(defMap.count("/pkg/Func") == 1u);
+  CHECK(defMap.at("/pkg/StructA") == &definitions[0]);
+  CHECK(defMap.at("/pkg/StructB") == &definitions[1]);
+  CHECK(defMap.at("/pkg/Func") == &definitions[2]);
+
+  CHECK(structNames.size() == 2u);
+  CHECK(structNames.count("/pkg/StructA") == 1u);
+  CHECK(structNames.count("/pkg/StructB") == 1u);
+  CHECK(structNames.count("/pkg/Func") == 0u);
+
+  primec::ir_lowerer::buildDefinitionMapAndStructNames({}, defMap, structNames);
+  CHECK(defMap.empty());
+  CHECK(structNames.empty());
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/Foo",

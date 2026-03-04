@@ -114,6 +114,10 @@ ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);
 bool isWildcardImportPath(const std::string &path, std::string &prefixOut);
+void buildDefinitionMapAndStructNames(
+    const std::vector<Definition> &definitions,
+    std::unordered_map<std::string, const Definition *> &defMapOut,
+    std::unordered_set<std::string> &structNamesOut);
 std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
     const std::vector<std::string> &imports,
     const std::vector<Definition> &definitions,
