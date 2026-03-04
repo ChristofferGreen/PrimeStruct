@@ -439,39 +439,27 @@
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
           };
 
-          ir_lowerer::ResultWhyCallOps resultWhyOps;
-          resultWhyOps.resolveStructTypeName =
+          const ir_lowerer::ResultWhyCallOps resultWhyOps = ir_lowerer::makeResultWhyCallOps(
               [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
                 return resolveStructTypeName(typeName, nsPrefix, structPathOut);
-              };
-          resultWhyOps.getReturnInfo = [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
-            return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
-          };
-          resultWhyOps.bindingKind = [&](const Expr &bindingExpr) { return bindingKind(bindingExpr); };
-          resultWhyOps.extractFirstBindingTypeTransform =
-              [&](const Expr &bindingExpr, std::string &typeNameOut, std::vector<std::string> &templateArgsOut) {
-                return ir_lowerer::extractFirstBindingTypeTransform(
-                    bindingExpr, typeNameOut, templateArgsOut);
-              };
-          resultWhyOps.resolveStructSlotLayout =
+              },
+              [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
+                return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
+              },
+              [&](const Expr &bindingExpr) { return bindingKind(bindingExpr); },
               [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-            return resolveStructSlotLayout(structPath, layoutOut);
-          };
-          resultWhyOps.valueKindFromTypeName =
-              [&](const std::string &typeName) { return valueKindFromTypeName(typeName); };
-          resultWhyOps.makeErrorValueExpr =
+                return resolveStructSlotLayout(structPath, layoutOut);
+              },
+              [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
               [&](LocalMap &callLocals, LocalInfo::ValueKind valueKind) {
                 return makeErrorValueExpr(callLocals, valueKind);
-              };
-          resultWhyOps.makeBoolErrorExpr =
-              [&](LocalMap &callLocals) { return makeBoolErrorExpr(callLocals); };
-          resultWhyOps.emitInlineDefinitionCall =
+              },
+              [&](LocalMap &callLocals) { return makeBoolErrorExpr(callLocals); },
               [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
                 return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
-              };
-          resultWhyOps.emitFileErrorWhy =
-              [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); };
-          resultWhyOps.emitEmptyString = [&]() { return emitEmptyString(); };
+              },
+              [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
+              [&]() { return emitEmptyString(); });
           const auto resultWhyResult = ir_lowerer::emitResolvedResultWhyCall(
               expr, resultInfo, localsIn, errorLocal, defMap, resultWhyOps, error);
           return resultWhyResult == ir_lowerer::ResultWhyCallEmitResult::Emitted;

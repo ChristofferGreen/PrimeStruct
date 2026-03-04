@@ -34,6 +34,7 @@ using ResolveMethodCallWithLocalsFn = std::function<const Definition *(const Exp
 using LookupReturnInfoFn = std::function<bool(const std::string &, ReturnInfo &)>;
 using ResolveResultExprInfoWithLocalsFn =
     std::function<bool(const Expr &, const LocalMap &, ResultExprInfo &)>;
+struct ResultWhyCallOps;
 
 bool resolveResultExprInfo(const Expr &expr,
                            const LookupLocalResultInfoFn &lookupLocal,
@@ -64,6 +65,17 @@ bool emitResultWhyLocalsFromValueExpr(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     int32_t &errorLocalOut);
+ResultWhyCallOps makeResultWhyCallOps(
+    const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<Expr(LocalMap &, LocalInfo::ValueKind)> &makeErrorValueExpr,
+    const std::function<Expr(LocalMap &)> &makeBoolErrorExpr,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const std::function<bool()> &emitEmptyString);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(

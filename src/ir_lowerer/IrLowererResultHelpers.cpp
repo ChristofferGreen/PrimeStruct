@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "IrLowererBindingTransformHelpers.h"
+
 namespace primec::ir_lowerer {
 
 bool resolveResultExprInfo(const Expr &expr,
@@ -158,6 +160,35 @@ bool emitResultWhyLocalsFromValueExpr(
   emitResultWhyErrorLocalFromResult(
       resultLocal, resultHasValue, errorLocalOut, emitInstruction);
   return true;
+}
+
+ResultWhyCallOps makeResultWhyCallOps(
+    const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<Expr(LocalMap &, LocalInfo::ValueKind)> &makeErrorValueExpr,
+    const std::function<Expr(LocalMap &)> &makeBoolErrorExpr,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const std::function<bool()> &emitEmptyString) {
+  ResultWhyCallOps ops;
+  ops.resolveStructTypeName = resolveStructTypeName;
+  ops.getReturnInfo = getReturnInfo;
+  ops.bindingKind = bindingKind;
+  ops.extractFirstBindingTypeTransform =
+      [](const Expr &bindingExpr, std::string &typeNameOut, std::vector<std::string> &templateArgsOut) {
+        return extractFirstBindingTypeTransform(bindingExpr, typeNameOut, templateArgsOut);
+      };
+  ops.resolveStructSlotLayout = resolveStructSlotLayout;
+  ops.valueKindFromTypeName = valueKindFromTypeName;
+  ops.makeErrorValueExpr = makeErrorValueExpr;
+  ops.makeBoolErrorExpr = makeBoolErrorExpr;
+  ops.emitInlineDefinitionCall = emitInlineDefinitionCall;
+  ops.emitFileErrorWhy = emitFileErrorWhy;
+  ops.emitEmptyString = emitEmptyString;
+  return ops;
 }
 
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {

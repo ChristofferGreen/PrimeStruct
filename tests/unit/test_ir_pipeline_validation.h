@@ -12790,6 +12790,154 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer result helpers compose Result.why call ops") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  bool resolveStructCalled = false;
+  bool getReturnInfoCalled = false;
+  bool bindingKindCalled = false;
+  bool resolveLayoutCalled = false;
+  bool valueKindCalled = false;
+  bool makeErrorExprCalled = false;
+  bool makeBoolExprCalled = false;
+  bool emitInlineCalled = false;
+  bool emitFileErrorCalled = false;
+  bool emitEmptyStringCalled = false;
+  int32_t seenFileErrorLocal = -1;
+
+  const primec::ir_lowerer::ResultWhyCallOps ops = primec::ir_lowerer::makeResultWhyCallOps(
+      [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
+        resolveStructCalled = true;
+        CHECK(typeName == "ErrType");
+        CHECK(nsPrefix == "/pkg");
+        structPathOut = "/ErrType";
+        return true;
+      },
+      [&](const std::string &path, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
+        getReturnInfoCalled = true;
+        CHECK(path == "/ErrType/why");
+        returnInfoOut = primec::ir_lowerer::ReturnInfo{};
+        returnInfoOut.kind = ValueKind::String;
+        return true;
+      },
+      [&](const primec::Expr &bindingExpr) {
+        bindingKindCalled = true;
+        CHECK(bindingExpr.kind == primec::Expr::Kind::Name);
+        return primec::ir_lowerer::LocalInfo::Kind::Value;
+      },
+      [&](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        resolveLayoutCalled = true;
+        CHECK(structPath == "/ErrType");
+        layoutOut = primec::ir_lowerer::StructSlotLayoutInfo{};
+        layoutOut.fields.push_back({0, ValueKind::Int32, ""});
+        return true;
+      },
+      [&](const std::string &typeName) {
+        valueKindCalled = true;
+        CHECK(typeName == "ErrType");
+        return ValueKind::Int32;
+      },
+      [&](primec::ir_lowerer::LocalMap &, ValueKind kind) {
+        makeErrorExprCalled = true;
+        CHECK(kind == ValueKind::Int32);
+        primec::Expr valueExpr;
+        valueExpr.kind = primec::Expr::Kind::Name;
+        valueExpr.name = "err_value";
+        return valueExpr;
+      },
+      [&](primec::ir_lowerer::LocalMap &) {
+        makeBoolExprCalled = true;
+        primec::Expr valueExpr;
+        valueExpr.kind = primec::Expr::Kind::Name;
+        valueExpr.name = "err_bool";
+        return valueExpr;
+      },
+      [&](const primec::Expr &callExpr,
+          const primec::Definition &callee,
+          const primec::ir_lowerer::LocalMap &) {
+        emitInlineCalled = true;
+        CHECK(callExpr.kind == primec::Expr::Kind::Call);
+        CHECK(callee.fullPath == "/ErrType/why");
+        return true;
+      },
+      [&](int32_t errorLocal) {
+        emitFileErrorCalled = true;
+        seenFileErrorLocal = errorLocal;
+        return true;
+      },
+      [&]() {
+        emitEmptyStringCalled = true;
+        return true;
+      });
+
+  std::string resolvedPath;
+  CHECK(ops.resolveStructTypeName("ErrType", "/pkg", resolvedPath));
+  CHECK(resolvedPath == "/ErrType");
+  CHECK(resolveStructCalled);
+
+  primec::ir_lowerer::ReturnInfo returnInfo;
+  CHECK(ops.getReturnInfo("/ErrType/why", returnInfo));
+  CHECK(returnInfo.kind == ValueKind::String);
+  CHECK(getReturnInfoCalled);
+
+  primec::Expr typedBinding;
+  typedBinding.kind = primec::Expr::Kind::Name;
+  primec::Transform qualifier;
+  qualifier.name = "mut";
+  typedBinding.transforms.push_back(qualifier);
+  primec::Transform typeTransform;
+  typeTransform.name = "ErrType";
+  typedBinding.transforms.push_back(typeTransform);
+  std::string typeName;
+  std::vector<std::string> templateArgs;
+  CHECK(ops.extractFirstBindingTypeTransform(typedBinding, typeName, templateArgs));
+  CHECK(typeName == "ErrType");
+  CHECK(templateArgs.empty());
+
+  primec::Expr untypedBinding;
+  CHECK_FALSE(ops.extractFirstBindingTypeTransform(untypedBinding, typeName, templateArgs));
+  CHECK(typeName.empty());
+  CHECK(templateArgs.empty());
+
+  CHECK(ops.bindingKind(typedBinding) == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(bindingKindCalled);
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  CHECK(ops.resolveStructSlotLayout("/ErrType", layout));
+  REQUIRE(layout.fields.size() == 1);
+  CHECK(layout.fields.front().slot == 0);
+  CHECK(layout.fields.front().valueKind == ValueKind::Int32);
+  CHECK(resolveLayoutCalled);
+
+  CHECK(ops.valueKindFromTypeName("ErrType") == ValueKind::Int32);
+  CHECK(valueKindCalled);
+
+  primec::ir_lowerer::LocalMap callLocals;
+  primec::Expr errorExpr = ops.makeErrorValueExpr(callLocals, ValueKind::Int32);
+  CHECK(errorExpr.kind == primec::Expr::Kind::Name);
+  CHECK(errorExpr.name == "err_value");
+  CHECK(makeErrorExprCalled);
+
+  primec::Expr boolExpr = ops.makeBoolErrorExpr(callLocals);
+  CHECK(boolExpr.kind == primec::Expr::Kind::Name);
+  CHECK(boolExpr.name == "err_bool");
+  CHECK(makeBoolExprCalled);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  primec::Definition callee;
+  callee.fullPath = "/ErrType/why";
+  CHECK(ops.emitInlineDefinitionCall(callExpr, callee, callLocals));
+  CHECK(emitInlineCalled);
+
+  CHECK(ops.emitFileErrorWhy(42));
+  CHECK(emitFileErrorCalled);
+  CHECK(seenFileErrorLocal == 42);
+
+  CHECK(ops.emitEmptyString());
+  CHECK(emitEmptyStringCalled);
+}
+
 TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
   using EmitResult = primec::ir_lowerer::ResultWhyCallEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
