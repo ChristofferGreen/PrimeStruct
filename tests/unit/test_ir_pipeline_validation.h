@@ -2854,6 +2854,41 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop match check") {
   CHECK(instructions[13].imm == 0);
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup loop advance patching") {
+  std::vector<primec::Instruction> instructions = {
+      {primec::IrOpcode::PushI32, 10},
+      {primec::IrOpcode::JumpIfZero, 0},
+      {primec::IrOpcode::PushI32, 12},
+      {primec::IrOpcode::JumpIfZero, 0},
+      {primec::IrOpcode::Jump, 0},
+      {primec::IrOpcode::PushI32, 13},
+  };
+
+  primec::ir_lowerer::emitMapLookupLoopAdvanceAndPatch(
+      1,
+      3,
+      4,
+      2,
+      9,
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
+
+  REQUIRE(instructions.size() == 11);
+  CHECK(instructions[1].imm == 6);
+  CHECK(instructions[3].imm == 11);
+  CHECK(instructions[4].imm == 11);
+  CHECK(instructions[6].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[6].imm == 9);
+  CHECK(instructions[7].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[7].imm == 1);
+  CHECK(instructions[8].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[9].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[9].imm == 9);
+  CHECK(instructions[10].op == primec::IrOpcode::Jump);
+  CHECK(instructions[10].imm == 2);
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

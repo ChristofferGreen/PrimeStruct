@@ -176,6 +176,15 @@ MapLookupLoopMatchAnchors emitMapLookupLoopMatchCheck(
     LocalInfo::ValueKind mapKeyKind,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+void emitMapLookupLoopAdvanceAndPatch(
+    size_t jumpNotMatch,
+    size_t jumpLoopEnd,
+    size_t jumpFound,
+    size_t loopStart,
+    int32_t indexLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);

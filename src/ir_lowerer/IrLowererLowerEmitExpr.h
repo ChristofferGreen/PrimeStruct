@@ -989,17 +989,15 @@
             size_t jumpNotMatch = loopMatch.jumpNotMatch;
             size_t jumpFound = loopMatch.jumpFound;
 
-            size_t notMatchIndex = function.instructions.size();
-            function.instructions[jumpNotMatch].imm = static_cast<int32_t>(notMatchIndex);
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::PushI32, 1});
-            function.instructions.push_back({IrOpcode::AddI32, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
-
-            size_t loopEndIndex = function.instructions.size();
-            function.instructions[jumpLoopEnd].imm = static_cast<int32_t>(loopEndIndex);
-            function.instructions[jumpFound].imm = static_cast<int32_t>(loopEndIndex);
+            ir_lowerer::emitMapLookupLoopAdvanceAndPatch(
+                jumpNotMatch,
+                jumpLoopEnd,
+                jumpFound,
+                loopStart,
+                indexLocal,
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
 
             if (accessName == "at") {
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
