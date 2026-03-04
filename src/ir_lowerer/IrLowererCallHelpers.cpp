@@ -402,6 +402,34 @@ MapLookupLoopConditionAnchors emitMapLookupLoopCondition(
   return anchors;
 }
 
+MapLookupLoopMatchAnchors emitMapLookupLoopMatchCheck(
+    int32_t ptrLocal,
+    int32_t indexLocal,
+    int32_t keyLocal,
+    LocalInfo::ValueKind mapKeyKind,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::PushI32, 2);
+  emitInstruction(IrOpcode::MulI32, 0);
+  emitInstruction(IrOpcode::PushI32, 1);
+  emitInstruction(IrOpcode::AddI32, 0);
+  emitInstruction(IrOpcode::PushI32, IrSlotBytesI32);
+  emitInstruction(IrOpcode::MulI32, 0);
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal));
+  emitInstruction(mapKeyCompareOpcode(mapKeyKind), 0);
+
+  MapLookupLoopMatchAnchors anchors;
+  anchors.jumpNotMatch = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+  anchors.jumpFound = instructionCount();
+  emitInstruction(IrOpcode::Jump, 0);
+  return anchors;
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {

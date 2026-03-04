@@ -2826,6 +2826,34 @@ TEST_CASE("ir lowerer call helpers emit map lookup loop condition") {
   CHECK(instructions[3].imm == 0);
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup loop match check") {
+  std::vector<primec::Instruction> instructions;
+  auto anchors = primec::ir_lowerer::emitMapLookupLoopMatchCheck(
+      4,
+      5,
+      6,
+      primec::ir_lowerer::LocalInfo::ValueKind::Int64,
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+
+  CHECK(anchors.jumpNotMatch == 12);
+  CHECK(anchors.jumpFound == 13);
+  REQUIRE(instructions.size() == 14);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 5);
+  CHECK(instructions[6].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[6].imm == primec::IrSlotBytesI32);
+  CHECK(instructions[10].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[10].imm == 6);
+  CHECK(instructions[11].op == primec::IrOpcode::CmpEqI64);
+  CHECK(instructions[12].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[12].imm == 0);
+  CHECK(instructions[13].op == primec::IrOpcode::Jump);
+  CHECK(instructions[13].imm == 0);
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

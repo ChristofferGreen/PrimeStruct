@@ -979,22 +979,15 @@
             size_t loopStart = loopCondition.loopStart;
             size_t jumpLoopEnd = loopCondition.jumpLoopEnd;
 
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::PushI32, 2});
-            function.instructions.push_back({IrOpcode::MulI32, 0});
-            function.instructions.push_back({IrOpcode::PushI32, 1});
-            function.instructions.push_back({IrOpcode::AddI32, 0});
-            function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
-            function.instructions.push_back({IrOpcode::MulI32, 0});
-            function.instructions.push_back({IrOpcode::AddI64, 0});
-            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal)});
-            function.instructions.push_back({ir_lowerer::mapKeyCompareOpcode(mapKeyKind), 0});
-            size_t jumpNotMatch = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            size_t jumpFound = function.instructions.size();
-            function.instructions.push_back({IrOpcode::Jump, 0});
+            const auto loopMatch = ir_lowerer::emitMapLookupLoopMatchCheck(
+                ptrLocal,
+                indexLocal,
+                keyLocal,
+                mapKeyKind,
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+            size_t jumpNotMatch = loopMatch.jumpNotMatch;
+            size_t jumpFound = loopMatch.jumpFound;
 
             size_t notMatchIndex = function.instructions.size();
             function.instructions[jumpNotMatch].imm = static_cast<int32_t>(notMatchIndex);

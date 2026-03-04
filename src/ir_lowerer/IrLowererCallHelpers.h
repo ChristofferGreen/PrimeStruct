@@ -97,6 +97,10 @@ struct MapLookupLoopConditionAnchors {
   size_t loopStart = 0;
   size_t jumpLoopEnd = 0;
 };
+struct MapLookupLoopMatchAnchors {
+  size_t jumpNotMatch = 0;
+  size_t jumpFound = 0;
+};
 enum class MapLookupStringKeyResult {
   NotHandled,
   Resolved,
@@ -163,6 +167,13 @@ MapLookupLoopLocals emitMapLookupLoopLocals(
 MapLookupLoopConditionAnchors emitMapLookupLoopCondition(
     int32_t indexLocal,
     int32_t countLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+MapLookupLoopMatchAnchors emitMapLookupLoopMatchCheck(
+    int32_t ptrLocal,
+    int32_t indexLocal,
+    int32_t keyLocal,
+    LocalInfo::ValueKind mapKeyKind,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
