@@ -714,16 +714,15 @@
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
           return false;
         }
-        std::string mathName;
-        if (getMathBuiltinName(expr, mathName)) {
-          if (!ir_lowerer::isSupportedMathBuiltinName(mathName)) {
-            error = "native backend does not support math builtin: " + mathName;
-            return false;
-          }
-        }
-        const auto countAccessResult = ir_lowerer::tryEmitCountAccessCall(
+        const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatch(
             expr,
             localsIn,
+            [&](const Expr &callExpr, std::string &mathBuiltinName) {
+              return getMathBuiltinName(callExpr, mathBuiltinName);
+            },
+            [&](const std::string &mathBuiltinName) {
+              return ir_lowerer::isSupportedMathBuiltinName(mathBuiltinName);
+            },
             [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return isArrayCountCall(callExpr, localMap);
             },
@@ -745,16 +744,6 @@
             [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },
-            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            error);
-        if (countAccessResult == ir_lowerer::CountAccessCallEmitResult::Emitted) {
-          return true;
-        }
-        if (countAccessResult == ir_lowerer::CountAccessCallEmitResult::Error) {
-          return false;
-        }
-        const auto unsupportedCallResult = ir_lowerer::emitUnsupportedNativeCallDiagnostic(
-            expr,
             [&](const Expr &callExpr, std::string &builtinName) {
               PrintBuiltin printBuiltin;
               if (!getPrintBuiltin(callExpr, printBuiltin)) {
@@ -763,43 +752,20 @@
               builtinName = printBuiltin.name;
               return true;
             },
+            [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+              return inferExprKind(lookupKeyExpr, localMap);
+            },
+            [&]() { return allocTempLocal(); },
+            [&]() { emitStringIndexOutOfBounds(); },
+            [&]() { emitMapKeyNotFound(); },
+            [&]() { emitArrayIndexOutOfBounds(); },
+            [&]() { return function.instructions.size(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
             error);
-        if (unsupportedCallResult == ir_lowerer::UnsupportedNativeCallResult::Error) {
+        if (nativeTailResult == ir_lowerer::NativeCallTailDispatchResult::Emitted) {
+          return true;
+        }
+        if (nativeTailResult == ir_lowerer::NativeCallTailDispatchResult::Error) {
           return false;
         }
-        std::string accessName;
-        if (getBuiltinArrayAccessName(expr, accessName)) {
-          if (expr.args.size() != 2) {
-            error = accessName + " requires exactly two arguments";
-            return false;
-          }
-          if (!ir_lowerer::emitBuiltinArrayAccess(
-                  accessName,
-                  expr.args[0],
-                  expr.args[1],
-                  localsIn,
-                  [&](const Expr &lookupExpr,
-                      const ir_lowerer::LocalMap &localMap,
-                      int32_t &stringIndexOut,
-                      size_t &lengthOut) {
-                    return resolveStringTableTarget(lookupExpr, localMap, stringIndexOut, lengthOut);
-                  },
-                  [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                    return inferExprKind(lookupKeyExpr, localMap);
-                  },
-                  [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
-                    return isEntryArgsName(targetExpr, localMap);
-                  },
-                  [&]() { return allocTempLocal(); },
-                  [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
-                    return emitExpr(lookupExpr, localMap);
-                  },
-                  [&]() { emitStringIndexOutOfBounds(); },
-                  [&]() { emitMapKeyNotFound(); },
-                  [&]() { emitArrayIndexOutOfBounds(); },
-                  [&]() { return function.instructions.size(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
-                  error)) {
-            return false;
-          }

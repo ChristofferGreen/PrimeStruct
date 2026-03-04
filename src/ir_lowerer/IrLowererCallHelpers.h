@@ -84,6 +84,11 @@ enum class UnsupportedNativeCallResult {
   NotHandled,
   Error,
 };
+enum class NativeCallTailDispatchResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 enum class MapAccessLookupEmitResult {
   NotHandled,
   Emitted,
@@ -159,6 +164,27 @@ bool getUnsupportedVectorHelperName(const Expr &expr, std::string &helperName);
 UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    std::string &error);
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,

@@ -3,6 +3,7 @@
 #include <limits>
 #include <utility>
 
+#include "IrLowererCountAccessHelpers.h"
 #include "IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -274,6 +275,87 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
   }
 
   return UnsupportedNativeCallResult::NotHandled;
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  std::string mathName;
+  if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
+    error = "native backend does not support math builtin: " + mathName;
+    return NativeCallTailDispatchResult::Error;
+  }
+
+  const auto countAccessResult = tryEmitCountAccessCall(
+      expr,
+      localsIn,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      emitExpr,
+      emitInstruction,
+      error);
+  if (countAccessResult == CountAccessCallEmitResult::Emitted) {
+    return NativeCallTailDispatchResult::Emitted;
+  }
+  if (countAccessResult == CountAccessCallEmitResult::Error) {
+    return NativeCallTailDispatchResult::Error;
+  }
+
+  const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(
+      expr, tryGetPrintBuiltinName, error);
+  if (unsupportedCallResult == UnsupportedNativeCallResult::Error) {
+    return NativeCallTailDispatchResult::Error;
+  }
+
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName)) {
+    if (expr.args.size() != 2) {
+      error = accessName + " requires exactly two arguments";
+      return NativeCallTailDispatchResult::Error;
+    }
+    if (!emitBuiltinArrayAccess(accessName,
+                                expr.args[0],
+                                expr.args[1],
+                                localsIn,
+                                resolveStringTableTarget,
+                                inferExprKind,
+                                isEntryArgsName,
+                                allocTempLocal,
+                                emitExpr,
+                                emitStringIndexOutOfBounds,
+                                emitMapKeyNotFound,
+                                emitArrayIndexOutOfBounds,
+                                instructionCount,
+                                emitInstruction,
+                                patchInstructionImm,
+                                error)) {
+      return NativeCallTailDispatchResult::Error;
+    }
+    return NativeCallTailDispatchResult::Emitted;
+  }
+
+  return NativeCallTailDispatchResult::NotHandled;
 }
 
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
