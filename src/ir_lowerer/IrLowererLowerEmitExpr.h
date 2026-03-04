@@ -712,51 +712,26 @@
         if (readbackResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
           return readbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
-        if (isSimpleCallName(expr, "buffer")) {
-          ir_lowerer::BufferInitInfo initInfo;
-          if (!ir_lowerer::resolveBufferInitInfo(
-                  expr,
-                  [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
-                  initInfo,
-                  error)) {
-            return false;
-          }
-          const int32_t baseLocal = nextLocal;
-          const int32_t headerSlots = 1;
-          nextLocal += headerSlots + initInfo.count;
-          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(initInfo.count)});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-          for (int32_t i = 0; i < initInfo.count; ++i) {
-            function.instructions.push_back({initInfo.zeroOpcode, 0});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + headerSlots + i)});
-          }
-          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
-          return true;
-        }
-        if (isSimpleCallName(expr, "buffer_load")) {
-          ir_lowerer::BufferLoadInfo loadInfo;
-          if (!ir_lowerer::resolveBufferLoadInfo(
-                  expr,
-                  [&](const std::string &name) -> std::optional<LocalInfo::ValueKind> {
-                    auto it = localsIn.find(name);
-                    if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
-                      return std::nullopt;
-                    }
-                    return it->second.valueKind;
-                  },
-                  [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
-                  [&](const Expr &indexExpr) { return inferExprKind(indexExpr, localsIn); },
-                  loadInfo,
-                  error)) {
-            return false;
-          }
-          return ir_lowerer::emitBufferLoadCall(
-              expr,
-              loadInfo.indexKind,
-              [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
-              [&]() { return allocTempLocal(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+        const auto bufferBuiltinResult = ir_lowerer::tryEmitBufferBuiltinCall(
+            expr,
+            localsIn,
+            [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return inferExprKind(valueExpr, localMap);
+            },
+            [&](int32_t localCount) {
+              const int32_t baseLocal = nextLocal;
+              nextLocal += localCount;
+              return baseLocal;
+            },
+            [&]() { return allocTempLocal(); },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return emitExpr(valueExpr, localMap);
+            },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            error);
+        if (bufferBuiltinResult != ir_lowerer::BufferBuiltinCallEmitResult::NotMatched) {
+          return bufferBuiltinResult == ir_lowerer::BufferBuiltinCallEmitResult::Emitted;
         }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallWithCountFallbacks(
             expr,

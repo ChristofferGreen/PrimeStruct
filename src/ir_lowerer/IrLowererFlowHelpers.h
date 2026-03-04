@@ -75,6 +75,11 @@ enum class UnaryPassthroughCallResult {
   Emitted,
   Error,
 };
+enum class BufferBuiltinCallEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
 UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
                                                        const char *callName,
                                                        const std::function<bool(const Expr &)> &emitExpr,
@@ -104,5 +109,15 @@ bool emitBufferLoadCall(const Expr &expr,
                         const std::function<bool(const Expr &)> &emitExpr,
                         const std::function<int32_t()> &allocTempLocal,
                         const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t(int32_t)> &allocLocalRange,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

@@ -327,4 +327,64 @@ bool emitBufferLoadCall(const Expr &expr,
   return true;
 }
 
+BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t(int32_t)> &allocLocalRange,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  if (isSimpleCallName(expr, "buffer")) {
+    BufferInitInfo initInfo;
+    if (!resolveBufferInitInfo(expr, resolveValueKind, initInfo, error)) {
+      return BufferBuiltinCallEmitResult::Error;
+    }
+
+    const int32_t headerSlots = 1;
+    const int32_t baseLocal = allocLocalRange(headerSlots + initInfo.count);
+    emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(initInfo.count));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal));
+    for (int32_t i = 0; i < initInfo.count; ++i) {
+      emitInstruction(initInfo.zeroOpcode, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + headerSlots + i));
+    }
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal));
+    return BufferBuiltinCallEmitResult::Emitted;
+  }
+
+  if (isSimpleCallName(expr, "buffer_load")) {
+    BufferLoadInfo loadInfo;
+    if (!resolveBufferLoadInfo(
+            expr,
+            [&](const std::string &name) -> std::optional<LocalInfo::ValueKind> {
+              auto it = localsIn.find(name);
+              if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Buffer) {
+                return std::nullopt;
+              }
+              return it->second.valueKind;
+            },
+            resolveValueKind,
+            [&](const Expr &indexExpr) { return inferExprKind(indexExpr, localsIn); },
+            loadInfo,
+            error)) {
+      return BufferBuiltinCallEmitResult::Error;
+    }
+
+    if (!emitBufferLoadCall(
+            expr,
+            loadInfo.indexKind,
+            [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
+            allocTempLocal,
+            emitInstruction)) {
+      return BufferBuiltinCallEmitResult::Error;
+    }
+    return BufferBuiltinCallEmitResult::Emitted;
+  }
+
+  return BufferBuiltinCallEmitResult::NotMatched;
+}
+
 } // namespace primec::ir_lowerer
