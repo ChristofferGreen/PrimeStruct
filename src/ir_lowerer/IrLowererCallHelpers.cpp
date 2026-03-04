@@ -1,5 +1,7 @@
 #include "IrLowererCallHelpers.h"
 
+#include <utility>
+
 #include "IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -155,6 +157,81 @@ bool buildOrderedCallArguments(const Expr &callExpr,
     }
     error = "argument count mismatch";
     return false;
+  }
+  return true;
+}
+
+bool definitionHasTransform(const Definition &def, const std::string &transformName) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name == transformName) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isStructHelperDefinition(const Definition &def,
+                              const std::unordered_set<std::string> &structNames,
+                              std::string &parentStructPathOut) {
+  parentStructPathOut.clear();
+  if (!def.isNested) {
+    return false;
+  }
+  if (structNames.count(def.fullPath) > 0) {
+    return false;
+  }
+  const size_t slash = def.fullPath.find_last_of('/');
+  if (slash == std::string::npos || slash == 0) {
+    return false;
+  }
+  const std::string parent = def.fullPath.substr(0, slash);
+  if (structNames.count(parent) == 0) {
+    return false;
+  }
+  parentStructPathOut = parent;
+  return true;
+}
+
+Expr makeStructHelperThisParam(const std::string &structPath, bool isMutable) {
+  Expr param;
+  param.kind = Expr::Kind::Name;
+  param.isBinding = true;
+  param.name = "this";
+  Transform typeTransform;
+  typeTransform.name = "Reference";
+  typeTransform.templateArgs.push_back(structPath);
+  param.transforms.push_back(std::move(typeTransform));
+  if (isMutable) {
+    Transform mutTransform;
+    mutTransform.name = "mut";
+    param.transforms.push_back(std::move(mutTransform));
+  }
+  return param;
+}
+
+bool isStaticFieldBinding(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "static") {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool collectInstanceStructFieldParams(const Definition &structDef,
+                                      std::vector<Expr> &paramsOut,
+                                      std::string &error) {
+  paramsOut.clear();
+  paramsOut.reserve(structDef.statements.size());
+  for (const auto &param : structDef.statements) {
+    if (!param.isBinding) {
+      error = "struct definitions may only contain field bindings: " + structDef.fullPath;
+      return false;
+    }
+    if (isStaticFieldBinding(param)) {
+      continue;
+    }
+    paramsOut.push_back(param);
   }
   return true;
 }

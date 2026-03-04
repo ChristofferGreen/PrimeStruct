@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "primec/Ast.h"
@@ -61,6 +62,15 @@ bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,
                                std::vector<const Expr *> &ordered,
                                std::string &error);
+bool definitionHasTransform(const Definition &def, const std::string &transformName);
+bool isStructHelperDefinition(const Definition &def,
+                              const std::unordered_set<std::string> &structNames,
+                              std::string &parentStructPathOut);
+Expr makeStructHelperThisParam(const std::string &structPath, bool isMutable);
+bool isStaticFieldBinding(const Expr &expr);
+bool collectInstanceStructFieldParams(const Definition &structDef,
+                                      std::vector<Expr> &paramsOut,
+                                      std::string &error);
 const Definition *resolveDefinitionByPath(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &definitionPath);

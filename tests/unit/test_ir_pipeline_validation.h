@@ -371,6 +371,81 @@ TEST_CASE("ir lowerer call helpers reject unknown named arg") {
   CHECK(error == "unknown named argument: missing");
 }
 
+TEST_CASE("ir lowerer call helpers classify struct helpers and transforms") {
+  const std::unordered_set<std::string> structNames = {"/pkg/MyStruct"};
+  std::string parentStructPath;
+
+  primec::Definition notNested;
+  notNested.fullPath = "/pkg/MyStruct/helper";
+  CHECK_FALSE(primec::ir_lowerer::isStructHelperDefinition(
+      notNested, structNames, parentStructPath));
+
+  primec::Definition structDef;
+  structDef.isNested = true;
+  structDef.fullPath = "/pkg/MyStruct";
+  CHECK_FALSE(primec::ir_lowerer::isStructHelperDefinition(
+      structDef, structNames, parentStructPath));
+
+  primec::Definition helperDef;
+  helperDef.isNested = true;
+  helperDef.fullPath = "/pkg/MyStruct/helper";
+  CHECK(primec::ir_lowerer::isStructHelperDefinition(
+      helperDef, structNames, parentStructPath));
+  CHECK(parentStructPath == "/pkg/MyStruct");
+
+  primec::Transform staticTransform;
+  staticTransform.name = "static";
+  helperDef.transforms.push_back(staticTransform);
+  CHECK(primec::ir_lowerer::definitionHasTransform(helperDef, "static"));
+  CHECK_FALSE(primec::ir_lowerer::definitionHasTransform(helperDef, "mut"));
+}
+
+TEST_CASE("ir lowerer call helpers build this params and collect struct fields") {
+  primec::Expr thisParam = primec::ir_lowerer::makeStructHelperThisParam("/pkg/MyStruct", true);
+  CHECK(thisParam.kind == primec::Expr::Kind::Name);
+  CHECK(thisParam.isBinding);
+  CHECK(thisParam.name == "this");
+  REQUIRE(thisParam.transforms.size() == 2);
+  CHECK(thisParam.transforms[0].name == "Reference");
+  REQUIRE(thisParam.transforms[0].templateArgs.size() == 1);
+  CHECK(thisParam.transforms[0].templateArgs[0] == "/pkg/MyStruct");
+  CHECK(thisParam.transforms[1].name == "mut");
+
+  primec::Definition structDef;
+  structDef.fullPath = "/pkg/MyStruct";
+
+  primec::Expr instanceField;
+  instanceField.kind = primec::Expr::Kind::Name;
+  instanceField.isBinding = true;
+  instanceField.name = "value";
+
+  primec::Expr staticField = instanceField;
+  staticField.name = "globalValue";
+  primec::Transform staticTransform;
+  staticTransform.name = "static";
+  staticField.transforms.push_back(staticTransform);
+
+  structDef.statements = {instanceField, staticField};
+  std::vector<primec::Expr> collectedFields;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::collectInstanceStructFieldParams(
+      structDef, collectedFields, error));
+  CHECK(error.empty());
+  REQUIRE(collectedFields.size() == 1);
+  CHECK(collectedFields[0].name == "value");
+  CHECK_FALSE(primec::ir_lowerer::isStaticFieldBinding(collectedFields[0]));
+  CHECK(primec::ir_lowerer::isStaticFieldBinding(staticField));
+
+  primec::Expr invalidStatement;
+  invalidStatement.kind = primec::Expr::Kind::Call;
+  invalidStatement.name = "oops";
+  invalidStatement.isBinding = false;
+  structDef.statements.push_back(invalidStatement);
+  CHECK_FALSE(primec::ir_lowerer::collectInstanceStructFieldParams(
+      structDef, collectedFields, error));
+  CHECK(error == "struct definitions may only contain field bindings: /pkg/MyStruct");
+}
+
 TEST_CASE("ir lowerer on_error helpers wire definition handlers") {
   primec::Program program;
 
