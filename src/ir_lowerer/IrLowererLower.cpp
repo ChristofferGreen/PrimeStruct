@@ -7,6 +7,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
+#include "IrLowererFileWriteHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererCountAccessHelpers.h"

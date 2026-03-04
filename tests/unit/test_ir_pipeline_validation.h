@@ -10033,6 +10033,117 @@ TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   CHECK(instructions[0].imm == 42);
 }
 
+TEST_CASE("ir lowerer file write helpers resolve write opcodes") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::IrOpcode opcode = primec::IrOpcode::PushI32;
+  CHECK(primec::ir_lowerer::resolveFileWriteValueOpcode(ValueKind::Int32, opcode));
+  CHECK(opcode == primec::IrOpcode::FileWriteI32);
+
+  CHECK(primec::ir_lowerer::resolveFileWriteValueOpcode(ValueKind::Bool, opcode));
+  CHECK(opcode == primec::IrOpcode::FileWriteI32);
+
+  CHECK(primec::ir_lowerer::resolveFileWriteValueOpcode(ValueKind::Int64, opcode));
+  CHECK(opcode == primec::IrOpcode::FileWriteI64);
+
+  CHECK(primec::ir_lowerer::resolveFileWriteValueOpcode(ValueKind::UInt64, opcode));
+  CHECK(opcode == primec::IrOpcode::FileWriteU64);
+
+  CHECK_FALSE(primec::ir_lowerer::resolveFileWriteValueOpcode(ValueKind::Float64, opcode));
+}
+
+TEST_CASE("ir lowerer file write helpers emit write steps") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  std::string error;
+
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Name;
+  arg.name = "value";
+
+  bool emitExprCalled = false;
+  CHECK(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      9,
+      17,
+      [](const primec::Expr &, int32_t &stringIndex, size_t &length) {
+        stringIndex = 23;
+        length = 5;
+        return true;
+      },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [&](const primec::Expr &) {
+        emitExprCalled = true;
+        return true;
+      },
+      emitInstruction,
+      error));
+  CHECK_FALSE(emitExprCalled);
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 9);
+  CHECK(instructions[1].op == primec::IrOpcode::FileWriteString);
+  CHECK(instructions[1].imm == 23);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 17);
+  CHECK(error.empty());
+
+  instructions.clear();
+  emitExprCalled = false;
+  CHECK(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      4,
+      8,
+      [](const primec::Expr &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::Int64; },
+      [&](const primec::Expr &) {
+        emitExprCalled = true;
+        emitInstruction(primec::IrOpcode::PushI64, 77);
+        return true;
+      },
+      emitInstruction,
+      error));
+  CHECK(emitExprCalled);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == 77);
+  CHECK(instructions[2].op == primec::IrOpcode::FileWriteI64);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 8);
+
+  instructions.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      4,
+      8,
+      [](const primec::Expr &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::Float32; },
+      [](const primec::Expr &) { return true; },
+      emitInstruction,
+      error));
+  CHECK(error == "file write requires integer/bool or string arguments");
+
+  instructions.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitFileWriteStep(
+      arg,
+      4,
+      8,
+      [](const primec::Expr &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::ValueKind::Int32; },
+      [](const primec::Expr &) { return false; },
+      emitInstruction,
+      error));
+  CHECK(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4);
+}
+
 TEST_CASE("ir lowerer string call helpers emit values from locals") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

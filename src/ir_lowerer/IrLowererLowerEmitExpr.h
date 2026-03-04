@@ -633,44 +633,17 @@
           if (it != localsIn.end() && it->second.isFileHandle) {
             const int32_t handleIndex = it->second.index;
             auto emitWriteStep = [&](const Expr &arg, int32_t errorLocal) -> bool {
-              int32_t stringIndex = -1;
-              size_t length = 0;
-              if (resolveStringTableTarget(arg, localsIn, stringIndex, length)) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-                function.instructions.push_back({IrOpcode::FileWriteString, static_cast<uint64_t>(stringIndex)});
-                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-                return true;
-              }
-              LocalInfo::ValueKind kind = inferExprKind(arg, localsIn);
-              if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-                if (!emitExpr(arg, localsIn)) {
-                  return false;
-                }
-                function.instructions.push_back({IrOpcode::FileWriteI32, 0});
-                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-                return true;
-              }
-              if (kind == LocalInfo::ValueKind::Int64) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-                if (!emitExpr(arg, localsIn)) {
-                  return false;
-                }
-                function.instructions.push_back({IrOpcode::FileWriteI64, 0});
-                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-                return true;
-              }
-              if (kind == LocalInfo::ValueKind::UInt64) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex)});
-                if (!emitExpr(arg, localsIn)) {
-                  return false;
-                }
-                function.instructions.push_back({IrOpcode::FileWriteU64, 0});
-                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-                return true;
-              }
-              error = "file write requires integer/bool or string arguments";
-              return false;
+              return ir_lowerer::emitFileWriteStep(
+                  arg,
+                  handleIndex,
+                  errorLocal,
+                  [&](const Expr &valueExpr, int32_t &stringIndex, size_t &length) {
+                    return resolveStringTableTarget(valueExpr, localsIn, stringIndex, length);
+                  },
+                  [&](const Expr &valueExpr) { return inferExprKind(valueExpr, localsIn); },
+                  [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  error);
             };
             if (expr.name == "write" || expr.name == "write_line") {
               const int32_t errorLocal = allocTempLocal();

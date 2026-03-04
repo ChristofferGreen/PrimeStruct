@@ -19,6 +19,7 @@
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "src/ir_lowerer/IrLowererFileWriteHelpers.h"
 #include "src/ir_lowerer/IrLowererFlowHelpers.h"
 #include "src/ir_lowerer/IrLowererCountAccessHelpers.h"
 #include "src/ir_lowerer/IrLowererIndexKindHelpers.h"
