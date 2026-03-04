@@ -2605,6 +2605,18 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(error == "native backend only supports numeric/bool map values");
 }
 
+TEST_CASE("ir lowerer call helpers map key compare opcode selection") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using primec::IrOpcode;
+
+  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Int32) == IrOpcode::CmpEqI32);
+  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Bool) == IrOpcode::CmpEqI32);
+  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Int64) == IrOpcode::CmpEqI64);
+  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::UInt64) == IrOpcode::CmpEqI64);
+  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Float32) == IrOpcode::CmpEqF32);
+  CHECK(primec::ir_lowerer::mapKeyCompareOpcode(Kind::Float64) == IrOpcode::CmpEqF64);
+}
+
 TEST_CASE("ir lowerer call helpers handle non-method count fallback") {
   using Result = primec::ir_lowerer::CountMethodFallbackResult;
 

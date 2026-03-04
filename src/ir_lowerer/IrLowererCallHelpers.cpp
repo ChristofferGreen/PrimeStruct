@@ -293,6 +293,19 @@ bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
   return true;
 }
 
+IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind) {
+  if (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64) {
+    return IrOpcode::CmpEqI64;
+  }
+  if (mapKeyKind == LocalInfo::ValueKind::Float64) {
+    return IrOpcode::CmpEqF64;
+  }
+  if (mapKeyKind == LocalInfo::ValueKind::Float32) {
+    return IrOpcode::CmpEqF32;
+  }
+  return IrOpcode::CmpEqI32;
+}
+
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,

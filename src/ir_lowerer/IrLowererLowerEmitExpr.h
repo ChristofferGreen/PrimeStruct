@@ -976,15 +976,7 @@
             function.instructions.push_back({IrOpcode::AddI64, 0});
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(keyLocal)});
-            IrOpcode cmpKeyOp = IrOpcode::CmpEqI32;
-            if (mapKeyKind == LocalInfo::ValueKind::Int64 || mapKeyKind == LocalInfo::ValueKind::UInt64) {
-              cmpKeyOp = IrOpcode::CmpEqI64;
-            } else if (mapKeyKind == LocalInfo::ValueKind::Float64) {
-              cmpKeyOp = IrOpcode::CmpEqF64;
-            } else if (mapKeyKind == LocalInfo::ValueKind::Float32) {
-              cmpKeyOp = IrOpcode::CmpEqF32;
-            }
-            function.instructions.push_back({cmpKeyOp, 0});
+            function.instructions.push_back({ir_lowerer::mapKeyCompareOpcode(mapKeyKind), 0});
             size_t jumpNotMatch = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
             size_t jumpFound = function.instructions.size();

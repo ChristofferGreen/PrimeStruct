@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "primec/IR.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -110,6 +111,7 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMa
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);
+IrOpcode mapKeyCompareOpcode(LocalInfo::ValueKind mapKeyKind);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
