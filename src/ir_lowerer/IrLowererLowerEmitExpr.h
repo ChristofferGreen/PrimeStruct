@@ -987,38 +987,14 @@
           }
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
 
-          if (accessName == "at") {
-            const int32_t countLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
-
-            if (indexKind != LocalInfo::ValueKind::UInt64) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-              function.instructions.push_back({pushZeroForIndex(indexKind), 0});
-              function.instructions.push_back({cmpLtForIndex(indexKind), 0});
-              size_t jumpNonNegative = function.instructions.size();
-              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-              emitArrayIndexOutOfBounds();
-              size_t nonNegativeIndex = function.instructions.size();
-              function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
-            }
-
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-            function.instructions.push_back({cmpGeForIndex(indexKind), 0});
-            size_t jumpInRange = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            emitArrayIndexOutOfBounds();
-            size_t inRangeIndex = function.instructions.size();
-            function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
-          }
-
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-          function.instructions.push_back({pushOneForIndex(indexKind), headerSlots});
-          function.instructions.push_back({addForIndex(indexKind), 0});
-          function.instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
-          function.instructions.push_back({mulForIndex(indexKind), 0});
-          function.instructions.push_back({IrOpcode::AddI64, 0});
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          ir_lowerer::emitArrayVectorAccessLoad(
+              accessName,
+              ptrLocal,
+              indexLocal,
+              indexKind,
+              headerSlots,
+              [&]() { return allocTempLocal(); },
+              [&]() { emitArrayIndexOutOfBounds(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });

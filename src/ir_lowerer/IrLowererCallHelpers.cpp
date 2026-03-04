@@ -515,6 +515,52 @@ bool emitMapLookupAccess(
   return true;
 }
 
+void emitArrayVectorAccessLoad(
+    const std::string &accessName,
+    int32_t ptrLocal,
+    int32_t indexLocal,
+    LocalInfo::ValueKind indexKind,
+    uint64_t headerSlots,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+  if (accessName == "at") {
+    const int32_t countLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
+
+    if (indexKind != LocalInfo::ValueKind::UInt64) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+      emitInstruction(pushZeroForIndex(indexKind), 0);
+      emitInstruction(cmpLtForIndex(indexKind), 0);
+      const size_t jumpNonNegative = instructionCount();
+      emitInstruction(IrOpcode::JumpIfZero, 0);
+      emitArrayIndexOutOfBounds();
+      patchInstructionImm(jumpNonNegative, static_cast<uint64_t>(instructionCount()));
+    }
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+    emitInstruction(cmpGeForIndex(indexKind), 0);
+    const size_t jumpInRange = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitArrayIndexOutOfBounds();
+    patchInstructionImm(jumpInRange, static_cast<uint64_t>(instructionCount()));
+  }
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(pushOneForIndex(indexKind), headerSlots);
+  emitInstruction(addForIndex(indexKind), 0);
+  emitInstruction(pushOneForIndex(indexKind), IrSlotBytesI32);
+  emitInstruction(mulForIndex(indexKind), 0);
+  emitInstruction(IrOpcode::AddI64, 0);
+  emitInstruction(IrOpcode::LoadIndirect, 0);
+}
+
 MapLookupLoopLocals emitMapLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,
