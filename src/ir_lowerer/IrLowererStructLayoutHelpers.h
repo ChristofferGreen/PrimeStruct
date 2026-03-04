@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,16 @@ bool classifyBindingTypeLayout(const LayoutFieldBinding &binding,
                                BindingTypeLayout &layoutOut,
                                std::string &structTypeNameOut,
                                std::string &errorOut);
+bool appendStructLayoutField(const std::string &structPath,
+                             const Expr &fieldExpr,
+                             const LayoutFieldBinding &binding,
+                             const std::function<bool(const LayoutFieldBinding &,
+                                                      BindingTypeLayout &,
+                                                      std::string &)> &resolveTypeLayout,
+                             uint32_t &offsetInOut,
+                             uint32_t &structAlignmentInOut,
+                             IrStructLayout &layoutOut,
+                             std::string &errorOut);
 bool isLayoutQualifierName(const std::string &name);
 IrStructFieldCategory fieldCategory(const Expr &expr);
 IrStructVisibility fieldVisibility(const Expr &expr);

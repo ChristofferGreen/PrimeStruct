@@ -31,14 +31,10 @@
                                                     error)) {
     return false;
   }
-  struct TypeLayout {
-    uint32_t sizeBytes = 0;
-    uint32_t alignmentBytes = 1;
-  };
   std::unordered_map<std::string, IrStructLayout> layoutCache;
   std::unordered_set<std::string> layoutStack;
   std::function<bool(const Definition &, IrStructLayout &)> computeStructLayout;
-  std::function<bool(const FieldBinding &, const std::string &, TypeLayout &)> typeLayoutForBinding;
+  std::function<bool(const FieldBinding &, const std::string &, ir_lowerer::BindingTypeLayout &)> typeLayoutForBinding;
 
   computeStructLayout = [&](const Definition &def, IrStructLayout &layoutOut) -> bool {
     auto cached = layoutCache.find(def.fullPath);
@@ -76,53 +72,16 @@
       }
       const FieldBinding &binding = fieldInfoIt->second[fieldIndex];
       ++fieldIndex;
-      const bool fieldIsStatic = isStaticField(stmt);
-      if (fieldIsStatic) {
-        IrStructField field;
-        field.name = stmt.name;
-        field.envelope = ir_lowerer::formatLayoutFieldEnvelope(binding);
-        field.offsetBytes = 0;
-        field.sizeBytes = 0;
-        field.alignmentBytes = 1;
-        field.paddingKind = IrStructPaddingKind::None;
-        field.category = fieldCategory(stmt);
-        field.visibility = fieldVisibility(stmt);
-        field.isStatic = true;
-        layout.fields.push_back(std::move(field));
-        continue;
-      }
-      TypeLayout typeLayout;
-      if (!typeLayoutForBinding(binding, def.namespacePrefix, typeLayout)) {
+      auto resolveFieldTypeLayout = [&](const FieldBinding &fieldBinding,
+                                        ir_lowerer::BindingTypeLayout &fieldTypeLayout,
+                                        std::string &layoutError) -> bool {
+        (void)layoutError;
+        return typeLayoutForBinding(fieldBinding, def.namespacePrefix, fieldTypeLayout);
+      };
+      if (!ir_lowerer::appendStructLayoutField(
+              def.fullPath, stmt, binding, resolveFieldTypeLayout, offset, structAlign, layout, error)) {
         return false;
       }
-      uint32_t explicitFieldAlign = 1;
-      bool hasFieldAlign = false;
-      const std::string fieldContext = "field " + def.fullPath + "/" + stmt.name;
-      if (!extractAlignment(stmt.transforms, fieldContext, explicitFieldAlign, hasFieldAlign, error)) {
-        return false;
-      }
-      if (hasFieldAlign && explicitFieldAlign < typeLayout.alignmentBytes) {
-        error = "alignment requirement on " + fieldContext + " is smaller than required alignment of " +
-                std::to_string(typeLayout.alignmentBytes);
-        return false;
-      }
-      uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, typeLayout.alignmentBytes)
-                                          : typeLayout.alignmentBytes;
-      uint32_t &activeOffset = offset;
-      uint32_t alignedOffset = alignTo(activeOffset, fieldAlign);
-      IrStructField field;
-      field.name = stmt.name;
-      field.envelope = ir_lowerer::formatLayoutFieldEnvelope(binding);
-      field.offsetBytes = alignedOffset;
-      field.sizeBytes = typeLayout.sizeBytes;
-      field.alignmentBytes = fieldAlign;
-      field.paddingKind = (alignedOffset != activeOffset) ? IrStructPaddingKind::Align : IrStructPaddingKind::None;
-      field.category = fieldCategory(stmt);
-      field.visibility = fieldVisibility(stmt);
-      field.isStatic = false;
-      layout.fields.push_back(std::move(field));
-      activeOffset = alignedOffset + typeLayout.sizeBytes;
-      structAlign = std::max(structAlign, fieldAlign);
     }
     if (hasStructAlign && explicitStructAlign < structAlign) {
       error = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +
@@ -140,15 +99,14 @@
 
   typeLayoutForBinding = [&](const FieldBinding &binding,
                              const std::string &namespacePrefix,
-                             TypeLayout &layoutOut) -> bool {
+                             ir_lowerer::BindingTypeLayout &layoutOut) -> bool {
     ir_lowerer::BindingTypeLayout bindingLayout;
     std::string structTypeName;
     if (!ir_lowerer::classifyBindingTypeLayout(binding, bindingLayout, structTypeName, error)) {
       return false;
     }
     if (structTypeName.empty()) {
-      layoutOut.sizeBytes = bindingLayout.sizeBytes;
-      layoutOut.alignmentBytes = bindingLayout.alignmentBytes;
+      layoutOut = bindingLayout;
       return true;
     }
     std::string structPath = resolveStructTypePath(structTypeName, namespacePrefix);

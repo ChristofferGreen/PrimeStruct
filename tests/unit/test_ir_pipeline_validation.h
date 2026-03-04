@@ -1277,6 +1277,104 @@ TEST_CASE("ir lowerer struct layout helpers classify binding type layout") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer struct layout helpers append struct fields") {
+  primec::IrStructLayout layout;
+  layout.name = "/pkg/S";
+
+  uint32_t offset = 0;
+  uint32_t structAlign = 1;
+  int resolveCalls = 0;
+  std::string error;
+
+  const auto resolveTypeLayout = [&](const primec::ir_lowerer::LayoutFieldBinding &binding,
+                                     primec::ir_lowerer::BindingTypeLayout &layoutOut,
+                                     std::string &errorOut) {
+    (void)errorOut;
+    ++resolveCalls;
+    if (binding.typeName == "i64") {
+      layoutOut = {8u, 8u};
+      return true;
+    }
+    if (binding.typeName == "i32") {
+      layoutOut = {4u, 4u};
+      return true;
+    }
+    return false;
+  };
+
+  primec::Expr staticField;
+  staticField.kind = primec::Expr::Kind::Call;
+  staticField.isBinding = true;
+  staticField.name = "global";
+  primec::Transform staticTransform;
+  staticTransform.name = "static";
+  primec::Transform privateTransform;
+  privateTransform.name = "private";
+  staticField.transforms = {privateTransform, staticTransform};
+
+  const primec::ir_lowerer::LayoutFieldBinding staticBinding = {"i64", ""};
+  CHECK(primec::ir_lowerer::appendStructLayoutField(
+      "/pkg/S", staticField, staticBinding, resolveTypeLayout, offset, structAlign, layout, error));
+  CHECK(resolveCalls == 0);
+  REQUIRE(layout.fields.size() == 1u);
+  CHECK(layout.fields[0].name == "global");
+  CHECK(layout.fields[0].isStatic);
+  CHECK(layout.fields[0].sizeBytes == 0u);
+  CHECK(layout.fields[0].visibility == primec::IrStructVisibility::Private);
+
+  primec::Expr valueField;
+  valueField.kind = primec::Expr::Kind::Call;
+  valueField.isBinding = true;
+  valueField.name = "value";
+  primec::Transform alignEight;
+  alignEight.name = "align_bytes";
+  alignEight.arguments = {"8"};
+  valueField.transforms = {alignEight};
+
+  const primec::ir_lowerer::LayoutFieldBinding valueBinding = {"i32", ""};
+  CHECK(primec::ir_lowerer::appendStructLayoutField(
+      "/pkg/S", valueField, valueBinding, resolveTypeLayout, offset, structAlign, layout, error));
+  CHECK(resolveCalls == 1);
+  REQUIRE(layout.fields.size() == 2u);
+  CHECK(layout.fields[1].name == "value");
+  CHECK_FALSE(layout.fields[1].isStatic);
+  CHECK(layout.fields[1].offsetBytes == 0u);
+  CHECK(layout.fields[1].sizeBytes == 4u);
+  CHECK(layout.fields[1].alignmentBytes == 8u);
+  CHECK(layout.fields[1].paddingKind == primec::IrStructPaddingKind::None);
+  CHECK(offset == 4u);
+  CHECK(structAlign == 8u);
+
+  primec::Expr tailField;
+  tailField.kind = primec::Expr::Kind::Call;
+  tailField.isBinding = true;
+  tailField.name = "tail";
+
+  const primec::ir_lowerer::LayoutFieldBinding tailBinding = {"i64", ""};
+  CHECK(primec::ir_lowerer::appendStructLayoutField(
+      "/pkg/S", tailField, tailBinding, resolveTypeLayout, offset, structAlign, layout, error));
+  CHECK(resolveCalls == 2);
+  REQUIRE(layout.fields.size() == 3u);
+  CHECK(layout.fields[2].offsetBytes == 8u);
+  CHECK(layout.fields[2].paddingKind == primec::IrStructPaddingKind::Align);
+  CHECK(offset == 16u);
+  CHECK(structAlign == 8u);
+
+  primec::Expr badField;
+  badField.kind = primec::Expr::Kind::Call;
+  badField.isBinding = true;
+  badField.name = "bad";
+  primec::Transform alignTwo;
+  alignTwo.name = "align_bytes";
+  alignTwo.arguments = {"2"};
+  badField.transforms = {alignTwo};
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::appendStructLayoutField(
+      "/pkg/S", badField, tailBinding, resolveTypeLayout, offset, structAlign, layout, error));
+  CHECK(error == "alignment requirement on field /pkg/S/bad is smaller than required alignment of 8");
+}
+
 TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));

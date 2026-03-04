@@ -1,5 +1,6 @@
 #include "IrLowererStructLayoutHelpers.h"
 
+#include <algorithm>
 #include <cctype>
 #include <limits>
 
@@ -160,6 +161,69 @@ bool classifyBindingTypeLayout(const LayoutFieldBinding &binding,
   structTypeNameOut.clear();
   errorOut.clear();
   return classifyBindingTypeLayoutInternal(binding, layoutOut, structTypeNameOut, errorOut);
+}
+
+bool appendStructLayoutField(const std::string &structPath,
+                             const Expr &fieldExpr,
+                             const LayoutFieldBinding &binding,
+                             const std::function<bool(const LayoutFieldBinding &,
+                                                      BindingTypeLayout &,
+                                                      std::string &)> &resolveTypeLayout,
+                             uint32_t &offsetInOut,
+                             uint32_t &structAlignmentInOut,
+                             IrStructLayout &layoutOut,
+                             std::string &errorOut) {
+  if (isStaticField(fieldExpr)) {
+    IrStructField field;
+    field.name = fieldExpr.name;
+    field.envelope = formatLayoutFieldEnvelope(binding);
+    field.offsetBytes = 0;
+    field.sizeBytes = 0;
+    field.alignmentBytes = 1;
+    field.paddingKind = IrStructPaddingKind::None;
+    field.category = fieldCategory(fieldExpr);
+    field.visibility = fieldVisibility(fieldExpr);
+    field.isStatic = true;
+    layoutOut.fields.push_back(std::move(field));
+    return true;
+  }
+
+  BindingTypeLayout typeLayout;
+  if (!resolveTypeLayout(binding, typeLayout, errorOut)) {
+    return false;
+  }
+
+  uint32_t explicitFieldAlign = 1;
+  bool hasFieldAlign = false;
+  const std::string fieldContext = "field " + structPath + "/" + fieldExpr.name;
+  if (!extractAlignment(fieldExpr.transforms, fieldContext, explicitFieldAlign, hasFieldAlign, errorOut)) {
+    return false;
+  }
+  if (hasFieldAlign && explicitFieldAlign < typeLayout.alignmentBytes) {
+    errorOut = "alignment requirement on " + fieldContext + " is smaller than required alignment of " +
+               std::to_string(typeLayout.alignmentBytes);
+    return false;
+  }
+
+  const uint32_t fieldAlign = hasFieldAlign ? std::max(explicitFieldAlign, typeLayout.alignmentBytes)
+                                            : typeLayout.alignmentBytes;
+  const uint32_t alignedOffset = alignTo(offsetInOut, fieldAlign);
+
+  IrStructField field;
+  field.name = fieldExpr.name;
+  field.envelope = formatLayoutFieldEnvelope(binding);
+  field.offsetBytes = alignedOffset;
+  field.sizeBytes = typeLayout.sizeBytes;
+  field.alignmentBytes = fieldAlign;
+  field.paddingKind = (alignedOffset != offsetInOut) ? IrStructPaddingKind::Align : IrStructPaddingKind::None;
+  field.category = fieldCategory(fieldExpr);
+  field.visibility = fieldVisibility(fieldExpr);
+  field.isStatic = false;
+  layoutOut.fields.push_back(std::move(field));
+
+  offsetInOut = alignedOffset + typeLayout.sizeBytes;
+  structAlignmentInOut = std::max(structAlignmentInOut, fieldAlign);
+  return true;
 }
 
 bool isLayoutQualifierName(const std::string &name) {
