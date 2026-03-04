@@ -9664,6 +9664,27 @@ TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
   CHECK_FALSE(resolveResultExprInfo(unknownName, locals, out));
 }
 
+TEST_CASE("ir lowerer result helpers classify Result.why error kinds") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Int32));
+  CHECK(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Int64));
+  CHECK(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::UInt64));
+  CHECK(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Bool));
+  CHECK_FALSE(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Float32));
+  CHECK_FALSE(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::String));
+  CHECK_FALSE(primec::ir_lowerer::isSupportedResultWhyErrorKind(ValueKind::Unknown));
+}
+
+TEST_CASE("ir lowerer result helpers normalize Result.why type names") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("FileError", ValueKind::Int32) == "FileError");
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::Int32) == "i32");
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::Int64) == "i64");
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::UInt64) == "u64");
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::Bool) == "bool");
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("CustomError", ValueKind::Float64) == "CustomError");
+}
+
 TEST_CASE("ir lowerer flow helpers restore scoped state") {
   std::optional<primec::ir_lowerer::OnErrorHandler> onError;
   primec::ir_lowerer::OnErrorHandler initialHandler;

@@ -47,5 +47,7 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo);
+bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
+std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 
 } // namespace primec::ir_lowerer

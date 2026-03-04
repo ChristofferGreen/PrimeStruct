@@ -425,11 +425,6 @@
             return true;
           };
 
-          auto isSupportedErrorKind = [](LocalInfo::ValueKind kind) -> bool {
-            return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-                   kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;
-          };
-
           auto getBindingTypeName = [&](const Expr &binding, std::string &typeNameOut,
                                         std::vector<std::string> &templateArgsOut) -> bool {
             for (const auto &transform : binding.transforms) {
@@ -510,7 +505,7 @@
                     return false;
                   }
                   if (layout.fields.size() != 1 || !layout.fields.front().structPath.empty() ||
-                      !isSupportedErrorKind(layout.fields.front().valueKind)) {
+                      !ir_lowerer::isSupportedResultWhyErrorKind(layout.fields.front().valueKind)) {
                     return emitEmptyString();
                   }
                   Expr errorValueExpr = layout.fields.front().valueKind == LocalInfo::ValueKind::Bool
@@ -535,7 +530,7 @@
                   return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
                 }
                 LocalInfo::ValueKind paramKindValue = valueKindFromTypeName(paramTypeName);
-                if (isSupportedErrorKind(paramKindValue)) {
+                if (ir_lowerer::isSupportedResultWhyErrorKind(paramKindValue)) {
                   Expr errorValueExpr = paramKindValue == LocalInfo::ValueKind::Bool
                                             ? makeBoolErrorExpr(callLocals)
                                             : makeErrorValueExpr(callLocals, paramKindValue);
@@ -554,25 +549,9 @@
           }
 
           LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
-          if (isSupportedErrorKind(errorKind)) {
-            auto normalizedErrorName = [&]() -> std::string {
-              if (resultInfo.errorType == "FileError") {
-                return "FileError";
-              }
-              switch (errorKind) {
-                case LocalInfo::ValueKind::Int32:
-                  return "i32";
-                case LocalInfo::ValueKind::Int64:
-                  return "i64";
-                case LocalInfo::ValueKind::UInt64:
-                  return "u64";
-                case LocalInfo::ValueKind::Bool:
-                  return "bool";
-                default:
-                  return resultInfo.errorType;
-              }
-            };
-            const std::string whyPath = "/" + normalizedErrorName() + "/why";
+          if (ir_lowerer::isSupportedResultWhyErrorKind(errorKind)) {
+            const std::string whyPath =
+                "/" + ir_lowerer::normalizeResultWhyErrorName(resultInfo.errorType, errorKind) + "/why";
             auto whyIt = defMap.find(whyPath);
             if (whyIt != defMap.end() && whyIt->second && whyIt->second->parameters.size() == 1) {
               ReturnInfo whyReturn;

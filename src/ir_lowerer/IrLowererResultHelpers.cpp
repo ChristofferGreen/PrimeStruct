@@ -122,4 +122,27 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
   };
 }
 
+bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {
+  return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
+         kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;
+}
+
+std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind) {
+  if (errorType == "FileError") {
+    return "FileError";
+  }
+  switch (errorKind) {
+    case LocalInfo::ValueKind::Int32:
+      return "i32";
+    case LocalInfo::ValueKind::Int64:
+      return "i64";
+    case LocalInfo::ValueKind::UInt64:
+      return "u64";
+    case LocalInfo::ValueKind::Bool:
+      return "bool";
+    default:
+      return errorType;
+  }
+}
+
 } // namespace primec::ir_lowerer
