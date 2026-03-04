@@ -181,4 +181,24 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
   return typeNameForValueKind(inferredKind);
 }
 
+std::string resolveMethodReceiverStructTypePathFromCallExpr(
+    const Expr &receiverCallExpr,
+    const std::string &resolvedReceiverPath,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames) {
+  if (receiverCallExpr.isBinding || receiverCallExpr.isMethodCall) {
+    return "";
+  }
+
+  std::string resolved = resolvedReceiverPath;
+  auto importIt = importAliases.find(receiverCallExpr.name);
+  if (structNames.count(resolved) == 0 && importIt != importAliases.end()) {
+    resolved = importIt->second;
+  }
+  if (structNames.count(resolved) > 0) {
+    return resolved;
+  }
+  return "";
+}
+
 } // namespace primec::ir_lowerer

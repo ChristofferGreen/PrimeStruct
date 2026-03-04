@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "primec/Ast.h"
 
@@ -31,5 +33,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
                                             std::string &resolvedTypePathOut);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind);
+std::string resolveMethodReceiverStructTypePathFromCallExpr(
+    const Expr &receiverCallExpr,
+    const std::string &resolvedReceiverPath,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames);
 
 } // namespace primec::ir_lowerer

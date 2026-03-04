@@ -3139,6 +3139,45 @@ TEST_CASE("ir lowerer setup type helper falls back for method receiver call targ
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(userCall, ValueKind::Unknown).empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves method receiver struct paths from call expressions") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "Ctor";
+
+  const std::unordered_set<std::string> structNames = {"/pkg/Ctor", "/imports/Ctor"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"Ctor", "/imports/Ctor"}};
+
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/pkg/Ctor", importAliases, structNames) == "/pkg/Ctor");
+
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/Ctor", importAliases, structNames) == "/imports/Ctor");
+}
+
+TEST_CASE("ir lowerer setup type helper rejects non-struct method receiver call paths") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "Ctor";
+
+  const std::unordered_set<std::string> structNames = {"/pkg/Ctor"};
+  const std::unordered_map<std::string, std::string> importAliases = {{"Ctor", "/imports/Ctor"}};
+
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/not-struct/Ctor", importAliases, structNames)
+        .empty());
+
+  receiverCall.isBinding = true;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/pkg/Ctor", importAliases, structNames)
+        .empty());
+
+  receiverCall.isBinding = false;
+  receiverCall.isMethodCall = true;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverStructTypePathFromCallExpr(
+            receiverCall, "/pkg/Ctor", importAliases, structNames)
+        .empty());
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
   primec::Definition entryDef;
   primec::Transform resultReturn;

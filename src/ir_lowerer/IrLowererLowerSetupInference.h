@@ -41,15 +41,9 @@
       }
     } else if (receiver.kind == Expr::Kind::Call) {
       typeName = resolveMethodReceiverTypeNameFromCallExpr(receiver, inferExprKind(receiver, localsIn));
-      if (typeName.empty() && !receiver.isBinding && !receiver.isMethodCall) {
-        std::string resolved = resolveExprPath(receiver);
-        auto importIt = importAliases.find(receiver.name);
-        if (structNames.count(resolved) == 0 && importIt != importAliases.end()) {
-          resolved = importIt->second;
-        }
-        if (structNames.count(resolved) > 0) {
-          resolvedTypePath = resolved;
-        }
+      if (typeName.empty()) {
+        resolvedTypePath = resolveMethodReceiverStructTypePathFromCallExpr(
+            receiver, resolveExprPath(receiver), importAliases, structNames);
       }
     } else {
       typeName = typeNameForValueKind(inferExprKind(receiver, localsIn));
