@@ -1,5 +1,7 @@
 #include "IrLowererFlowHelpers.h"
 
+#include <cstdlib>
+#include <cstring>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -111,6 +113,27 @@ bool emitCompareToZero(std::vector<IrInstruction> &instructions,
   }
   error = "boolean conversion requires numeric operand";
   return false;
+}
+
+bool emitFloatLiteral(std::vector<IrInstruction> &instructions, const Expr &expr, std::string &error) {
+  char *end = nullptr;
+  const char *text = expr.floatValue.c_str();
+  double value = std::strtod(text, &end);
+  if (end == text || (end && *end != '\0')) {
+    error = "invalid float literal";
+    return false;
+  }
+  if (expr.floatWidth == 64) {
+    uint64_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    instructions.push_back({IrOpcode::PushF64, bits});
+    return true;
+  }
+  float f32 = static_cast<float>(value);
+  uint32_t bits = 0;
+  std::memcpy(&bits, &f32, sizeof(bits));
+  instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
+  return true;
 }
 
 } // namespace primec::ir_lowerer

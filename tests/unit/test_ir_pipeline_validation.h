@@ -9594,6 +9594,39 @@ TEST_CASE("ir lowerer flow helpers emit compare-to-zero sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers emit float literal sequences") {
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  primec::Expr float64Expr;
+  float64Expr.kind = primec::Expr::Kind::FloatLiteral;
+  float64Expr.floatValue = "1.5";
+  float64Expr.floatWidth = 64;
+  CHECK(primec::ir_lowerer::emitFloatLiteral(instructions, float64Expr, error));
+  REQUIRE(instructions.size() == 1u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushF64);
+  CHECK(instructions[0].imm == 0x3ff8000000000000ull);
+  CHECK(error.empty());
+
+  instructions.clear();
+  primec::Expr float32Expr;
+  float32Expr.kind = primec::Expr::Kind::FloatLiteral;
+  float32Expr.floatValue = "2.5";
+  float32Expr.floatWidth = 32;
+  CHECK(primec::ir_lowerer::emitFloatLiteral(instructions, float32Expr, error));
+  REQUIRE(instructions.size() == 1u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushF32);
+  CHECK(instructions[0].imm == 0x40200000ull);
+  CHECK(error.empty());
+
+  instructions.clear();
+  primec::Expr invalidExpr = float64Expr;
+  invalidExpr.floatValue = "not_a_float";
+  CHECK_FALSE(primec::ir_lowerer::emitFloatLiteral(instructions, invalidExpr, error));
+  CHECK(error == "invalid float literal");
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

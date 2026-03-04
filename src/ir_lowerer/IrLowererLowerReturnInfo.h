@@ -223,24 +223,7 @@
   };
 
   auto emitFloatLiteral = [&](const Expr &expr) -> bool {
-    char *end = nullptr;
-    const char *text = expr.floatValue.c_str();
-    double value = std::strtod(text, &end);
-    if (end == text || (end && *end != '\0')) {
-      error = "invalid float literal";
-      return false;
-    }
-    if (expr.floatWidth == 64) {
-      uint64_t bits = 0;
-      std::memcpy(&bits, &value, sizeof(bits));
-      function.instructions.push_back({IrOpcode::PushF64, bits});
-      return true;
-    }
-    float f32 = static_cast<float>(value);
-    uint32_t bits = 0;
-    std::memcpy(&bits, &f32, sizeof(bits));
-    function.instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-    return true;
+    return ir_lowerer::emitFloatLiteral(function.instructions, expr, error);
   };
 
   auto emitCompareToZero = [&](LocalInfo::ValueKind kind, bool equals) -> bool {
