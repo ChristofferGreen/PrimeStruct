@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "IrLowererCallHelpers.h"
+#include "IrLowererCountAccessHelpers.h"
 #include "IrLowererFlowHelpers.h"
 #include "primec/Ast.h"
 
@@ -17,6 +18,10 @@ struct EntryCallOnErrorSetup {
   CallResolutionAdapters callResolutionAdapters;
   bool hasTailExecution = false;
   OnErrorByDefinition onErrorByDefinition;
+};
+struct EntryCountCallOnErrorSetup {
+  EntryCountAccessSetup countAccessSetup;
+  EntryCallOnErrorSetup callOnErrorSetup;
 };
 
 bool parseTransformArgumentExpr(const std::string &text,
@@ -49,5 +54,12 @@ bool buildEntryCallOnErrorSetup(const Program &program,
                                 const std::unordered_map<std::string, std::string> &importAliases,
                                 EntryCallOnErrorSetup &out,
                                 std::string &error);
+bool buildEntryCountCallOnErrorSetup(const Program &program,
+                                     const Definition &entryDef,
+                                     bool definitionReturnsVoid,
+                                     const std::unordered_map<std::string, const Definition *> &defMap,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     EntryCountCallOnErrorSetup &out,
+                                     std::string &error);
 
 } // namespace primec::ir_lowerer

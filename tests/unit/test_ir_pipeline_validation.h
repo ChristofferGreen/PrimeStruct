@@ -517,6 +517,73 @@ TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error set
   CHECK(error == "unknown on_error handler: /missing");
 }
 
+TEST_CASE("ir lowerer on_error helpers build bundled entry count and call/on_error setup") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition calleeDef;
+  calleeDef.fullPath = "/callee";
+  calleeDef.namespacePrefix = "";
+  program.definitions.push_back(calleeDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.namespacePrefix = "";
+  primec::Expr entryParam;
+  entryParam.name = "argv";
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  entryParam.transforms.push_back(arrayTransform);
+  entryDef.parameters.push_back(entryParam);
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  onError.arguments = {"1i32"};
+  entryDef.transforms.push_back(onError);
+  primec::Expr tailCall;
+  tailCall.kind = primec::Expr::Kind::Call;
+  tailCall.name = "callee";
+  entryDef.statements = {tailCall};
+  program.definitions.push_back(entryDef);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/handler", &program.definitions[0]},
+      {"/callee", &program.definitions[1]},
+      {"/main", &program.definitions[2]},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::ir_lowerer::EntryCountCallOnErrorSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCountCallOnErrorSetup(
+      program, program.definitions[2], true, defMap, importAliases, setup, error));
+  CHECK(setup.countAccessSetup.hasEntryArgs);
+  CHECK(setup.countAccessSetup.entryArgsName == "argv");
+  CHECK(setup.callOnErrorSetup.hasTailExecution);
+  CHECK(setup.callOnErrorSetup.callResolutionAdapters.resolveExprPath(tailCall) == "/callee");
+  REQUIRE(setup.callOnErrorSetup.onErrorByDefinition.count("/main") == 1);
+  REQUIRE(setup.callOnErrorSetup.onErrorByDefinition.at("/main").has_value());
+  CHECK(setup.callOnErrorSetup.onErrorByDefinition.at("/main")->handlerPath == "/handler");
+
+  primec::Program badEntryProgram = program;
+  primec::Expr extraEntryParam = entryParam;
+  extraEntryParam.name = "extra";
+  badEntryProgram.definitions[2].parameters.push_back(extraEntryParam);
+  const std::unordered_map<std::string, const primec::Definition *> badEntryDefMap = {
+      {"/handler", &badEntryProgram.definitions[0]},
+      {"/callee", &badEntryProgram.definitions[1]},
+      {"/main", &badEntryProgram.definitions[2]},
+  };
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCountCallOnErrorSetup(
+      badEntryProgram, badEntryProgram.definitions[2], true, badEntryDefMap, importAliases, setup, error));
+  CHECK(error == "native backend only supports a single array<string> entry parameter");
+}
+
 TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   primec::Transform onError;
   onError.name = "on_error";

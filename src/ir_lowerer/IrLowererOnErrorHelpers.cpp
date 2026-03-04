@@ -114,4 +114,22 @@ bool buildEntryCallOnErrorSetup(const Program &program,
   return true;
 }
 
+bool buildEntryCountCallOnErrorSetup(const Program &program,
+                                     const Definition &entryDef,
+                                     bool definitionReturnsVoid,
+                                     const std::unordered_map<std::string, const Definition *> &defMap,
+                                     const std::unordered_map<std::string, std::string> &importAliases,
+                                     EntryCountCallOnErrorSetup &out,
+                                     std::string &error) {
+  out = EntryCountCallOnErrorSetup{};
+  if (!buildEntryCountAccessSetup(entryDef, out.countAccessSetup, error)) {
+    return false;
+  }
+  if (!buildEntryCallOnErrorSetup(
+          program, entryDef, definitionReturnsVoid, defMap, importAliases, out.callOnErrorSetup, error)) {
+    return false;
+  }
+  return true;
+}
+
 } // namespace primec::ir_lowerer

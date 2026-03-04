@@ -48,10 +48,12 @@
   auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
   auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
-  ir_lowerer::EntryCountAccessSetup entryCountAccessSetup;
-  if (!ir_lowerer::buildEntryCountAccessSetup(*entryDef, entryCountAccessSetup, error)) {
+  ir_lowerer::EntryCountCallOnErrorSetup entryCountCallOnErrorSetup;
+  if (!ir_lowerer::buildEntryCountCallOnErrorSetup(
+          program, *entryDef, returnsVoid, defMap, importAliases, entryCountCallOnErrorSetup, error)) {
     return false;
   }
+  const auto &entryCountAccessSetup = entryCountCallOnErrorSetup.countAccessSetup;
   const bool hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
   const std::string &entryArgsName = entryCountAccessSetup.entryArgsName;
   const auto &countAccessClassifiers = entryCountAccessSetup.classifiers;
@@ -63,11 +65,7 @@
 
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
-  ir_lowerer::EntryCallOnErrorSetup entryCallOnErrorSetup;
-  if (!ir_lowerer::buildEntryCallOnErrorSetup(
-          program, *entryDef, returnsVoid, defMap, importAliases, entryCallOnErrorSetup, error)) {
-    return false;
-  }
+  const auto &entryCallOnErrorSetup = entryCountCallOnErrorSetup.callOnErrorSetup;
   const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
   auto resolveExprPath = callResolutionAdapters.resolveExprPath;
   auto isTailCallCandidate = callResolutionAdapters.isTailCallCandidate;
