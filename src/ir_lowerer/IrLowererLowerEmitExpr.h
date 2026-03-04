@@ -865,32 +865,16 @@
             }
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
 
-            if (accessName == "at") {
-              if (indexKind != LocalInfo::ValueKind::UInt64) {
-                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-                function.instructions.push_back({pushZeroForIndex(indexKind), 0});
-                function.instructions.push_back({cmpLtForIndex(indexKind), 0});
-                size_t jumpNonNegative = function.instructions.size();
-                function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-                emitStringIndexOutOfBounds();
-                size_t nonNegativeIndex = function.instructions.size();
-                function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
-              }
-
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-              IrOpcode lengthOp =
-                  (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
-              function.instructions.push_back({lengthOp, static_cast<uint64_t>(stringLength)});
-              function.instructions.push_back({cmpGeForIndex(indexKind), 0});
-              size_t jumpInRange = function.instructions.size();
-              function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-              emitStringIndexOutOfBounds();
-              size_t inRangeIndex = function.instructions.size();
-              function.instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
-            }
-
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::LoadStringByte, static_cast<uint64_t>(stringIndex)});
+            ir_lowerer::emitStringAccessLoad(
+                accessName,
+                indexLocal,
+                indexKind,
+                stringLength,
+                stringIndex,
+                [&]() { emitStringIndexOutOfBounds(); },
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
             return true;
           }
           if (target.kind == Expr::Kind::StringLiteral) {

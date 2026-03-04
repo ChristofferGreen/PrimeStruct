@@ -515,6 +515,42 @@ bool emitMapLookupAccess(
   return true;
 }
 
+void emitStringAccessLoad(
+    const std::string &accessName,
+    int32_t indexLocal,
+    LocalInfo::ValueKind indexKind,
+    size_t stringLength,
+    int32_t stringIndex,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+  if (accessName == "at") {
+    if (indexKind != LocalInfo::ValueKind::UInt64) {
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+      emitInstruction(pushZeroForIndex(indexKind), 0);
+      emitInstruction(cmpLtForIndex(indexKind), 0);
+      const size_t jumpNonNegative = instructionCount();
+      emitInstruction(IrOpcode::JumpIfZero, 0);
+      emitStringIndexOutOfBounds();
+      patchInstructionImm(jumpNonNegative, static_cast<uint64_t>(instructionCount()));
+    }
+
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    const IrOpcode lengthOp =
+        (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::PushI32 : IrOpcode::PushI64;
+    emitInstruction(lengthOp, static_cast<uint64_t>(stringLength));
+    emitInstruction(cmpGeForIndex(indexKind), 0);
+    const size_t jumpInRange = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitStringIndexOutOfBounds();
+    patchInstructionImm(jumpInRange, static_cast<uint64_t>(instructionCount()));
+  }
+
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  emitInstruction(IrOpcode::LoadStringByte, static_cast<uint64_t>(stringIndex));
+}
+
 void emitArrayVectorAccessLoad(
     const std::string &accessName,
     int32_t ptrLocal,

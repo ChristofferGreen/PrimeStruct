@@ -211,6 +211,16 @@ bool emitMapLookupAccess(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
     std::string &error);
+void emitStringAccessLoad(
+    const std::string &accessName,
+    int32_t indexLocal,
+    LocalInfo::ValueKind indexKind,
+    size_t stringLength,
+    int32_t stringIndex,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
 void emitArrayVectorAccessLoad(
     const std::string &accessName,
     int32_t ptrLocal,

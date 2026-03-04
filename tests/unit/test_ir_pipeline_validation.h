@@ -3199,6 +3199,63 @@ TEST_CASE("ir lowerer call helpers emit map lookup access") {
   CHECK(error == "native backend requires map lookup key to be string literal or binding backed by literals");
 }
 
+TEST_CASE("ir lowerer call helpers emit string access load") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  std::vector<primec::Instruction> instructions;
+  int stringIndexOutOfBoundsCalls = 0;
+  primec::ir_lowerer::emitStringAccessLoad(
+      "at",
+      9,
+      Kind::Int32,
+      5,
+      12,
+      [&]() { ++stringIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
+
+  CHECK(stringIndexOutOfBoundsCalls == 2);
+  REQUIRE(instructions.size() == 10);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 9);
+  CHECK(instructions[1].op == primec::ir_lowerer::pushZeroForIndex(Kind::Int32));
+  CHECK(instructions[2].op == primec::ir_lowerer::cmpLtForIndex(Kind::Int32));
+  CHECK(instructions[3].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[3].imm == 4);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 9);
+  CHECK(instructions[5].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[5].imm == 5);
+  CHECK(instructions[6].op == primec::ir_lowerer::cmpGeForIndex(Kind::Int32));
+  CHECK(instructions[7].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[7].imm == 8);
+  CHECK(instructions[8].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[8].imm == 9);
+  CHECK(instructions[9].op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions[9].imm == 12);
+
+  instructions.clear();
+  stringIndexOutOfBoundsCalls = 0;
+  primec::ir_lowerer::emitStringAccessLoad(
+      "index",
+      11,
+      Kind::UInt64,
+      999,
+      4,
+      [&]() { ++stringIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; });
+
+  CHECK(stringIndexOutOfBoundsCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 11);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions[1].imm == 4);
+}
+
 TEST_CASE("ir lowerer call helpers emit array vector access load") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 
