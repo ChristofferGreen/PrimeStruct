@@ -1009,16 +1009,10 @@
                   [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
             }
 
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-            function.instructions.push_back({IrOpcode::PushI32, 2});
-            function.instructions.push_back({IrOpcode::MulI32, 0});
-            function.instructions.push_back({IrOpcode::PushI32, 2});
-            function.instructions.push_back({IrOpcode::AddI32, 0});
-            function.instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
-            function.instructions.push_back({IrOpcode::MulI32, 0});
-            function.instructions.push_back({IrOpcode::AddI64, 0});
-            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            ir_lowerer::emitMapLookupValueLoad(
+                ptrLocal,
+                indexLocal,
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
             return true;
           }
 
