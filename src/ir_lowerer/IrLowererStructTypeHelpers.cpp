@@ -61,6 +61,50 @@ bool resolveStructTypePathFromScope(
   return false;
 }
 
+StructLayoutFieldIndex buildStructLayoutFieldIndex(
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields) {
+  StructLayoutFieldIndex fieldIndex;
+  fieldIndex.reserve(structReserveHint);
+  if (!enumerateStructLayoutFields) {
+    return fieldIndex;
+  }
+  enumerateStructLayoutFields([&](const std::string &structPath, const StructLayoutFieldInfo &field) {
+    fieldIndex[structPath].push_back(field);
+  });
+  return fieldIndex;
+}
+
+bool collectStructLayoutFieldsFromIndex(const StructLayoutFieldIndex &fieldIndex,
+                                        const std::string &structPath,
+                                        std::vector<StructLayoutFieldInfo> &out) {
+  auto fieldIt = fieldIndex.find(structPath);
+  if (fieldIt == fieldIndex.end()) {
+    return false;
+  }
+  out = fieldIt->second;
+  return true;
+}
+
+bool collectStructArrayFieldsFromLayoutIndex(const StructLayoutFieldIndex &fieldIndex,
+                                             const std::string &structPath,
+                                             std::vector<StructArrayFieldInfo> &out) {
+  std::vector<StructLayoutFieldInfo> layoutFields;
+  if (!collectStructLayoutFieldsFromIndex(fieldIndex, structPath, layoutFields)) {
+    return false;
+  }
+  out.clear();
+  out.reserve(layoutFields.size());
+  for (const auto &field : layoutFields) {
+    StructArrayFieldInfo info;
+    info.typeName = field.typeName;
+    info.typeTemplateArg = field.typeTemplateArg;
+    info.isStatic = field.isStatic;
+    out.push_back(std::move(info));
+  }
+  return true;
+}
+
 bool resolveStructArrayTypeInfoFromPath(const std::string &structPath,
                                         const CollectStructArrayFieldsFn &collectStructArrayFields,
                                         const ValueKindFromTypeNameFn &valueKindFromTypeName,

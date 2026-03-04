@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -62,6 +63,11 @@ using CollectStructLayoutFieldsFn =
 using ResolveDefinitionNamespacePrefixByPathFn =
     std::function<bool(const std::string &, std::string &)>;
 using StructSlotLayoutCache = std::unordered_map<std::string, StructSlotLayoutInfo>;
+using StructLayoutFieldIndex = std::unordered_map<std::string, std::vector<StructLayoutFieldInfo>>;
+using AppendStructLayoutFieldFn =
+    std::function<void(const std::string &, const StructLayoutFieldInfo &)>;
+using EnumerateStructLayoutFieldsFn =
+    std::function<void(const AppendStructLayoutFieldFn &)>;
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
@@ -71,6 +77,15 @@ bool resolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases,
     std::string &resolvedOut);
+StructLayoutFieldIndex buildStructLayoutFieldIndex(
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields);
+bool collectStructLayoutFieldsFromIndex(const StructLayoutFieldIndex &fieldIndex,
+                                        const std::string &structPath,
+                                        std::vector<StructLayoutFieldInfo> &out);
+bool collectStructArrayFieldsFromLayoutIndex(const StructLayoutFieldIndex &fieldIndex,
+                                             const std::string &structPath,
+                                             std::vector<StructArrayFieldInfo> &out);
 bool resolveStructArrayTypeInfoFromPath(const std::string &structPath,
                                         const CollectStructArrayFieldsFn &collectStructArrayFields,
                                         const ValueKindFromTypeNameFn &valueKindFromTypeName,

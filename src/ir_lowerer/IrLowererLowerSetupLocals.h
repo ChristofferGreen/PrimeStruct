@@ -168,23 +168,24 @@
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
+  ir_lowerer::StructLayoutFieldIndex structLayoutFieldIndex = ir_lowerer::buildStructLayoutFieldIndex(
+      structFieldInfoByName.size(),
+      [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+        for (const auto &entry : structFieldInfoByName) {
+          for (const auto &field : entry.second) {
+            ir_lowerer::StructLayoutFieldInfo info;
+            info.name = field.name;
+            info.typeName = field.binding.typeName;
+            info.typeTemplateArg = field.binding.typeTemplateArg;
+            info.isStatic = field.isStatic;
+            appendStructLayoutField(entry.first, info);
+          }
+        }
+      });
 
   auto collectStructArrayFields = [&](const std::string &structPath,
                                       std::vector<ir_lowerer::StructArrayFieldInfo> &out) -> bool {
-    out.clear();
-    auto fieldIt = structFieldInfoByName.find(structPath);
-    if (fieldIt == structFieldInfoByName.end()) {
-      return false;
-    }
-    out.reserve(fieldIt->second.size());
-    for (const auto &field : fieldIt->second) {
-      ir_lowerer::StructArrayFieldInfo info;
-      info.typeName = field.binding.typeName;
-      info.typeTemplateArg = field.binding.typeTemplateArg;
-      info.isStatic = field.isStatic;
-      out.push_back(std::move(info));
-    }
-    return true;
+    return ir_lowerer::collectStructArrayFieldsFromLayoutIndex(structLayoutFieldIndex, structPath, out);
   };
 
   auto resolveStructArrayInfoFromPath = [&](const std::string &structPath, StructArrayInfo &out) -> bool {
@@ -199,21 +200,7 @@
 
   auto collectStructLayoutFields = [&](const std::string &structPath,
                                        std::vector<ir_lowerer::StructLayoutFieldInfo> &out) -> bool {
-    out.clear();
-    auto fieldIt = structFieldInfoByName.find(structPath);
-    if (fieldIt == structFieldInfoByName.end()) {
-      return false;
-    }
-    out.reserve(fieldIt->second.size());
-    for (const auto &field : fieldIt->second) {
-      ir_lowerer::StructLayoutFieldInfo info;
-      info.name = field.name;
-      info.typeName = field.binding.typeName;
-      info.typeTemplateArg = field.binding.typeTemplateArg;
-      info.isStatic = field.isStatic;
-      out.push_back(std::move(info));
-    }
-    return true;
+    return ir_lowerer::collectStructLayoutFieldsFromIndex(structLayoutFieldIndex, structPath, out);
   };
 
   auto resolveDefinitionNamespacePrefix =

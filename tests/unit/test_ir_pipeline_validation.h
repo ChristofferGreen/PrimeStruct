@@ -642,6 +642,39 @@ TEST_CASE("ir lowerer struct type helpers infer field-access struct paths") {
             notFieldAccess, locals, inferStructExprPath, resolveStructFieldSlot).empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers build layout field index and collect fields") {
+  const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =
+      primec::ir_lowerer::buildStructLayoutFieldIndex(
+          2,
+          [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+            appendStructLayoutField("/pkg/Foo", {"a", "i32", "", false});
+            appendStructLayoutField("/pkg/Foo", {"b", "array<i32>", "", true});
+            appendStructLayoutField("/pkg/Bar", {"x", "f64", "", false});
+          });
+  REQUIRE(fieldIndex.size() == 2);
+
+  std::vector<primec::ir_lowerer::StructLayoutFieldInfo> layoutFields;
+  REQUIRE(primec::ir_lowerer::collectStructLayoutFieldsFromIndex(fieldIndex, "/pkg/Foo", layoutFields));
+  REQUIRE(layoutFields.size() == 2);
+  CHECK(layoutFields[0].name == "a");
+  CHECK(layoutFields[1].name == "b");
+  CHECK(layoutFields[1].isStatic);
+
+  std::vector<primec::ir_lowerer::StructArrayFieldInfo> arrayFields;
+  REQUIRE(primec::ir_lowerer::collectStructArrayFieldsFromLayoutIndex(fieldIndex, "/pkg/Foo", arrayFields));
+  REQUIRE(arrayFields.size() == 2);
+  CHECK(arrayFields[0].typeName == "i32");
+  CHECK(arrayFields[1].typeName == "array<i32>");
+  CHECK(arrayFields[1].isStatic);
+
+  CHECK_FALSE(primec::ir_lowerer::collectStructLayoutFieldsFromIndex(fieldIndex, "/pkg/Missing", layoutFields));
+  CHECK_FALSE(primec::ir_lowerer::collectStructArrayFieldsFromLayoutIndex(fieldIndex, "/pkg/Missing", arrayFields));
+
+  const primec::ir_lowerer::StructLayoutFieldIndex emptyIndex =
+      primec::ir_lowerer::buildStructLayoutFieldIndex(1, {});
+  CHECK(emptyIndex.empty());
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve struct array info from path") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   auto valueKindFromTypeName = [](const std::string &typeName) {
