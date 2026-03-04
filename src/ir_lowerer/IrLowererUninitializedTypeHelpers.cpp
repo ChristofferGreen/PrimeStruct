@@ -11,6 +11,7 @@ namespace primec::ir_lowerer {
 
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const ResolveStructTypePathFn &resolveStructTypePath,
+    const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
@@ -19,6 +20,8 @@ UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
   adapters.resolveUninitializedTypeInfo = makeResolveUninitializedTypeInfo(resolveStructTypePath, error);
   adapters.resolveUninitializedStorage = makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
       fieldIndex, defMap, adapters.resolveUninitializedTypeInfo, resolveStructFieldSlot, error);
+  adapters.inferStructExprPath = makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+      defMap, resolveStructTypePath, resolveExprPath, fieldIndex, resolveStructFieldSlot);
   return adapters;
 }
 

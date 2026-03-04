@@ -3026,8 +3026,9 @@ TEST_CASE("ir lowerer uninitialized type helpers build bundled uninitialized res
   };
 
   std::string error;
+  auto resolveExprPath = [](const primec::Expr &) { return std::string(); };
   auto adapters = primec::ir_lowerer::makeUninitializedResolutionAdapters(
-      resolveStruct, fieldIndex, defMap, resolveSlot, error);
+      resolveStruct, resolveExprPath, fieldIndex, defMap, resolveSlot, error);
 
   primec::ir_lowerer::UninitializedTypeInfo typeInfo;
   REQUIRE(adapters.resolveUninitializedTypeInfo("MyStruct", "/pkg", typeInfo));
@@ -3054,6 +3055,16 @@ TEST_CASE("ir lowerer uninitialized type helpers build bundled uninitialized res
   CHECK(out.receiver == &receiverIt->second);
   CHECK(out.fieldSlot.slotOffset == 3);
   CHECK(out.typeInfo.structPath == "/pkg/MyStruct");
+
+  primec::Expr selfExpr;
+  selfExpr.kind = primec::Expr::Kind::Name;
+  selfExpr.name = "self";
+  CHECK(adapters.inferStructExprPath(selfExpr, locals) == "/pkg/Container");
+
+  primec::Expr missingExpr;
+  missingExpr.kind = primec::Expr::Kind::Name;
+  missingExpr.name = "missing";
+  CHECK(adapters.inferStructExprPath(missingExpr, locals).empty());
 }
 
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {

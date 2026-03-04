@@ -129,14 +129,12 @@
       ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(structLayoutFieldIndex);
 
   const auto uninitializedResolutionAdapters = ir_lowerer::makeUninitializedResolutionAdapters(
-      resolveStructTypeName, uninitializedFieldBindingIndex, defMap, resolveStructFieldSlot, error);
+      resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, defMap, resolveStructFieldSlot, error);
   auto resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
   auto resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
+  auto inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;
 
   auto applyStructValueInfo = structTypeResolutionAdapters.applyStructValueInfo;
-
-  auto inferStructExprPath = ir_lowerer::makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
-      defMap, resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, resolveStructFieldSlot);
 
 
   auto combineNumericKinds = setupTypeAdapters.combineNumericKinds;

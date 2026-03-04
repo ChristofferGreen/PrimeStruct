@@ -80,10 +80,12 @@ using ResolveUninitializedStorageAccessFromFieldIndexFn =
 struct UninitializedResolutionAdapters {
   ResolveUninitializedFieldTypeInfoFn resolveUninitializedTypeInfo;
   ResolveUninitializedStorageAccessFromFieldIndexFn resolveUninitializedStorage;
+  InferStructExprWithLocalsFn inferStructExprPath;
 };
 
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const ResolveStructTypePathFn &resolveStructTypePath,
+    const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
