@@ -1,16 +1,5 @@
   const bool hasMathImport = ir_lowerer::hasProgramMathImport(program.imports);
 
-  bool returnsVoid = false;
-  ResultReturnInfo entryResultInfo;
-  bool entryHasResultInfo = false;
-  EntryReturnConfig entryReturnConfig;
-  if (!ir_lowerer::analyzeEntryReturnTransforms(*entryDef, entryPath, entryReturnConfig, error)) {
-    return false;
-  }
-  returnsVoid = entryReturnConfig.returnsVoid;
-  entryResultInfo = entryReturnConfig.resultInfo;
-  entryHasResultInfo = entryReturnConfig.hasResultInfo;
-
   IrFunction function;
   function.name = entryPath;
   function.metadata.effectMask = entryEffectMask;
@@ -27,14 +16,14 @@
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
 
-  ir_lowerer::RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+  ir_lowerer::EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
+  if (!ir_lowerer::buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
       stringTable,
       function,
       program,
       *entryDef,
-      returnsVoid,
+      entryPath,
       defMap,
       importAliases,
       hasMathImport,
@@ -52,12 +41,22 @@
           }
         }
       },
-      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
+      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
       error)) {
     return false;
   }
+  const auto &entryReturnConfig =
+      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup.entryReturnConfig;
+  bool returnsVoid = entryReturnConfig.returnsVoid;
+  ResultReturnInfo entryResultInfo = entryReturnConfig.resultInfo;
+  bool entryHasResultInfo = entryReturnConfig.hasResultInfo;
+
+  const auto &runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup =
+      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+          .runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
   const auto &runtimeErrorAndStringLiteralSetup =
-      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup.runtimeErrorAndStringLiteralSetup;
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+          .runtimeErrorAndStringLiteralSetup;
   const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
   auto internString = stringLiteralHelpers.internString;
 

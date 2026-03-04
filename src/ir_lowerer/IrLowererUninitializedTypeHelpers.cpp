@@ -9,6 +9,43 @@
 
 namespace primec::ir_lowerer {
 
+bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const Definition &entryDef,
+    const std::string &entryPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
+  out = EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup{};
+  if (!analyzeEntryReturnTransforms(entryDef, entryPath, out.entryReturnConfig, error)) {
+    return false;
+  }
+  if (!buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+          stringTable,
+          function,
+          program,
+          entryDef,
+          out.entryReturnConfig.returnsVoid,
+          defMap,
+          importAliases,
+          hasMathImport,
+          structNames,
+          structReserveHint,
+          enumerateStructLayoutFields,
+          out.runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
+          error)) {
+    return false;
+  }
+  return true;
+}
+
 bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     std::vector<std::string> &stringTable,
     IrFunction &function,

@@ -841,6 +841,145 @@ TEST_CASE(
   CHECK(error == "native backend only supports a single array<string> entry parameter");
 }
 
+TEST_CASE(
+    "ir lowerer uninitialized type helpers build bundled entry return, runtime entry, and setup resolution") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition calleeDef;
+  calleeDef.fullPath = "/callee";
+  calleeDef.namespacePrefix = "";
+  program.definitions.push_back(calleeDef);
+
+  primec::Definition containerDef;
+  containerDef.fullPath = "/pkg/Container";
+  containerDef.namespacePrefix = "/pkg";
+  program.definitions.push_back(containerDef);
+
+  primec::Definition myStructDef;
+  myStructDef.fullPath = "/pkg/MyStruct";
+  myStructDef.namespacePrefix = "/pkg";
+  program.definitions.push_back(myStructDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.namespacePrefix = "";
+  primec::Expr entryParam;
+  entryParam.name = "argv";
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  entryParam.transforms.push_back(arrayTransform);
+  entryDef.parameters.push_back(entryParam);
+
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"Result<i64, FileError>"};
+  entryDef.transforms.push_back(returnTransform);
+
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  onError.arguments = {"1i32"};
+  entryDef.transforms.push_back(onError);
+
+  primec::Expr tailCall;
+  tailCall.kind = primec::Expr::Kind::Call;
+  tailCall.name = "callee";
+  entryDef.statements = {tailCall};
+  program.definitions.push_back(entryDef);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/handler", &program.definitions[0]},
+      {"/callee", &program.definitions[1]},
+      {"/pkg/Container", &program.definitions[2]},
+      {"/pkg/MyStruct", &program.definitions[3]},
+      {"/main", &program.definitions[4]},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {{"MyStruct", "/pkg/MyStruct"}};
+  const std::unordered_set<std::string> structNames = {"/pkg/Container", "/pkg/MyStruct"};
+
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  std::string error;
+  primec::ir_lowerer::EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup setup;
+  REQUIRE(primec::ir_lowerer::buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
+      program,
+      program.definitions[4],
+      "/main",
+      defMap,
+      importAliases,
+      true,
+      structNames,
+      2,
+      [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+        appendStructLayoutField("/pkg/MyStruct", {"value", "i32", "", false});
+        appendStructLayoutField("/pkg/Container", {"slot", "uninitialized", "MyStruct", false});
+      },
+      setup,
+      error));
+  CHECK(error.empty());
+  CHECK(setup.entryReturnConfig.hasReturnTransform);
+  CHECK_FALSE(setup.entryReturnConfig.returnsVoid);
+  CHECK(setup.entryReturnConfig.hasResultInfo);
+  CHECK(setup.entryReturnConfig.resultInfo.isResult);
+
+  CHECK(setup.runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+            .entrySetupMathTypeStructAndUninitializedResolutionSetup.entryCountCallOnErrorSetup
+            .countAccessSetup.hasEntryArgs);
+  CHECK(setup.runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+            .entrySetupMathTypeStructAndUninitializedResolutionSetup
+            .setupMathTypeStructAndUninitializedResolutionSetup
+            .setupTypeStructAndUninitializedResolutionSetup
+            .setupTypeAndStructTypeAdapters.valueKindFromTypeName("i32") == ValueKind::Int32);
+
+  CHECK(setup.runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+            .runtimeErrorAndStringLiteralSetup.stringLiteralHelpers.internString("hello") == 0);
+  setup.runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+      .runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters.emitArrayIndexOutOfBounds();
+  REQUIRE(function.instructions.size() == 3);
+  CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 1);
+
+  primec::Program badProgram = program;
+  badProgram.definitions[4].transforms.clear();
+  primec::Transform badReturn;
+  badReturn.name = "return";
+  badReturn.templateArgs = {"array<string>"};
+  badProgram.definitions[4].transforms.push_back(badReturn);
+  const std::unordered_map<std::string, const primec::Definition *> badDefMap = {
+      {"/handler", &badProgram.definitions[0]},
+      {"/callee", &badProgram.definitions[1]},
+      {"/pkg/Container", &badProgram.definitions[2]},
+      {"/pkg/MyStruct", &badProgram.definitions[3]},
+      {"/main", &badProgram.definitions[4]},
+  };
+  CHECK_FALSE(primec::ir_lowerer::buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
+      badProgram,
+      badProgram.definitions[4],
+      "/main",
+      badDefMap,
+      importAliases,
+      true,
+      structNames,
+      2,
+      [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+        appendStructLayoutField("/pkg/MyStruct", {"value", "i32", "", false});
+        appendStructLayoutField("/pkg/Container", {"slot", "uninitialized", "MyStruct", false});
+      },
+      setup,
+      error));
+  CHECK(error == "native backend does not support string array return types on /main");
+}
+
 TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   primec::Transform onError;
   onError.name = "on_error";

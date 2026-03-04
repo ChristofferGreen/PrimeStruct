@@ -9,6 +9,7 @@
 
 #include "IrLowererSharedTypes.h"
 #include "IrLowererOnErrorHelpers.h"
+#include "IrLowererReturnInferenceHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -111,7 +112,26 @@ struct RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup {
   RuntimeErrorAndStringLiteralSetup runtimeErrorAndStringLiteralSetup;
   EntrySetupMathTypeStructAndUninitializedResolutionSetup entrySetupMathTypeStructAndUninitializedResolutionSetup;
 };
+struct EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup {
+  EntryReturnConfig entryReturnConfig;
+  RuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
+      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
+};
 
+bool buildEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const Definition &entryDef,
+    const std::string &entryPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    bool hasMathImport,
+    const std::unordered_set<std::string> &structNames,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error);
 bool buildRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
     std::vector<std::string> &stringTable,
     IrFunction &function,
