@@ -47,37 +47,9 @@
     importAliases.emplace(remainder, importPath);
   }
 
-  auto isStructTransformName = [](const std::string &name) {
-    return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
-           name == "platform_independent_padding";
-  };
-  auto isStructDefinition = [&](const Definition &def) {
-    bool hasStruct = false;
-    bool hasReturn = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "return") {
-        hasReturn = true;
-      }
-      if (isStructTransformName(transform.name)) {
-        hasStruct = true;
-      }
-    }
-    if (hasStruct) {
-      return true;
-    }
-    if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
-      return false;
-    }
-    for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
-        return false;
-      }
-    }
-    return true;
-  };
   std::unordered_set<std::string> structNames;
   for (const auto &def : program.definitions) {
-    if (isStructDefinition(def)) {
+    if (ir_lowerer::isStructDefinition(def)) {
       structNames.insert(def.fullPath);
     }
   }
@@ -545,7 +517,7 @@
   };
   std::unordered_map<std::string, std::vector<StructFieldInfo>> structFieldInfoByName;
   for (const auto &def : program.definitions) {
-    if (!isStructDefinition(def)) {
+    if (!ir_lowerer::isStructDefinition(def)) {
       continue;
     }
     std::vector<StructFieldInfo> fields;
@@ -744,7 +716,7 @@
   };
 
   for (const auto &def : program.definitions) {
-    if (!isStructDefinition(def)) {
+    if (!ir_lowerer::isStructDefinition(def)) {
       continue;
     }
     IrStructLayout layout;

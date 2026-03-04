@@ -67,6 +67,8 @@ bool buildOrderedCallArguments(const Expr &callExpr,
                                std::vector<const Expr *> &ordered,
                                std::string &error);
 bool definitionHasTransform(const Definition &def, const std::string &transformName);
+bool isStructTransformName(const std::string &name);
+bool isStructDefinition(const Definition &def);
 bool isStructHelperDefinition(const Definition &def,
                               const std::unordered_set<std::string> &structNames,
                               std::string &parentStructPathOut);

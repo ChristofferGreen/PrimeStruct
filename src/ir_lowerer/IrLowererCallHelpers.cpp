@@ -178,6 +178,36 @@ bool definitionHasTransform(const Definition &def, const std::string &transformN
   return false;
 }
 
+bool isStructTransformName(const std::string &name) {
+  return name == "struct" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
+         name == "platform_independent_padding";
+}
+
+bool isStructDefinition(const Definition &def) {
+  bool hasStruct = false;
+  bool hasReturn = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "return") {
+      hasReturn = true;
+    }
+    if (isStructTransformName(transform.name)) {
+      hasStruct = true;
+    }
+  }
+  if (hasStruct) {
+    return true;
+  }
+  if (hasReturn || !def.parameters.empty() || def.hasReturnStatement || def.returnExpr.has_value()) {
+    return false;
+  }
+  for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool isStructHelperDefinition(const Definition &def,
                               const std::unordered_set<std::string> &structNames,
                               std::string &parentStructPathOut) {

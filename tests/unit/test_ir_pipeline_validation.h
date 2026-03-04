@@ -422,6 +422,50 @@ TEST_CASE("ir lowerer call helpers classify struct helpers and transforms") {
   CHECK_FALSE(primec::ir_lowerer::definitionHasTransform(helperDef, "mut"));
 }
 
+TEST_CASE("ir lowerer call helpers classify struct definitions") {
+  CHECK(primec::ir_lowerer::isStructTransformName("struct"));
+  CHECK(primec::ir_lowerer::isStructTransformName("pod"));
+  CHECK(primec::ir_lowerer::isStructTransformName("handle"));
+  CHECK(primec::ir_lowerer::isStructTransformName("gpu_lane"));
+  CHECK(primec::ir_lowerer::isStructTransformName("no_padding"));
+  CHECK(primec::ir_lowerer::isStructTransformName("platform_independent_padding"));
+  CHECK_FALSE(primec::ir_lowerer::isStructTransformName("return"));
+
+  primec::Definition transformedStruct;
+  transformedStruct.fullPath = "/pkg/StructWithTransform";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  transformedStruct.transforms.push_back(structTransform);
+  CHECK(primec::ir_lowerer::isStructDefinition(transformedStruct));
+
+  primec::Definition implicitStruct;
+  implicitStruct.fullPath = "/pkg/ImplicitStruct";
+  primec::Expr field;
+  field.kind = primec::Expr::Kind::Name;
+  field.isBinding = true;
+  field.name = "value";
+  implicitStruct.statements.push_back(field);
+  CHECK(primec::ir_lowerer::isStructDefinition(implicitStruct));
+
+  primec::Definition returnDef = implicitStruct;
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnDef.transforms.push_back(returnTransform);
+  CHECK_FALSE(primec::ir_lowerer::isStructDefinition(returnDef));
+
+  primec::Definition paramDef = implicitStruct;
+  paramDef.parameters.push_back(field);
+  CHECK_FALSE(primec::ir_lowerer::isStructDefinition(paramDef));
+
+  primec::Definition mixedDef = implicitStruct;
+  primec::Expr callStmt;
+  callStmt.kind = primec::Expr::Kind::Call;
+  callStmt.name = "doThing";
+  callStmt.isBinding = false;
+  mixedDef.statements.push_back(callStmt);
+  CHECK_FALSE(primec::ir_lowerer::isStructDefinition(mixedDef));
+}
+
 TEST_CASE("ir lowerer call helpers build this params and collect struct fields") {
   primec::Expr thisParam = primec::ir_lowerer::makeStructHelperThisParam("/pkg/MyStruct", true);
   CHECK(thisParam.kind == primec::Expr::Kind::Name);
