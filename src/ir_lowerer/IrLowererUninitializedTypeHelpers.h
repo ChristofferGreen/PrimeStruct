@@ -30,6 +30,10 @@ struct UninitializedFieldBindingInfo {
 
 using UninitializedFieldBindingIndex =
     std::unordered_map<std::string, std::vector<UninitializedFieldBindingInfo>>;
+struct StructAndUninitializedFieldIndexes {
+  StructLayoutFieldIndex structLayoutFieldIndex;
+  UninitializedFieldBindingIndex uninitializedFieldBindingIndex;
+};
 using AppendUninitializedFieldBindingFn =
     std::function<void(const std::string &structPath, const UninitializedFieldBindingInfo &fieldBinding)>;
 using EnumerateUninitializedFieldBindingsFn =
@@ -108,6 +112,9 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
                                             const LocalMap &localsIn,
                                             UninitializedLocalStorageAccessInfo &out,
                                             bool &resolvedOut);
+StructAndUninitializedFieldIndexes buildStructAndUninitializedFieldIndexes(
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields);
 UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
     std::size_t structReserveHint,
     const EnumerateUninitializedFieldBindingsFn &enumerateFieldBindings);

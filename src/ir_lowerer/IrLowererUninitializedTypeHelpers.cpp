@@ -168,6 +168,17 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
   return true;
 }
 
+StructAndUninitializedFieldIndexes buildStructAndUninitializedFieldIndexes(
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields) {
+  StructAndUninitializedFieldIndexes indexes;
+  indexes.structLayoutFieldIndex =
+      buildStructLayoutFieldIndex(structReserveHint, enumerateStructLayoutFields);
+  indexes.uninitializedFieldBindingIndex =
+      buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(indexes.structLayoutFieldIndex);
+  return indexes;
+}
+
 UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
     std::size_t structReserveHint,
     const EnumerateUninitializedFieldBindingsFn &enumerateFieldBindings) {

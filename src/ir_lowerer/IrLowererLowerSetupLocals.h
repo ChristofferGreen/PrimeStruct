@@ -90,7 +90,7 @@
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
-  ir_lowerer::StructLayoutFieldIndex structLayoutFieldIndex = ir_lowerer::buildStructLayoutFieldIndex(
+  const auto structAndUninitializedFieldIndexes = ir_lowerer::buildStructAndUninitializedFieldIndexes(
       structFieldInfoByName.size(),
       [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
         for (const auto &entry : structFieldInfoByName) {
@@ -104,6 +104,7 @@
           }
         }
       });
+  const auto &structLayoutFieldIndex = structAndUninitializedFieldIndexes.structLayoutFieldIndex;
 
   const auto structArrayInfoAdapters = ir_lowerer::makeStructArrayInfoAdapters(
       structLayoutFieldIndex, resolveStructTypeName, valueKindFromTypeName);
@@ -125,8 +126,8 @@
   auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
-  ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex =
-      ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(structLayoutFieldIndex);
+  const auto &uninitializedFieldBindingIndex =
+      structAndUninitializedFieldIndexes.uninitializedFieldBindingIndex;
 
   const auto uninitializedResolutionAdapters = ir_lowerer::makeUninitializedResolutionAdapters(
       resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, defMap, resolveStructFieldSlot, error);

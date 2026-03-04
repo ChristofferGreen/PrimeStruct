@@ -1949,6 +1949,44 @@ TEST_CASE("ir lowerer uninitialized type helpers build field binding index from 
   CHECK(emptyIndex.empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers build bundled struct and uninitialized field indexes") {
+  const primec::ir_lowerer::StructAndUninitializedFieldIndexes indexes =
+      primec::ir_lowerer::buildStructAndUninitializedFieldIndexes(
+          2,
+          [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+            appendStructLayoutField("/pkg/Container", {"slot", "uninitialized", "i64", false});
+            appendStructLayoutField("/pkg/Container", {"value", "i32", "", false});
+            appendStructLayoutField("/pkg/Other", {"field", "uninitialized", "f64", false});
+          });
+
+  REQUIRE(indexes.structLayoutFieldIndex.size() == 2);
+  std::vector<primec::ir_lowerer::StructLayoutFieldInfo> layoutFields;
+  REQUIRE(primec::ir_lowerer::collectStructLayoutFieldsFromIndex(
+      indexes.structLayoutFieldIndex, "/pkg/Container", layoutFields));
+  REQUIRE(layoutFields.size() == 2);
+  CHECK(layoutFields[0].name == "slot");
+  CHECK(layoutFields[1].name == "value");
+
+  std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fieldsOut;
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      indexes.uninitializedFieldBindingIndex, "/pkg/Container", fieldsOut));
+  REQUIRE(fieldsOut.size() == 2);
+  CHECK(fieldsOut[0].name == "slot");
+  CHECK(fieldsOut[0].typeTemplateArg == "i64");
+  CHECK(fieldsOut[1].name == "value");
+
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      indexes.uninitializedFieldBindingIndex, "/pkg/Other", fieldsOut));
+  REQUIRE(fieldsOut.size() == 1);
+  CHECK(fieldsOut[0].name == "field");
+  CHECK(fieldsOut[0].typeTemplateArg == "f64");
+
+  const primec::ir_lowerer::StructAndUninitializedFieldIndexes emptyIndexes =
+      primec::ir_lowerer::buildStructAndUninitializedFieldIndexes(1, {});
+  CHECK(emptyIndexes.structLayoutFieldIndex.empty());
+  CHECK(emptyIndexes.uninitializedFieldBindingIndex.empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers check field index struct path") {
   const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
       primec::ir_lowerer::buildUninitializedFieldBindingIndex(
