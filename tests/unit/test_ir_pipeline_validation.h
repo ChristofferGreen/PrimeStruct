@@ -3201,6 +3201,18 @@ TEST_CASE("ir lowerer string literal helper interns string table values") {
   CHECK(stringTable[1] == "world");
 }
 
+TEST_CASE("ir lowerer string literal helper builds string interner") {
+  std::vector<std::string> stringTable;
+  auto internString = primec::ir_lowerer::makeInternLowererString(stringTable);
+
+  CHECK(internString("hello") == 0);
+  CHECK(internString("world") == 1);
+  CHECK(internString("hello") == 0);
+  REQUIRE(stringTable.size() == 2);
+  CHECK(stringTable[0] == "hello");
+  CHECK(stringTable[1] == "world");
+}
+
 TEST_CASE("ir lowerer string literal helper parses and validates encoding") {
   std::string decoded;
   std::string error;

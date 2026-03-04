@@ -29,9 +29,7 @@
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
 
-  auto internString = [&](const std::string &text) -> int32_t {
-    return ir_lowerer::internLowererString(text, stringTable);
-  };
+  auto internString = ir_lowerer::makeInternLowererString(stringTable);
 
   auto emitArrayIndexOutOfBounds = ir_lowerer::makeEmitArrayIndexOutOfBounds(function, internString);
   auto emitStringIndexOutOfBounds = ir_lowerer::makeEmitStringIndexOutOfBounds(function, internString);
