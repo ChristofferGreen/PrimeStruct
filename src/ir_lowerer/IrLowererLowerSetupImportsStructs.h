@@ -21,43 +21,15 @@
   auto resolveStructLayoutExprPath = [&](const Expr &expr) -> std::string {
     return resolveStructLayoutExprPathFromScope(expr, defMap, importAliases);
   };
-  struct StructFieldInfo {
-    std::string name;
-    FieldBinding binding;
-    bool isStatic = false;
-  };
-  std::unordered_map<std::string, std::vector<StructFieldInfo>> structFieldInfoByName;
-  for (const auto &def : program.definitions) {
-    if (!ir_lowerer::isStructDefinition(def)) {
-      continue;
-    }
-    std::vector<StructFieldInfo> fields;
-    std::unordered_map<std::string, FieldBinding> knownFields;
-    fields.reserve(def.statements.size());
-    for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
-        continue;
-      }
-      FieldBinding binding;
-      if (!ir_lowerer::resolveLayoutFieldBinding(def,
-                                                 stmt,
-                                                 knownFields,
-                                                 structNames,
-                                                 resolveStructTypePath,
-                                                 resolveStructLayoutExprPath,
-                                                 defMap,
-                                                 binding,
-                                                 error)) {
-        return false;
-      }
-      StructFieldInfo field;
-      field.name = stmt.name;
-      field.binding = std::move(binding);
-      field.isStatic = isStaticField(stmt);
-      knownFields[field.name] = field.binding;
-      fields.push_back(std::move(field));
-    }
-    structFieldInfoByName.emplace(def.fullPath, std::move(fields));
+  std::unordered_map<std::string, std::vector<FieldBinding>> structFieldInfoByName;
+  if (!ir_lowerer::collectStructLayoutFieldBindings(program,
+                                                    structNames,
+                                                    resolveStructTypePath,
+                                                    resolveStructLayoutExprPath,
+                                                    defMap,
+                                                    structFieldInfoByName,
+                                                    error)) {
+    return false;
   }
   struct TypeLayout {
     uint32_t sizeBytes = 0;
@@ -102,7 +74,7 @@
         error = "internal error: mismatched struct field info for " + def.fullPath;
         return false;
       }
-      const FieldBinding &binding = fieldInfoIt->second[fieldIndex].binding;
+      const FieldBinding &binding = fieldInfoIt->second[fieldIndex];
       ++fieldIndex;
       const bool fieldIsStatic = isStaticField(stmt);
       if (fieldIsStatic) {

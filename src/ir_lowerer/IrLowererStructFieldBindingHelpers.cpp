@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"
@@ -159,6 +160,46 @@ bool resolveLayoutFieldBinding(
 
   errorOut = "unresolved or ambiguous omitted struct field envelope: " + fieldPath;
   return false;
+}
+
+bool collectStructLayoutFieldBindings(
+    const Program &program,
+    const std::unordered_set<std::string> &structNames,
+    const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
+    const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,
+    std::string &errorOut) {
+  fieldsByStructOut.clear();
+  for (const auto &def : program.definitions) {
+    if (!isStructDefinition(def)) {
+      continue;
+    }
+    std::vector<LayoutFieldBinding> fields;
+    std::unordered_map<std::string, LayoutFieldBinding> knownFields;
+    fields.reserve(def.statements.size());
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        continue;
+      }
+      LayoutFieldBinding binding;
+      if (!resolveLayoutFieldBinding(def,
+                                     stmt,
+                                     knownFields,
+                                     structNames,
+                                     resolveStructTypePath,
+                                     resolveStructLayoutExprPath,
+                                     defMap,
+                                     binding,
+                                     errorOut)) {
+        return false;
+      }
+      knownFields[stmt.name] = binding;
+      fields.push_back(std::move(binding));
+    }
+    fieldsByStructOut.emplace(def.fullPath, std::move(fields));
+  }
+  return true;
 }
 
 std::string formatLayoutFieldEnvelope(const LayoutFieldBinding &binding) {

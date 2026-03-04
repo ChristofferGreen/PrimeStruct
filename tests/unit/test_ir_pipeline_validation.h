@@ -862,6 +862,140 @@ TEST_CASE("ir lowerer struct field binding helpers resolve layout bindings") {
   CHECK(error == "unresolved or ambiguous omitted struct field envelope: /pkg/Holder/badType");
 }
 
+TEST_CASE("ir lowerer struct field binding helpers collect struct layout bindings") {
+  primec::Program program;
+
+  primec::Definition structA;
+  structA.fullPath = "/pkg/A";
+  structA.namespacePrefix = "/pkg";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structA.transforms = {structTransform};
+
+  primec::Definition makeA;
+  makeA.fullPath = "/pkg/makeA";
+  makeA.namespacePrefix = "/pkg";
+  primec::Transform returnA;
+  returnA.name = "return";
+  returnA.templateArgs = {"A"};
+  makeA.transforms.push_back(returnA);
+
+  primec::Definition structS;
+  structS.fullPath = "/pkg/S";
+  structS.namespacePrefix = "/pkg";
+  structS.transforms = {structTransform};
+
+  primec::Expr typedField;
+  typedField.kind = primec::Expr::Kind::Call;
+  typedField.isBinding = true;
+  typedField.name = "typed";
+  primec::Transform typeI32;
+  typeI32.name = "i32";
+  typedField.transforms = {typeI32};
+
+  primec::Expr typedRef;
+  typedRef.kind = primec::Expr::Kind::Name;
+  typedRef.name = "typed";
+
+  primec::Expr copiedField;
+  copiedField.kind = primec::Expr::Kind::Call;
+  copiedField.isBinding = true;
+  copiedField.name = "copied";
+  copiedField.args = {typedRef};
+
+  primec::Expr makeCall;
+  makeCall.kind = primec::Expr::Kind::Call;
+  makeCall.name = "makeA";
+
+  primec::Expr childField;
+  childField.kind = primec::Expr::Kind::Call;
+  childField.isBinding = true;
+  childField.name = "child";
+  childField.args = {makeCall};
+
+  structS.statements = {typedField, copiedField, childField};
+
+  program.definitions = {structA, makeA, structS};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  for (const auto &def : program.definitions) {
+    defMap.emplace(def.fullPath, &def);
+  }
+
+  const std::unordered_set<std::string> structNames = {
+      "/pkg/A",
+      "/pkg/S",
+  };
+  const std::unordered_map<std::string, std::string> importAliases;
+  const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, structNames, importAliases);
+  };
+  const auto resolveStructLayoutExprPath = [](const primec::Expr &expr) {
+    if (!expr.name.empty() && expr.name[0] == '/') {
+      return expr.name;
+    }
+    if (expr.name.find('/') != std::string::npos) {
+      return "/" + expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      return expr.namespacePrefix + "/" + expr.name;
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+
+  std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> fieldsByStruct;
+  std::string error;
+  CHECK(primec::ir_lowerer::collectStructLayoutFieldBindings(program,
+                                                             structNames,
+                                                             resolveStructTypePath,
+                                                             resolveStructLayoutExprPath,
+                                                             defMap,
+                                                             fieldsByStruct,
+                                                             error));
+  CHECK(error.empty());
+  REQUIRE(fieldsByStruct.count("/pkg/S") == 1u);
+  REQUIRE(fieldsByStruct.count("/pkg/A") == 1u);
+  REQUIRE(fieldsByStruct["/pkg/S"].size() == 3u);
+  CHECK(fieldsByStruct["/pkg/S"][0].typeName == "i32");
+  CHECK(fieldsByStruct["/pkg/S"][1].typeName == "i32");
+  CHECK(fieldsByStruct["/pkg/S"][2].typeName == "/pkg/A");
+  CHECK(fieldsByStruct["/pkg/A"].empty());
+
+  primec::Program badProgram;
+  primec::Definition badStruct;
+  badStruct.fullPath = "/pkg/Bad";
+  badStruct.namespacePrefix = "/pkg";
+  badStruct.transforms = {structTransform};
+  primec::Expr badField;
+  badField.kind = primec::Expr::Kind::Call;
+  badField.isBinding = true;
+  badField.name = "bad";
+  badStruct.statements = {badField};
+  badProgram.definitions = {badStruct};
+
+  std::unordered_map<std::string, const primec::Definition *> badDefMap = {
+      {badStruct.fullPath, &badProgram.definitions[0]},
+  };
+  const std::unordered_set<std::string> badStructNames = {
+      "/pkg/Bad",
+  };
+  const auto badResolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
+    return primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+        typeName, namespacePrefix, badStructNames, importAliases);
+  };
+  fieldsByStruct.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::collectStructLayoutFieldBindings(badProgram,
+                                                                   badStructNames,
+                                                                   badResolveStructTypePath,
+                                                                   resolveStructLayoutExprPath,
+                                                                   badDefMap,
+                                                                   fieldsByStruct,
+                                                                   error));
+  CHECK(error == "omitted struct field envelope requires exactly one initializer: /pkg/Bad/bad");
+}
+
 TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/A",
