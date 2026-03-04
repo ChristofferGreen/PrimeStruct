@@ -89,6 +89,11 @@ enum class MapAccessLookupEmitResult {
   Emitted,
   Error,
 };
+enum class StringTableAccessEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 enum class NonLiteralStringAccessTargetResult {
   Continue,
   Stop,
@@ -161,6 +166,20 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<void()> &emitMapKeyNotFound,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error);
+StringTableAccessEmitResult tryEmitStringTableAccessLoad(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,

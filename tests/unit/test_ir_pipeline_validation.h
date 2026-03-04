@@ -2859,6 +2859,198 @@ TEST_CASE("ir lowerer call helpers resolve validated access index kind") {
   CHECK(error == "native backend requires integer indices for at");
 }
 
+TEST_CASE("ir lowerer call helpers emit string table access load") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Result = primec::ir_lowerer::StringTableAccessEmitResult;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "text";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Name;
+  indexExpr.name = "idx";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::Instruction> instructions;
+  std::string error = "stale";
+
+  int allocCalls = 0;
+  int inferCalls = 0;
+  int emitExprCalls = 0;
+  int stringIndexOutOfBoundsCalls = 0;
+
+  CHECK(primec::ir_lowerer::tryEmitStringTableAccessLoad(
+            "at",
+            targetExpr,
+            indexExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++inferCalls;
+              return Kind::Int32;
+            },
+            [&]() {
+              ++allocCalls;
+              return 9;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [&]() { ++stringIndexOutOfBoundsCalls; },
+            [&]() { return instructions.size(); },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(allocCalls == 0);
+  CHECK(inferCalls == 0);
+  CHECK(emitExprCalls == 0);
+  CHECK(stringIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringTableAccessLoad(
+            "at",
+            targetExpr,
+            indexExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+              stringIndex = 7;
+              length = 5;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++inferCalls;
+              return Kind::Float32;
+            },
+            [&]() {
+              ++allocCalls;
+              return 10;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [&]() { ++stringIndexOutOfBoundsCalls; },
+            [&]() { return instructions.size(); },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+            error) == Result::Error);
+  CHECK(error == "native backend requires integer indices for at");
+  CHECK(allocCalls == 0);
+  CHECK(inferCalls == 1);
+  CHECK(emitExprCalls == 0);
+  CHECK(stringIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringTableAccessLoad(
+            "at",
+            targetExpr,
+            indexExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+              stringIndex = 8;
+              length = static_cast<size_t>(std::numeric_limits<int32_t>::max()) + 1;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++inferCalls;
+              return Kind::Int32;
+            },
+            [&]() {
+              ++allocCalls;
+              return 11;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            [&]() { ++stringIndexOutOfBoundsCalls; },
+            [&]() { return instructions.size(); },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+            error) == Result::Error);
+  CHECK(error == "native backend string too large for indexing");
+  CHECK(allocCalls == 0);
+  CHECK(inferCalls == 2);
+  CHECK(emitExprCalls == 0);
+  CHECK(stringIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringTableAccessLoad(
+            "at",
+            targetExpr,
+            indexExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+              stringIndex = 9;
+              length = 4;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++inferCalls;
+              return Kind::Int32;
+            },
+            [&]() {
+              ++allocCalls;
+              return 12;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return false;
+            },
+            [&]() { ++stringIndexOutOfBoundsCalls; },
+            [&]() { return instructions.size(); },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+            error) == Result::Error);
+  CHECK(error.empty());
+  CHECK(allocCalls == 1);
+  CHECK(inferCalls == 3);
+  CHECK(emitExprCalls == 1);
+  CHECK(stringIndexOutOfBoundsCalls == 0);
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringTableAccessLoad(
+            "at",
+            targetExpr,
+            indexExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+              stringIndex = 12;
+              length = 5;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+            []() { return 21; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, 3});
+              return true;
+            },
+            [&]() { ++stringIndexOutOfBoundsCalls; },
+            [&]() { return instructions.size(); },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+            error) == Result::Emitted);
+  CHECK(stringIndexOutOfBoundsCalls == 2);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 12);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 3);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 21);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].imm == 21);
+  CHECK(instructions[11].op == primec::IrOpcode::LoadStringByte);
+  CHECK(instructions[11].imm == 12);
+}
+
 TEST_CASE("ir lowerer call helpers validate non literal string access target") {
   using Result = primec::ir_lowerer::NonLiteralStringAccessTargetResult;
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;

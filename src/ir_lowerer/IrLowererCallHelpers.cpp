@@ -1,5 +1,6 @@
 #include "IrLowererCallHelpers.h"
 
+#include <limits>
 #include <utility>
 
 #include "IrLowererHelpers.h"
@@ -332,6 +333,54 @@ MapAccessLookupEmitResult tryEmitMapAccessLookup(
     return MapAccessLookupEmitResult::Error;
   }
   return MapAccessLookupEmitResult::Emitted;
+}
+
+StringTableAccessEmitResult tryEmitStringTableAccessLoad(
+    const std::string &accessName,
+    const Expr &targetExpr,
+    const Expr &indexExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  int32_t stringIndex = -1;
+  size_t stringLength = 0;
+  if (!resolveStringTableTarget(targetExpr, localsIn, stringIndex, stringLength)) {
+    return StringTableAccessEmitResult::NotHandled;
+  }
+
+  LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
+  if (!resolveValidatedAccessIndexKind(indexExpr, localsIn, accessName, inferExprKind, indexKind, error)) {
+    return StringTableAccessEmitResult::Error;
+  }
+  if (stringLength > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+    error = "native backend string too large for indexing";
+    return StringTableAccessEmitResult::Error;
+  }
+
+  const int32_t indexLocal = allocTempLocal();
+  if (!emitExpr(indexExpr, localsIn)) {
+    return StringTableAccessEmitResult::Error;
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+
+  emitStringAccessLoad(
+      accessName,
+      indexLocal,
+      indexKind,
+      stringLength,
+      stringIndex,
+      emitStringIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm);
+  return StringTableAccessEmitResult::Emitted;
 }
 
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(

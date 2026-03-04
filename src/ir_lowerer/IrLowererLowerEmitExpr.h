@@ -846,42 +846,33 @@
           }
           const Expr &target = expr.args.front();
 
-          int32_t stringIndex = -1;
-          size_t stringLength = 0;
-          if (resolveStringTableTarget(target, localsIn, stringIndex, stringLength)) {
-            LocalInfo::ValueKind indexKind = LocalInfo::ValueKind::Unknown;
-            if (!ir_lowerer::resolveValidatedAccessIndexKind(
-                    expr.args[1],
-                    localsIn,
-                    accessName,
-                    [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
-                      return inferExprKind(lookupKeyExpr, localMap);
-                    },
-                    indexKind,
-                    error)) {
-              return false;
-            }
-            if (stringLength > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-              error = "native backend string too large for indexing";
-              return false;
-            }
-
-            const int32_t indexLocal = allocTempLocal();
-            if (!emitExpr(expr.args[1], localsIn)) {
-              return false;
-            }
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-
-            ir_lowerer::emitStringAccessLoad(
-                accessName,
-                indexLocal,
-                indexKind,
-                stringLength,
-                stringIndex,
-                [&]() { emitStringIndexOutOfBounds(); },
-                [&]() { return function.instructions.size(); },
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; });
+          const auto stringTableAccessResult = ir_lowerer::tryEmitStringTableAccessLoad(
+              accessName,
+              target,
+              expr.args[1],
+              localsIn,
+              [&](const Expr &lookupExpr,
+                  const ir_lowerer::LocalMap &localMap,
+                  int32_t &stringIndexOut,
+                  size_t &lengthOut) {
+                return resolveStringTableTarget(lookupExpr, localMap, stringIndexOut, lengthOut);
+              },
+              [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                return inferExprKind(lookupKeyExpr, localMap);
+              },
+              [&]() { return allocTempLocal(); },
+              [&](const Expr &lookupExpr, const ir_lowerer::LocalMap &localMap) {
+                return emitExpr(lookupExpr, localMap);
+              },
+              [&]() { emitStringIndexOutOfBounds(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
+              error);
+          if (stringTableAccessResult == ir_lowerer::StringTableAccessEmitResult::Error) {
+            return false;
+          }
+          if (stringTableAccessResult == ir_lowerer::StringTableAccessEmitResult::Emitted) {
             return true;
           }
           const auto nonLiteralStringTargetResult = ir_lowerer::validateNonLiteralStringAccessTarget(
