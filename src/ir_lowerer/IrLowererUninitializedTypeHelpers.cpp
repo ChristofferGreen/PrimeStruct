@@ -575,4 +575,25 @@ bool resolveUninitializedStorageAccessFromDefinitionFieldIndex(
       error);
 }
 
+ResolveUninitializedStorageAccessFromFieldIndexFn
+makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
+    std::string &error) {
+  return [&](const Expr &storage, const LocalMap &localsIn, UninitializedStorageAccessInfo &out, bool &resolvedOut) {
+    return resolveUninitializedStorageAccessFromDefinitionFieldIndex(
+        storage,
+        localsIn,
+        fieldIndex,
+        defMap,
+        resolveUninitializedTypeInfo,
+        resolveStructFieldSlot,
+        out,
+        resolvedOut,
+        error);
+  };
+}
+
 } // namespace primec::ir_lowerer

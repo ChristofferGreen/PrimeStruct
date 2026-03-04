@@ -74,6 +74,9 @@ struct UninitializedLocalStorageAccessInfo {
   UninitializedTypeInfo typeInfo;
 };
 
+using ResolveUninitializedStorageAccessFromFieldIndexFn =
+    std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
+
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
                                   const ResolveStructTypePathFn &resolveStructTypePath,
@@ -212,6 +215,13 @@ bool resolveUninitializedStorageAccessFromDefinitionFieldIndex(
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     UninitializedStorageAccessInfo &out,
     bool &resolvedOut,
+    std::string &error);
+ResolveUninitializedStorageAccessFromFieldIndexFn
+makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveUninitializedFieldTypeInfoFn &resolveUninitializedTypeInfo,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     std::string &error);
 
 } // namespace primec::ir_lowerer

@@ -229,24 +229,8 @@
   ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex =
       ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(structLayoutFieldIndex);
 
-  auto resolveUninitializedStorage = [&](const Expr &storage,
-                                         const LocalMap &localsIn,
-                                         UninitializedStorageAccess &out,
-                                         bool &resolved) -> bool {
-    if (!ir_lowerer::resolveUninitializedStorageAccessFromDefinitionFieldIndex(
-            storage,
-            localsIn,
-            uninitializedFieldBindingIndex,
-            defMap,
-            resolveUninitializedTypeInfo,
-            resolveStructFieldSlot,
-            out,
-            resolved,
-            error)) {
-      return false;
-    }
-    return true;
-  };
+  auto resolveUninitializedStorage = ir_lowerer::makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
+      uninitializedFieldBindingIndex, defMap, resolveUninitializedTypeInfo, resolveStructFieldSlot, error);
 
   auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
     ir_lowerer::applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
