@@ -1,5 +1,7 @@
 #include "IrLowererCountAccessHelpers.h"
 
+#include <limits>
+
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 
@@ -147,6 +149,34 @@ bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
     return it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String;
   }
   return false;
+}
+
+StringCountCallEmitResult tryEmitStringCountCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCallFn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<void(int32_t)> &emitPushI32,
+    std::string &error) {
+  if (!isStringCountCallFn(expr, localsIn)) {
+    return StringCountCallEmitResult::NotHandled;
+  }
+  if (expr.args.size() != 1) {
+    error = "count requires exactly one argument";
+    return StringCountCallEmitResult::Error;
+  }
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+    error = "native backend only supports count() on string literals or string bindings";
+    return StringCountCallEmitResult::Error;
+  }
+  if (length > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
+    error = "native backend string too large for count()";
+    return StringCountCallEmitResult::Error;
+  }
+  emitPushI32(static_cast<int32_t>(length));
+  return StringCountCallEmitResult::Emitted;
 }
 
 } // namespace primec::ir_lowerer

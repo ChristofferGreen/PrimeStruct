@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -25,6 +27,11 @@ struct EntryCountAccessSetup {
   std::string entryArgsName;
   CountAccessClassifiers classifiers;
 };
+enum class StringCountCallEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 
 bool resolveEntryArgsParameter(const Definition &entryDef,
                                bool &hasEntryArgsOut,
@@ -40,5 +47,12 @@ bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryAr
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
 bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn);
 bool isStringCountCall(const Expr &expr, const LocalMap &localsIn);
+StringCountCallEmitResult tryEmitStringCountCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<void(int32_t)> &emitPushI32,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

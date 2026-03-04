@@ -802,23 +802,27 @@
           function.instructions.push_back({IrOpcode::LoadIndirect, 0});
           return true;
         }
-        if (isStringCountCall(expr, localsIn)) {
-          if (expr.args.size() != 1) {
-            error = "count requires exactly one argument";
-            return false;
-          }
-          int32_t stringIndex = -1;
-          size_t length = 0;
-          if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
-            error = "native backend only supports count() on string literals or string bindings";
-            return false;
-          }
-          if (length > static_cast<size_t>(std::numeric_limits<int32_t>::max())) {
-            error = "native backend string too large for count()";
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(length))});
+        const auto stringCountResult = ir_lowerer::tryEmitStringCountCall(
+            expr,
+            localsIn,
+            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+              return isStringCountCall(callExpr, localMap);
+            },
+            [&](const Expr &targetExpr,
+                const ir_lowerer::LocalMap &localMap,
+                int32_t &stringIndexOut,
+                size_t &lengthOut) {
+              return resolveStringTableTarget(targetExpr, localMap, stringIndexOut, lengthOut);
+            },
+            [&](int32_t length) {
+              function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(length)});
+            },
+            error);
+        if (stringCountResult == ir_lowerer::StringCountCallEmitResult::Emitted) {
           return true;
+        }
+        if (stringCountResult == ir_lowerer::StringCountCallEmitResult::Error) {
+          return false;
         }
         const auto unsupportedCallResult = ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             expr,

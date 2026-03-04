@@ -7847,6 +7847,79 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   CHECK_FALSE(primec::ir_lowerer::isVectorCapacityCall(capacityCall, locals));
 }
 
+TEST_CASE("ir lowerer count access helpers emit string count calls") {
+  using Result = primec::ir_lowerer::StringCountCallEmitResult;
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  primec::Expr target;
+  target.kind = primec::Expr::Kind::Name;
+  target.name = "text";
+  countCall.args = {target};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  int32_t emittedLength = -1;
+
+  CHECK(primec::ir_lowerer::tryEmitStringCountCall(
+            countCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](int32_t) {},
+            error) == Result::NotHandled);
+
+  countCall.args.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringCountCall(
+            countCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return true; },
+            [&](int32_t) {},
+            error) == Result::Error);
+  CHECK(error == "count requires exactly one argument");
+
+  countCall.args = {target};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringCountCall(
+            countCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](int32_t) {},
+            error) == Result::Error);
+  CHECK(error == "native backend only supports count() on string literals or string bindings");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringCountCall(
+            countCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+              stringIndex = 7;
+              length = static_cast<size_t>(std::numeric_limits<int32_t>::max()) + 1;
+              return true;
+            },
+            [&](int32_t) {},
+            error) == Result::Error);
+  CHECK(error == "native backend string too large for count()");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitStringCountCall(
+            countCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndex, size_t &length) {
+              stringIndex = 3;
+              length = 42;
+              return true;
+            },
+            [&](int32_t length) { emittedLength = length; },
+            error) == Result::Emitted);
+  CHECK(emittedLength == 42);
+}
+
 TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   primec::ir_lowerer::LocalMap locals;
   auto isEntryArgsName = primec::ir_lowerer::makeIsEntryArgsName(true, "argv");
