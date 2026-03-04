@@ -66,5 +66,6 @@ void emitVectorReserveExceeded(IrFunction &function, const InternRuntimeErrorStr
 void emitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitFloatToIntNonFinite(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRuntimeErrorStringFn &internString);
 
 } // namespace primec::ir_lowerer

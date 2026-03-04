@@ -7797,6 +7797,39 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
   }
 }
 
+TEST_CASE("ir lowerer runtime error helpers emit file-error why dispatch sequence") {
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  auto internString = [&](const std::string &text) -> int32_t {
+    for (size_t i = 0; i < stringTable.size(); ++i) {
+      if (stringTable[i] == text) {
+        return static_cast<int32_t>(i);
+      }
+    }
+    stringTable.push_back(text);
+    return static_cast<int32_t>(stringTable.size() - 1);
+  };
+
+  primec::ir_lowerer::emitFileErrorWhy(function, 7, internString);
+
+  auto emptyIt = std::find(stringTable.begin(), stringTable.end(), "");
+  REQUIRE(emptyIt != stringTable.end());
+  auto unknownIt = std::find(stringTable.begin(), stringTable.end(), "Unknown file error");
+  REQUIRE(unknownIt != stringTable.end());
+  const uint64_t unknownIndex = static_cast<uint64_t>(std::distance(stringTable.begin(), unknownIt));
+
+  REQUIRE_FALSE(function.instructions.empty());
+  CHECK(function.instructions.back().op == primec::IrOpcode::PushI64);
+  CHECK(function.instructions.back().imm == unknownIndex);
+
+  CHECK(std::any_of(function.instructions.begin(),
+                    function.instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::JumpIfZero; }));
+  CHECK(std::any_of(function.instructions.begin(),
+                    function.instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::Jump; }));
+}
+
 TEST_CASE("ir lowerer runtime error helpers build scoped emitters") {
   primec::IrFunction function;
   std::vector<std::string> stringTable;
