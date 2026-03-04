@@ -916,11 +916,20 @@
             const LocalInfo::ValueKind mapKeyKind = mapTargetInfo.mapKeyKind;
             const LocalInfo::ValueKind mapValueKind = mapTargetInfo.mapValueKind;
 
-            const int32_t ptrLocal = allocTempLocal();
-            if (!emitExpr(expr.args[0], localsIn)) {
+            int32_t ptrLocal = -1;
+            if (!ir_lowerer::emitMapLookupTargetPointerLocal(
+                    expr.args[0],
+                    localsIn,
+                    [&]() { return allocTempLocal(); },
+                    [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
+                      return emitExpr(targetExpr, localMap);
+                    },
+                    [&](int32_t localIndex) {
+                      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
+                    },
+                    ptrLocal)) {
               return false;
             }
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
 
             const int32_t keyLocal = allocTempLocal();
             const auto stringLookupKeyEmitResult = ir_lowerer::tryEmitMapLookupStringKeyLocal(

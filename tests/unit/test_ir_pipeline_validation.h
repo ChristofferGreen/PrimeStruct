@@ -2782,6 +2782,53 @@ TEST_CASE("ir lowerer call helpers emit map lookup non-string key locals") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup target pointer local") {
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "values";
+
+  primec::ir_lowerer::LocalMap locals;
+  locals[targetExpr.name] = primec::ir_lowerer::LocalInfo{};
+
+  int nextLocal = 40;
+  int stored = -1;
+  primec::Expr capturedExpr;
+  bool emitCalled = false;
+  int32_t ptrLocal = -1;
+  CHECK(primec::ir_lowerer::emitMapLookupTargetPointerLocal(
+      targetExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localMap) {
+        emitCalled = true;
+        capturedExpr = expr;
+        return localMap.count("values") == 1;
+      },
+      [&](int32_t localIndex) { stored = localIndex; },
+      ptrLocal));
+  CHECK(emitCalled);
+  CHECK(capturedExpr.kind == primec::Expr::Kind::Name);
+  CHECK(capturedExpr.name == "values");
+  CHECK(ptrLocal == 40);
+  CHECK(stored == 40);
+
+  stored = -1;
+  emitCalled = false;
+  CHECK_FALSE(primec::ir_lowerer::emitMapLookupTargetPointerLocal(
+      targetExpr,
+      locals,
+      [&]() { return nextLocal++; },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        emitCalled = true;
+        return false;
+      },
+      [&](int32_t localIndex) { stored = localIndex; },
+      ptrLocal));
+  CHECK(emitCalled);
+  CHECK(ptrLocal == 41);
+  CHECK(stored == -1);
+}
+
 TEST_CASE("ir lowerer call helpers emit map lookup loop locals") {
   std::vector<primec::Instruction> instructions;
   int nextLocal = 30;

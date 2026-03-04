@@ -371,6 +371,21 @@ bool emitMapLookupNonStringKeyLocal(
   return true;
 }
 
+bool emitMapLookupTargetPointerLocal(
+    const Expr &targetExpr,
+    const LocalMap &localsIn,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(int32_t)> &emitStoreLocal,
+    int32_t &ptrLocalOut) {
+  ptrLocalOut = allocTempLocal();
+  if (!emitExpr(targetExpr, localsIn)) {
+    return false;
+  }
+  emitStoreLocal(ptrLocalOut);
+  return true;
+}
+
 MapLookupLoopLocals emitMapLookupLoopLocals(
     int32_t ptrLocal,
     const std::function<int32_t()> &allocTempLocal,
