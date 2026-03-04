@@ -12,6 +12,22 @@ void emitRuntimeError(IrFunction &function, const std::string &message, const In
 }
 } // namespace
 
+RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  RuntimeErrorEmitters emitters;
+  emitters.emitArrayIndexOutOfBounds = makeEmitArrayIndexOutOfBounds(function, internString);
+  emitters.emitStringIndexOutOfBounds = makeEmitStringIndexOutOfBounds(function, internString);
+  emitters.emitMapKeyNotFound = makeEmitMapKeyNotFound(function, internString);
+  emitters.emitVectorIndexOutOfBounds = makeEmitVectorIndexOutOfBounds(function, internString);
+  emitters.emitVectorPopOnEmpty = makeEmitVectorPopOnEmpty(function, internString);
+  emitters.emitVectorCapacityExceeded = makeEmitVectorCapacityExceeded(function, internString);
+  emitters.emitVectorReserveNegative = makeEmitVectorReserveNegative(function, internString);
+  emitters.emitVectorReserveExceeded = makeEmitVectorReserveExceeded(function, internString);
+  emitters.emitLoopCountNegative = makeEmitLoopCountNegative(function, internString);
+  emitters.emitPowNegativeExponent = makeEmitPowNegativeExponent(function, internString);
+  emitters.emitFloatToIntNonFinite = makeEmitFloatToIntNonFinite(function, internString);
+  return emitters;
+}
+
 EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString) {
   return [&function, &internString]() {

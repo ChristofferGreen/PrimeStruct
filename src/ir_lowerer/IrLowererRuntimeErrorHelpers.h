@@ -10,6 +10,21 @@ namespace primec::ir_lowerer {
 using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
 using EmitRuntimeErrorFn = std::function<void()>;
 
+struct RuntimeErrorEmitters {
+  EmitRuntimeErrorFn emitArrayIndexOutOfBounds;
+  EmitRuntimeErrorFn emitStringIndexOutOfBounds;
+  EmitRuntimeErrorFn emitMapKeyNotFound;
+  EmitRuntimeErrorFn emitVectorIndexOutOfBounds;
+  EmitRuntimeErrorFn emitVectorPopOnEmpty;
+  EmitRuntimeErrorFn emitVectorCapacityExceeded;
+  EmitRuntimeErrorFn emitVectorReserveNegative;
+  EmitRuntimeErrorFn emitVectorReserveExceeded;
+  EmitRuntimeErrorFn emitLoopCountNegative;
+  EmitRuntimeErrorFn emitPowNegativeExponent;
+  EmitRuntimeErrorFn emitFloatToIntNonFinite;
+};
+
+RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
 EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,

@@ -31,17 +31,18 @@
 
   auto internString = ir_lowerer::makeInternLowererString(stringTable);
 
-  auto emitArrayIndexOutOfBounds = ir_lowerer::makeEmitArrayIndexOutOfBounds(function, internString);
-  auto emitStringIndexOutOfBounds = ir_lowerer::makeEmitStringIndexOutOfBounds(function, internString);
-  auto emitMapKeyNotFound = ir_lowerer::makeEmitMapKeyNotFound(function, internString);
-  auto emitVectorIndexOutOfBounds = ir_lowerer::makeEmitVectorIndexOutOfBounds(function, internString);
-  auto emitVectorPopOnEmpty = ir_lowerer::makeEmitVectorPopOnEmpty(function, internString);
-  auto emitVectorCapacityExceeded = ir_lowerer::makeEmitVectorCapacityExceeded(function, internString);
-  auto emitVectorReserveNegative = ir_lowerer::makeEmitVectorReserveNegative(function, internString);
-  auto emitVectorReserveExceeded = ir_lowerer::makeEmitVectorReserveExceeded(function, internString);
-  auto emitLoopCountNegative = ir_lowerer::makeEmitLoopCountNegative(function, internString);
-  auto emitPowNegativeExponent = ir_lowerer::makeEmitPowNegativeExponent(function, internString);
-  auto emitFloatToIntNonFinite = ir_lowerer::makeEmitFloatToIntNonFinite(function, internString);
+  const auto runtimeErrorEmitters = ir_lowerer::makeRuntimeErrorEmitters(function, internString);
+  auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
+  auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
+  auto emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;
+  auto emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
+  auto emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
+  auto emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
+  auto emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
+  auto emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
+  auto emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
+  auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
+  auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
   bool hasEntryArgs = false;
   std::string entryArgsName;
