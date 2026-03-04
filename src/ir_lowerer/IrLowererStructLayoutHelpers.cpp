@@ -227,6 +227,52 @@ bool computeStructLayoutWithCache(
   return true;
 }
 
+bool computeStructLayoutUncached(
+    const Definition &def,
+    const std::vector<LayoutFieldBinding> &fieldBindings,
+    const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut) {
+  layoutOut = IrStructLayout{};
+  layoutOut.name = def.fullPath;
+  uint32_t structAlign = 1;
+  uint32_t explicitStructAlign = 1;
+  bool hasStructAlign = false;
+  if (!extractAlignment(def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, errorOut)) {
+    return false;
+  }
+
+  uint32_t offset = 0;
+  size_t fieldIndex = 0;
+  for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding) {
+      continue;
+    }
+    if (fieldIndex >= fieldBindings.size()) {
+      errorOut = "internal error: mismatched struct field info for " + def.fullPath;
+      return false;
+    }
+
+    const LayoutFieldBinding &binding = fieldBindings[fieldIndex];
+    ++fieldIndex;
+    if (!appendStructLayoutField(
+            def.fullPath, stmt, binding, resolveFieldTypeLayout, offset, structAlign, layoutOut, errorOut)) {
+      return false;
+    }
+  }
+
+  if (hasStructAlign && explicitStructAlign < structAlign) {
+    errorOut = "alignment requirement on struct " + def.fullPath + " is smaller than required alignment of " +
+               std::to_string(structAlign);
+    return false;
+  }
+
+  structAlign = hasStructAlign ? std::max(structAlign, explicitStructAlign) : structAlign;
+  layoutOut.alignmentBytes = structAlign;
+  layoutOut.totalSizeBytes = alignTo(offset, structAlign);
+  return true;
+}
+
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,
                              const LayoutFieldBinding &binding,

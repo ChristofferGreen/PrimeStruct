@@ -1517,6 +1517,111 @@ TEST_CASE("ir lowerer struct layout helpers compute with cache") {
   CHECK(out.alignmentBytes == 4u);
 }
 
+TEST_CASE("ir lowerer struct layout helpers compute uncached layout") {
+  primec::Definition def;
+  def.fullPath = "/pkg/S";
+  def.namespacePrefix = "/pkg";
+  primec::Transform structAlign;
+  structAlign.name = "align_bytes";
+  structAlign.arguments = {"16"};
+  def.transforms = {structAlign};
+
+  primec::Expr firstField;
+  firstField.kind = primec::Expr::Kind::Name;
+  firstField.isBinding = true;
+  firstField.name = "value";
+
+  primec::Expr staticField = firstField;
+  staticField.name = "cached";
+  primec::Transform staticTransform;
+  staticTransform.name = "static";
+  staticField.transforms = {staticTransform};
+  def.statements = {firstField, staticField};
+
+  const std::vector<primec::ir_lowerer::LayoutFieldBinding> fieldBindings = {
+      {"i32", ""},
+      {"UnknownStaticType", ""},
+  };
+
+  int resolveCalls = 0;
+  const auto resolveFieldTypeLayout = [&](const primec::ir_lowerer::LayoutFieldBinding &binding,
+                                          primec::ir_lowerer::BindingTypeLayout &layout,
+                                          std::string &resolveError) {
+    ++resolveCalls;
+    if (binding.typeName == "i32") {
+      layout = {4u, 4u};
+      return true;
+    }
+    resolveError = "unexpected type layout request";
+    return false;
+  };
+
+  primec::IrStructLayout layout;
+  std::string error;
+  CHECK(primec::ir_lowerer::computeStructLayoutUncached(
+      def, fieldBindings, resolveFieldTypeLayout, layout, error));
+  CHECK(error.empty());
+  CHECK(resolveCalls == 1);
+  CHECK(layout.name == "/pkg/S");
+  CHECK(layout.alignmentBytes == 16u);
+  CHECK(layout.totalSizeBytes == 16u);
+  REQUIRE(layout.fields.size() == 2u);
+  CHECK(layout.fields[0].name == "value");
+  CHECK(layout.fields[0].offsetBytes == 0u);
+  CHECK(layout.fields[0].sizeBytes == 4u);
+  CHECK(layout.fields[0].alignmentBytes == 4u);
+  CHECK_FALSE(layout.fields[0].isStatic);
+  CHECK(layout.fields[1].name == "cached");
+  CHECK(layout.fields[1].offsetBytes == 0u);
+  CHECK(layout.fields[1].sizeBytes == 0u);
+  CHECK(layout.fields[1].alignmentBytes == 1u);
+  CHECK(layout.fields[1].isStatic);
+}
+
+TEST_CASE("ir lowerer struct layout helpers compute uncached diagnostics") {
+  primec::Definition mismatchDef;
+  mismatchDef.fullPath = "/pkg/Mismatch";
+  primec::Expr mismatchField;
+  mismatchField.kind = primec::Expr::Kind::Name;
+  mismatchField.isBinding = true;
+  mismatchField.name = "field";
+  mismatchDef.statements = {mismatchField};
+
+  primec::IrStructLayout layout;
+  std::string error;
+  const auto resolveFieldTypeLayout = [](const primec::ir_lowerer::LayoutFieldBinding &,
+                                         primec::ir_lowerer::BindingTypeLayout &,
+                                         std::string &) { return true; };
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutUncached(
+      mismatchDef, {}, resolveFieldTypeLayout, layout, error));
+  CHECK(error == "internal error: mismatched struct field info for /pkg/Mismatch");
+
+  primec::Definition alignDef;
+  alignDef.fullPath = "/pkg/BadAlign";
+  primec::Transform structAlign;
+  structAlign.name = "align_bytes";
+  structAlign.arguments = {"2"};
+  alignDef.transforms = {structAlign};
+  primec::Expr wideField = mismatchField;
+  wideField.name = "wide";
+  alignDef.statements = {wideField};
+
+  const std::vector<primec::ir_lowerer::LayoutFieldBinding> wideBindings = {
+      {"Wide", ""},
+  };
+  const auto resolveWideLayout = [](const primec::ir_lowerer::LayoutFieldBinding &,
+                                    primec::ir_lowerer::BindingTypeLayout &resolvedLayout,
+                                    std::string &resolveError) {
+    (void)resolveError;
+    resolvedLayout = {8u, 8u};
+    return true;
+  };
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutUncached(
+      alignDef, wideBindings, resolveWideLayout, layout, error));
+  CHECK(error == "alignment requirement on struct /pkg/BadAlign is smaller than required alignment of 8");
+}
+
 TEST_CASE("ir lowerer struct layout helpers classify layout transforms") {
   CHECK(primec::ir_lowerer::isLayoutQualifierName("public"));
   CHECK(primec::ir_lowerer::isLayoutQualifierName("align_kbytes"));

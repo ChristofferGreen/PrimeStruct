@@ -44,6 +44,12 @@ bool computeStructLayoutWithCache(
     const std::function<bool(IrStructLayout &, std::string &)> &computeUncachedLayout,
     IrStructLayout &layoutOut,
     std::string &errorOut);
+bool computeStructLayoutUncached(
+    const Definition &def,
+    const std::vector<LayoutFieldBinding> &fieldBindings,
+    const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
+    IrStructLayout &layoutOut,
+    std::string &errorOut);
 bool appendStructLayoutField(const std::string &structPath,
                              const Expr &fieldExpr,
                              const LayoutFieldBinding &binding,
