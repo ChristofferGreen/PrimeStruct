@@ -31,6 +31,8 @@ struct StructArrayTypeInfo {
   int32_t fieldCount = 0;
 };
 
+using ResolveStructArrayTypeInfoFn = std::function<bool(const std::string &, StructArrayTypeInfo &)>;
+using ApplyStructArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using CollectStructArrayFieldsFn = std::function<bool(const std::string &, std::vector<StructArrayFieldInfo> &)>;
 
 struct StructSlotFieldInfo {
@@ -101,6 +103,9 @@ bool resolveStructArrayTypeInfoFromBindingWithLayoutFieldIndex(
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     StructArrayTypeInfo &out);
+ResolveStructArrayTypeInfoFn makeResolveStructArrayTypeInfoFromLayoutFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName);
 bool resolveStructArrayTypeInfoFromPath(const std::string &structPath,
                                         const CollectStructArrayFieldsFn &collectStructArrayFields,
                                         const ValueKindFromTypeNameFn &valueKindFromTypeName,
@@ -121,6 +126,10 @@ void applyStructArrayInfoFromBindingWithLayoutFieldIndex(
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     LocalInfo &info);
+ApplyStructArrayInfoFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const StructLayoutFieldIndex &fieldIndex,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName);
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
                                   const std::string &fieldName,
                                   StructSlotFieldInfo &out);

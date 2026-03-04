@@ -146,6 +146,15 @@ bool resolveStructArrayTypeInfoFromBindingWithLayoutFieldIndex(
       out);
 }
 
+ResolveStructArrayTypeInfoFn makeResolveStructArrayTypeInfoFromLayoutFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName) {
+  return [&](const std::string &structPath, StructArrayTypeInfo &out) {
+    return resolveStructArrayTypeInfoFromLayoutFieldIndex(
+        structPath, fieldIndex, valueKindFromTypeName, out);
+  };
+}
+
 bool resolveStructArrayTypeInfoFromPath(const std::string &structPath,
                                         const CollectStructArrayFieldsFn &collectStructArrayFields,
                                         const ValueKindFromTypeNameFn &valueKindFromTypeName,
@@ -245,6 +254,16 @@ void applyStructArrayInfoFromBindingWithLayoutFieldIndex(
       },
       valueKindFromTypeName,
       info);
+}
+
+ApplyStructArrayInfoFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const StructLayoutFieldIndex &fieldIndex,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName) {
+  return [&](const Expr &expr, LocalInfo &info) {
+    applyStructArrayInfoFromBindingWithLayoutFieldIndex(
+        expr, resolveStructTypeName, fieldIndex, valueKindFromTypeName, info);
+  };
 }
 
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,

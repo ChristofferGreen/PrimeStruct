@@ -183,15 +183,11 @@
         }
       });
 
-  auto resolveStructArrayInfoFromPath = [&](const std::string &structPath, StructArrayInfo &out) -> bool {
-    return ir_lowerer::resolveStructArrayTypeInfoFromLayoutFieldIndex(
-        structPath, structLayoutFieldIndex, valueKindFromTypeName, out);
-  };
+  auto resolveStructArrayInfoFromPath = ir_lowerer::makeResolveStructArrayTypeInfoFromLayoutFieldIndex(
+      structLayoutFieldIndex, valueKindFromTypeName);
 
-  auto applyStructArrayInfo = [&](const Expr &expr, LocalInfo &info) {
-    ir_lowerer::applyStructArrayInfoFromBindingWithLayoutFieldIndex(
-        expr, resolveStructTypeName, structLayoutFieldIndex, valueKindFromTypeName, info);
-  };
+  auto applyStructArrayInfo = ir_lowerer::makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
+      resolveStructTypeName, structLayoutFieldIndex, valueKindFromTypeName);
 
   ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
   std::unordered_set<std::string> structSlotLayoutStack;
