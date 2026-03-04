@@ -42,6 +42,13 @@ bool hasProgramMathImport(const std::vector<std::string> &imports) {
   return false;
 }
 
+SetupMathResolvers makeSetupMathResolvers(bool hasMathImport) {
+  SetupMathResolvers resolvers;
+  resolvers.getMathBuiltinName = makeGetSetupMathBuiltinName(hasMathImport);
+  resolvers.getMathConstantName = makeGetSetupMathConstantName(hasMathImport);
+  return resolvers;
+}
+
 GetSetupMathBuiltinNameFn makeGetSetupMathBuiltinName(bool hasMathImport) {
   return [hasMathImport](const Expr &expr, std::string &out) {
     return getSetupMathBuiltinName(expr, hasMathImport, out);

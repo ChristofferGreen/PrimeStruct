@@ -72,8 +72,9 @@
     return false;
   }
 
-  auto getMathBuiltinName = ir_lowerer::makeGetSetupMathBuiltinName(hasMathImport);
-  auto getMathConstantName = ir_lowerer::makeGetSetupMathConstantName(hasMathImport);
+  const auto setupMathResolvers = ir_lowerer::makeSetupMathResolvers(hasMathImport);
+  auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
+  auto getMathConstantName = setupMathResolvers.getMathConstantName;
 
   auto setReferenceArrayInfo = ir_lowerer::makeSetReferenceArrayInfoFromTransforms();
   auto bindingKind = ir_lowerer::makeBindingKindFromTransforms();

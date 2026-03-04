@@ -3680,6 +3680,25 @@ TEST_CASE("ir lowerer setup math helper builds scoped name resolvers") {
   CHECK_FALSE(resolveConstantWithoutImport("pi", constantName));
 }
 
+TEST_CASE("ir lowerer setup math helper builds bundled name resolvers") {
+  auto resolversWithImport = primec::ir_lowerer::makeSetupMathResolvers(true);
+  auto resolversWithoutImport = primec::ir_lowerer::makeSetupMathResolvers(false);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "sin";
+
+  std::string builtinName;
+  CHECK(resolversWithImport.getMathBuiltinName(callExpr, builtinName));
+  CHECK(builtinName == "sin");
+  CHECK_FALSE(resolversWithoutImport.getMathBuiltinName(callExpr, builtinName));
+
+  std::string constantName;
+  CHECK(resolversWithImport.getMathConstantName("pi", constantName));
+  CHECK(constantName == "pi");
+  CHECK_FALSE(resolversWithoutImport.getMathConstantName("pi", constantName));
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";
