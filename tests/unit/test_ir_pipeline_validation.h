@@ -3006,6 +3006,22 @@ TEST_CASE("ir lowerer setup type helper returns unknown for unsupported names") 
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup type helper maps value kinds to type names") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Int32) == "i32");
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Int64) == "i64");
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::UInt64) == "u64");
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Float32) == "f32");
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Float64) == "f64");
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Bool) == "bool");
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::String) == "string");
+}
+
+TEST_CASE("ir lowerer setup type helper returns empty name for unknown kind") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  CHECK(primec::ir_lowerer::typeNameForValueKind(ValueKind::Unknown).empty());
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
   primec::Definition entryDef;
   primec::Transform resultReturn;

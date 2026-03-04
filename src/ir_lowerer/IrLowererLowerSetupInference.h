@@ -17,26 +17,6 @@
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
 
-  auto typeNameForValueKind = [](LocalInfo::ValueKind kind) -> std::string {
-    switch (kind) {
-      case LocalInfo::ValueKind::Int32:
-        return "i32";
-      case LocalInfo::ValueKind::Int64:
-        return "i64";
-      case LocalInfo::ValueKind::UInt64:
-        return "u64";
-      case LocalInfo::ValueKind::Float32:
-        return "f32";
-      case LocalInfo::ValueKind::Float64:
-        return "f64";
-      case LocalInfo::ValueKind::Bool:
-        return "bool";
-      case LocalInfo::ValueKind::String:
-        return "string";
-      default:
-        return "";
-    }
-  };
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &localsIn) -> const Definition * {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || !callExpr.isMethodCall) {

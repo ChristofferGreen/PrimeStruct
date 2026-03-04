@@ -95,4 +95,25 @@ LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::V
   return LocalInfo::ValueKind::Unknown;
 }
 
+std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
+  switch (kind) {
+    case LocalInfo::ValueKind::Int32:
+      return "i32";
+    case LocalInfo::ValueKind::Int64:
+      return "i64";
+    case LocalInfo::ValueKind::UInt64:
+      return "u64";
+    case LocalInfo::ValueKind::Float32:
+      return "f32";
+    case LocalInfo::ValueKind::Float64:
+      return "f64";
+    case LocalInfo::ValueKind::Bool:
+      return "bool";
+    case LocalInfo::ValueKind::String:
+      return "string";
+    default:
+      return "";
+  }
+}
+
 } // namespace primec::ir_lowerer
