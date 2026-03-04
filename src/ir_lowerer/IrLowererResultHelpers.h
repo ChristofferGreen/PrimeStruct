@@ -3,8 +3,11 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -49,5 +52,30 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const LookupReturnInfoFn &lookupReturnInfo);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
+enum class ResultWhyCallEmitResult {
+  Emitted,
+  Error,
+};
+struct ResultWhyCallOps {
+  std::function<bool(const std::string &, const std::string &, std::string &)> resolveStructTypeName;
+  std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
+  std::function<LocalInfo::Kind(const Expr &)> bindingKind;
+  std::function<bool(const Expr &, std::string &, std::vector<std::string> &)> extractFirstBindingTypeTransform;
+  std::function<bool(const std::string &, StructSlotLayoutInfo &)> resolveStructSlotLayout;
+  std::function<LocalInfo::ValueKind(const std::string &)> valueKindFromTypeName;
+  std::function<Expr(LocalMap &, LocalInfo::ValueKind)> makeErrorValueExpr;
+  std::function<Expr(LocalMap &)> makeBoolErrorExpr;
+  std::function<bool(const Expr &, const Definition &, const LocalMap &)> emitInlineDefinitionCall;
+  std::function<bool(int32_t)> emitFileErrorWhy;
+  std::function<bool()> emitEmptyString;
+};
+ResultWhyCallEmitResult emitResolvedResultWhyCall(
+    const Expr &expr,
+    const ResultExprInfo &resultInfo,
+    const LocalMap &localsIn,
+    int32_t errorLocal,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResultWhyCallOps &ops,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

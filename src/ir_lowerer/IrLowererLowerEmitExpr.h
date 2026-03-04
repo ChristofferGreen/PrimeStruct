@@ -466,113 +466,42 @@
             return errorExpr;
           };
 
-          std::string errorStructPath;
-          if (resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
-            const std::string whyPath = errorStructPath + "/why";
-            auto whyIt = defMap.find(whyPath);
-            if (whyIt != defMap.end() && whyIt->second && whyIt->second->parameters.size() == 1) {
-              ReturnInfo whyReturn;
-              if (!getReturnInfo || !getReturnInfo(whyIt->second->fullPath, whyReturn)) {
-                return false;
-              }
-              if (whyReturn.returnsVoid || whyReturn.returnsArray ||
-                  whyReturn.kind != LocalInfo::ValueKind::String) {
-                error = "Result.why requires a string-returning why() for " + resultInfo.errorType;
-                return false;
-              }
-              const Expr &param = whyIt->second->parameters.front();
-              LocalInfo::Kind paramKind = bindingKind(param);
-              std::string paramTypeName;
-              std::vector<std::string> paramTemplateArgs;
-              if (paramKind == LocalInfo::Kind::Value &&
-                  ir_lowerer::extractFirstBindingTypeTransform(param, paramTypeName, paramTemplateArgs) &&
-                  paramTemplateArgs.empty()) {
-                std::string paramStructPath;
-                LocalMap callLocals = localsIn;
-                if (resolveStructTypeName(paramTypeName, param.namespacePrefix, paramStructPath) &&
-                    paramStructPath == errorStructPath) {
-                  StructSlotLayout layout;
-                  if (!resolveStructSlotLayout(errorStructPath, layout)) {
-                    return false;
-                  }
-                  if (layout.fields.size() != 1 || !layout.fields.front().structPath.empty() ||
-                      !ir_lowerer::isSupportedResultWhyErrorKind(layout.fields.front().valueKind)) {
-                    return emitEmptyString();
-                  }
-                  Expr errorValueExpr = layout.fields.front().valueKind == LocalInfo::ValueKind::Bool
-                                            ? makeBoolErrorExpr(callLocals)
-                                            : makeErrorValueExpr(callLocals, layout.fields.front().valueKind);
-                  Expr ctorExpr;
-                  ctorExpr.kind = Expr::Kind::Call;
-                  ctorExpr.name = errorStructPath;
-                  ctorExpr.namespacePrefix = expr.namespacePrefix;
-                  ctorExpr.isMethodCall = false;
-                  ctorExpr.isBinding = false;
-                  ctorExpr.args.push_back(errorValueExpr);
-                  ctorExpr.argNames.push_back(std::nullopt);
-                  Expr callExpr;
-                  callExpr.kind = Expr::Kind::Call;
-                  callExpr.name = whyPath;
-                  callExpr.namespacePrefix = expr.namespacePrefix;
-                  callExpr.isMethodCall = false;
-                  callExpr.isBinding = false;
-                  callExpr.args.push_back(ctorExpr);
-                  callExpr.argNames.push_back(std::nullopt);
-                  return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
-                }
-                LocalInfo::ValueKind paramKindValue = valueKindFromTypeName(paramTypeName);
-                if (ir_lowerer::isSupportedResultWhyErrorKind(paramKindValue)) {
-                  Expr errorValueExpr = paramKindValue == LocalInfo::ValueKind::Bool
-                                            ? makeBoolErrorExpr(callLocals)
-                                            : makeErrorValueExpr(callLocals, paramKindValue);
-                  Expr callExpr;
-                  callExpr.kind = Expr::Kind::Call;
-                  callExpr.name = whyPath;
-                  callExpr.namespacePrefix = expr.namespacePrefix;
-                  callExpr.isMethodCall = false;
-                  callExpr.isBinding = false;
-                  callExpr.args.push_back(errorValueExpr);
-                  callExpr.argNames.push_back(std::nullopt);
-                  return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
-                }
-              }
-            }
-          }
-
-          LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
-          if (ir_lowerer::isSupportedResultWhyErrorKind(errorKind)) {
-            const std::string whyPath =
-                "/" + ir_lowerer::normalizeResultWhyErrorName(resultInfo.errorType, errorKind) + "/why";
-            auto whyIt = defMap.find(whyPath);
-            if (whyIt != defMap.end() && whyIt->second && whyIt->second->parameters.size() == 1) {
-              ReturnInfo whyReturn;
-              if (!getReturnInfo || !getReturnInfo(whyIt->second->fullPath, whyReturn)) {
-                return false;
-              }
-              if (whyReturn.returnsVoid || whyReturn.returnsArray ||
-                  whyReturn.kind != LocalInfo::ValueKind::String) {
-                error = "Result.why requires a string-returning why() for " + resultInfo.errorType;
-                return false;
-              }
-              LocalMap callLocals = localsIn;
-              Expr errorValueExpr = errorKind == LocalInfo::ValueKind::Bool ? makeBoolErrorExpr(callLocals)
-                                                                            : makeErrorValueExpr(callLocals, errorKind);
-              Expr callExpr;
-              callExpr.kind = Expr::Kind::Call;
-              callExpr.name = whyPath;
-              callExpr.namespacePrefix = expr.namespacePrefix;
-              callExpr.isMethodCall = false;
-              callExpr.isBinding = false;
-              callExpr.args.push_back(errorValueExpr);
-              callExpr.argNames.push_back(std::nullopt);
-              return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals, true);
-            }
-          }
-
-          if (resultInfo.errorType == "FileError") {
-            return emitFileErrorWhy(errorLocal);
-          }
-          return emitEmptyString();
+          ir_lowerer::ResultWhyCallOps resultWhyOps;
+          resultWhyOps.resolveStructTypeName =
+              [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
+                return resolveStructTypeName(typeName, nsPrefix, structPathOut);
+              };
+          resultWhyOps.getReturnInfo = [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
+            return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
+          };
+          resultWhyOps.bindingKind = [&](const Expr &bindingExpr) { return bindingKind(bindingExpr); };
+          resultWhyOps.extractFirstBindingTypeTransform =
+              [&](const Expr &bindingExpr, std::string &typeNameOut, std::vector<std::string> &templateArgsOut) {
+                return ir_lowerer::extractFirstBindingTypeTransform(
+                    bindingExpr, typeNameOut, templateArgsOut);
+              };
+          resultWhyOps.resolveStructSlotLayout =
+              [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+            return resolveStructSlotLayout(structPath, layoutOut);
+          };
+          resultWhyOps.valueKindFromTypeName =
+              [&](const std::string &typeName) { return valueKindFromTypeName(typeName); };
+          resultWhyOps.makeErrorValueExpr =
+              [&](LocalMap &callLocals, LocalInfo::ValueKind valueKind) {
+                return makeErrorValueExpr(callLocals, valueKind);
+              };
+          resultWhyOps.makeBoolErrorExpr =
+              [&](LocalMap &callLocals) { return makeBoolErrorExpr(callLocals); };
+          resultWhyOps.emitInlineDefinitionCall =
+              [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
+                return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
+              };
+          resultWhyOps.emitFileErrorWhy =
+              [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); };
+          resultWhyOps.emitEmptyString = [&]() { return emitEmptyString(); };
+          const auto resultWhyResult = ir_lowerer::emitResolvedResultWhyCall(
+              expr, resultInfo, localsIn, errorLocal, defMap, resultWhyOps, error);
+          return resultWhyResult == ir_lowerer::ResultWhyCallEmitResult::Emitted;
         }
         const auto fileErrorWhyResult = ir_lowerer::tryEmitFileErrorWhyCall(
             expr,

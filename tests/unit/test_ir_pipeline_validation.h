@@ -12570,6 +12570,147 @@ TEST_CASE("ir lowerer result helpers normalize Result.why type names") {
   CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("CustomError", ValueKind::Float64) == "CustomError");
 }
 
+TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
+  using EmitResult = primec::ir_lowerer::ResultWhyCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultWhyExpr;
+  resultWhyExpr.kind = primec::Expr::Kind::Call;
+  resultWhyExpr.isMethodCall = true;
+  resultWhyExpr.name = "why";
+  resultWhyExpr.namespacePrefix = "/pkg";
+
+  primec::Definition structWhyDef;
+  structWhyDef.fullPath = "/MyError/why";
+  structWhyDef.parameters.resize(1);
+  primec::Definition i32WhyDef;
+  i32WhyDef.fullPath = "/i32/why";
+  i32WhyDef.parameters.resize(1);
+  std::unordered_map<std::string, const primec::Definition *> defMap{
+      {"/MyError/why", &structWhyDef},
+      {"/i32/why", &i32WhyDef},
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+
+  primec::ir_lowerer::ResultWhyCallOps ops;
+  ops.resolveStructTypeName = [](const std::string &typeName,
+                                 const std::string &,
+                                 std::string &structPathOut) {
+    if (typeName == "MyError") {
+      structPathOut = "/MyError";
+      return true;
+    }
+    return false;
+  };
+  ops.getReturnInfo = [](const std::string &path, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
+    if (path != "/MyError/why" && path != "/i32/why") {
+      return false;
+    }
+    returnInfoOut = primec::ir_lowerer::ReturnInfo{};
+    returnInfoOut.kind = ValueKind::String;
+    return true;
+  };
+  ops.bindingKind = [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; };
+  ops.extractFirstBindingTypeTransform =
+      [](const primec::Expr &, std::string &typeNameOut, std::vector<std::string> &templateArgsOut) {
+        typeNameOut = "MyError";
+        templateArgsOut.clear();
+        return true;
+      };
+  ops.resolveStructSlotLayout =
+      [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+    if (structPath != "/MyError") {
+      return false;
+    }
+    layoutOut = primec::ir_lowerer::StructSlotLayoutInfo{};
+    layoutOut.fields.push_back({0, ValueKind::Int32, ""});
+    layoutOut.fields.push_back({1, ValueKind::Int32, ""});
+    return true;
+  };
+  ops.valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "AnyInt" || typeName == "MyError") {
+      return ValueKind::Int32;
+    }
+    return ValueKind::Unknown;
+  };
+  ops.makeErrorValueExpr = [](primec::ir_lowerer::LocalMap &, ValueKind) {
+    primec::Expr value;
+    value.kind = primec::Expr::Kind::Name;
+    value.name = "err";
+    return value;
+  };
+  ops.makeBoolErrorExpr = [](primec::ir_lowerer::LocalMap &) {
+    primec::Expr value;
+    value.kind = primec::Expr::Kind::Name;
+    value.name = "err_bool";
+    return value;
+  };
+
+  int inlineCalls = 0;
+  int fileErrorCalls = 0;
+  int emptyStringCalls = 0;
+  ops.emitInlineDefinitionCall = [&](const primec::Expr &callExpr,
+                                     const primec::Definition &callee,
+                                     const primec::ir_lowerer::LocalMap &) {
+    ++inlineCalls;
+    CHECK(callExpr.kind == primec::Expr::Kind::Call);
+    CHECK(callee.fullPath == "/i32/why");
+    return true;
+  };
+  ops.emitFileErrorWhy = [&](int32_t errorLocal) {
+    ++fileErrorCalls;
+    CHECK(errorLocal == 17);
+    return true;
+  };
+  ops.emitEmptyString = [&]() {
+    ++emptyStringCalls;
+    return true;
+  };
+
+  primec::ir_lowerer::ResultExprInfo structResultInfo;
+  structResultInfo.isResult = true;
+  structResultInfo.errorType = "MyError";
+  CHECK(primec::ir_lowerer::emitResolvedResultWhyCall(
+            resultWhyExpr, structResultInfo, locals, 17, defMap, ops, error) ==
+        EmitResult::Emitted);
+  CHECK(emptyStringCalls == 1);
+  CHECK(inlineCalls == 0);
+
+  primec::ir_lowerer::ResultExprInfo i32ResultInfo;
+  i32ResultInfo.isResult = true;
+  i32ResultInfo.errorType = "AnyInt";
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedResultWhyCall(
+            resultWhyExpr, i32ResultInfo, locals, 17, defMap, ops, error) ==
+        EmitResult::Emitted);
+  CHECK(inlineCalls == 1);
+
+  ops.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
+    returnInfoOut = primec::ir_lowerer::ReturnInfo{};
+    returnInfoOut.kind = ValueKind::Int32;
+    return true;
+  };
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedResultWhyCall(
+            resultWhyExpr, i32ResultInfo, locals, 17, defMap, ops, error) ==
+        EmitResult::Error);
+  CHECK(error == "Result.why requires a string-returning why() for AnyInt");
+
+  ops.resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  ops.valueKindFromTypeName = [](const std::string &) { return ValueKind::Unknown; };
+  ops.getReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  primec::ir_lowerer::ResultExprInfo fileErrorResultInfo;
+  fileErrorResultInfo.isResult = true;
+  fileErrorResultInfo.errorType = "FileError";
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedResultWhyCall(
+            resultWhyExpr, fileErrorResultInfo, locals, 17, defMap, ops, error) ==
+        EmitResult::Emitted);
+  CHECK(fileErrorCalls == 1);
+}
+
 TEST_CASE("ir lowerer flow helpers restore scoped state") {
   std::optional<primec::ir_lowerer::OnErrorHandler> onError;
   primec::ir_lowerer::OnErrorHandler initialHandler;
