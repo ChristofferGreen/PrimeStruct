@@ -54,6 +54,18 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string &resolvedTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut);
 bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
                                            const LocalMap &localsIn,
                                            const std::string &methodName,

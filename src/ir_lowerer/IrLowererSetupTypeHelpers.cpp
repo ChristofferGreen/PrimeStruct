@@ -263,6 +263,50 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   return defIt->second;
 }
 
+const Definition *resolveMethodCallDefinitionFromExpr(
+    const Expr &callExpr,
+    const LocalMap &localsIn,
+    const IsMethodCallClassifierFn &isArrayCountCall,
+    const IsMethodCallClassifierFn &isVectorCapacityCall,
+    const IsMethodCallClassifierFn &isEntryArgsName,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const InferReceiverExprKindFn &inferExprKind,
+    const ResolveReceiverExprPathFn &resolveExprPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    std::string &errorOut) {
+  const Expr *receiver = nullptr;
+  if (!resolveMethodCallReceiverExpr(callExpr,
+                                     localsIn,
+                                     isArrayCountCall,
+                                     isVectorCapacityCall,
+                                     isEntryArgsName,
+                                     receiver,
+                                     errorOut)) {
+    return nullptr;
+  }
+  if (receiver == nullptr) {
+    return nullptr;
+  }
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  if (!resolveMethodReceiverTarget(*receiver,
+                                   localsIn,
+                                   callExpr.name,
+                                   importAliases,
+                                   structNames,
+                                   inferExprKind,
+                                   resolveExprPath,
+                                   typeName,
+                                   resolvedTypePath,
+                                   errorOut)) {
+    return nullptr;
+  }
+  return resolveMethodDefinitionFromReceiverTarget(
+      callExpr.name, typeName, resolvedTypePath, defMap, errorOut);
+}
+
 bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
                                            const LocalMap &localsIn,
                                            const std::string &methodName,

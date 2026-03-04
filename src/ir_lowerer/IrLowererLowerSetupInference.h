@@ -9,34 +9,17 @@
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &localsIn) -> const Definition * {
-    const Expr *receiver = nullptr;
-    if (!resolveMethodCallReceiverExpr(callExpr,
-                                       localsIn,
-                                       isArrayCountCall,
-                                       isVectorCapacityCall,
-                                       isEntryArgsName,
-                                       receiver,
-                                       error)) {
-      return nullptr;
-    }
-    if (receiver == nullptr) {
-      return nullptr;
-    }
-    std::string typeName;
-    std::string resolvedTypePath;
-    if (!resolveMethodReceiverTarget(*receiver,
-                                     localsIn,
-                                     callExpr.name,
-                                     importAliases,
-                                     structNames,
-                                     inferExprKind,
-                                     resolveExprPath,
-                                     typeName,
-                                     resolvedTypePath,
-                                     error)) {
-      return nullptr;
-    }
-    return resolveMethodDefinitionFromReceiverTarget(callExpr.name, typeName, resolvedTypePath, defMap, error);
+    return resolveMethodCallDefinitionFromExpr(callExpr,
+                                               localsIn,
+                                               isArrayCountCall,
+                                               isVectorCapacityCall,
+                                               isEntryArgsName,
+                                               importAliases,
+                                               structNames,
+                                               inferExprKind,
+                                               resolveExprPath,
+                                               defMap,
+                                               error);
   };
 
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
