@@ -29,7 +29,8 @@
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
 
-  auto internString = ir_lowerer::makeInternLowererString(stringTable);
+  const auto stringLiteralHelpers = ir_lowerer::makeStringLiteralHelperContext(stringTable, error);
+  auto internString = stringLiteralHelpers.internString;
 
   const auto runtimeErrorEmitters = ir_lowerer::makeRuntimeErrorEmitters(function, internString);
   auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
@@ -54,7 +55,7 @@
   auto isArrayCountCall = countAccessClassifiers.isArrayCountCall;
   auto isVectorCapacityCall = countAccessClassifiers.isVectorCapacityCall;
 
-  auto resolveStringTableTarget = ir_lowerer::makeResolveStringTableTarget(stringTable, internString, error);
+  auto resolveStringTableTarget = stringLiteralHelpers.resolveStringTableTarget;
 
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 

@@ -29,6 +29,13 @@ bool parseLowererStringLiteral(const std::string &text, std::string &decoded, st
   return true;
 }
 
+StringLiteralHelperContext makeStringLiteralHelperContext(std::vector<std::string> &stringTable, std::string &error) {
+  StringLiteralHelperContext context;
+  context.internString = makeInternLowererString(stringTable);
+  context.resolveStringTableTarget = makeResolveStringTableTarget(stringTable, context.internString, error);
+  return context;
+}
+
 InternStringLiteralFn makeInternLowererString(std::vector<std::string> &stringTable) {
   return [&stringTable](const std::string &text) {
     return internLowererString(text, stringTable);

@@ -3339,6 +3339,39 @@ TEST_CASE("ir lowerer string literal helper builds string table target resolver"
   CHECK(length == 5);
 }
 
+TEST_CASE("ir lowerer string literal helper builds bundled context") {
+  std::vector<std::string> stringTable;
+  std::string error;
+  auto helpers = primec::ir_lowerer::makeStringLiteralHelperContext(stringTable, error);
+
+  CHECK(helpers.internString("hello") == 0);
+  CHECK(helpers.internString("hello") == 0);
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::StringLiteral;
+  literalExpr.stringValue = "\"hello\"utf8";
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  REQUIRE(helpers.resolveStringTableTarget(literalExpr, primec::ir_lowerer::LocalMap{}, stringIndex, length));
+  CHECK(stringIndex == 0);
+  CHECK(length == 5);
+  REQUIRE(stringTable.size() == 1);
+  CHECK(stringTable[0] == "hello");
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo local;
+  local.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  local.stringSource = primec::ir_lowerer::LocalInfo::StringSource::TableIndex;
+  local.stringIndex = -1;
+  locals.emplace("bad", local);
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "bad";
+  CHECK_FALSE(helpers.resolveStringTableTarget(nameExpr, locals, stringIndex, length));
+  CHECK(error == "native backend missing string table data for: bad");
+}
+
 TEST_CASE("ir lowerer string literal helper reports table-target diagnostics") {
   std::vector<std::string> stringTable;
   auto internString = [&](const std::string &text) {
