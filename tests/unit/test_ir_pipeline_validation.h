@@ -800,6 +800,199 @@ TEST_CASE("ir lowerer struct type helpers resolve field slot from layout") {
       "/pkg/Missing", "nested", resolveStructSlotFields, out));
 }
 
+TEST_CASE("ir lowerer struct type helpers resolve struct slot layouts from definition fields") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  auto collectStructLayoutFields = [](const std::string &structPath,
+                                      std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+    out.clear();
+    if (structPath == "/pkg/Inner") {
+      out.push_back({"x", "i32", "", false});
+      return true;
+    }
+    if (structPath == "/pkg/Outer") {
+      out.push_back({"id", "i64", "", false});
+      out.push_back({"payload", "uninitialized", "Inner", false});
+      out.push_back({"skipStatic", "i32", "", true});
+      return true;
+    }
+    return false;
+  };
+  auto resolveDefinitionNamespacePrefix = [](const std::string &structPath, std::string &namespacePrefixOut) {
+    if (structPath == "/pkg/Inner" || structPath == "/pkg/Outer") {
+      namespacePrefixOut = "/pkg";
+      return true;
+    }
+    return false;
+  };
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &namespacePrefix,
+                                  std::string &resolvedOut) {
+    if (namespacePrefix == "/pkg" && typeName == "Inner") {
+      resolvedOut = "/pkg/Inner";
+      return true;
+    }
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    if (typeName == "i64") {
+      return ValueKind::Int64;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields("/pkg/Outer",
+                                                                           collectStructLayoutFields,
+                                                                           resolveDefinitionNamespacePrefix,
+                                                                           resolveStructTypeName,
+                                                                           valueKindFromTypeName,
+                                                                           layoutCache,
+                                                                           layoutStack,
+                                                                           layout,
+                                                                           error));
+  CHECK(error.empty());
+  CHECK(layout.structPath == "/pkg/Outer");
+  CHECK(layout.totalSlots == 4);
+  REQUIRE(layout.fields.size() == 2);
+  CHECK(layout.fields[0].name == "id");
+  CHECK(layout.fields[0].slotOffset == 1);
+  CHECK(layout.fields[0].slotCount == 1);
+  CHECK(layout.fields[0].valueKind == ValueKind::Int64);
+  CHECK(layout.fields[1].name == "payload");
+  CHECK(layout.fields[1].slotOffset == 2);
+  CHECK(layout.fields[1].slotCount == 2);
+  CHECK(layout.fields[1].structPath == "/pkg/Inner");
+  CHECK(layoutCache.count("/pkg/Outer") == 1);
+  CHECK(layoutCache.count("/pkg/Inner") == 1);
+  CHECK(layoutStack.empty());
+
+  primec::ir_lowerer::StructSlotFieldInfo slot;
+  REQUIRE(primec::ir_lowerer::resolveStructFieldSlotFromDefinitionFields("/pkg/Outer",
+                                                                          "payload",
+                                                                          collectStructLayoutFields,
+                                                                          resolveDefinitionNamespacePrefix,
+                                                                          resolveStructTypeName,
+                                                                          valueKindFromTypeName,
+                                                                          layoutCache,
+                                                                          layoutStack,
+                                                                          slot,
+                                                                          error));
+  CHECK(slot.name == "payload");
+  CHECK(slot.slotOffset == 2);
+  CHECK(slot.slotCount == 2);
+  CHECK(slot.structPath == "/pkg/Inner");
+}
+
+TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnostics") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  auto resolveDefinitionNamespacePrefix = [](const std::string &structPath, std::string &namespacePrefixOut) {
+    if (structPath.rfind("/pkg/", 0) == 0) {
+      namespacePrefixOut = "/pkg";
+      return true;
+    }
+    return false;
+  };
+  auto resolveStructTypeName = [](const std::string &typeName,
+                                  const std::string &namespacePrefix,
+                                  std::string &resolvedOut) {
+    if (namespacePrefix == "/pkg" && typeName == "Cycle") {
+      resolvedOut = "/pkg/Cycle";
+      return true;
+    }
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    return ValueKind::Unknown;
+  };
+
+  {
+    auto collectStructLayoutFields = [](const std::string &structPath,
+                                        std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+      out.clear();
+      if (structPath == "/pkg/BadUninit") {
+        out.push_back({"slot", "uninitialized", "", false});
+        return true;
+      }
+      return false;
+    };
+    primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+    std::unordered_set<std::string> layoutStack;
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    std::string error;
+    CHECK_FALSE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields("/pkg/BadUninit",
+                                                                                 collectStructLayoutFields,
+                                                                                 resolveDefinitionNamespacePrefix,
+                                                                                 resolveStructTypeName,
+                                                                                 valueKindFromTypeName,
+                                                                                 layoutCache,
+                                                                                 layoutStack,
+                                                                                 layout,
+                                                                                 error));
+    CHECK(error == "uninitialized requires a template argument on /pkg/BadUninit");
+  }
+
+  {
+    auto collectStructLayoutFields = [](const std::string &structPath,
+                                        std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+      out.clear();
+      if (structPath == "/pkg/BadTemplate") {
+        out.push_back({"slot", "array", "i32", false});
+        return true;
+      }
+      return false;
+    };
+    primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+    std::unordered_set<std::string> layoutStack;
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    std::string error;
+    CHECK_FALSE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields("/pkg/BadTemplate",
+                                                                                 collectStructLayoutFields,
+                                                                                 resolveDefinitionNamespacePrefix,
+                                                                                 resolveStructTypeName,
+                                                                                 valueKindFromTypeName,
+                                                                                 layoutCache,
+                                                                                 layoutStack,
+                                                                                 layout,
+                                                                                 error));
+    CHECK(error == "native backend does not support templated struct fields on /pkg/BadTemplate");
+  }
+
+  {
+    auto collectStructLayoutFields = [](const std::string &structPath,
+                                        std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+      out.clear();
+      if (structPath == "/pkg/Cycle") {
+        out.push_back({"next", "Cycle", "", false});
+        return true;
+      }
+      return false;
+    };
+    primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+    std::unordered_set<std::string> layoutStack;
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    std::string error;
+    CHECK_FALSE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields("/pkg/Cycle",
+                                                                                 collectStructLayoutFields,
+                                                                                 resolveDefinitionNamespacePrefix,
+                                                                                 resolveStructTypeName,
+                                                                                 valueKindFromTypeName,
+                                                                                 layoutCache,
+                                                                                 layoutStack,
+                                                                                 layout,
+                                                                                 error));
+    CHECK(error == "recursive struct layout not supported: /pkg/Cycle");
+  }
+}
+
 TEST_CASE("ir lowerer struct type helpers apply struct value info") {
   auto resolveStruct = [](const std::string &typeName,
                           const std::string &namespacePrefix,

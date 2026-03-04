@@ -169,6 +169,138 @@ bool resolveStructFieldSlotFromLayout(const std::string &structPath,
   return resolveStructSlotFieldByName(fields, fieldName, out);
 }
 
+bool resolveStructSlotLayoutFromDefinitionFields(
+    const std::string &structPath,
+    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ResolveDefinitionNamespacePrefixByPathFn &resolveDefinitionNamespacePrefix,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotLayoutInfo &out,
+    std::string &error) {
+  auto cached = layoutCache.find(structPath);
+  if (cached != layoutCache.end()) {
+    out = cached->second;
+    return true;
+  }
+  if (!layoutStack.insert(structPath).second) {
+    error = "recursive struct layout not supported: " + structPath;
+    return false;
+  }
+
+  std::string namespacePrefix;
+  if (!resolveDefinitionNamespacePrefix(structPath, namespacePrefix)) {
+    error = "native backend cannot resolve struct layout: " + structPath;
+    layoutStack.erase(structPath);
+    return false;
+  }
+
+  std::vector<StructLayoutFieldInfo> fields;
+  if (!collectStructLayoutFields(structPath, fields)) {
+    error = "native backend cannot resolve struct fields: " + structPath;
+    layoutStack.erase(structPath);
+    return false;
+  }
+
+  StructSlotLayoutInfo layout;
+  layout.structPath = structPath;
+  int32_t offset = 1;
+  layout.fields.reserve(fields.size());
+  for (const auto &field : fields) {
+    if (field.isStatic) {
+      continue;
+    }
+    StructLayoutFieldInfo binding = field;
+    if (binding.typeName == "uninitialized") {
+      if (binding.typeTemplateArg.empty()) {
+        error = "uninitialized requires a template argument on " + structPath;
+        layoutStack.erase(structPath);
+        return false;
+      }
+      std::string base;
+      std::string arg;
+      if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
+        binding.typeName = base;
+        binding.typeTemplateArg = arg;
+      } else {
+        binding.typeName = binding.typeTemplateArg;
+        binding.typeTemplateArg.clear();
+      }
+    }
+    if (!binding.typeTemplateArg.empty()) {
+      error = "native backend does not support templated struct fields on " + structPath;
+      layoutStack.erase(structPath);
+      return false;
+    }
+
+    StructSlotFieldInfo info;
+    info.name = binding.name;
+    info.slotOffset = offset;
+    LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      info.valueKind = kind;
+      info.slotCount = 1;
+    } else {
+      std::string nestedStruct;
+      if (!resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
+        error = "native backend does not support struct field type: " + binding.typeName + " on " +
+                structPath;
+        layoutStack.erase(structPath);
+        return false;
+      }
+      StructSlotLayoutInfo nestedLayout;
+      if (!resolveStructSlotLayoutFromDefinitionFields(nestedStruct,
+                                                       collectStructLayoutFields,
+                                                       resolveDefinitionNamespacePrefix,
+                                                       resolveStructTypeName,
+                                                       valueKindFromTypeName,
+                                                       layoutCache,
+                                                       layoutStack,
+                                                       nestedLayout,
+                                                       error)) {
+        layoutStack.erase(structPath);
+        return false;
+      }
+      info.structPath = nestedStruct;
+      info.slotCount = nestedLayout.totalSlots;
+    }
+    layout.fields.push_back(info);
+    offset += info.slotCount;
+  }
+  layout.totalSlots = offset;
+  layoutStack.erase(structPath);
+  layoutCache.emplace(structPath, layout);
+  out = std::move(layout);
+  return true;
+}
+
+bool resolveStructFieldSlotFromDefinitionFields(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ResolveDefinitionNamespacePrefixByPathFn &resolveDefinitionNamespacePrefix,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotFieldInfo &out,
+    std::string &error) {
+  StructSlotLayoutInfo layout;
+  if (!resolveStructSlotLayoutFromDefinitionFields(structPath,
+                                                   collectStructLayoutFields,
+                                                   resolveDefinitionNamespacePrefix,
+                                                   resolveStructTypeName,
+                                                   valueKindFromTypeName,
+                                                   layoutCache,
+                                                   layoutStack,
+                                                   layout,
+                                                   error)) {
+    return false;
+  }
+  return resolveStructSlotFieldByName(layout.fields, fieldName, out);
+}
+
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {

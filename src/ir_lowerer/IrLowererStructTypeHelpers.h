@@ -40,10 +40,28 @@ struct StructSlotFieldInfo {
   std::string structPath;
 };
 
+struct StructLayoutFieldInfo {
+  std::string name;
+  std::string typeName;
+  std::string typeTemplateArg;
+  bool isStatic = false;
+};
+
+struct StructSlotLayoutInfo {
+  std::string structPath;
+  int32_t totalSlots = 0;
+  std::vector<StructSlotFieldInfo> fields;
+};
+
 using ResolveStructFieldSlotFn =
     std::function<bool(const std::string &, const std::string &, StructSlotFieldInfo &)>;
 using ResolveStructSlotFieldsFn =
     std::function<bool(const std::string &, std::vector<StructSlotFieldInfo> &)>;
+using CollectStructLayoutFieldsFn =
+    std::function<bool(const std::string &, std::vector<StructLayoutFieldInfo> &)>;
+using ResolveDefinitionNamespacePrefixByPathFn =
+    std::function<bool(const std::string &, std::string &)>;
+using StructSlotLayoutCache = std::unordered_map<std::string, StructSlotLayoutInfo>;
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
@@ -74,6 +92,27 @@ bool resolveStructFieldSlotFromLayout(const std::string &structPath,
                                       const std::string &fieldName,
                                       const ResolveStructSlotFieldsFn &resolveStructSlotFields,
                                       StructSlotFieldInfo &out);
+bool resolveStructSlotLayoutFromDefinitionFields(
+    const std::string &structPath,
+    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ResolveDefinitionNamespacePrefixByPathFn &resolveDefinitionNamespacePrefix,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotLayoutInfo &out,
+    std::string &error);
+bool resolveStructFieldSlotFromDefinitionFields(
+    const std::string &structPath,
+    const std::string &fieldName,
+    const CollectStructLayoutFieldsFn &collectStructLayoutFields,
+    const ResolveDefinitionNamespacePrefixByPathFn &resolveDefinitionNamespacePrefix,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    StructSlotFieldInfo &out,
+    std::string &error);
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info);

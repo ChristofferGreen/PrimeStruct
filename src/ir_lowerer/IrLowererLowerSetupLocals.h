@@ -168,11 +168,6 @@
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
-  struct StructSlotLayout {
-    std::string structPath;
-    int32_t totalSlots = 0;
-    std::vector<StructSlotFieldInfo> fields;
-  };
 
   auto collectStructArrayFields = [&](const std::string &structPath,
                                       std::vector<ir_lowerer::StructArrayFieldInfo> &out) -> bool {
@@ -202,110 +197,65 @@
         expr, resolveStructTypeName, collectStructArrayFields, valueKindFromTypeName, info);
   };
 
-  std::unordered_map<std::string, StructSlotLayout> structSlotLayoutCache;
-  std::unordered_set<std::string> structSlotLayoutStack;
-  std::function<bool(const std::string &, StructSlotLayout &)> resolveStructSlotLayout;
-  resolveStructSlotLayout = [&](const std::string &structPath, StructSlotLayout &out) -> bool {
-    auto cached = structSlotLayoutCache.find(structPath);
-    if (cached != structSlotLayoutCache.end()) {
-      out = cached->second;
-      return true;
-    }
-    if (!structSlotLayoutStack.insert(structPath).second) {
-      error = "recursive struct layout not supported: " + structPath;
-      return false;
-    }
-    const Definition *structDef = ir_lowerer::resolveDefinitionByPath(defMap, structPath);
-    if (structDef == nullptr) {
-      error = "native backend cannot resolve struct layout: " + structPath;
-      structSlotLayoutStack.erase(structPath);
-      return false;
-    }
+  auto collectStructLayoutFields = [&](const std::string &structPath,
+                                       std::vector<ir_lowerer::StructLayoutFieldInfo> &out) -> bool {
+    out.clear();
     auto fieldIt = structFieldInfoByName.find(structPath);
     if (fieldIt == structFieldInfoByName.end()) {
-      error = "native backend cannot resolve struct fields: " + structPath;
-      structSlotLayoutStack.erase(structPath);
       return false;
     }
-    StructSlotLayout layout;
-    layout.structPath = structPath;
-    int32_t offset = 1;
-    layout.fields.reserve(fieldIt->second.size());
-    const std::string &namespacePrefix = structDef->namespacePrefix;
+    out.reserve(fieldIt->second.size());
     for (const auto &field : fieldIt->second) {
-      if (field.isStatic) {
-        continue;
-      }
-      FieldBinding binding = field.binding;
-      if (binding.typeName == "uninitialized") {
-        if (binding.typeTemplateArg.empty()) {
-          error = "uninitialized requires a template argument on " + structPath;
-          structSlotLayoutStack.erase(structPath);
-          return false;
-        }
-        std::string base;
-        std::string arg;
-        if (splitTemplateTypeName(binding.typeTemplateArg, base, arg)) {
-          binding.typeName = base;
-          binding.typeTemplateArg = arg;
-        } else {
-          binding.typeName = binding.typeTemplateArg;
-          binding.typeTemplateArg.clear();
-        }
-      }
-      if (!binding.typeTemplateArg.empty()) {
-        error = "native backend does not support templated struct fields on " + structPath;
-        structSlotLayoutStack.erase(structPath);
-        return false;
-      }
-      StructSlotFieldInfo info;
+      ir_lowerer::StructLayoutFieldInfo info;
       info.name = field.name;
-      info.slotOffset = offset;
-      LocalInfo::ValueKind kind = valueKindFromTypeName(binding.typeName);
-      if (kind != LocalInfo::ValueKind::Unknown) {
-        info.valueKind = kind;
-        info.slotCount = 1;
-      } else {
-        std::string nestedStruct;
-        if (!resolveStructTypeName(binding.typeName, namespacePrefix, nestedStruct)) {
-          error = "native backend does not support struct field type: " + binding.typeName + " on " +
-                  structPath;
-          structSlotLayoutStack.erase(structPath);
-          return false;
-        }
-        StructSlotLayout nestedLayout;
-        if (!resolveStructSlotLayout(nestedStruct, nestedLayout)) {
-          structSlotLayoutStack.erase(structPath);
-          return false;
-        }
-        info.structPath = nestedStruct;
-        info.slotCount = nestedLayout.totalSlots;
-      }
-      layout.fields.push_back(info);
-      offset += info.slotCount;
+      info.typeName = field.binding.typeName;
+      info.typeTemplateArg = field.binding.typeTemplateArg;
+      info.isStatic = field.isStatic;
+      out.push_back(std::move(info));
     }
-    layout.totalSlots = offset;
-    structSlotLayoutStack.erase(structPath);
-    structSlotLayoutCache.emplace(structPath, layout);
-    out = std::move(layout);
     return true;
+  };
+
+  auto resolveDefinitionNamespacePrefix =
+      [&](const std::string &structPath, std::string &namespacePrefixOut) -> bool {
+    const Definition *structDef = ir_lowerer::resolveDefinitionByPath(defMap, structPath);
+    if (structDef == nullptr) {
+      return false;
+    }
+    namespacePrefixOut = structDef->namespacePrefix;
+    return true;
+  };
+
+  ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
+  std::unordered_set<std::string> structSlotLayoutStack;
+  using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
+  auto resolveStructSlotLayout = [&](const std::string &structPath, StructSlotLayout &out) -> bool {
+    return ir_lowerer::resolveStructSlotLayoutFromDefinitionFields(
+        structPath,
+        collectStructLayoutFields,
+        resolveDefinitionNamespacePrefix,
+        resolveStructTypeName,
+        valueKindFromTypeName,
+        structSlotLayoutCache,
+        structSlotLayoutStack,
+        out,
+        error);
   };
 
   auto resolveStructFieldSlot = [&](const std::string &structPath,
                                     const std::string &fieldName,
                                     StructSlotFieldInfo &out) -> bool {
-    return ir_lowerer::resolveStructFieldSlotFromLayout(
+    return ir_lowerer::resolveStructFieldSlotFromDefinitionFields(
         structPath,
         fieldName,
-        [&](const std::string &candidateStructPath, std::vector<StructSlotFieldInfo> &fieldsOut) {
-          StructSlotLayout layout;
-          if (!resolveStructSlotLayout(candidateStructPath, layout)) {
-            return false;
-          }
-          fieldsOut = layout.fields;
-          return true;
-        },
-        out);
+        collectStructLayoutFields,
+        resolveDefinitionNamespacePrefix,
+        resolveStructTypeName,
+        valueKindFromTypeName,
+        structSlotLayoutCache,
+        structSlotLayoutStack,
+        out,
+        error);
   };
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
