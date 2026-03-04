@@ -456,6 +456,67 @@ TEST_CASE("ir lowerer on_error helpers wire definition handlers from call adapte
   CHECK_FALSE(onErrorByDef.at("/handler").has_value());
 }
 
+TEST_CASE("ir lowerer on_error helpers build bundled entry call and on_error setup") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition calleeDef;
+  calleeDef.fullPath = "/callee";
+  calleeDef.namespacePrefix = "";
+  program.definitions.push_back(calleeDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.namespacePrefix = "";
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  onError.arguments = {"1i32"};
+  entryDef.transforms.push_back(onError);
+  primec::Expr tailCall;
+  tailCall.kind = primec::Expr::Kind::Call;
+  tailCall.name = "callee";
+  entryDef.statements = {tailCall};
+  program.definitions.push_back(entryDef);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/handler", &program.definitions[0]},
+      {"/callee", &program.definitions[1]},
+      {"/main", &program.definitions[2]},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {};
+
+  primec::ir_lowerer::EntryCallOnErrorSetup setup;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::buildEntryCallOnErrorSetup(
+      program, program.definitions[2], true, defMap, importAliases, setup, error));
+  CHECK(error.empty());
+  CHECK(setup.hasTailExecution);
+  CHECK(setup.callResolutionAdapters.resolveExprPath(tailCall) == "/callee");
+  CHECK(setup.callResolutionAdapters.definitionExists("/callee"));
+
+  REQUIRE(setup.onErrorByDefinition.count("/main") == 1);
+  REQUIRE(setup.onErrorByDefinition.at("/main").has_value());
+  CHECK(setup.onErrorByDefinition.at("/main")->handlerPath == "/handler");
+  REQUIRE(setup.onErrorByDefinition.at("/main")->boundArgs.size() == 1);
+  CHECK(setup.onErrorByDefinition.at("/main")->boundArgs.front().literalValue == 1);
+
+  primec::Program badProgram = program;
+  badProgram.definitions[2].transforms.front().templateArgs[1] = "missing";
+  const std::unordered_map<std::string, const primec::Definition *> badDefMap = {
+      {"/handler", &badProgram.definitions[0]},
+      {"/callee", &badProgram.definitions[1]},
+      {"/main", &badProgram.definitions[2]},
+  };
+  CHECK_FALSE(primec::ir_lowerer::buildEntryCallOnErrorSetup(
+      badProgram, badProgram.definitions[2], true, badDefMap, importAliases, setup, error));
+  CHECK(error == "unknown on_error handler: /missing");
+}
+
 TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   primec::Transform onError;
   onError.name = "on_error";

@@ -13,6 +13,11 @@
 namespace primec::ir_lowerer {
 
 using OnErrorByDefinition = std::unordered_map<std::string, std::optional<OnErrorHandler>>;
+struct EntryCallOnErrorSetup {
+  CallResolutionAdapters callResolutionAdapters;
+  bool hasTailExecution = false;
+  OnErrorByDefinition onErrorByDefinition;
+};
 
 bool parseTransformArgumentExpr(const std::string &text,
                                 const std::string &namespacePrefix,
@@ -37,5 +42,12 @@ bool buildOnErrorByDefinitionFromCallResolutionAdapters(
     const CallResolutionAdapters &callResolutionAdapters,
     OnErrorByDefinition &out,
     std::string &error);
+bool buildEntryCallOnErrorSetup(const Program &program,
+                                const Definition &entryDef,
+                                bool definitionReturnsVoid,
+                                const std::unordered_map<std::string, const Definition *> &defMap,
+                                const std::unordered_map<std::string, std::string> &importAliases,
+                                EntryCallOnErrorSetup &out,
+                                std::string &error);
 
 } // namespace primec::ir_lowerer

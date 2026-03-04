@@ -61,18 +61,17 @@
 
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
-  const auto entryCallResolutionSetup =
-      ir_lowerer::buildEntryCallResolutionSetup(*entryDef, returnsVoid, defMap, importAliases);
-  const auto &callResolutionAdapters = entryCallResolutionSetup.adapters;
-  auto resolveExprPath = callResolutionAdapters.resolveExprPath;
-  if (entryCallResolutionSetup.hasTailExecution) {
-    function.metadata.instrumentationFlags |= InstrumentationTailExecution;
-  }
-  OnErrorByDefinition onErrorByDef;
-  if (!ir_lowerer::buildOnErrorByDefinitionFromCallResolutionAdapters(
-          program, callResolutionAdapters, onErrorByDef, error)) {
+  ir_lowerer::EntryCallOnErrorSetup entryCallOnErrorSetup;
+  if (!ir_lowerer::buildEntryCallOnErrorSetup(
+          program, *entryDef, returnsVoid, defMap, importAliases, entryCallOnErrorSetup, error)) {
     return false;
   }
+  const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
+  auto resolveExprPath = callResolutionAdapters.resolveExprPath;
+  if (entryCallOnErrorSetup.hasTailExecution) {
+    function.metadata.instrumentationFlags |= InstrumentationTailExecution;
+  }
+  OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
   const auto setupMathResolvers = ir_lowerer::makeSetupMathResolvers(hasMathImport);
   auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;

@@ -95,4 +95,23 @@ bool buildOnErrorByDefinitionFromCallResolutionAdapters(
                                   error);
 }
 
+bool buildEntryCallOnErrorSetup(const Program &program,
+                                const Definition &entryDef,
+                                bool definitionReturnsVoid,
+                                const std::unordered_map<std::string, const Definition *> &defMap,
+                                const std::unordered_map<std::string, std::string> &importAliases,
+                                EntryCallOnErrorSetup &out,
+                                std::string &error) {
+  out = EntryCallOnErrorSetup{};
+  const EntryCallResolutionSetup entryCallResolutionSetup = buildEntryCallResolutionSetup(
+      entryDef, definitionReturnsVoid, defMap, importAliases);
+  out.callResolutionAdapters = entryCallResolutionSetup.adapters;
+  out.hasTailExecution = entryCallResolutionSetup.hasTailExecution;
+  if (!buildOnErrorByDefinitionFromCallResolutionAdapters(
+          program, out.callResolutionAdapters, out.onErrorByDefinition, error)) {
+    return false;
+  }
+  return true;
+}
+
 } // namespace primec::ir_lowerer
