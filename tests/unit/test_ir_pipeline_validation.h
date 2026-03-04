@@ -12790,6 +12790,75 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer result helpers compose Result.why expression ops") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t tempCounter = 5;
+  int internCalls = 0;
+  int allocCalls = 0;
+
+  const primec::ir_lowerer::ResultWhyExprOps exprOps = primec::ir_lowerer::makeResultWhyExprOps(
+      17,
+      "/pkg",
+      tempCounter,
+      [&](const std::string &value) {
+        ++internCalls;
+        CHECK(value.empty());
+        return 23;
+      },
+      [&]() {
+        ++allocCalls;
+        return 41;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+
+  CHECK(exprOps.emitEmptyString());
+  CHECK(internCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].imm == 23);
+
+  primec::ir_lowerer::LocalMap locals;
+  const primec::Expr errorExpr = exprOps.makeErrorValueExpr(locals, ValueKind::Int32);
+  CHECK(errorExpr.kind == primec::Expr::Kind::Name);
+  CHECK(errorExpr.name == "__result_why_err_5");
+  CHECK(errorExpr.namespacePrefix == "/pkg");
+  CHECK(tempCounter == 6);
+  auto errorIt = locals.find("__result_why_err_5");
+  REQUIRE(errorIt != locals.end());
+  CHECK(errorIt->second.index == 17);
+  CHECK(errorIt->second.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(errorIt->second.valueKind == ValueKind::Int32);
+
+  instructions.clear();
+  const primec::Expr boolExpr = exprOps.makeBoolErrorExpr(locals);
+  CHECK(boolExpr.kind == primec::Expr::Kind::Name);
+  CHECK(boolExpr.name == "__result_why_bool_6");
+  CHECK(boolExpr.namespacePrefix == "/pkg");
+  CHECK(tempCounter == 7);
+  CHECK(allocCalls == 1);
+  auto boolIt = locals.find("__result_why_bool_6");
+  REQUIRE(boolIt != locals.end());
+  CHECK(boolIt->second.index == 41);
+  CHECK(boolIt->second.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(boolIt->second.valueKind == ValueKind::Bool);
+
+  REQUIRE(instructions.size() == 6);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 17);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == 0);
+  CHECK(instructions[2].op == primec::IrOpcode::CmpEqI64);
+  CHECK(instructions[2].imm == 0);
+  CHECK(instructions[3].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[3].imm == 0);
+  CHECK(instructions[4].op == primec::IrOpcode::CmpEqI64);
+  CHECK(instructions[4].imm == 0);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[5].imm == 41);
+}
+
 TEST_CASE("ir lowerer result helpers compose Result.why call ops") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

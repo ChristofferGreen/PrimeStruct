@@ -415,29 +415,13 @@
             return false;
           }
 
-          auto emitEmptyString = [&]() -> bool {
-            return ir_lowerer::emitResultWhyEmptyString(
-                [&](const std::string &value) { return internString(value); },
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-          };
-
-          auto makeErrorValueExpr = [&](LocalMap &callLocals,
-                                        LocalInfo::ValueKind valueKind) -> Expr {
-            const int32_t tempOrdinal = onErrorTempCounter++;
-            return ir_lowerer::makeResultWhyErrorValueExpr(
-                errorLocal, valueKind, expr.namespacePrefix, tempOrdinal, callLocals);
-          };
-
-          auto makeBoolErrorExpr = [&](LocalMap &callLocals) -> Expr {
-            const int32_t tempOrdinal = onErrorTempCounter++;
-            return ir_lowerer::makeResultWhyBoolErrorExpr(
-                errorLocal,
-                expr.namespacePrefix,
-                tempOrdinal,
-                callLocals,
-                [&]() { return allocTempLocal(); },
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-          };
+          const ir_lowerer::ResultWhyExprOps resultWhyExprOps = ir_lowerer::makeResultWhyExprOps(
+              errorLocal,
+              expr.namespacePrefix,
+              onErrorTempCounter,
+              [&](const std::string &value) { return internString(value); },
+              [&]() { return allocTempLocal(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
           const ir_lowerer::ResultWhyCallOps resultWhyOps = ir_lowerer::makeResultWhyCallOps(
               [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
@@ -452,14 +436,14 @@
               },
               [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
               [&](LocalMap &callLocals, LocalInfo::ValueKind valueKind) {
-                return makeErrorValueExpr(callLocals, valueKind);
+                return resultWhyExprOps.makeErrorValueExpr(callLocals, valueKind);
               },
-              [&](LocalMap &callLocals) { return makeBoolErrorExpr(callLocals); },
+              [&](LocalMap &callLocals) { return resultWhyExprOps.makeBoolErrorExpr(callLocals); },
               [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
                 return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
               },
               [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
-              [&]() { return emitEmptyString(); });
+              [&]() { return resultWhyExprOps.emitEmptyString(); });
           const auto resultWhyResult = ir_lowerer::emitResolvedResultWhyCall(
               expr, resultInfo, localsIn, errorLocal, defMap, resultWhyOps, error);
           return resultWhyResult == ir_lowerer::ResultWhyCallEmitResult::Emitted;

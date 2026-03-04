@@ -35,6 +35,11 @@ using LookupReturnInfoFn = std::function<bool(const std::string &, ReturnInfo &)
 using ResolveResultExprInfoWithLocalsFn =
     std::function<bool(const Expr &, const LocalMap &, ResultExprInfo &)>;
 struct ResultWhyCallOps;
+struct ResultWhyExprOps {
+  std::function<bool()> emitEmptyString;
+  std::function<Expr(LocalMap &, LocalInfo::ValueKind)> makeErrorValueExpr;
+  std::function<Expr(LocalMap &)> makeBoolErrorExpr;
+};
 
 bool resolveResultExprInfo(const Expr &expr,
                            const LookupLocalResultInfoFn &lookupLocal,
@@ -65,6 +70,13 @@ bool emitResultWhyLocalsFromValueExpr(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     int32_t &errorLocalOut);
+ResultWhyExprOps makeResultWhyExprOps(
+    int32_t errorLocal,
+    const std::string &namespacePrefix,
+    int32_t &onErrorTempCounter,
+    const std::function<int32_t(const std::string &)> &internString,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 ResultWhyCallOps makeResultWhyCallOps(
     const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,

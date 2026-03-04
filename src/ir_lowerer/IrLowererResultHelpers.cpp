@@ -162,6 +162,40 @@ bool emitResultWhyLocalsFromValueExpr(
   return true;
 }
 
+ResultWhyExprOps makeResultWhyExprOps(
+    int32_t errorLocal,
+    const std::string &namespacePrefix,
+    int32_t &onErrorTempCounter,
+    const std::function<int32_t(const std::string &)> &internString,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  ResultWhyExprOps ops;
+  int32_t *tempCounter = &onErrorTempCounter;
+  ops.emitEmptyString = [internString, emitInstruction]() {
+    return emitResultWhyEmptyString(internString, emitInstruction);
+  };
+  ops.makeErrorValueExpr =
+      [errorLocal, namespacePrefix, tempCounter](LocalMap &callLocals,
+                                                 LocalInfo::ValueKind valueKind) {
+        const int32_t tempOrdinal = (*tempCounter)++;
+        return makeResultWhyErrorValueExpr(
+            errorLocal, valueKind, namespacePrefix, tempOrdinal, callLocals);
+      };
+  ops.makeBoolErrorExpr =
+      [errorLocal, namespacePrefix, tempCounter, allocTempLocal, emitInstruction](
+          LocalMap &callLocals) {
+        const int32_t tempOrdinal = (*tempCounter)++;
+        return makeResultWhyBoolErrorExpr(
+            errorLocal,
+            namespacePrefix,
+            tempOrdinal,
+            callLocals,
+            allocTempLocal,
+            emitInstruction);
+      };
+  return ops;
+}
+
 ResultWhyCallOps makeResultWhyCallOps(
     const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
