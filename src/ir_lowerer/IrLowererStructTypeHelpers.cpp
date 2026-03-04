@@ -89,6 +89,47 @@ void buildDefinitionMapAndStructNames(
   }
 }
 
+void appendStructLayoutFieldsFromFieldBindings(
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const AppendStructLayoutFieldFn &appendStructLayoutField) {
+  if (!appendStructLayoutField) {
+    return;
+  }
+
+  auto isStaticFieldBinding = [](const Expr &fieldExpr) {
+    for (const auto &transform : fieldExpr.transforms) {
+      if (transform.name == "static") {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (const auto &entry : structFieldInfoByName) {
+    auto defIt = defMap.find(entry.first);
+    if (defIt == defMap.end() || defIt->second == nullptr) {
+      continue;
+    }
+
+    const Definition &structDef = *defIt->second;
+    std::size_t fieldIndex = 0;
+    for (const auto &fieldStmt : structDef.statements) {
+      if (!fieldStmt.isBinding || fieldIndex >= entry.second.size()) {
+        continue;
+      }
+      const auto &field = entry.second[fieldIndex++];
+
+      StructLayoutFieldInfo info;
+      info.name = fieldStmt.name;
+      info.typeName = field.typeName;
+      info.typeTemplateArg = field.typeTemplateArg;
+      info.isStatic = isStaticFieldBinding(fieldStmt);
+      appendStructLayoutField(entry.first, info);
+    }
+  }
+}
+
 std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
     const std::vector<std::string> &imports,
     const std::vector<Definition> &definitions,

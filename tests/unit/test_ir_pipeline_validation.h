@@ -660,6 +660,64 @@ TEST_CASE("ir lowerer struct type helpers build definition map and struct names"
   CHECK(structNames.empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers append layout fields from bindings") {
+  primec::Definition structDef;
+  structDef.fullPath = "/pkg/S";
+
+  primec::Expr firstField;
+  firstField.kind = primec::Expr::Kind::Name;
+  firstField.isBinding = true;
+  firstField.name = "a";
+
+  primec::Expr nonBindingStmt;
+  nonBindingStmt.kind = primec::Expr::Kind::Call;
+  nonBindingStmt.name = "noop";
+
+  primec::Expr secondField;
+  secondField.kind = primec::Expr::Kind::Name;
+  secondField.isBinding = true;
+  secondField.name = "b";
+  primec::Transform staticTransform;
+  staticTransform.name = "static";
+  secondField.transforms.push_back(staticTransform);
+
+  primec::Expr thirdField;
+  thirdField.kind = primec::Expr::Kind::Name;
+  thirdField.isBinding = true;
+  thirdField.name = "c";
+
+  structDef.statements = {firstField, nonBindingStmt, secondField, thirdField};
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/S", &structDef},
+  };
+  const std::unordered_map<std::string, std::vector<primec::ir_lowerer::LayoutFieldBinding>> structFieldInfoByName = {
+      {"/pkg/S", {{"i32", ""}, {"array", "i32"}}},
+      {"/pkg/Missing", {{"i64", ""}}},
+  };
+
+  std::vector<std::pair<std::string, primec::ir_lowerer::StructLayoutFieldInfo>> appended;
+  primec::ir_lowerer::appendStructLayoutFieldsFromFieldBindings(
+      structFieldInfoByName,
+      defMap,
+      [&](const std::string &structPath, const primec::ir_lowerer::StructLayoutFieldInfo &field) {
+        appended.emplace_back(structPath, field);
+      });
+
+  REQUIRE(appended.size() == 2u);
+  CHECK(appended[0].first == "/pkg/S");
+  CHECK(appended[0].second.name == "a");
+  CHECK(appended[0].second.typeName == "i32");
+  CHECK(appended[0].second.typeTemplateArg.empty());
+  CHECK_FALSE(appended[0].second.isStatic);
+
+  CHECK(appended[1].first == "/pkg/S");
+  CHECK(appended[1].second.name == "b");
+  CHECK(appended[1].second.typeName == "array");
+  CHECK(appended[1].second.typeTemplateArg == "i32");
+  CHECK(appended[1].second.isStatic);
+}
+
 TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/Foo",

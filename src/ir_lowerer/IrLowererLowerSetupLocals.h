@@ -28,26 +28,8 @@
       structNames,
       structFieldInfoByName.size(),
       [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
-        for (const auto &entry : structFieldInfoByName) {
-          auto defIt = defMap.find(entry.first);
-          if (defIt == defMap.end() || defIt->second == nullptr) {
-            continue;
-          }
-          const Definition &structDef = *defIt->second;
-          std::size_t fieldIndex = 0;
-          for (const auto &fieldStmt : structDef.statements) {
-            if (!fieldStmt.isBinding || fieldIndex >= entry.second.size()) {
-              continue;
-            }
-            const auto &field = entry.second[fieldIndex++];
-            ir_lowerer::StructLayoutFieldInfo info;
-            info.name = fieldStmt.name;
-            info.typeName = field.typeName;
-            info.typeTemplateArg = field.typeTemplateArg;
-            info.isStatic = ir_lowerer::isStaticField(fieldStmt);
-            appendStructLayoutField(entry.first, info);
-          }
-        }
+        ir_lowerer::appendStructLayoutFieldsFromFieldBindings(
+            structFieldInfoByName, defMap, appendStructLayoutField);
       },
       entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup,
       error)) {

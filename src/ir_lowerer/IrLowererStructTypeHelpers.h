@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -118,6 +119,10 @@ void buildDefinitionMapAndStructNames(
     const std::vector<Definition> &definitions,
     std::unordered_map<std::string, const Definition *> &defMapOut,
     std::unordered_set<std::string> &structNamesOut);
+void appendStructLayoutFieldsFromFieldBindings(
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const AppendStructLayoutFieldFn &appendStructLayoutField);
 std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
     const std::vector<std::string> &imports,
     const std::vector<Definition> &definitions,
