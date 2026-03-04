@@ -713,45 +713,21 @@
           return readbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
         if (isSimpleCallName(expr, "buffer")) {
-          if (expr.templateArgs.size() != 1) {
-            error = "buffer requires exactly one template argument";
-            return false;
-          }
-          if (expr.args.size() != 1) {
-            error = "buffer requires exactly one argument";
-            return false;
-          }
-          if (expr.args.front().kind != Expr::Kind::Literal || expr.args.front().isUnsigned ||
-              expr.args.front().intWidth == 64) {
-            error = "buffer requires constant i32 size";
-            return false;
-          }
-          const int64_t count64 = static_cast<int64_t>(expr.args.front().literalValue);
-          if (count64 < 0 || count64 > std::numeric_limits<int32_t>::max()) {
-            error = "buffer size out of range";
-            return false;
-          }
-          const int32_t count = static_cast<int32_t>(count64);
-          LocalInfo::ValueKind elemKind = valueKindFromTypeName(expr.templateArgs.front());
-          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-            error = "buffer requires numeric/bool element type";
+          ir_lowerer::BufferInitInfo initInfo;
+          if (!ir_lowerer::resolveBufferInitInfo(
+                  expr,
+                  [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
+                  initInfo,
+                  error)) {
             return false;
           }
           const int32_t baseLocal = nextLocal;
           const int32_t headerSlots = 1;
-          nextLocal += headerSlots + count;
-          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(count)});
+          nextLocal += headerSlots + initInfo.count;
+          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(initInfo.count)});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-          IrOpcode zeroOp = IrOpcode::PushI32;
-          if (elemKind == LocalInfo::ValueKind::Int64 || elemKind == LocalInfo::ValueKind::UInt64) {
-            zeroOp = IrOpcode::PushI64;
-          } else if (elemKind == LocalInfo::ValueKind::Float64) {
-            zeroOp = IrOpcode::PushF64;
-          } else if (elemKind == LocalInfo::ValueKind::Float32) {
-            zeroOp = IrOpcode::PushF32;
-          }
-          for (int32_t i = 0; i < count; ++i) {
-            function.instructions.push_back({zeroOp, 0});
+          for (int32_t i = 0; i < initInfo.count; ++i) {
+            function.instructions.push_back({initInfo.zeroOpcode, 0});
             function.instructions.push_back(
                 {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + headerSlots + i)});
           }

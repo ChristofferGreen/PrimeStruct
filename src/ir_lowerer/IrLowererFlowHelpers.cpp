@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -216,6 +217,46 @@ UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
     return UnaryPassthroughCallResult::Error;
   }
   return UnaryPassthroughCallResult::Emitted;
+}
+
+bool resolveBufferInitInfo(const Expr &expr,
+                           const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
+                           BufferInitInfo &out,
+                           std::string &error) {
+  if (expr.templateArgs.size() != 1) {
+    error = "buffer requires exactly one template argument";
+    return false;
+  }
+  if (expr.args.size() != 1) {
+    error = "buffer requires exactly one argument";
+    return false;
+  }
+  if (expr.args.front().kind != Expr::Kind::Literal || expr.args.front().isUnsigned || expr.args.front().intWidth == 64) {
+    error = "buffer requires constant i32 size";
+    return false;
+  }
+  const int64_t count64 = static_cast<int64_t>(expr.args.front().literalValue);
+  if (count64 < 0 || count64 > std::numeric_limits<int32_t>::max()) {
+    error = "buffer size out of range";
+    return false;
+  }
+  const LocalInfo::ValueKind elemKind = resolveValueKind(expr.templateArgs.front());
+  if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
+    error = "buffer requires numeric/bool element type";
+    return false;
+  }
+
+  out.count = static_cast<int32_t>(count64);
+  out.elemKind = elemKind;
+  out.zeroOpcode = IrOpcode::PushI32;
+  if (elemKind == LocalInfo::ValueKind::Int64 || elemKind == LocalInfo::ValueKind::UInt64) {
+    out.zeroOpcode = IrOpcode::PushI64;
+  } else if (elemKind == LocalInfo::ValueKind::Float64) {
+    out.zeroOpcode = IrOpcode::PushF64;
+  } else if (elemKind == LocalInfo::ValueKind::Float32) {
+    out.zeroOpcode = IrOpcode::PushF32;
+  }
+  return true;
 }
 
 } // namespace primec::ir_lowerer

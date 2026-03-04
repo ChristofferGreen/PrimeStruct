@@ -79,5 +79,14 @@ UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
                                                        const char *callName,
                                                        const std::function<bool(const Expr &)> &emitExpr,
                                                        std::string &error);
+struct BufferInitInfo {
+  int32_t count = 0;
+  LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
+  IrOpcode zeroOpcode = IrOpcode::PushI32;
+};
+bool resolveBufferInitInfo(const Expr &expr,
+                           const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
+                           BufferInitInfo &out,
+                           std::string &error);
 
 } // namespace primec::ir_lowerer

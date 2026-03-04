@@ -10083,6 +10083,79 @@ TEST_CASE("ir lowerer flow helpers match and emit unary passthrough calls") {
   CHECK(error == "emit failure");
 }
 
+TEST_CASE("ir lowerer flow helpers resolve buffer init info") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr bufferExpr;
+  bufferExpr.kind = primec::Expr::Kind::Call;
+  bufferExpr.name = "buffer";
+  bufferExpr.templateArgs = {"i64"};
+
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Literal;
+  countExpr.intWidth = 32;
+  countExpr.literalValue = 3;
+  bufferExpr.args.push_back(countExpr);
+
+  primec::ir_lowerer::BufferInitInfo info;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveBufferInitInfo(
+      bufferExpr,
+      [](const std::string &typeName) {
+        if (typeName == "i64") {
+          return ValueKind::Int64;
+        }
+        if (typeName == "f32") {
+          return ValueKind::Float32;
+        }
+        if (typeName == "string") {
+          return ValueKind::String;
+        }
+        return ValueKind::Unknown;
+      },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.count == 3);
+  CHECK(info.elemKind == ValueKind::Int64);
+  CHECK(info.zeroOpcode == primec::IrOpcode::PushI64);
+
+  primec::Expr wrongTemplateExpr = bufferExpr;
+  wrongTemplateExpr.templateArgs.clear();
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBufferInitInfo(
+      wrongTemplateExpr,
+      [](const std::string &) { return ValueKind::Int32; },
+      info,
+      error));
+  CHECK(error == "buffer requires exactly one template argument");
+
+  primec::Expr wrongCountExpr = bufferExpr;
+  wrongCountExpr.args.front().literalValue = 2147483648ull;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBufferInitInfo(
+      wrongCountExpr,
+      [](const std::string &) { return ValueKind::Int32; },
+      info,
+      error));
+  CHECK(error == "buffer size out of range");
+
+  primec::Expr unsupportedElemExpr = bufferExpr;
+  unsupportedElemExpr.templateArgs = {"string"};
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveBufferInitInfo(
+      unsupportedElemExpr,
+      [](const std::string &typeName) {
+        if (typeName == "string") {
+          return ValueKind::String;
+        }
+        return ValueKind::Unknown;
+      },
+      info,
+      error));
+  CHECK(error == "buffer requires numeric/bool element type");
+}
+
 TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
