@@ -113,7 +113,7 @@
   ir_lowerer::StructSlotLayoutCache structSlotLayoutCache;
   std::unordered_set<std::string> structSlotLayoutStack;
   using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
-  auto resolveStructSlotLayout = ir_lowerer::makeResolveStructSlotLayoutFromDefinitionFieldIndex(
+  const auto structSlotResolutionAdapters = ir_lowerer::makeStructSlotResolutionAdapters(
       structLayoutFieldIndex,
       defMap,
       resolveStructTypeName,
@@ -121,15 +121,8 @@
       structSlotLayoutCache,
       structSlotLayoutStack,
       error);
-
-  auto resolveStructFieldSlot = ir_lowerer::makeResolveStructFieldSlotFromDefinitionFieldIndex(
-      structLayoutFieldIndex,
-      defMap,
-      resolveStructTypeName,
-      valueKindFromTypeName,
-      structSlotLayoutCache,
-      structSlotLayoutStack,
-      error);
+  auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
+  auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
   ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex =

@@ -72,6 +72,10 @@ using ResolveStructFieldSlotFn =
 using ResolveStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using ResolveStructSlotFieldsFn =
     std::function<bool(const std::string &, std::vector<StructSlotFieldInfo> &)>;
+struct StructSlotResolutionAdapters {
+  ResolveStructSlotLayoutFn resolveStructSlotLayout;
+  ResolveStructFieldSlotFn resolveStructFieldSlot;
+};
 using CollectStructLayoutFieldsFn =
     std::function<bool(const std::string &, std::vector<StructLayoutFieldInfo> &)>;
 using ResolveDefinitionNamespacePrefixByPathFn =
@@ -209,6 +213,14 @@ ResolveStructSlotLayoutFn makeResolveStructSlotLayoutFromDefinitionFieldIndex(
     std::unordered_set<std::string> &layoutStack,
     std::string &error);
 ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    std::string &error);
+StructSlotResolutionAdapters makeStructSlotResolutionAdapters(
     const StructLayoutFieldIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,

@@ -547,6 +547,22 @@ ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
   };
 }
 
+StructSlotResolutionAdapters makeStructSlotResolutionAdapters(
+    const StructLayoutFieldIndex &fieldIndex,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const ValueKindFromTypeNameFn &valueKindFromTypeName,
+    StructSlotLayoutCache &layoutCache,
+    std::unordered_set<std::string> &layoutStack,
+    std::string &error) {
+  StructSlotResolutionAdapters adapters;
+  adapters.resolveStructSlotLayout = makeResolveStructSlotLayoutFromDefinitionFieldIndex(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+  adapters.resolveStructFieldSlot = makeResolveStructFieldSlotFromDefinitionFieldIndex(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+  return adapters;
+}
+
 ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
     const ResolveStructTypeNameFn &resolveStructTypeName) {
   return [&](const Expr &expr, LocalInfo &info) {
