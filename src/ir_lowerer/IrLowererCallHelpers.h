@@ -93,6 +93,11 @@ enum class MapLookupStringKeyResult {
   Resolved,
   Error,
 };
+enum class MapLookupKeyLocalEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,
@@ -123,6 +128,15 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     int32_t &stringIndexOut,
+    std::string &error);
+MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<void(int32_t)> &emitPushI32,
+    const std::function<void(int32_t)> &emitStoreLocal,
+    int32_t keyLocal,
     std::string &error);
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,

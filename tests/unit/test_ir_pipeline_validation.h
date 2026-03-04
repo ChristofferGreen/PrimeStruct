@@ -2661,6 +2661,57 @@ TEST_CASE("ir lowerer call helpers resolve map lookup string keys") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer call helpers emit map lookup string key locals") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Result = primec::ir_lowerer::MapLookupKeyLocalEmitResult;
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Name;
+  keyExpr.name = "k";
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  int32_t pushed = -1;
+  int32_t stored = -1;
+
+  CHECK(primec::ir_lowerer::tryEmitMapLookupStringKeyLocal(
+            Kind::Int64,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return true; },
+            [&](int32_t imm) { pushed = imm; },
+            [&](int32_t local) { stored = local; },
+            4,
+            error) == Result::NotHandled);
+
+  CHECK(primec::ir_lowerer::tryEmitMapLookupStringKeyLocal(
+            Kind::String,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](int32_t imm) { pushed = imm; },
+            [&](int32_t local) { stored = local; },
+            4,
+            error) == Result::Error);
+  CHECK(error == "native backend requires map lookup key to be string literal or binding backed by literals");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitMapLookupStringKeyLocal(
+            Kind::String,
+            keyExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &indexOut, size_t &lengthOut) {
+              indexOut = 23;
+              lengthOut = 8;
+              return true;
+            },
+            [&](int32_t imm) { pushed = imm; },
+            [&](int32_t local) { stored = local; },
+            9,
+            error) == Result::Emitted);
+  CHECK(pushed == 23);
+  CHECK(stored == 9);
+}
+
 TEST_CASE("ir lowerer call helpers validate map lookup key kinds") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
 

@@ -923,8 +923,7 @@
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
 
             const int32_t keyLocal = allocTempLocal();
-            int32_t stringLookupKeyIndex = -1;
-            const auto stringLookupKeyResult = ir_lowerer::tryResolveMapLookupStringKey(
+            const auto stringLookupKeyEmitResult = ir_lowerer::tryEmitMapLookupStringKeyLocal(
                 mapKeyKind,
                 expr.args[1],
                 localsIn,
@@ -934,15 +933,18 @@
                     size_t &lengthOut) {
                   return resolveStringTableTarget(lookupKeyExpr, localMap, stringIndexOut, lengthOut);
                 },
-                stringLookupKeyIndex,
+                [&](int32_t stringIndex) {
+                  function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+                },
+                [&](int32_t localIndex) {
+                  function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
+                },
+                keyLocal,
                 error);
-            if (stringLookupKeyResult == ir_lowerer::MapLookupStringKeyResult::Error) {
+            if (stringLookupKeyEmitResult == ir_lowerer::MapLookupKeyLocalEmitResult::Error) {
               return false;
             }
-            if (stringLookupKeyResult == ir_lowerer::MapLookupStringKeyResult::Resolved) {
-              function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringLookupKeyIndex)});
-              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(keyLocal)});
-            } else {
+            if (stringLookupKeyEmitResult != ir_lowerer::MapLookupKeyLocalEmitResult::Emitted) {
               LocalInfo::ValueKind lookupKeyKind = inferExprKind(expr.args[1], localsIn);
               if (!ir_lowerer::validateMapLookupKeyKind(
                       mapKeyKind, lookupKeyKind, error)) {

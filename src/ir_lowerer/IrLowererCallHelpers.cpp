@@ -324,6 +324,29 @@ MapLookupStringKeyResult tryResolveMapLookupStringKey(
   return MapLookupStringKeyResult::Resolved;
 }
 
+MapLookupKeyLocalEmitResult tryEmitMapLookupStringKeyLocal(
+    LocalInfo::ValueKind mapKeyKind,
+    const Expr &lookupKeyExpr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<void(int32_t)> &emitPushI32,
+    const std::function<void(int32_t)> &emitStoreLocal,
+    int32_t keyLocal,
+    std::string &error) {
+  int32_t stringIndex = -1;
+  const auto resolveResult = tryResolveMapLookupStringKey(
+      mapKeyKind, lookupKeyExpr, localsIn, resolveStringTableTarget, stringIndex, error);
+  if (resolveResult == MapLookupStringKeyResult::NotHandled) {
+    return MapLookupKeyLocalEmitResult::NotHandled;
+  }
+  if (resolveResult == MapLookupStringKeyResult::Error) {
+    return MapLookupKeyLocalEmitResult::Error;
+  }
+  emitPushI32(stringIndex);
+  emitStoreLocal(keyLocal);
+  return MapLookupKeyLocalEmitResult::Emitted;
+}
+
 bool validateMapLookupKeyKind(LocalInfo::ValueKind mapKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error) {
