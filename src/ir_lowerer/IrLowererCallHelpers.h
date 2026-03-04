@@ -71,6 +71,10 @@ bool isStaticFieldBinding(const Expr &expr);
 bool collectInstanceStructFieldParams(const Definition &structDef,
                                       std::vector<Expr> &paramsOut,
                                       std::string &error);
+bool buildInlineCallParameterList(const Definition &callee,
+                                  const std::unordered_set<std::string> &structNames,
+                                  std::vector<Expr> &paramsOut,
+                                  std::string &error);
 const Definition *resolveDefinitionByPath(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &definitionPath);

@@ -28,27 +28,11 @@
     }
     ResultReturnScope resultScope(currentReturnResult, scopedResult);
     pushFileScope();
-    std::vector<Expr> structParams;
-    if (structDef && !ir_lowerer::collectInstanceStructFieldParams(callee, structParams, error)) {
+    std::vector<Expr> callParams;
+    if (!ir_lowerer::buildInlineCallParameterList(callee, structNames, callParams, error)) {
       inlineStack.erase(callee.fullPath);
       return false;
     }
-    std::vector<Expr> helperParams;
-    if (!structDef) {
-      std::string helperParent;
-      if (ir_lowerer::isStructHelperDefinition(callee, structNames, helperParent) &&
-          !ir_lowerer::definitionHasTransform(callee, "static")) {
-        helperParams.reserve(callee.parameters.size() + 1);
-        helperParams.push_back(ir_lowerer::makeStructHelperThisParam(
-            helperParent,
-            ir_lowerer::definitionHasTransform(callee, "mut")));
-        for (const auto &param : callee.parameters) {
-          helperParams.push_back(param);
-        }
-      }
-    }
-    const std::vector<Expr> &callParams =
-        structDef ? structParams : (helperParams.empty() ? callee.parameters : helperParams);
 
     std::vector<const Expr *> orderedArgs;
     if (!buildOrderedCallArguments(callExpr, callParams, orderedArgs)) {

@@ -236,6 +236,32 @@ bool collectInstanceStructFieldParams(const Definition &structDef,
   return true;
 }
 
+bool buildInlineCallParameterList(const Definition &callee,
+                                  const std::unordered_set<std::string> &structNames,
+                                  std::vector<Expr> &paramsOut,
+                                  std::string &error) {
+  paramsOut.clear();
+  if (isStructDefinition(callee)) {
+    return collectInstanceStructFieldParams(callee, paramsOut, error);
+  }
+
+  std::string helperParent;
+  if (!isStructHelperDefinition(callee, structNames, helperParent) ||
+      definitionHasTransform(callee, "static")) {
+    paramsOut = callee.parameters;
+    return true;
+  }
+
+  paramsOut.reserve(callee.parameters.size() + 1);
+  paramsOut.push_back(makeStructHelperThisParam(
+      helperParent,
+      definitionHasTransform(callee, "mut")));
+  for (const auto &param : callee.parameters) {
+    paramsOut.push_back(param);
+  }
+  return true;
+}
+
 std::string resolveDefinitionNamespacePrefix(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &definitionPath) {
