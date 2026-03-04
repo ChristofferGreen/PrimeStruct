@@ -19,6 +19,11 @@ using AllocTempLocalForWriteFn = std::function<int32_t()>;
 using GetInstructionCountForWriteFn = std::function<size_t()>;
 using PatchInstructionImmForWriteFn = std::function<void(size_t, int32_t)>;
 
+bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut);
+bool emitFileOpenCall(const std::string &mode,
+                      int32_t stringIndex,
+                      const EmitInstructionForWriteFn &emitInstruction,
+                      std::string &error);
 bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut);
 bool emitFileWriteStep(const Expr &arg,
                        int32_t handleIndex,

@@ -10052,6 +10052,39 @@ TEST_CASE("ir lowerer file write helpers resolve write opcodes") {
   CHECK_FALSE(primec::ir_lowerer::resolveFileWriteValueOpcode(ValueKind::Float64, opcode));
 }
 
+TEST_CASE("ir lowerer file write helpers resolve and emit file open modes") {
+  primec::IrOpcode opcode = primec::IrOpcode::PushI32;
+  CHECK(primec::ir_lowerer::resolveFileOpenModeOpcode("Read", opcode));
+  CHECK(opcode == primec::IrOpcode::FileOpenRead);
+  CHECK(primec::ir_lowerer::resolveFileOpenModeOpcode("Write", opcode));
+  CHECK(opcode == primec::IrOpcode::FileOpenWrite);
+  CHECK(primec::ir_lowerer::resolveFileOpenModeOpcode("Append", opcode));
+  CHECK(opcode == primec::IrOpcode::FileOpenAppend);
+  CHECK_FALSE(primec::ir_lowerer::resolveFileOpenModeOpcode("Invalid", opcode));
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::emitFileOpenCall("Read", 7, emitInstruction, error));
+  CHECK(primec::ir_lowerer::emitFileOpenCall("Write", 8, emitInstruction, error));
+  CHECK(primec::ir_lowerer::emitFileOpenCall("Append", 9, emitInstruction, error));
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::FileOpenRead);
+  CHECK(instructions[0].imm == 7);
+  CHECK(instructions[1].op == primec::IrOpcode::FileOpenWrite);
+  CHECK(instructions[1].imm == 8);
+  CHECK(instructions[2].op == primec::IrOpcode::FileOpenAppend);
+  CHECK(instructions[2].imm == 9);
+  CHECK(error.empty());
+
+  CHECK_FALSE(primec::ir_lowerer::emitFileOpenCall("Invalid", 10, emitInstruction, error));
+  CHECK(error == "File requires Read, Write, or Append mode");
+  CHECK(instructions.size() == 3);
+}
+
 TEST_CASE("ir lowerer file write helpers emit write steps") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

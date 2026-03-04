@@ -613,20 +613,11 @@
             error = "native backend only supports File() with string literals or literal-backed bindings";
             return false;
           }
-          if (expr.templateArgs.front() == "Read") {
-            function.instructions.push_back({IrOpcode::FileOpenRead, static_cast<uint64_t>(stringIndex)});
-            return true;
-          }
-          if (expr.templateArgs.front() == "Write") {
-            function.instructions.push_back({IrOpcode::FileOpenWrite, static_cast<uint64_t>(stringIndex)});
-            return true;
-          }
-          if (expr.templateArgs.front() == "Append") {
-            function.instructions.push_back({IrOpcode::FileOpenAppend, static_cast<uint64_t>(stringIndex)});
-            return true;
-          }
-          error = "File requires Read, Write, or Append mode";
-          return false;
+          return ir_lowerer::emitFileOpenCall(
+              expr.templateArgs.front(),
+              stringIndex,
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              error);
         }
         if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
           auto it = localsIn.find(expr.args.front().name);

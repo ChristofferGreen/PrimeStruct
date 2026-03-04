@@ -2,6 +2,35 @@
 
 namespace primec::ir_lowerer {
 
+bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut) {
+  if (mode == "Read") {
+    opcodeOut = IrOpcode::FileOpenRead;
+    return true;
+  }
+  if (mode == "Write") {
+    opcodeOut = IrOpcode::FileOpenWrite;
+    return true;
+  }
+  if (mode == "Append") {
+    opcodeOut = IrOpcode::FileOpenAppend;
+    return true;
+  }
+  return false;
+}
+
+bool emitFileOpenCall(const std::string &mode,
+                      int32_t stringIndex,
+                      const EmitInstructionForWriteFn &emitInstruction,
+                      std::string &error) {
+  IrOpcode opcode = IrOpcode::FileOpenRead;
+  if (!resolveFileOpenModeOpcode(mode, opcode)) {
+    error = "File requires Read, Write, or Append mode";
+    return false;
+  }
+  emitInstruction(opcode, static_cast<uint64_t>(stringIndex));
+  return true;
+}
+
 bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut) {
   if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
     opcodeOut = IrOpcode::FileWriteI32;
