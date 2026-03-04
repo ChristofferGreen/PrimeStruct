@@ -24,6 +24,18 @@ CallResolutionAdapters makeCallResolutionAdapters(
   return adapters;
 }
 
+EntryCallResolutionSetup buildEntryCallResolutionSetup(
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases) {
+  EntryCallResolutionSetup setup;
+  setup.adapters = makeCallResolutionAdapters(defMap, importAliases);
+  setup.hasTailExecution = hasTailExecutionCandidate(
+      entryDef.statements, definitionReturnsVoid, setup.adapters.isTailCallCandidate);
+  return setup;
+}
+
 ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {

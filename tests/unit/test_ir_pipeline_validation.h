@@ -273,6 +273,46 @@ TEST_CASE("ir lowerer call helpers detect tail execution candidates from stateme
   CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
 }
 
+TEST_CASE("ir lowerer call helpers build bundled entry call setup") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/entry";
+  entryDef.namespacePrefix = "";
+  primec::Expr tailCall;
+  tailCall.kind = primec::Expr::Kind::Call;
+  tailCall.name = "callee";
+  entryDef.statements = {tailCall};
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/callee", &callee},
+      {"/entry", &entryDef},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {{"callee", "/callee"}};
+
+  const auto voidSetup = primec::ir_lowerer::buildEntryCallResolutionSetup(
+      entryDef, true, defMap, importAliases);
+  CHECK(voidSetup.hasTailExecution);
+  CHECK(voidSetup.adapters.resolveExprPath(tailCall) == "/callee");
+  CHECK(voidSetup.adapters.isTailCallCandidate(tailCall));
+  CHECK(voidSetup.adapters.definitionExists("/callee"));
+  CHECK_FALSE(voidSetup.adapters.definitionExists("/missing"));
+
+  const auto nonVoidSetup = primec::ir_lowerer::buildEntryCallResolutionSetup(
+      entryDef, false, defMap, importAliases);
+  CHECK_FALSE(nonVoidSetup.hasTailExecution);
+
+  primec::Expr returnCall;
+  returnCall.kind = primec::Expr::Kind::Call;
+  returnCall.name = "return";
+  returnCall.args = {tailCall};
+  entryDef.statements = {returnCall};
+  const auto returnSetup = primec::ir_lowerer::buildEntryCallResolutionSetup(
+      entryDef, false, defMap, importAliases);
+  CHECK(returnSetup.hasTailExecution);
+}
+
 TEST_CASE("ir lowerer call helpers order positional named and default args") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;

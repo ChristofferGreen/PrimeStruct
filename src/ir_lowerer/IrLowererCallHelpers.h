@@ -18,12 +18,21 @@ struct CallResolutionAdapters {
   IsTailCallCandidateFn isTailCallCandidate;
   DefinitionExistsFn definitionExists;
 };
+struct EntryCallResolutionSetup {
+  CallResolutionAdapters adapters;
+  bool hasTailExecution = false;
+};
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
                                         const ResolveExprPathFn &resolveExprPath);
 
 CallResolutionAdapters makeCallResolutionAdapters(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases);
+EntryCallResolutionSetup buildEntryCallResolutionSetup(
+    const Definition &entryDef,
+    bool definitionReturnsVoid,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
 ResolveExprPathFn makeResolveCallPathFromScope(

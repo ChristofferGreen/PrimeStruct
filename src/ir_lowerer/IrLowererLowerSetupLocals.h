@@ -61,12 +61,11 @@
 
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
-  const auto callResolutionAdapters = ir_lowerer::makeCallResolutionAdapters(defMap, importAliases);
+  const auto entryCallResolutionSetup =
+      ir_lowerer::buildEntryCallResolutionSetup(*entryDef, returnsVoid, defMap, importAliases);
+  const auto &callResolutionAdapters = entryCallResolutionSetup.adapters;
   auto resolveExprPath = callResolutionAdapters.resolveExprPath;
-  auto isTailCallCandidate = callResolutionAdapters.isTailCallCandidate;
-  const bool sawTailExecution =
-      ir_lowerer::hasTailExecutionCandidate(entryDef->statements, returnsVoid, isTailCallCandidate);
-  if (sawTailExecution) {
+  if (entryCallResolutionSetup.hasTailExecution) {
     function.metadata.instrumentationFlags |= InstrumentationTailExecution;
   }
   auto definitionExists = callResolutionAdapters.definitionExists;
