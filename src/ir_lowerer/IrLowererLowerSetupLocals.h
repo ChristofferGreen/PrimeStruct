@@ -83,16 +83,11 @@
   auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
   auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
 
-  const auto setupTypeAndStructTypeAdapters = ir_lowerer::makeSetupTypeAndStructTypeAdapters(
-      structNames, importAliases);
-  auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
-  const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
-  auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
-
-  using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
-  using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
-  ir_lowerer::StructAndUninitializedResolutionSetup structAndUninitializedResolutionSetup;
-  if (!ir_lowerer::buildStructAndUninitializedResolutionSetup(
+  ir_lowerer::SetupTypeStructAndUninitializedResolutionSetup
+      setupTypeStructAndUninitializedResolutionSetup;
+  if (!ir_lowerer::buildSetupTypeStructAndUninitializedResolutionSetup(
+      structNames,
+      importAliases,
       structFieldInfoByName.size(),
       [&](const ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
         for (const auto &entry : structFieldInfoByName) {
@@ -107,13 +102,21 @@
         }
       },
       defMap,
-      resolveStructTypeName,
-      valueKindFromTypeName,
       resolveExprPath,
-      structAndUninitializedResolutionSetup,
+      setupTypeStructAndUninitializedResolutionSetup,
       error)) {
     return false;
   }
+  const auto &setupTypeAndStructTypeAdapters =
+      setupTypeStructAndUninitializedResolutionSetup.setupTypeAndStructTypeAdapters;
+  auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
+  const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
+  auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
+
+  using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
+  using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
+  const auto &structAndUninitializedResolutionSetup =
+      setupTypeStructAndUninitializedResolutionSetup.structAndUninitializedResolutionSetup;
   const auto &structLayoutResolutionAdapters =
       structAndUninitializedResolutionSetup.structLayoutResolutionAdapters;
   const auto &structArrayInfoAdapters = structLayoutResolutionAdapters.structArrayInfo;

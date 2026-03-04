@@ -9,6 +9,31 @@
 
 namespace primec::ir_lowerer {
 
+bool buildSetupTypeStructAndUninitializedResolutionSetup(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const InferStructExprPathFn &resolveExprPath,
+    SetupTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error) {
+  out = SetupTypeStructAndUninitializedResolutionSetup{};
+  out.setupTypeAndStructTypeAdapters = makeSetupTypeAndStructTypeAdapters(structNames, importAliases);
+  const auto &structTypeResolutionAdapters = out.setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
+  if (!buildStructAndUninitializedResolutionSetup(structReserveHint,
+                                                  enumerateStructLayoutFields,
+                                                  defMap,
+                                                  structTypeResolutionAdapters.resolveStructTypeName,
+                                                  out.setupTypeAndStructTypeAdapters.valueKindFromTypeName,
+                                                  resolveExprPath,
+                                                  out.structAndUninitializedResolutionSetup,
+                                                  error)) {
+    return false;
+  }
+  return true;
+}
+
 bool buildStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,

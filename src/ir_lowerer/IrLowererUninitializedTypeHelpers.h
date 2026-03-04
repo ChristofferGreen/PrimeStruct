@@ -92,7 +92,20 @@ struct StructAndUninitializedResolutionSetup {
   StructLayoutResolutionAdapters structLayoutResolutionAdapters;
   UninitializedResolutionAdapters uninitializedResolutionAdapters;
 };
+struct SetupTypeStructAndUninitializedResolutionSetup {
+  SetupTypeAndStructTypeAdapters setupTypeAndStructTypeAdapters;
+  StructAndUninitializedResolutionSetup structAndUninitializedResolutionSetup;
+};
 
+bool buildSetupTypeStructAndUninitializedResolutionSetup(
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::size_t structReserveHint,
+    const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const InferStructExprPathFn &resolveExprPath,
+    SetupTypeStructAndUninitializedResolutionSetup &out,
+    std::string &error);
 bool buildStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
