@@ -348,33 +348,15 @@
     ir_lowerer::applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
   };
 
-  std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
-  auto inferDefinitionStructReturnPath = [&](const std::string &defPath) -> std::string {
-    return ir_lowerer::inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
-        defPath,
+  auto inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
+    return ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+        expr,
+        localsIn,
         defMap,
         resolveStructTypeName,
         resolveExprPath,
-        uninitializedFieldBindingIndex);
-  };
-  inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
-    const std::string nameStructPath = ir_lowerer::inferStructPathFromNameExpr(expr, localsIn);
-    if (!nameStructPath.empty() || expr.kind == Expr::Kind::Name) {
-      return nameStructPath;
-    }
-    if (expr.kind == Expr::Kind::Call) {
-      const std::string fieldAccessStruct = ir_lowerer::inferStructPathFromFieldAccessCall(
-          expr, localsIn, inferStructExprPath, resolveStructFieldSlot);
-      if (!fieldAccessStruct.empty() || expr.isFieldAccess) {
-        return fieldAccessStruct;
-      }
-      return ir_lowerer::inferStructPathFromCallTargetWithFieldBindingIndex(
-          expr,
-          resolveExprPath,
-          uninitializedFieldBindingIndex,
-          inferDefinitionStructReturnPath);
-    }
-    return "";
+        uninitializedFieldBindingIndex,
+        resolveStructFieldSlot);
   };
 
 

@@ -261,6 +261,40 @@ std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
       defPath, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, visitedDefs);
 }
 
+std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
+  std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
+  inferStructExprPath = [&](const Expr &exprIn, const LocalMap &localsInExpr) -> std::string {
+    const std::string nameStructPath = inferStructPathFromNameExpr(exprIn, localsInExpr);
+    if (!nameStructPath.empty() || exprIn.kind == Expr::Kind::Name) {
+      return nameStructPath;
+    }
+    if (exprIn.kind == Expr::Kind::Call) {
+      const std::string fieldAccessStruct = inferStructPathFromFieldAccessCall(
+          exprIn, localsInExpr, inferStructExprPath, resolveStructFieldSlot);
+      if (!fieldAccessStruct.empty() || exprIn.isFieldAccess) {
+        return fieldAccessStruct;
+      }
+      return inferStructPathFromCallTargetWithFieldBindingIndex(
+          exprIn,
+          resolveExprPath,
+          fieldIndex,
+          [&](const std::string &defPath) {
+            return inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
+                defPath, defMap, resolveStructTypeName, resolveExprPath, fieldIndex);
+          });
+    }
+    return "";
+  };
+  return inferStructExprPath(expr, localsIn);
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {

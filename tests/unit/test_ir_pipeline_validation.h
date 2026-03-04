@@ -1322,6 +1322,96 @@ TEST_CASE("ir lowerer uninitialized type helpers infer definition return paths b
             .empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer expression struct paths by definition call target field index") {
+  primec::Definition factoryDef;
+  factoryDef.fullPath = "/pkg/factory";
+  factoryDef.namespacePrefix = "/pkg";
+  primec::Expr stepExpr;
+  stepExpr.kind = primec::Expr::Kind::Call;
+  stepExpr.name = "step";
+  factoryDef.returnExpr = stepExpr;
+
+  primec::Definition stepDef;
+  stepDef.fullPath = "/pkg/step";
+  stepDef.namespacePrefix = "/pkg";
+  primec::Expr ctorExpr;
+  ctorExpr.kind = primec::Expr::Kind::Call;
+  ctorExpr.name = "Ctor";
+  stepDef.returnExpr = ctorExpr;
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/factory", &factoryDef},
+      {"/pkg/step", &stepDef},
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          1,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Ctor", {"slot", "uninitialized", "i64", false});
+          });
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind != primec::Expr::Kind::Call) {
+      return std::string();
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+  auto resolveStructFieldSlot = [](const std::string &structPath,
+                                   const std::string &fieldName,
+                                   primec::ir_lowerer::StructSlotFieldInfo &out) {
+    if (structPath == "/pkg/Local" && fieldName == "slot") {
+      out = {"slot", 1, 1, primec::ir_lowerer::LocalInfo::ValueKind::Unknown, "/pkg/Nested"};
+      return true;
+    }
+    return false;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo localInfo;
+  localInfo.structTypeName = "/pkg/Local";
+  locals.emplace("self", localInfo);
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "self";
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            nameExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
+        "/pkg/Local");
+
+  primec::Expr fieldReceiverExpr;
+  fieldReceiverExpr.kind = primec::Expr::Kind::Name;
+  fieldReceiverExpr.name = "self";
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Call;
+  fieldExpr.isFieldAccess = true;
+  fieldExpr.name = "slot";
+  fieldExpr.args.push_back(fieldReceiverExpr);
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            fieldExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
+        "/pkg/Nested");
+
+  primec::Expr unresolvedFieldExpr;
+  unresolvedFieldExpr.kind = primec::Expr::Kind::Call;
+  unresolvedFieldExpr.isFieldAccess = true;
+  unresolvedFieldExpr.name = "factory";
+  unresolvedFieldExpr.args.push_back(fieldReceiverExpr);
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(unresolvedFieldExpr,
+                                                                                             locals,
+                                                                                             defMap,
+                                                                                             resolveStructTypeName,
+                                                                                             resolveExprPath,
+                                                                                             fieldIndex,
+                                                                                             resolveStructFieldSlot)
+            .empty());
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "factory";
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            callExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
+        "/pkg/Ctor");
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});
