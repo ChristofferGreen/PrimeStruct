@@ -145,6 +145,12 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const InferStructExprPathFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot);
+InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot);
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut);

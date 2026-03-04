@@ -1382,6 +1382,30 @@ TEST_CASE("ir lowerer struct type helpers apply struct value info") {
   CHECK(alreadyTyped.structTypeName == "/already/Set");
 }
 
+TEST_CASE("ir lowerer struct type helpers build struct value info applier") {
+  auto resolveStruct = [](const std::string &typeName,
+                          const std::string &namespacePrefix,
+                          std::string &resolvedOut) {
+    if (typeName == "Foo" && namespacePrefix == "/pkg") {
+      resolvedOut = "/pkg/Foo";
+      return true;
+    }
+    return false;
+  };
+  auto applyStructValueInfo = primec::ir_lowerer::makeApplyStructValueInfoFromBinding(resolveStruct);
+
+  primec::Expr typedBinding;
+  typedBinding.namespacePrefix = "/pkg";
+  primec::Transform typed;
+  typed.name = "Foo";
+  typedBinding.transforms.push_back(typed);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  applyStructValueInfo(typedBinding, info);
+  CHECK(info.structTypeName == "/pkg/Foo");
+}
+
 TEST_CASE("ir lowerer struct type helpers skip unsupported struct value paths") {
   auto resolveStruct = [](const std::string &, const std::string &, std::string &) { return false; };
 
@@ -2003,6 +2027,46 @@ TEST_CASE("ir lowerer uninitialized type helpers infer expression struct paths b
   CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
             callExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
         "/pkg/Ctor");
+}
+
+TEST_CASE("ir lowerer uninitialized type helpers build expression struct path inferer from definition call target field index") {
+  primec::Definition factoryDef;
+  factoryDef.fullPath = "/pkg/factory";
+  factoryDef.namespacePrefix = "/pkg";
+  primec::Expr ctorExpr;
+  ctorExpr.kind = primec::Expr::Kind::Call;
+  ctorExpr.name = "Ctor";
+  factoryDef.returnExpr = ctorExpr;
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/factory", &factoryDef},
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndex(
+          1,
+          [](const primec::ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
+            appendFieldBinding("/pkg/Ctor", {"slot", "uninitialized", "i64", false});
+          });
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind != primec::Expr::Kind::Call) {
+      return std::string();
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+  auto resolveStructFieldSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  auto inferStructExprPath =
+      primec::ir_lowerer::makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+          defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "factory";
+  primec::ir_lowerer::LocalMap locals;
+  CHECK(inferStructExprPath(callExpr, locals) == "/pkg/Ctor");
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {

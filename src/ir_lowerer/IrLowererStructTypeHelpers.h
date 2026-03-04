@@ -33,6 +33,7 @@ struct StructArrayTypeInfo {
 
 using ResolveStructArrayTypeInfoFn = std::function<bool(const std::string &, StructArrayTypeInfo &)>;
 using ApplyStructArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
+using ApplyStructValueInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using CollectStructArrayFieldsFn = std::function<bool(const std::string &, std::vector<StructArrayFieldInfo> &)>;
 
 struct StructSlotFieldInfo {
@@ -198,6 +199,8 @@ ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
     StructSlotLayoutCache &layoutCache,
     std::unordered_set<std::string> &layoutStack,
     std::string &error);
+ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
+    const ResolveStructTypeNameFn &resolveStructTypeName);
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info);

@@ -321,6 +321,18 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
   return inferStructExprPath(expr, localsIn);
 }
 
+InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
+    const InferStructExprPathFn &resolveExprPath,
+    const UninitializedFieldBindingIndex &fieldIndex,
+    const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
+  return [&](const Expr &expr, const LocalMap &localsIn) {
+    return inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+        expr, localsIn, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+  };
+}
+
 bool collectUninitializedFieldBindingsFromIndex(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath,
                                                 std::vector<UninitializedFieldBindingInfo> &fieldsOut) {

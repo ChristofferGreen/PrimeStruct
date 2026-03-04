@@ -526,6 +526,13 @@ ResolveStructFieldSlotFn makeResolveStructFieldSlotFromDefinitionFieldIndex(
   };
 }
 
+ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
+    const ResolveStructTypeNameFn &resolveStructTypeName) {
+  return [&](const Expr &expr, LocalInfo &info) {
+    applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
+  };
+}
+
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {

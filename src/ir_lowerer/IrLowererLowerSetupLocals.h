@@ -207,20 +207,10 @@
   auto resolveUninitializedStorage = ir_lowerer::makeResolveUninitializedStorageAccessFromDefinitionFieldIndex(
       uninitializedFieldBindingIndex, defMap, resolveUninitializedTypeInfo, resolveStructFieldSlot, error);
 
-  auto applyStructValueInfo = [&](const Expr &expr, LocalInfo &info) {
-    ir_lowerer::applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
-  };
+  auto applyStructValueInfo = ir_lowerer::makeApplyStructValueInfoFromBinding(resolveStructTypeName);
 
-  auto inferStructExprPath = [&](const Expr &expr, const LocalMap &localsIn) -> std::string {
-    return ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
-        expr,
-        localsIn,
-        defMap,
-        resolveStructTypeName,
-        resolveExprPath,
-        uninitializedFieldBindingIndex,
-        resolveStructFieldSlot);
-  };
+  auto inferStructExprPath = ir_lowerer::makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+      defMap, resolveStructTypeName, resolveExprPath, uninitializedFieldBindingIndex, resolveStructFieldSlot);
 
 
   auto combineNumericKinds = [&](LocalInfo::ValueKind left,
