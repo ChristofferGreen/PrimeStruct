@@ -10345,6 +10345,88 @@ TEST_CASE("ir lowerer file write helpers emit write_byte calls") {
   CHECK(instructions[0].imm == 6);
 }
 
+TEST_CASE("ir lowerer file write helpers emit write_bytes calls") {
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "file";
+  primec::Expr bytesArg;
+  bytesArg.kind = primec::Expr::Kind::Name;
+  bytesArg.name = "bytes";
+
+  primec::Expr writeBytesExpr;
+  writeBytesExpr.kind = primec::Expr::Kind::Call;
+  writeBytesExpr.name = "write_bytes";
+  writeBytesExpr.args = {receiver, bytesArg};
+
+  int nextLocal = 50;
+  int emitExprCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitFileWriteBytesCall(
+      writeBytesExpr,
+      3,
+      [&](const primec::Expr &) {
+        ++emitExprCalls;
+        emitInstruction(primec::IrOpcode::PushI64, 55);
+        return true;
+      },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm,
+      error));
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 34);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 50);
+  CHECK(instructions[33].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[33].imm == 53);
+
+  instructions.clear();
+  error.clear();
+  primec::Expr badArityExpr = writeBytesExpr;
+  badArityExpr.args = {receiver};
+  CHECK_FALSE(primec::ir_lowerer::emitFileWriteBytesCall(
+      badArityExpr,
+      3,
+      [](const primec::Expr &) { return true; },
+      [&]() { return 0; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm,
+      error));
+  CHECK(error == "write_bytes requires exactly one argument");
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  emitExprCalls = 0;
+  nextLocal = 60;
+  CHECK_FALSE(primec::ir_lowerer::emitFileWriteBytesCall(
+      writeBytesExpr,
+      3,
+      [&](const primec::Expr &) {
+        ++emitExprCalls;
+        return false;
+      },
+      [&]() { return nextLocal++; },
+      emitInstruction,
+      getInstructionCount,
+      patchInstructionImm,
+      error));
+  CHECK(emitExprCalls == 1);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer file write helpers emit write-bytes loops") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

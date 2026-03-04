@@ -135,6 +135,27 @@ bool emitFileWriteByteCall(const Expr &expr,
   return true;
 }
 
+bool emitFileWriteBytesCall(const Expr &expr,
+                            int32_t handleIndex,
+                            const EmitExprForWriteFn &emitExpr,
+                            const AllocTempLocalForWriteFn &allocTempLocal,
+                            const EmitInstructionForWriteFn &emitInstruction,
+                            const GetInstructionCountForWriteFn &getInstructionCount,
+                            const PatchInstructionImmForWriteFn &patchInstructionImm,
+                            std::string &error) {
+  if (expr.args.size() != 2) {
+    error = "write_bytes requires exactly one argument";
+    return false;
+  }
+  return emitFileWriteBytesLoop(expr.args[1],
+                                handleIndex,
+                                emitExpr,
+                                allocTempLocal,
+                                emitInstruction,
+                                getInstructionCount,
+                                patchInstructionImm);
+}
+
 bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             int32_t handleIndex,
                             const EmitExprForWriteFn &emitExpr,

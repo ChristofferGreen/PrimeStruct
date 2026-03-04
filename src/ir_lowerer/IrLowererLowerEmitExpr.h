@@ -655,18 +655,15 @@
                   error);
             }
             if (expr.name == "write_bytes") {
-              if (expr.args.size() != 2) {
-                error = "write_bytes requires exactly one argument";
-                return false;
-              }
-              return ir_lowerer::emitFileWriteBytesLoop(
-                  expr.args[1],
+              return ir_lowerer::emitFileWriteBytesCall(
+                  expr,
                   handleIndex,
                   [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
                   [&]() { return allocTempLocal(); },
                   [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                   [&]() { return function.instructions.size(); },
-                  [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; });
+                  [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; },
+                  error);
             }
             if (expr.name == "flush") {
               ir_lowerer::emitFileFlushCall(
