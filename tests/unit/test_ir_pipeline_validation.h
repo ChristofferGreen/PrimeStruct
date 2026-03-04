@@ -1325,6 +1325,39 @@ TEST_CASE("ir lowerer uninitialized type helpers build field binding index") {
   CHECK(emptyIndex.empty());
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers build field binding index from struct layout field index") {
+  const primec::ir_lowerer::StructLayoutFieldIndex layoutFieldIndex =
+      primec::ir_lowerer::buildStructLayoutFieldIndex(
+          2,
+          [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+            appendStructLayoutField("/pkg/Container", {"slot", "uninitialized", "i64", false});
+            appendStructLayoutField("/pkg/Container", {"static_slot", "uninitialized", "i32", true});
+            appendStructLayoutField("/pkg/Other", {"value", "i64", "", false});
+          });
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(layoutFieldIndex);
+
+  REQUIRE(fieldIndex.size() == 2);
+
+  std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fieldsOut;
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      fieldIndex, "/pkg/Container", fieldsOut));
+  REQUIRE(fieldsOut.size() == 2);
+  CHECK(fieldsOut[0].name == "slot");
+  CHECK(fieldsOut[0].typeTemplateArg == "i64");
+  CHECK(fieldsOut[1].name == "static_slot");
+  CHECK(fieldsOut[1].isStatic);
+
+  REQUIRE(primec::ir_lowerer::collectUninitializedFieldBindingsFromIndex(
+      fieldIndex, "/pkg/Other", fieldsOut));
+  REQUIRE(fieldsOut.size() == 1);
+  CHECK(fieldsOut[0].name == "value");
+
+  const primec::ir_lowerer::UninitializedFieldBindingIndex emptyIndex =
+      primec::ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex({});
+  CHECK(emptyIndex.empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers check field index struct path") {
   const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex =
       primec::ir_lowerer::buildUninitializedFieldBindingIndex(

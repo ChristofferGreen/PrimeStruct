@@ -92,6 +92,8 @@ bool resolveUninitializedLocalStorageAccess(const Expr &storage,
 UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
     std::size_t structReserveHint,
     const EnumerateUninitializedFieldBindingsFn &enumerateFieldBindings);
+UninitializedFieldBindingIndex buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex);
 bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath);
 std::string inferStructPathFromCallTargetWithFieldBindingIndex(

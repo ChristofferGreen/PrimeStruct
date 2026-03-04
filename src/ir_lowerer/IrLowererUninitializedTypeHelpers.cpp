@@ -159,6 +159,24 @@ UninitializedFieldBindingIndex buildUninitializedFieldBindingIndex(
   return fieldIndex;
 }
 
+UninitializedFieldBindingIndex buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(
+    const StructLayoutFieldIndex &fieldIndex) {
+  return buildUninitializedFieldBindingIndex(
+      fieldIndex.size(),
+      [&](const AppendUninitializedFieldBindingFn &appendFieldBinding) {
+        for (const auto &entry : fieldIndex) {
+          for (const auto &field : entry.second) {
+            UninitializedFieldBindingInfo info;
+            info.name = field.name;
+            info.typeName = field.typeName;
+            info.typeTemplateArg = field.typeTemplateArg;
+            info.isStatic = field.isStatic;
+            appendFieldBinding(entry.first, info);
+          }
+        }
+      });
+}
+
 bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingIndex &fieldIndex,
                                                 const std::string &structPath) {
   return fieldIndex.count(structPath) > 0;

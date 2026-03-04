@@ -247,20 +247,7 @@
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
   ir_lowerer::UninitializedFieldBindingIndex uninitializedFieldBindingIndex =
-      ir_lowerer::buildUninitializedFieldBindingIndex(
-          structFieldInfoByName.size(),
-          [&](const ir_lowerer::AppendUninitializedFieldBindingFn &appendFieldBinding) {
-            for (const auto &entry : structFieldInfoByName) {
-              for (const auto &field : entry.second) {
-                ir_lowerer::UninitializedFieldBindingInfo info;
-                info.name = field.name;
-                info.typeName = field.binding.typeName;
-                info.typeTemplateArg = field.binding.typeTemplateArg;
-                info.isStatic = field.isStatic;
-                appendFieldBinding(entry.first, info);
-              }
-            }
-          });
+      ir_lowerer::buildUninitializedFieldBindingIndexFromStructLayoutFieldIndex(structLayoutFieldIndex);
 
   auto resolveUninitializedStorage = [&](const Expr &storage,
                                          const LocalMap &localsIn,
