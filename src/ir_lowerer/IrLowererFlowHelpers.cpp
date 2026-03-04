@@ -201,15 +201,21 @@ bool emitGpuBuiltinLoad(
   return true;
 }
 
-bool emitUnaryPassthroughCall(const Expr &expr,
-                              const std::string &callName,
-                              const std::function<bool(const Expr &)> &emitExpr,
-                              std::string &error) {
-  if (expr.args.size() != 1) {
-    error = callName + " requires exactly one argument";
-    return false;
+UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
+                                                       const char *callName,
+                                                       const std::function<bool(const Expr &)> &emitExpr,
+                                                       std::string &error) {
+  if (!isSimpleCallName(expr, callName)) {
+    return UnaryPassthroughCallResult::NotMatched;
   }
-  return emitExpr(expr.args.front());
+  if (expr.args.size() != 1) {
+    error = std::string(callName) + " requires exactly one argument";
+    return UnaryPassthroughCallResult::Error;
+  }
+  if (!emitExpr(expr.args.front())) {
+    return UnaryPassthroughCallResult::Error;
+  }
+  return UnaryPassthroughCallResult::Emitted;
 }
 
 } // namespace primec::ir_lowerer

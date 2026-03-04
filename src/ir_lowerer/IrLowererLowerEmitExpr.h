@@ -8,12 +8,15 @@
       error = "IR backends do not support lambdas";
       return false;
     }
-    if (!expr.isMethodCall && isSimpleCallName(expr, "move")) {
-      if (expr.args.size() != 1) {
-        error = "move requires exactly one argument";
-        return false;
+    if (!expr.isMethodCall) {
+      const auto moveResult = ir_lowerer::tryEmitUnaryPassthroughCall(
+          expr,
+          "move",
+          [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
+          error);
+      if (moveResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
+        return moveResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
       }
-      return emitExpr(expr.args.front(), localsIn);
     }
     switch (expr.kind) {
       case Expr::Kind::Literal: {
@@ -693,19 +696,21 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               error);
         }
-        if (isSimpleCallName(expr, "upload")) {
-          return ir_lowerer::emitUnaryPassthroughCall(
+        const auto uploadResult = ir_lowerer::tryEmitUnaryPassthroughCall(
               expr,
               "upload",
               [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
               error);
+        if (uploadResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
+          return uploadResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
-        if (isSimpleCallName(expr, "readback")) {
-          return ir_lowerer::emitUnaryPassthroughCall(
+        const auto readbackResult = ir_lowerer::tryEmitUnaryPassthroughCall(
               expr,
               "readback",
               [&](const Expr &argExpr) { return emitExpr(argExpr, localsIn); },
               error);
+        if (readbackResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
+          return readbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
         if (isSimpleCallName(expr, "buffer")) {
           if (expr.templateArgs.size() != 1) {
