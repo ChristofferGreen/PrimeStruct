@@ -423,7 +423,13 @@
               [&]() { return allocTempLocal(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
 
-          const ir_lowerer::ResultWhyCallOps resultWhyOps = ir_lowerer::makeResultWhyCallOps(
+          return ir_lowerer::emitResultWhyCallWithComposedOps(
+              expr,
+              resultInfo,
+              localsIn,
+              errorLocal,
+              defMap,
+              resultWhyExprOps,
               [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
                 return resolveStructTypeName(typeName, nsPrefix, structPathOut);
               },
@@ -435,18 +441,11 @@
                 return resolveStructSlotLayout(structPath, layoutOut);
               },
               [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
-              [&](LocalMap &callLocals, LocalInfo::ValueKind valueKind) {
-                return resultWhyExprOps.makeErrorValueExpr(callLocals, valueKind);
-              },
-              [&](LocalMap &callLocals) { return resultWhyExprOps.makeBoolErrorExpr(callLocals); },
               [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
                 return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
               },
               [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
-              [&]() { return resultWhyExprOps.emitEmptyString(); });
-          const auto resultWhyResult = ir_lowerer::emitResolvedResultWhyCall(
-              expr, resultInfo, localsIn, errorLocal, defMap, resultWhyOps, error);
-          return resultWhyResult == ir_lowerer::ResultWhyCallEmitResult::Emitted;
+              error);
         }
         const auto fileErrorWhyResult = ir_lowerer::tryEmitFileErrorWhyCall(
             expr,

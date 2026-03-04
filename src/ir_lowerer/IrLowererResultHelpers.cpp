@@ -225,6 +225,39 @@ ResultWhyCallOps makeResultWhyCallOps(
   return ops;
 }
 
+bool emitResultWhyCallWithComposedOps(
+    const Expr &expr,
+    const ResultExprInfo &resultInfo,
+    const LocalMap &localsIn,
+    int32_t errorLocal,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResultWhyExprOps &exprOps,
+    const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::string &error) {
+  const ResultWhyCallOps ops = makeResultWhyCallOps(
+      resolveStructTypeName,
+      getReturnInfo,
+      bindingKind,
+      resolveStructSlotLayout,
+      valueKindFromTypeName,
+      [&](LocalMap &callLocals, LocalInfo::ValueKind valueKind) {
+        return exprOps.makeErrorValueExpr(callLocals, valueKind);
+      },
+      [&](LocalMap &callLocals) { return exprOps.makeBoolErrorExpr(callLocals); },
+      emitInlineDefinitionCall,
+      emitFileErrorWhy,
+      [&]() { return exprOps.emitEmptyString(); });
+  return emitResolvedResultWhyCall(
+             expr, resultInfo, localsIn, errorLocal, defMap, ops, error) ==
+         ResultWhyCallEmitResult::Emitted;
+}
+
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;

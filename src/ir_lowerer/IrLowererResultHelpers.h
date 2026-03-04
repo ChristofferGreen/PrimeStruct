@@ -88,6 +88,21 @@ ResultWhyCallOps makeResultWhyCallOps(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
     const std::function<bool()> &emitEmptyString);
+bool emitResultWhyCallWithComposedOps(
+    const Expr &expr,
+    const ResultExprInfo &resultInfo,
+    const LocalMap &localsIn,
+    int32_t errorLocal,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const ResultWhyExprOps &exprOps,
+    const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::string &error);
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind);
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind);
 void emitResultWhyErrorLocalFromResult(

@@ -13007,6 +13007,108 @@ TEST_CASE("ir lowerer result helpers compose Result.why call ops") {
   CHECK(emitEmptyStringCalled);
 }
 
+TEST_CASE("ir lowerer result helpers emit Result.why with composed ops") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultWhyExpr;
+  resultWhyExpr.kind = primec::Expr::Kind::Call;
+  resultWhyExpr.isMethodCall = true;
+  resultWhyExpr.name = "why";
+  resultWhyExpr.namespacePrefix = "/pkg";
+
+  primec::Definition i32WhyDef;
+  i32WhyDef.fullPath = "/i32/why";
+  i32WhyDef.parameters.resize(1);
+  std::unordered_map<std::string, const primec::Definition *> defMap{
+      {"/i32/why", &i32WhyDef},
+  };
+
+  primec::ir_lowerer::ResultExprInfo resultInfo;
+  resultInfo.isResult = true;
+  resultInfo.errorType = "AnyInt";
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t tempCounter = 0;
+  const primec::ir_lowerer::ResultWhyExprOps exprOps = primec::ir_lowerer::makeResultWhyExprOps(
+      17,
+      "/pkg",
+      tempCounter,
+      [&](const std::string &) { return 0; },
+      [&]() { return 41; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); });
+
+  bool inlineCalled = false;
+  bool fileErrorCalled = false;
+  CHECK(primec::ir_lowerer::emitResultWhyCallWithComposedOps(
+      resultWhyExpr,
+      resultInfo,
+      locals,
+      17,
+      defMap,
+      exprOps,
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &path, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
+        if (path != "/i32/why") {
+          return false;
+        }
+        returnInfoOut = primec::ir_lowerer::ReturnInfo{};
+        returnInfoOut.kind = ValueKind::String;
+        return true;
+      },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+      [](const std::string &typeName) {
+        if (typeName == "AnyInt") {
+          return ValueKind::Int32;
+        }
+        return ValueKind::Unknown;
+      },
+      [&](const primec::Expr &callExpr, const primec::Definition &callee, const primec::ir_lowerer::LocalMap &) {
+        inlineCalled = true;
+        CHECK(callee.fullPath == "/i32/why");
+        REQUIRE(callExpr.args.size() == 1);
+        CHECK(callExpr.args.front().kind == primec::Expr::Kind::Name);
+        CHECK(callExpr.args.front().name == "__result_why_err_0");
+        return true;
+      },
+      [&](int32_t) {
+        fileErrorCalled = true;
+        return true;
+      },
+      error));
+  CHECK(inlineCalled);
+  CHECK_FALSE(fileErrorCalled);
+
+  inlineCalled = false;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitResultWhyCallWithComposedOps(
+      resultWhyExpr,
+      resultInfo,
+      locals,
+      17,
+      defMap,
+      exprOps,
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
+        returnInfoOut = primec::ir_lowerer::ReturnInfo{};
+        returnInfoOut.kind = ValueKind::Int32;
+        return true;
+      },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+      [](const std::string &) { return ValueKind::Int32; },
+      [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+        inlineCalled = true;
+        return true;
+      },
+      [&](int32_t) { return true; },
+      error));
+  CHECK_FALSE(inlineCalled);
+  CHECK(error == "Result.why requires a string-returning why() for AnyInt");
+}
+
 TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
   using EmitResult = primec::ir_lowerer::ResultWhyCallEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
