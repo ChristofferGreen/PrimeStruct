@@ -30,13 +30,8 @@
     std::string typeName;
     std::string resolvedTypePath;
     if (receiver.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(receiver.name);
-      if (it == localsIn.end()) {
-        error = "native backend does not know identifier: " + receiver.name;
-        return nullptr;
-      }
-      if (!resolveMethodReceiverTypeFromLocalInfo(it->second, typeName, resolvedTypePath)) {
-        error = "unknown method target for " + callExpr.name;
+      if (!resolveMethodReceiverTypeFromNameExpr(
+              receiver, localsIn, callExpr.name, typeName, resolvedTypePath, error)) {
         return nullptr;
       }
     } else if (receiver.kind == Expr::Kind::Call) {

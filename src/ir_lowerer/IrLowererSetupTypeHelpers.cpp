@@ -231,4 +231,27 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   return defIt->second;
 }
 
+bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
+                                           const LocalMap &localsIn,
+                                           const std::string &methodName,
+                                           std::string &typeNameOut,
+                                           std::string &resolvedTypePathOut,
+                                           std::string &errorOut) {
+  if (receiverNameExpr.kind != Expr::Kind::Name) {
+    errorOut = "internal method receiver type resolution requires name expression";
+    return false;
+  }
+
+  auto it = localsIn.find(receiverNameExpr.name);
+  if (it == localsIn.end()) {
+    errorOut = "native backend does not know identifier: " + receiverNameExpr.name;
+    return false;
+  }
+  if (!resolveMethodReceiverTypeFromLocalInfo(it->second, typeNameOut, resolvedTypePathOut)) {
+    errorOut = "unknown method target for " + methodName;
+    return false;
+  }
+  return true;
+}
+
 } // namespace primec::ir_lowerer

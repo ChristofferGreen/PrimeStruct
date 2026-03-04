@@ -44,5 +44,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string &resolvedTypePath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
+bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
+                                           const LocalMap &localsIn,
+                                           const std::string &methodName,
+                                           std::string &typeNameOut,
+                                           std::string &resolvedTypePathOut,
+                                           std::string &errorOut);
 
 } // namespace primec::ir_lowerer

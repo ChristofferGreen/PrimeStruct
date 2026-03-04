@@ -3217,6 +3217,49 @@ TEST_CASE("ir lowerer setup type helper reports method target lookup diagnostics
   CHECK(error == "unknown method: /pkg/Ctor/missing");
 }
 
+TEST_CASE("ir lowerer setup type helper resolves name receiver targets") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "items";
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  locals.emplace("items", itemsLocal);
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromNameExpr(
+      receiverName, locals, "count", typeName, resolvedTypePath, error));
+  CHECK(typeName == "array");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper reports name receiver diagnostics") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "ptr";
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  const primec::ir_lowerer::LocalMap noLocals;
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTypeFromNameExpr(
+      receiverName, noLocals, "count", typeName, resolvedTypePath, error));
+  CHECK(error == "native backend does not know identifier: ptr");
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerLocal;
+  pointerLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  locals.emplace("ptr", pointerLocal);
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveMethodReceiverTypeFromNameExpr(
+      receiverName, locals, "count", typeName, resolvedTypePath, error));
+  CHECK(error == "unknown method target for count");
+}
+
 TEST_CASE("ir lowerer return inference helper analyzes entry return transforms") {
   primec::Definition entryDef;
   primec::Transform resultReturn;
