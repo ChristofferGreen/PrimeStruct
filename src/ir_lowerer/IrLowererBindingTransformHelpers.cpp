@@ -32,6 +32,28 @@ bool hasExplicitBindingTypeTransform(const Expr &expr) {
   return false;
 }
 
+bool extractFirstBindingTypeTransform(const Expr &expr,
+                                      std::string &typeNameOut,
+                                      std::vector<std::string> &templateArgsOut) {
+  typeNameOut.clear();
+  templateArgsOut.clear();
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      continue;
+    }
+    typeNameOut = transform.name;
+    templateArgsOut = transform.templateArgs;
+    return true;
+  }
+  return false;
+}
+
 bool extractUninitializedTemplateArg(const Expr &expr, std::string &typeTextOut) {
   typeTextOut.clear();
   for (const auto &transform : expr.transforms) {

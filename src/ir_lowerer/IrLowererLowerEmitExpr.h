@@ -425,19 +425,6 @@
             return true;
           };
 
-          auto getBindingTypeName = [&](const Expr &binding, std::string &typeNameOut,
-                                        std::vector<std::string> &templateArgsOut) -> bool {
-            for (const auto &transform : binding.transforms) {
-              if (isBindingQualifierName(transform.name)) {
-                continue;
-              }
-              typeNameOut = transform.name;
-              templateArgsOut = transform.templateArgs;
-              return true;
-            }
-            return false;
-          };
-
           auto makeErrorValueExpr = [&](LocalMap &callLocals,
                                         LocalInfo::ValueKind valueKind) -> Expr {
             std::string localName = "__result_why_err_" + std::to_string(onErrorTempCounter++);
@@ -495,7 +482,8 @@
               std::string paramTypeName;
               std::vector<std::string> paramTemplateArgs;
               if (paramKind == LocalInfo::Kind::Value &&
-                  getBindingTypeName(param, paramTypeName, paramTemplateArgs) && paramTemplateArgs.empty()) {
+                  ir_lowerer::extractFirstBindingTypeTransform(param, paramTypeName, paramTemplateArgs) &&
+                  paramTemplateArgs.empty()) {
                 std::string paramStructPath;
                 LocalMap callLocals = localsIn;
                 if (resolveStructTypeName(paramTypeName, param.namespacePrefix, paramStructPath) &&

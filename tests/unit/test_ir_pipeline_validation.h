@@ -7053,6 +7053,44 @@ TEST_CASE("ir lowerer binding transform helpers detect explicit binding types") 
   CHECK(primec::ir_lowerer::hasExplicitBindingTypeTransform(expr));
 }
 
+TEST_CASE("ir lowerer binding transform helpers extract first binding type transform") {
+  primec::Expr expr;
+
+  primec::Transform effects;
+  effects.name = "effects";
+  effects.arguments = {"io_out"};
+  expr.transforms.push_back(effects);
+
+  primec::Transform qualifier;
+  qualifier.name = "mut";
+  expr.transforms.push_back(qualifier);
+
+  primec::Transform withArgs;
+  withArgs.name = "align_bytes";
+  withArgs.arguments = {"16"};
+  expr.transforms.push_back(withArgs);
+
+  primec::Transform typed;
+  typed.name = "Result";
+  typed.templateArgs = {"i32", "FileError"};
+  expr.transforms.push_back(typed);
+
+  std::string typeName;
+  std::vector<std::string> templateArgs;
+  REQUIRE(primec::ir_lowerer::extractFirstBindingTypeTransform(expr, typeName, templateArgs));
+  CHECK(typeName == "Result");
+  REQUIRE(templateArgs.size() == 2);
+  CHECK(templateArgs[0] == "i32");
+  CHECK(templateArgs[1] == "FileError");
+
+  expr.transforms.clear();
+  expr.transforms.push_back(effects);
+  expr.transforms.push_back(qualifier);
+  CHECK_FALSE(primec::ir_lowerer::extractFirstBindingTypeTransform(expr, typeName, templateArgs));
+  CHECK(typeName.empty());
+  CHECK(templateArgs.empty());
+}
+
 TEST_CASE("ir lowerer binding transform helpers extract uninitialized template args") {
   primec::Expr expr;
   primec::Transform uninitialized;
