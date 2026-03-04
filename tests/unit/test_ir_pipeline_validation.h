@@ -126,6 +126,47 @@ TEST_CASE("ir lowerer effects unit rejects unsupported nested expression effects
   CHECK(error == "native backend does not support effect: unsupported_effect on /main");
 }
 
+TEST_CASE("ir lowerer effects unit resolves entry metadata masks") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Transform effects;
+  effects.name = "effects";
+  effects.arguments = {"io_out", "heap_alloc"};
+  entryDef.transforms.push_back(effects);
+
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveEntryMetadataMasks(
+      entryDef, "/main", {"io_err"}, {"io_out"}, entryEffectMask, entryCapabilityMask, error));
+  CHECK(error.empty());
+  CHECK(entryEffectMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
+  CHECK(entryCapabilityMask == (primec::EffectIoOut | primec::EffectHeapAlloc));
+}
+
+TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Transform capabilitiesA;
+  capabilitiesA.name = "capabilities";
+  capabilitiesA.arguments = {"io_out"};
+  entryDef.transforms.push_back(capabilitiesA);
+
+  primec::Transform capabilitiesB;
+  capabilitiesB.name = "capabilities";
+  capabilitiesB.arguments = {"io_err"};
+  entryDef.transforms.push_back(capabilitiesB);
+
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::resolveEntryMetadataMasks(
+      entryDef, "/main", {"io_out"}, {"io_out"}, entryEffectMask, entryCapabilityMask, error));
+  CHECK(error == "duplicate capabilities transform on /main");
+}
+
 TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
   primec::Definition callee;
   callee.fullPath = "/callee";

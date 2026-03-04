@@ -41,6 +41,14 @@ bool validateProgramEffects(const Program &program,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error);
 
+bool resolveEntryMetadataMasks(const Definition &entryDef,
+                               const std::string &entryPath,
+                               const std::vector<std::string> &defaultEffects,
+                               const std::vector<std::string> &entryDefaultEffects,
+                               uint64_t &entryEffectMaskOut,
+                               uint64_t &entryCapabilityMaskOut,
+                               std::string &error);
+
 bool resolveEffectMask(const std::vector<Transform> &transforms,
                        bool isEntry,
                        const std::vector<std::string> &defaultEffects,

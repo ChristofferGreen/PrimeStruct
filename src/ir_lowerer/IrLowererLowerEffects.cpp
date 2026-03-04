@@ -365,6 +365,23 @@ bool validateProgramEffects(const Program &program,
   return true;
 }
 
+bool resolveEntryMetadataMasks(const Definition &entryDef,
+                               const std::string &entryPath,
+                               const std::vector<std::string> &defaultEffects,
+                               const std::vector<std::string> &entryDefaultEffects,
+                               uint64_t &entryEffectMaskOut,
+                               uint64_t &entryCapabilityMaskOut,
+                               std::string &error) {
+  const auto entryEffects = resolveActiveEffects(entryDef.transforms, true, defaultEffects, entryDefaultEffects);
+  if (!resolveEffectMask(entryDef.transforms, true, defaultEffects, entryDefaultEffects, entryEffectMaskOut, error)) {
+    return false;
+  }
+  if (!resolveCapabilityMask(entryDef.transforms, entryEffects, entryPath, entryCapabilityMaskOut, error)) {
+    return false;
+  }
+  return true;
+}
+
 bool resolveEffectMask(const std::vector<Transform> &transforms,
                        bool isEntry,
                        const std::vector<std::string> &defaultEffects,
