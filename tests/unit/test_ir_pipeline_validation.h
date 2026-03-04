@@ -578,6 +578,99 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
             slashExpr, defMap, importAliases) == "/pkg/Thing");
 }
 
+TEST_CASE("ir lowerer struct field binding helpers resolve envelope values") {
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "tmp";
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::Literal;
+  literalExpr.literalValue = 7;
+
+  primec::Expr blockCall;
+  blockCall.kind = primec::Expr::Kind::Call;
+  blockCall.name = "block";
+  blockCall.hasBodyArguments = true;
+  blockCall.bodyArguments = {bindingExpr, literalExpr};
+
+  const primec::Expr *valueExpr =
+      primec::ir_lowerer::getEnvelopeValueExpr(blockCall, false);
+  REQUIRE(valueExpr != nullptr);
+  CHECK(valueExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(valueExpr->literalValue == 7);
+
+  primec::Expr notBlock = blockCall;
+  notBlock.name = "custom";
+  CHECK(primec::ir_lowerer::getEnvelopeValueExpr(notBlock, false) == nullptr);
+  CHECK(primec::ir_lowerer::getEnvelopeValueExpr(notBlock, true) != nullptr);
+
+  primec::Expr withArgs = blockCall;
+  withArgs.args.push_back(literalExpr);
+  CHECK(primec::ir_lowerer::getEnvelopeValueExpr(withArgs, false) == nullptr);
+}
+
+TEST_CASE("ir lowerer struct field binding helpers infer primitive bindings") {
+  const std::unordered_map<std::string, primec::ir_lowerer::LayoutFieldBinding> knownFields = {
+      {"existing", {"i64", ""}},
+  };
+  primec::ir_lowerer::LayoutFieldBinding inferred;
+
+  primec::Expr literalExpr;
+  literalExpr.kind = primec::Expr::Kind::Literal;
+  literalExpr.intWidth = 64;
+  CHECK(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      literalExpr, knownFields, inferred));
+  CHECK(inferred.typeName == "i64");
+
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "existing";
+  CHECK(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      nameExpr, knownFields, inferred));
+  CHECK(inferred.typeName == "i64");
+
+  primec::Expr arrayCall;
+  arrayCall.kind = primec::Expr::Kind::Call;
+  arrayCall.name = "array";
+  arrayCall.templateArgs = {"f32"};
+  CHECK(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      arrayCall, knownFields, inferred));
+  CHECK(inferred.typeName == "array");
+  CHECK(inferred.typeTemplateArg == "f32");
+
+  primec::Expr mapCall;
+  mapCall.kind = primec::Expr::Kind::Call;
+  mapCall.name = "map";
+  mapCall.templateArgs = {"i32", "bool"};
+  CHECK(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      mapCall, knownFields, inferred));
+  CHECK(inferred.typeName == "map");
+  CHECK(inferred.typeTemplateArg == "i32, bool");
+
+  primec::Expr convertCall;
+  convertCall.kind = primec::Expr::Kind::Call;
+  convertCall.name = "convert";
+  convertCall.templateArgs = {"int"};
+  CHECK(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      convertCall, knownFields, inferred));
+  CHECK(inferred.typeName == "i32");
+
+  primec::Expr unsupportedConvert = convertCall;
+  unsupportedConvert.templateArgs = {"Widget"};
+  CHECK_FALSE(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      unsupportedConvert, knownFields, inferred));
+
+  primec::Expr envelopeCall;
+  envelopeCall.kind = primec::Expr::Kind::Call;
+  envelopeCall.name = "block";
+  envelopeCall.hasBodyArguments = true;
+  envelopeCall.bodyArguments = {literalExpr};
+  CHECK(primec::ir_lowerer::inferPrimitiveFieldBinding(
+      envelopeCall, knownFields, inferred));
+  CHECK(inferred.typeName == "i64");
+}
+
 TEST_CASE("ir lowerer struct layout helpers parse and extract alignment transforms") {
   CHECK(primec::ir_lowerer::alignTo(7u, 4u) == 8u);
   CHECK(primec::ir_lowerer::alignTo(16u, 8u) == 16u);
