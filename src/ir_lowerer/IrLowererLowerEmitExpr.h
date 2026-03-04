@@ -393,59 +393,39 @@
           }
           return emitExpr(expr.args[1], localsIn);
         }
-        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-            expr.args.front().name == "Result" && expr.name == "why") {
-          ResultExprInfo resultInfo;
-          if (!ir_lowerer::resolveResultWhyCallInfo(
-                  expr, localsIn, resolveResultExprInfo, resultInfo, error)) {
-            return false;
-          }
-
-          int32_t errorLocal = 0;
-          if (!ir_lowerer::emitResultWhyLocalsFromValueExpr(
-                  expr.args[1],
-                  localsIn,
-                  resultInfo.hasValue,
-                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                    return emitExpr(valueExpr, valueLocals);
-                  },
-                  [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  errorLocal)) {
-            return false;
-          }
-
-          const ir_lowerer::ResultWhyExprOps resultWhyExprOps = ir_lowerer::makeResultWhyExprOps(
-              errorLocal,
-              expr.namespacePrefix,
-              onErrorTempCounter,
-              [&](const std::string &value) { return internString(value); },
-              [&]() { return allocTempLocal(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-
-          return ir_lowerer::emitResultWhyCallWithComposedOps(
-              expr,
-              resultInfo,
-              localsIn,
-              errorLocal,
-              defMap,
-              resultWhyExprOps,
-              [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
-                return resolveStructTypeName(typeName, nsPrefix, structPathOut);
-              },
-              [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
-                return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
-              },
-              [&](const Expr &bindingExpr) { return bindingKind(bindingExpr); },
-              [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                return resolveStructSlotLayout(structPath, layoutOut);
-              },
-              [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
-              [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
-                return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
-              },
-              [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
-              error);
+        const auto resultWhyCallResult = ir_lowerer::tryEmitResultWhyCall(
+            expr,
+            localsIn,
+            defMap,
+            onErrorTempCounter,
+            resolveResultExprInfo,
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return emitExpr(valueExpr, valueLocals);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            [&](const std::string &value) { return internString(value); },
+            [&](const std::string &typeName, const std::string &nsPrefix, std::string &structPathOut) {
+              return resolveStructTypeName(typeName, nsPrefix, structPathOut);
+            },
+            [&](const std::string &definitionPath, ReturnInfo &returnInfoOut) {
+              return getReturnInfo && getReturnInfo(definitionPath, returnInfoOut);
+            },
+            [&](const Expr &bindingExpr) { return bindingKind(bindingExpr); },
+            [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(structPath, layoutOut);
+            },
+            [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
+            [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
+              return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
+            },
+            [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
+            error);
+        if (resultWhyCallResult == ir_lowerer::ResultWhyMethodCallEmitResult::Emitted) {
+          return true;
+        }
+        if (resultWhyCallResult == ir_lowerer::ResultWhyMethodCallEmitResult::Error) {
+          return false;
         }
         const auto fileErrorWhyResult = ir_lowerer::tryEmitFileErrorWhyCall(
             expr,

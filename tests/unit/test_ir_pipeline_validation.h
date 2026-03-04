@@ -12790,6 +12790,143 @@ TEST_CASE("ir lowerer result helpers emit Result.why value-local setup") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
+  using EmitResult = primec::ir_lowerer::ResultWhyMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "why";
+  expr.namespacePrefix = "/pkg";
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "res";
+  expr.args = {resultType, valueExpr};
+
+  primec::Definition i32WhyDef;
+  i32WhyDef.fullPath = "/i32/why";
+  i32WhyDef.parameters.resize(1);
+  std::unordered_map<std::string, const primec::Definition *> defMap{
+      {"/i32/why", &i32WhyDef},
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  int32_t tempCounter = 0;
+  int allocCounter = 0;
+  bool inlineCalled = false;
+  bool fileErrorCalled = false;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitResultWhyCall(
+            expr,
+            locals,
+            defMap,
+            tempCounter,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &out) {
+              out = primec::ir_lowerer::ResultExprInfo{};
+              out.isResult = true;
+              out.hasValue = true;
+              out.errorType = "AnyInt";
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&]() {
+              ++allocCounter;
+              return allocCounter;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](const std::string &) { return 0; },
+            [](const std::string &, const std::string &, std::string &) { return false; },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &returnInfoOut) {
+              if (path != "/i32/why") {
+                return false;
+              }
+              returnInfoOut = primec::ir_lowerer::ReturnInfo{};
+              returnInfoOut.kind = ValueKind::String;
+              return true;
+            },
+            [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [](const std::string &typeName) {
+              if (typeName == "AnyInt") {
+                return ValueKind::Int32;
+              }
+              return ValueKind::Unknown;
+            },
+            [&](const primec::Expr &, const primec::Definition &callee, const primec::ir_lowerer::LocalMap &) {
+              inlineCalled = true;
+              CHECK(callee.fullPath == "/i32/why");
+              return true;
+            },
+            [&](int32_t) {
+              fileErrorCalled = true;
+              return true;
+            },
+            error) ==
+        EmitResult::Emitted);
+  CHECK(inlineCalled);
+  CHECK_FALSE(fileErrorCalled);
+
+  primec::Expr nonResultExpr = expr;
+  nonResultExpr.name = "map";
+  CHECK(primec::ir_lowerer::tryEmitResultWhyCall(
+            nonResultExpr,
+            locals,
+            defMap,
+            tempCounter,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&]() { return 0; },
+            [&](primec::IrOpcode, uint64_t) {},
+            [&](const std::string &) { return 0; },
+            [](const std::string &, const std::string &, std::string &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+            [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [](const std::string &) { return ValueKind::Unknown; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [&](int32_t) { return false; },
+            error) ==
+        EmitResult::NotHandled);
+
+  primec::Expr invalidArgExpr = expr;
+  invalidArgExpr.args = {resultType};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultWhyCall(
+            invalidArgExpr,
+            locals,
+            defMap,
+            tempCounter,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&]() { return 0; },
+            [&](primec::IrOpcode, uint64_t) {},
+            [&](const std::string &) { return 0; },
+            [](const std::string &, const std::string &, std::string &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+            [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [](const std::string &) { return ValueKind::Unknown; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [&](int32_t) { return false; },
+            error) ==
+        EmitResult::Error);
+  CHECK(error == "Result.why requires exactly one argument");
+}
+
 TEST_CASE("ir lowerer result helpers compose Result.why expression ops") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

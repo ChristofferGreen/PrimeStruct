@@ -142,6 +142,74 @@ bool resolveResultWhyCallInfo(const Expr &expr,
   return true;
 }
 
+ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    int32_t &onErrorTempCounter,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<int32_t(const std::string &)> &internString,
+    const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::string &error) {
+  if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+        expr.args.front().name == "Result" && expr.name == "why")) {
+    return ResultWhyMethodCallEmitResult::NotHandled;
+  }
+
+  ResultExprInfo resultInfo;
+  if (!resolveResultWhyCallInfo(
+          expr, localsIn, resolveResultExprInfo, resultInfo, error)) {
+    return ResultWhyMethodCallEmitResult::Error;
+  }
+
+  int32_t errorLocal = 0;
+  if (!emitResultWhyLocalsFromValueExpr(
+          expr.args[1],
+          localsIn,
+          resultInfo.hasValue,
+          emitExpr,
+          allocTempLocal,
+          emitInstruction,
+          errorLocal)) {
+    return ResultWhyMethodCallEmitResult::Error;
+  }
+
+  const ResultWhyExprOps resultWhyExprOps = makeResultWhyExprOps(
+      errorLocal,
+      expr.namespacePrefix,
+      onErrorTempCounter,
+      internString,
+      allocTempLocal,
+      emitInstruction);
+
+  return emitResultWhyCallWithComposedOps(
+             expr,
+             resultInfo,
+             localsIn,
+             errorLocal,
+             defMap,
+             resultWhyExprOps,
+             resolveStructTypeName,
+             getReturnInfo,
+             bindingKind,
+             resolveStructSlotLayout,
+             valueKindFromTypeName,
+             emitInlineDefinitionCall,
+             emitFileErrorWhy,
+             error)
+             ? ResultWhyMethodCallEmitResult::Emitted
+             : ResultWhyMethodCallEmitResult::Error;
+}
+
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
     const LocalMap &localsIn,
