@@ -13589,6 +13589,137 @@ TEST_CASE("ir lowerer file write helpers emit write-bytes loops") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer file write helpers dispatch file-handle methods") {
+  using Result = primec::ir_lowerer::FileHandleMethodCallEmitResult;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo fileInfo;
+  fileInfo.index = 7;
+  fileInfo.isFileHandle = true;
+  locals.emplace("file", fileInfo);
+
+  primec::ir_lowerer::LocalInfo valueInfo;
+  valueInfo.index = 11;
+  locals.emplace("value", valueInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto getInstructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "file";
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Name;
+  valueArg.name = "value";
+
+  primec::Expr writeExpr;
+  writeExpr.kind = primec::Expr::Kind::Call;
+  writeExpr.name = "write";
+  writeExpr.isMethodCall = true;
+  writeExpr.args = {receiver, valueArg};
+
+  int emitExprCalls = 0;
+  int nextLocal = 20;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
+            writeExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &localMap) {
+              ++emitExprCalls;
+              CHECK(localMap.count("file") == 1);
+              emitInstruction(primec::IrOpcode::PushI32, 99);
+              return true;
+            },
+            [&]() { return nextLocal++; },
+            emitInstruction,
+            getInstructionCount,
+            patchInstructionImm,
+            error) == Result::Emitted);
+  CHECK(emitExprCalls == 1);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+
+  primec::Expr badWriteByteExpr;
+  badWriteByteExpr.kind = primec::Expr::Kind::Call;
+  badWriteByteExpr.name = "write_byte";
+  badWriteByteExpr.isMethodCall = true;
+  badWriteByteExpr.args = {receiver};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
+            badWriteByteExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](primec::IrOpcode, uint64_t) {},
+            []() { return static_cast<size_t>(0); },
+            [](size_t, int32_t) {},
+            error) == Result::Error);
+  CHECK(error == "write_byte requires exactly one argument");
+
+  primec::Expr unknownMethodExpr;
+  unknownMethodExpr.kind = primec::Expr::Kind::Call;
+  unknownMethodExpr.name = "noop";
+  unknownMethodExpr.isMethodCall = true;
+  unknownMethodExpr.args = {receiver, valueArg};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
+            unknownMethodExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](primec::IrOpcode, uint64_t) {},
+            []() { return static_cast<size_t>(0); },
+            [](size_t, int32_t) {},
+            error) == Result::NotMatched);
+
+  primec::Expr nonFileReceiver;
+  nonFileReceiver.kind = primec::Expr::Kind::Name;
+  nonFileReceiver.name = "value";
+  primec::Expr nonFileExpr;
+  nonFileExpr.kind = primec::Expr::Kind::Call;
+  nonFileExpr.name = "write";
+  nonFileExpr.isMethodCall = true;
+  nonFileExpr.args = {nonFileReceiver, valueArg};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileHandleMethodCall(
+            nonFileExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](primec::IrOpcode, uint64_t) {},
+            []() { return static_cast<size_t>(0); },
+            [](size_t, int32_t) {},
+            error) == Result::NotMatched);
+}
+
 TEST_CASE("ir lowerer file write helpers emit flush and close calls") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {

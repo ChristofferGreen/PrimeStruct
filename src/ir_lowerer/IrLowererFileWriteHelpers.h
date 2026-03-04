@@ -19,6 +19,17 @@ using AllocTempLocalForWriteFn = std::function<int32_t()>;
 using GetInstructionCountForWriteFn = std::function<size_t()>;
 using PatchInstructionImmForWriteFn = std::function<void(size_t, int32_t)>;
 using EmitFileWriteStepFn = std::function<bool(const Expr &, int32_t)>;
+using ResolveStringTableTargetWithLocalsForWriteFn =
+    std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)>;
+using InferExprKindWithLocalsForWriteFn =
+    std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+using EmitExprWithLocalsForWriteFn = std::function<bool(const Expr &, const LocalMap &)>;
+
+enum class FileHandleMethodCallEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
 
 bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut);
 bool emitFileOpenCall(const std::string &mode,
@@ -61,6 +72,17 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             const EmitInstructionForWriteFn &emitInstruction,
                             const GetInstructionCountForWriteFn &getInstructionCount,
                             const PatchInstructionImmForWriteFn &patchInstructionImm);
+FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const InferExprKindWithLocalsForWriteFn &inferExprKind,
+    const EmitExprWithLocalsForWriteFn &emitExpr,
+    const AllocTempLocalForWriteFn &allocTempLocal,
+    const EmitInstructionForWriteFn &emitInstruction,
+    const GetInstructionCountForWriteFn &getInstructionCount,
+    const PatchInstructionImmForWriteFn &patchInstructionImm,
+    std::string &error);
 void emitFileFlushCall(int32_t handleIndex, const EmitInstructionForWriteFn &emitInstruction);
 void emitFileCloseCall(int32_t handleIndex,
                        const AllocTempLocalForWriteFn &allocTempLocal,

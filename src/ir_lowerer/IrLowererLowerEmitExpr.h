@@ -611,65 +611,31 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               error);
         }
-        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
-          auto it = localsIn.find(expr.args.front().name);
-          if (it != localsIn.end() && it->second.isFileHandle) {
-            const int32_t handleIndex = it->second.index;
-            auto emitWriteStep = [&](const Expr &arg, int32_t errorLocal) -> bool {
-              return ir_lowerer::emitFileWriteStep(
-                  arg,
-                  handleIndex,
-                  errorLocal,
-                  [&](const Expr &valueExpr, int32_t &stringIndex, size_t &length) {
-                    return resolveStringTableTarget(valueExpr, localsIn, stringIndex, length);
-                  },
-                  [&](const Expr &valueExpr) { return inferExprKind(valueExpr, localsIn); },
-                  [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  error);
-            };
-            if (expr.name == "write" || expr.name == "write_line") {
-              return ir_lowerer::emitFileWriteCall(
-                  expr,
-                  handleIndex,
-                  emitWriteStep,
-                  [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  [&]() { return function.instructions.size(); },
-                  [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; });
-            }
-            if (expr.name == "write_byte") {
-              return ir_lowerer::emitFileWriteByteCall(
-                  expr,
-                  handleIndex,
-                  [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  error);
-            }
-            if (expr.name == "write_bytes") {
-              return ir_lowerer::emitFileWriteBytesCall(
-                  expr,
-                  handleIndex,
-                  [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
-                  [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                  [&]() { return function.instructions.size(); },
-                  [&](size_t index, int32_t imm) { function.instructions[index].imm = imm; },
-                  error);
-            }
-            if (expr.name == "flush") {
-              ir_lowerer::emitFileFlushCall(
-                  handleIndex, [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-              return true;
-            }
-            if (expr.name == "close") {
-              ir_lowerer::emitFileCloseCall(
-                  handleIndex,
-                  [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
-              return true;
-            }
-          }
+        const auto fileHandleCallResult = ir_lowerer::tryEmitFileHandleMethodCall(
+            expr,
+            localsIn,
+            [&](const Expr &valueExpr,
+                const ir_lowerer::LocalMap &localMap,
+                int32_t &stringIndexOut,
+                size_t &lengthOut) {
+              return resolveStringTableTarget(valueExpr, localMap, stringIndexOut, lengthOut);
+            },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return inferExprKind(valueExpr, localMap);
+            },
+            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+              return emitExpr(valueExpr, localMap);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            [&]() { return function.instructions.size(); },
+            [&](size_t instructionIndex, int32_t imm) { function.instructions[instructionIndex].imm = imm; },
+            error);
+        if (fileHandleCallResult == ir_lowerer::FileHandleMethodCallEmitResult::Emitted) {
+          return true;
+        }
+        if (fileHandleCallResult == ir_lowerer::FileHandleMethodCallEmitResult::Error) {
+          return false;
         }
         std::string gpuBuiltin;
         if (getBuiltinGpuName(expr, gpuBuiltin)) {

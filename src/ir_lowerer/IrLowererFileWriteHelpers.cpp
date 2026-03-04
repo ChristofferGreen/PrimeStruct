@@ -216,6 +216,86 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
   return true;
 }
 
+FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const InferExprKindWithLocalsForWriteFn &inferExprKind,
+    const EmitExprWithLocalsForWriteFn &emitExpr,
+    const AllocTempLocalForWriteFn &allocTempLocal,
+    const EmitInstructionForWriteFn &emitInstruction,
+    const GetInstructionCountForWriteFn &getInstructionCount,
+    const PatchInstructionImmForWriteFn &patchInstructionImm,
+    std::string &error) {
+  if (!expr.isMethodCall || expr.args.empty() || expr.args.front().kind != Expr::Kind::Name) {
+    return FileHandleMethodCallEmitResult::NotMatched;
+  }
+  auto it = localsIn.find(expr.args.front().name);
+  if (it == localsIn.end() || !it->second.isFileHandle) {
+    return FileHandleMethodCallEmitResult::NotMatched;
+  }
+
+  const int32_t handleIndex = it->second.index;
+  auto emitWriteStep = [&](const Expr &arg, int32_t errorLocal) -> bool {
+    return emitFileWriteStep(
+        arg,
+        handleIndex,
+        errorLocal,
+        [&](const Expr &valueExpr, int32_t &stringIndex, size_t &length) {
+          return resolveStringTableTarget(valueExpr, localsIn, stringIndex, length);
+        },
+        [&](const Expr &valueExpr) { return inferExprKind(valueExpr, localsIn); },
+        [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
+        emitInstruction,
+        error);
+  };
+
+  if (expr.name == "write" || expr.name == "write_line") {
+    if (!emitFileWriteCall(expr,
+                           handleIndex,
+                           emitWriteStep,
+                           allocTempLocal,
+                           emitInstruction,
+                           getInstructionCount,
+                           patchInstructionImm)) {
+      return FileHandleMethodCallEmitResult::Error;
+    }
+    return FileHandleMethodCallEmitResult::Emitted;
+  }
+  if (expr.name == "write_byte") {
+    if (!emitFileWriteByteCall(expr,
+                               handleIndex,
+                               [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
+                               emitInstruction,
+                               error)) {
+      return FileHandleMethodCallEmitResult::Error;
+    }
+    return FileHandleMethodCallEmitResult::Emitted;
+  }
+  if (expr.name == "write_bytes") {
+    if (!emitFileWriteBytesCall(expr,
+                                handleIndex,
+                                [&](const Expr &valueExpr) { return emitExpr(valueExpr, localsIn); },
+                                allocTempLocal,
+                                emitInstruction,
+                                getInstructionCount,
+                                patchInstructionImm,
+                                error)) {
+      return FileHandleMethodCallEmitResult::Error;
+    }
+    return FileHandleMethodCallEmitResult::Emitted;
+  }
+  if (expr.name == "flush") {
+    emitFileFlushCall(handleIndex, emitInstruction);
+    return FileHandleMethodCallEmitResult::Emitted;
+  }
+  if (expr.name == "close") {
+    emitFileCloseCall(handleIndex, allocTempLocal, emitInstruction);
+    return FileHandleMethodCallEmitResult::Emitted;
+  }
+  return FileHandleMethodCallEmitResult::NotMatched;
+}
+
 void emitFileFlushCall(int32_t handleIndex, const EmitInstructionForWriteFn &emitInstruction) {
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));
   emitInstruction(IrOpcode::FileFlush, 0);
