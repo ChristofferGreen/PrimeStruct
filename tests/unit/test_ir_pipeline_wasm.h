@@ -624,6 +624,87 @@ TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") 
   }
 }
 
+TEST_CASE("wasm emitter formats decimal file writes for i32 i64 and u64") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  const std::string outName = "primec_wasm_file_numeric_output.txt";
+  module.stringTable.push_back(outName);
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int64_t>(-42))});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(',')});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteByte, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0xc271f71fb04cb000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToI64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(',')});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteByte, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x41efffffffe00000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToU64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const auto textBytes = [](const std::string &text) {
+    return std::vector<uint8_t>(text.begin(), text.end());
+  };
+  CHECK(containsByteSequence(bytes, textBytes("fd_write")));
+  CHECK(containsByteSequence(bytes, {0x80})); // i64.div_u
+  CHECK(containsByteSequence(bytes, {0x82})); // i64.rem_u
+  CHECK(containsByteSequence(bytes, {0xa7})); // i32.wrap_i64
+
+  if (hasWasmtime()) {
+    const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_numeric_runtime";
+    std::error_code ec;
+    std::filesystem::remove_all(tempRoot, ec);
+    std::filesystem::create_directories(tempRoot, ec);
+    REQUIRE(!ec);
+
+    const std::filesystem::path wasmPath = tempRoot / "file_numeric.wasm";
+    const std::filesystem::path outFilePath = tempRoot / outName;
+    {
+      std::ofstream wasmFile(wasmPath, std::ios::binary);
+      REQUIRE(wasmFile.good());
+      wasmFile.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+      REQUIRE(wasmFile.good());
+    }
+
+    const std::string runCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                               quoteShellArg(wasmPath.string()) + " > /dev/null";
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFileText(outFilePath.string()) == "-42,-1234567890123,4294967295");
+  }
+}
+
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
   primec::WasmEmitter emitter;
   primec::IrModule module;
