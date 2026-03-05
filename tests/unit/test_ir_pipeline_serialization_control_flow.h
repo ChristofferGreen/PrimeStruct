@@ -1940,6 +1940,69 @@ TEST_CASE("native emitter debug dump includes optimization defaults") {
   CHECK(dump.find("instruction_total_after=0\n") != std::string::npos);
 }
 
+TEST_CASE("native emitter debug dump sorts duplicate indices by name") {
+  primec::NativeEmitterInstrumentation instrumentation;
+  instrumentation.totalInstructionCount = 6;
+  instrumentation.totalValueStackPushCount = 4;
+  instrumentation.totalValueStackPopCount = 4;
+  instrumentation.totalSpillCount = 1;
+  instrumentation.totalReloadCount = 1;
+
+  primec::NativeEmitterFunctionInstrumentation zetaStats;
+  zetaStats.functionIndex = 3;
+  zetaStats.functionName = "/zeta";
+  zetaStats.instructionTotal = 2;
+  zetaStats.valueStackPushCount = 1;
+  zetaStats.valueStackPopCount = 1;
+  instrumentation.perFunction.push_back(zetaStats);
+
+  primec::NativeEmitterFunctionInstrumentation alphaStats;
+  alphaStats.functionIndex = 3;
+  alphaStats.functionName = "/alpha";
+  alphaStats.instructionTotal = 4;
+  alphaStats.valueStackPushCount = 3;
+  alphaStats.valueStackPopCount = 3;
+  instrumentation.perFunction.push_back(alphaStats);
+
+  const std::string expected =
+      "native_emitter_debug_v1\n"
+      "[instrumentation]\n"
+      "total_instruction_count=6\n"
+      "total_value_stack_push_count=4\n"
+      "total_value_stack_pop_count=4\n"
+      "total_spill_count=1\n"
+      "total_reload_count=1\n"
+      "function_count=2\n"
+      "function[0].index=3\n"
+      "function[0].name=/alpha\n"
+      "function[0].instruction_total=4\n"
+      "function[0].value_stack_push_count=3\n"
+      "function[0].value_stack_pop_count=3\n"
+      "function[0].spill_count=0\n"
+      "function[0].reload_count=0\n"
+      "function[1].index=3\n"
+      "function[1].name=/zeta\n"
+      "function[1].instruction_total=2\n"
+      "function[1].value_stack_push_count=1\n"
+      "function[1].value_stack_pop_count=1\n"
+      "function[1].spill_count=0\n"
+      "function[1].reload_count=0\n"
+      "[optimization]\n"
+      "applied=0\n"
+      "instruction_total_before=0\n"
+      "instruction_total_after=0\n"
+      "value_stack_push_count_before=0\n"
+      "value_stack_push_count_after=0\n"
+      "value_stack_pop_count_before=0\n"
+      "value_stack_pop_count_after=0\n"
+      "spill_count_before=0\n"
+      "spill_count_after=0\n"
+      "reload_count_before=0\n"
+      "reload_count_after=0\n";
+
+  CHECK(primec::formatNativeEmitterDebugDump(instrumentation) == expected);
+}
+
 TEST_CASE("native emitter debug dump docs applied example snapshot stays stable") {
   primec::NativeEmitterInstrumentation instrumentation;
   instrumentation.totalInstructionCount = 4;
