@@ -1,7 +1,15 @@
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/wait.h>
+#endif
 
 #include "primec/WasmEmitter.h"
 
@@ -106,6 +114,45 @@ bool containsByteSequence(const std::vector<uint8_t> &haystack, const std::vecto
     }
   }
   return false;
+}
+
+std::string quoteShellArg(const std::string &value) {
+  std::string quoted = "'";
+  for (char c : value) {
+    if (c == '\'') {
+      quoted += "'\\''";
+    } else {
+      quoted += c;
+    }
+  }
+  quoted += "'";
+  return quoted;
+}
+
+int runCommand(const std::string &command) {
+  int code = std::system(command.c_str());
+#if defined(__unix__) || defined(__APPLE__)
+  if (code == -1) {
+    return -1;
+  }
+  if (WIFEXITED(code)) {
+    return WEXITSTATUS(code);
+  }
+  return -1;
+#else
+  return code;
+#endif
+}
+
+std::string readFileText(const std::string &path) {
+  std::ifstream file(path);
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  return buffer.str();
+}
+
+bool hasWasmtime() {
+  return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
 }
 
 } // namespace
@@ -489,6 +536,92 @@ TEST_CASE("wasm emitter adds wasi imports memory and argv output lowering") {
   CHECK(containsByteSequence(bytes, {0x10, 0x02}));
   CHECK(containsByteSequence(bytes, {0x36, 0x02, 0x00}));
   CHECK(containsByteSequence(bytes, {0x28, 0x02, 0x00}));
+}
+
+TEST_CASE("wasm emitter maps wasi file open write flush close and error paths") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  const std::string outName = "primec_wasm_file_ops_output.txt";
+  const std::string missingName = "primec_wasm_file_ops_missing.txt";
+  module.stringTable.push_back(outName);
+  module.stringTable.push_back(missingName);
+  module.stringTable.push_back("payload");
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileWriteString, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileFlush, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+
+  mainFn.instructions.push_back({primec::IrOpcode::FileOpenRead, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpGtI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  std::vector<uint8_t> sectionIds;
+  std::vector<uint32_t> sectionLengths;
+  REQUIRE(parseSections(bytes, sectionIds, sectionLengths, error));
+  CHECK(error.empty());
+  const std::vector<uint8_t> expectedSectionIds = {1, 2, 3, 5, 7, 10, 11};
+  CHECK(sectionIds == expectedSectionIds);
+
+  const auto textBytes = [](const std::string &text) {
+    return std::vector<uint8_t>(text.begin(), text.end());
+  };
+  CHECK(containsByteSequence(bytes, textBytes("path_open")));
+  CHECK(containsByteSequence(bytes, textBytes("fd_sync")));
+  CHECK(containsByteSequence(bytes, textBytes("fd_close")));
+  CHECK(containsByteSequence(bytes, textBytes("fd_write")));
+
+  CHECK(containsByteSequence(bytes, {0x10, 0x00}));
+  CHECK(containsByteSequence(bytes, {0x10, 0x01}));
+  CHECK(containsByteSequence(bytes, {0x10, 0x02}));
+  CHECK(containsByteSequence(bytes, {0x10, 0x03}));
+
+  if (hasWasmtime()) {
+    const std::filesystem::path tempRoot = std::filesystem::temp_directory_path() / "primec_wasm_file_ops_runtime";
+    std::error_code ec;
+    std::filesystem::remove_all(tempRoot, ec);
+    std::filesystem::create_directories(tempRoot, ec);
+    REQUIRE(!ec);
+
+    const std::filesystem::path wasmPath = tempRoot / "file_ops.wasm";
+    const std::filesystem::path runOutPath = tempRoot / "wasmtime_stdout.txt";
+    const std::filesystem::path outFilePath = tempRoot / outName;
+    {
+      std::ofstream wasmFile(wasmPath, std::ios::binary);
+      REQUIRE(wasmFile.good());
+      wasmFile.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+      REQUIRE(wasmFile.good());
+    }
+
+    const std::string runCmd = "wasmtime --invoke main --dir=" + quoteShellArg(tempRoot.string()) + " " +
+                               quoteShellArg(wasmPath.string()) + " > " + quoteShellArg(runOutPath.string());
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFileText(runOutPath.string()).find("1") != std::string::npos);
+    CHECK(readFileText(outFilePath.string()) == "payload");
+  }
 }
 
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {

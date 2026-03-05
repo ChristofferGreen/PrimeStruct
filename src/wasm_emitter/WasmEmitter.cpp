@@ -24,6 +24,7 @@ constexpr uint8_t WasmSectionCode = 10;
 constexpr uint8_t WasmSectionData = 11;
 
 constexpr uint8_t WasmValueTypeI32 = 0x7f;
+constexpr uint8_t WasmValueTypeI64 = 0x7e;
 constexpr uint8_t WasmValueTypeF32 = 0x7d;
 constexpr uint8_t WasmValueTypeF64 = 0x7c;
 constexpr uint8_t WasmBlockTypeVoid = 0x40;
@@ -44,7 +45,9 @@ constexpr uint8_t WasmOpLocalSet = 0x21;
 constexpr uint8_t WasmOpLocalTee = 0x22;
 constexpr uint8_t WasmOpI32Load = 0x28;
 constexpr uint8_t WasmOpI32Store = 0x36;
+constexpr uint8_t WasmOpI32Store8 = 0x3a;
 constexpr uint8_t WasmOpI32Const = 0x41;
+constexpr uint8_t WasmOpI64Const = 0x42;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
 constexpr uint8_t WasmOpI32Eq = 0x46;
 constexpr uint8_t WasmOpI32Ne = 0x47;
@@ -57,6 +60,8 @@ constexpr uint8_t WasmOpI32Add = 0x6a;
 constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
 constexpr uint8_t WasmOpI32DivS = 0x6d;
+constexpr uint8_t WasmOpI32And = 0x71;
+constexpr uint8_t WasmOpI32Or = 0x72;
 constexpr uint8_t WasmOpF32Const = 0x43;
 constexpr uint8_t WasmOpF64Const = 0x44;
 constexpr uint8_t WasmOpF32Eq = 0x5b;
@@ -141,6 +146,10 @@ struct WasmLocalLayout {
   uint32_t argvPtrLocal = 0;
   uint32_t argvLenLocal = 0;
   uint32_t argvNextPtrLocal = 0;
+  bool hasFileHelpers = false;
+  uint32_t fileHandleLocal = 0;
+  uint32_t fileValueLocal = 0;
+  uint32_t fileErrLocal = 0;
   uint32_t totalLocals = 0;
 };
 
@@ -148,24 +157,41 @@ struct WasmRuntimeContext {
   bool enabled = false;
   bool hasArgvOps = false;
   bool hasOutputOps = false;
+  bool hasFileOps = false;
+  bool hasFileWriteOps = false;
   uint32_t functionIndexOffset = 0;
   uint32_t fdWriteImportIndex = 0;
   uint32_t argsSizesGetImportIndex = 0;
   uint32_t argsGetImportIndex = 0;
+  uint32_t fdCloseImportIndex = 0;
+  uint32_t fdSyncImportIndex = 0;
+  uint32_t pathOpenImportIndex = 0;
   uint32_t argcAddr = 0;
   uint32_t argvBufSizeAddr = 0;
   uint32_t nwrittenAddr = 0;
+  uint32_t openedFdAddr = 0;
   uint32_t iovAddr = 0;
   uint32_t argvPtrsBase = 0;
   uint32_t argvBufferBase = 0;
   uint32_t argvPtrsCapacityBytes = 0;
   uint32_t argvBufferCapacityBytes = 0;
   uint32_t newlineAddr = 0;
+  uint32_t byteScratchAddr = 0;
   std::vector<uint32_t> stringPtrs;
   std::vector<uint32_t> stringLens;
   std::vector<WasmMemoryLimit> memories;
   std::vector<WasmDataSegment> dataSegments;
 };
+
+constexpr uint32_t WasiPreopenDirFd = 3u;
+constexpr uint32_t WasiFdflagAppend = 1u;
+constexpr uint32_t WasiOflagsCreat = 1u;
+constexpr uint32_t WasiOflagsTrunc = 8u;
+constexpr uint64_t WasiRightsFdRead = 2ull;
+constexpr uint64_t WasiRightsFdWrite = 64ull;
+constexpr uint32_t WasmFileHandleErrorBit = 0x80000000u;
+constexpr uint32_t WasmFileHandleErrorMask = 0x7fffffffu;
+constexpr uint32_t WasmErrnoNotSupported = 95u;
 
 void appendU32Leb(uint32_t value, std::vector<uint8_t> &out) {
   do {
@@ -179,6 +205,21 @@ void appendU32Leb(uint32_t value, std::vector<uint8_t> &out) {
 }
 
 void appendS32Leb(int32_t value, std::vector<uint8_t> &out) {
+  bool more = true;
+  while (more) {
+    uint8_t byte = static_cast<uint8_t>(value & 0x7f);
+    value >>= 7;
+    const bool signBit = (byte & 0x40) != 0;
+    if ((value == 0 && !signBit) || (value == -1 && signBit)) {
+      more = false;
+    } else {
+      byte |= 0x80;
+    }
+    out.push_back(byte);
+  }
+}
+
+void appendS64Leb(int64_t value, std::vector<uint8_t> &out) {
   bool more = true;
   while (more) {
     uint8_t byte = static_cast<uint8_t>(value & 0x7f);
@@ -425,6 +466,17 @@ bool opcodeNeedsWasiRuntime(IrOpcode op) {
     case IrOpcode::PrintString:
     case IrOpcode::PrintArgv:
     case IrOpcode::PrintArgvUnsafe:
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+    case IrOpcode::FileClose:
+    case IrOpcode::FileFlush:
+    case IrOpcode::FileWriteI32:
+    case IrOpcode::FileWriteI64:
+    case IrOpcode::FileWriteU64:
+    case IrOpcode::FileWriteString:
+    case IrOpcode::FileWriteByte:
+    case IrOpcode::FileWriteNewline:
       return true;
     default:
       return false;
@@ -446,6 +498,12 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
       layout.hasArgvHelpers = true;
     }
+    if (inst.op == IrOpcode::FileOpenRead || inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
+        inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush || inst.op == IrOpcode::FileWriteI32 ||
+        inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
+        inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
+      layout.hasFileHelpers = true;
+    }
   }
   const uint64_t baseCount = hasLocal ? (maxLocalIndex + 1) : 0;
   layout.irLocalCount = static_cast<uint32_t>(baseCount);
@@ -461,6 +519,12 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     layout.argvLenLocal = static_cast<uint32_t>(totalCount + 3);
     layout.argvNextPtrLocal = static_cast<uint32_t>(totalCount + 4);
     totalCount += 5;
+  }
+  if (layout.hasFileHelpers) {
+    layout.fileHandleLocal = static_cast<uint32_t>(totalCount);
+    layout.fileValueLocal = static_cast<uint32_t>(totalCount + 1);
+    layout.fileErrLocal = static_cast<uint32_t>(totalCount + 2);
+    totalCount += 3;
   }
   if (totalCount > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
     error = "wasm emitter local count exceeds 32-bit limit in function: " + function.name;
@@ -496,7 +560,8 @@ void emitWasiWritePtrLen(uint32_t fd,
                          uint32_t ptrLocal,
                          uint32_t lenLocal,
                          const WasmRuntimeContext &runtime,
-                         std::vector<uint8_t> &out) {
+                         std::vector<uint8_t> &out,
+                         bool dropResult = true) {
   out.push_back(WasmOpI32Const);
   appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
   out.push_back(WasmOpLocalGet);
@@ -521,10 +586,13 @@ void emitWasiWritePtrLen(uint32_t fd,
   appendS32Leb(static_cast<int32_t>(runtime.nwrittenAddr), out);
   out.push_back(WasmOpCall);
   appendU32Leb(runtime.fdWriteImportIndex, out);
-  out.push_back(WasmOpDrop);
+  if (dropResult) {
+    out.push_back(WasmOpDrop);
+  }
 }
 
-void emitWasiWriteLiteral(uint32_t fd, uint32_t ptr, uint32_t len, const WasmRuntimeContext &runtime, std::vector<uint8_t> &out) {
+void emitWasiWriteLiteral(
+    uint32_t fd, uint32_t ptr, uint32_t len, const WasmRuntimeContext &runtime, std::vector<uint8_t> &out, bool dropResult = true) {
   out.push_back(WasmOpI32Const);
   appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
   out.push_back(WasmOpI32Const);
@@ -549,7 +617,66 @@ void emitWasiWriteLiteral(uint32_t fd, uint32_t ptr, uint32_t len, const WasmRun
   appendS32Leb(static_cast<int32_t>(runtime.nwrittenAddr), out);
   out.push_back(WasmOpCall);
   appendU32Leb(runtime.fdWriteImportIndex, out);
-  out.push_back(WasmOpDrop);
+  if (dropResult) {
+    out.push_back(WasmOpDrop);
+  }
+}
+
+void emitWasiWriteLiteralFromFdLocal(
+    uint32_t fdLocal, uint32_t ptr, uint32_t len, const WasmRuntimeContext &runtime, std::vector<uint8_t> &out) {
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(ptr), out);
+  out.push_back(WasmOpI32Store);
+  appendI32MemArg(0, out);
+
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr + 4), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(len), out);
+  out.push_back(WasmOpI32Store);
+  appendI32MemArg(0, out);
+
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(fdLocal, out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(1, out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.nwrittenAddr), out);
+  out.push_back(WasmOpCall);
+  appendU32Leb(runtime.fdWriteImportIndex, out);
+}
+
+void emitWasiPathOpen(uint32_t pathPtr,
+                      uint32_t pathLen,
+                      uint32_t oflags,
+                      uint64_t rightsBase,
+                      uint32_t fdflags,
+                      const WasmRuntimeContext &runtime,
+                      std::vector<uint8_t> &out) {
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(WasiPreopenDirFd), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(0, out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(pathPtr), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(pathLen), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(oflags), out);
+  out.push_back(WasmOpI64Const);
+  appendS64Leb(static_cast<int64_t>(rightsBase), out);
+  out.push_back(WasmOpI64Const);
+  appendS64Leb(0, out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(fdflags), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.openedFdAddr), out);
+  out.push_back(WasmOpCall);
+  appendU32Leb(runtime.pathOpenImportIndex, out);
 }
 
 void appendDataSegmentAt(uint32_t address, const std::vector<uint8_t> &bytes, std::vector<WasmDataSegment> &segments) {
@@ -580,6 +707,15 @@ bool buildWasiRuntimeContext(const IrModule &module,
       if (inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
         runtime.hasOutputOps = true;
       }
+      if (inst.op == IrOpcode::FileOpenRead || inst.op == IrOpcode::FileOpenWrite || inst.op == IrOpcode::FileOpenAppend ||
+          inst.op == IrOpcode::FileClose || inst.op == IrOpcode::FileFlush || inst.op == IrOpcode::FileWriteI32 ||
+          inst.op == IrOpcode::FileWriteI64 || inst.op == IrOpcode::FileWriteU64 || inst.op == IrOpcode::FileWriteString ||
+          inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
+        runtime.hasFileOps = true;
+      }
+      if (inst.op == IrOpcode::FileWriteString || inst.op == IrOpcode::FileWriteByte || inst.op == IrOpcode::FileWriteNewline) {
+        runtime.hasFileWriteOps = true;
+      }
     }
   }
   if (!runtime.enabled) {
@@ -589,13 +725,15 @@ bool buildWasiRuntimeContext(const IrModule &module,
   runtime.argcAddr = 0;
   runtime.argvBufSizeAddr = 4;
   runtime.nwrittenAddr = 8;
+  runtime.openedFdAddr = 12;
   runtime.iovAddr = 16;
   runtime.argvPtrsBase = 64;
   runtime.argvPtrsCapacityBytes = 4096;
   runtime.argvBufferBase = runtime.argvPtrsBase + runtime.argvPtrsCapacityBytes;
   runtime.argvBufferCapacityBytes = 16384;
   runtime.newlineAddr = runtime.argvBufferBase + runtime.argvBufferCapacityBytes;
-  uint32_t stringBase = runtime.newlineAddr + 1;
+  runtime.byteScratchAddr = runtime.newlineAddr + 1;
+  uint32_t stringBase = runtime.byteScratchAddr + 1;
 
   runtime.stringPtrs.assign(module.stringTable.size(), 0);
   runtime.stringLens.assign(module.stringTable.size(), 0);
@@ -612,27 +750,62 @@ bool buildWasiRuntimeContext(const IrModule &module,
   }
   appendDataSegmentAt(runtime.newlineAddr, std::vector<uint8_t>{'\n'}, runtime.dataSegments);
 
-  WasmFunctionType fdWriteType;
-  fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
-  fdWriteType.results = {WasmValueTypeI32};
-  runtime.fdWriteImportIndex = static_cast<uint32_t>(imports.size());
-  imports.push_back({"wasi_snapshot_preview1", "fd_write", WasmFunctionKind, static_cast<uint32_t>(types.size())});
-  types.push_back(std::move(fdWriteType));
+  if (runtime.hasOutputOps || runtime.hasFileWriteOps) {
+    WasmFunctionType fdWriteType;
+    fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
+    fdWriteType.results = {WasmValueTypeI32};
+    runtime.fdWriteImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back({"wasi_snapshot_preview1", "fd_write", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(fdWriteType));
+  }
 
-  WasmFunctionType argsSizesType;
-  argsSizesType.params = {WasmValueTypeI32, WasmValueTypeI32};
-  argsSizesType.results = {WasmValueTypeI32};
-  runtime.argsSizesGetImportIndex = static_cast<uint32_t>(imports.size());
-  imports.push_back(
-      {"wasi_snapshot_preview1", "args_sizes_get", WasmFunctionKind, static_cast<uint32_t>(types.size())});
-  types.push_back(std::move(argsSizesType));
+  if (runtime.hasArgvOps) {
+    WasmFunctionType argsSizesType;
+    argsSizesType.params = {WasmValueTypeI32, WasmValueTypeI32};
+    argsSizesType.results = {WasmValueTypeI32};
+    runtime.argsSizesGetImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back(
+        {"wasi_snapshot_preview1", "args_sizes_get", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(argsSizesType));
 
-  WasmFunctionType argsGetType;
-  argsGetType.params = {WasmValueTypeI32, WasmValueTypeI32};
-  argsGetType.results = {WasmValueTypeI32};
-  runtime.argsGetImportIndex = static_cast<uint32_t>(imports.size());
-  imports.push_back({"wasi_snapshot_preview1", "args_get", WasmFunctionKind, static_cast<uint32_t>(types.size())});
-  types.push_back(std::move(argsGetType));
+    WasmFunctionType argsGetType;
+    argsGetType.params = {WasmValueTypeI32, WasmValueTypeI32};
+    argsGetType.results = {WasmValueTypeI32};
+    runtime.argsGetImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back({"wasi_snapshot_preview1", "args_get", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(argsGetType));
+  }
+
+  if (runtime.hasFileOps) {
+    WasmFunctionType pathOpenType;
+    pathOpenType.params = {WasmValueTypeI32,
+                           WasmValueTypeI32,
+                           WasmValueTypeI32,
+                           WasmValueTypeI32,
+                           WasmValueTypeI32,
+                           WasmValueTypeI64,
+                           WasmValueTypeI64,
+                           WasmValueTypeI32,
+                           WasmValueTypeI32};
+    pathOpenType.results = {WasmValueTypeI32};
+    runtime.pathOpenImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back({"wasi_snapshot_preview1", "path_open", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(pathOpenType));
+
+    WasmFunctionType fdCloseType;
+    fdCloseType.params = {WasmValueTypeI32};
+    fdCloseType.results = {WasmValueTypeI32};
+    runtime.fdCloseImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back({"wasi_snapshot_preview1", "fd_close", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(fdCloseType));
+
+    WasmFunctionType fdSyncType;
+    fdSyncType.params = {WasmValueTypeI32};
+    fdSyncType.results = {WasmValueTypeI32};
+    runtime.fdSyncImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back({"wasi_snapshot_preview1", "fd_sync", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(fdSyncType));
+  }
 
   runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
 
@@ -997,6 +1170,207 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       out.push_back(WasmOpEnd);
       return true;
     }
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend: {
+      if (!runtime.enabled || !runtime.hasFileOps || !localLayout.hasFileHelpers) {
+        error = "wasm emitter missing file runtime support in function: " + functionName;
+        return false;
+      }
+      if (inst.imm >= runtime.stringPtrs.size()) {
+        error = "wasm emitter invalid string index in function: " + functionName;
+        return false;
+      }
+
+      uint32_t oflags = 0;
+      uint64_t rightsBase = WasiRightsFdRead;
+      uint32_t fdflags = 0;
+      if (inst.op == IrOpcode::FileOpenWrite) {
+        oflags = WasiOflagsCreat | WasiOflagsTrunc;
+        rightsBase = WasiRightsFdWrite;
+      } else if (inst.op == IrOpcode::FileOpenAppend) {
+        oflags = WasiOflagsCreat;
+        rightsBase = WasiRightsFdWrite;
+        fdflags = WasiFdflagAppend;
+      }
+
+      emitWasiPathOpen(runtime.stringPtrs[static_cast<size_t>(inst.imm)],
+                       runtime.stringLens[static_cast<size_t>(inst.imm)],
+                       oflags,
+                       rightsBase,
+                       fdflags,
+                       runtime,
+                       out);
+      out.push_back(WasmOpLocalTee);
+      appendU32Leb(localLayout.fileErrLocal, out);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      emitI32LoadAtAddress(runtime.openedFdAddr, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileErrLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32Or);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileClose: {
+      if (!runtime.enabled || !runtime.hasFileOps || !localLayout.hasFileHelpers) {
+        error = "wasm emitter missing file runtime support in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpCall);
+      appendU32Leb(runtime.fdCloseImportIndex, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileFlush: {
+      if (!runtime.enabled || !runtime.hasFileOps || !localLayout.hasFileHelpers) {
+        error = "wasm emitter missing file runtime support in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpCall);
+      appendU32Leb(runtime.fdSyncImportIndex, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileWriteString: {
+      if (!runtime.enabled || !runtime.hasFileWriteOps || !localLayout.hasFileHelpers) {
+        error = "wasm emitter missing file write runtime support in function: " + functionName;
+        return false;
+      }
+      if (inst.imm >= runtime.stringPtrs.size()) {
+        error = "wasm emitter invalid string index in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal,
+                                      runtime.stringPtrs[static_cast<size_t>(inst.imm)],
+                                      runtime.stringLens[static_cast<size_t>(inst.imm)],
+                                      runtime,
+                                      out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileWriteByte: {
+      if (!runtime.enabled || !runtime.hasFileWriteOps || !localLayout.hasFileHelpers) {
+        error = "wasm emitter missing file write runtime support in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileValueLocal, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.byteScratchAddr), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileValueLocal, out);
+      out.push_back(WasmOpI32Store8);
+      appendI32MemArg(0, out);
+      emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.byteScratchAddr, 1, runtime, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileWriteNewline: {
+      if (!runtime.enabled || !runtime.hasFileWriteOps || !localLayout.hasFileHelpers) {
+        error = "wasm emitter missing file write runtime support in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.newlineAddr, 1, runtime, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fileHandleLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
+      out.push_back(WasmOpI32And);
+      out.push_back(WasmOpEnd);
+      return true;
+    }
+    case IrOpcode::FileWriteI32:
+    case IrOpcode::FileWriteI64:
+    case IrOpcode::FileWriteU64:
+      out.push_back(WasmOpDrop);
+      out.push_back(WasmOpDrop);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(WasmErrnoNotSupported), out);
+      return true;
     case IrOpcode::Call:
     case IrOpcode::CallVoid: {
       if (inst.imm >= functionTypes.size()) {
