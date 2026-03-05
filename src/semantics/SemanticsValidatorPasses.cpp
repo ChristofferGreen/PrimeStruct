@@ -4,6 +4,7 @@
 #include <array>
 #include <cctype>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <optional>
 
@@ -208,6 +209,66 @@ bool SemanticsValidator::validateDefinitions() {
     error_.clear();
     resetCollectedState();
   };
+  auto isBuiltinCall = [&](const Expr &expr) -> bool {
+    if (expr.isMethodCall) {
+      return false;
+    }
+    if (isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
+        isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
+      return true;
+    }
+    std::string builtinName;
+    return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
+           getBuiltinMutationName(expr, builtinName) ||
+           getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
+           getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           getBuiltinCollectionName(expr, builtinName);
+  };
+  auto collectDefinitionUnknownCallDiagnostics = [&](const Definition &def,
+                                                     std::vector<SemanticDiagnosticRecord> &out) {
+    std::function<void(const Expr &)> scanExpr;
+    scanExpr = [&](const Expr &expr) {
+      if (expr.kind == Expr::Kind::Call) {
+        if (!expr.name.empty() && !isBuiltinCall(expr)) {
+          const std::string resolved = resolveCalleePath(expr);
+          if (defMap_.count(resolved) == 0) {
+            SemanticDiagnosticRecord record;
+            record.message = "unknown call target: " + expr.name;
+            if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+              record.line = expr.sourceLine;
+              record.column = expr.sourceColumn;
+            }
+            if (def.sourceLine > 0 && def.sourceColumn > 0) {
+              SemanticDiagnosticRelatedSpan related;
+              related.line = def.sourceLine;
+              related.column = def.sourceColumn;
+              related.label = "definition: " + def.fullPath;
+              record.relatedSpans.push_back(std::move(related));
+            }
+            out.push_back(std::move(record));
+          }
+        }
+      }
+      for (const auto &arg : expr.args) {
+        scanExpr(arg);
+      }
+      for (const auto &arg : expr.bodyArguments) {
+        scanExpr(arg);
+      }
+    };
+
+    for (const auto &stmt : def.statements) {
+      scanExpr(stmt);
+    }
+    if (def.returnExpr.has_value()) {
+      scanExpr(*def.returnExpr);
+    }
+  };
 
   auto validateDefinition = [&](const Definition &def) -> bool {
     DefinitionContextScope definitionScope(*this, def);
@@ -322,6 +383,19 @@ bool SemanticsValidator::validateDefinitions() {
 
   for (const auto &def : program_.definitions) {
     resetCollectedState();
+    if (collectDiagnostics) {
+      std::vector<SemanticDiagnosticRecord> intraDefinitionRecords;
+      collectDefinitionUnknownCallDiagnostics(def, intraDefinitionRecords);
+      if (!intraDefinitionRecords.empty()) {
+        if (error_.empty()) {
+          error_ = intraDefinitionRecords.front().message;
+        }
+        collectedRecords.insert(collectedRecords.end(),
+                                std::make_move_iterator(intraDefinitionRecords.begin()),
+                                std::make_move_iterator(intraDefinitionRecords.end()));
+        continue;
+      }
+    }
     if (!validateDefinition(def)) {
       if (!collectDiagnostics) {
         return false;
@@ -1014,6 +1088,66 @@ bool SemanticsValidator::validateExecutions() {
     error_.clear();
     resetCollectedState();
   };
+  auto isBuiltinCall = [&](const Expr &expr) -> bool {
+    if (expr.isMethodCall) {
+      return false;
+    }
+    if (isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
+        isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
+      return true;
+    }
+    std::string builtinName;
+    return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
+           getBuiltinMutationName(expr, builtinName) ||
+           getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinAbsSignName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
+           getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
+           getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           getBuiltinCollectionName(expr, builtinName);
+  };
+  auto collectExecutionUnknownCallDiagnostics = [&](const Execution &exec,
+                                                    std::vector<SemanticDiagnosticRecord> &out) {
+    std::function<void(const Expr &)> scanExpr;
+    scanExpr = [&](const Expr &expr) {
+      if (expr.kind == Expr::Kind::Call) {
+        if (!expr.name.empty() && !isBuiltinCall(expr)) {
+          const std::string resolved = resolveCalleePath(expr);
+          if (defMap_.count(resolved) == 0) {
+            SemanticDiagnosticRecord record;
+            record.message = "unknown call target: " + expr.name;
+            if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+              record.line = expr.sourceLine;
+              record.column = expr.sourceColumn;
+            }
+            if (exec.sourceLine > 0 && exec.sourceColumn > 0) {
+              SemanticDiagnosticRelatedSpan related;
+              related.line = exec.sourceLine;
+              related.column = exec.sourceColumn;
+              related.label = "execution: " + exec.fullPath;
+              record.relatedSpans.push_back(std::move(related));
+            }
+            out.push_back(std::move(record));
+          }
+        }
+      }
+      for (const auto &arg : expr.args) {
+        scanExpr(arg);
+      }
+      for (const auto &arg : expr.bodyArguments) {
+        scanExpr(arg);
+      }
+    };
+
+    for (const auto &arg : exec.arguments) {
+      scanExpr(arg);
+    }
+    for (const auto &arg : exec.bodyArguments) {
+      scanExpr(arg);
+    }
+  };
 
   auto validateExecution = [&](const Execution &exec) -> bool {
     ExecutionContextScope executionScope(*this, exec);
@@ -1150,6 +1284,19 @@ bool SemanticsValidator::validateExecutions() {
 
   for (const auto &exec : program_.executions) {
     resetCollectedState();
+    if (collectDiagnostics) {
+      std::vector<SemanticDiagnosticRecord> intraExecutionRecords;
+      collectExecutionUnknownCallDiagnostics(exec, intraExecutionRecords);
+      if (!intraExecutionRecords.empty()) {
+        if (error_.empty()) {
+          error_ = intraExecutionRecords.front().message;
+        }
+        collectedRecords.insert(collectedRecords.end(),
+                                std::make_move_iterator(intraExecutionRecords.begin()),
+                                std::make_move_iterator(intraExecutionRecords.end()));
+        continue;
+      }
+    }
     if (!validateExecution(exec)) {
       if (!collectDiagnostics) {
         return false;
