@@ -247,6 +247,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add spill-plan verifier negative regression coverage for successor-block index mismatches to lock deterministic diagnostics. Testing: mutate one planned successor index after insertion and assert the stable verifier error substring.
 - ✓ Add spill-plan verifier negative regression coverage for edge spill-op mismatches to lock deterministic diagnostics. Testing: mutate one planned successor edge-op list after insertion and assert the stable verifier error substring.
 - ✓ Add spill-plan verifier negative regression coverage for successor-edge count mismatches to lock deterministic diagnostics. Testing: mutate one planned block to remove a successor-edge entry and assert the stable verifier error substring.
+- ✓ Add spill-plan verifier negative regression coverage for module/allocation/plan function-count mismatches to lock deterministic diagnostics. Testing: direct verifier call with mismatched function counts asserting the stable error substring.
 
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).

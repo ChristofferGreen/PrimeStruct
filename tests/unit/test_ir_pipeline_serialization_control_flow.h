@@ -1206,6 +1206,20 @@ TEST_CASE("spill insertion verifier rejects successor edge count mismatch") {
   CHECK(error.find("matching successor edge counts") != std::string::npos);
 }
 
+TEST_CASE("spill insertion verifier rejects function count mismatch") {
+  primec::IrVirtualRegisterModule module;
+  primec::IrVirtualRegisterFunction function;
+  function.name = "/main";
+  module.functions.push_back(std::move(function));
+
+  primec::IrLinearScanModuleAllocation allocation;
+  primec::IrVirtualRegisterSpillPlan plan;
+  std::string error;
+
+  CHECK_FALSE(primec::verifyIrVirtualRegisterSpillPlan(module, allocation, plan, error));
+  CHECK(error.find("matching function counts") != std::string::npos);
+}
+
 TEST_CASE("scheduler is dependency-safe and latency-aware") {
   primec::IrModule module;
   module.entryIndex = 0;
