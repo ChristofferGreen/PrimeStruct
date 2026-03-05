@@ -1201,6 +1201,26 @@ bool VmDebugSession::start(const IrModule &module,
 VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) {
   constexpr uint64_t kSlotBytes = IrSlotBytes;
   constexpr size_t MaxCallDepth = 4096;
+  if (!module_) {
+    error = "debug session has no active module";
+    return StepOutcome::Fault;
+  }
+  auto writeAll = [&](int fd, const void *data, size_t size) -> int {
+    const char *cursor = static_cast<const char *>(data);
+    size_t remaining = size;
+    while (remaining > 0) {
+      ssize_t wrote = ::write(fd, cursor, remaining);
+      if (wrote < 0) {
+        return errno == 0 ? EIO : errno;
+      }
+      if (wrote == 0) {
+        return EIO;
+      }
+      remaining -= static_cast<size_t>(wrote);
+      cursor += wrote;
+    }
+    return 0;
+  };
   if (frames_.empty()) {
     error = "debug session has no active frame";
     return StepOutcome::Fault;
@@ -1224,6 +1244,11 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       ip += 1;
       return StepOutcome::Continue;
     case IrOpcode::PushI64:
+      stack_.push_back(inst.imm);
+      ip += 1;
+      return StepOutcome::Continue;
+    case IrOpcode::PushF32:
+    case IrOpcode::PushF64:
       stack_.push_back(inst.imm);
       ip += 1;
       return StepOutcome::Continue;
@@ -1262,6 +1287,49 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         return StepOutcome::Fault;
       }
       stack_.push_back(static_cast<uint64_t>(inst.imm) * kSlotBytes);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::LoadIndirect: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on load indirect";
+        return StepOutcome::Fault;
+      }
+      const uint64_t address = stack_.back();
+      stack_.pop_back();
+      if (address % kSlotBytes != 0) {
+        error = "unaligned indirect address in IR: " + std::to_string(address);
+        return StepOutcome::Fault;
+      }
+      const uint64_t index = address / kSlotBytes;
+      if (index >= locals.size()) {
+        error = "invalid indirect address in IR: " + std::to_string(address);
+        return StepOutcome::Fault;
+      }
+      stack_.push_back(locals[static_cast<size_t>(index)]);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::StoreIndirect: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on store indirect";
+        return StepOutcome::Fault;
+      }
+      const uint64_t value = stack_.back();
+      stack_.pop_back();
+      const uint64_t address = stack_.back();
+      stack_.pop_back();
+      if (address % kSlotBytes != 0) {
+        error = "unaligned indirect address in IR: " + std::to_string(address);
+        return StepOutcome::Fault;
+      }
+      const uint64_t index = address / kSlotBytes;
+      if (index >= locals.size()) {
+        error = "invalid indirect address in IR: " + std::to_string(address);
+        return StepOutcome::Fault;
+      }
+      locals[static_cast<size_t>(index)] = value;
+      stack_.push_back(value);
       ip += 1;
       return StepOutcome::Continue;
     }
@@ -1357,6 +1425,367 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         return StepOutcome::Fault;
       }
       stack_.push_back(lhs / rhs);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::NegI32:
+    case IrOpcode::NegI64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on negate";
+        return StepOutcome::Fault;
+      }
+      const int64_t value = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      stack_.push_back(static_cast<uint64_t>(-value));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::AddF32:
+    case IrOpcode::SubF32:
+    case IrOpcode::MulF32:
+    case IrOpcode::DivF32: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on float op";
+        return StepOutcome::Fault;
+      }
+      const float rhs = bitsToF32(stack_.back());
+      stack_.pop_back();
+      const float lhs = bitsToF32(stack_.back());
+      stack_.pop_back();
+      float out = 0.0f;
+      switch (inst.op) {
+        case IrOpcode::AddF32:
+          out = lhs + rhs;
+          break;
+        case IrOpcode::SubF32:
+          out = lhs - rhs;
+          break;
+        case IrOpcode::MulF32:
+          out = lhs * rhs;
+          break;
+        case IrOpcode::DivF32:
+          out = lhs / rhs;
+          break;
+        default:
+          break;
+      }
+      stack_.push_back(f32ToBits(out));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::NegF32: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on negate";
+        return StepOutcome::Fault;
+      }
+      const float value = bitsToF32(stack_.back());
+      stack_.pop_back();
+      stack_.push_back(f32ToBits(-value));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::AddF64:
+    case IrOpcode::SubF64:
+    case IrOpcode::MulF64:
+    case IrOpcode::DivF64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on float op";
+        return StepOutcome::Fault;
+      }
+      const double rhs = bitsToF64(stack_.back());
+      stack_.pop_back();
+      const double lhs = bitsToF64(stack_.back());
+      stack_.pop_back();
+      double out = 0.0;
+      switch (inst.op) {
+        case IrOpcode::AddF64:
+          out = lhs + rhs;
+          break;
+        case IrOpcode::SubF64:
+          out = lhs - rhs;
+          break;
+        case IrOpcode::MulF64:
+          out = lhs * rhs;
+          break;
+        case IrOpcode::DivF64:
+          out = lhs / rhs;
+          break;
+        default:
+          break;
+      }
+      stack_.push_back(f64ToBits(out));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::NegF64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on negate";
+        return StepOutcome::Fault;
+      }
+      const double value = bitsToF64(stack_.back());
+      stack_.pop_back();
+      stack_.push_back(f64ToBits(-value));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::CmpEqI32:
+    case IrOpcode::CmpNeI32:
+    case IrOpcode::CmpLtI32:
+    case IrOpcode::CmpLeI32:
+    case IrOpcode::CmpGtI32:
+    case IrOpcode::CmpGeI32:
+    case IrOpcode::CmpEqI64:
+    case IrOpcode::CmpNeI64:
+    case IrOpcode::CmpLtI64:
+    case IrOpcode::CmpLeI64:
+    case IrOpcode::CmpGtI64:
+    case IrOpcode::CmpGeI64:
+    case IrOpcode::CmpLtU64:
+    case IrOpcode::CmpLeU64:
+    case IrOpcode::CmpGtU64:
+    case IrOpcode::CmpGeU64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on compare";
+        return StepOutcome::Fault;
+      }
+      const uint64_t rhsRaw = stack_.back();
+      stack_.pop_back();
+      const uint64_t lhsRaw = stack_.back();
+      stack_.pop_back();
+      bool cmp = false;
+      switch (inst.op) {
+        case IrOpcode::CmpEqI32:
+        case IrOpcode::CmpEqI64:
+          cmp = lhsRaw == rhsRaw;
+          break;
+        case IrOpcode::CmpNeI32:
+        case IrOpcode::CmpNeI64:
+          cmp = lhsRaw != rhsRaw;
+          break;
+        case IrOpcode::CmpLtI32:
+        case IrOpcode::CmpLtI64:
+          cmp = static_cast<int64_t>(lhsRaw) < static_cast<int64_t>(rhsRaw);
+          break;
+        case IrOpcode::CmpLeI32:
+        case IrOpcode::CmpLeI64:
+          cmp = static_cast<int64_t>(lhsRaw) <= static_cast<int64_t>(rhsRaw);
+          break;
+        case IrOpcode::CmpGtI32:
+        case IrOpcode::CmpGtI64:
+          cmp = static_cast<int64_t>(lhsRaw) > static_cast<int64_t>(rhsRaw);
+          break;
+        case IrOpcode::CmpGeI32:
+        case IrOpcode::CmpGeI64:
+          cmp = static_cast<int64_t>(lhsRaw) >= static_cast<int64_t>(rhsRaw);
+          break;
+        case IrOpcode::CmpLtU64:
+          cmp = lhsRaw < rhsRaw;
+          break;
+        case IrOpcode::CmpLeU64:
+          cmp = lhsRaw <= rhsRaw;
+          break;
+        case IrOpcode::CmpGtU64:
+          cmp = lhsRaw > rhsRaw;
+          break;
+        case IrOpcode::CmpGeU64:
+          cmp = lhsRaw >= rhsRaw;
+          break;
+        default:
+          break;
+      }
+      stack_.push_back(cmp ? 1 : 0);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::CmpEqF32:
+    case IrOpcode::CmpNeF32:
+    case IrOpcode::CmpLtF32:
+    case IrOpcode::CmpLeF32:
+    case IrOpcode::CmpGtF32:
+    case IrOpcode::CmpGeF32: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on compare";
+        return StepOutcome::Fault;
+      }
+      const float rhs = bitsToF32(stack_.back());
+      stack_.pop_back();
+      const float lhs = bitsToF32(stack_.back());
+      stack_.pop_back();
+      bool cmp = false;
+      switch (inst.op) {
+        case IrOpcode::CmpEqF32:
+          cmp = lhs == rhs;
+          break;
+        case IrOpcode::CmpNeF32:
+          cmp = lhs != rhs;
+          break;
+        case IrOpcode::CmpLtF32:
+          cmp = lhs < rhs;
+          break;
+        case IrOpcode::CmpLeF32:
+          cmp = lhs <= rhs;
+          break;
+        case IrOpcode::CmpGtF32:
+          cmp = lhs > rhs;
+          break;
+        case IrOpcode::CmpGeF32:
+          cmp = lhs >= rhs;
+          break;
+        default:
+          break;
+      }
+      stack_.push_back(cmp ? 1 : 0);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::CmpEqF64:
+    case IrOpcode::CmpNeF64:
+    case IrOpcode::CmpLtF64:
+    case IrOpcode::CmpLeF64:
+    case IrOpcode::CmpGtF64:
+    case IrOpcode::CmpGeF64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on compare";
+        return StepOutcome::Fault;
+      }
+      const double rhs = bitsToF64(stack_.back());
+      stack_.pop_back();
+      const double lhs = bitsToF64(stack_.back());
+      stack_.pop_back();
+      bool cmp = false;
+      switch (inst.op) {
+        case IrOpcode::CmpEqF64:
+          cmp = lhs == rhs;
+          break;
+        case IrOpcode::CmpNeF64:
+          cmp = lhs != rhs;
+          break;
+        case IrOpcode::CmpLtF64:
+          cmp = lhs < rhs;
+          break;
+        case IrOpcode::CmpLeF64:
+          cmp = lhs <= rhs;
+          break;
+        case IrOpcode::CmpGtF64:
+          cmp = lhs > rhs;
+          break;
+        case IrOpcode::CmpGeF64:
+          cmp = lhs >= rhs;
+          break;
+        default:
+          break;
+      }
+      stack_.push_back(cmp ? 1 : 0);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ConvertI32ToF32:
+    case IrOpcode::ConvertI64ToF32:
+    case IrOpcode::ConvertU64ToF32: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on convert";
+        return StepOutcome::Fault;
+      }
+      const uint64_t raw = stack_.back();
+      stack_.pop_back();
+      float value = 0.0f;
+      if (inst.op == IrOpcode::ConvertU64ToF32) {
+        value = static_cast<float>(raw);
+      } else if (inst.op == IrOpcode::ConvertI64ToF32) {
+        value = static_cast<float>(static_cast<int64_t>(raw));
+      } else {
+        value = static_cast<float>(static_cast<int32_t>(raw));
+      }
+      stack_.push_back(f32ToBits(value));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ConvertI32ToF64:
+    case IrOpcode::ConvertI64ToF64:
+    case IrOpcode::ConvertU64ToF64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on convert";
+        return StepOutcome::Fault;
+      }
+      const uint64_t raw = stack_.back();
+      stack_.pop_back();
+      double value = 0.0;
+      if (inst.op == IrOpcode::ConvertU64ToF64) {
+        value = static_cast<double>(raw);
+      } else if (inst.op == IrOpcode::ConvertI64ToF64) {
+        value = static_cast<double>(static_cast<int64_t>(raw));
+      } else {
+        value = static_cast<double>(static_cast<int32_t>(raw));
+      }
+      stack_.push_back(f64ToBits(value));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ConvertF32ToI32:
+    case IrOpcode::ConvertF32ToI64:
+    case IrOpcode::ConvertF32ToU64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on convert";
+        return StepOutcome::Fault;
+      }
+      const float value = bitsToF32(stack_.back());
+      stack_.pop_back();
+      if (inst.op == IrOpcode::ConvertF32ToU64) {
+        const uint64_t out = static_cast<uint64_t>(value);
+        stack_.push_back(out);
+      } else if (inst.op == IrOpcode::ConvertF32ToI64) {
+        const int64_t out = static_cast<int64_t>(value);
+        stack_.push_back(static_cast<uint64_t>(out));
+      } else {
+        const int32_t out = static_cast<int32_t>(value);
+        stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(out)));
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ConvertF64ToI32:
+    case IrOpcode::ConvertF64ToI64:
+    case IrOpcode::ConvertF64ToU64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on convert";
+        return StepOutcome::Fault;
+      }
+      const double value = bitsToF64(stack_.back());
+      stack_.pop_back();
+      if (inst.op == IrOpcode::ConvertF64ToU64) {
+        const uint64_t out = static_cast<uint64_t>(value);
+        stack_.push_back(out);
+      } else if (inst.op == IrOpcode::ConvertF64ToI64) {
+        const int64_t out = static_cast<int64_t>(value);
+        stack_.push_back(static_cast<uint64_t>(out));
+      } else {
+        const int32_t out = static_cast<int32_t>(value);
+        stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(out)));
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ConvertF32ToF64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on convert";
+        return StepOutcome::Fault;
+      }
+      const float value = bitsToF32(stack_.back());
+      stack_.pop_back();
+      const double out = static_cast<double>(value);
+      stack_.push_back(f64ToBits(out));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ConvertF64ToF32: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on convert";
+        return StepOutcome::Fault;
+      }
+      const double value = bitsToF64(stack_.back());
+      stack_.pop_back();
+      const float out = static_cast<float>(value);
+      stack_.push_back(f32ToBits(out));
       ip += 1;
       return StepOutcome::Continue;
     }
@@ -1458,8 +1887,364 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       return StepOutcome::Continue;
     }
+    case IrOpcode::ReturnF32: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on return";
+        return StepOutcome::Fault;
+      }
+      const uint64_t returnValue = static_cast<uint64_t>(static_cast<uint32_t>(stack_.back()));
+      stack_.pop_back();
+      const bool returnToCaller = frame.returnValueToCaller;
+      if (frames_.size() == 1) {
+        result_ = returnValue;
+        frames_.clear();
+        return StepOutcome::Exit;
+      }
+      frames_.pop_back();
+      if (returnToCaller) {
+        stack_.push_back(returnValue);
+      }
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ReturnF64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on return";
+        return StepOutcome::Fault;
+      }
+      const uint64_t returnValue = stack_.back();
+      stack_.pop_back();
+      const bool returnToCaller = frame.returnValueToCaller;
+      if (frames_.size() == 1) {
+        result_ = returnValue;
+        frames_.clear();
+        return StepOutcome::Exit;
+      }
+      frames_.pop_back();
+      if (returnToCaller) {
+        stack_.push_back(returnValue);
+      }
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintI32: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on print";
+        return StepOutcome::Fault;
+      }
+      const int32_t value = static_cast<int32_t>(stack_.back());
+      stack_.pop_back();
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string text = std::to_string(value);
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintI64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on print";
+        return StepOutcome::Fault;
+      }
+      const int64_t value = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string text = std::to_string(value);
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintU64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on print";
+        return StepOutcome::Fault;
+      }
+      const uint64_t value = stack_.back();
+      stack_.pop_back();
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string text = std::to_string(value);
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintString: {
+      const uint64_t stringIndex = decodePrintStringIndex(inst.imm);
+      if (stringIndex >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return StepOutcome::Fault;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintStringDynamic: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on print";
+        return StepOutcome::Fault;
+      }
+      const uint64_t stringIndex = stack_.back();
+      stack_.pop_back();
+      if (stringIndex >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return StepOutcome::Fault;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintArgv: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on print";
+        return StepOutcome::Fault;
+      }
+      if (!args_) {
+        error = "VM missing argv data for PrintArgv";
+        return StepOutcome::Fault;
+      }
+      const int64_t index = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      if (index < 0 || static_cast<size_t>(index) >= args_->size()) {
+        error = "invalid argv index in IR";
+        return StepOutcome::Fault;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string_view text = (*args_)[static_cast<size_t>(index)];
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::PrintArgvUnsafe: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on print";
+        return StepOutcome::Fault;
+      }
+      if (!args_) {
+        error = "VM missing argv data for PrintArgvUnsafe";
+        return StepOutcome::Fault;
+      }
+      const int64_t index = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      if (index < 0 || static_cast<size_t>(index) >= args_->size()) {
+        ip += 1;
+        return StepOutcome::Continue;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
+      const bool newline = (flags & PrintFlagNewline) != 0;
+      const std::string_view text = (*args_)[static_cast<size_t>(index)];
+      std::fwrite(text.data(), 1, text.size(), out);
+      if (newline) {
+        std::fputc('\n', out);
+      }
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend: {
+      if (inst.imm >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return StepOutcome::Fault;
+      }
+      const std::string &path = module_->stringTable[static_cast<size_t>(inst.imm)];
+      int flags = O_RDONLY;
+      const int mode = 0644;
+      if (inst.op == IrOpcode::FileOpenWrite) {
+        flags = O_WRONLY | O_CREAT | O_TRUNC;
+      } else if (inst.op == IrOpcode::FileOpenAppend) {
+        flags = O_WRONLY | O_CREAT | O_APPEND;
+      }
+      const int fd = ::open(path.c_str(), flags, mode);
+      uint64_t packed = 0;
+      if (fd < 0) {
+        const uint32_t err = errno == 0 ? 1u : static_cast<uint32_t>(errno);
+        packed = static_cast<uint64_t>(err) << 32;
+      } else {
+        packed = static_cast<uint64_t>(static_cast<uint32_t>(fd));
+      }
+      stack_.push_back(packed);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileClose: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on file close";
+        return StepOutcome::Fault;
+      }
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const int rc = ::close(fd);
+      const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileFlush: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on file flush";
+        return StepOutcome::Fault;
+      }
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const int rc = ::fsync(fd);
+      const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileWriteI32: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on file write";
+        return StepOutcome::Fault;
+      }
+      const int64_t value = static_cast<int64_t>(static_cast<int32_t>(stack_.back()));
+      stack_.pop_back();
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const std::string text = std::to_string(value);
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileWriteI64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on file write";
+        return StepOutcome::Fault;
+      }
+      const int64_t value = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const std::string text = std::to_string(value);
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileWriteU64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on file write";
+        return StepOutcome::Fault;
+      }
+      const uint64_t value = stack_.back();
+      stack_.pop_back();
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const std::string text = std::to_string(static_cast<unsigned long long>(value));
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileWriteString: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on file write";
+        return StepOutcome::Fault;
+      }
+      if (inst.imm >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return StepOutcome::Fault;
+      }
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const std::string &text = module_->stringTable[static_cast<size_t>(inst.imm)];
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileWriteByte: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on file write";
+        return StepOutcome::Fault;
+      }
+      const uint8_t value = static_cast<uint8_t>(stack_.back() & 0xffu);
+      stack_.pop_back();
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, &value, 1));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::FileWriteNewline: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on file write";
+        return StepOutcome::Fault;
+      }
+      const uint64_t handle = stack_.back();
+      stack_.pop_back();
+      const int fd = static_cast<int>(handle & 0xffffffffu);
+      const char newline = '\n';
+      const uint32_t err = static_cast<uint32_t>(writeAll(fd, &newline, 1));
+      stack_.push_back(static_cast<uint64_t>(err));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::LoadStringByte: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on string index";
+        return StepOutcome::Fault;
+      }
+      const uint64_t indexRaw = stack_.back();
+      stack_.pop_back();
+      const uint64_t stringIndex = inst.imm;
+      if (stringIndex >= module_->stringTable.size()) {
+        error = "invalid string index in IR";
+        return StepOutcome::Fault;
+      }
+      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
+      const size_t index = static_cast<size_t>(indexRaw);
+      if (index >= text.size()) {
+        error = "string index out of bounds in IR";
+        return StepOutcome::Fault;
+      }
+      const uint8_t byte = static_cast<uint8_t>(text[index]);
+      stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(byte))));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
     default:
-      error = "debug session unsupported opcode: " + std::to_string(static_cast<uint32_t>(inst.op));
+      error = "unknown IR opcode";
       return StepOutcome::Fault;
   }
 }

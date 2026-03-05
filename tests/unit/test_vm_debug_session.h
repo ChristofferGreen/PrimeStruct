@@ -236,4 +236,258 @@ TEST_CASE("vm debug session validates control-state preconditions") {
   CHECK(error.find("not paused") != std::string::npos);
 }
 
+TEST_CASE("vm debug opcode matrix matches vm execute for expanded families") {
+  struct OpcodeMatrixCase {
+    std::string name;
+    primec::IrModule module;
+    std::vector<std::string> args;
+  };
+
+  auto f32Bits = [](float value) {
+    uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    return static_cast<uint64_t>(bits);
+  };
+  auto f64Bits = [](double value) {
+    uint64_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    return bits;
+  };
+
+  auto make_views = [](const std::vector<std::string> &args) {
+    std::vector<std::string_view> views;
+    views.reserve(args.size());
+    for (const std::string &arg : args) {
+      views.push_back(arg);
+    }
+    return views;
+  };
+
+  auto runVm = [&](const primec::IrModule &module, const std::vector<std::string> &args, uint64_t &result, std::string &error) {
+    primec::Vm vm;
+    if (args.empty()) {
+      return vm.execute(module, result, error, 0);
+    }
+    const std::vector<std::string_view> views = make_views(args);
+    return vm.execute(module, result, error, views);
+  };
+
+  auto runDebugByStep =
+      [&](const primec::IrModule &module, const std::vector<std::string> &args, uint64_t &result, std::string &error) {
+        primec::VmDebugSession session;
+        if (args.empty()) {
+          if (!session.start(module, error, 0)) {
+            return false;
+          }
+        } else {
+          const std::vector<std::string_view> views = make_views(args);
+          if (!session.start(module, error, views)) {
+            return false;
+          }
+        }
+
+        constexpr size_t MaxSteps = 4096;
+        for (size_t stepIndex = 0; stepIndex < MaxSteps; ++stepIndex) {
+          primec::VmDebugStopReason reason = primec::VmDebugStopReason::Step;
+          const bool ok = session.step(reason, error);
+          if (!ok) {
+            return false;
+          }
+          if (reason == primec::VmDebugStopReason::Exit) {
+            result = session.snapshot().result;
+            return true;
+          }
+          if (reason != primec::VmDebugStopReason::Step) {
+            error = "unexpected stop reason while stepping";
+            return false;
+          }
+        }
+        error = "debug step limit exceeded";
+        return false;
+      };
+
+  std::vector<OpcodeMatrixCase> cases;
+
+  {
+    OpcodeMatrixCase c;
+    c.name = "indirect and integer families";
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+    fn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+    fn.instructions.push_back({primec::IrOpcode::AddressOfLocal, 0});
+    fn.instructions.push_back({primec::IrOpcode::LoadIndirect, 0});
+    fn.instructions.push_back({primec::IrOpcode::NegI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int64_t>(-7))});
+    fn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI64, 11});
+    fn.instructions.push_back({primec::IrOpcode::NegI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    OpcodeMatrixCase c;
+    c.name = "float compare and convert families";
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(1.5f)});
+    fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(2.0f)});
+    fn.instructions.push_back({primec::IrOpcode::AddF32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(0.5f)});
+    fn.instructions.push_back({primec::IrOpcode::SubF32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(4.0f)});
+    fn.instructions.push_back({primec::IrOpcode::MulF32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(4.0f)});
+    fn.instructions.push_back({primec::IrOpcode::DivF32, 0});
+    fn.instructions.push_back({primec::IrOpcode::NegF32, 0});
+    fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::ConvertI32ToF64, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushF64, f64Bits(-3.0)});
+    fn.instructions.push_back({primec::IrOpcode::CmpEqF64, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushF64, f64Bits(5.0)});
+    fn.instructions.push_back({primec::IrOpcode::NegF64, 0});
+    fn.instructions.push_back({primec::IrOpcode::ConvertF64ToI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::ConvertI64ToF32, 0});
+    fn.instructions.push_back({primec::IrOpcode::ConvertF32ToU64, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    OpcodeMatrixCase c;
+    c.name = "return f32 and f64 families";
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 2});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction returnF32Fn;
+    returnF32Fn.name = "/retf32";
+    returnF32Fn.instructions.push_back({primec::IrOpcode::PushF32, f32Bits(1.0f)});
+    returnF32Fn.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+
+    primec::IrFunction returnF64Fn;
+    returnF64Fn.name = "/retf64";
+    returnF64Fn.instructions.push_back({primec::IrOpcode::PushF64, f64Bits(2.0)});
+    returnF64Fn.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
+
+    c.module.functions.push_back(std::move(mainFn));
+    c.module.functions.push_back(std::move(returnF32Fn));
+    c.module.functions.push_back(std::move(returnF64Fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    OpcodeMatrixCase c;
+    c.name = "print argv and string-byte families";
+    c.args = {""};
+    c.module.stringTable = {"", "abc"};
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PrintArgv, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    fn.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe, 0});
+    fn.instructions.push_back({primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, 0)});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PrintStringDynamic, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PrintI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::PrintI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::PrintU64, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    fn.instructions.push_back({primec::IrOpcode::LoadStringByte, 1});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  const std::filesystem::path filePath =
+      std::filesystem::temp_directory_path() / "primestruct_vm_debug_opcode_matrix_file.txt";
+  std::filesystem::remove(filePath);
+  {
+    OpcodeMatrixCase c;
+    c.name = "file opcode family";
+    c.module.stringTable = {filePath.string(), "text"};
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::FileOpenWrite, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteString, 1});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 65});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteByte, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteNewline, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI64, 8});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteI64, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI64, 9});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteU64, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileFlush, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileOpenAppend, 0});
+    fn.instructions.push_back({primec::IrOpcode::Dup, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    fn.instructions.push_back({primec::IrOpcode::FileWriteI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
+    fn.instructions.push_back({primec::IrOpcode::FileClose, 0});
+    fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  for (const OpcodeMatrixCase &c : cases) {
+    uint64_t vmResult = 0;
+    std::string vmError;
+    INFO("vm case: " << c.name);
+    REQUIRE(runVm(c.module, c.args, vmResult, vmError));
+    CHECK(vmError.empty());
+
+    uint64_t debugResult = 0;
+    std::string debugError;
+    INFO("debug case: " << c.name);
+    REQUIRE(runDebugByStep(c.module, c.args, debugResult, debugError));
+    CHECK(debugError.empty());
+    CHECK(debugResult == vmResult);
+  }
+
+  std::filesystem::remove(filePath);
+}
+
 TEST_SUITE_END();
