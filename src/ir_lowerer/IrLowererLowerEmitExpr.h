@@ -500,7 +500,7 @@
         if (readbackResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
           return readbackResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
         }
-        const auto bufferBuiltinResult = ir_lowerer::tryEmitBufferBuiltinCall(
+        const auto bufferBuiltinResult = ir_lowerer::tryEmitBufferBuiltinDispatchWithLocals(
             expr,
             localsIn,
             [&](const std::string &typeName) { return valueKindFromTypeName(typeName); },
@@ -518,8 +518,8 @@
             },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             error);
-        if (bufferBuiltinResult != ir_lowerer::BufferBuiltinCallEmitResult::NotMatched) {
-          return bufferBuiltinResult == ir_lowerer::BufferBuiltinCallEmitResult::Emitted;
+        if (bufferBuiltinResult != ir_lowerer::BufferBuiltinDispatchResult::NotHandled) {
+          return bufferBuiltinResult == ir_lowerer::BufferBuiltinDispatchResult::Emitted;
         }
         const auto inlineDispatchResult = ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             expr,
@@ -547,7 +547,7 @@
         if (inlineDispatchResult == ir_lowerer::InlineCallDispatchResult::Error) {
           return false;
         }
-        const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatch(
+        const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
             expr,
             localsIn,
             [&](const Expr &callExpr, std::string &mathBuiltinName) {

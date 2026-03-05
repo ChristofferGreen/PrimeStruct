@@ -2891,6 +2891,135 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
+  using BufferResult = primec::ir_lowerer::BufferBuiltinDispatchResult;
+  using NativeResult = primec::ir_lowerer::NativeCallTailDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo arrayInfo;
+  arrayInfo.kind = LocalInfo::Kind::Array;
+  arrayInfo.index = 9;
+  arrayInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("arr", arrayInfo);
+
+  primec::Expr arrName;
+  arrName.kind = primec::Expr::Kind::Name;
+  arrName.name = "arr";
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, uint64_t imm) { instructions.at(index).imm = imm; };
+
+  int nextLocal = 20;
+  int nextTempLocal = 100;
+  std::string error;
+
+  primec::Expr bufferExpr;
+  bufferExpr.kind = primec::Expr::Kind::Call;
+  bufferExpr.name = "buffer";
+  bufferExpr.templateArgs = {"i32"};
+  primec::Expr twoLiteral;
+  twoLiteral.kind = primec::Expr::Kind::Literal;
+  twoLiteral.literalValue = 2;
+  bufferExpr.args = {twoLiteral};
+
+  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinDispatchWithLocals(
+            bufferExpr,
+            locals,
+            [](const std::string &typeName) {
+              return typeName == "i32" ? LocalInfo::ValueKind::Int32 : LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&](int32_t localCount) {
+              const int32_t base = nextLocal;
+              nextLocal += localCount;
+              return base;
+            },
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            emitInstruction,
+            error) == BufferResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+
+  instructions.clear();
+  primec::Expr plainExpr;
+  plainExpr.kind = primec::Expr::Kind::Call;
+  plainExpr.name = "plain";
+  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinDispatchWithLocals(
+            plainExpr,
+            locals,
+            [](const std::string &) { return LocalInfo::ValueKind::Unknown; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Unknown;
+            },
+            [](int32_t) { return 0; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            emitInstruction,
+            error) == BufferResult::NotHandled);
+  CHECK(instructions.empty());
+
+  primec::Expr badBufferExpr = bufferExpr;
+  badBufferExpr.templateArgs = {"string"};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitBufferBuiltinDispatchWithLocals(
+            badBufferExpr,
+            locals,
+            [](const std::string &) { return LocalInfo::ValueKind::String; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [](int32_t) { return 0; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            emitInstruction,
+            error) == BufferResult::Error);
+  CHECK(error == "buffer requires numeric/bool element type");
+
+  primec::Expr countExpr;
+  countExpr.kind = primec::Expr::Kind::Call;
+  countExpr.name = "count";
+  countExpr.args = {arrName};
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            countExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &) {
+              return callExpr.name == "count";
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+}
+
 TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo mapInfo;

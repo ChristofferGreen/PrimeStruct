@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "IrLowererCountAccessHelpers.h"
+#include "IrLowererFlowHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -358,6 +359,79 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   return NativeCallTailDispatchResult::NotHandled;
+}
+
+BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t(int32_t)> &allocLocalRange,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  const auto result = tryEmitBufferBuiltinCall(
+      expr,
+      localsIn,
+      valueKindFromTypeName,
+      inferExprKind,
+      allocLocalRange,
+      allocTempLocal,
+      emitExpr,
+      emitInstruction,
+      error);
+  if (result == BufferBuiltinCallEmitResult::Emitted) {
+    return BufferBuiltinDispatchResult::Emitted;
+  }
+  if (result == BufferBuiltinCallEmitResult::Error) {
+    return BufferBuiltinDispatchResult::Error;
+  }
+  return BufferBuiltinDispatchResult::NotHandled;
+}
+
+NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
+    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void()> &emitStringIndexOutOfBounds,
+    const std::function<void()> &emitMapKeyNotFound,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    std::string &error) {
+  return tryEmitNativeCallTailDispatch(
+      expr,
+      localsIn,
+      tryGetMathBuiltinName,
+      isSupportedMathBuiltinName,
+      isArrayCountCall,
+      isVectorCapacityCall,
+      isStringCountCall,
+      isEntryArgsName,
+      resolveStringTableTarget,
+      emitExpr,
+      tryGetPrintBuiltinName,
+      inferExprKind,
+      allocTempLocal,
+      emitStringIndexOutOfBounds,
+      emitMapKeyNotFound,
+      emitArrayIndexOutOfBounds,
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      error);
 }
 
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
