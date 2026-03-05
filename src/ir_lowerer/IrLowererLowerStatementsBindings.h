@@ -178,95 +178,27 @@
       }
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall &&
-        (isSimpleCallName(stmt, "init") || isSimpleCallName(stmt, "drop"))) {
-      const bool isInit = isSimpleCallName(stmt, "init");
-      const size_t expectedArgs = isInit ? 2 : 1;
-      if (stmt.args.size() != expectedArgs) {
-        error = std::string(isInit ? "init" : "drop") + " requires exactly " +
-                std::to_string(expectedArgs) + " argument" + (expectedArgs == 1 ? "" : "s");
-        return false;
-      }
-      UninitializedStorageAccess access;
-      bool resolved = false;
-      if (!resolveUninitializedStorage(stmt.args.front(), localsIn, access, resolved)) {
-        return false;
-      }
-      if (!resolved) {
-        error = std::string(isInit ? "init" : "drop") + " requires uninitialized storage";
-        return false;
-      }
-      auto emitFieldPointer = [&](const Expr &receiver, const StructSlotFieldInfo &field, int32_t ptrLocal) -> bool {
-        if (!emitExpr(receiver, localsIn)) {
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-        const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
-        if (offsetBytes != 0) {
-          function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
-          function.instructions.push_back({IrOpcode::AddI64, 0});
-        }
-        return true;
-      };
-      if (isInit) {
-        const Expr &valueExpr = stmt.args.back();
-        if (access.location == UninitializedStorageAccess::Location::Local) {
-          const LocalInfo &storageInfo = *access.local;
-          if (!storageInfo.structTypeName.empty()) {
-            StructSlotLayout layout;
-            if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
-              return false;
-            }
-            if (!emitExpr(valueExpr, localsIn)) {
-              return false;
-            }
-            const int32_t srcPtrLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-            const int32_t destPtrLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
-            if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, layout.totalSlots)) {
-              return false;
-            }
-            return true;
-          }
-          if (!emitExpr(valueExpr, localsIn)) {
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(storageInfo.index)});
-          return true;
-        }
-        if (access.location == UninitializedStorageAccess::Location::Field) {
-          const Expr &receiver = stmt.args.front().args.front();
-          const StructSlotFieldInfo &field = access.fieldSlot;
-          const int32_t ptrLocal = allocTempLocal();
-          if (!emitFieldPointer(receiver, field, ptrLocal)) {
-            return false;
-          }
-          if (!field.structPath.empty()) {
-            if (!emitExpr(valueExpr, localsIn)) {
-              return false;
-            }
-            const int32_t srcPtrLocal = allocTempLocal();
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-            if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, field.slotCount)) {
-              return false;
-            }
-            return true;
-          }
-          if (!emitExpr(valueExpr, localsIn)) {
-            return false;
-          }
-          const int32_t valueLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-          function.instructions.push_back({IrOpcode::Pop, 0});
-          return true;
-        }
-      }
+    const auto uninitializedInitDropResult = ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+        stmt,
+        localsIn,
+        function.instructions,
+        [&](const Expr &storageExpr,
+            const LocalMap &valueLocals,
+            ir_lowerer::UninitializedStorageAccessInfo &accessOut,
+            bool &resolvedOut) { return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+          return resolveStructSlotLayout(structPath, layoutOut);
+        },
+        [&]() { return allocTempLocal(); },
+        [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
+          return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
+        },
+        error);
+    if (uninitializedInitDropResult == ir_lowerer::UninitializedStorageInitDropEmitResult::Error) {
+      return false;
+    }
+    if (uninitializedInitDropResult == ir_lowerer::UninitializedStorageInitDropEmitResult::Emitted) {
       return true;
     }
     if (stmt.kind == Expr::Kind::Call && !stmt.isMethodCall && isSimpleCallName(stmt, "take") &&

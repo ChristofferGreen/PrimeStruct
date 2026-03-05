@@ -11460,6 +11460,207 @@ TEST_CASE("ir lowerer statement binding helper rejects non-string source binding
   CHECK(error == "native backend requires string bindings to use string literals, bindings, or entry args");
 }
 
+TEST_CASE("ir lowerer statement binding helper emits uninitialized local init and drop") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 77;
+
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "init";
+  initCall.args = {storageExpr, valueExpr};
+
+  primec::Expr dropCall;
+  dropCall.kind = primec::Expr::Kind::Call;
+  dropCall.name = "drop";
+  dropCall.args = {storageExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo storageInfo;
+  storageInfo.index = 8;
+  storageInfo.isUninitializedStorage = true;
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 50;
+  int structCopyCalls = 0;
+  std::string error;
+
+  auto resolveAccess = [&](const primec::Expr &storage,
+                           const primec::ir_lowerer::LocalMap &,
+                           primec::ir_lowerer::UninitializedStorageAccessInfo &access,
+                           bool &resolved) {
+    if (storage.kind == primec::Expr::Kind::Name && storage.name == "slot") {
+      access.location = primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local;
+      access.local = &storageInfo;
+      resolved = true;
+      return true;
+    }
+    resolved = false;
+    return true;
+  };
+
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            initCall,
+            locals,
+            instructions,
+            resolveAccess,
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, expr.literalValue});
+              return true;
+            },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [&]() { return nextTempLocal++; },
+            [&](int32_t, int32_t, int32_t) {
+              ++structCopyCalls;
+              return true;
+            },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(structCopyCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 77);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 8);
+
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            dropCall,
+            locals,
+            instructions,
+            resolveAccess,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [&]() { return nextTempLocal++; },
+            [&](int32_t, int32_t, int32_t) {
+              ++structCopyCalls;
+              return true;
+            },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+}
+
+TEST_CASE("ir lowerer statement binding helper emits struct-storage init via ptr copy") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "srcPtr";
+
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "init";
+  initCall.args = {storageExpr, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo storageInfo;
+  storageInfo.index = 11;
+  storageInfo.structTypeName = "/Pair";
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 30;
+  int copiedSlotCount = 0;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            initCall,
+            locals,
+            instructions,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &access,
+                bool &resolved) {
+              access.location = primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local;
+              access.local = &storageInfo;
+              resolved = true;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI64, 1234});
+              return true;
+            },
+            [](const std::string &structPath, primec::ir_lowerer::StructSlotLayoutInfo &layout) {
+              if (structPath != "/Pair") {
+                return false;
+              }
+              layout.totalSlots = 3;
+              return true;
+            },
+            [&]() { return nextTempLocal++; },
+            [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
+              copiedSlotCount = slotCount;
+              instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(destPtrLocal)});
+              instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(srcPtrLocal)});
+              return true;
+            },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(copiedSlotCount == 3);
+  CHECK_FALSE(instructions.empty());
+}
+
+TEST_CASE("ir lowerer statement binding helper validates uninitialized init drop diagnostics") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "init";
+  callExpr.args.push_back(primec::Expr{});
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            callExpr,
+            locals,
+            instructions,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &, bool &) {
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+            []() { return 0; },
+            [](int32_t, int32_t, int32_t) { return true; },
+            error) == EmitResult::Error);
+  CHECK(error == "init requires exactly 2 arguments");
+
+  primec::Expr dropCall;
+  dropCall.kind = primec::Expr::Kind::Call;
+  dropCall.name = "drop";
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "x";
+  dropCall.args = {storageExpr};
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            dropCall,
+            locals,
+            instructions,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::UninitializedStorageAccessInfo &,
+               bool &resolved) {
+              resolved = false;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+            []() { return 0; },
+            [](int32_t, int32_t, int32_t) { return true; },
+            error) == EmitResult::Error);
+  CHECK(error == "drop requires uninitialized storage");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

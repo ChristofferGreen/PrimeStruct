@@ -11,6 +11,9 @@
 
 namespace primec::ir_lowerer {
 
+struct StructSlotLayoutInfo;
+struct UninitializedStorageAccessInfo;
+
 using HasExplicitBindingTypeTransformFn = std::function<bool(const Expr &)>;
 using BindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
 using BindingValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
@@ -22,6 +25,16 @@ using ApplyStructBindingInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using IsStringBindingFn = std::function<bool(const Expr &)>;
 using EmitExprForBindingFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
+using ResolveUninitializedStorageForStatementFn =
+    std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
+using ResolveStructSlotLayoutForStatementFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
+using EmitStructCopyFromPtrsForStatementFn = std::function<bool(int32_t, int32_t, int32_t)>;
+
+enum class UninitializedStorageInitDropEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
 
 struct StatementBindingTypeInfo {
   LocalInfo::Kind kind = LocalInfo::Kind::Value;
@@ -71,5 +84,15 @@ bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const IsEntryArgsNameFn &isEntryArgsName,
                                            const std::function<void()> &emitArrayIndexOutOfBounds,
                                            std::string &error);
+UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatement(
+    const Expr &stmt,
+    LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const EmitExprForBindingFn &emitExpr,
+    const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
+    const std::function<int32_t()> &allocTempLocal,
+    const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    std::string &error);
 
 } // namespace primec::ir_lowerer

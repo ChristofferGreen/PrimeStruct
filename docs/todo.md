@@ -26,9 +26,10 @@ Legend:
 - ✓ Continue loop/control-flow refactor by extracting `while`/`for` body-scope orchestration from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
 - ✓ Continue loop/control-flow refactor by extracting `for` condition-binding declare/init helpers from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
 - ✓ Continue loop/control-flow refactor by extracting vector helper statement lowering (`push`/`pop`/`reserve`/`clear`/`remove_at`/`remove_swap`) from `IrLowererLowerStatementsLoops.h` into compileable helpers with direct unit coverage.
-- ◐ Refactor complex binding/storage statement lowering in `IrLowererLowerStatementsBindings.h` (phase 1 extracted string-binding initializer lowering into compileable `IrLowererStatementBindingHelpers.{h,cpp}` with helper-unit coverage).
+- ◐ Refactor complex binding/storage statement lowering in `IrLowererLowerStatementsBindings.h` (phase 1 extracted string-binding initializer lowering into compileable `IrLowererStatementBindingHelpers.{h,cpp}` with helper-unit coverage; phase 2 extracted uninitialized storage `init`/`drop` lowering into the same compileable helper unit with direct tests).
 - ✓ Continue binding/storage refactor by extracting string-binding initializer lowering from `IrLowererLowerStatementsBindings.h` into compileable helpers with direct unit coverage.
-- ○ Continue binding/storage refactor by extracting uninitialized storage `init`/`drop` lowering from `IrLowererLowerStatementsBindings.h` into compileable helpers with direct unit coverage.
+- ✓ Continue binding/storage refactor by extracting uninitialized storage `init`/`drop` lowering from `IrLowererLowerStatementsBindings.h` into compileable helpers with direct unit coverage.
+- ○ Continue binding/storage refactor by extracting uninitialized storage `take` statement lowering from `IrLowererLowerStatementsBindings.h` into compileable helpers with direct unit coverage.
 - ◐ Refactor complex statement-call lowering in `IrLowererLowerStatementsCalls.h`.
 - ◐ Refactor setup inference and adapter wiring in `IrLowererLowerSetupInference.h`.
 - ◐ Refactor inline-call and return handling in `IrLowererLowerInlineCalls.h` and `IrLowererLowerReturnInfo.h`.

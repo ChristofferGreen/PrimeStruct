@@ -4,6 +4,7 @@
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStringLiteralHelpers.h"
+#include "IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -326,6 +327,118 @@ bool emitStringStatementBindingInitializer(const Expr &stmt,
   localsIn.emplace(stmt.name, info);
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
   return true;
+}
+
+UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatement(
+    const Expr &stmt,
+    LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const EmitExprForBindingFn &emitExpr,
+    const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
+    const std::function<int32_t()> &allocTempLocal,
+    const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    std::string &error) {
+  if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall ||
+      (!isSimpleCallName(stmt, "init") && !isSimpleCallName(stmt, "drop"))) {
+    return UninitializedStorageInitDropEmitResult::NotMatched;
+  }
+
+  const bool isInit = isSimpleCallName(stmt, "init");
+  const size_t expectedArgs = isInit ? 2 : 1;
+  if (stmt.args.size() != expectedArgs) {
+    error = std::string(isInit ? "init" : "drop") + " requires exactly " + std::to_string(expectedArgs) + " argument" +
+            (expectedArgs == 1 ? "" : "s");
+    return UninitializedStorageInitDropEmitResult::Error;
+  }
+
+  UninitializedStorageAccessInfo access;
+  bool resolved = false;
+  if (!resolveUninitializedStorage(stmt.args.front(), localsIn, access, resolved)) {
+    return UninitializedStorageInitDropEmitResult::Error;
+  }
+  if (!resolved) {
+    error = std::string(isInit ? "init" : "drop") + " requires uninitialized storage";
+    return UninitializedStorageInitDropEmitResult::Error;
+  }
+
+  if (!isInit) {
+    return UninitializedStorageInitDropEmitResult::Emitted;
+  }
+
+  auto emitFieldPointer = [&](const Expr &receiver, const StructSlotFieldInfo &field, int32_t ptrLocal) -> bool {
+    if (!emitExpr(receiver, localsIn)) {
+      return false;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
+    if (offsetBytes != 0) {
+      instructions.push_back({IrOpcode::PushI64, offsetBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
+    return true;
+  };
+
+  const Expr &valueExpr = stmt.args.back();
+  if (access.location == UninitializedStorageAccessInfo::Location::Local) {
+    const LocalInfo &storageInfo = *access.local;
+    if (!storageInfo.structTypeName.empty()) {
+      StructSlotLayoutInfo layout;
+      if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      if (!emitExpr(valueExpr, localsIn)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      const int32_t srcPtrLocal = allocTempLocal();
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+      const int32_t destPtrLocal = allocTempLocal();
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+      if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, layout.totalSlots)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      return UninitializedStorageInitDropEmitResult::Emitted;
+    }
+    if (!emitExpr(valueExpr, localsIn)) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(storageInfo.index)});
+    return UninitializedStorageInitDropEmitResult::Emitted;
+  }
+
+  if (access.location == UninitializedStorageAccessInfo::Location::Field) {
+    const Expr &receiver = stmt.args.front().args.front();
+    const StructSlotFieldInfo &field = access.fieldSlot;
+    const int32_t ptrLocal = allocTempLocal();
+    if (!emitFieldPointer(receiver, field, ptrLocal)) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    if (!field.structPath.empty()) {
+      if (!emitExpr(valueExpr, localsIn)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      const int32_t srcPtrLocal = allocTempLocal();
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+      if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, field.slotCount)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      return UninitializedStorageInitDropEmitResult::Emitted;
+    }
+    if (!emitExpr(valueExpr, localsIn)) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    const int32_t valueLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return UninitializedStorageInitDropEmitResult::Emitted;
+  }
+
+  return UninitializedStorageInitDropEmitResult::Emitted;
 }
 
 } // namespace primec::ir_lowerer
