@@ -214,7 +214,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Implement deterministic fixed-step simulation loop shared by browser/native/Metal hosts. Testing: deterministic tick-state tests with golden angle/transform snapshots.
 - ✓ Add transform/rotation math parity tests across VM/native/Wasm/Metal-hosted paths. Testing: backend parity corpus with tolerance-checked numeric outputs.
 - ✓ Add integration coverage that builds all sample targets and validates generated artifacts (`.wasm`, native binary, shader outputs, loader assets). Testing: artifact existence + hash/schema checks in CI.
-- ○ Add optional visual smoke checks for sample startup (headless where possible, interactive otherwise). Testing: automated startup checks with explicit skip rules per runner capability.
+- ✓ Add optional visual smoke checks for sample startup (headless where possible, interactive otherwise). Testing: automated startup checks with explicit skip rules per runner capability.
 - ○ Document sample build/run instructions and expected runtime behavior for browser + native + macOS Metal targets (startup, controls, FPS/diagnostic overlay). Testing: scripted doc-command smoke checks to prevent instruction drift.
 
 **Native Register Allocation & Scheduling**

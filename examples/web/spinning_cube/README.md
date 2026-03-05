@@ -80,3 +80,12 @@ This example is a milestone target for cross-platform backend work.
     is available.
 - The integration test emits an `artifact_manifest.json` with per-artifact size
   and deterministic FNV-1a hash fields for schema/hash validation.
+
+## Optional Visual Startup Smoke
+- Automated visual startup checks run with explicit capability gates:
+  - native host startup marker (`native host verified cube simulation output`)
+  - macOS Metal startup marker (`frame_rendered=1`) when `xcrun` exists
+  - browser headless startup (`chromium`/`google-chrome` + `python3`) when
+    available.
+- If browser headless tooling is unavailable, tests emit an interactive fallback
+  note instead of failing.

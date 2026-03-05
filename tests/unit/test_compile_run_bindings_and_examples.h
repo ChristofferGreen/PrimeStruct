@@ -694,6 +694,185 @@ TEST_CASE("spinning cube integration artifact matrix stays valid") {
   CHECK(manifestText.find("\"hash_fnv1a64\":\"0\"") == std::string::npos);
 }
 
+TEST_CASE("spinning cube optional startup visual smoke checks") {
+  std::filesystem::path webSampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  std::filesystem::path nativeSampleDir =
+      std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(webSampleDir)) {
+    webSampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  if (!std::filesystem::exists(nativeSampleDir)) {
+    nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
+  }
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(webSampleDir));
+  REQUIRE(std::filesystem::exists(nativeSampleDir));
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path cubePath = webSampleDir / "cube.prime";
+  const std::filesystem::path indexPath = webSampleDir / "index.html";
+  const std::filesystem::path mainJsPath = webSampleDir / "main.js";
+  const std::filesystem::path wgslPath = webSampleDir / "cube.wgsl";
+  const std::filesystem::path nativeHostPath = nativeSampleDir / "main.cpp";
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  const std::filesystem::path metalShaderPath = metalSampleDir / "cube.metal";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(indexPath));
+  REQUIRE(std::filesystem::exists(mainJsPath));
+  REQUIRE(std::filesystem::exists(wgslPath));
+  REQUIRE(std::filesystem::exists(nativeHostPath));
+  REQUIRE(std::filesystem::exists(metalHostPath));
+  REQUIRE(std::filesystem::exists(metalShaderPath));
+
+  // Native visual startup proxy: host bootstrap prints a stable ready marker.
+  {
+    const std::filesystem::path nativeExePath =
+        std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native";
+    const std::string compileNativeCmd =
+        "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativeExePath.string()) +
+        " --entry /main";
+    CHECK(runCommand(compileNativeCmd) == 0);
+    CHECK(std::filesystem::exists(nativeExePath));
+
+    std::string cxx = "";
+    if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
+      cxx = "c++";
+    } else if (runCommand("clang++ --version > /dev/null 2>&1") == 0) {
+      cxx = "clang++";
+    } else if (runCommand("g++ --version > /dev/null 2>&1") == 0) {
+      cxx = "g++";
+    } else {
+      INFO("no C++ compiler found; skipping native startup visual smoke");
+      cxx.clear();
+    }
+    if (!cxx.empty()) {
+      const std::filesystem::path hostPath =
+          std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native_host";
+      const std::string compileHostCmd = cxx + " -std=c++17 " + quoteShellArg(nativeHostPath.string()) + " -o " +
+                                         quoteShellArg(hostPath.string());
+      CHECK(runCommand(compileHostCmd) == 0);
+      const std::filesystem::path hostOutPath =
+          std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_native_host.out.txt";
+      const std::string runHostCmd = quoteShellArg(hostPath.string()) + " " + quoteShellArg(nativeExePath.string()) +
+                                     " > " + quoteShellArg(hostOutPath.string());
+      CHECK(runCommand(runHostCmd) == 0);
+      CHECK(readFile(hostOutPath.string()).find("native host verified cube simulation output") != std::string::npos);
+    }
+  }
+
+  // Metal visual startup smoke (headless GPU where available).
+  if (runCommand("xcrun --version > /dev/null 2>&1") == 0) {
+    const std::filesystem::path outDir =
+        std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_metal";
+    std::error_code ec;
+    std::filesystem::remove_all(outDir, ec);
+    std::filesystem::create_directories(outDir, ec);
+    REQUIRE(!ec);
+
+    const std::filesystem::path airPath = outDir / "cube.air";
+    const std::filesystem::path metallibPath = outDir / "cube.metallib";
+    const std::filesystem::path hostPath = outDir / "metal_host";
+    const std::filesystem::path hostOutPath = outDir / "metal_host.out.txt";
+
+    const std::string compileMetalCmd = "xcrun metal -std=metal3.0 -c " + quoteShellArg(metalShaderPath.string()) +
+                                        " -o " + quoteShellArg(airPath.string());
+    CHECK(runCommand(compileMetalCmd) == 0);
+    const std::string compileLibCmd =
+        "xcrun metallib " + quoteShellArg(airPath.string()) + " -o " + quoteShellArg(metallibPath.string());
+    CHECK(runCommand(compileLibCmd) == 0);
+    const std::string compileHostCmd =
+        "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(metalHostPath.string()) +
+        " -framework Foundation -framework Metal -o " + quoteShellArg(hostPath.string());
+    CHECK(runCommand(compileHostCmd) == 0);
+    const std::string runHostCmd =
+        quoteShellArg(hostPath.string()) + " " + quoteShellArg(metallibPath.string()) + " > " +
+        quoteShellArg(hostOutPath.string());
+    CHECK(runCommand(runHostCmd) == 0);
+    CHECK(readFile(hostOutPath.string()).find("frame_rendered=1") != std::string::npos);
+  } else {
+    INFO("xcrun unavailable; skipping metal startup visual smoke");
+  }
+
+  // Browser visual smoke (headless where possible, explicit skip otherwise).
+  std::string browserCmd = "";
+  if (runCommand("chromium --version > /dev/null 2>&1") == 0) {
+    browserCmd = "chromium";
+  } else if (runCommand("google-chrome --version > /dev/null 2>&1") == 0) {
+    browserCmd = "google-chrome";
+  } else if (runCommand("chrome --version > /dev/null 2>&1") == 0) {
+    browserCmd = "chrome";
+  } else if (runCommand("google-chrome-stable --version > /dev/null 2>&1") == 0) {
+    browserCmd = "google-chrome-stable";
+  }
+
+  if (browserCmd.empty() || runCommand("python3 --version > /dev/null 2>&1") != 0) {
+    INFO("no headless browser+python available; skip browser startup visual smoke");
+    INFO("interactive fallback: run python3 -m http.server in examples/web/spinning_cube and open index.html");
+    return;
+  }
+
+  if (runCommand(browserCmd + " --headless --disable-gpu --dump-dom about:blank > /dev/null 2>&1") != 0) {
+    INFO("browser runtime lacks headless mode; skip browser startup visual smoke");
+    INFO("interactive fallback: run python3 -m http.server in examples/web/spinning_cube and open index.html");
+    return;
+  }
+
+  const std::filesystem::path browserOutDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_visual_browser";
+  std::error_code ec;
+  std::filesystem::remove_all(browserOutDir, ec);
+  std::filesystem::create_directories(browserOutDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path wasmPath = browserOutDir / "cube.wasm";
+  const std::string compileWasmCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath.string()) + " --entry /main";
+  CHECK(runCommand(compileWasmCmd) == 0);
+
+  std::filesystem::copy_file(indexPath, browserOutDir / "index.html",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(mainJsPath, browserOutDir / "main.js",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(wgslPath, browserOutDir / "cube.wgsl",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+
+  const std::filesystem::path serverLogPath = browserOutDir / "server.log";
+  const std::filesystem::path serverPidPath = browserOutDir / "server.pid";
+  const std::filesystem::path browserDomPath = browserOutDir / "browser.dom.txt";
+  const std::filesystem::path browserErrPath = browserOutDir / "browser.err.txt";
+
+  const int port = 18765;
+  const std::string startServerCmd = "python3 -m http.server " + std::to_string(port) + " --bind 127.0.0.1 --directory " +
+                                     quoteShellArg(browserOutDir.string()) + " > " + quoteShellArg(serverLogPath.string()) +
+                                     " 2>&1 & echo $! > " + quoteShellArg(serverPidPath.string());
+  CHECK(runCommand(startServerCmd) == 0);
+  CHECK(runCommand("sleep 1") == 0);
+
+  const std::string runBrowserCmd = browserCmd + " --headless --disable-gpu --virtual-time-budget=5000 --dump-dom " +
+                                    "http://127.0.0.1:" + std::to_string(port) + "/index.html > " +
+                                    quoteShellArg(browserDomPath.string()) + " 2> " + quoteShellArg(browserErrPath.string());
+  const int browserCode = runCommand(runBrowserCmd);
+
+  const std::string stopServerCmd = "kill $(cat " + quoteShellArg(serverPidPath.string()) + ") > /dev/null 2>&1";
+  runCommand(stopServerCmd);
+
+  CHECK(browserCode == 0);
+  const std::string dom = readFile(browserDomPath.string());
+  CHECK(dom.find("PrimeStruct Spinning Cube Host") != std::string::npos);
+  CHECK(dom.find("Host running") != std::string::npos || dom.find("Wasm load skipped") != std::string::npos);
+}
+
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
