@@ -236,6 +236,124 @@ TEST_CASE("vm debug session validates control-state preconditions") {
   CHECK(error.find("not paused") != std::string::npos);
 }
 
+TEST_CASE("vm debug runtime hooks cover all event kinds") {
+  struct HookRecorder {
+    size_t beforeCount = 0;
+    size_t afterCount = 0;
+    size_t callPushCount = 0;
+    size_t callPopCount = 0;
+    size_t faultCount = 0;
+    std::vector<size_t> pushedFunctions;
+    std::vector<size_t> poppedFunctions;
+    std::vector<primec::IrOpcode> beforeOpcodes;
+    std::vector<primec::IrOpcode> afterOpcodes;
+    std::vector<primec::IrOpcode> faultOpcodes;
+    std::vector<std::string> faultMessages;
+  };
+
+  auto makeHooks = [](HookRecorder &recorder) {
+    primec::VmDebugHooks hooks;
+    hooks.userData = &recorder;
+    hooks.beforeInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      auto &record = *static_cast<HookRecorder *>(userData);
+      record.beforeCount += 1;
+      record.beforeOpcodes.push_back(event.opcode);
+    };
+    hooks.afterInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      auto &record = *static_cast<HookRecorder *>(userData);
+      record.afterCount += 1;
+      record.afterOpcodes.push_back(event.opcode);
+    };
+    hooks.callPush = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      auto &record = *static_cast<HookRecorder *>(userData);
+      record.callPushCount += 1;
+      record.pushedFunctions.push_back(event.functionIndex);
+    };
+    hooks.callPop = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      auto &record = *static_cast<HookRecorder *>(userData);
+      record.callPopCount += 1;
+      record.poppedFunctions.push_back(event.functionIndex);
+    };
+    hooks.fault = [](const primec::VmDebugFaultHookEvent &event, void *userData) {
+      auto &record = *static_cast<HookRecorder *>(userData);
+      record.faultCount += 1;
+      record.faultOpcodes.push_back(event.opcode);
+      record.faultMessages.emplace_back(event.message);
+    };
+    return hooks;
+  };
+
+  HookRecorder successRecorder;
+  primec::VmDebugSession successSession;
+  successSession.setHooks(makeHooks(successRecorder));
+
+  primec::IrModule successModule;
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  primec::IrFunction calleeFn;
+  calleeFn.name = "/double";
+  calleeFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  calleeFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  calleeFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  successModule.functions.push_back(std::move(mainFn));
+  successModule.functions.push_back(std::move(calleeFn));
+  successModule.entryIndex = 0;
+
+  std::string error;
+  REQUIRE(successSession.start(successModule, error));
+  CHECK(error.empty());
+
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+  REQUIRE(successSession.continueExecution(stopReason, error));
+  CHECK(error.empty());
+  CHECK(stopReason == primec::VmDebugStopReason::Exit);
+  CHECK(successSession.snapshot().result == 9);
+
+  CHECK(successRecorder.beforeCount == 8);
+  CHECK(successRecorder.afterCount == 8);
+  CHECK(successRecorder.callPushCount == 1);
+  CHECK(successRecorder.callPopCount == 2);
+  CHECK(successRecorder.faultCount == 0);
+  CHECK(successRecorder.pushedFunctions == std::vector<size_t>{1});
+  CHECK(successRecorder.poppedFunctions == std::vector<size_t>{1, 0});
+
+  HookRecorder faultRecorder;
+  primec::VmDebugSession faultSession;
+  faultSession.setHooks(makeHooks(faultRecorder));
+
+  primec::IrModule faultModule;
+  primec::IrFunction faultFn;
+  faultFn.name = "/main";
+  faultFn.instructions.push_back({static_cast<primec::IrOpcode>(255), 0});
+  faultModule.functions.push_back(std::move(faultFn));
+  faultModule.entryIndex = 0;
+
+  error.clear();
+  REQUIRE(faultSession.start(faultModule, error));
+  CHECK(error.empty());
+
+  stopReason = primec::VmDebugStopReason::Step;
+  error.clear();
+  CHECK_FALSE(faultSession.step(stopReason, error));
+  CHECK(stopReason == primec::VmDebugStopReason::Fault);
+  CHECK(error == "unknown IR opcode");
+
+  CHECK(faultRecorder.beforeCount == 1);
+  CHECK(faultRecorder.afterCount == 0);
+  CHECK(faultRecorder.callPushCount == 0);
+  CHECK(faultRecorder.callPopCount == 0);
+  CHECK(faultRecorder.faultCount == 1);
+  REQUIRE(faultRecorder.faultOpcodes.size() == 1);
+  CHECK(faultRecorder.faultOpcodes.front() == static_cast<primec::IrOpcode>(255));
+  REQUIRE(faultRecorder.faultMessages.size() == 1);
+  CHECK(faultRecorder.faultMessages.front() == "unknown IR opcode");
+}
+
 TEST_CASE("vm debug opcode matrix matches vm execute for expanded families") {
   struct OpcodeMatrixCase {
     std::string name;

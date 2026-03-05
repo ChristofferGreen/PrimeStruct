@@ -112,6 +112,38 @@ struct VmDebugSnapshot {
   uint64_t result = 0;
 };
 
+struct VmDebugInstructionHookEvent {
+  VmDebugSnapshot snapshot;
+  IrOpcode opcode = IrOpcode::PushI32;
+  uint64_t immediate = 0;
+};
+
+struct VmDebugCallHookEvent {
+  VmDebugSnapshot snapshot;
+  size_t functionIndex = 0;
+  bool returnsValueToCaller = false;
+};
+
+struct VmDebugFaultHookEvent {
+  VmDebugSnapshot snapshot;
+  IrOpcode opcode = IrOpcode::PushI32;
+  uint64_t immediate = 0;
+  std::string_view message;
+};
+
+using VmDebugInstructionHook = void (*)(const VmDebugInstructionHookEvent &, void *);
+using VmDebugCallHook = void (*)(const VmDebugCallHookEvent &, void *);
+using VmDebugFaultHook = void (*)(const VmDebugFaultHookEvent &, void *);
+
+struct VmDebugHooks {
+  VmDebugInstructionHook beforeInstruction = nullptr;
+  VmDebugInstructionHook afterInstruction = nullptr;
+  VmDebugCallHook callPush = nullptr;
+  VmDebugCallHook callPop = nullptr;
+  VmDebugFaultHook fault = nullptr;
+  void *userData = nullptr;
+};
+
 class Vm {
 public:
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
@@ -128,6 +160,8 @@ public:
   bool step(VmDebugStopReason &stopReason, std::string &error);
   bool continueExecution(VmDebugStopReason &stopReason, std::string &error);
   bool pause(std::string &error);
+  void setHooks(const VmDebugHooks &hooks);
+  void clearHooks();
   VmDebugSnapshot snapshot() const;
 
 private:
@@ -154,6 +188,7 @@ private:
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;
   bool pauseRequested_ = false;
+  VmDebugHooks hooks_;
 };
 
 } // namespace primec

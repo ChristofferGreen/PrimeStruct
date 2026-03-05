@@ -1238,82 +1238,118 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     return StepOutcome::Fault;
   }
   const IrInstruction &inst = fn.instructions[ip];
+  auto emitInstructionHook = [&](VmDebugInstructionHook hook) {
+    if (!hook) {
+      return;
+    }
+    VmDebugInstructionHookEvent event;
+    event.snapshot = snapshot();
+    event.opcode = inst.op;
+    event.immediate = inst.imm;
+    hook(event, hooks_.userData);
+  };
+  auto emitCallHook = [&](VmDebugCallHook hook, size_t functionIndex, bool returnsValueToCaller) {
+    if (!hook) {
+      return;
+    }
+    VmDebugCallHookEvent event;
+    event.snapshot = snapshot();
+    event.functionIndex = functionIndex;
+    event.returnsValueToCaller = returnsValueToCaller;
+    hook(event, hooks_.userData);
+  };
+  auto finishStep = [&](StepOutcome outcome) {
+    emitInstructionHook(hooks_.afterInstruction);
+    return outcome;
+  };
+  auto finishFault = [&]() {
+    if (hooks_.fault) {
+      VmDebugFaultHookEvent event;
+      event.snapshot = snapshot();
+      event.opcode = inst.op;
+      event.immediate = inst.imm;
+      event.message = error;
+      hooks_.fault(event, hooks_.userData);
+    }
+    return StepOutcome::Fault;
+  };
+  emitInstructionHook(hooks_.beforeInstruction);
   switch (inst.op) {
     case IrOpcode::PushI32:
       stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(inst.imm))));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     case IrOpcode::PushI64:
       stack_.push_back(inst.imm);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     case IrOpcode::PushF32:
     case IrOpcode::PushF64:
       stack_.push_back(inst.imm);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     case IrOpcode::PushArgc: {
       const int32_t count32 = static_cast<int32_t>(argCount_);
       stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(count32)));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::LoadLocal: {
       if (static_cast<size_t>(inst.imm) >= locals.size()) {
         error = "invalid local index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.push_back(locals[static_cast<size_t>(inst.imm)]);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::StoreLocal: {
       if (static_cast<size_t>(inst.imm) >= locals.size()) {
         error = "invalid local index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       if (stack_.empty()) {
         error = "IR stack underflow on store";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       locals[static_cast<size_t>(inst.imm)] = stack_.back();
       stack_.pop_back();
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::AddressOfLocal: {
       if (static_cast<size_t>(inst.imm) >= locals.size()) {
         error = "invalid local index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.push_back(static_cast<uint64_t>(inst.imm) * kSlotBytes);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::LoadIndirect: {
       if (stack_.empty()) {
         error = "IR stack underflow on load indirect";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t address = stack_.back();
       stack_.pop_back();
       if (address % kSlotBytes != 0) {
         error = "unaligned indirect address in IR: " + std::to_string(address);
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t index = address / kSlotBytes;
       if (index >= locals.size()) {
         error = "invalid indirect address in IR: " + std::to_string(address);
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.push_back(locals[static_cast<size_t>(index)]);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::StoreIndirect: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on store indirect";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t value = stack_.back();
       stack_.pop_back();
@@ -1321,41 +1357,41 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       if (address % kSlotBytes != 0) {
         error = "unaligned indirect address in IR: " + std::to_string(address);
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t index = address / kSlotBytes;
       if (index >= locals.size()) {
         error = "invalid indirect address in IR: " + std::to_string(address);
-        return StepOutcome::Fault;
+        return finishFault();
       }
       locals[static_cast<size_t>(index)] = value;
       stack_.push_back(value);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::Dup: {
       if (stack_.empty()) {
         error = "IR stack underflow on dup";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.push_back(stack_.back());
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::Pop: {
       if (stack_.empty()) {
         error = "IR stack underflow on pop";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.pop_back();
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::AddI32:
     case IrOpcode::AddI64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on add";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t rhs = stack_.back();
       stack_.pop_back();
@@ -1363,13 +1399,13 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       stack_.push_back(lhs + rhs);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::SubI32:
     case IrOpcode::SubI64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on sub";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t rhs = stack_.back();
       stack_.pop_back();
@@ -1377,13 +1413,13 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       stack_.push_back(lhs - rhs);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::MulI32:
     case IrOpcode::MulI64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on mul";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t rhs = stack_.back();
       stack_.pop_back();
@@ -1391,13 +1427,13 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       stack_.push_back(lhs * rhs);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::DivI32:
     case IrOpcode::DivI64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on div";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t rhs = static_cast<int64_t>(stack_.back());
       stack_.pop_back();
@@ -1405,16 +1441,16 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       if (rhs == 0) {
         error = "division by zero in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.push_back(static_cast<uint64_t>(lhs / rhs));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::DivU64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on div";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t rhs = stack_.back();
       stack_.pop_back();
@@ -1422,23 +1458,23 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       stack_.pop_back();
       if (rhs == 0) {
         error = "division by zero in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       stack_.push_back(lhs / rhs);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::NegI32:
     case IrOpcode::NegI64: {
       if (stack_.empty()) {
         error = "IR stack underflow on negate";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t value = static_cast<int64_t>(stack_.back());
       stack_.pop_back();
       stack_.push_back(static_cast<uint64_t>(-value));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::AddF32:
     case IrOpcode::SubF32:
@@ -1446,7 +1482,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     case IrOpcode::DivF32: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on float op";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const float rhs = bitsToF32(stack_.back());
       stack_.pop_back();
@@ -1471,18 +1507,18 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(f32ToBits(out));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::NegF32: {
       if (stack_.empty()) {
         error = "IR stack underflow on negate";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const float value = bitsToF32(stack_.back());
       stack_.pop_back();
       stack_.push_back(f32ToBits(-value));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::AddF64:
     case IrOpcode::SubF64:
@@ -1490,7 +1526,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     case IrOpcode::DivF64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on float op";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const double rhs = bitsToF64(stack_.back());
       stack_.pop_back();
@@ -1515,18 +1551,18 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(f64ToBits(out));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::NegF64: {
       if (stack_.empty()) {
         error = "IR stack underflow on negate";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const double value = bitsToF64(stack_.back());
       stack_.pop_back();
       stack_.push_back(f64ToBits(-value));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::CmpEqI32:
     case IrOpcode::CmpNeI32:
@@ -1546,7 +1582,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     case IrOpcode::CmpGeU64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on compare";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t rhsRaw = stack_.back();
       stack_.pop_back();
@@ -1595,7 +1631,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(cmp ? 1 : 0);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::CmpEqF32:
     case IrOpcode::CmpNeF32:
@@ -1605,7 +1641,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     case IrOpcode::CmpGeF32: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on compare";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const float rhs = bitsToF32(stack_.back());
       stack_.pop_back();
@@ -1636,7 +1672,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(cmp ? 1 : 0);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::CmpEqF64:
     case IrOpcode::CmpNeF64:
@@ -1646,7 +1682,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     case IrOpcode::CmpGeF64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on compare";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const double rhs = bitsToF64(stack_.back());
       stack_.pop_back();
@@ -1677,14 +1713,14 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(cmp ? 1 : 0);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ConvertI32ToF32:
     case IrOpcode::ConvertI64ToF32:
     case IrOpcode::ConvertU64ToF32: {
       if (stack_.empty()) {
         error = "IR stack underflow on convert";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t raw = stack_.back();
       stack_.pop_back();
@@ -1698,14 +1734,14 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(f32ToBits(value));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ConvertI32ToF64:
     case IrOpcode::ConvertI64ToF64:
     case IrOpcode::ConvertU64ToF64: {
       if (stack_.empty()) {
         error = "IR stack underflow on convert";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t raw = stack_.back();
       stack_.pop_back();
@@ -1719,14 +1755,14 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(f64ToBits(value));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ConvertF32ToI32:
     case IrOpcode::ConvertF32ToI64:
     case IrOpcode::ConvertF32ToU64: {
       if (stack_.empty()) {
         error = "IR stack underflow on convert";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const float value = bitsToF32(stack_.back());
       stack_.pop_back();
@@ -1741,14 +1777,14 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(out)));
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ConvertF64ToI32:
     case IrOpcode::ConvertF64ToI64:
     case IrOpcode::ConvertF64ToU64: {
       if (stack_.empty()) {
         error = "IR stack underflow on convert";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const double value = bitsToF64(stack_.back());
       stack_.pop_back();
@@ -1763,67 +1799,67 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(out)));
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ConvertF32ToF64: {
       if (stack_.empty()) {
         error = "IR stack underflow on convert";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const float value = bitsToF32(stack_.back());
       stack_.pop_back();
       const double out = static_cast<double>(value);
       stack_.push_back(f64ToBits(out));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ConvertF64ToF32: {
       if (stack_.empty()) {
         error = "IR stack underflow on convert";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const double value = bitsToF64(stack_.back());
       stack_.pop_back();
       const float out = static_cast<float>(value);
       stack_.push_back(f32ToBits(out));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::JumpIfZero: {
       if (stack_.empty()) {
         error = "IR stack underflow on jump";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t value = stack_.back();
       stack_.pop_back();
       if (inst.imm > fn.instructions.size()) {
         error = "invalid jump target in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       if (value == 0) {
         ip = static_cast<size_t>(inst.imm);
       } else {
         ip += 1;
       }
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::Jump: {
       if (inst.imm > fn.instructions.size()) {
         error = "invalid jump target in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       ip = static_cast<size_t>(inst.imm);
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::Call:
     case IrOpcode::CallVoid: {
       if (!module_ || inst.imm >= module_->functions.size()) {
         error = "invalid call target in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       if (frames_.size() >= MaxCallDepth) {
         error = "VM call stack overflow";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const size_t target = static_cast<size_t>(inst.imm);
       Frame calleeFrame;
@@ -1833,102 +1869,118 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       calleeFrame.returnValueToCaller = (inst.op == IrOpcode::Call);
       ip += 1;
       frames_.push_back(std::move(calleeFrame));
-      return StepOutcome::Continue;
+      emitCallHook(hooks_.callPush, target, inst.op == IrOpcode::Call);
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ReturnVoid: {
       const uint64_t returnValue = 0;
       const bool returnToCaller = frame.returnValueToCaller;
+      const size_t poppedFunctionIndex = frame.functionIndex;
       if (frames_.size() == 1) {
         result_ = returnValue;
         frames_.clear();
-        return StepOutcome::Exit;
+        emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+        return finishStep(StepOutcome::Exit);
       }
       frames_.pop_back();
       if (returnToCaller) {
         stack_.push_back(returnValue);
       }
-      return StepOutcome::Continue;
+      emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ReturnI32: {
       if (stack_.empty()) {
         error = "IR stack underflow on return";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t returnValue = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(stack_.back())));
       stack_.pop_back();
       const bool returnToCaller = frame.returnValueToCaller;
+      const size_t poppedFunctionIndex = frame.functionIndex;
       if (frames_.size() == 1) {
         result_ = returnValue;
         frames_.clear();
-        return StepOutcome::Exit;
+        emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+        return finishStep(StepOutcome::Exit);
       }
       frames_.pop_back();
       if (returnToCaller) {
         stack_.push_back(returnValue);
       }
-      return StepOutcome::Continue;
+      emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ReturnI64: {
       if (stack_.empty()) {
         error = "IR stack underflow on return";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t returnValue = stack_.back();
       stack_.pop_back();
       const bool returnToCaller = frame.returnValueToCaller;
+      const size_t poppedFunctionIndex = frame.functionIndex;
       if (frames_.size() == 1) {
         result_ = returnValue;
         frames_.clear();
-        return StepOutcome::Exit;
+        emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+        return finishStep(StepOutcome::Exit);
       }
       frames_.pop_back();
       if (returnToCaller) {
         stack_.push_back(returnValue);
       }
-      return StepOutcome::Continue;
+      emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ReturnF32: {
       if (stack_.empty()) {
         error = "IR stack underflow on return";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t returnValue = static_cast<uint64_t>(static_cast<uint32_t>(stack_.back()));
       stack_.pop_back();
       const bool returnToCaller = frame.returnValueToCaller;
+      const size_t poppedFunctionIndex = frame.functionIndex;
       if (frames_.size() == 1) {
         result_ = returnValue;
         frames_.clear();
-        return StepOutcome::Exit;
+        emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+        return finishStep(StepOutcome::Exit);
       }
       frames_.pop_back();
       if (returnToCaller) {
         stack_.push_back(returnValue);
       }
-      return StepOutcome::Continue;
+      emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::ReturnF64: {
       if (stack_.empty()) {
         error = "IR stack underflow on return";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t returnValue = stack_.back();
       stack_.pop_back();
       const bool returnToCaller = frame.returnValueToCaller;
+      const size_t poppedFunctionIndex = frame.functionIndex;
       if (frames_.size() == 1) {
         result_ = returnValue;
         frames_.clear();
-        return StepOutcome::Exit;
+        emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+        return finishStep(StepOutcome::Exit);
       }
       frames_.pop_back();
       if (returnToCaller) {
         stack_.push_back(returnValue);
       }
-      return StepOutcome::Continue;
+      emitCallHook(hooks_.callPop, poppedFunctionIndex, returnToCaller);
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintI32: {
       if (stack_.empty()) {
         error = "IR stack underflow on print";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int32_t value = static_cast<int32_t>(stack_.back());
       stack_.pop_back();
@@ -1941,12 +1993,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintI64: {
       if (stack_.empty()) {
         error = "IR stack underflow on print";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t value = static_cast<int64_t>(stack_.back());
       stack_.pop_back();
@@ -1959,12 +2011,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintU64: {
       if (stack_.empty()) {
         error = "IR stack underflow on print";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t value = stack_.back();
       stack_.pop_back();
@@ -1977,13 +2029,13 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintString: {
       const uint64_t stringIndex = decodePrintStringIndex(inst.imm);
       if (stringIndex >= module_->stringTable.size()) {
         error = "invalid string index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t flags = decodePrintFlags(inst.imm);
       FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
@@ -1994,18 +2046,18 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintStringDynamic: {
       if (stack_.empty()) {
         error = "IR stack underflow on print";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t stringIndex = stack_.back();
       stack_.pop_back();
       if (stringIndex >= module_->stringTable.size()) {
         error = "invalid string index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t flags = decodePrintFlags(inst.imm);
       FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
@@ -2016,22 +2068,22 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintArgv: {
       if (stack_.empty()) {
         error = "IR stack underflow on print";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       if (!args_) {
         error = "VM missing argv data for PrintArgv";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t index = static_cast<int64_t>(stack_.back());
       stack_.pop_back();
       if (index < 0 || static_cast<size_t>(index) >= args_->size()) {
         error = "invalid argv index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t flags = decodePrintFlags(inst.imm);
       FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
@@ -2042,22 +2094,22 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::PrintArgvUnsafe: {
       if (stack_.empty()) {
         error = "IR stack underflow on print";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       if (!args_) {
         error = "VM missing argv data for PrintArgvUnsafe";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t index = static_cast<int64_t>(stack_.back());
       stack_.pop_back();
       if (index < 0 || static_cast<size_t>(index) >= args_->size()) {
         ip += 1;
-        return StepOutcome::Continue;
+        return finishStep(StepOutcome::Continue);
       }
       const uint64_t flags = decodePrintFlags(inst.imm);
       FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
@@ -2068,14 +2120,14 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
         std::fputc('\n', out);
       }
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend: {
       if (inst.imm >= module_->stringTable.size()) {
         error = "invalid string index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const std::string &path = module_->stringTable[static_cast<size_t>(inst.imm)];
       int flags = O_RDONLY;
@@ -2095,12 +2147,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       }
       stack_.push_back(packed);
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileClose: {
       if (stack_.empty()) {
         error = "IR stack underflow on file close";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t handle = stack_.back();
       stack_.pop_back();
@@ -2109,12 +2161,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileFlush: {
       if (stack_.empty()) {
         error = "IR stack underflow on file flush";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t handle = stack_.back();
       stack_.pop_back();
@@ -2123,12 +2175,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = (rc < 0) ? (errno == 0 ? 1u : static_cast<uint32_t>(errno)) : 0u;
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteI32: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on file write";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t value = static_cast<int64_t>(static_cast<int32_t>(stack_.back()));
       stack_.pop_back();
@@ -2139,12 +2191,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteI64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on file write";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const int64_t value = static_cast<int64_t>(stack_.back());
       stack_.pop_back();
@@ -2155,12 +2207,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteU64: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on file write";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t value = stack_.back();
       stack_.pop_back();
@@ -2171,16 +2223,16 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteString: {
       if (stack_.empty()) {
         error = "IR stack underflow on file write";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       if (inst.imm >= module_->stringTable.size()) {
         error = "invalid string index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t handle = stack_.back();
       stack_.pop_back();
@@ -2189,12 +2241,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, text.data(), text.size()));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteByte: {
       if (stack_.size() < 2) {
         error = "IR stack underflow on file write";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint8_t value = static_cast<uint8_t>(stack_.back() & 0xffu);
       stack_.pop_back();
@@ -2204,12 +2256,12 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, &value, 1));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::FileWriteNewline: {
       if (stack_.empty()) {
         error = "IR stack underflow on file write";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t handle = stack_.back();
       stack_.pop_back();
@@ -2218,34 +2270,34 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
       const uint32_t err = static_cast<uint32_t>(writeAll(fd, &newline, 1));
       stack_.push_back(static_cast<uint64_t>(err));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     case IrOpcode::LoadStringByte: {
       if (stack_.empty()) {
         error = "IR stack underflow on string index";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint64_t indexRaw = stack_.back();
       stack_.pop_back();
       const uint64_t stringIndex = inst.imm;
       if (stringIndex >= module_->stringTable.size()) {
         error = "invalid string index in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
       const size_t index = static_cast<size_t>(indexRaw);
       if (index >= text.size()) {
         error = "string index out of bounds in IR";
-        return StepOutcome::Fault;
+        return finishFault();
       }
       const uint8_t byte = static_cast<uint8_t>(text[index]);
       stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(byte))));
       ip += 1;
-      return StepOutcome::Continue;
+      return finishStep(StepOutcome::Continue);
     }
     default:
       error = "unknown IR opcode";
-      return StepOutcome::Fault;
+      return finishFault();
   }
 }
 
@@ -2349,6 +2401,14 @@ bool VmDebugSession::continueExecution(VmDebugStopReason &stopReason, std::strin
       return true;
     }
   }
+}
+
+void VmDebugSession::setHooks(const VmDebugHooks &hooks) {
+  hooks_ = hooks;
+}
+
+void VmDebugSession::clearHooks() {
+  hooks_ = {};
 }
 
 bool VmDebugSession::pause(std::string &error) {

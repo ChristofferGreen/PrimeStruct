@@ -165,7 +165,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Define VM debug session state model and stop-reason enum (`Breakpoint`, `Step`, `Pause`, `Fault`, `Exit`) shared by CLI/tooling. Testing: unit tests for state transition legality and stop-reason coverage.
 - ✓ Add a first-class VM debug session API (separate from `Vm::execute`) with deterministic controls: `step`, `continue`, and `pause`. Testing: golden step transcripts for representative IR programs.
 - ✓ Expand `VmDebugSession` opcode coverage to parity with `Vm::execute` and add opcode-matrix stepping regressions for unsupported instruction families.
-- ○ Add VM runtime debug hook plumbing (`beforeInstruction`, `afterInstruction`, `callPush`, `callPop`, `fault`). Testing: hook coverage tests for every event kind.
+- ✓ Add VM runtime debug hook plumbing (`beforeInstruction`, `afterInstruction`, `callPush`, `callPop`, `fault`). Testing: hook coverage tests for every event kind.
 - ○ Make debug event ordering deterministic and document ordering guarantees. Testing: event-sequence snapshot tests and deterministic replay equivalence checks.
 - ○ Add IR-level breakpoints keyed by `(functionIndex, ip)`. Testing: compile-run suites with single/multiple breakpoints and branch-path coverage.
 - ○ Add `primevm --debug-json` NDJSON event streaming mode. Testing: CLI integration tests validating NDJSON schema and field stability.
