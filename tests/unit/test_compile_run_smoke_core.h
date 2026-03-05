@@ -406,6 +406,7 @@ main() {
     sawPayload = true;
     CHECK(entry.find("\"instruction_pointer\":") != std::string::npos);
     CHECK(entry.find("\"call_stack\":[") != std::string::npos);
+    CHECK(entry.find("\"frame_locals\":[") != std::string::npos);
     CHECK(entry.find("\"current_frame_locals\":[") != std::string::npos);
     CHECK(entry.find("\"operand_stack\":[") != std::string::npos);
 
@@ -605,6 +606,52 @@ main() {
   CHECK(frames[5].find("\"event\":\"exited\"") != std::string::npos);
   CHECK(frames[5].find("\"exitCode\":9") != std::string::npos);
   CHECK(frames[6].find("\"event\":\"terminated\"") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-dap exposes non-top frame locals in variables") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  [int mut] inner{7i32}
+  return(inner)
+}
+
+[return<int>]
+main() {
+  [int mut] outer{9i32}
+  return(helper())
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_dap_non_top_locals.prime", source);
+
+  const std::string requests = makeDapFrame(R"({"seq":1,"type":"request","command":"initialize","arguments":{}})") +
+                               makeDapFrame(R"({"seq":2,"type":"request","command":"launch","arguments":{}})") +
+                               makeDapFrame(R"({"seq":3,"type":"request","command":"setInstructionBreakpoints","arguments":{"breakpoints":[{"instructionReference":"f1:ip2"}]}})") +
+                               makeDapFrame(R"({"seq":4,"type":"request","command":"continue","arguments":{"threadId":1}})") +
+                               makeDapFrame(R"({"seq":5,"type":"request","command":"stackTrace","arguments":{"threadId":1}})") +
+                               makeDapFrame(R"({"seq":6,"type":"request","command":"scopes","arguments":{"frameId":2}})") +
+                               makeDapFrame(R"({"seq":7,"type":"request","command":"variables","arguments":{"variablesReference":513}})") +
+                               makeDapFrame(R"({"seq":8,"type":"request","command":"disconnect","arguments":{}})");
+  const std::string requestPath = writeTemp("primevm_debug_dap_non_top_locals.requests", requests);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primevm_debug_dap_non_top_locals.out").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --entry /main --debug-dap < " + quoteShellArg(requestPath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(cmd) == 0);
+
+  bool framingOk = false;
+  const std::vector<std::string> frames = parseDapFrames(readFile(outPath), framingOk);
+  CHECK(framingOk);
+  REQUIRE(frames.size() == 11);
+  CHECK(frames[4].find("\"command\":\"setInstructionBreakpoints\"") != std::string::npos);
+  CHECK(frames[6].find("\"event\":\"stopped\"") != std::string::npos);
+  CHECK(frames[7].find("\"command\":\"stackTrace\"") != std::string::npos);
+  CHECK(frames[7].find("\"totalFrames\":2") != std::string::npos);
+  CHECK(frames[8].find("\"command\":\"scopes\"") != std::string::npos);
+  CHECK(frames[8].find("\"variablesReference\":513") != std::string::npos);
+  CHECK(frames[9].find("\"command\":\"variables\"") != std::string::npos);
+  CHECK(frames[9].find("\"name\":\"outer\"") != std::string::npos);
+  CHECK(frames[9].find("\"value\":\"9\"") != std::string::npos);
 }
 
 TEST_CASE("primevm rejects primec output flags") {

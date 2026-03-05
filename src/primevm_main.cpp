@@ -113,6 +113,18 @@ std::string encodeUint64ArrayJson(const std::vector<uint64_t> &values) {
   return out;
 }
 
+std::string encodeFrameLocalsJson(const std::vector<std::vector<uint64_t>> &frameLocals) {
+  std::string out = "[";
+  for (size_t i = 0; i < frameLocals.size(); ++i) {
+    if (i > 0) {
+      out += ",";
+    }
+    out += encodeUint64ArrayJson(frameLocals[i]);
+  }
+  out += "]";
+  return out;
+}
+
 std::string encodeCallStackJson(const std::vector<primec::VmDebugStackFrameSnapshot> &frames) {
   std::string out = "[";
   for (size_t i = 0; i < frames.size(); ++i) {
@@ -128,7 +140,8 @@ std::string encodeCallStackJson(const std::vector<primec::VmDebugStackFrameSnaps
 
 std::string encodeDebugSnapshotPayloadJson(const primec::VmDebugSnapshotPayload &payload) {
   return std::string("{\"instruction_pointer\":") + std::to_string(payload.instructionPointer) + ",\"call_stack\":" +
-         encodeCallStackJson(payload.callStack) + ",\"current_frame_locals\":" +
+         encodeCallStackJson(payload.callStack) + ",\"frame_locals\":" + encodeFrameLocalsJson(payload.frameLocals) +
+         ",\"current_frame_locals\":" +
          encodeUint64ArrayJson(payload.currentFrameLocals) + ",\"operand_stack\":" +
          encodeUint64ArrayJson(payload.operandStack) + "}";
 }

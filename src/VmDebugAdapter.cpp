@@ -55,10 +55,29 @@ size_t resolveLocalVariableCount(const IrFunction &function, const VmDebugSnapsh
       slotCount = nextCount;
     }
   }
-  if (frameOrdinal == 0 && payload.currentFrameLocals.size() > slotCount) {
-    slotCount = payload.currentFrameLocals.size();
+  if (frameOrdinal < payload.callStack.size()) {
+    const size_t payloadIndex = payload.callStack.size() - frameOrdinal - 1;
+    if (payloadIndex < payload.frameLocals.size() && payload.frameLocals[payloadIndex].size() > slotCount) {
+      slotCount = payload.frameLocals[payloadIndex].size();
+    } else if (frameOrdinal == 0 && payload.currentFrameLocals.size() > slotCount) {
+      slotCount = payload.currentFrameLocals.size();
+    }
   }
   return slotCount;
+}
+
+const std::vector<uint64_t> *frameLocalsForOrdinal(const VmDebugSnapshotPayload &payload, size_t frameOrdinal) {
+  if (frameOrdinal >= payload.callStack.size()) {
+    return nullptr;
+  }
+  const size_t payloadIndex = payload.callStack.size() - frameOrdinal - 1;
+  if (payloadIndex < payload.frameLocals.size()) {
+    return &payload.frameLocals[payloadIndex];
+  }
+  if (frameOrdinal == 0) {
+    return &payload.currentFrameLocals;
+  }
+  return nullptr;
 }
 
 } // namespace
@@ -377,6 +396,7 @@ bool VmDebugAdapter::variables(int64_t variablesReference,
     }
 
     const size_t slotCount = resolveLocalVariableCount(function, payload, frameOrdinal);
+    const std::vector<uint64_t> *frameLocals = frameLocalsForOrdinal(payload, frameOrdinal);
     outVariables.reserve(slotCount);
     for (size_t slotIndex = 0; slotIndex < slotCount; ++slotIndex) {
       VmDebugAdapterVariable variable;
@@ -392,8 +412,8 @@ bool VmDebugAdapter::variables(int64_t variablesReference,
         variable.typeName = "u64";
       }
 
-      if (frameOrdinal == 0 && slotIndex < payload.currentFrameLocals.size()) {
-        variable.value = std::to_string(payload.currentFrameLocals[slotIndex]);
+      if (frameLocals != nullptr && slotIndex < frameLocals->size()) {
+        variable.value = std::to_string((*frameLocals)[slotIndex]);
       } else {
         variable.value = "<unavailable>";
       }

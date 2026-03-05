@@ -263,6 +263,60 @@ TEST_CASE("vm debug snapshot payload tracks locals and operand stack across step
   CHECK(payload.instructionPointer == 3);
 }
 
+TEST_CASE("vm debug snapshot payload exposes concrete locals for non-top frames") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  helperFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+  module.entryIndex = 0;
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  primec::VmDebugStopReason reason = primec::VmDebugStopReason::Step;
+  REQUIRE(session.step(reason, error));
+  REQUIRE(session.step(reason, error));
+  REQUIRE(session.step(reason, error));
+  CHECK(reason == primec::VmDebugStopReason::Step);
+
+  auto payload = session.snapshotPayload();
+  REQUIRE(payload.callStack.size() == 2);
+  REQUIRE(payload.frameLocals.size() == 2);
+  REQUIRE(payload.frameLocals[0].size() == 1);
+  CHECK(static_cast<int32_t>(payload.frameLocals[0][0]) == 9);
+  REQUIRE(payload.frameLocals[1].size() == 1);
+  CHECK(static_cast<int32_t>(payload.frameLocals[1][0]) == 0);
+
+  REQUIRE(session.step(reason, error));
+  REQUIRE(session.step(reason, error));
+  CHECK(reason == primec::VmDebugStopReason::Step);
+
+  payload = session.snapshotPayload();
+  REQUIRE(payload.callStack.size() == 2);
+  REQUIRE(payload.frameLocals.size() == 2);
+  REQUIRE(payload.frameLocals[0].size() == 1);
+  CHECK(static_cast<int32_t>(payload.frameLocals[0][0]) == 9);
+  REQUIRE(payload.frameLocals[1].size() == 1);
+  CHECK(static_cast<int32_t>(payload.frameLocals[1][0]) == 7);
+  CHECK(payload.currentFrameLocals == payload.frameLocals[1]);
+}
+
 TEST_CASE("vm debug session validates control-state preconditions") {
   primec::VmDebugSession session;
   std::string error;
@@ -630,6 +684,74 @@ TEST_CASE("vm debug adapter reports invalid debug protocol queries") {
   REQUIRE(breakpoints.size() == 1);
   CHECK_FALSE(breakpoints[0].verified);
   CHECK(breakpoints[0].message.find("source breakpoint not found") != std::string::npos);
+}
+
+TEST_CASE("vm debug adapter exposes caller locals for non-top frames") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.localDebugSlots.push_back({0u, "outer", "i32"});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9, 101});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0, 102});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1, 103});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 104});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.localDebugSlots.push_back({0u, "inner", "i32"});
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 7, 201});
+  helperFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0, 202});
+  helperFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0, 203});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 204});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+  module.entryIndex = 0;
+  module.instructionSourceMap.push_back({103u, 40u, 5u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({203u, 80u, 7u, primec::IrSourceMapProvenance::CanonicalAst});
+
+  primec::VmDebugAdapter adapter;
+  std::string error;
+  REQUIRE(adapter.launch(module, error));
+  CHECK(error.empty());
+
+  REQUIRE(adapter.setInstructionBreakpoints({{1u, 2u}}, error));
+  CHECK(error.empty());
+
+  primec::VmDebugAdapterStopEvent stopEvent;
+  REQUIRE(adapter.continueExecution(stopEvent, error));
+  CHECK(error.empty());
+  CHECK(stopEvent.reason == primec::VmDebugStopReason::Breakpoint);
+
+  std::vector<primec::VmDebugAdapterStackFrame> frames;
+  REQUIRE(adapter.stackTrace(1, frames, error));
+  CHECK(error.empty());
+  REQUIRE(frames.size() == 2);
+  CHECK(frames[0].name == "/helper");
+  CHECK(frames[1].name == "/main");
+
+  std::vector<primec::VmDebugAdapterScope> callerScopes;
+  REQUIRE(adapter.scopes(frames[1].id, callerScopes, error));
+  CHECK(error.empty());
+  REQUIRE(callerScopes.size() == 2);
+
+  int64_t callerLocalsReference = 0;
+  for (const primec::VmDebugAdapterScope &scope : callerScopes) {
+    if (scope.name == "Locals") {
+      callerLocalsReference = scope.variablesReference;
+      break;
+    }
+  }
+  REQUIRE(callerLocalsReference != 0);
+
+  std::vector<primec::VmDebugAdapterVariable> callerLocals;
+  REQUIRE(adapter.variables(callerLocalsReference, callerLocals, error));
+  CHECK(error.empty());
+  REQUIRE(callerLocals.size() == 1);
+  CHECK(callerLocals[0].name == "outer");
+  CHECK(callerLocals[0].value == "9");
+  CHECK(callerLocals[0].typeName == "i32");
 }
 
 TEST_CASE("vm debug hook event ordering is deterministic and replayable") {

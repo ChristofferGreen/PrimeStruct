@@ -2696,8 +2696,10 @@ VmDebugSnapshotPayload VmDebugSession::snapshotPayload() const {
   VmDebugSnapshotPayload out;
   out.operandStack = stack_;
   out.callStack.reserve(frames_.size());
+  out.frameLocals.reserve(frames_.size());
   for (const Frame &frame : frames_) {
     out.callStack.push_back({frame.functionIndex, frame.ip});
+    out.frameLocals.push_back(frame.locals);
   }
   if (!frames_.empty()) {
     const Frame &frame = frames_.back();

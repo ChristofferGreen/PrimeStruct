@@ -122,6 +122,7 @@ struct VmDebugStackFrameSnapshot {
 struct VmDebugSnapshotPayload {
   size_t instructionPointer = 0;
   std::vector<VmDebugStackFrameSnapshot> callStack;
+  std::vector<std::vector<uint64_t>> frameLocals;
   std::vector<uint64_t> currentFrameLocals;
   std::vector<uint64_t> operandStack;
 };
