@@ -521,4 +521,151 @@ StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
   return StatementPrintPathSpaceEmitResult::NotMatched;
 }
 
+ReturnStatementEmitResult tryEmitReturnStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::optional<ReturnStatementInlineContext> &inlineContext,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    const EmitExprForBindingFn &emitExpr,
+    const InferBindingExprKindFn &inferExprKind,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
+    const std::function<void()> &emitFileScopeCleanupAll,
+    std::string &error) {
+  if (!isReturnCall(stmt)) {
+    return ReturnStatementEmitResult::NotMatched;
+  }
+
+  auto isSupportedScalarKind = [](LocalInfo::ValueKind kind) {
+    return kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64 ||
+           kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool ||
+           kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::Float64 ||
+           kind == LocalInfo::ValueKind::String;
+  };
+
+  if (inlineContext.has_value()) {
+    const ReturnStatementInlineContext &context = *inlineContext;
+    if (stmt.args.empty()) {
+      if (!context.returnsVoid) {
+        error = "return requires exactly one argument";
+        return ReturnStatementEmitResult::Error;
+      }
+      const size_t jumpIndex = instructions.size();
+      instructions.push_back({IrOpcode::Jump, 0});
+      if (context.returnJumps) {
+        context.returnJumps->push_back(jumpIndex);
+      }
+      return ReturnStatementEmitResult::Emitted;
+    }
+    if (stmt.args.size() != 1) {
+      error = "return requires exactly one argument";
+      return ReturnStatementEmitResult::Error;
+    }
+    if (context.returnsVoid) {
+      error = "return value not allowed for void definition";
+      return ReturnStatementEmitResult::Error;
+    }
+    if (context.returnLocal < 0) {
+      error = "native backend missing inline return local";
+      return ReturnStatementEmitResult::Error;
+    }
+
+    const Expr &valueExpr = stmt.args.front();
+    if (!emitExpr(valueExpr, localsIn)) {
+      return ReturnStatementEmitResult::Error;
+    }
+
+    if (context.returnsArray) {
+      const LocalInfo::ValueKind arrayKind = inferArrayElementKind(valueExpr, localsIn);
+      if (arrayKind == LocalInfo::ValueKind::Unknown) {
+        error = "native backend only supports returning array values";
+        return ReturnStatementEmitResult::Error;
+      }
+      if (arrayKind == LocalInfo::ValueKind::String) {
+        error = "native backend does not support string array return types";
+        return ReturnStatementEmitResult::Error;
+      }
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+      const size_t jumpIndex = instructions.size();
+      instructions.push_back({IrOpcode::Jump, 0});
+      if (context.returnJumps) {
+        context.returnJumps->push_back(jumpIndex);
+      }
+      return ReturnStatementEmitResult::Emitted;
+    }
+
+    const LocalInfo::ValueKind returnKind = inferExprKind(valueExpr, localsIn);
+    if (!isSupportedScalarKind(returnKind)) {
+      error = "native backend only supports returning numeric, bool, or string values";
+      return ReturnStatementEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+    const size_t jumpIndex = instructions.size();
+    instructions.push_back({IrOpcode::Jump, 0});
+    if (context.returnJumps) {
+      context.returnJumps->push_back(jumpIndex);
+    }
+    return ReturnStatementEmitResult::Emitted;
+  }
+
+  if (stmt.args.empty()) {
+    if (!definitionReturnsVoid) {
+      error = "return requires exactly one argument";
+      return ReturnStatementEmitResult::Error;
+    }
+    if (emitFileScopeCleanupAll) {
+      emitFileScopeCleanupAll();
+    }
+    instructions.push_back({IrOpcode::ReturnVoid, 0});
+    sawReturn = true;
+    return ReturnStatementEmitResult::Emitted;
+  }
+  if (stmt.args.size() != 1) {
+    error = "return requires exactly one argument";
+    return ReturnStatementEmitResult::Error;
+  }
+  if (definitionReturnsVoid) {
+    error = "return value not allowed for void definition";
+    return ReturnStatementEmitResult::Error;
+  }
+
+  const Expr &valueExpr = stmt.args.front();
+  if (!emitExpr(valueExpr, localsIn)) {
+    return ReturnStatementEmitResult::Error;
+  }
+  if (emitFileScopeCleanupAll) {
+    emitFileScopeCleanupAll();
+  }
+
+  const LocalInfo::ValueKind arrayKind = inferArrayElementKind(valueExpr, localsIn);
+  if (arrayKind != LocalInfo::ValueKind::Unknown) {
+    if (arrayKind == LocalInfo::ValueKind::String) {
+      error = "native backend does not support string array return types";
+      return ReturnStatementEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::ReturnI64, 0});
+    sawReturn = true;
+    return ReturnStatementEmitResult::Emitted;
+  }
+
+  const LocalInfo::ValueKind returnKind = inferExprKind(valueExpr, localsIn);
+  if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
+      returnKind == LocalInfo::ValueKind::String) {
+    instructions.push_back({IrOpcode::ReturnI64, 0});
+  } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
+    instructions.push_back({IrOpcode::ReturnI32, 0});
+  } else if (returnKind == LocalInfo::ValueKind::Float32) {
+    instructions.push_back({IrOpcode::ReturnF32, 0});
+  } else if (returnKind == LocalInfo::ValueKind::Float64) {
+    instructions.push_back({IrOpcode::ReturnF64, 0});
+  } else {
+    error = "native backend only supports returning numeric, bool, or string values";
+    return ReturnStatementEmitResult::Error;
+  }
+
+  sawReturn = true;
+  return ReturnStatementEmitResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer

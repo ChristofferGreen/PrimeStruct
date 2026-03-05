@@ -11897,6 +11897,137 @@ TEST_CASE("ir lowerer statement binding helper emits pathspace statement builtin
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer statement binding helper emits inline return statements") {
+  using EmitResult = primec::ir_lowerer::ReturnStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 5;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "return";
+  stmt.args = {valueExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::vector<size_t> jumps;
+  bool sawReturn = false;
+  int cleanupCalls = 0;
+  std::string error;
+  const std::optional<primec::ir_lowerer::ReturnStatementInlineContext> inlineContext =
+      primec::ir_lowerer::ReturnStatementInlineContext{false, false, 9, &jumps};
+
+  CHECK(primec::ir_lowerer::tryEmitReturnStatement(
+            stmt,
+            {},
+            instructions,
+            inlineContext,
+            false,
+            sawReturn,
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, expr.literalValue});
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+            [&]() { ++cleanupCalls; },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(sawReturn);
+  CHECK(cleanupCalls == 0);
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 9);
+  CHECK(instructions[2].op == primec::IrOpcode::Jump);
+  REQUIRE(jumps.size() == 1);
+  CHECK(jumps[0] == 2);
+}
+
+TEST_CASE("ir lowerer statement binding helper emits non-inline void return statements") {
+  using EmitResult = primec::ir_lowerer::ReturnStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "return";
+
+  std::vector<primec::IrInstruction> instructions;
+  bool sawReturn = false;
+  int cleanupCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitReturnStatement(
+            stmt,
+            {},
+            instructions,
+            std::nullopt,
+            true,
+            sawReturn,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+            [&]() { ++cleanupCalls; },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(sawReturn);
+  CHECK(cleanupCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::ReturnVoid);
+}
+
+TEST_CASE("ir lowerer statement binding helper validates return diagnostics") {
+  using EmitResult = primec::ir_lowerer::ReturnStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 1;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "return";
+  stmt.args = {valueExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  bool sawReturn = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitReturnStatement(
+            stmt,
+            {},
+            instructions,
+            std::nullopt,
+            true,
+            sawReturn,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+            []() {},
+            error) == EmitResult::Error);
+  CHECK(error == "return value not allowed for void definition");
+
+  std::vector<size_t> jumps;
+  const std::optional<primec::ir_lowerer::ReturnStatementInlineContext> inlineContext =
+      primec::ir_lowerer::ReturnStatementInlineContext{false, true, 3, &jumps};
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitReturnStatement(
+            stmt,
+            {},
+            instructions,
+            inlineContext,
+            false,
+            sawReturn,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+            []() {},
+            error) == EmitResult::Error);
+  CHECK(error == "native backend only supports returning array values");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,6 +49,18 @@ enum class StatementPrintPathSpaceEmitResult {
   NotMatched,
   Emitted,
   Error,
+};
+enum class ReturnStatementEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+
+struct ReturnStatementInlineContext {
+  bool returnsVoid = false;
+  bool returnsArray = false;
+  int32_t returnLocal = -1;
+  std::vector<size_t> *returnJumps = nullptr;
 };
 
 struct StatementBindingTypeInfo {
@@ -121,6 +135,18 @@ StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     const EmitExprForBindingFn &emitExpr,
     std::vector<IrInstruction> &instructions,
+    std::string &error);
+ReturnStatementEmitResult tryEmitReturnStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::optional<ReturnStatementInlineContext> &inlineContext,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    const EmitExprForBindingFn &emitExpr,
+    const InferBindingExprKindFn &inferExprKind,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
+    const std::function<void()> &emitFileScopeCleanupAll,
     std::string &error);
 
 } // namespace primec::ir_lowerer

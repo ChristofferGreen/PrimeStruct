@@ -233,112 +233,34 @@
     if (printPathSpaceResult == ir_lowerer::StatementPrintPathSpaceEmitResult::Emitted) {
       return true;
     }
-    if (isReturnCall(stmt)) {
-      if (activeInlineContext) {
-        InlineContext &context = *activeInlineContext;
-        if (stmt.args.empty()) {
-          if (!context.returnsVoid) {
-            error = "return requires exactly one argument";
-            return false;
-          }
-          size_t jumpIndex = function.instructions.size();
-          function.instructions.push_back({IrOpcode::Jump, 0});
-          context.returnJumps.push_back(jumpIndex);
-          return true;
-        }
-        if (stmt.args.size() != 1) {
-          error = "return requires exactly one argument";
-          return false;
-        }
-        if (context.returnsVoid) {
-          error = "return value not allowed for void definition";
-          return false;
-        }
-        if (context.returnLocal < 0) {
-          error = "native backend missing inline return local";
-          return false;
-        }
-        if (!emitExpr(stmt.args.front(), localsIn)) {
-          return false;
-        }
-        if (context.returnsArray) {
-          LocalInfo::ValueKind arrayKind = inferArrayElementKind(stmt.args.front(), localsIn);
-          if (arrayKind == LocalInfo::ValueKind::Unknown) {
-            error = "native backend only supports returning array values";
-            return false;
-          }
-          if (arrayKind == LocalInfo::ValueKind::String) {
-            error = "native backend does not support string array return types";
-            return false;
-          }
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
-          size_t jumpIndex = function.instructions.size();
-          function.instructions.push_back({IrOpcode::Jump, 0});
-          context.returnJumps.push_back(jumpIndex);
-          return true;
-        }
-        LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
-        if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
-            returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool ||
-            returnKind == LocalInfo::ValueKind::Float32 || returnKind == LocalInfo::ValueKind::Float64 ||
-            returnKind == LocalInfo::ValueKind::String) {
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
-          size_t jumpIndex = function.instructions.size();
-          function.instructions.push_back({IrOpcode::Jump, 0});
-          context.returnJumps.push_back(jumpIndex);
-          return true;
-        }
-        error = "native backend only supports returning numeric, bool, or string values";
-        return false;
+    const std::optional<ir_lowerer::ReturnStatementInlineContext> returnInlineContext = [&]()
+        -> std::optional<ir_lowerer::ReturnStatementInlineContext> {
+      if (!activeInlineContext) {
+        return std::nullopt;
       }
-
-      if (stmt.args.empty()) {
-        if (!returnsVoid) {
-          error = "return requires exactly one argument";
-          return false;
-        }
-        emitFileScopeCleanupAll();
-        function.instructions.push_back({IrOpcode::ReturnVoid, 0});
-        sawReturn = true;
-        return true;
-      }
-      if (stmt.args.size() != 1) {
-        error = "return requires exactly one argument";
-        return false;
-      }
-      if (returnsVoid) {
-        error = "return value not allowed for void definition";
-        return false;
-      }
-      if (!emitExpr(stmt.args.front(), localsIn)) {
-        return false;
-      }
-      emitFileScopeCleanupAll();
-      LocalInfo::ValueKind arrayKind = inferArrayElementKind(stmt.args.front(), localsIn);
-      if (arrayKind != LocalInfo::ValueKind::Unknown) {
-        if (arrayKind == LocalInfo::ValueKind::String) {
-          error = "native backend does not support string array return types";
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::ReturnI64, 0});
-      } else {
-        LocalInfo::ValueKind returnKind = inferExprKind(stmt.args.front(), localsIn);
-        if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64) {
-          function.instructions.push_back({IrOpcode::ReturnI64, 0});
-        } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
-          function.instructions.push_back({IrOpcode::ReturnI32, 0});
-        } else if (returnKind == LocalInfo::ValueKind::String) {
-          function.instructions.push_back({IrOpcode::ReturnI64, 0});
-        } else if (returnKind == LocalInfo::ValueKind::Float32) {
-          function.instructions.push_back({IrOpcode::ReturnF32, 0});
-        } else if (returnKind == LocalInfo::ValueKind::Float64) {
-          function.instructions.push_back({IrOpcode::ReturnF64, 0});
-        } else {
-          error = "native backend only supports returning numeric, bool, or string values";
-          return false;
-        }
-      }
-      sawReturn = true;
+      return ir_lowerer::ReturnStatementInlineContext{
+          activeInlineContext->returnsVoid,
+          activeInlineContext->returnsArray,
+          activeInlineContext->returnLocal,
+          &activeInlineContext->returnJumps,
+      };
+    }();
+    const auto returnResult = ir_lowerer::tryEmitReturnStatement(
+        stmt,
+        localsIn,
+        function.instructions,
+        returnInlineContext,
+        returnsVoid,
+        sawReturn,
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferArrayElementKind(valueExpr, valueLocals); },
+        [&]() { emitFileScopeCleanupAll(); },
+        error);
+    if (returnResult == ir_lowerer::ReturnStatementEmitResult::Error) {
+      return false;
+    }
+    if (returnResult == ir_lowerer::ReturnStatementEmitResult::Emitted) {
       return true;
     }
     if (isMatchCall(stmt)) {
