@@ -635,6 +635,36 @@ TEST_CASE("ir serializes instruction debug ids") {
   CHECK(decoded.functions[0].instructions[3].debugId == 14u);
 }
 
+TEST_CASE("ir serializes instruction source map metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 11});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 12});
+  module.functions.push_back(fn);
+  module.instructionSourceMap.push_back({11u, 4u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({12u, 5u, 3u, primec::IrSourceMapProvenance::Unknown});
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.instructionSourceMap.size() == 2);
+  CHECK(decoded.instructionSourceMap[0].debugId == 11u);
+  CHECK(decoded.instructionSourceMap[0].line == 4u);
+  CHECK(decoded.instructionSourceMap[0].column == 2u);
+  CHECK(decoded.instructionSourceMap[0].provenance == primec::IrSourceMapProvenance::CanonicalAst);
+  CHECK(decoded.instructionSourceMap[1].debugId == 12u);
+  CHECK(decoded.instructionSourceMap[1].line == 5u);
+  CHECK(decoded.instructionSourceMap[1].column == 3u);
+  CHECK(decoded.instructionSourceMap[1].provenance == primec::IrSourceMapProvenance::Unknown);
+}
+
 TEST_CASE("ir serializes local debug slot metadata") {
   primec::IrModule module;
   module.entryIndex = 0;
@@ -731,6 +761,28 @@ TEST_CASE("ir deserialization rejects malformed instruction debug id metadata") 
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));
   CHECK(error == "truncated IR instruction debug id");
+}
+
+TEST_CASE("ir deserialization rejects malformed instruction source map metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 9});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 10});
+  module.functions.push_back(fn);
+  module.instructionSourceMap.push_back({9u, 3u, 1u, primec::IrSourceMapProvenance::CanonicalAst});
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+  REQUIRE(!data.empty());
+  data.pop_back();
+
+  primec::IrModule decoded;
+  CHECK_FALSE(primec::deserializeIr(data, decoded, error));
+  CHECK(error == "truncated IR instruction source map entry");
 }
 
 TEST_CASE("ir deserialization rejects unsupported version") {
@@ -839,6 +891,79 @@ main() {
     }
   }
   CHECK(sawAnyInstruction);
+}
+
+TEST_CASE("ir lowerer emits deterministic instruction source map provenance") {
+  const std::string source = R"(
+[return<int>]
+helper([int] x) {
+  return(plus(x, 2i32))
+}
+
+[return<int>]
+main() {
+  [int] a{1i32}
+  [int] b{helper(a)}
+  return(b)
+}
+)";
+
+  primec::Program firstProgram;
+  primec::Program secondProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, firstProgram, error));
+  CHECK(error.empty());
+  REQUIRE(parseAndValidate(source, secondProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule firstModule;
+  primec::IrModule secondModule;
+  REQUIRE(lowerer.lower(firstProgram, "/main", {}, {}, firstModule, error));
+  CHECK(error.empty());
+  REQUIRE(lowerer.lower(secondProgram, "/main", {}, {}, secondModule, error));
+  CHECK(error.empty());
+
+  size_t totalInstructionCount = 0;
+  std::unordered_map<uint32_t, const primec::IrInstructionSourceMapEntry *> sourceMapByDebugId;
+  for (const auto &entry : firstModule.instructionSourceMap) {
+    CHECK(entry.debugId > 0u);
+    CHECK(entry.provenance == primec::IrSourceMapProvenance::CanonicalAst);
+    CHECK(sourceMapByDebugId.emplace(entry.debugId, &entry).second);
+  }
+  for (const auto &fn : firstModule.functions) {
+    totalInstructionCount += fn.instructions.size();
+  }
+  CHECK(firstModule.instructionSourceMap.size() == totalInstructionCount);
+
+  std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> definitionSpanByPath;
+  for (const auto &def : firstProgram.definitions) {
+    const uint32_t line = def.sourceLine > 0 ? static_cast<uint32_t>(def.sourceLine) : 0u;
+    const uint32_t column = def.sourceColumn > 0 ? static_cast<uint32_t>(def.sourceColumn) : 0u;
+    definitionSpanByPath.emplace(def.fullPath, std::make_pair(line, column));
+  }
+
+  for (const auto &fn : firstModule.functions) {
+    const auto spanIt = definitionSpanByPath.find(fn.name);
+    for (const auto &inst : fn.instructions) {
+      auto sourceIt = sourceMapByDebugId.find(inst.debugId);
+      REQUIRE(sourceIt != sourceMapByDebugId.end());
+      if (spanIt != definitionSpanByPath.end()) {
+        CHECK(sourceIt->second->line == spanIt->second.first);
+        CHECK(sourceIt->second->column == spanIt->second.second);
+      }
+    }
+  }
+
+  REQUIRE(firstModule.instructionSourceMap.size() == secondModule.instructionSourceMap.size());
+  for (size_t i = 0; i < firstModule.instructionSourceMap.size(); ++i) {
+    const auto &firstEntry = firstModule.instructionSourceMap[i];
+    const auto &secondEntry = secondModule.instructionSourceMap[i];
+    CHECK(firstEntry.debugId == secondEntry.debugId);
+    CHECK(firstEntry.line == secondEntry.line);
+    CHECK(firstEntry.column == secondEntry.column);
+    CHECK(firstEntry.provenance == secondEntry.provenance);
+  }
 }
 
 TEST_CASE("ir leaves tail metadata unset for builtin return") {

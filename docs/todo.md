@@ -172,7 +172,8 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add on-demand snapshot payloads (call stack, current frame locals, operand stack, instruction pointer) to debug JSON mode (`--debug-json-snapshots=none|stop|all`). Testing: VM debug-session payload stepping assertions plus CLI debug-json payload shape/value assertions across step boundaries and option diagnostics.
 - ✓ Extend IR debug metadata with local slot names/types (no runtime semantic change). Testing: IR serialize/deserialize round-trip tests and malformed-metadata rejection tests.
 - ✓ Extend IR debug metadata with instruction debug IDs for source-map linkage. Testing: ID stability snapshots across deterministic builds.
-- ○ Implement source-map plumbing (AST/token span -> canonical AST -> IR instruction). Testing: source-map golden tests and transform-provenance assertions.
+- ✓ Implement source-map plumbing vertical slice (canonical AST definition spans -> IR instruction debug IDs via serialized `instruction_source_map` metadata with provenance tags). Testing: source-map metadata round-trip tests, malformed-metadata rejection tests, and deterministic provenance mapping checks.
+- ○ Refine source-map granularity to statement/expression token spans across text/semantic transforms (replace definition-level fallback spans). Testing: source-map golden tests and transform-provenance assertions.
 - ○ Add source-level breakpoint resolution on top of IR/source maps. Testing: breakpoint mapping tests (single/multi-hit and ambiguous-span diagnostics).
 - ○ Map runtime stack traces back to source spans in VM diagnostics. Testing: stack-trace mapping assertions for nested calls and faults.
 - ○ Add a DAP/LSP debug adapter that translates VM debug events into debugger primitives (threads/stack frames/scopes/variables/breakpoints). Testing: protocol transcript tests and adapter integration smoke tests.

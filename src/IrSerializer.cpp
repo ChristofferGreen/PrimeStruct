@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 18;
+constexpr uint32_t IrVersion = 19;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -52,6 +52,15 @@ bool readU64(const std::vector<uint8_t> &data, size_t &offset, uint64_t &outValu
              (static_cast<uint64_t>(data[offset + 6]) << 48) |
              (static_cast<uint64_t>(data[offset + 7]) << 56);
   offset += 8;
+  return true;
+}
+
+bool readU8(const std::vector<uint8_t> &data, size_t &offset, uint8_t &outValue) {
+  if (offset >= data.size()) {
+    return false;
+  }
+  outValue = data[offset];
+  ++offset;
   return true;
 }
 } // namespace
@@ -161,6 +170,17 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
       appendU64(out, inst.imm);
       appendU32(out, inst.debugId);
     }
+  }
+  if (module.instructionSourceMap.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    error = "too many IR instruction source map entries";
+    return false;
+  }
+  appendU32(out, static_cast<uint32_t>(module.instructionSourceMap.size()));
+  for (const auto &entry : module.instructionSourceMap) {
+    appendU32(out, entry.debugId);
+    appendU32(out, entry.line);
+    appendU32(out, entry.column);
+    out.push_back(static_cast<uint8_t>(entry.provenance));
   }
   return true;
 }
@@ -385,6 +405,23 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       fn.instructions.push_back(inst);
     }
     out.functions.push_back(std::move(fn));
+  }
+  uint32_t sourceMapCount = 0;
+  if (!readU32(data, offset, sourceMapCount)) {
+    error = "truncated IR instruction source map count";
+    return false;
+  }
+  out.instructionSourceMap.reserve(sourceMapCount);
+  for (uint32_t sourceMapIndex = 0; sourceMapIndex < sourceMapCount; ++sourceMapIndex) {
+    IrInstructionSourceMapEntry entry;
+    uint8_t provenance = 0;
+    if (!readU32(data, offset, entry.debugId) || !readU32(data, offset, entry.line) ||
+        !readU32(data, offset, entry.column) || !readU8(data, offset, provenance)) {
+      error = "truncated IR instruction source map entry";
+      return false;
+    }
+    entry.provenance = static_cast<IrSourceMapProvenance>(provenance);
+    out.instructionSourceMap.push_back(entry);
   }
   if (entryIndex >= out.functions.size()) {
     error = "invalid IR entry index";

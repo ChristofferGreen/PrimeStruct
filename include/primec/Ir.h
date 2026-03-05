@@ -207,6 +207,18 @@ struct IrLocalDebugSlot {
   std::string typeName;
 };
 
+enum class IrSourceMapProvenance : uint8_t {
+  Unknown = 0,
+  CanonicalAst = 1,
+};
+
+struct IrInstructionSourceMapEntry {
+  uint32_t debugId = 0;
+  uint32_t line = 0;
+  uint32_t column = 0;
+  IrSourceMapProvenance provenance = IrSourceMapProvenance::CanonicalAst;
+};
+
 struct IrFunction {
   std::string name;
   IrExecutionMetadata metadata;
@@ -219,6 +231,7 @@ struct IrModule {
   int32_t entryIndex = -1;
   std::vector<std::string> stringTable;
   std::vector<IrStructLayout> structLayouts;
+  std::vector<IrInstructionSourceMapEntry> instructionSourceMap;
 };
 
 } // namespace primec

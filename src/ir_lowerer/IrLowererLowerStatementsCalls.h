@@ -146,14 +146,34 @@
     return false;
   }
 
+  size_t totalInstructionCount = 0;
+  for (const auto &loweredFunction : out.functions) {
+    totalInstructionCount += loweredFunction.instructions.size();
+  }
+  out.instructionSourceMap.clear();
+  out.instructionSourceMap.reserve(totalInstructionCount);
+
   uint64_t nextInstructionDebugId = 1;
   for (auto &loweredFunction : out.functions) {
+    uint32_t sourceLine = 0;
+    uint32_t sourceColumn = 0;
+    auto defIt = defMap.find(loweredFunction.name);
+    if (defIt != defMap.end() && defIt->second != nullptr) {
+      if (defIt->second->sourceLine > 0) {
+        sourceLine = static_cast<uint32_t>(defIt->second->sourceLine);
+      }
+      if (defIt->second->sourceColumn > 0) {
+        sourceColumn = static_cast<uint32_t>(defIt->second->sourceColumn);
+      }
+    }
     for (auto &instruction : loweredFunction.instructions) {
       if (nextInstructionDebugId > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
         error = "too many IR instructions for debug id metadata";
         return false;
       }
       instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId);
+      out.instructionSourceMap.push_back(
+          {instruction.debugId, sourceLine, sourceColumn, IrSourceMapProvenance::CanonicalAst});
       ++nextInstructionDebugId;
     }
   }
