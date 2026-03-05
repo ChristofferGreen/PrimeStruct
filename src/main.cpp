@@ -12,6 +12,7 @@
 #include "primec/OptionsParser.h"
 #include "primec/TransformRegistry.h"
 #include "primec/Vm.h"
+#include "primec/WasmEmitter.h"
 
 #include <algorithm>
 #include <cctype>
@@ -381,7 +382,7 @@ int main(int argc, char **argv) {
       if (!argError.empty()) {
         std::cerr << "Argument error: " << argError << "\n";
       }
-      std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv] <input.prime> [-o <output>] "
+      std::cerr << "Usage: primec [--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm] <input.prime> [-o <output>] "
                    "[--entry /path] [--import-path <dir>] [-I <dir>] "
                    "[--text-transforms <list>] [--text-transform-rules <rules>] "
                    "[--semantic-transform-rules <rules>] [--semantic-transforms <list>] "
@@ -673,6 +674,59 @@ int main(int argc, char **argv) {
                          "tool invocation failed",
                          2,
                          {"backend: spirv"});
+    }
+    return 0;
+  }
+
+  if (options.emitKind == "wasm") {
+    primec::IrLowerer lowerer;
+    primec::IrModule ir;
+    if (!lowerer.lower(program,
+                       options.entryPath,
+                       options.defaultEffects,
+                       options.entryDefaultEffects,
+                       ir,
+                       error)) {
+      return emitFailure(
+          options, primec::DiagnosticCode::LoweringError, "Wasm lowering error: ", error, 2, {"backend: wasm"});
+    }
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::LoweringError,
+                         "Wasm IR validation error: ",
+                         error,
+                         2,
+                         {"backend: wasm", "stage: ir-validate"});
+    }
+    if (options.inlineIrCalls) {
+      if (!primec::inlineIrModuleCalls(ir, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::LoweringError,
+                           "Wasm IR inlining error: ",
+                           error,
+                           2,
+                           {"backend: wasm", "stage: ir-inline"});
+      }
+      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::LoweringError,
+                           "Wasm IR validation error: ",
+                           error,
+                           2,
+                           {"backend: wasm", "stage: ir-validate"});
+      }
+    }
+    primec::WasmEmitter wasmEmitter;
+    std::vector<uint8_t> data;
+    if (!wasmEmitter.emitModule(ir, data, error)) {
+      return emitFailure(options, primec::DiagnosticCode::EmitError, "Wasm emit error: ", error, 2, {"backend: wasm"});
+    }
+    if (!writeBinaryFile(options.outputPath, data)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::OutputError,
+                         "Failed to write output: ",
+                         options.outputPath,
+                         2);
     }
     return 0;
   }

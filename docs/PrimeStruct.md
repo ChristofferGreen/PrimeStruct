@@ -121,6 +121,9 @@ module {
 - `primec --emit=spirv input.prime -o module.spv`
   - Emits SPIR-V by first generating GLSL and invoking `glslangValidator` or `glslc` (compute stage).
   - Requires `glslangValidator` or `glslc` on `PATH`.
+- `primec --emit=wasm input.prime -o module`
+  - Routes through canonical IR into `WasmEmitter`.
+  - Current state: CLI and diagnostics wiring is in place; non-empty function lowering still reports a backend emit diagnostic until Wasm codegen TODOs land.
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
   - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).

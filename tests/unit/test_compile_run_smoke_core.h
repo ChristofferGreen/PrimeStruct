@@ -201,6 +201,47 @@ main() {
   CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
 }
 
+TEST_CASE("primec accepts wasm emit flag and reports wasm emit errors") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_option.prime", source);
+  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_option.wasm").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_option_err.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("Wasm emit error: wasm emitter function lowering is not implemented yet") != std::string::npos);
+  CHECK(diagnostics.find("Usage: primec") == std::string::npos);
+}
+
+TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
+  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_diagnostics.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_diagnostics_err.json").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"wasm emitter function lowering is not implemented yet\"") != std::string::npos);
+  CHECK(diagnostics.find("\"notes\":[\"backend: wasm\"]") != std::string::npos);
+  CHECK(diagnostics.find("Usage: primec") == std::string::npos);
+}
+
 TEST_CASE("rejects stdlib version flag") {
   const std::string source = R"(
 [return<int>]
@@ -227,6 +268,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(runCommand("./primec --unknown-option 2> " + quoteShellArg(primecErrPath)) == 2);
   const std::string primecErr = readFile(primecErrPath);
   CHECK(primecErr.find("Usage: primec") != std::string::npos);
+  CHECK(primecErr.find("[--emit=cpp|exe|native|ir|vm|glsl|spirv|wasm]") != std::string::npos);
   CHECK(primecErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
   CHECK(primecErr.find("[--text-transforms <list>]") != std::string::npos);
   CHECK(primecErr.find("[--ir-inline]") != std::string::npos);

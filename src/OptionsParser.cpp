@@ -404,7 +404,7 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     }
     if (isPrimecMode &&
         (arg == "--emit=cpp" || arg == "--emit=exe" || arg == "--emit=native" || arg == "--emit=ir" ||
-         arg == "--emit=vm" || arg == "--emit=glsl" || arg == "--emit=spirv")) {
+         arg == "--emit=vm" || arg == "--emit=glsl" || arg == "--emit=spirv" || arg == "--emit=wasm")) {
       out.emitKind = arg.substr(std::string("--emit=").size());
     } else if (arg == "--emit-diagnostics") {
       out.emitDiagnostics = true;
