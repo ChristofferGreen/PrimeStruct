@@ -238,6 +238,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primevmErr.find("[--import-path <dir>] [-I <dir>]") != std::string::npos);
   CHECK(primevmErr.find("[--text-transforms <list>]") != std::string::npos);
   CHECK(primevmErr.find("[--ir-inline]") != std::string::npos);
+  CHECK(primevmErr.find("[--debug-json]") != std::string::npos);
   CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
 }
 
@@ -269,6 +270,107 @@ main() {
   const std::string srcPath = writeTemp("primevm_emit_vm_flag.prime", source);
   const std::string runVmCmd = "./primevm --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 9);
+}
+
+TEST_CASE("primevm debug-json emits stable NDJSON schema") {
+  const std::string source = R"(
+[return<int>]
+double() {
+  return(plus(4i32, 4i32))
+}
+
+[return<int>]
+main() {
+  return(plus(double(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_json_schema.prime", source);
+  const std::string outPathA =
+      (std::filesystem::temp_directory_path() / "primevm_debug_json_schema_a.ndjson").string();
+  const std::string outPathB =
+      (std::filesystem::temp_directory_path() / "primevm_debug_json_schema_b.ndjson").string();
+
+  const std::string cmdA =
+      "./primevm " + quoteShellArg(srcPath) + " --entry /main --debug-json > " + quoteShellArg(outPathA);
+  const std::string cmdB =
+      "./primevm " + quoteShellArg(srcPath) + " --entry /main --debug-json > " + quoteShellArg(outPathB);
+  CHECK(runCommand(cmdA) == 9);
+  CHECK(runCommand(cmdB) == 9);
+
+  const std::string outA = readFile(outPathA);
+  const std::string outB = readFile(outPathB);
+  CHECK(outA == outB);
+  CHECK(outA.find("Usage: primevm") == std::string::npos);
+
+  std::vector<std::string> lines;
+  std::stringstream stream(outA);
+  std::string line;
+  while (std::getline(stream, line)) {
+    if (!line.empty()) {
+      lines.push_back(line);
+    }
+  }
+  REQUIRE(lines.size() >= 6);
+
+  CHECK(lines.front().find("\"version\":1") != std::string::npos);
+  CHECK(lines.front().find("\"event\":\"session_start\"") != std::string::npos);
+  CHECK(lines.front().find("\"snapshot\":{") != std::string::npos);
+
+  bool sawBefore = false;
+  bool sawAfter = false;
+  bool sawCallPush = false;
+  bool sawCallPop = false;
+  for (const auto &entry : lines) {
+    CHECK(entry.front() == '{');
+    CHECK(entry.back() == '}');
+    if (entry.find("\"event\":\"before_instruction\"") != std::string::npos) {
+      sawBefore = true;
+      CHECK(entry.find("\"sequence\":") != std::string::npos);
+      CHECK(entry.find("\"snapshot\":{") != std::string::npos);
+      CHECK(entry.find("\"opcode\":") != std::string::npos);
+      CHECK(entry.find("\"immediate\":") != std::string::npos);
+    }
+    if (entry.find("\"event\":\"after_instruction\"") != std::string::npos) {
+      sawAfter = true;
+      CHECK(entry.find("\"sequence\":") != std::string::npos);
+      CHECK(entry.find("\"snapshot\":{") != std::string::npos);
+      CHECK(entry.find("\"opcode\":") != std::string::npos);
+      CHECK(entry.find("\"immediate\":") != std::string::npos);
+    }
+    if (entry.find("\"event\":\"call_push\"") != std::string::npos) {
+      sawCallPush = true;
+      CHECK(entry.find("\"sequence\":") != std::string::npos);
+      CHECK(entry.find("\"snapshot\":{") != std::string::npos);
+      CHECK(entry.find("\"function_index\":") != std::string::npos);
+      CHECK(entry.find("\"returns_value_to_caller\":") != std::string::npos);
+    }
+    if (entry.find("\"event\":\"call_pop\"") != std::string::npos) {
+      sawCallPop = true;
+      CHECK(entry.find("\"sequence\":") != std::string::npos);
+      CHECK(entry.find("\"snapshot\":{") != std::string::npos);
+      CHECK(entry.find("\"function_index\":") != std::string::npos);
+      CHECK(entry.find("\"returns_value_to_caller\":") != std::string::npos);
+    }
+  }
+  CHECK(sawBefore);
+  CHECK(sawAfter);
+  CHECK(sawCallPush);
+  CHECK(sawCallPop);
+
+  CHECK(lines.back().find("\"event\":\"stop\"") != std::string::npos);
+  CHECK(lines.back().find("\"reason\":\"Exit\"") != std::string::npos);
+  CHECK(lines.back().find("\"snapshot\":{") != std::string::npos);
+  CHECK(lines.back().find("\"result\":9") != std::string::npos);
+}
+
+TEST_CASE("primec rejects debug-json option") {
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_reject_debug_json_err.txt").string();
+  const std::string cmd = "./primec --debug-json 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("unknown option: --debug-json") != std::string::npos);
+  CHECK(diagnostics.find("Usage: primec") != std::string::npos);
 }
 
 TEST_CASE("primevm rejects primec output flags") {

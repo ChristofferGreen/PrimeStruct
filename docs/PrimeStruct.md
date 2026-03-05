@@ -123,6 +123,7 @@ module {
   - Requires `glslangValidator` or `glslc` on `PATH`.
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
+  - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).
 - `--ir-inline`
   - Enables the optional IR inlining optimization pass after IR validation and before VM/native/IR output.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
@@ -1229,6 +1230,7 @@ module {
 - Per instruction, hooks fire in this order: `beforeInstruction` -> zero or more in-instruction call events (`callPush` / `callPop`) -> `afterInstruction`.
 - Faulted instructions emit `beforeInstruction` and then `fault`; they do not emit `afterInstruction`.
 - For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is deterministic and replayable.
+- `primevm --debug-json` emits one JSON object per line (`version`, `event`, and event-specific fields). Hook records include `sequence` and `snapshot`; stop records include `reason` and a terminal snapshot.
 
 ### VM IR Breakpoints
 - `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`, `removeBreakpoint`, and `clearBreakpoints`.

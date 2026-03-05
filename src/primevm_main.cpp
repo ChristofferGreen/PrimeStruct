@@ -51,6 +51,59 @@ void replaceAll(std::string &text, std::string_view from, std::string_view to) {
   }
 }
 
+std::string jsonEscape(std::string_view text) {
+  std::string out;
+  out.reserve(text.size() + 8);
+  for (const char c : text) {
+    switch (c) {
+      case '\"':
+        out += "\\\"";
+        break;
+      case '\\':
+        out += "\\\\";
+        break;
+      case '\b':
+        out += "\\b";
+        break;
+      case '\f':
+        out += "\\f";
+        break;
+      case '\n':
+        out += "\\n";
+        break;
+      case '\r':
+        out += "\\r";
+        break;
+      case '\t':
+        out += "\\t";
+        break;
+      default:
+        if (static_cast<unsigned char>(c) < 0x20) {
+          out += "\\u00";
+          static constexpr char Hex[] = "0123456789abcdef";
+          out.push_back(Hex[(static_cast<unsigned char>(c) >> 4) & 0x0f]);
+          out.push_back(Hex[static_cast<unsigned char>(c) & 0x0f]);
+        } else {
+          out.push_back(c);
+        }
+        break;
+    }
+  }
+  return out;
+}
+
+std::string encodeDebugSnapshotJson(const primec::VmDebugSnapshot &snapshot) {
+  return std::string("{\"state\":\"") + std::string(primec::vmDebugSessionStateName(snapshot.state)) +
+         "\",\"function_index\":" + std::to_string(snapshot.functionIndex) + ",\"instruction_pointer\":" +
+         std::to_string(snapshot.instructionPointer) + ",\"call_depth\":" + std::to_string(snapshot.callDepth) +
+         ",\"operand_stack_size\":" + std::to_string(snapshot.operandStackSize) + ",\"result\":" +
+         std::to_string(snapshot.result) + "}";
+}
+
+void emitDebugJsonLine(const std::string &line) {
+  std::cout << line << "\n";
+}
+
 int emitFailure(const primec::Options &options,
                 primec::DiagnosticCode code,
                 const std::string &plainPrefix,
@@ -127,7 +180,7 @@ int main(int argc, char **argv) {
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
-                   "[--collect-diagnostics] "
+                   "[--debug-json] [--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
     }
@@ -252,6 +305,76 @@ int main(int argc, char **argv) {
     args.push_back(arg);
   }
   uint64_t result = 0;
+  if (options.debugJson) {
+    primec::VmDebugSession debugSession;
+    if (!debugSession.start(ir, error, args)) {
+      return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
+    }
+
+    emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"session_start\",\"snapshot\":") +
+                      encodeDebugSnapshotJson(debugSession.snapshot()) + "}");
+
+    primec::VmDebugHooks hooks;
+    hooks.beforeInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *) {
+      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"before_instruction\",\"sequence\":") +
+                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                        ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                        std::to_string(event.immediate) + "}");
+    };
+    hooks.afterInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *) {
+      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"after_instruction\",\"sequence\":") +
+                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                        ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                        std::to_string(event.immediate) + "}");
+    };
+    hooks.callPush = [](const primec::VmDebugCallHookEvent &event, void *) {
+      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"call_push\",\"sequence\":") +
+                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                        ",\"function_index\":" + std::to_string(event.functionIndex) +
+                        ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false") + "}");
+    };
+    hooks.callPop = [](const primec::VmDebugCallHookEvent &event, void *) {
+      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"call_pop\",\"sequence\":") +
+                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                        ",\"function_index\":" + std::to_string(event.functionIndex) +
+                        ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false") + "}");
+    };
+    hooks.fault = [](const primec::VmDebugFaultHookEvent &event, void *) {
+      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"fault\",\"sequence\":") + std::to_string(event.sequence) +
+                        ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) + ",\"opcode\":" +
+                        std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                        std::to_string(event.immediate) + ",\"message\":\"" + jsonEscape(event.message) + "\"}");
+    };
+    debugSession.setHooks(hooks);
+
+    while (true) {
+      primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+      error.clear();
+      const bool ok = debugSession.continueExecution(stopReason, error);
+      const primec::VmDebugSnapshot stopSnapshot = debugSession.snapshot();
+      std::string stopLine = std::string("{\"version\":1,\"event\":\"stop\",\"reason\":\"") +
+                             std::string(primec::vmDebugStopReasonName(stopReason)) + "\",\"snapshot\":" +
+                             encodeDebugSnapshotJson(stopSnapshot);
+      if (!ok && !error.empty()) {
+        stopLine += ",\"message\":\"" + jsonEscape(error) + "\"";
+      }
+      stopLine += "}";
+      emitDebugJsonLine(stopLine);
+
+      if (!ok) {
+        return emitFailure(options,
+                           primec::DiagnosticCode::RuntimeError,
+                           "VM error: ",
+                           error,
+                           3,
+                           {"backend: vm", "stage: debug-json"});
+      }
+      if (stopReason == primec::VmDebugStopReason::Exit) {
+        return static_cast<int>(static_cast<int32_t>(stopSnapshot.result));
+      }
+    }
+  }
+
   if (!vm.execute(ir, result, error, args)) {
     return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
   }
