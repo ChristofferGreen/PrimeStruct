@@ -224,7 +224,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Implement top-of-stack register cache for arm64 integer stack values (spill only on pressure). Testing: runtime parity tests plus instruction-count and spill-count deltas.
 - ✓ Implement top-of-stack register cache handling for float lanes (`f32`/`f64`) without semantic drift. Testing: float-heavy compile-run parity corpus.
 - ✓ Add an emitter flag to toggle register cache for A/B comparisons and bisecting. Testing: dual-mode parity tests (`cache on/off` identical outputs).
-- ○ Add correctness regressions for mixed int/float ops, calls/returns, branches, and conversions under register-cache mode. Testing: expanded compile-run matrix with branch/call depth coverage.
+- ✓ Add correctness regressions for mixed int/float ops, calls/returns, branches, and conversions under register-cache mode. Testing: expanded compile-run matrix with branch/call depth coverage.
 - ○ Lower stack-form IR to block-local virtual-register form (no semantic change). Testing: translation equivalence tests against interpreter/native baseline.
 - ○ Add liveness interval construction for virtual registers with deterministic tie-break ordering. Testing: liveness golden tests for representative control-flow graphs.
 - ○ Implement deterministic linear-scan register allocator with explicit spill policy. Testing: allocator golden tests for deterministic allocation/spill placement.

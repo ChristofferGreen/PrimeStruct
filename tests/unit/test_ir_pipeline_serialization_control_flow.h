@@ -796,6 +796,152 @@ TEST_CASE("native backend cache toggle preserves dual-mode parity") {
   CHECK(cacheOnInstrumentation.totalSpillCount < cacheOffInstrumentation.totalSpillCount);
   CHECK(cacheOnInstrumentation.totalReloadCount < cacheOffInstrumentation.totalReloadCount);
 }
+
+TEST_CASE("native backend cache mode regression matrix covers branches and call depth") {
+  struct CacheModeCase {
+    std::string name;
+    primec::IrModule module;
+  };
+
+  std::vector<CacheModeCase> cases;
+
+  {
+    primec::IrModule module;
+    module.entryIndex = 0;
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::CmpGtI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 11});
+    mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3FC00000u}); // 1.5f
+    mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u}); // 2.0f
+    mainFn.instructions.push_back({primec::IrOpcode::MulF32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+    mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    module.functions.push_back(std::move(mainFn));
+    cases.push_back({"branch_float_conversion", std::move(module)});
+  }
+
+  {
+    primec::IrModule module;
+    module.entryIndex = 0;
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+    mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction level1Fn;
+    level1Fn.name = "/level1";
+    level1Fn.instructions.push_back({primec::IrOpcode::Call, 2});
+    level1Fn.instructions.push_back({primec::IrOpcode::PushF64, 0x4000000000000000ull}); // 2.0
+    level1Fn.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+    level1Fn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+    level1Fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction level2Fn;
+    level2Fn.name = "/level2";
+    level2Fn.instructions.push_back({primec::IrOpcode::PushF32, 0x3FC00000u}); // 1.5f
+    level2Fn.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000u}); // 2.0f
+    level2Fn.instructions.push_back({primec::IrOpcode::AddF32, 0});
+    level2Fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+    level2Fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    module.functions.push_back(std::move(mainFn));
+    module.functions.push_back(std::move(level1Fn));
+    module.functions.push_back(std::move(level2Fn));
+    cases.push_back({"call_depth_float_int_mix", std::move(module)});
+  }
+
+  {
+    primec::IrModule module;
+    module.entryIndex = 0;
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction branchFn;
+    branchFn.name = "/branchFn";
+    branchFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+    branchFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+    branchFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+    branchFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 6});
+    branchFn.instructions.push_back({primec::IrOpcode::Call, 2});
+    branchFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    branchFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    branchFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction leafFn;
+    leafFn.name = "/leaf";
+    leafFn.instructions.push_back({primec::IrOpcode::PushI64, 8});
+    leafFn.instructions.push_back({primec::IrOpcode::ConvertI64ToF64, 0});
+    leafFn.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+    leafFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+    leafFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+    leafFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    module.functions.push_back(std::move(mainFn));
+    module.functions.push_back(std::move(branchFn));
+    module.functions.push_back(std::move(leafFn));
+    cases.push_back({"branch_and_call_depth", std::move(module)});
+  }
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterOptions cacheOnOptions;
+  cacheOnOptions.enableRegisterCache = true;
+  primec::NativeEmitterOptions cacheOffOptions;
+  cacheOffOptions.enableRegisterCache = false;
+  bool sawSpillOrReloadImprovement = false;
+
+  for (const auto &testCase : cases) {
+    primec::Vm vm;
+    uint64_t vmResult = 0;
+    std::string error;
+    INFO("cache matrix case: " << testCase.name);
+    REQUIRE(vm.execute(testCase.module, vmResult, error));
+    CHECK(error.empty());
+
+    primec::NativeEmitterInstrumentation cacheOnInstrumentation;
+    primec::NativeEmitterInstrumentation cacheOffInstrumentation;
+    const std::string exeOnPath = (std::filesystem::temp_directory_path() /
+                                   ("primec_native_ir_cache_matrix_on_" + testCase.name))
+                                      .string();
+    const std::string exeOffPath = (std::filesystem::temp_directory_path() /
+                                    ("primec_native_ir_cache_matrix_off_" + testCase.name))
+                                       .string();
+
+    REQUIRE(emitter.emitExecutable(testCase.module, exeOnPath, error, &cacheOnInstrumentation, cacheOnOptions));
+    CHECK(error.empty());
+    REQUIRE(emitter.emitExecutable(testCase.module, exeOffPath, error, &cacheOffInstrumentation, cacheOffOptions));
+    CHECK(error.empty());
+
+    const int nativeOnExit = runIrPipelineNativeBinary(exeOnPath);
+    const int nativeOffExit = runIrPipelineNativeBinary(exeOffPath);
+    CHECK(nativeOnExit == static_cast<int>(vmResult));
+    CHECK(nativeOffExit == static_cast<int>(vmResult));
+    CHECK(nativeOnExit == nativeOffExit);
+    CHECK(cacheOnInstrumentation.totalValueStackPushCount == cacheOffInstrumentation.totalValueStackPushCount);
+    CHECK(cacheOnInstrumentation.totalValueStackPopCount == cacheOffInstrumentation.totalValueStackPopCount);
+    CHECK(cacheOnInstrumentation.totalSpillCount <= cacheOffInstrumentation.totalSpillCount);
+    CHECK(cacheOnInstrumentation.totalReloadCount <= cacheOffInstrumentation.totalReloadCount);
+
+    if (cacheOnInstrumentation.totalSpillCount < cacheOffInstrumentation.totalSpillCount ||
+        cacheOnInstrumentation.totalReloadCount < cacheOffInstrumentation.totalReloadCount) {
+      sawSpillOrReloadImprovement = true;
+    }
+  }
+
+  CHECK(sawSpillOrReloadImprovement);
+}
 #endif
 
 TEST_CASE("native emitter debug dump format is deterministic and ordered") {
