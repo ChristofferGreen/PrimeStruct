@@ -693,6 +693,51 @@ TEST_CASE("native backend integer stack cache preserves parity and reduces spill
   CHECK(mainStats.spillCount < mainStats.valueStackPushCount);
   CHECK(mainStats.reloadCount < mainStats.valueStackPopCount);
 }
+
+TEST_CASE("native backend float stack cache preserves parity and reduces spills") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3FC00000u}); // 1.5f
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40200000u}); // 2.5f
+  mainFn.instructions.push_back({primec::IrOpcode::AddF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3F800000u}); // 1.0f
+  mainFn.instructions.push_back({primec::IrOpcode::SubF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3FF8000000000000ull}); // 1.5
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x4014000000000000ull}); // 5.0
+  mainFn.instructions.push_back({primec::IrOpcode::MulF64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  primec::Vm vm;
+  uint64_t vmResult = 0;
+  std::string error;
+  REQUIRE(vm.execute(module, vmResult, error));
+  CHECK(error.empty());
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterInstrumentation instrumentation;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_float_stack_cache_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
+  CHECK(error.empty());
+  const int nativeExit = runIrPipelineNativeBinary(exePath);
+  CHECK(nativeExit == static_cast<int>(vmResult));
+
+  REQUIRE(instrumentation.perFunction.size() == 1);
+  const auto &mainStats = instrumentation.perFunction[0];
+  CHECK(mainStats.valueStackPushCount == 11u);
+  CHECK(mainStats.valueStackPopCount == 11u);
+  CHECK(mainStats.spillCount == 4u);
+  CHECK(mainStats.reloadCount == 4u);
+  CHECK(mainStats.spillCount < mainStats.valueStackPushCount);
+  CHECK(mainStats.reloadCount < mainStats.valueStackPopCount);
+}
 #endif
 
 TEST_CASE("native emitter debug dump format is deterministic and ordered") {
