@@ -12028,6 +12028,201 @@ TEST_CASE("ir lowerer statement binding helper validates return diagnostics") {
   CHECK(error == "native backend only supports returning array values");
 }
 
+TEST_CASE("ir lowerer statement binding helper emits if statements") {
+  using EmitResult = primec::ir_lowerer::StatementMatchIfEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr condExpr;
+  condExpr.kind = primec::Expr::Kind::Name;
+  condExpr.name = "cond";
+
+  primec::Expr thenValue;
+  thenValue.kind = primec::Expr::Kind::Literal;
+  thenValue.intWidth = 32;
+  thenValue.literalValue = 1;
+  primec::Expr elseValue;
+  elseValue.kind = primec::Expr::Kind::Literal;
+  elseValue.intWidth = 32;
+  elseValue.literalValue = 2;
+
+  primec::Expr thenBlock;
+  thenBlock.kind = primec::Expr::Kind::Call;
+  thenBlock.name = "then";
+  thenBlock.hasBodyArguments = true;
+  thenBlock.bodyArguments = {thenValue};
+  primec::Expr elseBlock;
+  elseBlock.kind = primec::Expr::Kind::Call;
+  elseBlock.name = "else";
+  elseBlock.hasBodyArguments = true;
+  elseBlock.bodyArguments = {elseValue};
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "if";
+  stmt.args = {condExpr, thenBlock, elseBlock};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo condInfo;
+  condInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  condInfo.valueKind = ValueKind::Bool;
+  locals.emplace("cond", condInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int emitBlockCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitMatchIfStatement(
+            stmt,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, 1});
+              return true;
+            },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return expr.kind == primec::Expr::Kind::Name ? ValueKind::Bool : ValueKind::Int32;
+            },
+            [&](const primec::Expr &branchExpr, primec::ir_lowerer::LocalMap &) {
+              ++emitBlockCalls;
+              const uint64_t marker = branchExpr.bodyArguments.front().literalValue == 1 ? 111 : 222;
+              instructions.push_back({primec::IrOpcode::PushI32, marker});
+              return true;
+            },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitBlockCalls == 2);
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[1].imm == 4);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[2].imm == 111);
+  CHECK(instructions[3].op == primec::IrOpcode::Jump);
+  CHECK(instructions[3].imm == 5);
+  CHECK(instructions[4].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[4].imm == 222);
+}
+
+TEST_CASE("ir lowerer statement binding helper lowers match via statement callback") {
+  using EmitResult = primec::ir_lowerer::StatementMatchIfEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr condExpr;
+  condExpr.kind = primec::Expr::Kind::Name;
+  condExpr.name = "cond";
+
+  primec::Expr thenValue;
+  thenValue.kind = primec::Expr::Kind::Literal;
+  thenValue.intWidth = 32;
+  thenValue.literalValue = 1;
+  primec::Expr elseValue;
+  elseValue.kind = primec::Expr::Kind::Literal;
+  elseValue.intWidth = 32;
+  elseValue.literalValue = 0;
+
+  primec::Expr thenBlock;
+  thenBlock.kind = primec::Expr::Kind::Call;
+  thenBlock.name = "case";
+  thenBlock.hasBodyArguments = true;
+  thenBlock.bodyArguments = {thenValue};
+  primec::Expr elseBlock;
+  elseBlock.kind = primec::Expr::Kind::Call;
+  elseBlock.name = "else";
+  elseBlock.hasBodyArguments = true;
+  elseBlock.bodyArguments = {elseValue};
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "match";
+  stmt.args = {condExpr, thenBlock, elseBlock};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  int emitStatementCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitMatchIfStatement(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Bool; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &loweredStmt, primec::ir_lowerer::LocalMap &) {
+              ++emitStatementCalls;
+              return loweredStmt.kind == primec::Expr::Kind::Call && loweredStmt.name == "if";
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitStatementCalls == 1);
+}
+
+TEST_CASE("ir lowerer statement binding helper validates if and match diagnostics") {
+  using EmitResult = primec::ir_lowerer::StatementMatchIfEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr condExpr;
+  condExpr.kind = primec::Expr::Kind::Name;
+  condExpr.name = "cond";
+  primec::Expr scalarExpr;
+  scalarExpr.kind = primec::Expr::Kind::Literal;
+  scalarExpr.intWidth = 32;
+  scalarExpr.literalValue = 7;
+
+  primec::Expr blockExpr;
+  blockExpr.kind = primec::Expr::Kind::Call;
+  blockExpr.name = "branch";
+  blockExpr.hasBodyArguments = true;
+  blockExpr.bodyArguments = {scalarExpr};
+
+  primec::Expr ifStmt;
+  ifStmt.kind = primec::Expr::Kind::Call;
+  ifStmt.name = "if";
+  ifStmt.args = {condExpr, blockExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitMatchIfStatement(
+            ifStmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Bool; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "if requires condition, then, else");
+
+  ifStmt.args = {condExpr, blockExpr, scalarExpr};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitMatchIfStatement(
+            ifStmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Bool; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "if branches require block envelopes");
+
+  primec::Expr matchStmt;
+  matchStmt.kind = primec::Expr::Kind::Call;
+  matchStmt.name = "match";
+  matchStmt.args = {condExpr, blockExpr};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitMatchIfStatement(
+            matchStmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Bool; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "match requires value, cases, else");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

@@ -28,6 +28,8 @@ using ApplyStructBindingInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using IsStringBindingFn = std::function<bool(const Expr &)>;
 using EmitExprForBindingFn = std::function<bool(const Expr &, const LocalMap &)>;
 using IsEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
+using EmitStatementForBindingFn = std::function<bool(const Expr &, LocalMap &)>;
+using EmitBlockForBindingFn = std::function<bool(const Expr &, LocalMap &)>;
 using ResolveUninitializedStorageForStatementFn =
     std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
 using ResolveStructSlotLayoutForStatementFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
@@ -51,6 +53,11 @@ enum class StatementPrintPathSpaceEmitResult {
   Error,
 };
 enum class ReturnStatementEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+enum class StatementMatchIfEmitResult {
   NotMatched,
   Emitted,
   Error,
@@ -147,6 +154,15 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const InferBindingExprKindFn &inferExprKind,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
     const std::function<void()> &emitFileScopeCleanupAll,
+    std::string &error);
+StatementMatchIfEmitResult tryEmitMatchIfStatement(
+    const Expr &stmt,
+    LocalMap &localsIn,
+    const EmitExprForBindingFn &emitExpr,
+    const InferBindingExprKindFn &inferExprKind,
+    const EmitBlockForBindingFn &emitBlock,
+    const EmitStatementForBindingFn &emitStatement,
+    std::vector<IrInstruction> &instructions,
     std::string &error);
 
 } // namespace primec::ir_lowerer

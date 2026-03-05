@@ -263,66 +263,18 @@
     if (returnResult == ir_lowerer::ReturnStatementEmitResult::Emitted) {
       return true;
     }
-    if (isMatchCall(stmt)) {
-      Expr expanded;
-      if (!lowerMatchToIf(stmt, expanded, error)) {
-        return false;
-      }
-      return emitStatement(expanded, localsIn);
+    const auto matchIfResult = ir_lowerer::tryEmitMatchIfStatement(
+        stmt,
+        localsIn,
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+        [&](const Expr &blockExpr, LocalMap &blockLocals) { return emitBlock(blockExpr, blockLocals); },
+        [&](const Expr &loweredStmt, LocalMap &statementLocals) { return emitStatement(loweredStmt, statementLocals); },
+        function.instructions,
+        error);
+    if (matchIfResult == ir_lowerer::StatementMatchIfEmitResult::Error) {
+      return false;
     }
-    if (isIfCall(stmt)) {
-      if (stmt.args.size() != 3) {
-        error = "if requires condition, then, else";
-        return false;
-      }
-      if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-        error = "if does not accept trailing block arguments";
-        return false;
-      }
-      if (!emitExpr(stmt.args[0], localsIn)) {
-        return false;
-      }
-      LocalInfo::ValueKind condKind = inferExprKind(stmt.args[0], localsIn);
-      if (condKind != LocalInfo::ValueKind::Bool) {
-        error = "if condition requires bool";
-        return false;
-      }
-      const Expr &thenArg = stmt.args[1];
-      const Expr &elseArg = stmt.args[2];
-      auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
-        if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-          return false;
-        }
-        if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-          return false;
-        }
-        if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-          return false;
-        }
-        return true;
-      };
-      if (!isIfBlockEnvelope(thenArg) || !isIfBlockEnvelope(elseArg)) {
-        error = "if branches require block envelopes";
-        return false;
-      }
-      auto emitBranch = [&](const Expr &branch, LocalMap &branchLocals) -> bool {
-        return emitBlock(branch, branchLocals);
-      };
-      size_t jumpIfZeroIndex = function.instructions.size();
-      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-      LocalMap thenLocals = localsIn;
-      if (!emitBranch(thenArg, thenLocals)) {
-        return false;
-      }
-      size_t jumpIndex = function.instructions.size();
-      function.instructions.push_back({IrOpcode::Jump, 0});
-      size_t elseIndex = function.instructions.size();
-      function.instructions[jumpIfZeroIndex].imm = static_cast<int32_t>(elseIndex);
-      LocalMap elseLocals = localsIn;
-      if (!emitBranch(elseArg, elseLocals)) {
-        return false;
-      }
-      size_t endIndex = function.instructions.size();
-      function.instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);
+    if (matchIfResult == ir_lowerer::StatementMatchIfEmitResult::Emitted) {
       return true;
     }

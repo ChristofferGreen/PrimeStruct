@@ -668,4 +668,83 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   return ReturnStatementEmitResult::Emitted;
 }
 
+StatementMatchIfEmitResult tryEmitMatchIfStatement(const Expr &stmt,
+                                                   LocalMap &localsIn,
+                                                   const EmitExprForBindingFn &emitExpr,
+                                                   const InferBindingExprKindFn &inferExprKind,
+                                                   const EmitBlockForBindingFn &emitBlock,
+                                                   const EmitStatementForBindingFn &emitStatement,
+                                                   std::vector<IrInstruction> &instructions,
+                                                   std::string &error) {
+  if (isMatchCall(stmt)) {
+    Expr expanded;
+    if (!lowerMatchToIf(stmt, expanded, error)) {
+      return StatementMatchIfEmitResult::Error;
+    }
+    if (!emitStatement(expanded, localsIn)) {
+      return StatementMatchIfEmitResult::Error;
+    }
+    return StatementMatchIfEmitResult::Emitted;
+  }
+
+  if (!isIfCall(stmt)) {
+    return StatementMatchIfEmitResult::NotMatched;
+  }
+
+  if (stmt.args.size() != 3) {
+    error = "if requires condition, then, else";
+    return StatementMatchIfEmitResult::Error;
+  }
+  if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+    error = "if does not accept trailing block arguments";
+    return StatementMatchIfEmitResult::Error;
+  }
+  if (!emitExpr(stmt.args[0], localsIn)) {
+    return StatementMatchIfEmitResult::Error;
+  }
+  const LocalInfo::ValueKind condKind = inferExprKind(stmt.args[0], localsIn);
+  if (condKind != LocalInfo::ValueKind::Bool) {
+    error = "if condition requires bool";
+    return StatementMatchIfEmitResult::Error;
+  }
+
+  const Expr &thenArg = stmt.args[1];
+  const Expr &elseArg = stmt.args[2];
+  auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return false;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return false;
+    }
+    return true;
+  };
+  if (!isIfBlockEnvelope(thenArg) || !isIfBlockEnvelope(elseArg)) {
+    error = "if branches require block envelopes";
+    return StatementMatchIfEmitResult::Error;
+  }
+
+  auto emitBranch = [&](const Expr &branch, LocalMap &branchLocals) -> bool { return emitBlock(branch, branchLocals); };
+  const size_t jumpIfZeroIndex = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+  LocalMap thenLocals = localsIn;
+  if (!emitBranch(thenArg, thenLocals)) {
+    return StatementMatchIfEmitResult::Error;
+  }
+  const size_t jumpIndex = instructions.size();
+  instructions.push_back({IrOpcode::Jump, 0});
+  const size_t elseIndex = instructions.size();
+  instructions[jumpIfZeroIndex].imm = static_cast<int32_t>(elseIndex);
+  LocalMap elseLocals = localsIn;
+  if (!emitBranch(elseArg, elseLocals)) {
+    return StatementMatchIfEmitResult::Error;
+  }
+  const size_t endIndex = instructions.size();
+  instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);
+  return StatementMatchIfEmitResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer
