@@ -31,6 +31,7 @@ using LowerSetupInferenceMatchToIfFn = std::function<bool(const Expr &, Expr &, 
 using InferSetupInferenceBodyValueKindFn =
     std::function<LocalInfo::ValueKind(const std::vector<Expr> &, const LocalMap &)>;
 using IsSetupInferenceKnownDefinitionPathFn = std::function<bool(const std::string &)>;
+using IsSetupInferenceMethodCountLikeCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 enum class CallExpressionReturnKindResolution {
   NotResolved,
@@ -62,6 +63,10 @@ enum class ComparisonOperatorCallReturnKindResolution {
   Resolved,
 };
 enum class GpuBufferCallReturnKindResolution {
+  NotMatched,
+  Resolved,
+};
+enum class CountCapacityCallReturnKindResolution {
   NotMatched,
   Resolved,
 };
@@ -145,6 +150,13 @@ GpuBufferCallReturnKindResolution inferGpuBufferCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
     const InferSetupInferenceValueKindFn &inferBufferElementKind,
+    LocalInfo::ValueKind &kindOut);
+CountCapacityCallReturnKindResolution inferCountCapacityCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const IsSetupInferenceMethodCountLikeCallFn &isArrayCountCall,
+    const IsSetupInferenceMethodCountLikeCallFn &isStringCountCall,
+    const IsSetupInferenceMethodCountLikeCallFn &isVectorCapacityCall,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer

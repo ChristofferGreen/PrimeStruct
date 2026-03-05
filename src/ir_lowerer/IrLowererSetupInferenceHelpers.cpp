@@ -597,4 +597,21 @@ GpuBufferCallReturnKindResolution inferGpuBufferCallReturnKind(
   return GpuBufferCallReturnKindResolution::NotMatched;
 }
 
+CountCapacityCallReturnKindResolution inferCountCapacityCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const IsSetupInferenceMethodCountLikeCallFn &isArrayCountCall,
+    const IsSetupInferenceMethodCountLikeCallFn &isStringCountCall,
+    const IsSetupInferenceMethodCountLikeCallFn &isVectorCapacityCall,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  if (isArrayCountCall(expr, localsIn) || isStringCountCall(expr, localsIn) || isVectorCapacityCall(expr, localsIn)) {
+    kindOut = LocalInfo::ValueKind::Int32;
+    return CountCapacityCallReturnKindResolution::Resolved;
+  }
+
+  return CountCapacityCallReturnKindResolution::NotMatched;
+}
+
 } // namespace primec::ir_lowerer

@@ -255,14 +255,21 @@
         if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
           return LocalInfo::ValueKind::Unknown;
         }
-        if (isArrayCountCall(expr, localsIn)) {
-          return LocalInfo::ValueKind::Int32;
-        }
-        if (isStringCountCall(expr, localsIn)) {
-          return LocalInfo::ValueKind::Int32;
-        }
-        if (isVectorCapacityCall(expr, localsIn)) {
-          return LocalInfo::ValueKind::Int32;
+        LocalInfo::ValueKind countCapacityKind = LocalInfo::ValueKind::Unknown;
+        if (inferCountCapacityCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return isArrayCountCall(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return isStringCountCall(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return isVectorCapacityCall(candidateExpr, candidateLocals);
+                },
+                countCapacityKind) == CountCapacityCallReturnKindResolution::Resolved) {
+          return countCapacityKind;
         }
         LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
         if (resolveArrayMapAccessElementKind(

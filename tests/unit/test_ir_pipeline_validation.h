@@ -12482,6 +12482,95 @@ TEST_CASE("ir lowerer setup inference helper handles invalid GPU/buffer calls") 
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers count-capacity call return kinds") {
+  using Resolution = primec::ir_lowerer::CountCapacityCallReturnKindResolution;
+
+  primec::Expr arrayCountExpr;
+  arrayCountExpr.kind = primec::Expr::Kind::Call;
+  arrayCountExpr.name = "count";
+  arrayCountExpr.isMethodCall = true;
+
+  primec::Expr stringCountExpr;
+  stringCountExpr.kind = primec::Expr::Kind::Call;
+  stringCountExpr.name = "count";
+  stringCountExpr.isMethodCall = true;
+
+  primec::Expr vectorCapacityExpr;
+  vectorCapacityExpr.kind = primec::Expr::Kind::Call;
+  vectorCapacityExpr.name = "capacity";
+  vectorCapacityExpr.isMethodCall = true;
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::inferCountCapacityCallReturnKind(
+            arrayCountExpr,
+            {},
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return expr.name == "count";
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  CHECK(primec::ir_lowerer::inferCountCapacityCallReturnKind(
+            stringCountExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return expr.name == "count";
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  CHECK(primec::ir_lowerer::inferCountCapacityCallReturnKind(
+            vectorCapacityExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return expr.name == "capacity";
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles non count-capacity calls") {
+  using Resolution = primec::ir_lowerer::CountCapacityCallReturnKindResolution;
+
+  primec::Expr nonCountExpr;
+  nonCountExpr.kind = primec::Expr::Kind::Call;
+  nonCountExpr.name = "plus";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+  CHECK(primec::ir_lowerer::inferCountCapacityCallReturnKind(
+            nonCountExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return false;
+            },
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";
