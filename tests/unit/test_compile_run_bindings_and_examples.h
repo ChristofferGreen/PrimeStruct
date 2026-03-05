@@ -1006,6 +1006,7 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
       "xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework "
       "Metal -o /tmp/metal_host",
       "/tmp/metal_host /tmp/cube.metallib",
+      "./scripts/run_spinning_cube_demo.sh --primec ./build-debug/primec",
       "Diagnostics: prints `native host verified cube simulation output`.",
       "Diagnostics: prints `frame_rendered=1`.",
       "FPS/diagnostic overlay: status text under the canvas is the current",
@@ -1139,6 +1140,45 @@ TEST_CASE("spinning cube docs command snippets stay executable") {
   } else {
     INFO("xcrun unavailable; skipping scripted metal doc-command smoke");
   }
+}
+
+TEST_CASE("spinning cube demo script emits deterministic summary") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_spinning_cube_demo.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_spinning_cube_demo.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path workDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script";
+  std::error_code ec;
+  std::filesystem::remove_all(workDir, ec);
+  std::filesystem::create_directories(workDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path outPath = workDir / "script.out.txt";
+  const std::filesystem::path errPath = workDir / "script.err.txt";
+  const std::string command = quoteShellArg(scriptPath.string()) + " --primec ./primec --work-dir " +
+                              quoteShellArg(workDir.string()) + " > " + quoteShellArg(outPath.string()) + " 2> " +
+                              quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(outPath.string());
+  const std::string diagnostics = readFile(errPath.string());
+  CHECK(diagnostics.empty());
+  CHECK(output.find("[spinning-cube-demo] SUMMARY") != std::string::npos);
+
+  const bool webStatusPresent = output.find("[spinning-cube-demo] WEB: PASS (") != std::string::npos ||
+                                output.find("[spinning-cube-demo] WEB: SKIP (") != std::string::npos;
+  const bool nativeStatusPresent = output.find("[spinning-cube-demo] NATIVE: PASS (") != std::string::npos ||
+                                   output.find("[spinning-cube-demo] NATIVE: SKIP (") != std::string::npos;
+  const bool metalStatusPresent = output.find("[spinning-cube-demo] METAL: PASS (") != std::string::npos ||
+                                  output.find("[spinning-cube-demo] METAL: SKIP (") != std::string::npos;
+  CHECK(webStatusPresent);
+  CHECK(nativeStatusPresent);
+  CHECK(metalStatusPresent);
+  CHECK(output.find("[spinning-cube-demo] RESULT: PASS") != std::string::npos);
 }
 
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {

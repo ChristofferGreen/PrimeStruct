@@ -124,3 +124,16 @@ xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -
 Expected runtime behavior:
 - Startup: host process returns 0 after one frame submission.
 - Diagnostics: prints `frame_rendered=1`.
+
+### Combined Smoke Helper
+```bash
+./scripts/run_spinning_cube_demo.sh --primec ./build-debug/primec
+```
+Expected behavior:
+- Runs web, native, and metal checks in order.
+- Prints deterministic summary lines:
+  - `[spinning-cube-demo] WEB: ...`
+  - `[spinning-cube-demo] NATIVE: ...`
+  - `[spinning-cube-demo] METAL: ...`
+  - `[spinning-cube-demo] RESULT: PASS|FAIL`
+- Exit code is `0` when checks pass or are skipped, and `1` on any check failure.
