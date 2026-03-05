@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -163,6 +164,9 @@ public:
   bool step(VmDebugStopReason &stopReason, std::string &error);
   bool continueExecution(VmDebugStopReason &stopReason, std::string &error);
   bool pause(std::string &error);
+  bool addBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error);
+  bool removeBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error);
+  void clearBreakpoints();
   void setHooks(const VmDebugHooks &hooks);
   void clearHooks();
   VmDebugSnapshot snapshot() const;
@@ -191,6 +195,8 @@ private:
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;
   bool pauseRequested_ = false;
+  bool lastStopWasBreakpoint_ = false;
+  std::set<std::pair<size_t, size_t>> breakpoints_;
   uint64_t nextHookSequence_ = 0;
   VmDebugHooks hooks_;
 };

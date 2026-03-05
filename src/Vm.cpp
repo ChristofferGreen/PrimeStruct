@@ -1140,6 +1140,8 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   frames_.clear();
   result_ = 0;
   pauseRequested_ = false;
+  lastStopWasBreakpoint_ = false;
+  breakpoints_.clear();
   nextHookSequence_ = 0;
   for (size_t i = 0; i < module.functions.size(); ++i) {
     size_t localCount = 0;
@@ -2327,6 +2329,7 @@ bool VmDebugSession::step(VmDebugStopReason &stopReason, std::string &error) {
     if (stopTransition.valid) {
       state_ = stopTransition.state;
     }
+    lastStopWasBreakpoint_ = false;
     return false;
   }
   if (outcome == StepOutcome::Exit) {
@@ -2335,6 +2338,7 @@ bool VmDebugSession::step(VmDebugStopReason &stopReason, std::string &error) {
     if (stopTransition.valid) {
       state_ = stopTransition.state;
     }
+    lastStopWasBreakpoint_ = false;
     return true;
   }
   stopReason = VmDebugStopReason::Step;
@@ -2344,6 +2348,7 @@ bool VmDebugSession::step(VmDebugStopReason &stopReason, std::string &error) {
     return false;
   }
   state_ = stopTransition.state;
+  lastStopWasBreakpoint_ = false;
   return true;
 }
 
@@ -2371,9 +2376,28 @@ bool VmDebugSession::continueExecution(VmDebugStopReason &stopReason, std::strin
       return false;
     }
     state_ = stopTransition.state;
+    lastStopWasBreakpoint_ = false;
     return true;
   }
+  bool skipCurrentBreakpoint = lastStopWasBreakpoint_;
+  lastStopWasBreakpoint_ = false;
   while (true) {
+    if (!frames_.empty()) {
+      const Frame &frame = frames_.back();
+      const std::pair<size_t, size_t> key{frame.functionIndex, frame.ip};
+      if (!skipCurrentBreakpoint && breakpoints_.contains(key)) {
+        stopReason = VmDebugStopReason::Breakpoint;
+        const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+        if (!stopTransition.valid) {
+          error = "debug session failed to pause at breakpoint";
+          return false;
+        }
+        state_ = stopTransition.state;
+        lastStopWasBreakpoint_ = true;
+        return true;
+      }
+    }
+    skipCurrentBreakpoint = false;
     const StepOutcome outcome = stepInstruction(error);
     if (outcome == StepOutcome::Fault) {
       stopReason = VmDebugStopReason::Fault;
@@ -2381,6 +2405,7 @@ bool VmDebugSession::continueExecution(VmDebugStopReason &stopReason, std::strin
       if (stopTransition.valid) {
         state_ = stopTransition.state;
       }
+      lastStopWasBreakpoint_ = false;
       return false;
     }
     if (outcome == StepOutcome::Exit) {
@@ -2391,6 +2416,7 @@ bool VmDebugSession::continueExecution(VmDebugStopReason &stopReason, std::strin
         return false;
       }
       state_ = stopTransition.state;
+      lastStopWasBreakpoint_ = false;
       return true;
     }
     if (pauseRequested_) {
@@ -2402,9 +2428,46 @@ bool VmDebugSession::continueExecution(VmDebugStopReason &stopReason, std::strin
         return false;
       }
       state_ = stopTransition.state;
+      lastStopWasBreakpoint_ = false;
       return true;
     }
   }
+}
+
+bool VmDebugSession::addBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error) {
+  if (!module_) {
+    error = "debug session is not started";
+    return false;
+  }
+  if (functionIndex >= module_->functions.size()) {
+    error = "invalid breakpoint function index";
+    return false;
+  }
+  const IrFunction &function = module_->functions[functionIndex];
+  if (instructionPointer >= function.instructions.size()) {
+    error = "invalid breakpoint instruction pointer";
+    return false;
+  }
+  breakpoints_.insert({functionIndex, instructionPointer});
+  return true;
+}
+
+bool VmDebugSession::removeBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error) {
+  if (!module_) {
+    error = "debug session is not started";
+    return false;
+  }
+  const std::pair<size_t, size_t> key{functionIndex, instructionPointer};
+  if (breakpoints_.erase(key) == 0) {
+    error = "breakpoint not found";
+    return false;
+  }
+  return true;
+}
+
+void VmDebugSession::clearBreakpoints() {
+  breakpoints_.clear();
+  lastStopWasBreakpoint_ = false;
 }
 
 void VmDebugSession::setHooks(const VmDebugHooks &hooks) {

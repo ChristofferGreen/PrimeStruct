@@ -1230,6 +1230,11 @@ module {
 - Faulted instructions emit `beforeInstruction` and then `fault`; they do not emit `afterInstruction`.
 - For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is deterministic and replayable.
 
+### VM IR Breakpoints
+- `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`, `removeBreakpoint`, and `clearBreakpoints`.
+- Breakpoints are checked in `continueExecution` before instruction execution and stop with reason `Breakpoint`.
+- Continuing from a breakpoint resumes past that same location once (prevents immediate repeat-stops at the same `(functionIndex, instructionPointer)`), then normal breakpoint checks resume.
+
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
 deterministic diagnostics pipeline. See `docs/Semantics_Multithreaded_Pass.md`

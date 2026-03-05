@@ -463,6 +463,149 @@ TEST_CASE("vm debug hook event ordering is deterministic and replayable") {
   CHECK(secondRun == firstRun);
 }
 
+TEST_CASE("vm debug session breakpoints validate and support multi-hit flows") {
+  primec::VmDebugSession session;
+  std::string error;
+
+  CHECK_FALSE(session.addBreakpoint(0, 0, error));
+  CHECK(error.find("not started") != std::string::npos);
+
+  primec::IrModule module;
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction calleeFn;
+  calleeFn.name = "/double";
+  calleeFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  calleeFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  calleeFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(calleeFn));
+  module.entryIndex = 0;
+
+  error.clear();
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK_FALSE(session.addBreakpoint(3, 0, error));
+  CHECK(error.find("function index") != std::string::npos);
+
+  error.clear();
+  CHECK_FALSE(session.addBreakpoint(0, 9, error));
+  CHECK(error.find("instruction pointer") != std::string::npos);
+
+  error.clear();
+  REQUIRE(session.addBreakpoint(0, 1, error));
+  REQUIRE(session.addBreakpoint(1, 1, error));
+  REQUIRE(session.addBreakpoint(0, 3, error));
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK_FALSE(session.removeBreakpoint(0, 2, error));
+  CHECK(error.find("not found") != std::string::npos);
+
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+  error.clear();
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(stopReason == primec::VmDebugStopReason::Breakpoint);
+  CHECK(error.empty());
+  auto snap = session.snapshot();
+  CHECK(snap.functionIndex == 0);
+  CHECK(snap.instructionPointer == 1);
+
+  error.clear();
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(stopReason == primec::VmDebugStopReason::Breakpoint);
+  CHECK(error.empty());
+  snap = session.snapshot();
+  CHECK(snap.functionIndex == 1);
+  CHECK(snap.instructionPointer == 1);
+
+  error.clear();
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(stopReason == primec::VmDebugStopReason::Breakpoint);
+  CHECK(error.empty());
+  snap = session.snapshot();
+  CHECK(snap.functionIndex == 0);
+  CHECK(snap.instructionPointer == 3);
+
+  error.clear();
+  REQUIRE(session.removeBreakpoint(0, 3, error));
+  CHECK(error.empty());
+  session.clearBreakpoints();
+
+  error.clear();
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(stopReason == primec::VmDebugStopReason::Exit);
+  CHECK(error.empty());
+  CHECK(session.snapshot().result == 7);
+}
+
+TEST_CASE("vm debug breakpoints follow executed branch path deterministically") {
+  auto runBranchCase = [](uint64_t conditionValue, size_t expectedBreakpointIp, uint64_t expectedResult, std::string &error) {
+    error.clear();
+    primec::VmDebugSession session;
+    primec::IrModule module;
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, conditionValue});
+    mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 11});
+    mainFn.instructions.push_back({primec::IrOpcode::Jump, 5});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 22});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    module.functions.push_back(std::move(mainFn));
+    module.entryIndex = 0;
+
+    if (!session.start(module, error)) {
+      return false;
+    }
+    if (!session.addBreakpoint(0, 2, error) || !session.addBreakpoint(0, 4, error)) {
+      return false;
+    }
+
+    primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+    error.clear();
+    if (!session.continueExecution(stopReason, error)) {
+      return false;
+    }
+    if (stopReason != primec::VmDebugStopReason::Breakpoint) {
+      return false;
+    }
+    const auto snap = session.snapshot();
+    if (snap.functionIndex != 0 || snap.instructionPointer != expectedBreakpointIp) {
+      return false;
+    }
+
+    error.clear();
+    if (!session.continueExecution(stopReason, error)) {
+      return false;
+    }
+    if (stopReason != primec::VmDebugStopReason::Exit) {
+      return false;
+    }
+    if (session.snapshot().result != expectedResult) {
+      return false;
+    }
+    return true;
+  };
+
+  std::string error;
+  CHECK(runBranchCase(0, 4, 22, error));
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK(runBranchCase(1, 2, 11, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vm debug opcode matrix matches vm execute for expanded families") {
   struct OpcodeMatrixCase {
     std::string name;
