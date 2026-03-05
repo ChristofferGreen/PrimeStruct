@@ -80,10 +80,37 @@ enum class BufferBuiltinCallEmitResult {
   Emitted,
   Error,
 };
+struct CountedLoopControl {
+  int32_t counterLocal = -1;
+  LocalInfo::ValueKind countKind = LocalInfo::ValueKind::Unknown;
+  size_t checkIndex = 0;
+  size_t jumpEndIndex = 0;
+};
 UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
                                                        const char *callName,
                                                        const std::function<bool(const Expr &)> &emitExpr,
                                                        std::string &error);
+bool resolveCountedLoopKind(LocalInfo::ValueKind inferredKind,
+                            bool allowBool,
+                            const char *errorMessage,
+                            LocalInfo::ValueKind &countKindOut,
+                            std::string &error);
+bool emitCountedLoopPrologue(
+    LocalInfo::ValueKind countKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, int32_t)> &patchInstructionImm,
+    const std::function<void()> &emitLoopCountNegative,
+    CountedLoopControl &out,
+    std::string &error);
+void emitCountedLoopIterationStep(
+    const CountedLoopControl &control,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+void patchCountedLoopEnd(
+    const CountedLoopControl &control,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(size_t, int32_t)> &patchInstructionImm);
 struct BufferInitInfo {
   int32_t count = 0;
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;

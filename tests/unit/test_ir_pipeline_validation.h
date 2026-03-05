@@ -14224,6 +14224,119 @@ TEST_CASE("ir lowerer flow helpers match and emit unary passthrough calls") {
   CHECK(error == "emit failure");
 }
 
+TEST_CASE("ir lowerer flow helpers resolve counted loop kinds") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  ValueKind countKind = ValueKind::Unknown;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveCountedLoopKind(
+      ValueKind::Int32,
+      false,
+      "loop count requires integer",
+      countKind,
+      error));
+  CHECK(countKind == ValueKind::Int32);
+
+  CHECK(primec::ir_lowerer::resolveCountedLoopKind(
+      ValueKind::Bool,
+      true,
+      "repeat count requires integer or bool",
+      countKind,
+      error));
+  CHECK(countKind == ValueKind::Int32);
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveCountedLoopKind(
+      ValueKind::Float64,
+      false,
+      "loop count requires integer",
+      countKind,
+      error));
+  CHECK(error == "loop count requires integer");
+}
+
+TEST_CASE("ir lowerer flow helpers emit counted loop scaffolding") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+  auto instructionCount = [&]() { return instructions.size(); };
+  auto patchInstructionImm = [&](size_t index, int32_t imm) { instructions.at(index).imm = imm; };
+
+  int nextLocal = 50;
+  int loopCountNegativeCalls = 0;
+  primec::ir_lowerer::CountedLoopControl control;
+  std::string error;
+  CHECK(primec::ir_lowerer::emitCountedLoopPrologue(
+      ValueKind::Int32,
+      [&]() { return nextLocal++; },
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      [&]() {
+        ++loopCountNegativeCalls;
+        emitInstruction(primec::IrOpcode::PushI32, 999);
+      },
+      control,
+      error));
+  CHECK(error.empty());
+  CHECK(loopCountNegativeCalls == 1);
+  CHECK(control.counterLocal == 50);
+  CHECK(control.countKind == ValueKind::Int32);
+  CHECK(control.checkIndex == 6);
+  CHECK(control.jumpEndIndex == 9);
+  REQUIRE(instructions.size() == 10);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[0].imm == 50);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[3].op == primec::IrOpcode::CmpLtI32);
+  CHECK(instructions[4].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[4].imm == 6);
+  CHECK(instructions[6].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[7].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[8].op == primec::IrOpcode::CmpGtI32);
+  CHECK(instructions[9].op == primec::IrOpcode::JumpIfZero);
+
+  primec::ir_lowerer::emitCountedLoopIterationStep(control, emitInstruction);
+  REQUIRE(instructions.size() == 15);
+  CHECK(instructions[10].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[10].imm == 50);
+  CHECK(instructions[11].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[11].imm == 1);
+  CHECK(instructions[12].op == primec::IrOpcode::SubI32);
+  CHECK(instructions[13].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[13].imm == 50);
+  CHECK(instructions[14].op == primec::IrOpcode::Jump);
+  CHECK(instructions[14].imm == 6);
+
+  primec::ir_lowerer::patchCountedLoopEnd(control, instructionCount, patchInstructionImm);
+  CHECK(instructions[9].imm == 15);
+
+  instructions.clear();
+  loopCountNegativeCalls = 0;
+  error.clear();
+  CHECK(primec::ir_lowerer::emitCountedLoopPrologue(
+      ValueKind::UInt64,
+      [&]() { return nextLocal++; },
+      instructionCount,
+      emitInstruction,
+      patchInstructionImm,
+      [&]() { ++loopCountNegativeCalls; },
+      control,
+      error));
+  CHECK(error.empty());
+  CHECK(loopCountNegativeCalls == 0);
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[3].op == primec::IrOpcode::CmpNeI64);
+  CHECK(instructions[4].op == primec::IrOpcode::JumpIfZero);
+}
+
 TEST_CASE("ir lowerer flow helpers resolve buffer init info") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

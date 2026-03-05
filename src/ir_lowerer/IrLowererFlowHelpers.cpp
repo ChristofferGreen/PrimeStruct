@@ -220,6 +220,105 @@ UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
   return UnaryPassthroughCallResult::Emitted;
 }
 
+bool resolveCountedLoopKind(LocalInfo::ValueKind inferredKind,
+                            bool allowBool,
+                            const char *errorMessage,
+                            LocalInfo::ValueKind &countKindOut,
+                            std::string &error) {
+  countKindOut = inferredKind;
+  if (allowBool && countKindOut == LocalInfo::ValueKind::Bool) {
+    countKindOut = LocalInfo::ValueKind::Int32;
+  }
+  if (countKindOut == LocalInfo::ValueKind::Int32 ||
+      countKindOut == LocalInfo::ValueKind::Int64 ||
+      countKindOut == LocalInfo::ValueKind::UInt64) {
+    return true;
+  }
+  error = errorMessage;
+  return false;
+}
+
+bool emitCountedLoopPrologue(
+    LocalInfo::ValueKind countKind,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<void(size_t, int32_t)> &patchInstructionImm,
+    const std::function<void()> &emitLoopCountNegative,
+    CountedLoopControl &out,
+    std::string &error) {
+  if (countKind != LocalInfo::ValueKind::Int32 &&
+      countKind != LocalInfo::ValueKind::Int64 &&
+      countKind != LocalInfo::ValueKind::UInt64) {
+    error = "counted loop requires integer count";
+    return false;
+  }
+
+  out = CountedLoopControl{};
+  out.counterLocal = allocTempLocal();
+  out.countKind = countKind;
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(out.counterLocal));
+
+  if (countKind == LocalInfo::ValueKind::Int32) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
+    emitInstruction(IrOpcode::PushI32, 0);
+    emitInstruction(IrOpcode::CmpLtI32, 0);
+    const size_t jumpNonNegative = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitLoopCountNegative();
+    const size_t nonNegativeIndex = instructionCount();
+    patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
+  } else if (countKind == LocalInfo::ValueKind::Int64) {
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpLtI64, 0);
+    const size_t jumpNonNegative = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitLoopCountNegative();
+    const size_t nonNegativeIndex = instructionCount();
+    patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
+  }
+
+  out.checkIndex = instructionCount();
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
+  if (countKind == LocalInfo::ValueKind::Int32) {
+    emitInstruction(IrOpcode::PushI32, 0);
+    emitInstruction(IrOpcode::CmpGtI32, 0);
+  } else if (countKind == LocalInfo::ValueKind::Int64) {
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpGtI64, 0);
+  } else {
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpNeI64, 0);
+  }
+  out.jumpEndIndex = instructionCount();
+  emitInstruction(IrOpcode::JumpIfZero, 0);
+  return true;
+}
+
+void emitCountedLoopIterationStep(
+    const CountedLoopControl &control,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(control.counterLocal));
+  if (control.countKind == LocalInfo::ValueKind::Int32) {
+    emitInstruction(IrOpcode::PushI32, 1);
+    emitInstruction(IrOpcode::SubI32, 0);
+  } else {
+    emitInstruction(IrOpcode::PushI64, 1);
+    emitInstruction(IrOpcode::SubI64, 0);
+  }
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(control.counterLocal));
+  emitInstruction(IrOpcode::Jump, static_cast<uint64_t>(control.checkIndex));
+}
+
+void patchCountedLoopEnd(
+    const CountedLoopControl &control,
+    const std::function<size_t()> &instructionCount,
+    const std::function<void(size_t, int32_t)> &patchInstructionImm) {
+  const size_t endIndex = instructionCount();
+  patchInstructionImm(control.jumpEndIndex, static_cast<int32_t>(endIndex));
+}
+
 bool resolveBufferInitInfo(const Expr &expr,
                            const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
                            BufferInitInfo &out,

@@ -19,51 +19,28 @@
       if (!emitExpr(countExpr, localsIn)) {
         return false;
       }
-      LocalInfo::ValueKind countKind = inferExprKind(countExpr, localsIn);
-      if (countKind != LocalInfo::ValueKind::Int32 && countKind != LocalInfo::ValueKind::Int64 &&
-          countKind != LocalInfo::ValueKind::UInt64) {
-        error = "loop count requires integer";
+      LocalInfo::ValueKind countKind = LocalInfo::ValueKind::Unknown;
+      if (!ir_lowerer::resolveCountedLoopKind(
+              inferExprKind(countExpr, localsIn),
+              false,
+              "loop count requires integer",
+              countKind,
+              error)) {
         return false;
       }
 
-      const int32_t counterLocal = allocTempLocal();
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
-
-      if (countKind == LocalInfo::ValueKind::Int32) {
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
-        function.instructions.push_back({IrOpcode::PushI32, 0});
-        function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-        size_t jumpNonNegative = function.instructions.size();
-        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-        emitLoopCountNegative();
-        size_t nonNegativeIndex = function.instructions.size();
-        function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
-      } else if (countKind == LocalInfo::ValueKind::Int64) {
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
-        function.instructions.push_back({IrOpcode::PushI64, 0});
-        function.instructions.push_back({IrOpcode::CmpLtI64, 0});
-        size_t jumpNonNegative = function.instructions.size();
-        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-        emitLoopCountNegative();
-        size_t nonNegativeIndex = function.instructions.size();
-        function.instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+      ir_lowerer::CountedLoopControl loopControl;
+      if (!ir_lowerer::emitCountedLoopPrologue(
+              countKind,
+              [&]() { return allocTempLocal(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              [&](size_t instructionIndex, int32_t imm) { function.instructions[instructionIndex].imm = imm; },
+              [&]() { emitLoopCountNegative(); },
+              loopControl,
+              error)) {
+        return false;
       }
-
-      const size_t checkIndex = function.instructions.size();
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
-      if (countKind == LocalInfo::ValueKind::Int32) {
-        function.instructions.push_back({IrOpcode::PushI32, 0});
-        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
-      } else if (countKind == LocalInfo::ValueKind::Int64) {
-        function.instructions.push_back({IrOpcode::PushI64, 0});
-        function.instructions.push_back({IrOpcode::CmpGtI64, 0});
-      } else {
-        function.instructions.push_back({IrOpcode::PushI64, 0});
-        function.instructions.push_back({IrOpcode::CmpNeI64, 0});
-      }
-
-      const size_t jumpEndIndex = function.instructions.size();
-      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
       const Expr &body = stmt.args[1];
       if (!isLoopBlockEnvelope(body)) {
@@ -81,19 +58,13 @@
       emitFileScopeCleanup(fileScopeStack.back());
       popFileScope();
 
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
-      if (countKind == LocalInfo::ValueKind::Int32) {
-        function.instructions.push_back({IrOpcode::PushI32, 1});
-        function.instructions.push_back({IrOpcode::SubI32, 0});
-      } else {
-        function.instructions.push_back({IrOpcode::PushI64, 1});
-        function.instructions.push_back({IrOpcode::SubI64, 0});
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
-      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
-
-      const size_t endIndex = function.instructions.size();
-      function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+      ir_lowerer::emitCountedLoopIterationStep(
+          loopControl,
+          [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+      ir_lowerer::patchCountedLoopEnd(
+          loopControl,
+          [&]() { return function.instructions.size(); },
+          [&](size_t instructionIndex, int32_t imm) { function.instructions[instructionIndex].imm = imm; });
       return true;
     }
     if (isWhileCall(stmt)) {
@@ -257,34 +228,28 @@
       if (!emitExpr(stmt.args.front(), localsIn)) {
         return false;
       }
-      LocalInfo::ValueKind countKind = inferExprKind(stmt.args.front(), localsIn);
-      if (countKind == LocalInfo::ValueKind::Bool) {
-        countKind = LocalInfo::ValueKind::Int32;
-      }
-      if (countKind != LocalInfo::ValueKind::Int32 && countKind != LocalInfo::ValueKind::Int64 &&
-          countKind != LocalInfo::ValueKind::UInt64) {
-        error = "repeat count requires integer or bool";
+      LocalInfo::ValueKind countKind = LocalInfo::ValueKind::Unknown;
+      if (!ir_lowerer::resolveCountedLoopKind(
+              inferExprKind(stmt.args.front(), localsIn),
+              true,
+              "repeat count requires integer or bool",
+              countKind,
+              error)) {
         return false;
       }
 
-      const int32_t counterLocal = allocTempLocal();
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
-
-      const size_t checkIndex = function.instructions.size();
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
-      if (countKind == LocalInfo::ValueKind::Int32) {
-        function.instructions.push_back({IrOpcode::PushI32, 0});
-        function.instructions.push_back({IrOpcode::CmpGtI32, 0});
-      } else if (countKind == LocalInfo::ValueKind::Int64) {
-        function.instructions.push_back({IrOpcode::PushI64, 0});
-        function.instructions.push_back({IrOpcode::CmpGtI64, 0});
-      } else {
-        function.instructions.push_back({IrOpcode::PushI64, 0});
-        function.instructions.push_back({IrOpcode::CmpNeI64, 0});
+      ir_lowerer::CountedLoopControl loopControl;
+      if (!ir_lowerer::emitCountedLoopPrologue(
+              countKind,
+              [&]() { return allocTempLocal(); },
+              [&]() { return function.instructions.size(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              [&](size_t instructionIndex, int32_t imm) { function.instructions[instructionIndex].imm = imm; },
+              [&]() { emitLoopCountNegative(); },
+              loopControl,
+              error)) {
+        return false;
       }
-
-      const size_t jumpEndIndex = function.instructions.size();
-      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
       OnErrorScope onErrorScope(currentOnError, std::nullopt);
       pushFileScope();
@@ -297,19 +262,13 @@
       emitFileScopeCleanup(fileScopeStack.back());
       popFileScope();
 
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(counterLocal)});
-      if (countKind == LocalInfo::ValueKind::Int32) {
-        function.instructions.push_back({IrOpcode::PushI32, 1});
-        function.instructions.push_back({IrOpcode::SubI32, 0});
-      } else {
-        function.instructions.push_back({IrOpcode::PushI64, 1});
-        function.instructions.push_back({IrOpcode::SubI64, 0});
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(counterLocal)});
-      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
-
-      const size_t endIndex = function.instructions.size();
-      function.instructions[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+      ir_lowerer::emitCountedLoopIterationStep(
+          loopControl,
+          [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); });
+      ir_lowerer::patchCountedLoopEnd(
+          loopControl,
+          [&]() { return function.instructions.size(); },
+          [&](size_t instructionIndex, int32_t imm) { function.instructions[instructionIndex].imm = imm; });
       return true;
     }
     if (stmt.kind == Expr::Kind::Call && isBlockCall(stmt) && stmt.hasBodyArguments && resolveDefinitionCall(stmt) == nullptr) {
