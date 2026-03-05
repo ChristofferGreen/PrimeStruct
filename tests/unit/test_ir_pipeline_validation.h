@@ -11637,6 +11637,98 @@ TEST_CASE("ir lowerer setup inference helper handles invalid access kinds") {
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers body value kinds with locals scaffolding") {
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "x";
+  primec::Expr initializer;
+  initializer.kind = primec::Expr::Kind::Literal;
+  initializer.literalValue = 1;
+  bindingExpr.args = {initializer};
+
+  primec::Expr readExpr;
+  readExpr.kind = primec::Expr::Kind::Name;
+  readExpr.name = "x";
+
+  int applyArrayInfoCalls = 0;
+  int applyValueInfoCalls = 0;
+  const primec::ir_lowerer::LocalInfo::ValueKind kind = primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+      {bindingExpr, readExpr},
+      {},
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &locals) {
+        if (expr.kind == primec::Expr::Kind::Name) {
+          auto it = locals.find(expr.name);
+          if (it != locals.end() && !it->second.structTypeName.empty()) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+          }
+          if (it != locals.end()) {
+            return it->second.valueKind;
+          }
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&](const primec::Expr &, primec::ir_lowerer::LocalInfo &) { ++applyArrayInfoCalls; },
+      [&](const primec::Expr &, primec::ir_lowerer::LocalInfo &) { ++applyValueInfoCalls; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string("/pkg/Vec3"); });
+  CHECK(kind == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+  CHECK(applyArrayInfoCalls == 1);
+  CHECK(applyValueInfoCalls == 1);
+}
+
+TEST_CASE("ir lowerer setup inference helper validates body locals scaffolding diagnostics") {
+  primec::Expr badBindingExpr;
+  badBindingExpr.isBinding = true;
+  badBindingExpr.name = "x";
+  badBindingExpr.args = {};
+
+  CHECK(primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+            {badBindingExpr},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); }) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "return";
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Literal;
+  returnExpr.args = {arg, arg};
+
+  CHECK(primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+            {returnExpr},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+            },
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); }) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

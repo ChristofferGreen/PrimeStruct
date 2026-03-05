@@ -18,6 +18,13 @@ using ResolveSetupInferenceArrayReturnKindFn =
 using ResolveSetupInferenceCallReturnKindFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &, bool &)>;
 using IsSetupInferenceEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
+using IsSetupInferenceBindingMutableFn = std::function<bool(const Expr &)>;
+using SetupInferenceBindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
+using HasSetupInferenceExplicitBindingTypeTransformFn = std::function<bool(const Expr &)>;
+using SetupInferenceBindingValueKindFn =
+    std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
+using ApplySetupInferenceStructInfoFn = std::function<void(const Expr &, LocalInfo &)>;
+using InferSetupInferenceStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 
 enum class CallExpressionReturnKindResolution {
   NotResolved,
@@ -58,5 +65,16 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     const LocalMap &localsIn,
     const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
     LocalInfo::ValueKind &kindOut);
+LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
+    const std::vector<Expr> &bodyExpressions,
+    const LocalMap &localsBase,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const IsSetupInferenceBindingMutableFn &isBindingMutable,
+    const SetupInferenceBindingKindFn &bindingKind,
+    const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const SetupInferenceBindingValueKindFn &bindingValueKind,
+    const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
+    const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
+    const InferSetupInferenceStructExprPathFn &inferStructExprPath);
 
 } // namespace primec::ir_lowerer

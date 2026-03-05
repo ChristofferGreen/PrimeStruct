@@ -505,50 +505,23 @@
             if (!isIfBlockEnvelope(candidate)) {
               return inferExprKind(candidate, localsBase);
             }
-            LocalMap branchLocals = localsBase;
-            bool sawValue = false;
-            LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;
-            for (const auto &bodyExpr : candidate.bodyArguments) {
-              if (bodyExpr.isBinding) {
-                if (bodyExpr.args.size() != 1) {
-                  return LocalInfo::ValueKind::Unknown;
-                }
-                LocalInfo info;
-                info.index = 0;
-                info.isMutable = isBindingMutable(bodyExpr);
-                info.kind = bindingKind(bodyExpr);
-                LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-                if (hasExplicitBindingTypeTransform(bodyExpr)) {
-                  valueKind = bindingValueKind(bodyExpr, info.kind);
-                } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
-                  valueKind = inferExprKind(bodyExpr.args.front(), branchLocals);
-                  if (valueKind == LocalInfo::ValueKind::Unknown) {
-                    valueKind = LocalInfo::ValueKind::Int32;
-                  }
-                }
-                info.valueKind = valueKind;
-                applyStructArrayInfo(bodyExpr, info);
-                applyStructValueInfo(bodyExpr, info);
-                if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
-                    info.valueKind == LocalInfo::ValueKind::Unknown) {
-                  std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), branchLocals);
-                  if (!inferredStruct.empty()) {
-                    info.structTypeName = inferredStruct;
-                  }
-                }
-                branchLocals.emplace(bodyExpr.name, info);
-                continue;
-              }
-              if (isReturnCall(bodyExpr)) {
-                if (bodyExpr.args.size() != 1) {
-                  return LocalInfo::ValueKind::Unknown;
-                }
-                return inferExprKind(bodyExpr.args.front(), branchLocals);
-              }
-              sawValue = true;
-              lastKind = inferExprKind(bodyExpr, branchLocals);
-            }
-            return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
+            return inferBodyValueKindWithLocalsScaffolding(
+                candidate.bodyArguments,
+                localsBase,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferExprKind(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
+                [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
+                [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
+                [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
+                  return bindingValueKind(candidateExpr, kind);
+                },
+                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
+                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferStructExprPath(candidateExpr, candidateLocals);
+                });
           };
 
           LocalInfo::ValueKind thenKind = inferBranchValueKind(expr.args[1], localsIn);
@@ -562,51 +535,23 @@
           const std::string resolved = resolveExprPath(expr);
           if (defMap.find(resolved) == defMap.end() && expr.args.empty() && expr.templateArgs.empty() &&
               !hasNamedArguments(expr.argNames)) {
-            if (expr.bodyArguments.empty()) {
-              return LocalInfo::ValueKind::Unknown;
-            }
-            LocalMap blockLocals = localsIn;
-            LocalInfo::ValueKind result = LocalInfo::ValueKind::Unknown;
-            for (const auto &bodyExpr : expr.bodyArguments) {
-              if (bodyExpr.isBinding) {
-                if (bodyExpr.args.size() != 1) {
-                  return LocalInfo::ValueKind::Unknown;
-                }
-                LocalInfo info;
-                info.index = 0;
-                info.isMutable = isBindingMutable(bodyExpr);
-                info.kind = bindingKind(bodyExpr);
-                LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
-                if (hasExplicitBindingTypeTransform(bodyExpr)) {
-                  valueKind = bindingValueKind(bodyExpr, info.kind);
-                } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
-                  valueKind = inferExprKind(bodyExpr.args.front(), blockLocals);
-                  if (valueKind == LocalInfo::ValueKind::Unknown) {
-                    valueKind = LocalInfo::ValueKind::Int32;
-                  }
-                }
-                info.valueKind = valueKind;
-                applyStructArrayInfo(bodyExpr, info);
-                applyStructValueInfo(bodyExpr, info);
-                if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
-                    info.valueKind == LocalInfo::ValueKind::Unknown) {
-                  std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), blockLocals);
-                  if (!inferredStruct.empty()) {
-                    info.structTypeName = inferredStruct;
-                  }
-                }
-                blockLocals.emplace(bodyExpr.name, info);
-                continue;
-              }
-              if (isReturnCall(bodyExpr)) {
-                if (bodyExpr.args.size() != 1) {
-                  return LocalInfo::ValueKind::Unknown;
-                }
-                return inferExprKind(bodyExpr.args.front(), blockLocals);
-              }
-              result = inferExprKind(bodyExpr, blockLocals);
-            }
-            return result;
+            return inferBodyValueKindWithLocalsScaffolding(
+                expr.bodyArguments,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferExprKind(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
+                [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
+                [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
+                [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
+                  return bindingValueKind(candidateExpr, kind);
+                },
+                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
+                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferStructExprPath(candidateExpr, candidateLocals);
+                });
           }
         }
         if (getBuiltinPointerName(expr, builtin)) {

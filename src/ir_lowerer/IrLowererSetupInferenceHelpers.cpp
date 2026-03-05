@@ -264,4 +264,61 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
   return ArrayMapAccessElementKindResolution::Resolved;
 }
 
+LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
+    const std::vector<Expr> &bodyExpressions,
+    const LocalMap &localsBase,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const IsSetupInferenceBindingMutableFn &isBindingMutable,
+    const SetupInferenceBindingKindFn &bindingKind,
+    const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const SetupInferenceBindingValueKindFn &bindingValueKind,
+    const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
+    const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
+    const InferSetupInferenceStructExprPathFn &inferStructExprPath) {
+  LocalMap bodyLocals = localsBase;
+  bool sawValue = false;
+  LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;
+  for (const auto &bodyExpr : bodyExpressions) {
+    if (bodyExpr.isBinding) {
+      if (bodyExpr.args.size() != 1) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      LocalInfo info;
+      info.index = 0;
+      info.isMutable = isBindingMutable(bodyExpr);
+      info.kind = bindingKind(bodyExpr);
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      if (hasExplicitBindingTypeTransform(bodyExpr)) {
+        valueKind = bindingValueKind(bodyExpr, info.kind);
+      } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
+        valueKind = inferExprKind(bodyExpr.args.front(), bodyLocals);
+        if (valueKind == LocalInfo::ValueKind::Unknown) {
+          valueKind = LocalInfo::ValueKind::Int32;
+        }
+      }
+      info.valueKind = valueKind;
+      applyStructArrayInfo(bodyExpr, info);
+      applyStructValueInfo(bodyExpr, info);
+      if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value &&
+          info.valueKind == LocalInfo::ValueKind::Unknown) {
+        std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), bodyLocals);
+        if (!inferredStruct.empty()) {
+          info.structTypeName = inferredStruct;
+        }
+      }
+      bodyLocals.emplace(bodyExpr.name, info);
+      continue;
+    }
+    if (isReturnCall(bodyExpr)) {
+      if (bodyExpr.args.size() != 1) {
+        return LocalInfo::ValueKind::Unknown;
+      }
+      return inferExprKind(bodyExpr.args.front(), bodyLocals);
+    }
+    sawValue = true;
+    lastKind = inferExprKind(bodyExpr, bodyLocals);
+  }
+  return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
+}
+
 } // namespace primec::ir_lowerer
