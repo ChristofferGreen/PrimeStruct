@@ -608,6 +608,33 @@ TEST_CASE("ir serializes execution metadata") {
   CHECK(decodedFn.metadata.instrumentationFlags == fn.metadata.instrumentationFlags);
 }
 
+TEST_CASE("ir serializes instruction debug ids") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 11});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 2, 12});
+  fn.instructions.push_back({primec::IrOpcode::AddI32, 0, 13});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 14});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.functions.size() == 1);
+  REQUIRE(decoded.functions[0].instructions.size() == 4);
+  CHECK(decoded.functions[0].instructions[0].debugId == 11u);
+  CHECK(decoded.functions[0].instructions[1].debugId == 12u);
+  CHECK(decoded.functions[0].instructions[2].debugId == 13u);
+  CHECK(decoded.functions[0].instructions[3].debugId == 14u);
+}
+
 TEST_CASE("ir serializes local debug slot metadata") {
   primec::IrModule module;
   module.entryIndex = 0;
@@ -676,6 +703,36 @@ TEST_CASE("ir deserialization rejects malformed local debug metadata") {
   CHECK(error == "truncated IR local debug metadata type");
 }
 
+TEST_CASE("ir deserialization rejects malformed instruction debug id metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 9});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 10});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+
+  size_t offset = 0;
+  offset += 4 * 5;          // magic, version, function count, entry index, string count
+  offset += 4;              // struct count
+  offset += 4 + fn.name.size(); // function name length + bytes
+  offset += 8 + 8 + 4 + 4;  // function metadata
+  offset += 4;              // local debug metadata count
+  offset += 4;              // instruction count
+  offset += 1 + 8;          // first instruction opcode + imm
+  REQUIRE(offset < data.size());
+  data.resize(offset + 3); // truncate first instruction debug id payload
+
+  primec::IrModule decoded;
+  CHECK_FALSE(primec::deserializeIr(data, decoded, error));
+  CHECK(error == "truncated IR instruction debug id");
+}
+
 TEST_CASE("ir deserialization rejects unsupported version") {
   primec::IrModule module;
   module.entryIndex = 0;
@@ -728,6 +785,60 @@ main() {
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 2);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
+}
+
+TEST_CASE("ir lowerer assigns stable deterministic instruction debug ids") {
+  const std::string source = R"(
+[return<int>]
+helper([int] x) {
+  return(plus(x, 2i32))
+}
+
+[return<int>]
+main() {
+  [int] a{1i32}
+  [int] b{helper(a)}
+  if(greater_than(b, 0i32), then() {
+    return(b)
+  }, else() {
+    return(0i32)
+  })
+}
+)";
+
+  primec::Program firstProgram;
+  primec::Program secondProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, firstProgram, error));
+  CHECK(error.empty());
+  REQUIRE(parseAndValidate(source, secondProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule firstModule;
+  primec::IrModule secondModule;
+  REQUIRE(lowerer.lower(firstProgram, "/main", {}, {}, firstModule, error));
+  CHECK(error.empty());
+  REQUIRE(lowerer.lower(secondProgram, "/main", {}, {}, secondModule, error));
+  CHECK(error.empty());
+
+  REQUIRE(firstModule.functions.size() == secondModule.functions.size());
+  bool sawAnyInstruction = false;
+  uint32_t previousDebugId = 0;
+  for (size_t functionIndex = 0; functionIndex < firstModule.functions.size(); ++functionIndex) {
+    const auto &firstFn = firstModule.functions[functionIndex];
+    const auto &secondFn = secondModule.functions[functionIndex];
+    REQUIRE(firstFn.instructions.size() == secondFn.instructions.size());
+    for (size_t instructionIndex = 0; instructionIndex < firstFn.instructions.size(); ++instructionIndex) {
+      const uint32_t firstDebugId = firstFn.instructions[instructionIndex].debugId;
+      const uint32_t secondDebugId = secondFn.instructions[instructionIndex].debugId;
+      CHECK(firstDebugId == secondDebugId);
+      CHECK(firstDebugId > previousDebugId);
+      previousDebugId = firstDebugId;
+      sawAnyInstruction = true;
+    }
+  }
+  CHECK(sawAnyInstruction);
 }
 
 TEST_CASE("ir leaves tail metadata unset for builtin return") {

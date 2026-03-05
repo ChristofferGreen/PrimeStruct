@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 17;
+constexpr uint32_t IrVersion = 18;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -159,6 +159,7 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     for (const auto &inst : fn.instructions) {
       out.push_back(static_cast<uint8_t>(inst.op));
       appendU64(out, inst.imm);
+      appendU32(out, inst.debugId);
     }
   }
   return true;
@@ -375,6 +376,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       offset += 1;
       if (!readU64(data, offset, inst.imm)) {
         error = "truncated IR instruction data";
+        return false;
+      }
+      if (!readU32(data, offset, inst.debugId)) {
+        error = "truncated IR instruction debug id";
         return false;
       }
       fn.instructions.push_back(inst);

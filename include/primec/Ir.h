@@ -198,6 +198,7 @@ inline uint64_t decodePrintStringIndex(uint64_t imm) {
 struct IrInstruction {
   IrOpcode op = IrOpcode::PushI32;
   uint64_t imm = 0;
+  uint32_t debugId = 0;
 };
 
 struct IrLocalDebugSlot {

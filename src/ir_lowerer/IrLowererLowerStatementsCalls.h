@@ -146,6 +146,18 @@
     return false;
   }
 
+  uint64_t nextInstructionDebugId = 1;
+  for (auto &loweredFunction : out.functions) {
+    for (auto &instruction : loweredFunction.instructions) {
+      if (nextInstructionDebugId > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+        error = "too many IR instructions for debug id metadata";
+        return false;
+      }
+      instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId);
+      ++nextInstructionDebugId;
+    }
+  }
+
   out.stringTable = std::move(stringTable);
   return true;
 }
