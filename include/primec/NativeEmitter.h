@@ -41,6 +41,10 @@ struct NativeEmitterOptimizationInstrumentation {
   uint64_t reloadCountAfter = 0;
 };
 
+struct NativeEmitterOptions {
+  bool enableRegisterCache = true;
+};
+
 class NativeEmitter {
  public:
   bool emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const;
@@ -48,6 +52,11 @@ class NativeEmitter {
                       const std::string &outputPath,
                       std::string &error,
                       NativeEmitterInstrumentation *instrumentation) const;
+  bool emitExecutable(const IrModule &module,
+                      const std::string &outputPath,
+                      std::string &error,
+                      NativeEmitterInstrumentation *instrumentation,
+                      const NativeEmitterOptions &options) const;
 };
 
 std::string formatNativeEmitterDebugDump(

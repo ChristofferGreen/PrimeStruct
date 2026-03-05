@@ -56,25 +56,35 @@ std::string formatNativeEmitterDebugDump(
 }
 
 bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const {
-  return emitExecutable(module, outputPath, error, nullptr);
+  return emitExecutable(module, outputPath, error, nullptr, NativeEmitterOptions{});
 }
 
 bool NativeEmitter::emitExecutable(const IrModule &module,
                                    const std::string &outputPath,
                                    std::string &error,
                                    NativeEmitterInstrumentation *instrumentation) const {
+  return emitExecutable(module, outputPath, error, instrumentation, NativeEmitterOptions{});
+}
+
+bool NativeEmitter::emitExecutable(const IrModule &module,
+                                   const std::string &outputPath,
+                                   std::string &error,
+                                   NativeEmitterInstrumentation *instrumentation,
+                                   const NativeEmitterOptions &options) const {
   if (instrumentation != nullptr) {
     *instrumentation = NativeEmitterInstrumentation{};
   }
 #if !defined(__APPLE__)
   (void)module;
   (void)outputPath;
+  (void)options;
   error = "native backend is only supported on macOS";
   return false;
 #else
 #if !defined(__aarch64__) && !defined(__arm64__)
   (void)module;
   (void)outputPath;
+  (void)options;
   error = "native backend requires arm64";
   return false;
 #else
@@ -152,6 +162,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
   }
 
   Arm64Emitter emitter;
+  emitter.setValueStackCacheEnabled(options.enableRegisterCache);
   struct BranchFixup {
     size_t codeIndex = 0;
     size_t functionIndex = 0;

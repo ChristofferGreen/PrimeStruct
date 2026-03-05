@@ -738,6 +738,64 @@ TEST_CASE("native backend float stack cache preserves parity and reduces spills"
   CHECK(mainStats.spillCount < mainStats.valueStackPushCount);
   CHECK(mainStats.reloadCount < mainStats.valueStackPopCount);
 }
+
+TEST_CASE("native backend cache toggle preserves dual-mode parity") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3F800000u}); // 1.0f
+  helperFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  helperFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x4008000000000000ull}); // 3.0
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  primec::Vm vm;
+  uint64_t vmResult = 0;
+  std::string error;
+  REQUIRE(vm.execute(module, vmResult, error));
+  CHECK(error.empty());
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterOptions cacheOnOptions;
+  cacheOnOptions.enableRegisterCache = true;
+  primec::NativeEmitterOptions cacheOffOptions;
+  cacheOffOptions.enableRegisterCache = false;
+  primec::NativeEmitterInstrumentation cacheOnInstrumentation;
+  primec::NativeEmitterInstrumentation cacheOffInstrumentation;
+  const std::string exeOnPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_cache_toggle_on_exec").string();
+  const std::string exeOffPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_cache_toggle_off_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exeOnPath, error, &cacheOnInstrumentation, cacheOnOptions));
+  CHECK(error.empty());
+  REQUIRE(emitter.emitExecutable(module, exeOffPath, error, &cacheOffInstrumentation, cacheOffOptions));
+  CHECK(error.empty());
+
+  const int nativeOnExit = runIrPipelineNativeBinary(exeOnPath);
+  const int nativeOffExit = runIrPipelineNativeBinary(exeOffPath);
+  CHECK(nativeOnExit == static_cast<int>(vmResult));
+  CHECK(nativeOffExit == static_cast<int>(vmResult));
+  CHECK(nativeOnExit == nativeOffExit);
+  CHECK(cacheOnInstrumentation.totalSpillCount < cacheOffInstrumentation.totalSpillCount);
+  CHECK(cacheOnInstrumentation.totalReloadCount < cacheOffInstrumentation.totalReloadCount);
+}
 #endif
 
 TEST_CASE("native emitter debug dump format is deterministic and ordered") {

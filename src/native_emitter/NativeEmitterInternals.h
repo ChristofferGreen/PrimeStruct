@@ -55,6 +55,13 @@ class Arm64Emitter {
  public:
   static constexpr uint32_t MaxLdrStrOffsetBytes = 0xFFFu * 8u;
 
+  void setValueStackCacheEnabled(bool enabled) {
+    valueStackCacheEnabled_ = enabled;
+    if (!valueStackCacheEnabled_) {
+      hasValueStackCache_ = false;
+    }
+  }
+
   bool beginFunction(uint64_t frameSize, bool resetValueStack, std::string &error) {
     (void)error;
     hasValueStackCache_ = false;
@@ -930,6 +937,10 @@ class Arm64Emitter {
 
   void emitPushReg(uint8_t reg) {
     counters_.valueStackPushCount += 1;
+    if (!valueStackCacheEnabled_) {
+      emitSpillReg(reg);
+      return;
+    }
     if (hasValueStackCache_) {
       emitSpillReg(valueStackCacheReg_);
     }
@@ -941,6 +952,10 @@ class Arm64Emitter {
 
   void emitPopReg(uint8_t reg) {
     counters_.valueStackPopCount += 1;
+    if (!valueStackCacheEnabled_) {
+      emitReloadReg(reg);
+      return;
+    }
     if (hasValueStackCache_) {
       if (reg != valueStackCacheReg_) {
         emitMovReg(reg, valueStackCacheReg_);
@@ -1340,6 +1355,7 @@ class Arm64Emitter {
   Arm64InstrumentationCounters counters_;
   static constexpr uint8_t valueStackCacheReg_ = 26;
   bool hasValueStackCache_ = false;
+  bool valueStackCacheEnabled_ = true;
 };
 
 bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);
