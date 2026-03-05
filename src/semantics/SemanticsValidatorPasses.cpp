@@ -229,28 +229,65 @@ bool SemanticsValidator::validateDefinitions() {
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
            getBuiltinCollectionName(expr, builtinName);
   };
-  auto collectDefinitionUnknownCallDiagnostics = [&](const Definition &def,
-                                                     std::vector<SemanticDiagnosticRecord> &out) {
+  auto collectDefinitionIntraBodyCallDiagnostics = [&](const Definition &def,
+                                                        std::vector<SemanticDiagnosticRecord> &out) {
+    auto appendDefinitionRecord = [&](const Expr &expr, std::string message) {
+      SemanticDiagnosticRecord record;
+      record.message = std::move(message);
+      if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+        record.line = expr.sourceLine;
+        record.column = expr.sourceColumn;
+      }
+      if (def.sourceLine > 0 && def.sourceColumn > 0) {
+        SemanticDiagnosticRelatedSpan related;
+        related.line = def.sourceLine;
+        related.column = def.sourceColumn;
+        related.label = "definition: " + def.fullPath;
+        record.relatedSpans.push_back(std::move(related));
+      }
+      out.push_back(std::move(record));
+    };
+    auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
+      std::string message;
+      if (!validateNamedArguments(expr.args, expr.argNames, resolved, message)) {
+        appendDefinitionRecord(expr, std::move(message));
+        return true;
+      }
+      if (structNames_.count(resolved) > 0) {
+        return false;
+      }
+      auto paramsIt = paramsByDef_.find(resolved);
+      if (paramsIt == paramsByDef_.end()) {
+        return false;
+      }
+      const auto &calleeParams = paramsIt->second;
+      if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, message)) {
+        appendDefinitionRecord(expr, std::move(message));
+        return true;
+      }
+      std::vector<const Expr *> orderedArgs;
+      std::string orderError;
+      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+        if (orderError.find("argument count mismatch") != std::string::npos) {
+          message = "argument count mismatch for " + resolved;
+        } else {
+          message = std::move(orderError);
+        }
+        appendDefinitionRecord(expr, std::move(message));
+        return true;
+      }
+      return false;
+    };
+
     std::function<void(const Expr &)> scanExpr;
     scanExpr = [&](const Expr &expr) {
       if (expr.kind == Expr::Kind::Call) {
         if (!expr.name.empty() && !isBuiltinCall(expr)) {
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
-            SemanticDiagnosticRecord record;
-            record.message = "unknown call target: " + expr.name;
-            if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
-              record.line = expr.sourceLine;
-              record.column = expr.sourceColumn;
-            }
-            if (def.sourceLine > 0 && def.sourceColumn > 0) {
-              SemanticDiagnosticRelatedSpan related;
-              related.line = def.sourceLine;
-              related.column = def.sourceColumn;
-              related.label = "definition: " + def.fullPath;
-              record.relatedSpans.push_back(std::move(related));
-            }
-            out.push_back(std::move(record));
+            appendDefinitionRecord(expr, "unknown call target: " + expr.name);
+          } else {
+            collectResolvedCallArgumentDiagnostic(expr, resolved);
           }
         }
       }
@@ -385,7 +422,7 @@ bool SemanticsValidator::validateDefinitions() {
     resetCollectedState();
     if (collectDiagnostics) {
       std::vector<SemanticDiagnosticRecord> intraDefinitionRecords;
-      collectDefinitionUnknownCallDiagnostics(def, intraDefinitionRecords);
+      collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);
       if (!intraDefinitionRecords.empty()) {
         if (error_.empty()) {
           error_ = intraDefinitionRecords.front().message;
@@ -1108,28 +1145,65 @@ bool SemanticsValidator::validateExecutions() {
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
            getBuiltinCollectionName(expr, builtinName);
   };
-  auto collectExecutionUnknownCallDiagnostics = [&](const Execution &exec,
-                                                    std::vector<SemanticDiagnosticRecord> &out) {
+  auto collectExecutionIntraBodyCallDiagnostics = [&](const Execution &exec,
+                                                      std::vector<SemanticDiagnosticRecord> &out) {
+    auto appendExecutionRecord = [&](const Expr &expr, std::string message) {
+      SemanticDiagnosticRecord record;
+      record.message = std::move(message);
+      if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
+        record.line = expr.sourceLine;
+        record.column = expr.sourceColumn;
+      }
+      if (exec.sourceLine > 0 && exec.sourceColumn > 0) {
+        SemanticDiagnosticRelatedSpan related;
+        related.line = exec.sourceLine;
+        related.column = exec.sourceColumn;
+        related.label = "execution: " + exec.fullPath;
+        record.relatedSpans.push_back(std::move(related));
+      }
+      out.push_back(std::move(record));
+    };
+    auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
+      std::string message;
+      if (!validateNamedArguments(expr.args, expr.argNames, resolved, message)) {
+        appendExecutionRecord(expr, std::move(message));
+        return true;
+      }
+      if (structNames_.count(resolved) > 0) {
+        return false;
+      }
+      auto paramsIt = paramsByDef_.find(resolved);
+      if (paramsIt == paramsByDef_.end()) {
+        return false;
+      }
+      const auto &calleeParams = paramsIt->second;
+      if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, message)) {
+        appendExecutionRecord(expr, std::move(message));
+        return true;
+      }
+      std::vector<const Expr *> orderedArgs;
+      std::string orderError;
+      if (!buildOrderedArguments(calleeParams, expr.args, expr.argNames, orderedArgs, orderError)) {
+        if (orderError.find("argument count mismatch") != std::string::npos) {
+          message = "argument count mismatch for " + resolved;
+        } else {
+          message = std::move(orderError);
+        }
+        appendExecutionRecord(expr, std::move(message));
+        return true;
+      }
+      return false;
+    };
+
     std::function<void(const Expr &)> scanExpr;
     scanExpr = [&](const Expr &expr) {
       if (expr.kind == Expr::Kind::Call) {
         if (!expr.name.empty() && !isBuiltinCall(expr)) {
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
-            SemanticDiagnosticRecord record;
-            record.message = "unknown call target: " + expr.name;
-            if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
-              record.line = expr.sourceLine;
-              record.column = expr.sourceColumn;
-            }
-            if (exec.sourceLine > 0 && exec.sourceColumn > 0) {
-              SemanticDiagnosticRelatedSpan related;
-              related.line = exec.sourceLine;
-              related.column = exec.sourceColumn;
-              related.label = "execution: " + exec.fullPath;
-              record.relatedSpans.push_back(std::move(related));
-            }
-            out.push_back(std::move(record));
+            appendExecutionRecord(expr, "unknown call target: " + expr.name);
+          } else {
+            collectResolvedCallArgumentDiagnostic(expr, resolved);
           }
         }
       }
@@ -1286,7 +1360,7 @@ bool SemanticsValidator::validateExecutions() {
     resetCollectedState();
     if (collectDiagnostics) {
       std::vector<SemanticDiagnosticRecord> intraExecutionRecords;
-      collectExecutionUnknownCallDiagnostics(exec, intraExecutionRecords);
+      collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);
       if (!intraExecutionRecords.empty()) {
         if (error_.empty()) {
           error_ = intraExecutionRecords.front().message;
