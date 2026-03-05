@@ -1129,4 +1129,467 @@ bool Vm::execute(const IrModule &module,
   return executeImpl(module, result, error, static_cast<uint64_t>(args.size()), &args);
 }
 
+bool VmDebugSession::initFromModule(const IrModule &module,
+                                    uint64_t argCount,
+                                    const std::vector<std::string_view> *args) {
+  module_ = &module;
+  argCount_ = argCount;
+  args_ = args;
+  localCounts_.assign(module.functions.size(), 0);
+  stack_.clear();
+  frames_.clear();
+  result_ = 0;
+  pauseRequested_ = false;
+  for (size_t i = 0; i < module.functions.size(); ++i) {
+    size_t localCount = 0;
+    for (const auto &inst : module.functions[i].instructions) {
+      if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal || inst.op == IrOpcode::AddressOfLocal) {
+        localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+      }
+    }
+    localCounts_[i] = localCount;
+  }
+
+  Frame entryFrame;
+  entryFrame.functionIndex = static_cast<size_t>(module.entryIndex);
+  entryFrame.function = &module.functions[entryFrame.functionIndex];
+  entryFrame.locals.assign(localCounts_[entryFrame.functionIndex], 0);
+  frames_.push_back(std::move(entryFrame));
+
+  const VmDebugTransitionResult startTransition =
+      vmDebugApplyCommand(VmDebugSessionState::Idle, VmDebugSessionCommand::Start);
+  if (!startTransition.valid) {
+    return false;
+  }
+  state_ = startTransition.state;
+  const VmDebugTransitionResult pauseTransition = vmDebugApplyStopReason(state_, VmDebugStopReason::Pause);
+  if (!pauseTransition.valid) {
+    return false;
+  }
+  state_ = pauseTransition.state;
+  return true;
+}
+
+bool VmDebugSession::start(const IrModule &module, std::string &error, uint64_t argCount) {
+  if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
+    error = "invalid IR entry index";
+    return false;
+  }
+  ownedArgs_.clear();
+  if (!initFromModule(module, argCount, nullptr)) {
+    error = "failed to initialize debug session";
+    return false;
+  }
+  return true;
+}
+
+bool VmDebugSession::start(const IrModule &module,
+                          std::string &error,
+                          const std::vector<std::string_view> &args) {
+  if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
+    error = "invalid IR entry index";
+    return false;
+  }
+  ownedArgs_ = args;
+  if (!initFromModule(module, static_cast<uint64_t>(ownedArgs_.size()), &ownedArgs_)) {
+    error = "failed to initialize debug session";
+    return false;
+  }
+  return true;
+}
+
+VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) {
+  constexpr uint64_t kSlotBytes = IrSlotBytes;
+  constexpr size_t MaxCallDepth = 4096;
+  if (frames_.empty()) {
+    error = "debug session has no active frame";
+    return StepOutcome::Fault;
+  }
+  Frame &frame = frames_.back();
+  const IrFunction &fn = *frame.function;
+  std::vector<uint64_t> &locals = frame.locals;
+  size_t &ip = frame.ip;
+  if (ip >= fn.instructions.size()) {
+    if (frames_.size() == 1) {
+      error = "missing return in IR";
+    } else {
+      error = "missing return in IR function " + fn.name;
+    }
+    return StepOutcome::Fault;
+  }
+  const IrInstruction &inst = fn.instructions[ip];
+  switch (inst.op) {
+    case IrOpcode::PushI32:
+      stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(inst.imm))));
+      ip += 1;
+      return StepOutcome::Continue;
+    case IrOpcode::PushI64:
+      stack_.push_back(inst.imm);
+      ip += 1;
+      return StepOutcome::Continue;
+    case IrOpcode::PushArgc: {
+      const int32_t count32 = static_cast<int32_t>(argCount_);
+      stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(count32)));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::LoadLocal: {
+      if (static_cast<size_t>(inst.imm) >= locals.size()) {
+        error = "invalid local index in IR";
+        return StepOutcome::Fault;
+      }
+      stack_.push_back(locals[static_cast<size_t>(inst.imm)]);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::StoreLocal: {
+      if (static_cast<size_t>(inst.imm) >= locals.size()) {
+        error = "invalid local index in IR";
+        return StepOutcome::Fault;
+      }
+      if (stack_.empty()) {
+        error = "IR stack underflow on store";
+        return StepOutcome::Fault;
+      }
+      locals[static_cast<size_t>(inst.imm)] = stack_.back();
+      stack_.pop_back();
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::AddressOfLocal: {
+      if (static_cast<size_t>(inst.imm) >= locals.size()) {
+        error = "invalid local index in IR";
+        return StepOutcome::Fault;
+      }
+      stack_.push_back(static_cast<uint64_t>(inst.imm) * kSlotBytes);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::Dup: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on dup";
+        return StepOutcome::Fault;
+      }
+      stack_.push_back(stack_.back());
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::Pop: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on pop";
+        return StepOutcome::Fault;
+      }
+      stack_.pop_back();
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::AddI32:
+    case IrOpcode::AddI64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on add";
+        return StepOutcome::Fault;
+      }
+      const uint64_t rhs = stack_.back();
+      stack_.pop_back();
+      const uint64_t lhs = stack_.back();
+      stack_.pop_back();
+      stack_.push_back(lhs + rhs);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::SubI32:
+    case IrOpcode::SubI64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on sub";
+        return StepOutcome::Fault;
+      }
+      const uint64_t rhs = stack_.back();
+      stack_.pop_back();
+      const uint64_t lhs = stack_.back();
+      stack_.pop_back();
+      stack_.push_back(lhs - rhs);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::MulI32:
+    case IrOpcode::MulI64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on mul";
+        return StepOutcome::Fault;
+      }
+      const uint64_t rhs = stack_.back();
+      stack_.pop_back();
+      const uint64_t lhs = stack_.back();
+      stack_.pop_back();
+      stack_.push_back(lhs * rhs);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::DivI32:
+    case IrOpcode::DivI64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on div";
+        return StepOutcome::Fault;
+      }
+      const int64_t rhs = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      const int64_t lhs = static_cast<int64_t>(stack_.back());
+      stack_.pop_back();
+      if (rhs == 0) {
+        error = "division by zero in IR";
+        return StepOutcome::Fault;
+      }
+      stack_.push_back(static_cast<uint64_t>(lhs / rhs));
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::DivU64: {
+      if (stack_.size() < 2) {
+        error = "IR stack underflow on div";
+        return StepOutcome::Fault;
+      }
+      const uint64_t rhs = stack_.back();
+      stack_.pop_back();
+      const uint64_t lhs = stack_.back();
+      stack_.pop_back();
+      if (rhs == 0) {
+        error = "division by zero in IR";
+        return StepOutcome::Fault;
+      }
+      stack_.push_back(lhs / rhs);
+      ip += 1;
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::JumpIfZero: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on jump";
+        return StepOutcome::Fault;
+      }
+      const uint64_t value = stack_.back();
+      stack_.pop_back();
+      if (inst.imm > fn.instructions.size()) {
+        error = "invalid jump target in IR";
+        return StepOutcome::Fault;
+      }
+      if (value == 0) {
+        ip = static_cast<size_t>(inst.imm);
+      } else {
+        ip += 1;
+      }
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::Jump: {
+      if (inst.imm > fn.instructions.size()) {
+        error = "invalid jump target in IR";
+        return StepOutcome::Fault;
+      }
+      ip = static_cast<size_t>(inst.imm);
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid: {
+      if (!module_ || inst.imm >= module_->functions.size()) {
+        error = "invalid call target in IR";
+        return StepOutcome::Fault;
+      }
+      if (frames_.size() >= MaxCallDepth) {
+        error = "VM call stack overflow";
+        return StepOutcome::Fault;
+      }
+      const size_t target = static_cast<size_t>(inst.imm);
+      Frame calleeFrame;
+      calleeFrame.functionIndex = target;
+      calleeFrame.function = &module_->functions[target];
+      calleeFrame.locals.assign(localCounts_[target], 0);
+      calleeFrame.returnValueToCaller = (inst.op == IrOpcode::Call);
+      ip += 1;
+      frames_.push_back(std::move(calleeFrame));
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ReturnVoid: {
+      const uint64_t returnValue = 0;
+      const bool returnToCaller = frame.returnValueToCaller;
+      if (frames_.size() == 1) {
+        result_ = returnValue;
+        frames_.clear();
+        return StepOutcome::Exit;
+      }
+      frames_.pop_back();
+      if (returnToCaller) {
+        stack_.push_back(returnValue);
+      }
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ReturnI32: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on return";
+        return StepOutcome::Fault;
+      }
+      const uint64_t returnValue = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(stack_.back())));
+      stack_.pop_back();
+      const bool returnToCaller = frame.returnValueToCaller;
+      if (frames_.size() == 1) {
+        result_ = returnValue;
+        frames_.clear();
+        return StepOutcome::Exit;
+      }
+      frames_.pop_back();
+      if (returnToCaller) {
+        stack_.push_back(returnValue);
+      }
+      return StepOutcome::Continue;
+    }
+    case IrOpcode::ReturnI64: {
+      if (stack_.empty()) {
+        error = "IR stack underflow on return";
+        return StepOutcome::Fault;
+      }
+      const uint64_t returnValue = stack_.back();
+      stack_.pop_back();
+      const bool returnToCaller = frame.returnValueToCaller;
+      if (frames_.size() == 1) {
+        result_ = returnValue;
+        frames_.clear();
+        return StepOutcome::Exit;
+      }
+      frames_.pop_back();
+      if (returnToCaller) {
+        stack_.push_back(returnValue);
+      }
+      return StepOutcome::Continue;
+    }
+    default:
+      error = "debug session unsupported opcode: " + std::to_string(static_cast<uint32_t>(inst.op));
+      return StepOutcome::Fault;
+  }
+}
+
+bool VmDebugSession::step(VmDebugStopReason &stopReason, std::string &error) {
+  if (state_ == VmDebugSessionState::Idle) {
+    error = "debug session is not started";
+    return false;
+  }
+  if (state_ != VmDebugSessionState::Paused) {
+    error = "debug session is not paused";
+    return false;
+  }
+  const VmDebugTransitionResult continueTransition = vmDebugApplyCommand(state_, VmDebugSessionCommand::Continue);
+  if (!continueTransition.valid) {
+    error = "debug session cannot step from current state";
+    return false;
+  }
+  state_ = continueTransition.state;
+  const StepOutcome outcome = stepInstruction(error);
+  if (outcome == StepOutcome::Fault) {
+    stopReason = VmDebugStopReason::Fault;
+    const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+    if (stopTransition.valid) {
+      state_ = stopTransition.state;
+    }
+    return false;
+  }
+  if (outcome == StepOutcome::Exit) {
+    stopReason = VmDebugStopReason::Exit;
+    const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+    if (stopTransition.valid) {
+      state_ = stopTransition.state;
+    }
+    return true;
+  }
+  stopReason = VmDebugStopReason::Step;
+  const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+  if (!stopTransition.valid) {
+    error = "debug session failed to enter paused state after step";
+    return false;
+  }
+  state_ = stopTransition.state;
+  return true;
+}
+
+bool VmDebugSession::continueExecution(VmDebugStopReason &stopReason, std::string &error) {
+  if (state_ == VmDebugSessionState::Idle) {
+    error = "debug session is not started";
+    return false;
+  }
+  if (state_ != VmDebugSessionState::Paused) {
+    error = "debug session is not paused";
+    return false;
+  }
+  const VmDebugTransitionResult continueTransition = vmDebugApplyCommand(state_, VmDebugSessionCommand::Continue);
+  if (!continueTransition.valid) {
+    error = "debug session cannot continue from current state";
+    return false;
+  }
+  state_ = continueTransition.state;
+  if (pauseRequested_) {
+    pauseRequested_ = false;
+    stopReason = VmDebugStopReason::Pause;
+    const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+    if (!stopTransition.valid) {
+      error = "debug session failed to pause";
+      return false;
+    }
+    state_ = stopTransition.state;
+    return true;
+  }
+  while (true) {
+    const StepOutcome outcome = stepInstruction(error);
+    if (outcome == StepOutcome::Fault) {
+      stopReason = VmDebugStopReason::Fault;
+      const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+      if (stopTransition.valid) {
+        state_ = stopTransition.state;
+      }
+      return false;
+    }
+    if (outcome == StepOutcome::Exit) {
+      stopReason = VmDebugStopReason::Exit;
+      const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+      if (!stopTransition.valid) {
+        error = "debug session failed to exit";
+        return false;
+      }
+      state_ = stopTransition.state;
+      return true;
+    }
+    if (pauseRequested_) {
+      pauseRequested_ = false;
+      stopReason = VmDebugStopReason::Pause;
+      const VmDebugTransitionResult stopTransition = vmDebugApplyStopReason(state_, stopReason);
+      if (!stopTransition.valid) {
+        error = "debug session failed to pause";
+        return false;
+      }
+      state_ = stopTransition.state;
+      return true;
+    }
+  }
+}
+
+bool VmDebugSession::pause(std::string &error) {
+  if (state_ == VmDebugSessionState::Idle) {
+    error = "debug session is not started";
+    return false;
+  }
+  if (state_ == VmDebugSessionState::Faulted || state_ == VmDebugSessionState::Exited) {
+    error = "debug session cannot pause after termination";
+    return false;
+  }
+  pauseRequested_ = true;
+  return true;
+}
+
+VmDebugSnapshot VmDebugSession::snapshot() const {
+  VmDebugSnapshot out;
+  out.state = state_;
+  out.callDepth = frames_.size();
+  out.operandStackSize = stack_.size();
+  out.result = result_;
+  if (!frames_.empty()) {
+    out.functionIndex = frames_.back().functionIndex;
+    out.instructionPointer = frames_.back().ip;
+  }
+  return out;
+}
+
 } // namespace primec

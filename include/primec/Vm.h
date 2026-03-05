@@ -103,6 +103,15 @@ inline constexpr VmDebugTransitionResult vmDebugApplyStopReason(VmDebugSessionSt
   return {state, false};
 }
 
+struct VmDebugSnapshot {
+  VmDebugSessionState state = VmDebugSessionState::Idle;
+  size_t functionIndex = 0;
+  size_t instructionPointer = 0;
+  size_t callDepth = 0;
+  size_t operandStackSize = 0;
+  uint64_t result = 0;
+};
+
 class Vm {
 public:
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
@@ -110,6 +119,41 @@ public:
                uint64_t &result,
                std::string &error,
                const std::vector<std::string_view> &args) const;
+};
+
+class VmDebugSession {
+public:
+  bool start(const IrModule &module, std::string &error, uint64_t argCount = 0);
+  bool start(const IrModule &module, std::string &error, const std::vector<std::string_view> &args);
+  bool step(VmDebugStopReason &stopReason, std::string &error);
+  bool continueExecution(VmDebugStopReason &stopReason, std::string &error);
+  bool pause(std::string &error);
+  VmDebugSnapshot snapshot() const;
+
+private:
+  struct Frame {
+    const IrFunction *function = nullptr;
+    size_t functionIndex = 0;
+    std::vector<uint64_t> locals;
+    size_t ip = 0;
+    bool returnValueToCaller = false;
+  };
+
+  enum class StepOutcome { Continue, Exit, Fault };
+
+  bool initFromModule(const IrModule &module, uint64_t argCount, const std::vector<std::string_view> *args);
+  StepOutcome stepInstruction(std::string &error);
+
+  const IrModule *module_ = nullptr;
+  uint64_t argCount_ = 0;
+  const std::vector<std::string_view> *args_ = nullptr;
+  std::vector<std::string_view> ownedArgs_;
+  std::vector<size_t> localCounts_;
+  std::vector<uint64_t> stack_;
+  std::vector<Frame> frames_;
+  VmDebugSessionState state_ = VmDebugSessionState::Idle;
+  uint64_t result_ = 0;
+  bool pauseRequested_ = false;
 };
 
 } // namespace primec

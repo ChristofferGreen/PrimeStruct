@@ -104,4 +104,136 @@ TEST_CASE("vm debug stop reasons are rejected outside running state") {
   }
 }
 
+TEST_CASE("vm debug session step transcript is deterministic") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction calleeFn;
+  calleeFn.name = "/double";
+  calleeFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  calleeFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  calleeFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(calleeFn));
+  module.entryIndex = 0;
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  const primec::VmDebugSnapshot start = session.snapshot();
+  CHECK(start.state == primec::VmDebugSessionState::Paused);
+  CHECK(start.functionIndex == 0);
+  CHECK(start.instructionPointer == 0);
+  CHECK(start.callDepth == 1);
+  CHECK(start.operandStackSize == 0);
+
+  std::vector<std::string> transcript;
+  for (size_t i = 0; i < 8; ++i) {
+    primec::VmDebugStopReason reason = primec::VmDebugStopReason::Step;
+    REQUIRE(session.step(reason, error));
+    const primec::VmDebugSnapshot snap = session.snapshot();
+    transcript.push_back(std::string(primec::vmDebugStopReasonName(reason)) + " f" + std::to_string(snap.functionIndex) +
+                         " ip" + std::to_string(snap.instructionPointer) + " d" + std::to_string(snap.callDepth) +
+                         " s" + std::to_string(snap.operandStackSize) + " r" + std::to_string(snap.result));
+    if (reason == primec::VmDebugStopReason::Exit) {
+      break;
+    }
+  }
+
+  const std::vector<std::string> expected = {
+      "Step f0 ip1 d1 s1 r0",
+      "Step f1 ip0 d2 s1 r0",
+      "Step f1 ip1 d2 s2 r0",
+      "Step f1 ip2 d2 s1 r0",
+      "Step f0 ip2 d1 s1 r0",
+      "Step f0 ip3 d1 s2 r0",
+      "Step f0 ip4 d1 s1 r0",
+      "Exit f0 ip0 d0 s0 r9",
+  };
+  CHECK(transcript == expected);
+}
+
+TEST_CASE("vm debug session continue and pause controls are deterministic") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.entryIndex = 0;
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  REQUIRE(session.pause(error));
+  CHECK(error.empty());
+
+  primec::VmDebugStopReason reason = primec::VmDebugStopReason::Step;
+  REQUIRE(session.continueExecution(reason, error));
+  CHECK(error.empty());
+  CHECK(reason == primec::VmDebugStopReason::Pause);
+  const primec::VmDebugSnapshot paused = session.snapshot();
+  CHECK(paused.state == primec::VmDebugSessionState::Paused);
+  CHECK(paused.instructionPointer == 0);
+
+  REQUIRE(session.step(reason, error));
+  CHECK(error.empty());
+  CHECK(reason == primec::VmDebugStopReason::Step);
+  const primec::VmDebugSnapshot afterStep = session.snapshot();
+  CHECK(afterStep.instructionPointer == 1);
+
+  REQUIRE(session.continueExecution(reason, error));
+  CHECK(error.empty());
+  CHECK(reason == primec::VmDebugStopReason::Exit);
+  const primec::VmDebugSnapshot exited = session.snapshot();
+  CHECK(exited.state == primec::VmDebugSessionState::Exited);
+  CHECK(exited.result == 3);
+}
+
+TEST_CASE("vm debug session validates control-state preconditions") {
+  primec::VmDebugSession session;
+  std::string error;
+  primec::VmDebugStopReason reason = primec::VmDebugStopReason::Step;
+
+  CHECK_FALSE(session.step(reason, error));
+  CHECK(error.find("not started") != std::string::npos);
+
+  error.clear();
+  CHECK_FALSE(session.continueExecution(reason, error));
+  CHECK(error.find("not started") != std::string::npos);
+
+  primec::IrModule module;
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+  module.entryIndex = 0;
+
+  error.clear();
+  REQUIRE(session.start(module, error));
+  REQUIRE(session.continueExecution(reason, error));
+  CHECK(reason == primec::VmDebugStopReason::Exit);
+
+  error.clear();
+  CHECK_FALSE(session.step(reason, error));
+  CHECK(error.find("not paused") != std::string::npos);
+}
+
 TEST_SUITE_END();
