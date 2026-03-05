@@ -92,6 +92,7 @@ add_library(primec_lib
   src/text_filter/TextFilterPipelinePass.cpp
   src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
+  src/wasm_emitter/WasmEmitter.cpp
   src/Vm.cpp
 )
 

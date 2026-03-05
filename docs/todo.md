@@ -184,7 +184,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add checkpointed replay/time-travel on top of trace capture. Testing: checkpoint/restore equivalence tests and replay determinism regression suites.
 
 **WebAssembly Emitter**
-- ○ Add a new `WasmEmitter` backend entrypoint that consumes canonical `IrModule` (no AST-side Wasm lowering path). Testing: unit tests that emit/validate minimal Wasm modules.
+- ✓ Add a new `WasmEmitter` backend entrypoint that consumes canonical `IrModule` (no AST-side Wasm lowering path). Testing: unit tests that emit/validate minimal Wasm modules.
 - ○ Add Wasm module section encoders (type/function/code/data/import/export) with deterministic emission order. Testing: binary snapshot tests and validator-based structural checks.
 - ○ Add `--emit=wasm` CLI support in `primec` (option parsing + diagnostics parity). Testing: options-parser regression tests and diagnostics-mode argument tests.
 - ○ Add default `.wasm` output extension and usage/help text updates. Testing: usage-text lock tests and output-path default tests.

@@ -19,6 +19,7 @@
 #include "primec/Semantics.h"
 #include "primec/Vm.h"
 #include "primec/VmDebugAdapter.h"
+#include "primec/WasmEmitter.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTypeHelpers.h"
@@ -101,3 +102,4 @@ bool validateProgram(primec::Program &program,
 #include "test_vm_debug_session.h"
 #include "test_ir_pipeline_gpu.h"
 #include "test_ir_pipeline_external_tooling.h"
+#include "test_ir_pipeline_wasm.h"
