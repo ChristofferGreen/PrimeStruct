@@ -51,6 +51,10 @@ if ! [[ "$PORT_BASE" =~ ^[0-9]+$ ]]; then
   echo "[spinning-cube-demo] ERROR: --port-base must be an integer: $PORT_BASE" >&2
   exit 2
 fi
+if (( PORT_BASE < 1 || PORT_BASE > 65535 )); then
+  echo "[spinning-cube-demo] ERROR: --port-base out of range (1-65535): $PORT_BASE" >&2
+  exit 2
+fi
 
 if [[ ! -x "$PRIMEC_BIN" ]]; then
   echo "[spinning-cube-demo] ERROR: primec binary not found: $PRIMEC_BIN" >&2
