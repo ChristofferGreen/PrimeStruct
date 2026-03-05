@@ -223,6 +223,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a native host runtime smoke that compiles `examples/native/spinning_cube/main.cpp`, executes it with the generated cube native binary, and asserts success marker output. Testing: host exit code `0` and output contains `native host verified cube simulation output`.
 - ✓ Add a Metal full-path smoke that compiles shader + metallib and runs `metal_host` with the generated metallib, while skipping cleanly when `xcrun metal`/`metallib` are unavailable. Testing: when tools exist, host exit code `0` and output contains `frame_rendered=1`; otherwise emit explicit skip message.
 - ✓ Add a single `scripts/run_spinning_cube_demo.sh` helper that runs web, native, and Metal checks in order with clear PASS/FAIL/SKIP summary and stable exit codes. Testing: script self-check in CI with deterministic summary text.
+- ✓ Validate `scripts/run_spinning_cube_demo.sh --port-base` input and emit deterministic argument diagnostics (`exit 2`) for non-integer values. Testing: script self-check with invalid `--port-base` value asserts stable error text and exit code.
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
