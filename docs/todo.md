@@ -230,6 +230,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic diagnostics for missing/unexecutable `--primec` paths in `scripts/run_spinning_cube_demo.sh` (`exit 2` + stable `primec binary not found` text).
 - ✓ Add a regression test that locks deterministic missing-value diagnostics when `--work-dir` is followed by another flag token (`--*`) in `scripts/run_spinning_cube_demo.sh`.
 - ✓ Add a regression test that locks deterministic missing-value diagnostics when `--port-base` is followed by another flag token (`--*`) in `scripts/run_spinning_cube_demo.sh`.
+- ✓ Add a regression test that locks deterministic missing-value diagnostics when `--primec` is followed by another flag token (`--*`) in `scripts/run_spinning_cube_demo.sh`.
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
