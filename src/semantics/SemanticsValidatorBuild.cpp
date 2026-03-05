@@ -452,14 +452,41 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
 
   importAliases_.clear();
+  std::vector<SemanticDiagnosticRecord> importDiagnosticRecords;
+  auto collectImportDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  auto addImportDiagnostic = [&](const std::string &message, const Definition *relatedDef = nullptr) {
+    if (!collectImportDiagnostics) {
+      error_ = message;
+      return true;
+    }
+    SemanticDiagnosticRecord record;
+    record.message = message;
+    if (relatedDef != nullptr && relatedDef->sourceLine > 0 && relatedDef->sourceColumn > 0) {
+      SemanticDiagnosticRelatedSpan related;
+      related.line = relatedDef->sourceLine;
+      related.column = relatedDef->sourceColumn;
+      related.label = "definition: " + relatedDef->fullPath;
+      record.relatedSpans.push_back(std::move(related));
+    }
+    if (error_.empty()) {
+      error_ = message;
+    }
+    importDiagnosticRecords.push_back(std::move(record));
+    return false;
+  };
+
   for (const auto &importPath : program_.imports) {
     if (importPath == "/std/math") {
-      error_ = "import /std/math is not supported; use import /std/math/* or /std/math/<name>";
-      return false;
+      if (addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
+        return false;
+      }
+      continue;
     }
     if (importPath.empty() || importPath[0] != '/') {
-      error_ = "import path must be a slash path";
-      return false;
+      if (addImportDiagnostic("import path must be a slash path")) {
+        return false;
+      }
+      continue;
     }
     bool isWildcard = false;
     std::string prefix;
@@ -473,6 +500,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (isWildcard) {
       const std::string scopedPrefix = prefix + "/";
       bool sawImmediateDefinition = false;
+      bool importError = false;
       for (const auto &def : program_.definitions) {
         DefinitionContextScope definitionScope(*this, def);
         if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
@@ -487,27 +515,45 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
         sawImmediateDefinition = true;
         if (isRootBuiltinName(remainder)) {
-          error_ = "import creates name conflict: " + remainder;
-          return false;
+          if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
+            return false;
+          }
+          importError = true;
+          break;
         }
         if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
-          error_ = "import creates name conflict: " + remainder;
-          return false;
+          if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
+            return false;
+          }
+          importError = true;
+          break;
         }
         const std::string rootPath = "/" + remainder;
-        if (defMap_.count(rootPath) > 0) {
-          error_ = "import creates name conflict: " + remainder;
-          return false;
+        auto rootIt = defMap_.find(rootPath);
+        if (rootIt != defMap_.end()) {
+          if (addImportDiagnostic("import creates name conflict: " + remainder, rootIt->second)) {
+            return false;
+          }
+          importError = true;
+          break;
         }
         auto [it, inserted] = importAliases_.emplace(remainder, def.fullPath);
         if (!inserted && it->second != def.fullPath) {
-          error_ = "import creates name conflict: " + remainder;
-          return false;
+          if (addImportDiagnostic("import creates name conflict: " + remainder, &def)) {
+            return false;
+          }
+          importError = true;
+          break;
         }
       }
+      if (importError) {
+        continue;
+      }
       if (!sawImmediateDefinition && prefix != "/std/math") {
-        error_ = "unknown import path: " + importPath;
-        return false;
+        if (addImportDiagnostic("unknown import path: " + importPath)) {
+          return false;
+        }
+        continue;
       }
       continue;
     }
@@ -521,37 +567,59 @@ bool SemanticsValidator::buildDefinitionMaps() {
     auto defIt = defMap_.find(importPath);
     if (defIt == defMap_.end()) {
       if (!isMathBuiltinImport) {
-        error_ = "unknown import path: " + importPath;
-        return false;
+        if (addImportDiagnostic("unknown import path: " + importPath)) {
+          return false;
+        }
       }
       continue;
     }
     if (publicDefinitions_.count(importPath) == 0) {
-      error_ = "import path refers to private definition: " + importPath;
-      return false;
+      if (addImportDiagnostic("import path refers to private definition: " + importPath, defIt->second)) {
+        return false;
+      }
+      continue;
     }
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
     if (remainder.empty()) {
       continue;
     }
     if (isRootBuiltinName(remainder)) {
-      error_ = "import creates name conflict: " + remainder;
-      return false;
+      if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+        return false;
+      }
+      continue;
     }
     if (allowMathBareName(remainder) && isMathBuiltinName(remainder)) {
-      error_ = "import creates name conflict: " + remainder;
-      return false;
+      if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+        return false;
+      }
+      continue;
     }
     const std::string rootPath = "/" + remainder;
-    if (defMap_.count(rootPath) > 0) {
-      error_ = "import creates name conflict: " + remainder;
-      return false;
+    auto rootIt = defMap_.find(rootPath);
+    if (rootIt != defMap_.end()) {
+      if (addImportDiagnostic("import creates name conflict: " + remainder, rootIt->second)) {
+        return false;
+      }
+      continue;
     }
     auto [it, inserted] = importAliases_.emplace(remainder, importPath);
     if (!inserted && it->second != importPath) {
-      error_ = "import creates name conflict: " + remainder;
-      return false;
+      if (addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
+        return false;
+      }
+      continue;
     }
+  }
+
+  if (collectImportDiagnostics && !importDiagnosticRecords.empty()) {
+    diagnosticInfo_->records = std::move(importDiagnosticRecords);
+    if (!diagnosticInfo_->records.empty()) {
+      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
+      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
+      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
+    }
+    return false;
   }
 
   auto resolveStructReturnPath = [&](const std::string &typeName,

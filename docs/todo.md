@@ -18,7 +18,9 @@ Legend:
 - File-level refactoring/splitting roadmap items were removed from active TODOs by request (March 5, 2026).
 - ✓ Add `--collect-diagnostics` parse-stage collection with stable location ordering and multi-record JSON emission in `primec`/`primevm`.
 - ✓ Add semantic-stage multi-error collection for duplicate definitions with stable source ordering in `primec`/`primevm` JSON diagnostics.
-- ○ Extend semantic-stage collection to aggregate additional build-map errors (import conflicts, invalid transforms, return-kind resolution) instead of first-error exit.
+- ✓ Extend semantic-stage collection to aggregate import/build-map errors (unsupported `/std/math`, private import paths, unknown import paths, and import name conflicts) with stable ordering.
+- ○ Extend semantic-stage collection to aggregate invalid-transform build-map errors instead of first-error exit.
+- ○ Extend semantic-stage collection to aggregate return-kind resolution build-map errors instead of first-error exit.
 - ○ Extend semantic-stage collection through definition/execution validation passes to emit independent errors in one run with stable ordering.
 
 **Pipeline & CLI**
