@@ -393,7 +393,7 @@
         if (resultOkCallResult == ir_lowerer::ResultOkMethodCallEmitResult::Error) {
           return false;
         }
-        const auto resultWhyCallResult = ir_lowerer::tryEmitResultWhyCall(
+        const auto resultWhyDispatchResult = ir_lowerer::tryEmitResultWhyDispatchCall(
             expr,
             localsIn,
             defMap,
@@ -421,26 +421,10 @@
             },
             [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
             error);
-        if (resultWhyCallResult == ir_lowerer::ResultWhyMethodCallEmitResult::Emitted) {
+        if (resultWhyDispatchResult == ir_lowerer::ResultWhyDispatchEmitResult::Emitted) {
           return true;
         }
-        if (resultWhyCallResult == ir_lowerer::ResultWhyMethodCallEmitResult::Error) {
-          return false;
-        }
-        const auto fileErrorWhyResult = ir_lowerer::tryEmitFileErrorWhyCall(
-            expr,
-            localsIn,
-            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
-              return emitExpr(valueExpr, localMap);
-            },
-            [&]() { return allocTempLocal(); },
-            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            [&](int32_t errorLocal) { emitFileErrorWhy(errorLocal); },
-            error);
-        if (fileErrorWhyResult == ir_lowerer::FileErrorWhyCallEmitResult::Emitted) {
-          return true;
-        }
-        if (fileErrorWhyResult == ir_lowerer::FileErrorWhyCallEmitResult::Error) {
+        if (resultWhyDispatchResult == ir_lowerer::ResultWhyDispatchEmitResult::Error) {
           return false;
         }
         const auto fileConstructorResult = ir_lowerer::tryEmitFileConstructorCall(

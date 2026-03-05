@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererRuntimeErrorHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -238,6 +239,68 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
              error)
              ? ResultWhyMethodCallEmitResult::Emitted
              : ResultWhyMethodCallEmitResult::Error;
+}
+
+ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    int32_t &onErrorTempCounter,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const std::function<int32_t(const std::string &)> &internString,
+    const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
+    const std::function<bool(int32_t)> &emitFileErrorWhy,
+    std::string &error) {
+  const ResultWhyMethodCallEmitResult resultWhyCallResult = tryEmitResultWhyCall(
+      expr,
+      localsIn,
+      defMap,
+      onErrorTempCounter,
+      resolveResultExprInfo,
+      emitExpr,
+      allocTempLocal,
+      emitInstruction,
+      internString,
+      resolveStructTypeName,
+      getReturnInfo,
+      bindingKind,
+      resolveStructSlotLayout,
+      valueKindFromTypeName,
+      emitInlineDefinitionCall,
+      emitFileErrorWhy,
+      error);
+  if (resultWhyCallResult == ResultWhyMethodCallEmitResult::Emitted) {
+    return ResultWhyDispatchEmitResult::Emitted;
+  }
+  if (resultWhyCallResult == ResultWhyMethodCallEmitResult::Error) {
+    return ResultWhyDispatchEmitResult::Error;
+  }
+
+  const FileErrorWhyCallEmitResult fileErrorWhyResult = tryEmitFileErrorWhyCall(
+      expr,
+      localsIn,
+      emitExpr,
+      allocTempLocal,
+      emitInstruction,
+      [&](int32_t errorLocal) {
+        (void)emitFileErrorWhy(errorLocal);
+      },
+      error);
+  if (fileErrorWhyResult == FileErrorWhyCallEmitResult::Emitted) {
+    return ResultWhyDispatchEmitResult::Emitted;
+  }
+  if (fileErrorWhyResult == FileErrorWhyCallEmitResult::Error) {
+    return ResultWhyDispatchEmitResult::Error;
+  }
+  return ResultWhyDispatchEmitResult::NotHandled;
 }
 
 bool emitResultWhyLocalsFromValueExpr(

@@ -17,9 +17,10 @@ Legend:
 - ✓ Add backend capability matrix tests specifically for call semantics (recursion, tail-call, indirect-call policy).
 - ◐ Split IR lowerer fragment headers into compileable units with explicit interfaces and ownership boundaries.
 - Stop condition: mark this item as `✓` when each complicated fragment below is either (a) split so reusable logic lives in compileable `IrLowerer*.{h,cpp}` helpers with direct unit coverage, or (b) intentionally kept as a cohesive orchestration include with no duplicated logic across fragments.
-- ◐ Refactor complex expression-call lowering in `IrLowererLowerEmitExpr.h` (Result/File/buffer/count/access dispatch paths; phase 1 extracted `Result.ok` method-call emission to compileable `IrLowererResultHelpers.{h,cpp}` with helper-unit coverage; phase 2 extracted `File(...)` constructor dispatch to compileable `IrLowererFileWriteHelpers.{h,cpp}` with helper-unit coverage).
+- ◐ Refactor complex expression-call lowering in `IrLowererLowerEmitExpr.h` (Result/File/buffer/count/access dispatch paths; phase 1 extracted `Result.ok` method-call emission to compileable `IrLowererResultHelpers.{h,cpp}` with helper-unit coverage; phase 2 extracted `File(...)` constructor dispatch to compileable `IrLowererFileWriteHelpers.{h,cpp}` with helper-unit coverage; phase 3 extracted `Result.why`/`FileError.why` dispatch orchestration to compileable `IrLowererResultHelpers.{h,cpp}` with helper-unit coverage).
 - ✓ Continue expression-call refactor by extracting `File(...)` constructor dispatch from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
-- ○ Continue expression-call refactor by extracting `Result.why`/`FileError.why` dispatch orchestration from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
+- ✓ Continue expression-call refactor by extracting `Result.why`/`FileError.why` dispatch orchestration from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
+- ○ Continue expression-call refactor by extracting buffer builtin + count/access dispatch paths from `IrLowererLowerEmitExpr.h` into compileable helpers with direct unit coverage.
 - ◐ Refactor complex loop/control-flow statement lowering in `IrLowererLowerStatementsLoops.h`.
 - ◐ Refactor complex binding/storage statement lowering in `IrLowererLowerStatementsBindings.h`.
 - ◐ Refactor complex statement-call lowering in `IrLowererLowerStatementsCalls.h`.
