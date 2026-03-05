@@ -234,6 +234,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Validate `scripts/run_spinning_cube_demo.sh --port-base` range (`1..65535`) and emit deterministic argument diagnostics (`exit 2`) for out-of-range values.
 - ✓ Add a regression test that locks deterministic diagnostics for `--port-base 0` (lower-bound out-of-range path) in `scripts/run_spinning_cube_demo.sh`.
 - ✓ Add a regression test that locks deterministic `unknown arg` diagnostics when an unknown flag appears first (before any valid options) in `scripts/run_spinning_cube_demo.sh`.
+- ✓ Add a regression test that locks deterministic `unknown arg` diagnostics for a positional token (for example `foo`) passed to `scripts/run_spinning_cube_demo.sh`.
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
