@@ -29,82 +29,32 @@
     }
 
     if (structDef) {
-      StructSlotLayout layout;
-      if (!resolveStructSlotLayout(callee.fullPath, layout)) {
+      if (!ir_lowerer::emitInlineStructDefinitionArguments(
+              callee.fullPath,
+              orderedArgs,
+              callerLocals,
+              requireValue,
+              nextLocal,
+              [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                return resolveStructSlotLayout(structPath, layoutOut);
+              },
+              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                return inferExprKind(candidateExpr, candidateLocals);
+              },
+              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                return inferStructExprPath(candidateExpr, candidateLocals);
+              },
+              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                return emitExpr(candidateExpr, candidateLocals);
+              },
+              [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+                return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
+              },
+              [&]() { return allocTempLocal(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              error)) {
         inlineStack.erase(callee.fullPath);
         return false;
-      }
-      if (static_cast<int32_t>(orderedArgs.size()) != static_cast<int32_t>(layout.fields.size())) {
-        error = "argument count mismatch";
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
-      const int32_t baseLocal = nextLocal;
-      if (requireValue) {
-        nextLocal += layout.totalSlots;
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-      }
-      for (size_t i = 0; i < layout.fields.size(); ++i) {
-        const StructSlotFieldInfo &field = layout.fields[i];
-        const Expr *arg = orderedArgs[i];
-        if (!arg) {
-          error = "argument count mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        if (field.structPath.empty()) {
-          LocalInfo::ValueKind argKind = inferExprKind(*arg, callerLocals);
-          if (argKind == LocalInfo::ValueKind::Unknown && field.valueKind != LocalInfo::ValueKind::Unknown) {
-            argKind = field.valueKind;
-          }
-          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::String) {
-            error = "native backend requires struct field values to be numeric/bool on " + callee.fullPath;
-            inlineStack.erase(callee.fullPath);
-            return false;
-          }
-          if (argKind != field.valueKind) {
-            error = "struct field type mismatch";
-            inlineStack.erase(callee.fullPath);
-            return false;
-          }
-          if (!emitExpr(*arg, callerLocals)) {
-            inlineStack.erase(callee.fullPath);
-            return false;
-          }
-          if (requireValue) {
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset)});
-          } else {
-            function.instructions.push_back({IrOpcode::Pop, 0});
-          }
-          continue;
-        }
-
-        std::string argStruct = inferStructExprPath(*arg, callerLocals);
-        if (argStruct.empty() || argStruct != field.structPath) {
-          error = "struct field type mismatch";
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        if (!emitExpr(*arg, callerLocals)) {
-          inlineStack.erase(callee.fullPath);
-          return false;
-        }
-        if (requireValue) {
-          const int32_t srcPtrLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-          if (!emitStructCopySlots(baseLocal + field.slotOffset, srcPtrLocal, field.slotCount)) {
-            inlineStack.erase(callee.fullPath);
-            return false;
-          }
-        } else {
-          function.instructions.push_back({IrOpcode::Pop, 0});
-        }
-      }
-      if (requireValue) {
-        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
       }
       inlineStack.erase(callee.fullPath);
       return true;

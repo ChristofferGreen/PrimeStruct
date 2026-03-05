@@ -26,6 +26,7 @@
 #include "src/ir_lowerer/IrLowererCountAccessHelpers.h"
 #include "src/ir_lowerer/IrLowererIndexKindHelpers.h"
 #include "src/ir_lowerer/IrLowererInlineCallContextHelpers.h"
+#include "src/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 #include "src/ir_lowerer/IrLowererLowerEffects.h"
 #include "src/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "src/ir_lowerer/IrLowererOperatorArithmeticHelpers.h"

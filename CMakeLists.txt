@@ -31,6 +31,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererIndexKindHelpers.cpp
   src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp
+  src/ir_lowerer/IrLowererInlineStructArgHelpers.cpp
   src/ir_lowerer/IrLowererLowerEffects.cpp
   src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp

@@ -6806,6 +6806,163 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(loweredCallTargets.empty());
 }
 
+TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument flow") {
+  primec::Expr scalarArg;
+  scalarArg.kind = primec::Expr::Kind::Name;
+  scalarArg.name = "x";
+  primec::Expr nestedArg;
+  nestedArg.kind = primec::Expr::Kind::Name;
+  nestedArg.name = "nested";
+
+  const std::vector<const primec::Expr *> orderedArgs = {&scalarArg, &nestedArg};
+  primec::ir_lowerer::LocalMap callerLocals;
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  layout.structPath = "/pkg/Vec";
+  layout.totalSlots = 4;
+  primec::ir_lowerer::StructSlotFieldInfo scalarField;
+  scalarField.name = "x";
+  scalarField.slotOffset = 1;
+  scalarField.slotCount = 1;
+  scalarField.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  layout.fields.push_back(scalarField);
+  primec::ir_lowerer::StructSlotFieldInfo nestedField;
+  nestedField.name = "nested";
+  nestedField.slotOffset = 2;
+  nestedField.slotCount = 2;
+  nestedField.structPath = "/pkg/Nested";
+  layout.fields.push_back(nestedField);
+
+  int32_t nextLocal = 10;
+  int32_t nextTempLocal = 50;
+  std::vector<primec::IrInstruction> instructions;
+  int emitExprCalls = 0;
+  int copyCalls = 0;
+  int32_t copiedDest = -1;
+  int32_t copiedSrc = -1;
+  int32_t copiedCount = -1;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+      "/pkg/Vec",
+      orderedArgs,
+      callerLocals,
+      true,
+      nextLocal,
+      [&](const std::string &path, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        if (path != "/pkg/Vec") {
+          return false;
+        }
+        layoutOut = layout;
+        return true;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.name == "x") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.name == "nested") {
+          return std::string("/pkg/Nested");
+        }
+        return std::string();
+      },
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitExprCalls;
+        return true;
+      },
+      [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+        ++copyCalls;
+        copiedDest = destBaseLocal;
+        copiedSrc = srcPtrLocal;
+        copiedCount = slotCount;
+        return true;
+      },
+      [&]() { return nextTempLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error));
+  CHECK(error.empty());
+  CHECK(nextLocal == 14);
+  CHECK(emitExprCalls == 2);
+  CHECK(copyCalls == 1);
+  CHECK(copiedDest == 12);
+  CHECK(copiedSrc == 50);
+  CHECK(copiedCount == 2);
+  REQUIRE(instructions.size() == 5u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 3u);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 10u);
+  CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[2].imm == 11u);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 50u);
+  CHECK(instructions[4].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[4].imm == 10u);
+}
+
+TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
+  primec::Expr scalarArg;
+  scalarArg.kind = primec::Expr::Kind::Name;
+  scalarArg.name = "bad";
+  const std::vector<const primec::Expr *> orderedArgs = {&scalarArg};
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  layout.structPath = "/pkg/Vec";
+  layout.totalSlots = 1;
+  primec::ir_lowerer::StructSlotFieldInfo scalarField;
+  scalarField.name = "x";
+  scalarField.slotOffset = 0;
+  scalarField.slotCount = 1;
+  scalarField.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  layout.fields.push_back(scalarField);
+
+  int32_t nextLocal = 3;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+      "/pkg/Vec",
+      {},
+      {},
+      false,
+      nextLocal,
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        layoutOut = layout;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [](primec::IrOpcode, uint64_t) {},
+      error));
+  CHECK(error == "argument count mismatch");
+
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+      "/pkg/Vec",
+      orderedArgs,
+      {},
+      false,
+      nextLocal,
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        layoutOut = layout;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::String;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [](primec::IrOpcode, uint64_t) {},
+      error));
+  CHECK(error == "native backend requires struct field values to be numeric/bool on /pkg/Vec");
+}
+
 TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int32) == ValueKind::Int32);

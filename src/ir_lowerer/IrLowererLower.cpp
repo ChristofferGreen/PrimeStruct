@@ -11,6 +11,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererInlineCallContextHelpers.h"
+#include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererOnErrorHelpers.h"
