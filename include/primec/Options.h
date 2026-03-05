@@ -14,6 +14,7 @@ struct Options {
   bool emitDiagnostics = false;
   bool debugJson = false;
   bool debugDap = false;
+  std::string debugTracePath;
   DebugJsonSnapshotMode debugJsonSnapshotMode = DebugJsonSnapshotMode::None;
   bool collectDiagnostics = false;
   std::string inputPath;

@@ -240,6 +240,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primevmErr.find("[--ir-inline]") != std::string::npos);
   CHECK(primevmErr.find("[--debug-json]") != std::string::npos);
   CHECK(primevmErr.find("[--debug-json-snapshots [none|stop|all]]") != std::string::npos);
+  CHECK(primevmErr.find("[--debug-trace <path>]") != std::string::npos);
   CHECK(primevmErr.find("[--debug-dap]") != std::string::npos);
   CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
 }
@@ -497,6 +498,112 @@ TEST_CASE("primec rejects debug-json option") {
   CHECK(runCommand(dapCmd) == 2);
   const std::string dapDiagnostics = readFile(dapErrPath);
   CHECK(dapDiagnostics.find("unknown option: --debug-dap") != std::string::npos);
+
+  const std::string traceErrPath =
+      (std::filesystem::temp_directory_path() / "primec_reject_debug_trace_err.txt").string();
+  const std::string traceCmd = "./primec --debug-trace=trace.ndjson 2> " + quoteShellArg(traceErrPath);
+  CHECK(runCommand(traceCmd) == 2);
+  const std::string traceDiagnostics = readFile(traceErrPath);
+  CHECK(traceDiagnostics.find("unknown option: --debug-trace=trace.ndjson") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-trace requires path and mode exclusivity") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_trace_errors.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primevm_debug_trace_errors.err").string();
+
+  const std::string missingPathCmd = "./primevm " + quoteShellArg(srcPath) + " --debug-trace 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(missingPathCmd) == 2);
+  std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("--debug-trace requires an output path") != std::string::npos);
+
+  const std::string conflictJsonCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --debug-trace=trace.ndjson --debug-json 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(conflictJsonCmd) == 2);
+  diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("--debug-json cannot be combined with --debug-trace") != std::string::npos);
+
+  const std::string conflictDapCmd =
+      "./primevm " + quoteShellArg(srcPath) + " --debug-trace=trace.ndjson --debug-dap 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(conflictDapCmd) == 2);
+  diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("--debug-dap cannot be combined with --debug-trace") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-trace writes deterministic complete event logs") {
+  const std::string source = R"(
+[return<int>]
+double() {
+  return(plus(4i32, 4i32))
+}
+
+[return<int>]
+main() {
+  return(plus(double(), 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_trace_deterministic.prime", source);
+  const std::string tracePathA =
+      (std::filesystem::temp_directory_path() / "primevm_debug_trace_deterministic_a.ndjson").string();
+  const std::string tracePathB =
+      (std::filesystem::temp_directory_path() / "primevm_debug_trace_deterministic_b.ndjson").string();
+
+  const std::string cmdA =
+      "./primevm " + quoteShellArg(srcPath) + " --entry /main --debug-trace " + quoteShellArg(tracePathA);
+  const std::string cmdB =
+      "./primevm " + quoteShellArg(srcPath) + " --entry /main --debug-trace " + quoteShellArg(tracePathB);
+  CHECK(runCommand(cmdA) == 9);
+  CHECK(runCommand(cmdB) == 9);
+
+  const std::string traceA = readFile(tracePathA);
+  const std::string traceB = readFile(tracePathB);
+  CHECK(traceA == traceB);
+  CHECK(traceA.find("\"event\":\"session_start\"") != std::string::npos);
+  CHECK(traceA.find("\"event\":\"before_instruction\"") != std::string::npos);
+  CHECK(traceA.find("\"event\":\"after_instruction\"") != std::string::npos);
+  CHECK(traceA.find("\"event\":\"call_push\"") != std::string::npos);
+  CHECK(traceA.find("\"event\":\"call_pop\"") != std::string::npos);
+  CHECK(traceA.find("\"event\":\"stop\"") != std::string::npos);
+  CHECK(traceA.find("\"reason\":\"Exit\"") != std::string::npos);
+  CHECK(traceA.find("\"snapshot_payload\":{") != std::string::npos);
+  CHECK(traceA.find("\"frame_locals\":[") != std::string::npos);
+
+  std::vector<std::string> lines;
+  std::stringstream stream(traceA);
+  std::string line;
+  while (std::getline(stream, line)) {
+    if (!line.empty()) {
+      lines.push_back(line);
+    }
+  }
+  REQUIRE(lines.size() >= 6);
+
+  int64_t lastSequence = -1;
+  size_t observedSequenceCount = 0;
+  for (const std::string &entry : lines) {
+    const size_t key = entry.find("\"sequence\":");
+    if (key == std::string::npos) {
+      continue;
+    }
+    const size_t start = key + std::string("\"sequence\":").size();
+    size_t end = start;
+    while (end < entry.size() && std::isdigit(static_cast<unsigned char>(entry[end])) != 0) {
+      ++end;
+    }
+    REQUIRE(end > start);
+    const int64_t sequence = std::stoll(entry.substr(start, end - start));
+    if (lastSequence >= 0) {
+      CHECK(sequence == lastSequence + 1);
+    }
+    lastSequence = sequence;
+    ++observedSequenceCount;
+  }
+  CHECK(observedSequenceCount > 0);
 }
 
 TEST_CASE("primevm debug-dap rejects incompatible debug-json mode") {

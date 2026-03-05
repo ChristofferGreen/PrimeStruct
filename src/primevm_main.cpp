@@ -10,6 +10,7 @@
 #include "primec/VmDebugDap.h"
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -174,6 +175,22 @@ void emitDebugJsonLine(const std::string &line) {
   std::cout << line << "\n";
 }
 
+bool writeTraceLines(const std::string &path, const std::vector<std::string> &lines, std::string &error) {
+  std::ofstream out(path, std::ios::binary | std::ios::trunc);
+  if (!out.good()) {
+    error = "failed to open debug trace output: " + path;
+    return false;
+  }
+  for (const std::string &line : lines) {
+    out << line << "\n";
+    if (!out.good()) {
+      error = "failed to write debug trace output: " + path;
+      return false;
+    }
+  }
+  return true;
+}
+
 int emitFailure(const primec::Options &options,
                 primec::DiagnosticCode code,
                 const std::string &plainPrefix,
@@ -250,7 +267,8 @@ int main(int argc, char **argv) {
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
-                   "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--debug-dap] [--collect-diagnostics] "
+                   "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--debug-trace <path>] [--debug-dap] "
+                   "[--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
     }
@@ -386,6 +404,131 @@ int main(int argc, char **argv) {
                          {"backend: vm", "stage: debug-dap"});
     }
     return 0;
+  }
+  if (!options.debugTracePath.empty()) {
+    primec::VmDebugSession debugSession;
+    if (!debugSession.start(ir, error, args)) {
+      return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
+    }
+
+    DebugJsonEmitContext emitContext;
+    emitContext.session = &debugSession;
+    emitContext.snapshotMode = primec::DebugJsonSnapshotMode::All;
+    std::vector<std::string> traceLines;
+
+    std::string sessionStartLine =
+        std::string("{\"version\":1,\"event\":\"session_start\",\"snapshot\":") + encodeDebugSnapshotJson(debugSession.snapshot());
+    appendDebugSnapshotPayloadField(sessionStartLine, &emitContext, false);
+    sessionStartLine += "}";
+    traceLines.push_back(std::move(sessionStartLine));
+
+    struct DebugTraceEmitContext {
+      primec::VmDebugSession *session = nullptr;
+      std::vector<std::string> *lines = nullptr;
+    };
+    DebugTraceEmitContext traceContext;
+    traceContext.session = &debugSession;
+    traceContext.lines = &traceLines;
+
+    primec::VmDebugHooks hooks;
+    hooks.userData = &traceContext;
+    hooks.beforeInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      auto *context = static_cast<DebugTraceEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"before_instruction\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                         std::to_string(event.immediate) + ",\"snapshot_payload\":" +
+                         encodeDebugSnapshotPayloadJson(context->session->snapshotPayload());
+      line += "}";
+      context->lines->push_back(std::move(line));
+    };
+    hooks.afterInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      auto *context = static_cast<DebugTraceEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"after_instruction\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                         std::to_string(event.immediate) + ",\"snapshot_payload\":" +
+                         encodeDebugSnapshotPayloadJson(context->session->snapshotPayload());
+      line += "}";
+      context->lines->push_back(std::move(line));
+    };
+    hooks.callPush = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      auto *context = static_cast<DebugTraceEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"call_push\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"function_index\":" + std::to_string(event.functionIndex) +
+                         ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false") +
+                         ",\"snapshot_payload\":" + encodeDebugSnapshotPayloadJson(context->session->snapshotPayload());
+      line += "}";
+      context->lines->push_back(std::move(line));
+    };
+    hooks.callPop = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      auto *context = static_cast<DebugTraceEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"call_pop\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"function_index\":" + std::to_string(event.functionIndex) +
+                         ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false") +
+                         ",\"snapshot_payload\":" + encodeDebugSnapshotPayloadJson(context->session->snapshotPayload());
+      line += "}";
+      context->lines->push_back(std::move(line));
+    };
+    hooks.fault = [](const primec::VmDebugFaultHookEvent &event, void *userData) {
+      auto *context = static_cast<DebugTraceEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"fault\",\"sequence\":") + std::to_string(event.sequence) +
+                         ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) + ",\"opcode\":" +
+                         std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                         std::to_string(event.immediate) + ",\"message\":\"" + jsonEscape(event.message) +
+                         "\",\"snapshot_payload\":" + encodeDebugSnapshotPayloadJson(context->session->snapshotPayload());
+      line += "}";
+      context->lines->push_back(std::move(line));
+    };
+    debugSession.setHooks(hooks);
+
+    bool sawFault = false;
+    int exitCode = 0;
+    while (true) {
+      primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+      error.clear();
+      const bool ok = debugSession.continueExecution(stopReason, error);
+      const primec::VmDebugSnapshot stopSnapshot = debugSession.snapshot();
+      std::string stopLine = std::string("{\"version\":1,\"event\":\"stop\",\"reason\":\"") +
+                             std::string(primec::vmDebugStopReasonName(stopReason)) + "\",\"snapshot\":" +
+                             encodeDebugSnapshotJson(stopSnapshot) + ",\"snapshot_payload\":" +
+                             encodeDebugSnapshotPayloadJson(debugSession.snapshotPayload());
+      if (!ok && !error.empty()) {
+        stopLine += ",\"message\":\"" + jsonEscape(error) + "\"";
+      }
+      stopLine += "}";
+      traceLines.push_back(std::move(stopLine));
+
+      if (!ok) {
+        sawFault = true;
+        break;
+      }
+      if (stopReason == primec::VmDebugStopReason::Exit) {
+        exitCode = static_cast<int>(static_cast<int32_t>(stopSnapshot.result));
+        break;
+      }
+    }
+
+    std::string traceError;
+    if (!writeTraceLines(options.debugTracePath, traceLines, traceError)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::RuntimeError,
+                         "VM error: ",
+                         traceError,
+                         3,
+                         {"backend: vm", "stage: debug-trace"});
+    }
+    if (sawFault) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::RuntimeError,
+                         "VM error: ",
+                         error,
+                         3,
+                         {"backend: vm", "stage: debug-trace"});
+    }
+    return exitCode;
   }
   if (options.debugJson) {
     primec::VmDebugSession debugSession;

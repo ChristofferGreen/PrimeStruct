@@ -410,6 +410,17 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.emitDiagnostics = true;
     } else if (!isPrimecMode && arg == "--debug-json") {
       out.debugJson = true;
+    } else if (!isPrimecMode && arg == "--debug-trace" && i + 1 < argc) {
+      out.debugTracePath = argv[++i];
+    } else if (!isPrimecMode && arg == "--debug-trace") {
+      error = "--debug-trace requires an output path";
+      return false;
+    } else if (!isPrimecMode && arg.rfind("--debug-trace=", 0) == 0) {
+      out.debugTracePath = arg.substr(std::string("--debug-trace=").size());
+      if (out.debugTracePath.empty()) {
+        error = "--debug-trace requires an output path";
+        return false;
+      }
     } else if (!isPrimecMode && arg == "--debug-dap") {
       out.debugDap = true;
     } else if (!isPrimecMode && arg == "--debug-json-snapshots") {
@@ -546,6 +557,14 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
   if (!isPrimecMode) {
     if (out.debugDap && out.debugJson) {
       error = "--debug-dap cannot be combined with --debug-json";
+      return false;
+    }
+    if (out.debugDap && !out.debugTracePath.empty()) {
+      error = "--debug-dap cannot be combined with --debug-trace";
+      return false;
+    }
+    if (out.debugJson && !out.debugTracePath.empty()) {
+      error = "--debug-json cannot be combined with --debug-trace";
       return false;
     }
     if (out.debugJsonSnapshotMode != DebugJsonSnapshotMode::None && !out.debugJson) {

@@ -125,6 +125,7 @@ module {
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
   - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).
   - `--debug-json-snapshots=none|stop|all` adds on-demand `snapshot_payload` fields (`instruction_pointer`, `call_stack`, `frame_locals`, `current_frame_locals`, `operand_stack`) to debug-json events.
+  - `--debug-trace <path>` writes a deterministic VM event log (NDJSON) to the given file path using the same event schema family as debug-json (`session_start`, hook events, and `stop`).
   - `--debug-dap` runs a stdio DAP endpoint using `Content-Length` framing and routes debugger requests to `VmDebugAdapter`.
 - `--ir-inline`
   - Enables the optional IR inlining optimization pass after IR validation and before VM/native/IR output.
@@ -1238,6 +1239,7 @@ module {
 - For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is deterministic and replayable.
 - `primevm --debug-json` emits one JSON object per line (`version`, `event`, and event-specific fields). Hook records include `sequence` and `snapshot`; stop records include `reason` and a terminal snapshot.
 - `primevm --debug-json-snapshots=stop|all` adds `snapshot_payload` on demand; `stop` limits payloads to `stop` events, while `all` includes payloads on session/hook/stop events.
+- `primevm --debug-trace <path>` records deterministic VM events to a file (NDJSON) including hook `sequence` ordering, snapshots, and snapshot payloads; repeated runs over identical inputs must produce byte-identical trace logs.
 
 ### VM IR Breakpoints
 - `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`, `removeBreakpoint`, and `clearBreakpoints`.
