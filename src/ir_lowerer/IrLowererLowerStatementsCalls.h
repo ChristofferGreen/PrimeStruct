@@ -202,7 +202,7 @@
       instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId);
       uint32_t sourceLine = fallbackSourceLine;
       uint32_t sourceColumn = fallbackSourceColumn;
-      IrSourceMapProvenance sourceProvenance = IrSourceMapProvenance::CanonicalAst;
+      IrSourceMapProvenance sourceProvenance = IrSourceMapProvenance::SyntheticIr;
       if (sourceRanges != nullptr) {
         const InstructionSourceRange *bestRange = nullptr;
         for (const auto &range : *sourceRanges) {

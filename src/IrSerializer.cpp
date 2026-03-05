@@ -420,6 +420,10 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       error = "truncated IR instruction source map entry";
       return false;
     }
+    if (provenance > static_cast<uint8_t>(IrSourceMapProvenance::SyntheticIr)) {
+      error = "unsupported IR instruction source map provenance";
+      return false;
+    }
     entry.provenance = static_cast<IrSourceMapProvenance>(provenance);
     out.instructionSourceMap.push_back(entry);
   }

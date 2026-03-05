@@ -644,7 +644,7 @@ TEST_CASE("ir serializes instruction source map metadata") {
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 12});
   module.functions.push_back(fn);
   module.instructionSourceMap.push_back({11u, 4u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
-  module.instructionSourceMap.push_back({12u, 5u, 3u, primec::IrSourceMapProvenance::Unknown});
+  module.instructionSourceMap.push_back({12u, 5u, 3u, primec::IrSourceMapProvenance::SyntheticIr});
 
   std::vector<uint8_t> data;
   std::string error;
@@ -662,7 +662,7 @@ TEST_CASE("ir serializes instruction source map metadata") {
   CHECK(decoded.instructionSourceMap[1].debugId == 12u);
   CHECK(decoded.instructionSourceMap[1].line == 5u);
   CHECK(decoded.instructionSourceMap[1].column == 3u);
-  CHECK(decoded.instructionSourceMap[1].provenance == primec::IrSourceMapProvenance::Unknown);
+  CHECK(decoded.instructionSourceMap[1].provenance == primec::IrSourceMapProvenance::SyntheticIr);
 }
 
 TEST_CASE("ir serializes local debug slot metadata") {
@@ -783,6 +783,28 @@ TEST_CASE("ir deserialization rejects malformed instruction source map metadata"
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));
   CHECK(error == "truncated IR instruction source map entry");
+}
+
+TEST_CASE("ir deserialization rejects unsupported instruction source map provenance") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1, 9});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 10});
+  module.functions.push_back(fn);
+  module.instructionSourceMap.push_back({9u, 3u, 1u, primec::IrSourceMapProvenance::CanonicalAst});
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+  REQUIRE(!data.empty());
+  data.back() = 0xFF;
+
+  primec::IrModule decoded;
+  CHECK_FALSE(primec::deserializeIr(data, decoded, error));
+  CHECK(error == "unsupported IR instruction source map provenance");
 }
 
 TEST_CASE("ir deserialization rejects unsupported version") {
@@ -926,11 +948,15 @@ main() {
 
   size_t totalInstructionCount = 0;
   std::unordered_map<uint32_t, const primec::IrInstructionSourceMapEntry *> sourceMapByDebugId;
+  bool sawCanonicalProvenance = false;
   for (const auto &entry : firstModule.instructionSourceMap) {
     CHECK(entry.debugId > 0u);
-    CHECK(entry.provenance == primec::IrSourceMapProvenance::CanonicalAst);
+    if (entry.provenance == primec::IrSourceMapProvenance::CanonicalAst) {
+      sawCanonicalProvenance = true;
+    }
     CHECK(sourceMapByDebugId.emplace(entry.debugId, &entry).second);
   }
+  CHECK(sawCanonicalProvenance);
   for (const auto &fn : firstModule.functions) {
     totalInstructionCount += fn.instructions.size();
   }
@@ -983,6 +1009,48 @@ main() {
     CHECK(firstEntry.column == secondEntry.column);
     CHECK(firstEntry.provenance == secondEntry.provenance);
   }
+}
+
+TEST_CASE("ir lowerer marks implicit return source map provenance as synthetic") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  print_line("hello"utf8)
+}
+)";
+
+  primec::Program program;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, error, {"io_out"}));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, "/main", {"io_out"}, {"io_out"}, module, error));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  REQUIRE(!module.functions[0].instructions.empty());
+  CHECK(module.functions[0].instructions.back().op == primec::IrOpcode::ReturnVoid);
+
+  std::unordered_map<uint32_t, const primec::IrInstructionSourceMapEntry *> sourceMapByDebugId;
+  bool sawCanonical = false;
+  bool sawSynthetic = false;
+  for (const auto &entry : module.instructionSourceMap) {
+    sourceMapByDebugId.emplace(entry.debugId, &entry);
+    if (entry.provenance == primec::IrSourceMapProvenance::CanonicalAst) {
+      sawCanonical = true;
+    }
+    if (entry.provenance == primec::IrSourceMapProvenance::SyntheticIr) {
+      sawSynthetic = true;
+    }
+  }
+  CHECK(sawCanonical);
+  CHECK(sawSynthetic);
+
+  const uint32_t returnDebugId = module.functions[0].instructions.back().debugId;
+  auto sourceIt = sourceMapByDebugId.find(returnDebugId);
+  REQUIRE(sourceIt != sourceMapByDebugId.end());
+  CHECK(sourceIt->second->provenance == primec::IrSourceMapProvenance::SyntheticIr);
 }
 
 TEST_CASE("ir leaves tail metadata unset for builtin return") {

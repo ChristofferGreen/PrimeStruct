@@ -210,6 +210,7 @@ struct IrLocalDebugSlot {
 enum class IrSourceMapProvenance : uint8_t {
   Unknown = 0,
   CanonicalAst = 1,
+  SyntheticIr = 2,
 };
 
 struct IrInstructionSourceMapEntry {
