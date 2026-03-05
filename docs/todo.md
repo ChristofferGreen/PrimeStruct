@@ -211,7 +211,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add native desktop host target for the same sample (shared simulation logic + native host glue). Testing: native build-and-run integration test on supported CI runners.
 - ✓ Add Apple Metal shader/output path for macOS (`metal-osx` profile) with compile-time gating. Testing: macOS shader compile tests (`xcrun metal`/`metallib`) and profile rejection tests.
 - ✓ Add minimal macOS Metal host glue for drawing the cube using generated shader artifacts. Testing: macOS runtime smoke test with frame-render assertion.
-- ○ Implement deterministic fixed-step simulation loop shared by browser/native/Metal hosts. Testing: deterministic tick-state tests with golden angle/transform snapshots.
+- ✓ Implement deterministic fixed-step simulation loop shared by browser/native/Metal hosts. Testing: deterministic tick-state tests with golden angle/transform snapshots.
 - ○ Add transform/rotation math parity tests across VM/native/Wasm/Metal-hosted paths. Testing: backend parity corpus with tolerance-checked numeric outputs.
 - ○ Add integration coverage that builds all sample targets and validates generated artifacts (`.wasm`, native binary, shader outputs, loader assets). Testing: artifact existence + hash/schema checks in CI.
 - ○ Add optional visual smoke checks for sample startup (headless where possible, interactive otherwise). Testing: automated startup checks with explicit skip rules per runner capability.

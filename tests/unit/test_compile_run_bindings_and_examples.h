@@ -391,6 +391,54 @@ TEST_CASE("spinning cube native host target builds and runs") {
   CHECK(runCommand(runHostCmd) == 0);
 }
 
+TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
+  std::filesystem::path webSampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  if (!std::filesystem::exists(webSampleDir)) {
+    webSampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(webSampleDir));
+
+  const std::filesystem::path cubePath = webSampleDir / "cube.prime";
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  constexpr int GoldenSnapshot = 45;
+
+  const std::string vmSnapshotCmd =
+      "./primec --emit=vm " + quoteShellArg(cubePath.string()) + " --entry /cubeFixedStepSnapshot120";
+  CHECK(runCommand(vmSnapshotCmd) == GoldenSnapshot);
+
+  const std::string vmSnapshotChunkedCmd =
+      "./primec --emit=vm " + quoteShellArg(cubePath.string()) + " --entry /cubeFixedStepSnapshot120Chunked";
+  CHECK(runCommand(vmSnapshotChunkedCmd) == GoldenSnapshot);
+
+  const std::filesystem::path nativeSnapshotPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_fixed_step_snapshot_native";
+  const std::string compileNativeSnapshotCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(nativeSnapshotPath.string()) + " --entry /cubeFixedStepSnapshot120";
+  CHECK(runCommand(compileNativeSnapshotCmd) == 0);
+  CHECK(std::filesystem::exists(nativeSnapshotPath));
+  CHECK(runCommand(quoteShellArg(nativeSnapshotPath.string())) == GoldenSnapshot);
+
+  const std::filesystem::path nativeSnapshotChunkedPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_fixed_step_snapshot_chunked_native";
+  const std::string compileNativeSnapshotChunkedCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(nativeSnapshotChunkedPath.string()) + " --entry /cubeFixedStepSnapshot120Chunked";
+  CHECK(runCommand(compileNativeSnapshotChunkedCmd) == 0);
+  CHECK(std::filesystem::exists(nativeSnapshotChunkedPath));
+  CHECK(runCommand(quoteShellArg(nativeSnapshotChunkedPath.string())) == GoldenSnapshot);
+
+  const std::filesystem::path wasmSnapshotPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_fixed_step_snapshot.wasm";
+  const std::string compileWasmSnapshotCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmSnapshotPath.string()) + " --entry /cubeFixedStepSnapshot120";
+  CHECK(runCommand(compileWasmSnapshotCmd) == 0);
+  CHECK(std::filesystem::exists(wasmSnapshotPath));
+}
+
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";

@@ -21,7 +21,11 @@ This example is a milestone target for cross-platform backend work.
 - `cube.prime` now provides the shared simulation/data contract used by all hosts:
   - `CubeMeshLayout`: host-independent mesh/uniform stride + count metadata.
   - `CubeSimulationState`: deterministic tick + angle state.
-  - `cubeInit`, `cubeTick`, and `wrapAngle`: shared fixed-step update helpers.
+  - `cubeInit`, `cubeTick`, and `wrapAngle`: shared simulation helpers.
+  - `cubeAdvanceFixed`: deterministic fixed-step loop primitive with
+    accumulator + max-step guard.
+  - `cubeFixedStepSnapshot120` and `cubeFixedStepSnapshot120Chunked`: golden
+    deterministic tick-state snapshot entries used by smoke tests.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.

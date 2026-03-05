@@ -12,7 +12,16 @@ CubeSimulationState() {
   [i32] tick{0i32}
   [f32] angleRadians{0.0f32}
   [f32] angularVelocity{1.0471976f32}
+  [f32] axisX{1.0f32}
+  [f32] axisY{0.0f32}
   [CubeMeshLayout] mesh{CubeMeshLayout()}
+}
+
+[struct]
+CubeStepResult() {
+  [CubeSimulationState] state{CubeSimulationState()}
+  [f32] remainingSeconds{0.0f32}
+  [i32] stepCount{0i32}
 }
 
 [return<CubeMeshLayout>]
@@ -26,6 +35,8 @@ cubeInit() {
     [tick] 0i32,
     [angleRadians] 0.0f32,
     [angularVelocity] 1.0471976f32,
+    [axisX] 1.0f32,
+    [axisY] 0.0f32,
     [mesh] cubeMeshLayoutV1()
   ))
 }
@@ -47,12 +58,122 @@ wrapAngle([f32] angle) {
 cubeTick([CubeSimulationState] state, [f32] deltaSeconds) {
   [i32] nextTick{plus(state.tick, 1i32)}
   [f32] nextAngle{wrapAngle(plus(state.angleRadians, multiply(state.angularVelocity, deltaSeconds)))}
+
+  [f32] nextAxisX{plus(multiply(state.axisX, 0.9998477f32), multiply(state.axisY, -0.0174524f32))}
+  [f32] nextAxisY{plus(multiply(state.axisX, 0.0174524f32), multiply(state.axisY, 0.9998477f32))}
+
   return(CubeSimulationState(
     [tick] nextTick,
     [angleRadians] nextAngle,
     [angularVelocity] state.angularVelocity,
+    [axisX] nextAxisX,
+    [axisY] nextAxisY,
     [mesh] state.mesh
   ))
+}
+
+[return<CubeStepResult>]
+cubeAdvanceFixed([CubeSimulationState] state,
+                 [f32] accumulatedSeconds,
+                 [f32] fixedDeltaSeconds,
+                 [i32] maxSteps) {
+  [CubeSimulationState mut] current{state}
+  [f32 mut] remaining{accumulatedSeconds}
+  [i32 mut] steps{0i32}
+
+  if(less_equal(fixedDeltaSeconds, 0.0f32)) {
+    return(CubeStepResult(
+      [state] current,
+      [remainingSeconds] remaining,
+      [stepCount] steps
+    ))
+  }
+
+  if(less_than(maxSteps, 1i32)) {
+    return(CubeStepResult(
+      [state] current,
+      [remainingSeconds] remaining,
+      [stepCount] steps
+    ))
+  }
+
+  while(greater_equal(remaining, fixedDeltaSeconds)) {
+    if(greater_equal(steps, maxSteps)) {
+      return(CubeStepResult(
+        [state] current,
+        [remainingSeconds] remaining,
+        [stepCount] steps
+      ))
+    }
+
+    current = cubeTick(current, fixedDeltaSeconds)
+    remaining = minus(remaining, fixedDeltaSeconds)
+    steps = plus(steps, 1i32)
+  }
+
+  return(CubeStepResult(
+    [state] current,
+    [remainingSeconds] remaining,
+    [stepCount] steps
+  ))
+}
+
+[return<CubeSimulationState>]
+cubeRunFixedTicks([i32] ticks) {
+  [CubeSimulationState mut] state{cubeInit()}
+  [f32] fixedDelta{0.016666667f32}
+  [i32 mut] i{0i32}
+
+  while(less_than(i, ticks)) {
+    [CubeStepResult] step{cubeAdvanceFixed(state, fixedDelta, fixedDelta, 1i32)}
+    state = step.state
+    i = plus(i, 1i32)
+  }
+
+  return(state)
+}
+
+[return<CubeSimulationState>]
+cubeRunFixedTicksChunked([i32] ticks) {
+  [CubeSimulationState mut] state{cubeInit()}
+  [f32] fixedDelta{0.016666667f32}
+  [f32 mut] accumulator{0.0f32}
+  [i32 mut] i{0i32}
+
+  while(less_than(i, ticks)) {
+    accumulator = plus(accumulator, 0.010000000f32)
+    [CubeStepResult] stepA{cubeAdvanceFixed(state, accumulator, fixedDelta, 4i32)}
+    state = stepA.state
+    accumulator = stepA.remainingSeconds
+
+    accumulator = plus(accumulator, 0.006666667f32)
+    [CubeStepResult] stepB{cubeAdvanceFixed(state, accumulator, fixedDelta, 4i32)}
+    state = stepB.state
+    accumulator = stepB.remainingSeconds
+
+    i = plus(i, 1i32)
+  }
+
+  return(state)
+}
+
+[return<int>]
+cubeFixedStepSnapshotCode([CubeSimulationState] state) {
+  [i32] tickBucket{convert<int>(multiply(convert<f32>(state.tick), 0.1f32))}
+  [i32] angleDeci{convert<int>(multiply(state.angleRadians, 10.0f32))}
+  [i32] axisXShiftedDeci{convert<int>(multiply(plus(state.axisX, 1.0f32), 10.0f32))}
+  [i32] axisYDeci{convert<int>(multiply(state.axisY, 10.0f32))}
+  return(plus(plus(tickBucket, angleDeci), plus(axisXShiftedDeci, axisYDeci)))
+}
+
+[return<int>]
+cubeFixedStepSnapshot120() {
+  return(cubeFixedStepSnapshotCode(cubeRunFixedTicks(120i32)))
+}
+
+[return<int>]
+cubeFixedStepSnapshot120Chunked() {
+  return(cubeFixedStepSnapshotCode(cubeRunFixedTicksChunked(120i32)))
 }
 
 [return<int>]
