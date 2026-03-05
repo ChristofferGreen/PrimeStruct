@@ -10,6 +10,32 @@
   int32_t onErrorTempCounter = 0;
   std::vector<std::string> stringTable;
   std::unordered_set<std::string> loweredCallTargets;
+  struct InstructionSourceRange {
+    size_t beginIndex = 0;
+    size_t endIndex = 0;
+    uint32_t line = 0;
+    uint32_t column = 0;
+    IrSourceMapProvenance provenance = IrSourceMapProvenance::CanonicalAst;
+  };
+  std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
+  auto appendInstructionSourceRange = [&](const std::string &functionName,
+                                          const Expr &expr,
+                                          size_t beginIndex,
+                                          size_t endIndex) {
+    if (functionName.empty() || endIndex <= beginIndex) {
+      return;
+    }
+    InstructionSourceRange range;
+    range.beginIndex = beginIndex;
+    range.endIndex = endIndex;
+    if (expr.sourceLine > 0) {
+      range.line = static_cast<uint32_t>(expr.sourceLine);
+    }
+    if (expr.sourceColumn > 0) {
+      range.column = static_cast<uint32_t>(expr.sourceColumn);
+    }
+    instructionSourceRangesByFunction[functionName].push_back(range);
+  };
   std::vector<std::vector<int32_t>> fileScopeStack;
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;

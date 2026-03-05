@@ -937,23 +937,42 @@ main() {
   CHECK(firstModule.instructionSourceMap.size() == totalInstructionCount);
 
   std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> definitionSpanByPath;
+  std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> firstStatementSpanByPath;
   for (const auto &def : firstProgram.definitions) {
     const uint32_t line = def.sourceLine > 0 ? static_cast<uint32_t>(def.sourceLine) : 0u;
     const uint32_t column = def.sourceColumn > 0 ? static_cast<uint32_t>(def.sourceColumn) : 0u;
     definitionSpanByPath.emplace(def.fullPath, std::make_pair(line, column));
+    if (!def.statements.empty()) {
+      const uint32_t statementLine = def.statements.front().sourceLine > 0 ? static_cast<uint32_t>(def.statements.front().sourceLine) : 0u;
+      const uint32_t statementColumn =
+          def.statements.front().sourceColumn > 0 ? static_cast<uint32_t>(def.statements.front().sourceColumn) : 0u;
+      firstStatementSpanByPath.emplace(def.fullPath, std::make_pair(statementLine, statementColumn));
+    }
   }
 
+  std::unordered_set<uint32_t> mainLines;
+  bool sawMainInstructionOutsideDefinitionLine = false;
+  bool sawInlinedHelperStatementLine = false;
+  const auto mainDefSpan = definitionSpanByPath.find("/main");
+  const auto helperStatementSpan = firstStatementSpanByPath.find("/helper");
   for (const auto &fn : firstModule.functions) {
-    const auto spanIt = definitionSpanByPath.find(fn.name);
     for (const auto &inst : fn.instructions) {
       auto sourceIt = sourceMapByDebugId.find(inst.debugId);
       REQUIRE(sourceIt != sourceMapByDebugId.end());
-      if (spanIt != definitionSpanByPath.end()) {
-        CHECK(sourceIt->second->line == spanIt->second.first);
-        CHECK(sourceIt->second->column == spanIt->second.second);
+      if (fn.name == "/main") {
+        mainLines.insert(sourceIt->second->line);
+        if (mainDefSpan != definitionSpanByPath.end() && sourceIt->second->line != mainDefSpan->second.first) {
+          sawMainInstructionOutsideDefinitionLine = true;
+        }
+        if (helperStatementSpan != firstStatementSpanByPath.end() && sourceIt->second->line == helperStatementSpan->second.first) {
+          sawInlinedHelperStatementLine = true;
+        }
       }
     }
   }
+  CHECK(mainLines.size() > 1);
+  CHECK(sawMainInstructionOutsideDefinitionLine);
+  CHECK(sawInlinedHelperStatementLine);
 
   REQUIRE(firstModule.instructionSourceMap.size() == secondModule.instructionSourceMap.size());
   for (size_t i = 0; i < firstModule.instructionSourceMap.size(); ++i) {

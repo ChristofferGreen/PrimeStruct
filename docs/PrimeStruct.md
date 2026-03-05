@@ -144,7 +144,7 @@ module {
   - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops with immediates and debug IDs.
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
   - **Instruction:** `{ op, imm, debug_id }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning depends on `op`, and `debug_id` is a deterministic per-instruction identifier used for source-map linkage.
-  - **Instruction source map entry:** `{ debug_id, line, column, provenance }`; entries map instruction debug IDs back to canonical AST source coordinates and provenance tags.
+  - **Instruction source map entry:** `{ debug_id, line, column, provenance }`; entries map instruction debug IDs back to canonical AST statement/expression coordinates when available (including inlined callee statements) and provenance tags. Instructions with no direct AST origin currently fall back to definition coordinates.
   - **Locals:** addressed by index; `LoadLocal`, `StoreLocal`, `AddressOfLocal` operate on the index encoded in `imm`.
   - **Strings:** string literals are interned in `string_table` and referenced by index in print ops (see PSIR versioning).
   - **Entry:** `entry_index` points to the entry function in `functions`; its signature is enforced by the front-end.

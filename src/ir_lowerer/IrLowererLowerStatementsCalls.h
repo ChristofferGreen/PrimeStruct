@@ -74,6 +74,14 @@
   if (entryHasResultInfo) {
     entryResult = entryResultInfo;
   }
+  auto emitEntryStatement = [&](const Expr &stmt) -> bool {
+    const size_t startInstructionIndex = function.instructions.size();
+    if (!emitStatement(stmt, locals)) {
+      return false;
+    }
+    appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());
+    return true;
+  };
   const auto entryExecutionResult = ir_lowerer::emitEntryCallableExecutionWithCleanup(
       *entryDef,
       returnsVoid,
@@ -82,7 +90,7 @@
       entryOnError,
       currentReturnResult,
       entryResult,
-      [&](const Expr &stmt) { return emitStatement(stmt, locals); },
+      emitEntryStatement,
       [&]() { pushFileScope(); },
       [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
       [&]() { popFileScope(); },
@@ -146,6 +154,22 @@
     return false;
   }
 
+  for (auto &rangeEntry : instructionSourceRangesByFunction) {
+    auto &ranges = rangeEntry.second;
+    std::sort(ranges.begin(), ranges.end(), [](const InstructionSourceRange &left, const InstructionSourceRange &right) {
+      if (left.beginIndex != right.beginIndex) {
+        return left.beginIndex < right.beginIndex;
+      }
+      if (left.endIndex != right.endIndex) {
+        return left.endIndex < right.endIndex;
+      }
+      if (left.line != right.line) {
+        return left.line < right.line;
+      }
+      return left.column < right.column;
+    });
+  }
+
   size_t totalInstructionCount = 0;
   for (const auto &loweredFunction : out.functions) {
     totalInstructionCount += loweredFunction.instructions.size();
@@ -155,25 +179,56 @@
 
   uint64_t nextInstructionDebugId = 1;
   for (auto &loweredFunction : out.functions) {
-    uint32_t sourceLine = 0;
-    uint32_t sourceColumn = 0;
+    uint32_t fallbackSourceLine = 0;
+    uint32_t fallbackSourceColumn = 0;
     auto defIt = defMap.find(loweredFunction.name);
     if (defIt != defMap.end() && defIt->second != nullptr) {
       if (defIt->second->sourceLine > 0) {
-        sourceLine = static_cast<uint32_t>(defIt->second->sourceLine);
+        fallbackSourceLine = static_cast<uint32_t>(defIt->second->sourceLine);
       }
       if (defIt->second->sourceColumn > 0) {
-        sourceColumn = static_cast<uint32_t>(defIt->second->sourceColumn);
+        fallbackSourceColumn = static_cast<uint32_t>(defIt->second->sourceColumn);
       }
     }
-    for (auto &instruction : loweredFunction.instructions) {
+    const auto sourceRangesIt = instructionSourceRangesByFunction.find(loweredFunction.name);
+    const std::vector<InstructionSourceRange> *sourceRanges =
+        sourceRangesIt == instructionSourceRangesByFunction.end() ? nullptr : &sourceRangesIt->second;
+    for (size_t instructionIndex = 0; instructionIndex < loweredFunction.instructions.size(); ++instructionIndex) {
+      auto &instruction = loweredFunction.instructions[instructionIndex];
       if (nextInstructionDebugId > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
         error = "too many IR instructions for debug id metadata";
         return false;
       }
       instruction.debugId = static_cast<uint32_t>(nextInstructionDebugId);
+      uint32_t sourceLine = fallbackSourceLine;
+      uint32_t sourceColumn = fallbackSourceColumn;
+      IrSourceMapProvenance sourceProvenance = IrSourceMapProvenance::CanonicalAst;
+      if (sourceRanges != nullptr) {
+        const InstructionSourceRange *bestRange = nullptr;
+        for (const auto &range : *sourceRanges) {
+          if (range.beginIndex > instructionIndex) {
+            break;
+          }
+          if (instructionIndex < range.endIndex) {
+            if (bestRange == nullptr) {
+              bestRange = &range;
+            } else {
+              const size_t bestWidth = bestRange->endIndex - bestRange->beginIndex;
+              const size_t width = range.endIndex - range.beginIndex;
+              if (width < bestWidth || (width == bestWidth && range.beginIndex >= bestRange->beginIndex)) {
+                bestRange = &range;
+              }
+            }
+          }
+        }
+        if (bestRange != nullptr) {
+          sourceLine = bestRange->line;
+          sourceColumn = bestRange->column;
+          sourceProvenance = bestRange->provenance;
+        }
+      }
       out.instructionSourceMap.push_back(
-          {instruction.debugId, sourceLine, sourceColumn, IrSourceMapProvenance::CanonicalAst});
+          {instruction.debugId, sourceLine, sourceColumn, sourceProvenance});
       ++nextInstructionDebugId;
     }
   }

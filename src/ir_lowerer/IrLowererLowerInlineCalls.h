@@ -141,11 +141,13 @@
     activeInlineContext = &context;
     if (!structDef) {
       for (const auto &stmt : callee.statements) {
+        const size_t startInstructionIndex = function.instructions.size();
         if (!emitStatement(stmt, calleeLocals)) {
           activeInlineContext = prevContext;
           inlineStack.erase(callee.fullPath);
           return false;
         }
+        appendInstructionSourceRange(function.name, stmt, startInstructionIndex, function.instructions.size());
       }
     }
     size_t cleanupIndex = function.instructions.size();
