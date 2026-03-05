@@ -17,6 +17,7 @@ Default N is 5,000,000 in all implementations.
 
 Run via:
 - `./scripts/compile.sh --benchmark`
+- `./scripts/compile.sh --benchmark-regression` (writes a report and checks against stored baseline thresholds)
 
 You can change the number of runs with `BENCH_RUNS` and control the output
 folder with `BENCH_DIR`.
@@ -74,3 +75,21 @@ Controls:
 - `BENCH_COMPILE_RUNS` sets the number of timed runs (defaults to `BENCH_RUNS`).
 
 The generated source is written to the benchmark output directory.
+
+## Regression Harness
+
+The benchmark runner can emit a deterministic report artifact:
+
+- `./scripts/benchmark.sh --build-dir build-release --report-json build-release/benchmarks/benchmark_report.json`
+
+To enforce baseline regression checks (used by CI), run:
+
+- `./scripts/benchmark.sh --build-dir build-release --report-json build-release/benchmarks/benchmark_report.json --baseline-json benchmarks/benchmark_baseline.json`
+
+Threshold checking is handled by:
+
+- `scripts/check_benchmark_report.py --baseline benchmarks/benchmark_baseline.json --report build-release/benchmarks/benchmark_report.json`
+
+Baseline thresholds are stored in:
+
+- `benchmarks/benchmark_baseline.json`

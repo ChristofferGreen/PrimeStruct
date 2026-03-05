@@ -7,6 +7,10 @@ RUNS="${BENCH_RUNS:-5}"
 BENCH_DIR="${BENCH_DIR:-}"
 COMPILE_RUNS="${BENCH_COMPILE_RUNS:-}"
 COMPILE_LINES="${BENCH_COMPILE_LINES:-100000}"
+REPORT_JSON="${BENCH_REPORT_JSON:-}"
+BASELINE_JSON="${BENCH_BASELINE_JSON:-}"
+MAX_REGRESSION_RATIO="${BENCH_MAX_REGRESSION_RATIO:-1.25}"
+SIZE_REGRESSION_RATIO="${BENCH_SIZE_REGRESSION_RATIO:-1.05}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -22,6 +26,22 @@ while [[ $# -gt 0 ]]; do
       BENCH_DIR="$2"
       shift 2
       ;;
+    --report-json)
+      REPORT_JSON="$2"
+      shift 2
+      ;;
+    --baseline-json)
+      BASELINE_JSON="$2"
+      shift 2
+      ;;
+    --max-regression-ratio)
+      MAX_REGRESSION_RATIO="$2"
+      shift 2
+      ;;
+    --size-regression-ratio)
+      SIZE_REGRESSION_RATIO="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown arg: $1" >&2
       exit 2
@@ -34,6 +54,9 @@ if [[ -z "$BENCH_DIR" ]]; then
 fi
 if [[ -z "$COMPILE_RUNS" ]]; then
   COMPILE_RUNS="$RUNS"
+fi
+if [[ -n "$BASELINE_JSON" && -z "$REPORT_JSON" ]]; then
+  REPORT_JSON="$BENCH_DIR/benchmark_report.json"
 fi
 
 PRIMEC_BIN="$BUILD_DIR/primec"
@@ -252,10 +275,12 @@ fi
     "$COMPILE_C_SRC" "$COMPILE_CPP_SRC" "$COMPILE_RS_SRC" \
     "$CC" "$CXX" "$RUSTC" "$PRIMEC_BIN" \
     "$COMPILE_C_EXE" "$COMPILE_CPP_EXE" "$COMPILE_RS_EXE" \
-    "$COMPILE_CPP" "$COMPILE_NATIVE" <<'PY'
+    "$COMPILE_CPP" "$COMPILE_NATIVE" "$REPORT_JSON" <<'PY'
 import subprocess
 import sys
 import time
+import json
+import platform
 from pathlib import Path
 
 runs = int(sys.argv[1])
@@ -275,6 +300,7 @@ compile_cpp_exe = sys.argv[14]
 compile_rs_exe = sys.argv[15]
 compile_cpp = sys.argv[16]
 compile_native = sys.argv[17]
+report_json = sys.argv[18]
 
 def primestruct_entries(name: str):
     entries = [
@@ -308,7 +334,10 @@ if not run_native:
 print("Compile benchmark lines:", compile_lines)
 print("Compile benchmark runs:", compile_runs)
 
-def run_entry(label: str, path: str) -> None:
+runtime_results = []
+compile_results = []
+
+def run_entry(benchmark_name: str, label: str, path: str) -> None:
     print(f"\n== {label} ==")
     check = subprocess.run([path], capture_output=True, text=True, check=True)
     output = check.stdout.strip()
@@ -323,6 +352,14 @@ def run_entry(label: str, path: str) -> None:
     median = sorted(times)[len(times) // 2]
     print(f"mean:   {mean:.6f}s")
     print(f"median: {median:.6f}s")
+    runtime_results.append({
+        "benchmark": benchmark_name,
+        "entry": label,
+        "mean_seconds": mean,
+        "median_seconds": median,
+        "output": output,
+        "artifact_size_bytes": Path(path).stat().st_size,
+    })
 
 def run_compile_entry(label: str, cmd: list[str], outputs: list[str]) -> None:
     print(f"\n== {label} ==")
@@ -348,11 +385,23 @@ def run_compile_entry(label: str, cmd: list[str], outputs: list[str]) -> None:
     median = sorted(times)[len(times) // 2]
     print(f"mean:   {mean:.6f}s")
     print(f"median: {median:.6f}s")
+    artifact_size = 0
+    for out in outputs:
+        out_path = Path(out)
+        if out_path.exists():
+            artifact_size += out_path.stat().st_size
+    compile_results.append({
+        "benchmark": "compile_speed",
+        "entry": label,
+        "mean_seconds": mean,
+        "median_seconds": median,
+        "artifact_size_bytes": artifact_size,
+    })
 
 for bench, entries in benchmarks:
     print(f"\n=== {bench} ===")
     for label, exe in entries:
-        run_entry(label, exe)
+        run_entry(bench, label, exe)
 
 compile_entries = [
     ("c", [
@@ -408,5 +457,30 @@ if run_native:
 print("\n=== compile_speed ===")
 for label, cmd, outputs in compile_entries:
     run_compile_entry(label, cmd, outputs)
+
+if report_json:
+    report_payload = {
+        "schema": "primestruct_benchmark_report_v1",
+        "platform": {
+            "system": platform.system(),
+            "machine": platform.machine(),
+        },
+        "runs": runs,
+        "compile_runs": compile_runs,
+        "compile_lines": compile_lines,
+        "runtime_results": runtime_results,
+        "compile_results": compile_results,
+    }
+    report_path = Path(report_json)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 )
+
+if [[ -n "$BASELINE_JSON" ]]; then
+  "$PYTHON" "$ROOT_DIR/scripts/check_benchmark_report.py" \
+    --baseline "$BASELINE_JSON" \
+    --report "$REPORT_JSON" \
+    --max-regression-ratio "$MAX_REGRESSION_RATIO" \
+    --size-regression-ratio "$SIZE_REGRESSION_RATIO"
+fi

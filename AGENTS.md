@@ -35,6 +35,7 @@ build and layout solidify.
 - **Release build:** `./scripts/compile.sh --release` (Release build in `build-release`).
 - **Configure only:** `./scripts/compile.sh --configure` (regenerates build dir only).
 - **Skip tests:** `./scripts/compile.sh --skip-tests` (build only).
+- **Benchmark regression:** `./scripts/compile.sh --benchmark-regression` runs benchmark suite, writes `build-*/benchmarks/benchmark_report.json`, and checks against `benchmarks/benchmark_baseline.json`.
 - **Optional Wasm runtime checks:** `./scripts/compile.sh --wasm-runtime-checks` runs `scripts/run_wasm_runtime_checks.sh`; it executes Wasm outputs with `wasmtime` when available and emits an explicit skip message otherwise.
 - **Coverage:** `./scripts/compile.sh --coverage` builds with clang coverage flags, runs tests, and writes reports to `build-debug/coverage/coverage.txt` plus `build-debug/coverage/html/`.
 - **CTest:** from `build-debug/` run `ctest --output-on-failure`.

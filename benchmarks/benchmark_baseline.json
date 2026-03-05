@@ -1,0 +1,66 @@
+{
+  "schema": "primestruct_benchmark_baseline_v1",
+  "notes": "Pre-register-allocation baseline thresholds for benchmark regression checks.",
+  "entries": [
+    {
+      "phase": "runtime",
+      "benchmark": "aggregate",
+      "entry": "primestruct_cpp",
+      "max_mean_seconds": 1.0,
+      "max_artifact_size_bytes": 200000
+    },
+    {
+      "phase": "runtime",
+      "benchmark": "aggregate",
+      "entry": "primestruct_native",
+      "optional": true,
+      "max_mean_seconds": 1.0,
+      "max_artifact_size_bytes": 200000
+    },
+    {
+      "phase": "runtime",
+      "benchmark": "json_scan",
+      "entry": "primestruct_cpp",
+      "max_mean_seconds": 1.0,
+      "max_artifact_size_bytes": 250000
+    },
+    {
+      "phase": "runtime",
+      "benchmark": "json_scan",
+      "entry": "primestruct_native",
+      "optional": true,
+      "max_mean_seconds": 1.0,
+      "max_artifact_size_bytes": 250000
+    },
+    {
+      "phase": "runtime",
+      "benchmark": "json_parse",
+      "entry": "primestruct_cpp",
+      "max_mean_seconds": 1.5,
+      "max_artifact_size_bytes": 300000
+    },
+    {
+      "phase": "runtime",
+      "benchmark": "json_parse",
+      "entry": "primestruct_native",
+      "optional": true,
+      "max_mean_seconds": 1.5,
+      "max_artifact_size_bytes": 300000
+    },
+    {
+      "phase": "compile",
+      "benchmark": "compile_speed",
+      "entry": "primestruct_cpp",
+      "max_mean_seconds": 12.0,
+      "max_artifact_size_bytes": 8000000
+    },
+    {
+      "phase": "compile",
+      "benchmark": "compile_speed",
+      "entry": "primestruct_native",
+      "optional": true,
+      "max_mean_seconds": 12.0,
+      "max_artifact_size_bytes": 8000000
+    }
+  ]
+}

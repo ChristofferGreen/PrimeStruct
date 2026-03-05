@@ -220,7 +220,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
 - ✓ Add deterministic counter/debug dump output for instrumentation and optimization phases. Testing: dump-format snapshot tests with stable ordering.
-- ○ Add baseline performance/size benchmarks for representative IR workloads before allocator/scheduler changes. Testing: benchmark harness regression in CI with stored baseline artifacts.
+- ✓ Add baseline performance/size benchmarks for representative IR workloads before allocator/scheduler changes. Testing: benchmark harness regression in CI with stored baseline artifacts.
 - ○ Implement top-of-stack register cache for arm64 integer stack values (spill only on pressure). Testing: runtime parity tests plus instruction-count and spill-count deltas.
 - ○ Implement top-of-stack register cache handling for float lanes (`f32`/`f64`) without semantic drift. Testing: float-heavy compile-run parity corpus.
 - ○ Add an emitter flag to toggle register cache for A/B comparisons and bisecting. Testing: dual-mode parity tests (`cache on/off` identical outputs).

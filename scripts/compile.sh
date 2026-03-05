@@ -9,6 +9,7 @@ CONFIGURE_ONLY=0
 COVERAGE=0
 RUN_BENCHMARK=0
 RUN_WASM_RUNTIME_CHECKS=0
+RUN_BENCHMARK_REGRESSION=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -31,6 +32,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --benchmark)
       RUN_BENCHMARK=1
+      shift
+      ;;
+    --benchmark-regression)
+      RUN_BENCHMARK=1
+      RUN_BENCHMARK_REGRESSION=1
       shift
       ;;
     --wasm-runtime-checks)
@@ -153,5 +159,13 @@ if [[ $RUN_BENCHMARK -eq 1 ]]; then
   if [[ "$BUILD_TYPE" != "Release" ]]; then
     echo "[compile.sh] WARN: benchmarks run in $BUILD_TYPE mode; consider --release." >&2
   fi
-  "$ROOT_DIR/scripts/benchmark.sh" --build-dir "$BUILD_DIR"
+  if [[ $RUN_BENCHMARK_REGRESSION -eq 1 ]]; then
+    BENCH_REPORT_PATH="$BUILD_DIR/benchmarks/benchmark_report.json"
+    BENCH_BASELINE_PATH="$ROOT_DIR/benchmarks/benchmark_baseline.json"
+    "$ROOT_DIR/scripts/benchmark.sh" --build-dir "$BUILD_DIR" \
+      --report-json "$BENCH_REPORT_PATH" \
+      --baseline-json "$BENCH_BASELINE_PATH"
+  else
+    "$ROOT_DIR/scripts/benchmark.sh" --build-dir "$BUILD_DIR"
+  fi
 fi
