@@ -34,36 +34,25 @@
     if (dispatchResult == ir_lowerer::DispatchStatementEmitResult::Emitted) {
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call) {
-      if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn) && !isStringCountCall(stmt, localsIn) &&
-          !isVectorCapacityCall(stmt, localsIn)) {
-        const Definition *callee = resolveMethodCallDefinition(stmt, localsIn);
-        if (!callee) {
-          return false;
-        }
-        if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-          error = "native backend does not support block arguments on calls";
-          return false;
-        }
-        return emitInlineDefinitionCall(stmt, *callee, localsIn, false);
-      }
-      if (const Definition *callee = resolveDefinitionCall(stmt)) {
-        if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-          error = "native backend does not support block arguments on calls";
-          return false;
-        }
-        ReturnInfo info;
-        if (!getReturnInfo(callee->fullPath, info)) {
-          return false;
-        }
-        if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
-          return false;
-        }
-        if (!info.returnsVoid) {
-          function.instructions.push_back({IrOpcode::Pop, 0});
-        }
-        return true;
-      }
+    const auto directCallResult = ir_lowerer::tryEmitDirectCallStatement(
+        stmt,
+        localsIn,
+        [&](const Expr &callExpr, const LocalMap &callLocals) { return isArrayCountCall(callExpr, callLocals); },
+        [&](const Expr &callExpr, const LocalMap &callLocals) { return isStringCountCall(callExpr, callLocals); },
+        [&](const Expr &callExpr, const LocalMap &callLocals) { return isVectorCapacityCall(callExpr, callLocals); },
+        [&](const Expr &callExpr, const LocalMap &callLocals) { return resolveMethodCallDefinition(callExpr, callLocals); },
+        [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+        [&](const std::string &definitionPath, ReturnInfo &returnInfo) { return getReturnInfo(definitionPath, returnInfo); },
+        [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
+          return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
+        },
+        function.instructions,
+        error);
+    if (directCallResult == ir_lowerer::DirectCallStatementEmitResult::Error) {
+      return false;
+    }
+    if (directCallResult == ir_lowerer::DirectCallStatementEmitResult::Emitted) {
+      return true;
     }
     if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "assign")) {
       if (!emitExpr(stmt, localsIn)) {

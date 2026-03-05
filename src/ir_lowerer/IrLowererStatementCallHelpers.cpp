@@ -234,4 +234,58 @@ DispatchStatementEmitResult tryEmitDispatchStatement(
   return DispatchStatementEmitResult::Emitted;
 }
 
+DirectCallStatementEmitResult tryEmitDirectCallStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::vector<IrInstruction> &instructions,
+    std::string &error) {
+  if (stmt.kind != Expr::Kind::Call) {
+    return DirectCallStatementEmitResult::NotMatched;
+  }
+
+  if (stmt.isMethodCall && !isArrayCountCall(stmt, localsIn) && !isStringCountCall(stmt, localsIn) &&
+      !isVectorCapacityCall(stmt, localsIn)) {
+    const Definition *callee = resolveMethodCallDefinition(stmt, localsIn);
+    if (!callee) {
+      return DirectCallStatementEmitResult::Error;
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      error = "native backend does not support block arguments on calls";
+      return DirectCallStatementEmitResult::Error;
+    }
+    if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+      return DirectCallStatementEmitResult::Error;
+    }
+    return DirectCallStatementEmitResult::Emitted;
+  }
+
+  const Definition *callee = resolveDefinitionCall(stmt);
+  if (!callee) {
+    return DirectCallStatementEmitResult::NotMatched;
+  }
+  if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+    error = "native backend does not support block arguments on calls";
+    return DirectCallStatementEmitResult::Error;
+  }
+
+  ReturnInfo info;
+  if (!getReturnInfo(callee->fullPath, info)) {
+    return DirectCallStatementEmitResult::Error;
+  }
+  if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
+    return DirectCallStatementEmitResult::Error;
+  }
+  if (!info.returnsVoid) {
+    instructions.push_back({IrOpcode::Pop, 0});
+  }
+  return DirectCallStatementEmitResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer

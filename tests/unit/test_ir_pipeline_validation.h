@@ -12593,6 +12593,175 @@ TEST_CASE("ir lowerer statement call helper validates dispatch diagnostics") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer statement call helper emits direct calls") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+
+  primec::Expr methodStmt;
+  methodStmt.kind = primec::Expr::Kind::Call;
+  methodStmt.name = "write";
+  methodStmt.isMethodCall = true;
+
+  primec::Definition methodDef;
+  methodDef.fullPath = "/main/Writer.write";
+
+  std::vector<primec::IrInstruction> instructions;
+  int inlineCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            methodStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &methodDef;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool expectValue) {
+              ++inlineCalls;
+              CHECK_FALSE(expectValue);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
+  primec::Expr defStmt;
+  defStmt.kind = primec::Expr::Kind::Call;
+  defStmt.name = "/main/f";
+
+  primec::Definition def;
+  def.fullPath = "/main/f";
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            defStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return &def; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = false;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool expectValue) {
+              ++inlineCalls;
+              CHECK_FALSE(expectValue);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions.front().op == primec::IrOpcode::Pop);
+}
+
+TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") {
+  using EmitResult = primec::ir_lowerer::DirectCallStatementEmitResult;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "write";
+  stmt.isMethodCall = true;
+  stmt.hasBodyArguments = true;
+
+  primec::Definition methodDef;
+  methodDef.fullPath = "/main/Writer.write";
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            stmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &methodDef;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "native backend does not support block arguments on calls");
+
+  stmt.hasBodyArguments = false;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            stmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error.empty());
+
+  primec::Expr defStmt;
+  defStmt.kind = primec::Expr::Kind::Call;
+  defStmt.name = "/main/g";
+  primec::Definition def;
+  def.fullPath = "/main/g";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            defStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * { return &def; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+
+  primec::Expr otherStmt;
+  otherStmt.kind = primec::Expr::Kind::Call;
+  otherStmt.name = "notify";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            otherStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

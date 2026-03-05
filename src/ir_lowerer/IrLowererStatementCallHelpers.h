@@ -21,6 +21,11 @@ enum class DispatchStatementEmitResult {
   Emitted,
   Error,
 };
+enum class DirectCallStatementEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
 
 BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
     const Expr &stmt,
@@ -38,6 +43,18 @@ DispatchStatementEmitResult tryEmitDispatchStatement(
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::vector<IrInstruction> &instructions,
+    std::string &error);
+DirectCallStatementEmitResult tryEmitDirectCallStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
     std::string &error);
