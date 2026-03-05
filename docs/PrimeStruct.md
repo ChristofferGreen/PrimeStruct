@@ -1250,6 +1250,15 @@ module {
 - Stack frames are listed from faulting frame to caller frames and include function path, instruction pointer, instruction debug ID, and mapped source span (`line:column`) with provenance.
 - Caller-frame mapping reports call-site instructions (the `Call`/`CallVoid` slot) rather than the post-call instruction pointer.
 
+### VM Debug Adapter (MVP)
+- `VmDebugAdapter` (`primec/VmDebugAdapter.h`) translates VM debug-session behavior into debugger-facing primitives:
+  - execution control: `launch`, `continueExecution`, `step`, `pause`
+  - debugger queries: `threads`, `stackTrace`, `scopes`, `variables`
+  - breakpoints: `setInstructionBreakpoints`, `setSourceBreakpoints`
+- Stack-frame responses use source-map metadata when available (`line`, `column`, provenance) and keep the same call-site mapping behavior used by VM fault stack traces.
+- Adapter calls append deterministic transcript lines through `transcript()` to support protocol transcript tests and replay checks.
+- Current payload limit: concrete local/operand values are available for the active frame; non-top-frame locals are exposed as metadata with `<unavailable>` values until deeper-frame snapshots are added.
+
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
 deterministic diagnostics pipeline. See `docs/Semantics_Multithreaded_Pass.md`
@@ -1280,7 +1289,7 @@ Milestones:
 - M4: rename/code actions backed by reference indexing and stable IDs.
 
 Out of scope (initial):
-- Runtime debugging or VM execution control (await Phase 4 tooling).
+- External DAP transport wiring (`stdio`/JSON-RPC) and full editor integration surface.
 - GPU-specific editor features beyond diagnostics and symbol navigation.
 
 ## Dependencies & Related Work

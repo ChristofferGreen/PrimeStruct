@@ -70,6 +70,7 @@ add_library(primec_lib
   src/native_emitter/NativeEmitterEmit.cpp
   src/OptionsParser.cpp
   src/ProcessRunner.cpp
+  src/VmDebugAdapter.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserExpr.cpp
   src/parser/ParserHelpers.cpp

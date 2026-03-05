@@ -18,6 +18,7 @@
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
 #include "primec/Vm.h"
+#include "primec/VmDebugAdapter.h"
 #include "src/ir_lowerer/IrLowererCallHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "src/ir_lowerer/IrLowererBindingTypeHelpers.h"
