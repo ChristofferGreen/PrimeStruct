@@ -393,4 +393,54 @@ MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
   return MathBuiltinReturnKindResolution::NotMatched;
 }
 
+NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const InferSetupInferenceValueKindFn &inferPointerTargetKind,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  if (getBuiltinConvertName(expr)) {
+    if (expr.templateArgs.size() != 1) {
+      return NonMathScalarCallReturnKindResolution::Resolved;
+    }
+    kindOut = valueKindFromTypeName(expr.templateArgs.front());
+    return NonMathScalarCallReturnKindResolution::Resolved;
+  }
+
+  if (isSimpleCallName(expr, "increment") || isSimpleCallName(expr, "decrement") ||
+      isSimpleCallName(expr, "move")) {
+    if (expr.args.size() != 1) {
+      return NonMathScalarCallReturnKindResolution::Resolved;
+    }
+    kindOut = inferExprKind(expr.args.front(), localsIn);
+    return NonMathScalarCallReturnKindResolution::Resolved;
+  }
+
+  if (isSimpleCallName(expr, "assign")) {
+    if (expr.args.size() != 2) {
+      return NonMathScalarCallReturnKindResolution::Resolved;
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it == localsIn.end()) {
+        return NonMathScalarCallReturnKindResolution::Resolved;
+      }
+      if (it->second.kind != LocalInfo::Kind::Value && it->second.kind != LocalInfo::Kind::Reference) {
+        return NonMathScalarCallReturnKindResolution::Resolved;
+      }
+      kindOut = it->second.valueKind;
+      return NonMathScalarCallReturnKindResolution::Resolved;
+    }
+    if (target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") && target.args.size() == 1) {
+      kindOut = inferPointerTargetKind(target.args.front(), localsIn);
+    }
+    return NonMathScalarCallReturnKindResolution::Resolved;
+  }
+
+  return NonMathScalarCallReturnKindResolution::NotMatched;
+}
+
 } // namespace primec::ir_lowerer

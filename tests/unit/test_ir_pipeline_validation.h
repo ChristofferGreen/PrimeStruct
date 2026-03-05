@@ -11830,6 +11830,170 @@ TEST_CASE("ir lowerer setup inference helper handles non-math and invalid math c
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers non-math scalar call return kinds") {
+  using Resolution = primec::ir_lowerer::NonMathScalarCallReturnKindResolution;
+
+  primec::Expr x;
+  x.kind = primec::Expr::Kind::Name;
+  x.name = "x";
+
+  primec::Expr convertExpr;
+  convertExpr.kind = primec::Expr::Kind::Call;
+  convertExpr.name = "convert";
+  convertExpr.templateArgs = {"f64"};
+  convertExpr.args = {x};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            convertExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::Expr incrementExpr;
+  incrementExpr.kind = primec::Expr::Kind::Call;
+  incrementExpr.name = "increment";
+  incrementExpr.args = {x};
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            incrementExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr target;
+  target.kind = primec::Expr::Kind::Name;
+  target.name = "dst";
+  primec::Expr assignExpr;
+  assignExpr.kind = primec::Expr::Kind::Call;
+  assignExpr.name = "assign";
+  assignExpr.args = {target, x};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo dstInfo;
+  dstInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  dstInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  locals.emplace("dst", dstInfo);
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            assignExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  primec::Expr ptr;
+  ptr.kind = primec::Expr::Kind::Name;
+  ptr.name = "ptr";
+  primec::Expr dereferenceTarget;
+  dereferenceTarget.kind = primec::Expr::Kind::Call;
+  dereferenceTarget.name = "dereference";
+  dereferenceTarget.args = {ptr};
+  assignExpr.args = {dereferenceTarget, x};
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            assignExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "ptr") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles invalid non-math scalar calls") {
+  using Resolution = primec::ir_lowerer::NonMathScalarCallReturnKindResolution;
+
+  primec::Expr nonScalar;
+  nonScalar.kind = primec::Expr::Kind::Call;
+  nonScalar.name = "plus";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            nonScalar,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr invalidConvert;
+  invalidConvert.kind = primec::Expr::Kind::Call;
+  invalidConvert.name = "convert";
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            invalidConvert,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr invalidAssign;
+  invalidAssign.kind = primec::Expr::Kind::Call;
+  invalidAssign.name = "assign";
+  invalidAssign.args = {nonScalar};
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            invalidAssign,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr mapTarget;
+  mapTarget.kind = primec::Expr::Kind::Name;
+  mapTarget.name = "m";
+  invalidAssign.args = {mapTarget, nonScalar};
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("m", mapInfo);
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            invalidAssign,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

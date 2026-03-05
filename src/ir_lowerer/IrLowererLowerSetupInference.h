@@ -317,44 +317,18 @@
                 mathBuiltinKind) == MathBuiltinReturnKindResolution::Resolved) {
           return mathBuiltinKind;
         }
-        if (getBuiltinConvertName(expr)) {
-          if (expr.templateArgs.size() != 1) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          const std::string &typeName = expr.templateArgs.front();
-          return valueKindFromTypeName(typeName);
-        }
-        if (isSimpleCallName(expr, "increment") || isSimpleCallName(expr, "decrement")) {
-          if (expr.args.size() != 1) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          return inferExprKind(expr.args.front(), localsIn);
-        }
-        if (isSimpleCallName(expr, "move")) {
-          if (expr.args.size() != 1) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          return inferExprKind(expr.args.front(), localsIn);
-        }
-        if (isSimpleCallName(expr, "assign")) {
-          if (expr.args.size() != 2) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          const Expr &target = expr.args.front();
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end()) {
-              if (it->second.kind != LocalInfo::Kind::Value && it->second.kind != LocalInfo::Kind::Reference) {
-                return LocalInfo::ValueKind::Unknown;
-              }
-              return it->second.valueKind;
-            }
-            return LocalInfo::ValueKind::Unknown;
-          }
-          if (target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") && target.args.size() == 1) {
-            return inferPointerTargetKind(target.args.front(), localsIn);
-          }
-          return LocalInfo::ValueKind::Unknown;
+        LocalInfo::ValueKind nonMathScalarKind = LocalInfo::ValueKind::Unknown;
+        if (inferNonMathScalarCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferExprKind(candidateExpr, candidateLocals);
+                },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferPointerTargetKind(candidateExpr, candidateLocals);
+                },
+                nonMathScalarKind) == NonMathScalarCallReturnKindResolution::Resolved) {
+          return nonMathScalarKind;
         }
         if (isMatchCall(expr)) {
           Expr expanded;

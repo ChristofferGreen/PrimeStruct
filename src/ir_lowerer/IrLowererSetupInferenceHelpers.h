@@ -41,6 +41,10 @@ enum class MathBuiltinReturnKindResolution {
   NotMatched,
   Resolved,
 };
+enum class NonMathScalarCallReturnKindResolution {
+  NotMatched,
+  Resolved,
+};
 
 LocalInfo::ValueKind inferPointerTargetValueKind(
     const Expr &expr,
@@ -88,6 +92,12 @@ MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
     bool hasMathImport,
     const InferSetupInferenceValueKindFn &inferExprKind,
     const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    LocalInfo::ValueKind &kindOut);
+NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const InferSetupInferenceValueKindFn &inferPointerTargetKind,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer
