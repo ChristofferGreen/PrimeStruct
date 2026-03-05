@@ -243,6 +243,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Classify deterministic native compile failures that report `backend does not support return type` as `SKIP` (known backend limitation) in `scripts/run_spinning_cube_demo.sh` instead of hard `FAIL`. Testing: script regression with stub `primec` locks `NATIVE: SKIP (native backend limitation: backend does not support return type)`.
 - ✓ Add a regression test that locks deterministic diagnostics for an unexecutable `--primec` path in `scripts/run_spinning_cube_demo.sh` (`exit 2` + stable `primec binary not found` text).
 - ✓ Require `--primec` to reference an executable file (not just any executable path) in `scripts/run_spinning_cube_demo.sh` and lock deterministic rejection for directory paths. Testing: script regression with a directory-valued `--primec` asserts `exit 2` + stable `primec binary not found` text.
+- ✓ Add a regression test that locks deterministic fail-summary behavior when native compilation fails with a generic error in `scripts/run_spinning_cube_demo.sh` (`NATIVE: FAIL`, `RESULT: FAIL`, exit code `1`).
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
