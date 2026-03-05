@@ -111,6 +111,18 @@ void patchCountedLoopEnd(
     const CountedLoopControl &control,
     const std::function<size_t()> &instructionCount,
     const std::function<void(size_t, int32_t)> &patchInstructionImm);
+bool emitBodyStatements(
+    const std::vector<Expr> &bodyStatements,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, LocalMap &)> &emitStatement);
+bool emitBodyStatementsWithFileScope(
+    const std::vector<Expr> &bodyStatements,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, LocalMap &)> &emitStatement,
+    const std::function<bool()> &emitAfterBody,
+    const std::function<void()> &pushFileScope,
+    const std::function<void()> &emitCurrentFileScopeCleanup,
+    const std::function<void()> &popFileScope);
 struct BufferInitInfo {
   int32_t count = 0;
   LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;

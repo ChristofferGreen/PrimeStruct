@@ -14337,6 +14337,95 @@ TEST_CASE("ir lowerer flow helpers emit counted loop scaffolding") {
   CHECK(instructions[4].op == primec::IrOpcode::JumpIfZero);
 }
 
+TEST_CASE("ir lowerer flow helpers emit body statements") {
+  primec::Expr firstStmt;
+  firstStmt.kind = primec::Expr::Kind::Name;
+  firstStmt.name = "first";
+  primec::Expr secondStmt;
+  secondStmt.kind = primec::Expr::Kind::Name;
+  secondStmt.name = "second";
+
+  std::vector<std::string> seen;
+  primec::ir_lowerer::LocalMap locals;
+  CHECK(primec::ir_lowerer::emitBodyStatements(
+      {firstStmt, secondStmt},
+      locals,
+      [&](const primec::Expr &stmt, primec::ir_lowerer::LocalMap &bodyLocals) {
+        seen.push_back(stmt.name);
+        if (stmt.name == "first") {
+          primec::ir_lowerer::LocalInfo temp;
+          temp.index = 5;
+          bodyLocals.emplace("temp", temp);
+          return true;
+        }
+        return bodyLocals.count("temp") == 1;
+      }));
+  REQUIRE(seen.size() == 2);
+  CHECK(seen[0] == "first");
+  CHECK(seen[1] == "second");
+
+  seen.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitBodyStatements(
+      {firstStmt, secondStmt},
+      locals,
+      [&](const primec::Expr &stmt, primec::ir_lowerer::LocalMap &) {
+        seen.push_back(stmt.name);
+        return stmt.name != "second";
+      }));
+  REQUIRE(seen.size() == 2);
+  CHECK(seen[0] == "first");
+  CHECK(seen[1] == "second");
+}
+
+TEST_CASE("ir lowerer flow helpers emit body statements with file scope") {
+  primec::Expr bodyStmt;
+  bodyStmt.kind = primec::Expr::Kind::Name;
+  bodyStmt.name = "body";
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<std::string> events;
+  CHECK(primec::ir_lowerer::emitBodyStatementsWithFileScope(
+      {bodyStmt},
+      locals,
+      [&](const primec::Expr &, primec::ir_lowerer::LocalMap &) {
+        events.push_back("body");
+        return true;
+      },
+      [&]() {
+        events.push_back("after");
+        return true;
+      },
+      [&]() { events.push_back("push"); },
+      [&]() { events.push_back("cleanup"); },
+      [&]() { events.push_back("pop"); }));
+  REQUIRE(events.size() == 5);
+  CHECK(events[0] == "push");
+  CHECK(events[1] == "body");
+  CHECK(events[2] == "after");
+  CHECK(events[3] == "cleanup");
+  CHECK(events[4] == "pop");
+
+  events.clear();
+  CHECK_FALSE(primec::ir_lowerer::emitBodyStatementsWithFileScope(
+      {bodyStmt},
+      locals,
+      [&](const primec::Expr &, primec::ir_lowerer::LocalMap &) {
+        events.push_back("body");
+        return true;
+      },
+      [&]() {
+        events.push_back("after");
+        return false;
+      },
+      [&]() { events.push_back("push"); },
+      [&]() { events.push_back("cleanup"); },
+      [&]() { events.push_back("pop"); }));
+  REQUIRE(events.size() == 3);
+  CHECK(events[0] == "push");
+  CHECK(events[1] == "body");
+  CHECK(events[2] == "after");
+}
+
 TEST_CASE("ir lowerer flow helpers resolve buffer init info") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 

@@ -90,11 +90,11 @@
       const size_t jumpEndIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-      LocalMap bodyLocals = localsIn;
-      for (const auto &bodyStmt : body.bodyArguments) {
-        if (!emitStatement(bodyStmt, bodyLocals)) {
-          return false;
-        }
+      if (!ir_lowerer::emitBodyStatements(
+              body.bodyArguments,
+              localsIn,
+              [&](const Expr &bodyStmt, LocalMap &bodyLocals) { return emitStatement(bodyStmt, bodyLocals); })) {
+        return false;
       }
 
       function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
@@ -202,18 +202,18 @@
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
       OnErrorScope onErrorScope(currentOnError, std::nullopt);
-      pushFileScope();
-      LocalMap bodyLocals = loopLocals;
-      for (const auto &bodyStmt : body.bodyArguments) {
-        if (!emitStatement(bodyStmt, bodyLocals)) {
-          return false;
-        }
-      }
-      if (!emitStatement(step, loopLocals)) {
+      if (!ir_lowerer::emitBodyStatementsWithFileScope(
+              body.bodyArguments,
+              loopLocals,
+              [&](const Expr &bodyStmt, LocalMap &bodyLocals) {
+                return emitStatement(bodyStmt, bodyLocals);
+              },
+              [&]() { return emitStatement(step, loopLocals); },
+              [&]() { pushFileScope(); },
+              [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+              [&]() { popFileScope(); })) {
         return false;
       }
-      emitFileScopeCleanup(fileScopeStack.back());
-      popFileScope();
 
       function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
       const size_t endIndex = function.instructions.size();

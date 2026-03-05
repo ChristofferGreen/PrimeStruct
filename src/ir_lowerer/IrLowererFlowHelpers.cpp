@@ -319,6 +319,39 @@ void patchCountedLoopEnd(
   patchInstructionImm(control.jumpEndIndex, static_cast<int32_t>(endIndex));
 }
 
+bool emitBodyStatements(
+    const std::vector<Expr> &bodyStatements,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, LocalMap &)> &emitStatement) {
+  LocalMap bodyLocals = localsIn;
+  for (const auto &bodyStmt : bodyStatements) {
+    if (!emitStatement(bodyStmt, bodyLocals)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool emitBodyStatementsWithFileScope(
+    const std::vector<Expr> &bodyStatements,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, LocalMap &)> &emitStatement,
+    const std::function<bool()> &emitAfterBody,
+    const std::function<void()> &pushFileScope,
+    const std::function<void()> &emitCurrentFileScopeCleanup,
+    const std::function<void()> &popFileScope) {
+  pushFileScope();
+  if (!emitBodyStatements(bodyStatements, localsIn, emitStatement)) {
+    return false;
+  }
+  if (emitAfterBody && !emitAfterBody()) {
+    return false;
+  }
+  emitCurrentFileScopeCleanup();
+  popFileScope();
+  return true;
+}
+
 bool resolveBufferInitInfo(const Expr &expr,
                            const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
                            BufferInitInfo &out,
