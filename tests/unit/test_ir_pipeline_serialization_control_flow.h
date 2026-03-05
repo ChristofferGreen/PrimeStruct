@@ -1940,6 +1940,119 @@ TEST_CASE("native emitter debug dump includes optimization defaults") {
   CHECK(dump.find("instruction_total_after=0\n") != std::string::npos);
 }
 
+TEST_CASE("native emitter debug dump docs applied example snapshot stays stable") {
+  primec::NativeEmitterInstrumentation instrumentation;
+  instrumentation.totalInstructionCount = 4;
+  instrumentation.totalValueStackPushCount = 3;
+  instrumentation.totalValueStackPopCount = 2;
+  instrumentation.totalSpillCount = 1;
+  instrumentation.totalReloadCount = 1;
+  primec::NativeEmitterFunctionInstrumentation mainStats;
+  mainStats.functionIndex = 0;
+  mainStats.functionName = "/main";
+  mainStats.instructionTotal = 4;
+  mainStats.valueStackPushCount = 3;
+  mainStats.valueStackPopCount = 2;
+  mainStats.spillCount = 1;
+  mainStats.reloadCount = 1;
+  instrumentation.perFunction.push_back(mainStats);
+
+  primec::NativeEmitterOptimizationInstrumentation optimization;
+  optimization.applied = true;
+  optimization.instructionTotalBefore = 4;
+  optimization.instructionTotalAfter = 3;
+  optimization.valueStackPushCountBefore = 3;
+  optimization.valueStackPushCountAfter = 2;
+  optimization.valueStackPopCountBefore = 2;
+  optimization.valueStackPopCountAfter = 2;
+  optimization.spillCountBefore = 1;
+  optimization.spillCountAfter = 0;
+  optimization.reloadCountBefore = 1;
+  optimization.reloadCountAfter = 0;
+
+  // Keep in sync with docs/PrimeStruct.md "Native Allocator & Scheduler (IR Optimization Path)".
+  const std::string expected =
+      "native_emitter_debug_v1\n"
+      "[instrumentation]\n"
+      "total_instruction_count=4\n"
+      "total_value_stack_push_count=3\n"
+      "total_value_stack_pop_count=2\n"
+      "total_spill_count=1\n"
+      "total_reload_count=1\n"
+      "function_count=1\n"
+      "function[0].index=0\n"
+      "function[0].name=/main\n"
+      "function[0].instruction_total=4\n"
+      "function[0].value_stack_push_count=3\n"
+      "function[0].value_stack_pop_count=2\n"
+      "function[0].spill_count=1\n"
+      "function[0].reload_count=1\n"
+      "[optimization]\n"
+      "applied=1\n"
+      "instruction_total_before=4\n"
+      "instruction_total_after=3\n"
+      "value_stack_push_count_before=3\n"
+      "value_stack_push_count_after=2\n"
+      "value_stack_pop_count_before=2\n"
+      "value_stack_pop_count_after=2\n"
+      "spill_count_before=1\n"
+      "spill_count_after=0\n"
+      "reload_count_before=1\n"
+      "reload_count_after=0\n";
+
+  CHECK(primec::formatNativeEmitterDebugDump(instrumentation, optimization) == expected);
+}
+
+TEST_CASE("native emitter debug dump docs default example snapshot stays stable") {
+  primec::NativeEmitterInstrumentation instrumentation;
+  instrumentation.totalInstructionCount = 2;
+  instrumentation.totalValueStackPushCount = 1;
+  instrumentation.totalValueStackPopCount = 1;
+  instrumentation.totalSpillCount = 1;
+  instrumentation.totalReloadCount = 1;
+  primec::NativeEmitterFunctionInstrumentation mainStats;
+  mainStats.functionIndex = 0;
+  mainStats.functionName = "/main";
+  mainStats.instructionTotal = 2;
+  mainStats.valueStackPushCount = 1;
+  mainStats.valueStackPopCount = 1;
+  mainStats.spillCount = 1;
+  mainStats.reloadCount = 1;
+  instrumentation.perFunction.push_back(mainStats);
+
+  // Keep in sync with docs/PrimeStruct.md "Native Allocator & Scheduler (IR Optimization Path)".
+  const std::string expected =
+      "native_emitter_debug_v1\n"
+      "[instrumentation]\n"
+      "total_instruction_count=2\n"
+      "total_value_stack_push_count=1\n"
+      "total_value_stack_pop_count=1\n"
+      "total_spill_count=1\n"
+      "total_reload_count=1\n"
+      "function_count=1\n"
+      "function[0].index=0\n"
+      "function[0].name=/main\n"
+      "function[0].instruction_total=2\n"
+      "function[0].value_stack_push_count=1\n"
+      "function[0].value_stack_pop_count=1\n"
+      "function[0].spill_count=1\n"
+      "function[0].reload_count=1\n"
+      "[optimization]\n"
+      "applied=0\n"
+      "instruction_total_before=0\n"
+      "instruction_total_after=0\n"
+      "value_stack_push_count_before=0\n"
+      "value_stack_push_count_after=0\n"
+      "value_stack_pop_count_before=0\n"
+      "value_stack_pop_count_after=0\n"
+      "spill_count_before=0\n"
+      "spill_count_after=0\n"
+      "reload_count_before=0\n"
+      "reload_count_after=0\n";
+
+  CHECK(primec::formatNativeEmitterDebugDump(instrumentation) == expected);
+}
+
 TEST_CASE("ir serializes execution metadata") {
   primec::IrModule module;
   module.entryIndex = 0;

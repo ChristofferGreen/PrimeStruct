@@ -232,7 +232,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Implement block-local instruction scheduling (latency-aware, dependency-safe) after allocation. Testing: dependency-safety tests and deterministic-order snapshots.
 - ✓ Add verifier checks ensuring scheduled/allocation output preserves stack/SSA-equivalent behavior and branch-edge value agreement. Testing: negative tests with intentionally invalid schedules plus verifier pass coverage.
 - ✓ Add conformance and perf-gate tests comparing pre/post optimization outputs (correctness parity required; measurable push/pop/spill reductions expected). Testing: CI perf gates with explicit thresholds and parity locks.
-- ○ Document allocator/scheduler design, heuristics, and debug dump formats in `docs/PrimeStruct.md`. Testing: doc-linked dump examples validated by snapshot tests.
+- ✓ Document allocator/scheduler design, heuristics, and debug dump formats in `docs/PrimeStruct.md`. Testing: doc-linked dump examples validated by snapshot tests.
 
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).
