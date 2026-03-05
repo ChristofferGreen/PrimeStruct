@@ -89,3 +89,38 @@ This example is a milestone target for cross-platform backend work.
     available.
 - If browser headless tooling is unavailable, tests emit an interactive fallback
   note instead of failing.
+
+## Build And Run (Repo Root)
+### Browser
+```bash
+./primec --emit=wasm --wasm-profile browser examples/web/spinning_cube/cube.prime -o examples/web/spinning_cube/cube.wasm --entry /main
+python3 -m http.server 8080 --bind 127.0.0.1 --directory examples/web/spinning_cube
+```
+Open `http://127.0.0.1:8080/`.
+
+Expected runtime behavior:
+- Startup: page title and canvas appear, then status text reports host bootstrap.
+- Controls: none yet (v1 sample has no camera/input bindings).
+- FPS/diagnostic overlay: status text under the canvas is the current
+  diagnostics surface (no dedicated FPS counter yet).
+
+### Native
+```bash
+./primec --emit=native examples/web/spinning_cube/cube.prime -o /tmp/cube_native --entry /main
+c++ -std=c++17 examples/native/spinning_cube/main.cpp -o /tmp/spinning_cube_host
+/tmp/spinning_cube_host /tmp/cube_native
+```
+Expected runtime behavior:
+- Startup: host process returns 0 after running one simulation validation pass.
+- Diagnostics: prints `native host verified cube simulation output`.
+
+### macOS Metal
+```bash
+xcrun metal -std=metal3.0 -c examples/metal/spinning_cube/cube.metal -o /tmp/cube.air
+xcrun metallib /tmp/cube.air -o /tmp/cube.metallib
+xcrun clang++ -std=c++17 -fobjc-arc examples/metal/spinning_cube/metal_host.mm -framework Foundation -framework Metal -o /tmp/metal_host
+/tmp/metal_host /tmp/cube.metallib
+```
+Expected runtime behavior:
+- Startup: host process returns 0 after one frame submission.
+- Diagnostics: prints `frame_rendered=1`.

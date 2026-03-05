@@ -215,7 +215,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add transform/rotation math parity tests across VM/native/Wasm/Metal-hosted paths. Testing: backend parity corpus with tolerance-checked numeric outputs.
 - ✓ Add integration coverage that builds all sample targets and validates generated artifacts (`.wasm`, native binary, shader outputs, loader assets). Testing: artifact existence + hash/schema checks in CI.
 - ✓ Add optional visual smoke checks for sample startup (headless where possible, interactive otherwise). Testing: automated startup checks with explicit skip rules per runner capability.
-- ○ Document sample build/run instructions and expected runtime behavior for browser + native + macOS Metal targets (startup, controls, FPS/diagnostic overlay). Testing: scripted doc-command smoke checks to prevent instruction drift.
+- ✓ Document sample build/run instructions and expected runtime behavior for browser + native + macOS Metal targets (startup, controls, FPS/diagnostic overlay). Testing: scripted doc-command smoke checks to prevent instruction drift.
 
 **Native Register Allocation & Scheduling**
 - ○ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
