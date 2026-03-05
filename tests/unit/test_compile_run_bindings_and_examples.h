@@ -899,7 +899,10 @@ TEST_CASE("spinning cube optional startup visual smoke checks") {
   CHECK(browserCode == 0);
   const std::string dom = readFile(browserDomPath.string());
   CHECK(dom.find("PrimeStruct Spinning Cube Host") != std::string::npos);
-  CHECK(dom.find("Host running") != std::string::npos || dom.find("Wasm load skipped") != std::string::npos);
+  const bool hasHostRunning = dom.find("Host running") != std::string::npos;
+  const bool hasWasmLoadSkipped = dom.find("Wasm load skipped") != std::string::npos;
+  const bool hasExpectedStatus = hasHostRunning || hasWasmLoadSkipped;
+  CHECK(hasExpectedStatus);
 }
 
 TEST_CASE("spinning cube browser startup smoke proves wasm bootstrap") {
