@@ -633,6 +633,7 @@ Map IR lowering is currently limited in VM/native backends: numeric/bool values 
 - Strings are supported for printing, `count`, and indexing on string literals and string bindings in VM/native backends.
 - Struct values are supported in VM/native backends when fields are numeric/bool or other struct values; string or templated struct fields are rejected.
 - The C++ emitter supports broader operations and full string handling.
+- Wasm backend profiles use `primec --emit=wasm --wasm-profile=wasi|browser` (`wasi` default). The current normative Wasm limit IDs are `WASM-LIMIT-MEM-ON-DEMAND`, `WASM-LIMIT-MEM-SINGLE`, `WASM-LIMIT-IMPORTS-WASI`, `WASM-LIMIT-PROFILE-BROWSER`, and `WASM-LIMIT-PROFILE-WASI-ALLOWLIST` (see `docs/PrimeStruct.md`).
 - GPU backends accept only GPU-safe envelopes/operations; kernel bodies are validated against a GPU-safe allowlist.
 - VM/native emitter restrictions (current):
   - Recursive calls are rejected.

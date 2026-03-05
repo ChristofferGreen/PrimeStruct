@@ -123,8 +123,8 @@ module {
   - Requires `glslangValidator` or `glslc` on `PATH`.
 - `primec --emit=wasm input.prime -o module`
   - Routes through canonical IR into `WasmEmitter`.
-  - Runs `IrValidationTarget::Wasm` before emission to enforce the current Wasm opcode/effect/capability allowlist.
-  - Current state: CLI and diagnostics wiring is in place; non-empty function lowering still reports a backend emit diagnostic until Wasm codegen TODOs land.
+  - Runs `IrValidationTarget::Wasm` or `IrValidationTarget::WasmBrowser` before emission based on `--wasm-profile` (`wasi` default, `browser` optional).
+  - Rejects unsupported opcode/effect/capability combinations during `ir-validate` before backend emission.
   - When `-o` is omitted, output defaults to `<input-stem>.wasm`.
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
@@ -138,6 +138,13 @@ module {
   - Enables the optional IR inlining optimization pass after IR validation and before VM/native/IR output.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
 - All generated outputs land in the current directory (configurable by `--out-dir`).
+
+### Wasm backend limits (current)
+- `WASM-LIMIT-MEM-ON-DEMAND`: the emitter allocates linear memory only when the lowered IR uses WASI runtime opcodes (`PushArgc`, `Print*`, `File*`). Pure compute/control-flow modules emit no memory section.
+- `WASM-LIMIT-MEM-SINGLE`: when memory is present, the module uses exactly one linear memory (`memory index 0`) sized for runtime scratch space and literal data segments; no additional memories are emitted.
+- `WASM-LIMIT-IMPORTS-WASI`: imported host calls are limited to `wasi_snapshot_preview1` and the fixed symbol set `{fd_write, args_sizes_get, args_get, path_open, fd_close, fd_sync}` selected on demand from IR opcode usage.
+- `WASM-LIMIT-PROFILE-BROWSER`: `--wasm-profile=browser` rejects all non-zero effect/capability masks and rejects WASI-only opcodes (`PushArgc`, `Print*`, `File*`) during IR validation.
+- `WASM-LIMIT-PROFILE-WASI-ALLOWLIST`: `--wasm-profile=wasi` accepts only the explicit Wasm opcode/effect/capability allowlist; unsupported IR operations fail with deterministic `ir-validate` diagnostics.
 
 ## Goals
 - Single authoring language spanning gameplay/domain scripting, UI logic, automation, and rendering shaders.
