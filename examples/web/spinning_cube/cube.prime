@@ -1,0 +1,67 @@
+[struct]
+CubeMeshLayout() {
+  [i32] vertexCount{8i32}
+  [i32] indexCount{36i32}
+  [i32] positionStrideBytes{12i32}
+  [i32] colorStrideBytes{16i32}
+  [i32] uniformStrideBytes{64i32}
+}
+
+[struct]
+CubeSimulationState() {
+  [i32] tick{0i32}
+  [f32] angleRadians{0.0f32}
+  [f32] angularVelocity{1.0471976f32}
+  [CubeMeshLayout] mesh{CubeMeshLayout()}
+}
+
+[return<CubeMeshLayout>]
+cubeMeshLayoutV1() {
+  return(CubeMeshLayout())
+}
+
+[return<CubeSimulationState>]
+cubeInit() {
+  return(CubeSimulationState(
+    [tick] 0i32,
+    [angleRadians] 0.0f32,
+    [angularVelocity] 1.0471976f32,
+    [mesh] cubeMeshLayoutV1()
+  ))
+}
+
+[return<f32>]
+wrapAngle([f32] angle) {
+  [f32 mut] wrapped{angle}
+  [f32] tau{6.2831853f32}
+  while(greater_equal(wrapped, tau)) {
+    wrapped = minus(wrapped, tau)
+  }
+  while(less_than(wrapped, 0.0f32)) {
+    wrapped = plus(wrapped, tau)
+  }
+  return(wrapped)
+}
+
+[return<CubeSimulationState>]
+cubeTick([CubeSimulationState] state, [f32] deltaSeconds) {
+  [i32] nextTick{plus(state.tick, 1i32)}
+  [f32] nextAngle{wrapAngle(plus(state.angleRadians, multiply(state.angularVelocity, deltaSeconds)))}
+  return(CubeSimulationState(
+    [tick] nextTick,
+    [angleRadians] nextAngle,
+    [angularVelocity] state.angularVelocity,
+    [mesh] state.mesh
+  ))
+}
+
+[return<int>]
+main() {
+  [CubeSimulationState] state0{cubeInit()}
+  [CubeSimulationState] state1{cubeTick(state0, 0.016666667f32)}
+  if(greater_than(state1.angleRadians, state0.angleRadians)) {
+    return(state1.mesh.indexCount)
+  } else {
+    return(0i32)
+  }
+}

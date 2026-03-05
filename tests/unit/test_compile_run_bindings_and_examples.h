@@ -181,6 +181,38 @@ TEST_CASE("compiles examples to IR") {
   }
 }
 
+TEST_CASE("spinning cube shared source compiles across profile targets") {
+  std::filesystem::path cubePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "cube.prime";
+  if (!std::filesystem::exists(cubePath)) {
+    cubePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "cube.prime";
+  }
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  const std::string nativePath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_native_smoke").string();
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_smoke.wasm").string();
+  const std::string metalErrPath =
+      (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_smoke.err.txt").string();
+
+  const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
+                                quoteShellArg(nativePath) + " --entry /main";
+  CHECK(runCommand(nativeCmd) == 0);
+  CHECK(std::filesystem::exists(nativePath));
+
+  const std::string wasmBrowserCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath) + " --entry /main";
+  CHECK(runCommand(wasmBrowserCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+
+  const std::string metalCmd = "./primec --emit=metal " + quoteShellArg(cubePath.string()) +
+                               " -o /dev/null --entry /main 2> " + quoteShellArg(metalErrPath);
+  CHECK(runCommand(metalCmd) == 2);
+  CHECK(readFile(metalErrPath).find("Usage: primec") != std::string::npos);
+}
+
 TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
   REQUIRE(std::filesystem::exists(examplesDir));

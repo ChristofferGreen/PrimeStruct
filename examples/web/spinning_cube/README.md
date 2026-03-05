@@ -17,6 +17,12 @@ This example is a milestone target for cross-platform backend work.
 - `cube.metal` (or generated Metal shader output): shader module for macOS Metal path.
 - `metal_host.mm` (or equivalent host glue): minimal macOS renderer bootstrap for the Metal target.
 
+## Current Shared Source
+- `cube.prime` now provides the shared simulation/data contract used by all hosts:
+  - `CubeMeshLayout`: host-independent mesh/uniform stride + count metadata.
+  - `CubeSimulationState`: deterministic tick + angle state.
+  - `cubeInit`, `cubeTick`, and `wrapAngle`: shared fixed-step update helpers.
+
 ## Acceptance Criteria
 - The page shows a rotating cube without manual setup beyond launching a local static server.
 - A native desktop run shows the same rotating cube behavior from the same simulation source.
