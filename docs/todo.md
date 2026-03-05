@@ -242,6 +242,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add scheduler regression coverage for combined spilled-use and spilled-def penalties so latency adds both penalties deterministically. Testing: virtual-register scheduling snapshot with one instruction that has both spilled use and spilled def, asserting latency score and order.
 - ✓ Add linear-scan allocator negative regression coverage for invalid liveness interval ranges (`end < start`) to lock deterministic diagnostics. Testing: direct allocator call with malformed interval ranges expecting the stable error substring.
 - ✓ Add linear-scan allocator regression coverage ensuring empty liveness intervals are ignored without affecting deterministic assignment output. Testing: direct allocator call mixing empty and non-empty intervals with stable assignment/slot assertions.
+- ✓ Add linear-scan allocator regression coverage for zero-register mode to lock deterministic all-spill behavior and spill-slot numbering. Testing: direct allocator call with `physicalRegisterCount = 0` and stable spilled assignment/slot assertions.
 
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).

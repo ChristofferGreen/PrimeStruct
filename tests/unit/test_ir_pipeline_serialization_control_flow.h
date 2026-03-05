@@ -807,6 +807,37 @@ TEST_CASE("linear-scan allocator ignores empty intervals deterministically") {
   CHECK(allocation.functions[0].spillSlotCount == 0u);
 }
 
+TEST_CASE("linear-scan allocator spills all intervals with zero registers") {
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  primec::IrVirtualRegisterFunctionLiveness function;
+  function.functionName = "/main";
+  function.intervals = {
+      {2, {{3, 5}}},
+      {0, {{0, 2}}},
+      {1, {{1, 4}}},
+  };
+  liveness.functions.push_back(std::move(function));
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 0;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+
+  primec::IrLinearScanModuleAllocation allocation;
+  std::string error;
+  REQUIRE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.empty());
+  REQUIRE(allocation.functions.size() == 1);
+  const auto &assignments = allocation.functions[0].assignments;
+  REQUIRE(assignments.size() == 3);
+
+  for (size_t index = 0; index < assignments.size(); ++index) {
+    CHECK(assignments[index].virtualRegister == static_cast<uint32_t>(index));
+    CHECK(assignments[index].spilled);
+    CHECK(assignments[index].spillSlot == static_cast<uint32_t>(index));
+  }
+  CHECK(allocation.functions[0].spillSlotCount == 3u);
+}
+
 TEST_CASE("spill insertion verifies branch and call spill correctness") {
   primec::IrModule module;
   module.entryIndex = 0;
