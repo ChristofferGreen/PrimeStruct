@@ -2,31 +2,23 @@
                                       const Definition &callee,
                                       const LocalMap &callerLocals,
                                       bool requireValue) -> bool {
-    ReturnInfo returnInfo;
-    if (!getReturnInfo(callee.fullPath, returnInfo)) {
+    ir_lowerer::InlineDefinitionCallContextSetup callSetup;
+    if (!ir_lowerer::prepareInlineDefinitionCallContext(
+            callee,
+            requireValue,
+            [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
+            [&](const Definition &candidate) { return isStructDefinition(candidate); },
+            inlineStack,
+            loweredCallTargets,
+            onErrorByDef,
+            callSetup,
+            error)) {
       return false;
     }
-    const bool structDef = isStructDefinition(callee);
-    if (returnInfo.returnsVoid && requireValue && !structDef) {
-      error = "void call not allowed in expression context: " + callee.fullPath;
-      return false;
-    }
-    if (!inlineStack.insert(callee.fullPath).second) {
-      error = "native backend does not support recursive calls: " + callee.fullPath;
-      return false;
-    }
-    loweredCallTargets.insert(callee.fullPath);
-    std::optional<OnErrorHandler> scopedOnError;
-    auto onErrorIt = onErrorByDef.find(callee.fullPath);
-    if (onErrorIt != onErrorByDef.end()) {
-      scopedOnError = onErrorIt->second;
-    }
-    OnErrorScope onErrorScope(currentOnError, scopedOnError);
-    std::optional<ResultReturnInfo> scopedResult;
-    if (returnInfo.isResult) {
-      scopedResult = ResultReturnInfo{true, returnInfo.resultHasValue};
-    }
-    ResultReturnScope resultScope(currentReturnResult, scopedResult);
+    const ReturnInfo &returnInfo = callSetup.returnInfo;
+    const bool structDef = callSetup.structDefinition;
+    OnErrorScope onErrorScope(currentOnError, callSetup.scopedOnError);
+    ResultReturnScope resultScope(currentReturnResult, callSetup.scopedResult);
     pushFileScope();
     std::vector<Expr> callParams;
     std::vector<const Expr *> orderedArgs;

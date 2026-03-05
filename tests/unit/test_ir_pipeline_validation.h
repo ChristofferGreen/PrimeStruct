@@ -6691,6 +6691,121 @@ TEST_CASE("ir lowerer return inference helper resolves declared array and struct
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
 }
 
+TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
+  primec::Definition callee;
+  callee.fullPath = "/pkg/do_work";
+
+  primec::ir_lowerer::ReturnInfo returnInfo;
+  returnInfo.returnsVoid = false;
+  returnInfo.isResult = true;
+  returnInfo.resultHasValue = false;
+  returnInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+
+  primec::ir_lowerer::OnErrorHandler handler;
+  handler.handlerPath = "/pkg/on_error";
+
+  std::unordered_set<std::string> inlineStack;
+  std::unordered_set<std::string> loweredCallTargets;
+  std::unordered_map<std::string, primec::ir_lowerer::OnErrorHandler> onErrorByDef;
+  onErrorByDef.emplace(callee.fullPath, handler);
+
+  primec::ir_lowerer::InlineDefinitionCallContextSetup out;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      callee,
+      true,
+      [&](const std::string &path, primec::ir_lowerer::ReturnInfo &infoOut) {
+        if (path != callee.fullPath) {
+          return false;
+        }
+        infoOut = returnInfo;
+        return true;
+      },
+      [](const primec::Definition &) { return false; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error.empty());
+  CHECK(out.returnInfo.isResult);
+  CHECK_FALSE(out.returnInfo.resultHasValue);
+  CHECK(out.returnInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK_FALSE(out.structDefinition);
+  REQUIRE(out.scopedOnError.has_value());
+  CHECK(out.scopedOnError->handlerPath == "/pkg/on_error");
+  REQUIRE(out.scopedResult.has_value());
+  CHECK(out.scopedResult->isResult);
+  CHECK_FALSE(out.scopedResult->hasValue);
+  CHECK(inlineStack.count(callee.fullPath) == 1u);
+  CHECK(loweredCallTargets.count(callee.fullPath) == 1u);
+}
+
+TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
+  primec::Definition callee;
+  callee.fullPath = "/pkg/do_work";
+
+  primec::ir_lowerer::InlineDefinitionCallContextSetup out;
+  std::string error;
+
+  std::unordered_set<std::string> inlineStack;
+  std::unordered_set<std::string> loweredCallTargets;
+  std::unordered_map<std::string, primec::ir_lowerer::OnErrorHandler> onErrorByDef;
+
+  CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      callee,
+      true,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
+        infoOut = primec::ir_lowerer::ReturnInfo{};
+        infoOut.returnsVoid = true;
+        return true;
+      },
+      [](const primec::Definition &) { return false; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error == "void call not allowed in expression context: /pkg/do_work");
+  CHECK(inlineStack.empty());
+  CHECK(loweredCallTargets.empty());
+
+  error.clear();
+  inlineStack.insert(callee.fullPath);
+  CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      callee,
+      false,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
+        infoOut = primec::ir_lowerer::ReturnInfo{};
+        infoOut.returnsVoid = false;
+        return true;
+      },
+      [](const primec::Definition &) { return false; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error == "native backend does not support recursive calls: /pkg/do_work");
+  CHECK(loweredCallTargets.empty());
+
+  error.clear();
+  inlineStack.clear();
+  CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      callee,
+      false,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+      [](const primec::Definition &) { return false; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error.empty());
+  CHECK(inlineStack.empty());
+  CHECK(loweredCallTargets.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int32) == ValueKind::Int32);

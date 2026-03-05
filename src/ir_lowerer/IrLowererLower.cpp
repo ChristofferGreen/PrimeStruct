@@ -10,6 +10,7 @@
 #include "IrLowererFileWriteHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererInlineCallContextHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererOnErrorHelpers.h"
