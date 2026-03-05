@@ -1240,6 +1240,8 @@ module {
 
 ### VM IR Breakpoints
 - `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`, `removeBreakpoint`, and `clearBreakpoints`.
+- `resolveSourceBreakpoints(...)` maps source locations (`line`, optional `column`) to executable IR breakpoint locations via canonical source-map entries; line-only requests reject ambiguous multi-column matches with explicit diagnostics.
+- `VmDebugSession::addSourceBreakpoint(line, column, resolvedCount, ...)` resolves and installs all matching IR breakpoints in one call; `resolvedCount` reports how many executable locations were mapped.
 - Breakpoints are checked in `continueExecution` before instruction execution and stop with reason `Breakpoint`.
 - Continuing from a breakpoint resumes past that same location once (prevents immediate repeat-stops at the same `(functionIndex, instructionPointer)`), then normal breakpoint checks resume.
 

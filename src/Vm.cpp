@@ -1,9 +1,12 @@
 #include "primec/Vm.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
+#include <sstream>
+#include <unordered_map>
 #include <unistd.h>
 #include <string>
 #include <string_view>
@@ -1127,6 +1130,113 @@ bool Vm::execute(const IrModule &module,
                  std::string &error,
                  const std::vector<std::string_view> &args) const {
   return executeImpl(module, result, error, static_cast<uint64_t>(args.size()), &args);
+}
+
+bool resolveSourceBreakpoints(const IrModule &module,
+                              uint32_t line,
+                              std::optional<uint32_t> column,
+                              std::vector<VmResolvedSourceBreakpoint> &outBreakpoints,
+                              std::string &error) {
+  outBreakpoints.clear();
+  if (line == 0) {
+    error = "invalid source breakpoint line";
+    return false;
+  }
+
+  std::unordered_map<uint32_t, const IrInstructionSourceMapEntry *> entriesByDebugId;
+  std::vector<uint32_t> matchingColumns;
+  matchingColumns.reserve(module.instructionSourceMap.size());
+  for (const auto &entry : module.instructionSourceMap) {
+    if (entry.provenance != IrSourceMapProvenance::CanonicalAst) {
+      continue;
+    }
+    if (entry.line != line || entry.column == 0) {
+      continue;
+    }
+    matchingColumns.push_back(entry.column);
+    if (column.has_value() && entry.column != *column) {
+      continue;
+    }
+    entriesByDebugId.emplace(entry.debugId, &entry);
+  }
+
+  if (!column.has_value()) {
+    if (matchingColumns.empty()) {
+      error = "source breakpoint not found at line " + std::to_string(line);
+      return false;
+    }
+    std::sort(matchingColumns.begin(), matchingColumns.end());
+    matchingColumns.erase(std::unique(matchingColumns.begin(), matchingColumns.end()), matchingColumns.end());
+    if (matchingColumns.size() > 1) {
+      std::ostringstream columnsOut;
+      for (size_t i = 0; i < matchingColumns.size(); ++i) {
+        if (i > 0) {
+          columnsOut << ",";
+        }
+        columnsOut << matchingColumns[i];
+      }
+      error = "ambiguous source breakpoint at line " + std::to_string(line) +
+              "; specify column (matches: " + columnsOut.str() + ")";
+      return false;
+    }
+
+    const uint32_t selectedColumn = matchingColumns.front();
+    entriesByDebugId.clear();
+    for (const auto &entry : module.instructionSourceMap) {
+      if (entry.provenance != IrSourceMapProvenance::CanonicalAst) {
+        continue;
+      }
+      if (entry.line == line && entry.column == selectedColumn) {
+        entriesByDebugId.emplace(entry.debugId, &entry);
+      }
+    }
+  } else if (entriesByDebugId.empty()) {
+    error = "source breakpoint not found at line " + std::to_string(line) + ", column " + std::to_string(*column);
+    return false;
+  }
+
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    const IrFunction &function = module.functions[functionIndex];
+    for (size_t instructionPointer = 0; instructionPointer < function.instructions.size(); ++instructionPointer) {
+      const IrInstruction &instruction = function.instructions[instructionPointer];
+      auto entryIt = entriesByDebugId.find(instruction.debugId);
+      if (entryIt == entriesByDebugId.end()) {
+        continue;
+      }
+      const IrInstructionSourceMapEntry &entry = *entryIt->second;
+      outBreakpoints.push_back(
+          {functionIndex, instructionPointer, instruction.debugId, entry.line, entry.column, entry.provenance});
+    }
+  }
+  if (outBreakpoints.empty()) {
+    if (column.has_value()) {
+      error = "source breakpoint has no executable instructions at line " + std::to_string(line) + ", column " +
+              std::to_string(*column);
+    } else {
+      error = "source breakpoint has no executable instructions at line " + std::to_string(line);
+    }
+    return false;
+  }
+
+  std::sort(outBreakpoints.begin(),
+            outBreakpoints.end(),
+            [](const VmResolvedSourceBreakpoint &left, const VmResolvedSourceBreakpoint &right) {
+              if (left.functionIndex != right.functionIndex) {
+                return left.functionIndex < right.functionIndex;
+              }
+              if (left.instructionPointer != right.instructionPointer) {
+                return left.instructionPointer < right.instructionPointer;
+              }
+              return left.debugId < right.debugId;
+            });
+  outBreakpoints.erase(std::unique(outBreakpoints.begin(),
+                                   outBreakpoints.end(),
+                                   [](const VmResolvedSourceBreakpoint &left, const VmResolvedSourceBreakpoint &right) {
+                                     return left.functionIndex == right.functionIndex &&
+                                            left.instructionPointer == right.instructionPointer;
+                                   }),
+                       outBreakpoints.end());
+  return true;
 }
 
 bool VmDebugSession::initFromModule(const IrModule &module,
@@ -2449,6 +2559,25 @@ bool VmDebugSession::addBreakpoint(size_t functionIndex, size_t instructionPoint
     return false;
   }
   breakpoints_.insert({functionIndex, instructionPointer});
+  return true;
+}
+
+bool VmDebugSession::addSourceBreakpoint(uint32_t line,
+                                         std::optional<uint32_t> column,
+                                         size_t &resolvedCount,
+                                         std::string &error) {
+  if (!module_) {
+    error = "debug session is not started";
+    return false;
+  }
+  std::vector<VmResolvedSourceBreakpoint> resolved;
+  if (!resolveSourceBreakpoints(*module_, line, column, resolved, error)) {
+    return false;
+  }
+  for (const auto &breakpoint : resolved) {
+    breakpoints_.insert({breakpoint.functionIndex, breakpoint.instructionPointer});
+  }
+  resolvedCount = resolved.size();
   return true;
 }
 

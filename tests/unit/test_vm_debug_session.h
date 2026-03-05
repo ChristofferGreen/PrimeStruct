@@ -605,6 +605,116 @@ TEST_CASE("vm debug session breakpoints validate and support multi-hit flows") {
   CHECK(session.snapshot().result == 7);
 }
 
+TEST_CASE("vm resolves source breakpoints for single and multi-hit mappings") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3, 11});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1, 12});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 13});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 2, 21});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 22});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+  module.entryIndex = 0;
+  module.instructionSourceMap.push_back({11u, 100u, 4u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({21u, 100u, 4u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({13u, 101u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({22u, 100u, 4u, primec::IrSourceMapProvenance::SyntheticIr});
+
+  std::vector<primec::VmResolvedSourceBreakpoint> matches;
+  std::string error;
+  REQUIRE(primec::resolveSourceBreakpoints(module, 100u, 4u, matches, error));
+  CHECK(error.empty());
+  REQUIRE(matches.size() == 2);
+  CHECK(matches[0].functionIndex == 0);
+  CHECK(matches[0].instructionPointer == 0);
+  CHECK(matches[1].functionIndex == 1);
+  CHECK(matches[1].instructionPointer == 0);
+
+  matches.clear();
+  error.clear();
+  REQUIRE(primec::resolveSourceBreakpoints(module, 101u, std::nullopt, matches, error));
+  CHECK(error.empty());
+  REQUIRE(matches.size() == 1);
+  CHECK(matches[0].functionIndex == 0);
+  CHECK(matches[0].instructionPointer == 2);
+}
+
+TEST_CASE("vm source breakpoint resolution reports ambiguous span diagnostics") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 3});
+  module.functions.push_back(std::move(mainFn));
+  module.entryIndex = 0;
+  module.instructionSourceMap.push_back({1u, 200u, 3u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({2u, 200u, 9u, primec::IrSourceMapProvenance::CanonicalAst});
+
+  std::vector<primec::VmResolvedSourceBreakpoint> matches;
+  std::string error;
+  CHECK_FALSE(primec::resolveSourceBreakpoints(module, 200u, std::nullopt, matches, error));
+  CHECK(error.find("ambiguous source breakpoint") != std::string::npos);
+  CHECK(error.find("line 200") != std::string::npos);
+  CHECK(error.find("3") != std::string::npos);
+  CHECK(error.find("9") != std::string::npos);
+}
+
+TEST_CASE("vm debug session adds source breakpoints and hits all mapped locations") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3, 31});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1, 32});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 33});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/double";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 2, 41});
+  helperFn.instructions.push_back({primec::IrOpcode::MulI32, 0, 42});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 43});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+  module.entryIndex = 0;
+  module.instructionSourceMap.push_back({31u, 300u, 6u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({41u, 300u, 6u, primec::IrSourceMapProvenance::CanonicalAst});
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  size_t resolvedCount = 0;
+  REQUIRE(session.addSourceBreakpoint(300u, 6u, resolvedCount, error));
+  CHECK(error.empty());
+  CHECK(resolvedCount == 2);
+
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(error.empty());
+  CHECK(stopReason == primec::VmDebugStopReason::Breakpoint);
+  auto snap = session.snapshot();
+  CHECK(snap.functionIndex == 0);
+  CHECK(snap.instructionPointer == 0);
+
+  REQUIRE(session.continueExecution(stopReason, error));
+  CHECK(error.empty());
+  CHECK(stopReason == primec::VmDebugStopReason::Breakpoint);
+  snap = session.snapshot();
+  CHECK(snap.functionIndex == 1);
+  CHECK(snap.instructionPointer == 0);
+}
+
 TEST_CASE("vm debug breakpoints follow executed branch path deterministically") {
   auto runBranchCase = [](uint64_t conditionValue, size_t expectedBreakpointIp, uint64_t expectedResult, std::string &error) {
     error.clear();

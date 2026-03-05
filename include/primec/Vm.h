@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -160,6 +161,21 @@ struct VmDebugHooks {
   void *userData = nullptr;
 };
 
+struct VmResolvedSourceBreakpoint {
+  size_t functionIndex = 0;
+  size_t instructionPointer = 0;
+  uint32_t debugId = 0;
+  uint32_t line = 0;
+  uint32_t column = 0;
+  IrSourceMapProvenance provenance = IrSourceMapProvenance::Unknown;
+};
+
+bool resolveSourceBreakpoints(const IrModule &module,
+                              uint32_t line,
+                              std::optional<uint32_t> column,
+                              std::vector<VmResolvedSourceBreakpoint> &outBreakpoints,
+                              std::string &error);
+
 class Vm {
 public:
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
@@ -177,6 +193,7 @@ public:
   bool continueExecution(VmDebugStopReason &stopReason, std::string &error);
   bool pause(std::string &error);
   bool addBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error);
+  bool addSourceBreakpoint(uint32_t line, std::optional<uint32_t> column, size_t &resolvedCount, std::string &error);
   bool removeBreakpoint(size_t functionIndex, size_t instructionPointer, std::string &error);
   void clearBreakpoints();
   void setHooks(const VmDebugHooks &hooks);
