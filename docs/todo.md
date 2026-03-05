@@ -238,6 +238,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic missing-value diagnostics when `--port-base` is followed by bare `--` in `scripts/run_spinning_cube_demo.sh`.
 - ✓ Replace doctest-disallowed logical-OR assertion usage in spinning-cube compile-run tests so the suite builds cleanly under current doctest expression constraints.
 - ✓ Add a regression test that locks deterministic `unknown arg` diagnostics for bare `--` passed directly to `scripts/run_spinning_cube_demo.sh`.
+- ✓ Add a regression test that locks deterministic missing-value diagnostics when `--work-dir` is followed by bare `--` in `scripts/run_spinning_cube_demo.sh`.
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
