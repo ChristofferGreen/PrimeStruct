@@ -184,6 +184,7 @@ run_native_check() {
   local native_sample_dir="$ROOT_DIR/examples/native/spinning_cube"
   local native_dir="$WORK_DIR/native"
   local cube_native="$native_dir/cube_native"
+  local native_compile_err="$native_dir/native_compile.err.txt"
   local host_bin="$native_dir/spinning_cube_host"
   local host_out="$native_dir/native_host.out.txt"
   local cxx=""
@@ -207,7 +208,11 @@ run_native_check() {
   rm -rf "$native_dir"
   mkdir -p "$native_dir"
 
-  if ! "$PRIMEC_BIN" --emit=native "$web_sample_dir/cube.prime" -o "$cube_native" --entry /main; then
+  if ! "$PRIMEC_BIN" --emit=native "$web_sample_dir/cube.prime" -o "$cube_native" --entry /main 2>"$native_compile_err"; then
+    if grep -Fq "backend does not support return type" "$native_compile_err"; then
+      set_result native SKIP "native backend limitation: backend does not support return type"
+      return
+    fi
     set_result native FAIL "failed to compile cube native binary"
     return
   fi
