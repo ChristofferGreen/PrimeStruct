@@ -253,6 +253,12 @@ bool SemanticsValidator::validateDefinitions() {
       }
       out.push_back(std::move(record));
     };
+    auto isFlowEffectDiagnosticMessage = [](const std::string &message) {
+      return message.rfind("execution effects must be a subset of enclosing effects on ", 0) == 0 ||
+             message.rfind("capability requires matching effect on ", 0) == 0 ||
+             message.rfind("duplicate effects transform on ", 0) == 0 ||
+             message.rfind("duplicate capabilities transform on ", 0) == 0;
+    };
     auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
       auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                             const std::string &expectedType,
@@ -346,6 +352,19 @@ bool SemanticsValidator::validateDefinitions() {
     std::function<void(const Expr &)> scanExpr;
     scanExpr = [&](const Expr &expr) {
       if (expr.kind == Expr::Kind::Call) {
+        std::optional<EffectScope> effectScope;
+        if (!expr.isBinding && !expr.transforms.empty()) {
+          std::unordered_set<std::string> executionEffects;
+          if (!resolveExecutionEffects(expr, executionEffects)) {
+            const std::string effectError = error_;
+            error_.clear();
+            if (isFlowEffectDiagnosticMessage(effectError)) {
+              appendDefinitionRecord(expr, effectError);
+            }
+            return;
+          }
+          effectScope.emplace(*this, std::move(executionEffects));
+        }
         if (!expr.name.empty() && !isBuiltinCall(expr)) {
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
@@ -485,6 +504,7 @@ bool SemanticsValidator::validateDefinitions() {
   for (const auto &def : program_.definitions) {
     resetCollectedState();
     if (collectDiagnostics) {
+      ValidationContextScope validationContextScope(*this, buildDefinitionValidationContext(def));
       std::vector<SemanticDiagnosticRecord> intraDefinitionRecords;
       collectDefinitionIntraBodyCallDiagnostics(def, intraDefinitionRecords);
       if (!intraDefinitionRecords.empty()) {
@@ -1229,6 +1249,12 @@ bool SemanticsValidator::validateExecutions() {
       }
       out.push_back(std::move(record));
     };
+    auto isFlowEffectDiagnosticMessage = [](const std::string &message) {
+      return message.rfind("execution effects must be a subset of enclosing effects on ", 0) == 0 ||
+             message.rfind("capability requires matching effect on ", 0) == 0 ||
+             message.rfind("duplicate effects transform on ", 0) == 0 ||
+             message.rfind("duplicate capabilities transform on ", 0) == 0;
+    };
     auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
       auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                             const std::string &expectedType,
@@ -1322,6 +1348,19 @@ bool SemanticsValidator::validateExecutions() {
     std::function<void(const Expr &)> scanExpr;
     scanExpr = [&](const Expr &expr) {
       if (expr.kind == Expr::Kind::Call) {
+        std::optional<EffectScope> effectScope;
+        if (!expr.isBinding && !expr.transforms.empty()) {
+          std::unordered_set<std::string> executionEffects;
+          if (!resolveExecutionEffects(expr, executionEffects)) {
+            const std::string effectError = error_;
+            error_.clear();
+            if (isFlowEffectDiagnosticMessage(effectError)) {
+              appendExecutionRecord(expr, effectError);
+            }
+            return;
+          }
+          effectScope.emplace(*this, std::move(executionEffects));
+        }
         if (!expr.name.empty() && !isBuiltinCall(expr)) {
           const std::string resolved = resolveCalleePath(expr);
           if (defMap_.count(resolved) == 0) {
@@ -1483,6 +1522,7 @@ bool SemanticsValidator::validateExecutions() {
   for (const auto &exec : program_.executions) {
     resetCollectedState();
     if (collectDiagnostics) {
+      ValidationContextScope validationContextScope(*this, buildExecutionValidationContext(exec));
       std::vector<SemanticDiagnosticRecord> intraExecutionRecords;
       collectExecutionIntraBodyCallDiagnostics(exec, intraExecutionRecords);
       if (!intraExecutionRecords.empty()) {
