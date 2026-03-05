@@ -67,6 +67,18 @@ enum class ResultWhyMethodCallEmitResult {
   Emitted,
   Error,
 };
+enum class ResultOkMethodCallEmitResult {
+  NotHandled,
+  Emitted,
+  Error,
+};
+ResultOkMethodCallEmitResult tryEmitResultOkCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error);
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
     const LocalMap &localsIn,

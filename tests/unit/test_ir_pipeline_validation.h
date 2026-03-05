@@ -12423,6 +12423,124 @@ TEST_CASE("ir lowerer result helpers resolve Result.ok method") {
   CHECK(out.hasValue);
 }
 
+TEST_CASE("ir lowerer result helpers try emit Result.ok method calls") {
+  using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.isMethodCall = true;
+  expr.name = "ok";
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.literalValue = 7;
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  expr.args = {resultType};
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) ==
+        EmitResult::Emitted);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 0);
+
+  instructions.clear();
+  primec::Expr nonResultExpr = expr;
+  nonResultExpr.name = "map";
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            nonResultExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) ==
+        EmitResult::NotHandled);
+  CHECK(instructions.empty());
+
+  bool inferCalled = false;
+  bool emitCalled = false;
+  expr.args = {resultType, valueExpr};
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              inferCalled = true;
+              return ValueKind::Bool;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) ==
+        EmitResult::Emitted);
+  CHECK(inferCalled);
+  CHECK(emitCalled);
+
+  expr.args = {resultType, valueExpr, valueExpr};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](primec::IrOpcode, uint64_t) {},
+            error) ==
+        EmitResult::Error);
+  CHECK(error == "Result.ok accepts at most one argument");
+
+  emitCalled = false;
+  expr.args = {resultType, valueExpr};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int64;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            [&](primec::IrOpcode, uint64_t) {},
+            error) ==
+        EmitResult::Error);
+  CHECK(error == "native backend only supports Result.ok with 32-bit values");
+  CHECK_FALSE(emitCalled);
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            expr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Int32;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](primec::IrOpcode, uint64_t) {},
+            error) ==
+        EmitResult::Error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer result helpers resolve definition result metadata") {
   primec::Definition callee;
   callee.fullPath = "/make";

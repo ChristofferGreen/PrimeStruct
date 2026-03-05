@@ -376,22 +376,22 @@
           function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
           return true;
         }
-        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
-            expr.args.front().name == "Result" && expr.name == "ok") {
-          if (expr.args.size() == 1) {
-            function.instructions.push_back({IrOpcode::PushI32, 0});
-            return true;
-          }
-          if (expr.args.size() != 2) {
-            error = "Result.ok accepts at most one argument";
-            return false;
-          }
-          LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
-          if (argKind != LocalInfo::ValueKind::Int32 && argKind != LocalInfo::ValueKind::Bool) {
-            error = "native backend only supports Result.ok with 32-bit values";
-            return false;
-          }
-          return emitExpr(expr.args[1], localsIn);
+        const auto resultOkCallResult = ir_lowerer::tryEmitResultOkCall(
+            expr,
+            localsIn,
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return inferExprKind(valueExpr, valueLocals);
+            },
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return emitExpr(valueExpr, valueLocals);
+            },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            error);
+        if (resultOkCallResult == ir_lowerer::ResultOkMethodCallEmitResult::Emitted) {
+          return true;
+        }
+        if (resultOkCallResult == ir_lowerer::ResultOkMethodCallEmitResult::Error) {
+          return false;
         }
         const auto resultWhyCallResult = ir_lowerer::tryEmitResultWhyCall(
             expr,

@@ -124,6 +124,36 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
   };
 }
 
+ResultOkMethodCallEmitResult tryEmitResultOkCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::string &error) {
+  if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+        expr.args.front().name == "Result" && expr.name == "ok")) {
+    return ResultOkMethodCallEmitResult::NotHandled;
+  }
+  if (expr.args.size() == 1) {
+    emitInstruction(IrOpcode::PushI32, 0);
+    return ResultOkMethodCallEmitResult::Emitted;
+  }
+  if (expr.args.size() != 2) {
+    error = "Result.ok accepts at most one argument";
+    return ResultOkMethodCallEmitResult::Error;
+  }
+  const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
+  if (argKind != LocalInfo::ValueKind::Int32 && argKind != LocalInfo::ValueKind::Bool) {
+    error = "native backend only supports Result.ok with 32-bit values";
+    return ResultOkMethodCallEmitResult::Error;
+  }
+  if (!emitExpr(expr.args[1], localsIn)) {
+    return ResultOkMethodCallEmitResult::Error;
+  }
+  return ResultOkMethodCallEmitResult::Emitted;
+}
+
 bool resolveResultWhyCallInfo(const Expr &expr,
                               const LocalMap &localsIn,
                               const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
