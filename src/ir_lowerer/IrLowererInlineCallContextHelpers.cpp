@@ -9,7 +9,7 @@ bool prepareInlineDefinitionCallContext(
     const std::function<bool(const Definition &)> &isStructDefinition,
     std::unordered_set<std::string> &inlineStack,
     std::unordered_set<std::string> &loweredCallTargets,
-    const std::unordered_map<std::string, OnErrorHandler> &onErrorByDef,
+    const OnErrorByDefinition &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error) {
   out = InlineDefinitionCallContextSetup{};
@@ -30,7 +30,7 @@ bool prepareInlineDefinitionCallContext(
   loweredCallTargets.insert(callee.fullPath);
 
   auto onErrorIt = onErrorByDef.find(callee.fullPath);
-  if (onErrorIt != onErrorByDef.end()) {
+  if (onErrorIt != onErrorByDef.end() && onErrorIt->second.has_value()) {
     out.scopedOnError = onErrorIt->second;
   }
   if (out.returnInfo.isResult) {

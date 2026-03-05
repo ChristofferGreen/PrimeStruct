@@ -1,4 +1,5 @@
 #include "IrLowererFileWriteHelpers.h"
+#include "IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
 

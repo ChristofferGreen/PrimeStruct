@@ -46,6 +46,7 @@ add_library(primec_lib
   src/ir_lowerer/IrLowererResultHelpers.cpp
   src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp
   src/ir_lowerer/IrLowererSetupInferenceHelpers.cpp
+  src/ir_lowerer/IrLowererSetupLocalsHelpers.cpp
   src/ir_lowerer/IrLowererSetupMathHelpers.cpp
   src/ir_lowerer/IrLowererStatementBindingHelpers.cpp
   src/ir_lowerer/IrLowererStatementCallHelpers.cpp

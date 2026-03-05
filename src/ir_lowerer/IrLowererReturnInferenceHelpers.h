@@ -5,6 +5,7 @@
 
 #include "IrLowererFlowHelpers.h"
 #include "IrLowererSharedTypes.h"
+#include "IrLowererStructTypeHelpers.h"
 #include "primec/Ast.h"
 
 namespace primec::ir_lowerer {
@@ -35,7 +36,7 @@ using ApplyStructInfoForInferenceFn = std::function<void(const Expr &, LocalInfo
 using InferStructExprPathFromLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using IsStringBindingForInferenceFn = std::function<bool(const Expr &)>;
 using ResolveStructTypeNameForReturnFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
-using ResolveStructArrayInfoForReturnFn = std::function<bool(const std::string &, StructArrayInfo &)>;
+using ResolveStructArrayInfoForReturnFn = std::function<bool(const std::string &, StructArrayTypeInfo &)>;
 
 bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,

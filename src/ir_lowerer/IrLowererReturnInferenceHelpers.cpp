@@ -101,7 +101,7 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
       break;
     }
     std::string structPath;
-    StructArrayInfo structInfo;
+    StructArrayTypeInfo structInfo;
     if (resolveStructTypeName(typeName, def.namespacePrefix, structPath) &&
         resolveStructArrayInfoFromPath(structPath, structInfo)) {
       info.returnsArray = true;

@@ -5636,6 +5636,104 @@ TEST_CASE(
   CHECK(error == "native backend does not support string array return types on /main");
 }
 
+TEST_CASE("ir lowerer setup locals helper unpacks orchestration adapters") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  primec::Program program;
+  program.imports.push_back("/std/math/*");
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.namespacePrefix = "";
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition calleeDef;
+  calleeDef.fullPath = "/callee";
+  calleeDef.namespacePrefix = "";
+  program.definitions.push_back(calleeDef);
+
+  primec::Definition containerDef;
+  containerDef.fullPath = "/pkg/Container";
+  containerDef.namespacePrefix = "/pkg";
+  program.definitions.push_back(containerDef);
+
+  primec::Definition myStructDef;
+  myStructDef.fullPath = "/pkg/MyStruct";
+  myStructDef.namespacePrefix = "/pkg";
+  program.definitions.push_back(myStructDef);
+
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  entryDef.namespacePrefix = "";
+  primec::Expr entryParam;
+  entryParam.name = "argv";
+  primec::Transform arrayTransform;
+  arrayTransform.name = "array";
+  arrayTransform.templateArgs = {"string"};
+  entryParam.transforms.push_back(arrayTransform);
+  entryDef.parameters.push_back(entryParam);
+  program.definitions.push_back(entryDef);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/handler", &program.definitions[0]},
+      {"/callee", &program.definitions[1]},
+      {"/pkg/Container", &program.definitions[2]},
+      {"/pkg/MyStruct", &program.definitions[3]},
+      {"/main", &program.definitions[4]},
+  };
+  const std::unordered_map<std::string, std::string> importAliases = {{"MyStruct", "/pkg/MyStruct"}};
+  const std::unordered_set<std::string> structNames = {"/pkg/Container", "/pkg/MyStruct"};
+
+  primec::IrFunction function;
+  std::vector<std::string> stringTable;
+  std::string error;
+  primec::ir_lowerer::EntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup setup;
+  REQUIRE(primec::ir_lowerer::buildProgramEntryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup(
+      stringTable,
+      function,
+      program,
+      program.definitions[4],
+      "/main",
+      defMap,
+      importAliases,
+      structNames,
+      2,
+      [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+        appendStructLayoutField("/pkg/MyStruct", {"value", "i32", "", false});
+        appendStructLayoutField("/pkg/Container", {"slot", "uninitialized", "MyStruct", false});
+      },
+      setup,
+      error));
+  CHECK(error.empty());
+
+  const primec::ir_lowerer::SetupLocalsOrchestration unpacked =
+      primec::ir_lowerer::unpackSetupLocalsOrchestration(setup);
+  CHECK(unpacked.entryReturnConfig.returnsVoid);
+  CHECK(unpacked.entryCountAccessSetup.hasEntryArgs);
+  CHECK(unpacked.entryCountAccessSetup.entryArgsName == "argv");
+  CHECK(unpacked.entryCallOnErrorSetup.onErrorByDefinition.count("/main") == 1u);
+  CHECK_FALSE(unpacked.entryCallOnErrorSetup.hasTailExecution);
+
+  primec::Expr mathCall;
+  mathCall.kind = primec::Expr::Kind::Call;
+  mathCall.name = "sin";
+  std::string builtinName;
+  CHECK(unpacked.setupMathResolvers.getMathBuiltinName(mathCall, builtinName));
+  CHECK(builtinName == "sin");
+
+  CHECK(unpacked.setupTypeAndStructTypeAdapters.valueKindFromTypeName("i32") == ValueKind::Int32);
+  primec::ir_lowerer::StructSlotLayoutInfo slotLayout;
+  CHECK(unpacked.structSlotResolutionAdapters.resolveStructSlotLayout("/pkg/MyStruct", slotLayout));
+  CHECK(slotLayout.fields.size() == 1u);
+
+  primec::ir_lowerer::StructArrayTypeInfo arrayInfo;
+  CHECK(unpacked.structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath("/pkg/MyStruct", arrayInfo));
+  CHECK(arrayInfo.elementKind == ValueKind::Int32);
+
+  const size_t instructionBefore = function.instructions.size();
+  unpacked.runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters.emitArrayIndexOutOfBounds();
+  CHECK(function.instructions.size() > instructionBefore);
+}
+
 TEST_CASE("ir lowerer on_error helpers reject unknown handler") {
   primec::Transform onError;
   onError.name = "on_error";
@@ -6618,7 +6716,7 @@ TEST_CASE("ir lowerer return inference helper analyzes declared return transform
   primec::ir_lowerer::analyzeDeclaredReturnTransforms(
       def,
       [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, primec::ir_lowerer::StructArrayInfo &) { return false; },
+      [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
       info,
       hasReturnTransform,
       hasReturnAuto);
@@ -6645,7 +6743,7 @@ TEST_CASE("ir lowerer return inference helper resolves declared array and struct
   primec::ir_lowerer::analyzeDeclaredReturnTransforms(
       defArray,
       [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, primec::ir_lowerer::StructArrayInfo &) { return false; },
+      [](const std::string &, primec::ir_lowerer::StructArrayTypeInfo &) { return false; },
       info,
       hasReturnTransform,
       hasReturnAuto);
@@ -6674,7 +6772,7 @@ TEST_CASE("ir lowerer return inference helper resolves declared array and struct
         }
         return false;
       },
-      [](const std::string &path, primec::ir_lowerer::StructArrayInfo &infoOut) {
+      [](const std::string &path, primec::ir_lowerer::StructArrayTypeInfo &infoOut) {
         if (path == "/pkg/VecLike") {
           infoOut.elementKind = primec::ir_lowerer::LocalInfo::ValueKind::Float32;
           return true;
@@ -6706,7 +6804,7 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
 
   std::unordered_set<std::string> inlineStack;
   std::unordered_set<std::string> loweredCallTargets;
-  std::unordered_map<std::string, primec::ir_lowerer::OnErrorHandler> onErrorByDef;
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   onErrorByDef.emplace(callee.fullPath, handler);
 
   primec::ir_lowerer::InlineDefinitionCallContextSetup out;
@@ -6750,7 +6848,7 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
 
   std::unordered_set<std::string> inlineStack;
   std::unordered_set<std::string> loweredCallTargets;
-  std::unordered_map<std::string, primec::ir_lowerer::OnErrorHandler> onErrorByDef;
+  primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
 
   CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
       callee,

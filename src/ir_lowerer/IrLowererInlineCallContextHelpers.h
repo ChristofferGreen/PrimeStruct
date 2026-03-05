@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "IrLowererFlowHelpers.h"
+#include "IrLowererOnErrorHelpers.h"
 #include "IrLowererSharedTypes.h"
 #include "primec/Ast.h"
 
@@ -26,7 +27,7 @@ bool prepareInlineDefinitionCallContext(
     const std::function<bool(const Definition &)> &isStructDefinition,
     std::unordered_set<std::string> &inlineStack,
     std::unordered_set<std::string> &loweredCallTargets,
-    const std::unordered_map<std::string, OnErrorHandler> &onErrorByDef,
+    const OnErrorByDefinition &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error);
 

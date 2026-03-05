@@ -35,18 +35,15 @@
       error)) {
     return false;
   }
-  const auto &entryReturnConfig =
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup.entryReturnConfig;
+  const auto setupLocalsOrchestration = ir_lowerer::unpackSetupLocalsOrchestration(
+      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup);
+
+  const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
   bool returnsVoid = entryReturnConfig.returnsVoid;
   ResultReturnInfo entryResultInfo = entryReturnConfig.resultInfo;
   bool entryHasResultInfo = entryReturnConfig.hasResultInfo;
 
-  const auto &runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup =
-      entryReturnRuntimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-          .runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup;
-  const auto &runtimeErrorAndStringLiteralSetup =
-      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-          .runtimeErrorAndStringLiteralSetup;
+  const auto &runtimeErrorAndStringLiteralSetup = setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup;
   const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
   auto internString = stringLiteralHelpers.internString;
 
@@ -63,12 +60,7 @@
   auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
   auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
-  const auto &entrySetupMathTypeStructAndUninitializedResolutionSetup =
-      runtimeEntrySetupMathTypeStructAndUninitializedResolutionSetup
-          .entrySetupMathTypeStructAndUninitializedResolutionSetup;
-  const auto &entryCountCallOnErrorSetup =
-      entrySetupMathTypeStructAndUninitializedResolutionSetup.entryCountCallOnErrorSetup;
-  const auto &entryCountAccessSetup = entryCountCallOnErrorSetup.countAccessSetup;
+  const auto &entryCountAccessSetup = setupLocalsOrchestration.entryCountAccessSetup;
   const bool hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
   const std::string &entryArgsName = entryCountAccessSetup.entryArgsName;
   const auto &countAccessClassifiers = entryCountAccessSetup.classifiers;
@@ -80,7 +72,7 @@
 
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
-  const auto &entryCallOnErrorSetup = entryCountCallOnErrorSetup.callOnErrorSetup;
+  const auto &entryCallOnErrorSetup = setupLocalsOrchestration.entryCallOnErrorSetup;
   const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
   auto resolveExprPath = callResolutionAdapters.resolveExprPath;
   auto isTailCallCandidate = callResolutionAdapters.isTailCallCandidate;
@@ -89,53 +81,40 @@
   }
   OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
-  const auto &setupMathTypeStructAndUninitializedResolutionSetup =
-      entrySetupMathTypeStructAndUninitializedResolutionSetup
-          .setupMathTypeStructAndUninitializedResolutionSetup;
-  const auto &setupMathAndBindingAdapters =
-      setupMathTypeStructAndUninitializedResolutionSetup.setupMathAndBindingAdapters;
-  const auto &setupMathResolvers = setupMathAndBindingAdapters.setupMathResolvers;
+  const auto &setupMathResolvers = setupLocalsOrchestration.setupMathResolvers;
   auto getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
   auto getMathConstantName = setupMathResolvers.getMathConstantName;
 
-  const auto &bindingTypeAdapters = setupMathAndBindingAdapters.bindingTypeAdapters;
+  const auto &bindingTypeAdapters = setupLocalsOrchestration.bindingTypeAdapters;
   auto setReferenceArrayInfo = bindingTypeAdapters.setReferenceArrayInfo;
   auto bindingKind = bindingTypeAdapters.bindingKind;
   auto isStringBinding = bindingTypeAdapters.isStringBinding;
   auto isFileErrorBinding = bindingTypeAdapters.isFileErrorBinding;
   auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
 
-  const auto &setupTypeStructAndUninitializedResolutionSetup =
-      setupMathTypeStructAndUninitializedResolutionSetup.setupTypeStructAndUninitializedResolutionSetup;
-  const auto &setupTypeAndStructTypeAdapters =
-      setupTypeStructAndUninitializedResolutionSetup.setupTypeAndStructTypeAdapters;
+  const auto &setupTypeAndStructTypeAdapters = setupLocalsOrchestration.setupTypeAndStructTypeAdapters;
   auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
   const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
   auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
 
   using StructArrayInfo = ir_lowerer::StructArrayTypeInfo;
   using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
-  const auto &structAndUninitializedResolutionSetup =
-      setupTypeStructAndUninitializedResolutionSetup.structAndUninitializedResolutionSetup;
-  const auto &structLayoutResolutionAdapters =
-      structAndUninitializedResolutionSetup.structLayoutResolutionAdapters;
-  const auto &structArrayInfoAdapters = structLayoutResolutionAdapters.structArrayInfo;
+  const auto &structArrayInfoAdapters = setupLocalsOrchestration.structArrayInfoAdapters;
   auto resolveStructArrayInfoFromPath = structArrayInfoAdapters.resolveStructArrayTypeInfoFromPath;
   auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
 
   using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
-  const auto &structSlotResolutionAdapters = structLayoutResolutionAdapters.structSlotResolution;
+  const auto &structSlotResolutionAdapters = setupLocalsOrchestration.structSlotResolutionAdapters;
   auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
   auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
   using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
-  const auto &uninitializedResolutionAdapters =
-      structAndUninitializedResolutionSetup.uninitializedResolutionAdapters;
+  const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
   auto resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
   auto resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
   auto inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;
 
-  auto applyStructValueInfo = structTypeResolutionAdapters.applyStructValueInfo;
+  auto applyStructValueInfo = setupLocalsOrchestration.applyStructValueInfo;
 
 
   auto combineNumericKinds = setupTypeAndStructTypeAdapters.combineNumericKinds;
