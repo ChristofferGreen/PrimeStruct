@@ -26,6 +26,10 @@ enum class DirectCallStatementEmitResult {
   Emitted,
   Error,
 };
+enum class AssignOrExprStatementEmitResult {
+  Emitted,
+  Error,
+};
 
 BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
     const Expr &stmt,
@@ -58,5 +62,10 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::vector<IrInstruction> &instructions,
     std::string &error);
+AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    std::vector<IrInstruction> &instructions);
 
 } // namespace primec::ir_lowerer

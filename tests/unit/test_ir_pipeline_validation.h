@@ -12762,6 +12762,69 @@ TEST_CASE("ir lowerer statement call helper validates direct-call diagnostics") 
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer statement call helper emits assign and expression pops") {
+  using EmitResult = primec::ir_lowerer::AssignOrExprStatementEmitResult;
+
+  primec::Expr assignStmt;
+  assignStmt.kind = primec::Expr::Kind::Call;
+  assignStmt.name = "assign";
+
+  std::vector<primec::IrInstruction> instructions;
+  CHECK(primec::ir_lowerer::emitAssignOrExprStatementWithPop(
+            assignStmt,
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, 10});
+              return true;
+            },
+            instructions) == EmitResult::Emitted);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
+
+  primec::Expr exprStmt;
+  exprStmt.kind = primec::Expr::Kind::Call;
+  exprStmt.name = "notify";
+  instructions.clear();
+  CHECK(primec::ir_lowerer::emitAssignOrExprStatementWithPop(
+            exprStmt,
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI64, 11});
+              return true;
+            },
+            instructions) == EmitResult::Emitted);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::Pop);
+}
+
+TEST_CASE("ir lowerer statement call helper validates assign and expression pop errors") {
+  using EmitResult = primec::ir_lowerer::AssignOrExprStatementEmitResult;
+
+  primec::Expr assignStmt;
+  assignStmt.kind = primec::Expr::Kind::Call;
+  assignStmt.name = "assign";
+
+  std::vector<primec::IrInstruction> instructions;
+  CHECK(primec::ir_lowerer::emitAssignOrExprStatementWithPop(
+            assignStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            instructions) == EmitResult::Error);
+  CHECK(instructions.empty());
+
+  primec::Expr exprStmt;
+  exprStmt.kind = primec::Expr::Kind::Call;
+  exprStmt.name = "notify";
+  CHECK(primec::ir_lowerer::emitAssignOrExprStatementWithPop(
+            exprStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            instructions) == EmitResult::Error);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

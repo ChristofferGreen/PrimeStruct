@@ -54,17 +54,14 @@
     if (directCallResult == ir_lowerer::DirectCallStatementEmitResult::Emitted) {
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "assign")) {
-      if (!emitExpr(stmt, localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::Pop, 0});
-      return true;
-    }
-    if (!emitExpr(stmt, localsIn)) {
+    const auto assignOrExprResult = ir_lowerer::emitAssignOrExprStatementWithPop(
+        stmt,
+        localsIn,
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        function.instructions);
+    if (assignOrExprResult == ir_lowerer::AssignOrExprStatementEmitResult::Error) {
       return false;
     }
-    function.instructions.push_back({IrOpcode::Pop, 0});
     return true;
   };
 

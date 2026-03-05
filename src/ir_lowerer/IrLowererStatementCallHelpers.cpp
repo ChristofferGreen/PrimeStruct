@@ -288,4 +288,23 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   return DirectCallStatementEmitResult::Emitted;
 }
 
+AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    std::vector<IrInstruction> &instructions) {
+  if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "assign")) {
+    if (!emitExpr(stmt, localsIn)) {
+      return AssignOrExprStatementEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::Pop, 0});
+    return AssignOrExprStatementEmitResult::Emitted;
+  }
+  if (!emitExpr(stmt, localsIn)) {
+    return AssignOrExprStatementEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::Pop, 0});
+  return AssignOrExprStatementEmitResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer
