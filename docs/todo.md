@@ -24,7 +24,7 @@ Legend:
 - ✓ Extend semantic-stage collection through definition/execution validation passes to emit independent errors in one run with stable ordering.
 - ✓ Add intra-definition/execution body multi-error recovery for unknown call targets so a single definition/execution can report more than one unresolved-call semantic error per pass.
 - ✓ Extend intra-definition/execution body recovery to aggregate resolved-call argument-shape errors (duplicate/unknown named arguments and argument-count mismatches) with deterministic ordering.
-- ○ Extend intra-definition/execution body recovery to aggregate call argument type-mismatch diagnostics for resolved targets while preserving deterministic diagnostics.
+- ✓ Extend intra-definition/execution body recovery to aggregate call argument type-mismatch diagnostics for resolved targets while preserving deterministic diagnostics.
 - ○ Extend intra-definition/execution body recovery to aggregate flow/effect diagnostics (for example capability/effect subset failures) while preserving deterministic diagnostics.
 
 **Pipeline & CLI**

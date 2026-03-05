@@ -1055,6 +1055,111 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
+TEST_CASE("primec collect-diagnostics emits intra-definition argument-type payload") {
+  const std::string source = R"(
+[return<i32>]
+expects_bool([bool] cond, [i32] value) {
+  return(value)
+}
+[return<i32>]
+bad() {
+  expects_bool(1i32, 7i32)
+  expects_bool(true, false)
+  return(0i32)
+}
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_definition_argtype.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_collect_diagnostics_semantic_intra_definition_argtype_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits intra-definition argument-type payload") {
+  const std::string source = R"(
+[return<i32>]
+expects_bool([bool] cond, [i32] value) {
+  return(value)
+}
+[return<i32>]
+bad() {
+  expects_bool(1i32, 7i32)
+  expects_bool(true, false)
+  return(0i32)
+}
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("primevm_collect_diagnostics_semantic_intra_definition_argtype.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primevm_collect_diagnostics_semantic_intra_definition_argtype_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /bad\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
 TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for execution pass errors") {
   const std::string source = R"(
 [return<int>]
@@ -1321,6 +1426,115 @@ execute_repeat(take_two(a=1i32, a=2i32), take_two(1i32))
 
   const size_t firstMessage = diagnostics.find("\"message\":\"duplicate named argument: a\"");
   const size_t secondMessage = diagnostics.find("\"message\":\"argument count mismatch for /take_two\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primec collect-diagnostics emits intra-execution argument-type payload") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  return(0i32)
+}
+
+[return<i32>]
+expects_bool([bool] cond, [i32] value) {
+  return(value)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(expects_bool(1i32, 7i32), expects_bool(true, false))
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_intra_execution_argtype.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_collect_diagnostics_semantic_intra_execution_argtype_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits intra-execution argument-type payload") {
+  const std::string source = R"(
+[return<i32>]
+main() {
+  return(0i32)
+}
+
+[return<i32>]
+expects_bool([bool] cond, [i32] value) {
+  return(value)
+}
+
+[return<void>]
+execute_repeat([i32] a, [i32] b) {
+  return()
+}
+
+execute_repeat(expects_bool(1i32, 7i32), expects_bool(true, false))
+)";
+  const std::string srcPath =
+      writeTemp("primevm_collect_diagnostics_semantic_intra_execution_argtype.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primevm_collect_diagnostics_semantic_intra_execution_argtype_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"execution: /execute_repeat\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter cond: expected bool got i32\"");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"argument type mismatch for /expects_bool parameter value: expected i32 got bool\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   CHECK(firstMessage < secondMessage);

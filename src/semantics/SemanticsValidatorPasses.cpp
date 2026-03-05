@@ -231,6 +231,12 @@ bool SemanticsValidator::validateDefinitions() {
   };
   auto collectDefinitionIntraBodyCallDiagnostics = [&](const Definition &def,
                                                         std::vector<SemanticDiagnosticRecord> &out) {
+    const auto &definitionParams = paramsByDef_[def.fullPath];
+    std::unordered_map<std::string, BindingInfo> definitionLocals;
+    definitionLocals.reserve(definitionParams.size());
+    for (const auto &param : definitionParams) {
+      definitionLocals.emplace(param.name, param.binding);
+    }
     auto appendDefinitionRecord = [&](const Expr &expr, std::string message) {
       SemanticDiagnosticRecord record;
       record.message = std::move(message);
@@ -248,6 +254,13 @@ bool SemanticsValidator::validateDefinitions() {
       out.push_back(std::move(record));
     };
     auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
+      auto appendArgumentTypeMismatch = [&](const std::string &paramName,
+                                            const std::string &expectedType,
+                                            const std::string &actualType) {
+        appendDefinitionRecord(expr,
+                               "argument type mismatch for " + resolved + " parameter " + paramName + ": expected " +
+                                   expectedType + " got " + actualType);
+      };
       std::string message;
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, message)) {
         appendDefinitionRecord(expr, std::move(message));
@@ -275,6 +288,57 @@ bool SemanticsValidator::validateDefinitions() {
         }
         appendDefinitionRecord(expr, std::move(message));
         return true;
+      }
+      std::unordered_set<const Expr *> explicitArgs;
+      explicitArgs.reserve(expr.args.size());
+      for (const auto &arg : expr.args) {
+        explicitArgs.insert(&arg);
+      }
+      for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
+        const Expr *arg = orderedArgs[paramIndex];
+        if (arg == nullptr || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        const ParameterInfo &param = calleeParams[paramIndex];
+        const std::string &expectedTypeName = param.binding.typeName;
+        if (expectedTypeName.empty() || expectedTypeName == "auto") {
+          continue;
+        }
+        ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
+        if (expectedKind != ReturnKind::Unknown) {
+          ReturnKind actualKind = inferExprReturnKind(*arg, definitionParams, definitionLocals);
+          if (actualKind == ReturnKind::Unknown || actualKind == expectedKind) {
+            continue;
+          }
+          const std::string expectedName = typeNameForReturnKind(expectedKind);
+          const std::string actualName = typeNameForReturnKind(actualKind);
+          if (expectedName.empty() || actualName.empty()) {
+            continue;
+          }
+          appendArgumentTypeMismatch(param.name, expectedName, actualName);
+          continue;
+        }
+        const std::string expectedStructPath =
+            resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+        if (expectedStructPath.empty()) {
+          continue;
+        }
+        const std::string actualStructPath = inferStructReturnPath(*arg, definitionParams, definitionLocals);
+        if (!actualStructPath.empty()) {
+          if (actualStructPath != expectedStructPath) {
+            appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
+          }
+          continue;
+        }
+        ReturnKind actualKind = inferExprReturnKind(*arg, definitionParams, definitionLocals);
+        if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array) {
+          continue;
+        }
+        const std::string actualName = typeNameForReturnKind(actualKind);
+        if (actualName.empty()) {
+          continue;
+        }
+        appendArgumentTypeMismatch(param.name, expectedStructPath, actualName);
       }
       return false;
     };
@@ -1147,6 +1211,8 @@ bool SemanticsValidator::validateExecutions() {
   };
   auto collectExecutionIntraBodyCallDiagnostics = [&](const Execution &exec,
                                                       std::vector<SemanticDiagnosticRecord> &out) {
+    const std::vector<ParameterInfo> executionParams;
+    const std::unordered_map<std::string, BindingInfo> executionLocals;
     auto appendExecutionRecord = [&](const Expr &expr, std::string message) {
       SemanticDiagnosticRecord record;
       record.message = std::move(message);
@@ -1164,6 +1230,13 @@ bool SemanticsValidator::validateExecutions() {
       out.push_back(std::move(record));
     };
     auto collectResolvedCallArgumentDiagnostic = [&](const Expr &expr, const std::string &resolved) -> bool {
+      auto appendArgumentTypeMismatch = [&](const std::string &paramName,
+                                            const std::string &expectedType,
+                                            const std::string &actualType) {
+        appendExecutionRecord(expr,
+                              "argument type mismatch for " + resolved + " parameter " + paramName + ": expected " +
+                                  expectedType + " got " + actualType);
+      };
       std::string message;
       if (!validateNamedArguments(expr.args, expr.argNames, resolved, message)) {
         appendExecutionRecord(expr, std::move(message));
@@ -1191,6 +1264,57 @@ bool SemanticsValidator::validateExecutions() {
         }
         appendExecutionRecord(expr, std::move(message));
         return true;
+      }
+      std::unordered_set<const Expr *> explicitArgs;
+      explicitArgs.reserve(expr.args.size());
+      for (const auto &arg : expr.args) {
+        explicitArgs.insert(&arg);
+      }
+      for (size_t paramIndex = 0; paramIndex < orderedArgs.size() && paramIndex < calleeParams.size(); ++paramIndex) {
+        const Expr *arg = orderedArgs[paramIndex];
+        if (arg == nullptr || explicitArgs.count(arg) == 0) {
+          continue;
+        }
+        const ParameterInfo &param = calleeParams[paramIndex];
+        const std::string &expectedTypeName = param.binding.typeName;
+        if (expectedTypeName.empty() || expectedTypeName == "auto") {
+          continue;
+        }
+        ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
+        if (expectedKind != ReturnKind::Unknown) {
+          ReturnKind actualKind = inferExprReturnKind(*arg, executionParams, executionLocals);
+          if (actualKind == ReturnKind::Unknown || actualKind == expectedKind) {
+            continue;
+          }
+          const std::string expectedName = typeNameForReturnKind(expectedKind);
+          const std::string actualName = typeNameForReturnKind(actualKind);
+          if (expectedName.empty() || actualName.empty()) {
+            continue;
+          }
+          appendArgumentTypeMismatch(param.name, expectedName, actualName);
+          continue;
+        }
+        const std::string expectedStructPath =
+            resolveStructTypePath(expectedTypeName, expr.namespacePrefix, structNames_);
+        if (expectedStructPath.empty()) {
+          continue;
+        }
+        const std::string actualStructPath = inferStructReturnPath(*arg, executionParams, executionLocals);
+        if (!actualStructPath.empty()) {
+          if (actualStructPath != expectedStructPath) {
+            appendArgumentTypeMismatch(param.name, expectedStructPath, actualStructPath);
+          }
+          continue;
+        }
+        ReturnKind actualKind = inferExprReturnKind(*arg, executionParams, executionLocals);
+        if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array) {
+          continue;
+        }
+        const std::string actualName = typeNameForReturnKind(actualKind);
+        if (actualName.empty()) {
+          continue;
+        }
+        appendArgumentTypeMismatch(param.name, expectedStructPath, actualName);
       }
       return false;
     };
