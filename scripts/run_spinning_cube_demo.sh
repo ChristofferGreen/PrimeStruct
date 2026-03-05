@@ -10,14 +10,26 @@ PORT_BASE=18870
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --primec)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "[spinning-cube-demo] ERROR: missing value for --primec" >&2
+        exit 2
+      fi
       PRIMEC_BIN="$2"
       shift 2
       ;;
     --work-dir)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "[spinning-cube-demo] ERROR: missing value for --work-dir" >&2
+        exit 2
+      fi
       WORK_DIR="$2"
       shift 2
       ;;
     --port-base)
+      if [[ $# -lt 2 || "$2" == --* ]]; then
+        echo "[spinning-cube-demo] ERROR: missing value for --port-base" >&2
+        exit 2
+      fi
       PORT_BASE="$2"
       shift 2
       ;;
