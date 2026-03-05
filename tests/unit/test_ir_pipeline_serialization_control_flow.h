@@ -1003,6 +1003,46 @@ TEST_CASE("spill insertion verifier rejects missing reload ops") {
   CHECK(error.find("missing reload op") != std::string::npos);
 }
 
+TEST_CASE("spill insertion verifier rejects missing spill ops") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 8});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  REQUIRE(primec::buildIrVirtualRegisterLiveness(virtualModule, liveness, error));
+  CHECK(error.empty());
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 0;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+  primec::IrLinearScanModuleAllocation allocation;
+  REQUIRE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterSpillPlan plan;
+  REQUIRE(primec::insertIrVirtualRegisterSpills(virtualModule, allocation, plan, error));
+  CHECK(error.empty());
+  REQUIRE(plan.functions.size() == 1);
+  REQUIRE(plan.functions[0].blocks.size() == 1);
+  REQUIRE(plan.functions[0].blocks[0].instructions.size() == 4);
+
+  plan.functions[0].blocks[0].instructions[2].afterInstructionOps.clear();
+  CHECK_FALSE(primec::verifyIrVirtualRegisterSpillPlan(virtualModule, allocation, plan, error));
+  CHECK(error.find("missing spill op") != std::string::npos);
+}
+
 TEST_CASE("scheduler is dependency-safe and latency-aware") {
   primec::IrModule module;
   module.entryIndex = 0;
