@@ -1,7 +1,9 @@
 #include "IrLowererStatementCallHelpers.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererCallHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "IrLowererLowerEffects.h"
 #include "IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -305,6 +307,127 @@ AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
   }
   instructions.push_back({IrOpcode::Pop, 0});
   return AssignOrExprStatementEmitResult::Emitted;
+}
+
+bool buildCallableDefinitionCallContext(
+    const Definition &def,
+    int32_t &nextLocal,
+    LocalMap &definitionLocals,
+    Expr &callExpr,
+    const std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)> &inferParameterLocalInfo,
+    std::string &error) {
+  definitionLocals.clear();
+  callExpr = Expr{};
+  callExpr.kind = Expr::Kind::Call;
+  callExpr.name = def.fullPath;
+  callExpr.namespacePrefix = def.namespacePrefix;
+
+  bool isComputeDefinition = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "compute") {
+      isComputeDefinition = true;
+      break;
+    }
+  }
+  if (isComputeDefinition) {
+    auto addGpuLocal = [&](const char *name) {
+      LocalInfo gpuInfo;
+      gpuInfo.index = nextLocal++;
+      gpuInfo.kind = LocalInfo::Kind::Value;
+      gpuInfo.valueKind = LocalInfo::ValueKind::Int32;
+      definitionLocals.emplace(name, gpuInfo);
+    };
+    addGpuLocal(kGpuGlobalIdXName);
+    addGpuLocal(kGpuGlobalIdYName);
+    addGpuLocal(kGpuGlobalIdZName);
+  }
+
+  for (const auto &param : def.parameters) {
+    LocalInfo info;
+    info.index = nextLocal++;
+    if (!inferParameterLocalInfo(param, definitionLocals, info, error)) {
+      return false;
+    }
+    if (info.valueKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
+      error = "native backend requires typed parameters on " + def.fullPath;
+      return false;
+    }
+    definitionLocals.emplace(param.name, info);
+
+    Expr argExpr;
+    argExpr.kind = Expr::Kind::Name;
+    argExpr.name = param.name;
+    callExpr.args.push_back(std::move(argExpr));
+    callExpr.argNames.push_back(std::nullopt);
+  }
+  return true;
+}
+
+CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
+    const Program &program,
+    const Definition &entryDef,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<bool(const std::string &, const ReturnInfo &)> &appendReturnForDefinition,
+    IrFunction &function,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    std::string &error) {
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == entryDef.fullPath || isStructDefinition(def) ||
+        loweredCallTargets.find(def.fullPath) == loweredCallTargets.end()) {
+      continue;
+    }
+
+    ReturnInfo returnInfo;
+    if (!getReturnInfo(def.fullPath, returnInfo)) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+
+    function = IrFunction{};
+    function.name = def.fullPath;
+    if (!resolveEffectMask(
+            def.transforms, false, defaultEffects, entryDefaultEffects, function.metadata.effectMask, error)) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+    if (!resolveCapabilityMask(def.transforms,
+                               resolveActiveEffects(def.transforms, false, defaultEffects, entryDefaultEffects),
+                               def.fullPath,
+                               function.metadata.capabilityMask,
+                               error)) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+    function.metadata.schedulingScope = IrSchedulingScope::Default;
+    function.metadata.instrumentationFlags = 0;
+    if (hasTailExecutionCandidate(def.statements, returnInfo.returnsVoid, isTailCallCandidate)) {
+      function.metadata.instrumentationFlags |= InstrumentationTailExecution;
+    }
+
+    resetDefinitionLoweringState();
+    nextLocal = 0;
+
+    LocalMap definitionLocals;
+    Expr callExpr;
+    if (!buildDefinitionCallContext(def, nextLocal, definitionLocals, callExpr, error)) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+    if (!emitInlineDefinitionCall(callExpr, def, definitionLocals, !returnInfo.returnsVoid)) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+    if (!appendReturnForDefinition(def.fullPath, returnInfo)) {
+      return CallableDefinitionOrchestrationResult::Error;
+    }
+    outFunctions.push_back(std::move(function));
+  }
+
+  return CallableDefinitionOrchestrationResult::Emitted;
 }
 
 } // namespace primec::ir_lowerer

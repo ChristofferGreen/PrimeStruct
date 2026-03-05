@@ -12825,6 +12825,153 @@ TEST_CASE("ir lowerer statement call helper validates assign and expression pop 
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer statement call helper builds callable definition contexts") {
+  primec::Definition def;
+  def.fullPath = "/main/Kernel";
+  def.namespacePrefix = "/main";
+  def.transforms.push_back(primec::Transform{.name = "compute"});
+  primec::Expr p0;
+  p0.kind = primec::Expr::Kind::Name;
+  p0.name = "x";
+  primec::Expr p1;
+  p1.kind = primec::Expr::Kind::Name;
+  p1.name = "y";
+  def.parameters = {p0, p1};
+
+  int32_t nextLocal = 0;
+  primec::ir_lowerer::LocalMap locals;
+  primec::Expr callExpr;
+  std::string error;
+  CHECK(primec::ir_lowerer::buildCallableDefinitionCallContext(
+      def,
+      nextLocal,
+      locals,
+      callExpr,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &info, std::string &) {
+        info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        return true;
+      },
+      error));
+  CHECK(error.empty());
+  CHECK(nextLocal == 5);
+  CHECK(locals.count("__gpu_global_id_x") == 1);
+  CHECK(locals.count("__gpu_global_id_y") == 1);
+  CHECK(locals.count("__gpu_global_id_z") == 1);
+  CHECK(locals.count("x") == 1);
+  CHECK(locals.count("y") == 1);
+  CHECK(callExpr.name == "/main/Kernel");
+  REQUIRE(callExpr.args.size() == 2);
+  CHECK(callExpr.args[0].name == "x");
+  CHECK(callExpr.args[1].name == "y");
+
+  nextLocal = 0;
+  locals.clear();
+  callExpr = {};
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::buildCallableDefinitionCallContext(
+      def,
+      nextLocal,
+      locals,
+      callExpr,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo &info, std::string &) {
+        info.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        return true;
+      },
+      error));
+  CHECK(error == "native backend requires typed parameters on /main/Kernel");
+}
+
+TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {
+  using Result = primec::ir_lowerer::CallableDefinitionOrchestrationResult;
+
+  primec::Program program;
+  primec::Definition entry;
+  entry.fullPath = "/main/entry";
+  primec::Definition target;
+  target.fullPath = "/main/target";
+  program.definitions = {entry, target};
+
+  std::unordered_set<std::string> loweredCallTargets = {"/main/target"};
+  primec::IrFunction function;
+  int32_t nextLocal = 123;
+  std::vector<primec::IrFunction> outFunctions;
+  int resetCalls = 0;
+  bool sawBuildStartAtZero = false;
+  bool sawExpectValueFalse = false;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::lowerCallableDefinitionOrchestration(
+            program,
+            program.definitions.front(),
+            loweredCallTargets,
+            [](const primec::Definition &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = true;
+              return true;
+            },
+            {},
+            {},
+            [](const primec::Expr &) { return false; },
+            [&]() { ++resetCalls; },
+            [&](const primec::Definition &def, int32_t &localCursor, primec::ir_lowerer::LocalMap &locals, primec::Expr &callExpr, std::string &) {
+              sawBuildStartAtZero = (localCursor == 0);
+              localCursor = 1;
+              locals.clear();
+              callExpr = {};
+              callExpr.kind = primec::Expr::Kind::Call;
+              callExpr.name = def.fullPath;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool expectValue) {
+              sawExpectValueFalse = !expectValue;
+              function.instructions.push_back({primec::IrOpcode::PushI32, 9});
+              return true;
+            },
+            [&](const std::string &, const primec::ir_lowerer::ReturnInfo &) {
+              function.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+              return true;
+            },
+            function,
+            nextLocal,
+            outFunctions,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(resetCalls == 1);
+  CHECK(sawBuildStartAtZero);
+  CHECK(sawExpectValueFalse);
+  REQUIRE(outFunctions.size() == 1);
+  CHECK(outFunctions.front().name == "/main/target");
+  REQUIRE(outFunctions.front().instructions.size() == 2);
+  CHECK(outFunctions.front().instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(outFunctions.front().instructions[1].op == primec::IrOpcode::ReturnVoid);
+
+  outFunctions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::lowerCallableDefinitionOrchestration(
+            program,
+            program.definitions.front(),
+            loweredCallTargets,
+            [](const primec::Definition &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &) { return false; },
+            []() {},
+            [](const primec::Definition &, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
+              return true;
+            },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            [](const std::string &, const primec::ir_lowerer::ReturnInfo &) { return true; },
+            function,
+            nextLocal,
+            outFunctions,
+            error) == Result::Error);
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

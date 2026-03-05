@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "IrLowererSharedTypes.h"
@@ -27,6 +28,10 @@ enum class DirectCallStatementEmitResult {
   Error,
 };
 enum class AssignOrExprStatementEmitResult {
+  Emitted,
+  Error,
+};
+enum class CallableDefinitionOrchestrationResult {
   Emitted,
   Error,
 };
@@ -67,5 +72,29 @@ AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     std::vector<IrInstruction> &instructions);
+bool buildCallableDefinitionCallContext(
+    const Definition &def,
+    int32_t &nextLocal,
+    LocalMap &definitionLocals,
+    Expr &callExpr,
+    const std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)> &inferParameterLocalInfo,
+    std::string &error);
+CallableDefinitionOrchestrationResult lowerCallableDefinitionOrchestration(
+    const Program &program,
+    const Definition &entryDef,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<bool(const std::string &, const ReturnInfo &)> &appendReturnForDefinition,
+    IrFunction &function,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    std::string &error);
 
 } // namespace primec::ir_lowerer
