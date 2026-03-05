@@ -755,6 +755,25 @@ TEST_CASE("linear-scan allocator rejects unknown spill policy") {
   CHECK(error.find("spill policy") != std::string::npos);
 }
 
+TEST_CASE("linear-scan allocator rejects invalid interval ranges") {
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  primec::IrVirtualRegisterFunctionLiveness function;
+  function.functionName = "/main";
+  function.intervals = {
+      {0, {{3, 1}}},
+  };
+  liveness.functions.push_back(std::move(function));
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 1;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+
+  primec::IrLinearScanModuleAllocation allocation;
+  std::string error;
+  CHECK_FALSE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.find("invalid interval range") != std::string::npos);
+}
+
 TEST_CASE("spill insertion verifies branch and call spill correctness") {
   primec::IrModule module;
   module.entryIndex = 0;
