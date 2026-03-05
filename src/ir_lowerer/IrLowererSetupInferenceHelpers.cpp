@@ -443,4 +443,73 @@ NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
   return NonMathScalarCallReturnKindResolution::NotMatched;
 }
 
+ControlFlowCallReturnKindResolution inferControlFlowCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveSetupInferenceExprPathFn &resolveExprPath,
+    const LowerSetupInferenceMatchToIfFn &lowerMatchToIf,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    const InferSetupInferenceBodyValueKindFn &inferBodyValueKind,
+    const IsSetupInferenceKnownDefinitionPathFn &isKnownDefinitionPath,
+    std::string &error,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  if (isMatchCall(expr)) {
+    Expr expanded;
+    if (!lowerMatchToIf(expr, expanded, error)) {
+      return ControlFlowCallReturnKindResolution::Resolved;
+    }
+    kindOut = inferExprKind(expanded, localsIn);
+    return ControlFlowCallReturnKindResolution::Resolved;
+  }
+
+  auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+      return false;
+    }
+    if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return false;
+    }
+    if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+      return false;
+    }
+    return true;
+  };
+  auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
+    if (!isIfBlockEnvelope(candidate)) {
+      return inferExprKind(candidate, localsBase);
+    }
+    return inferBodyValueKind(candidate.bodyArguments, localsBase);
+  };
+
+  if (isIfCall(expr)) {
+    if (expr.args.size() != 3) {
+      return ControlFlowCallReturnKindResolution::Resolved;
+    }
+    LocalInfo::ValueKind thenKind = inferBranchValueKind(expr.args[1], localsIn);
+    LocalInfo::ValueKind elseKind = inferBranchValueKind(expr.args[2], localsIn);
+    if (thenKind == elseKind) {
+      kindOut = thenKind;
+    } else {
+      kindOut = combineNumericKinds(thenKind, elseKind);
+    }
+    return ControlFlowCallReturnKindResolution::Resolved;
+  }
+
+  if (isBlockCall(expr)) {
+    if (expr.hasBodyArguments) {
+      const std::string resolved = resolveExprPath(expr);
+      if (!isKnownDefinitionPath(resolved) && expr.args.empty() && expr.templateArgs.empty() &&
+          !hasNamedArguments(expr.argNames)) {
+        kindOut = inferBodyValueKind(expr.bodyArguments, localsIn);
+      }
+    }
+    return ControlFlowCallReturnKindResolution::Resolved;
+  }
+
+  return ControlFlowCallReturnKindResolution::NotMatched;
+}
+
 } // namespace primec::ir_lowerer

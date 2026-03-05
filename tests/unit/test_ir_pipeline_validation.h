@@ -11994,6 +11994,230 @@ TEST_CASE("ir lowerer setup inference helper handles invalid non-math scalar cal
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers control-flow call return kinds") {
+  using Resolution = primec::ir_lowerer::ControlFlowCallReturnKindResolution;
+
+  primec::Expr condition;
+  condition.kind = primec::Expr::Kind::Name;
+  condition.name = "cond";
+  primec::Expr thenBodyValue;
+  thenBodyValue.kind = primec::Expr::Kind::Name;
+  thenBodyValue.name = "thenValue";
+  primec::Expr elseValue;
+  elseValue.kind = primec::Expr::Kind::Name;
+  elseValue.name = "elseValue";
+
+  primec::Expr thenEnvelope;
+  thenEnvelope.kind = primec::Expr::Kind::Call;
+  thenEnvelope.name = "then";
+  thenEnvelope.hasBodyArguments = true;
+  thenEnvelope.bodyArguments = {thenBodyValue};
+
+  primec::Expr ifExpr;
+  ifExpr.kind = primec::Expr::Kind::Call;
+  ifExpr.name = "if";
+  ifExpr.args = {condition, thenEnvelope, elseValue};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  std::string error;
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            ifExpr,
+            {},
+            [](const primec::Expr &) { return std::string(); },
+            [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "elseValue") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              }
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "cond") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+              }
+              if (expr.kind == primec::Expr::Kind::Call && expr.name == "expanded_match") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind right) {
+              if (left == primec::ir_lowerer::LocalInfo::ValueKind::Int64 ||
+                  right == primec::ir_lowerer::LocalInfo::ValueKind::Int64) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+              }
+              return left;
+            },
+            [](const std::vector<primec::Expr> &body, const primec::ir_lowerer::LocalMap &) {
+              if (!body.empty() && body.front().kind == primec::Expr::Kind::Name &&
+                  body.front().name == "thenValue") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const std::string &) { return false; },
+            error,
+            kindOut) == Resolution::Resolved);
+  CHECK(error.empty());
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr matchExpr;
+  matchExpr.kind = primec::Expr::Kind::Call;
+  matchExpr.name = "match";
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            matchExpr,
+            {},
+            [](const primec::Expr &) { return std::string(); },
+            [](const primec::Expr &, primec::Expr &expanded, std::string &) {
+              expanded.kind = primec::Expr::Kind::Call;
+              expanded.name = "expanded_match";
+              return true;
+            },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Call && expr.name == "expanded_match") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            [](const std::vector<primec::Expr> &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const std::string &) { return false; },
+            error,
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Expr blockExpr;
+  blockExpr.kind = primec::Expr::Kind::Call;
+  blockExpr.name = "block";
+  blockExpr.hasBodyArguments = true;
+  blockExpr.bodyArguments = {thenBodyValue};
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            blockExpr,
+            {},
+            [](const primec::Expr &) { return "/pkg/block"; },
+            [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            [](const std::vector<primec::Expr> &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+            },
+            [](const std::string &) { return false; },
+            error,
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles invalid control-flow calls") {
+  using Resolution = primec::ir_lowerer::ControlFlowCallReturnKindResolution;
+
+  primec::Expr nonControl;
+  nonControl.kind = primec::Expr::Kind::Call;
+  nonControl.name = "plus";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  std::string error = "unchanged";
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            nonControl,
+            {},
+            [](const primec::Expr &) { return std::string(); },
+            [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            [](const std::vector<primec::Expr> &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const std::string &) { return false; },
+            error,
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(error == "unchanged");
+
+  primec::Expr matchExpr;
+  matchExpr.kind = primec::Expr::Kind::Call;
+  matchExpr.name = "match";
+  error.clear();
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            matchExpr,
+            {},
+            [](const primec::Expr &) { return std::string(); },
+            [](const primec::Expr &, primec::Expr &, std::string &errorOut) {
+              errorOut = "match lowering failed";
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            [](const std::vector<primec::Expr> &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const std::string &) { return false; },
+            error,
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(error == "match lowering failed");
+
+  primec::Expr ifExpr;
+  ifExpr.kind = primec::Expr::Kind::Call;
+  ifExpr.name = "if";
+  ifExpr.args = {nonControl};
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            ifExpr,
+            {},
+            [](const primec::Expr &) { return std::string(); },
+            [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            [](const std::vector<primec::Expr> &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const std::string &) { return false; },
+            error,
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr body;
+  body.kind = primec::Expr::Kind::Name;
+  body.name = "body";
+  primec::Expr blockExpr;
+  blockExpr.kind = primec::Expr::Kind::Call;
+  blockExpr.name = "block";
+  blockExpr.hasBodyArguments = true;
+  blockExpr.bodyArguments = {body};
+  CHECK(primec::ir_lowerer::inferControlFlowCallReturnKind(
+            blockExpr,
+            {},
+            [](const primec::Expr &) { return "/pkg/block"; },
+            [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](primec::ir_lowerer::LocalInfo::ValueKind left, primec::ir_lowerer::LocalInfo::ValueKind) {
+              return left;
+            },
+            [](const std::vector<primec::Expr> &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+            },
+            [](const std::string &path) { return path == "/pkg/block"; },
+            error,
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

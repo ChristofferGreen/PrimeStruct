@@ -27,6 +27,10 @@ using ApplySetupInferenceStructInfoFn = std::function<void(const Expr &, LocalIn
 using InferSetupInferenceStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using SetupInferenceCombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
+using LowerSetupInferenceMatchToIfFn = std::function<bool(const Expr &, Expr &, std::string &)>;
+using InferSetupInferenceBodyValueKindFn =
+    std::function<LocalInfo::ValueKind(const std::vector<Expr> &, const LocalMap &)>;
+using IsSetupInferenceKnownDefinitionPathFn = std::function<bool(const std::string &)>;
 
 enum class CallExpressionReturnKindResolution {
   NotResolved,
@@ -42,6 +46,10 @@ enum class MathBuiltinReturnKindResolution {
   Resolved,
 };
 enum class NonMathScalarCallReturnKindResolution {
+  NotMatched,
+  Resolved,
+};
+enum class ControlFlowCallReturnKindResolution {
   NotMatched,
   Resolved,
 };
@@ -98,6 +106,17 @@ NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
     const LocalMap &localsIn,
     const InferSetupInferenceValueKindFn &inferExprKind,
     const InferSetupInferenceValueKindFn &inferPointerTargetKind,
+    LocalInfo::ValueKind &kindOut);
+ControlFlowCallReturnKindResolution inferControlFlowCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveSetupInferenceExprPathFn &resolveExprPath,
+    const LowerSetupInferenceMatchToIfFn &lowerMatchToIf,
+    const InferSetupInferenceValueKindFn &inferExprKind,
+    const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    const InferSetupInferenceBodyValueKindFn &inferBodyValueKind,
+    const IsSetupInferenceKnownDefinitionPathFn &isKnownDefinitionPath,
+    std::string &error,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer

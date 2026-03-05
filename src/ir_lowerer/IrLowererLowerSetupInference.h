@@ -330,78 +330,43 @@
                 nonMathScalarKind) == NonMathScalarCallReturnKindResolution::Resolved) {
           return nonMathScalarKind;
         }
-        if (isMatchCall(expr)) {
-          Expr expanded;
-          if (!lowerMatchToIf(expr, expanded, error)) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          return inferExprKind(expanded, localsIn);
-        }
-        if (isIfCall(expr) && expr.args.size() == 3) {
-          auto isIfBlockEnvelope = [&](const Expr &candidate) -> bool {
-            if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
-              return false;
-            }
-            if (!candidate.args.empty() || !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
-              return false;
-            }
-            if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
-              return false;
-            }
-            return true;
-          };
-          auto inferBranchValueKind = [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
-            if (!isIfBlockEnvelope(candidate)) {
-              return inferExprKind(candidate, localsBase);
-            }
-            return inferBodyValueKindWithLocalsScaffolding(
-                candidate.bodyArguments,
-                localsBase,
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferExprKind(candidateExpr, candidateLocals);
-                },
-                [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
-                [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
-                [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
-                [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
-                  return bindingValueKind(candidateExpr, kind);
-                },
-                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
-                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferStructExprPath(candidateExpr, candidateLocals);
-                });
-          };
-
-          LocalInfo::ValueKind thenKind = inferBranchValueKind(expr.args[1], localsIn);
-          LocalInfo::ValueKind elseKind = inferBranchValueKind(expr.args[2], localsIn);
-          if (thenKind == elseKind) {
-            return thenKind;
-          }
-          return combineNumericKinds(thenKind, elseKind);
-        }
-        if (isBlockCall(expr) && expr.hasBodyArguments) {
-          const std::string resolved = resolveExprPath(expr);
-          if (defMap.find(resolved) == defMap.end() && expr.args.empty() && expr.templateArgs.empty() &&
-              !hasNamedArguments(expr.argNames)) {
-            return inferBodyValueKindWithLocalsScaffolding(
-                expr.bodyArguments,
+        LocalInfo::ValueKind controlFlowKind = LocalInfo::ValueKind::Unknown;
+        if (inferControlFlowCallReturnKind(
+                expr,
                 localsIn,
+                [&](const Expr &candidateExpr) { return resolveExprPath(candidateExpr); },
+                [&](const Expr &candidateExpr, Expr &expandedExpr, std::string &errorOut) {
+                  return lowerMatchToIf(candidateExpr, expandedExpr, errorOut);
+                },
                 [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
                   return inferExprKind(candidateExpr, candidateLocals);
                 },
-                [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
-                [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
-                [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
-                [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
-                  return bindingValueKind(candidateExpr, kind);
+                [&](LocalInfo::ValueKind left, LocalInfo::ValueKind right) {
+                  return combineNumericKinds(left, right);
                 },
-                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
-                [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
-                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                  return inferStructExprPath(candidateExpr, candidateLocals);
-                });
-          }
+                [&](const std::vector<Expr> &bodyExpressions, const LocalMap &localsBase) {
+                  return inferBodyValueKindWithLocalsScaffolding(
+                      bodyExpressions,
+                      localsBase,
+                      [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                        return inferExprKind(candidateExpr, candidateLocals);
+                      },
+                      [&](const Expr &candidateExpr) { return isBindingMutable(candidateExpr); },
+                      [&](const Expr &candidateExpr) { return bindingKind(candidateExpr); },
+                      [&](const Expr &candidateExpr) { return hasExplicitBindingTypeTransform(candidateExpr); },
+                      [&](const Expr &candidateExpr, LocalInfo::Kind kind) {
+                        return bindingValueKind(candidateExpr, kind);
+                      },
+                      [&](const Expr &candidateExpr, LocalInfo &info) { applyStructArrayInfo(candidateExpr, info); },
+                      [&](const Expr &candidateExpr, LocalInfo &info) { applyStructValueInfo(candidateExpr, info); },
+                      [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                        return inferStructExprPath(candidateExpr, candidateLocals);
+                      });
+                },
+                [&](const std::string &path) { return defMap.find(path) != defMap.end(); },
+                error,
+                controlFlowKind) == ControlFlowCallReturnKindResolution::Resolved) {
+          return controlFlowKind;
         }
         if (getBuiltinPointerName(expr, builtin)) {
           if (builtin == "dereference") {
