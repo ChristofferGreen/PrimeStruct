@@ -34,11 +34,19 @@ using IsFileErrorBindingForInferenceFn = std::function<bool(const Expr &)>;
 using ApplyStructInfoForInferenceFn = std::function<void(const Expr &, LocalInfo &)>;
 using InferStructExprPathFromLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using IsStringBindingForInferenceFn = std::function<bool(const Expr &)>;
+using ResolveStructTypeNameForReturnFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
+using ResolveStructArrayInfoForReturnFn = std::function<bool(const std::string &, StructArrayInfo &)>;
 
 bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   const std::string &entryPath,
                                   EntryReturnConfig &out,
                                   std::string &error);
+void analyzeDeclaredReturnTransforms(const Definition &def,
+                                     const ResolveStructTypeNameForReturnFn &resolveStructTypeName,
+                                     const ResolveStructArrayInfoForReturnFn &resolveStructArrayInfoFromPath,
+                                     ReturnInfo &info,
+                                     bool &hasReturnTransform,
+                                     bool &hasReturnAuto);
 
 bool inferDefinitionReturnType(const Definition &def,
                                LocalMap localsForInference,

@@ -1,63 +1,16 @@
     bool hasReturnTransformLocal = false;
     bool hasReturnAuto = false;
-    for (const auto &transform : def.transforms) {
-      if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
-          transform.name == "gpu_lane" || transform.name == "no_padding" ||
-          transform.name == "platform_independent_padding") {
-        info.returnsVoid = true;
-        hasReturnTransformLocal = true;
-        break;
-      }
-      if (transform.name != "return") {
-        continue;
-      }
-      hasReturnTransformLocal = true;
-      if (transform.templateArgs.size() != 1) {
-        continue;
-      }
-      const std::string &typeName = transform.templateArgs.front();
-      if (typeName == "auto") {
-        hasReturnAuto = true;
-        continue;
-      }
-      bool resultHasValue = false;
-      LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-      std::string resultErrorType;
-      if (parseResultTypeName(typeName, resultHasValue, resultValueKind, resultErrorType)) {
-        info.returnsArray = false;
-        info.returnsVoid = false;
-        info.isResult = true;
-        info.resultHasValue = resultHasValue;
-        info.resultErrorType = resultErrorType;
-        info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
-        break;
-      }
-      if (typeName == "void") {
-        info.returnsVoid = true;
-        break;
-      }
-      std::string base;
-      std::string arg;
-      if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
-        info.returnsArray = true;
-        info.kind = valueKindFromTypeName(arg);
-        info.returnsVoid = false;
-        break;
-      }
-      std::string structPath;
-      StructArrayInfo structInfo;
-      if (resolveStructTypeName(typeName, def.namespacePrefix, structPath) &&
-          resolveStructArrayInfoFromPath(structPath, structInfo)) {
-        info.returnsArray = true;
-        info.kind = structInfo.elementKind;
-        info.returnsVoid = false;
-        break;
-      }
-      info.returnsArray = false;
-      info.kind = valueKindFromTypeName(typeName);
-      info.returnsVoid = false;
-      break;
-    }
+    ir_lowerer::analyzeDeclaredReturnTransforms(
+        def,
+        [&](const std::string &typeName, const std::string &namespacePrefix, std::string &structPathOut) {
+          return resolveStructTypeName(typeName, namespacePrefix, structPathOut);
+        },
+        [&](const std::string &structPath, StructArrayInfo &structInfoOut) {
+          return resolveStructArrayInfoFromPath(structPath, structInfoOut);
+        },
+        info,
+        hasReturnTransformLocal,
+        hasReturnAuto);
 
     auto inferBindingIntoLocals = [&](const Expr &bindingExpr,
                                       bool isParameter,

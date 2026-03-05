@@ -48,6 +48,74 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
   return true;
 }
 
+void analyzeDeclaredReturnTransforms(const Definition &def,
+                                     const ResolveStructTypeNameForReturnFn &resolveStructTypeName,
+                                     const ResolveStructArrayInfoForReturnFn &resolveStructArrayInfoFromPath,
+                                     ReturnInfo &info,
+                                     bool &hasReturnTransform,
+                                     bool &hasReturnAuto) {
+  hasReturnTransform = false;
+  hasReturnAuto = false;
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "struct" || transform.name == "pod" || transform.name == "handle" ||
+        transform.name == "gpu_lane" || transform.name == "no_padding" ||
+        transform.name == "platform_independent_padding") {
+      info.returnsVoid = true;
+      hasReturnTransform = true;
+      break;
+    }
+    if (transform.name != "return") {
+      continue;
+    }
+    hasReturnTransform = true;
+    if (transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string &typeName = transform.templateArgs.front();
+    if (typeName == "auto") {
+      hasReturnAuto = true;
+      continue;
+    }
+    bool resultHasValue = false;
+    LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+    std::string resultErrorType;
+    if (parseResultTypeName(typeName, resultHasValue, resultValueKind, resultErrorType)) {
+      info.returnsArray = false;
+      info.returnsVoid = false;
+      info.isResult = true;
+      info.resultHasValue = resultHasValue;
+      info.resultErrorType = resultErrorType;
+      info.kind = resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+      break;
+    }
+    if (typeName == "void") {
+      info.returnsVoid = true;
+      break;
+    }
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeName, base, arg) && base == "array") {
+      info.returnsArray = true;
+      info.kind = valueKindFromTypeName(arg);
+      info.returnsVoid = false;
+      break;
+    }
+    std::string structPath;
+    StructArrayInfo structInfo;
+    if (resolveStructTypeName(typeName, def.namespacePrefix, structPath) &&
+        resolveStructArrayInfoFromPath(structPath, structInfo)) {
+      info.returnsArray = true;
+      info.kind = structInfo.elementKind;
+      info.returnsVoid = false;
+      break;
+    }
+    info.returnsArray = false;
+    info.kind = valueKindFromTypeName(typeName);
+    info.returnsVoid = false;
+    break;
+  }
+}
+
 bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
                                            bool isParameter,
                                            const std::string &definitionPath,

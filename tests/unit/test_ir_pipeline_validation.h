@@ -6597,6 +6597,100 @@ TEST_CASE("ir lowerer return inference helper handles void and diagnostics") {
   CHECK(error == "native backend does not support string array return types on /main");
 }
 
+TEST_CASE("ir lowerer return inference helper analyzes declared return transforms") {
+  primec::Definition def;
+  def.fullPath = "/pkg/main";
+  def.namespacePrefix = "/pkg";
+
+  primec::Transform returnAuto;
+  returnAuto.name = "return";
+  returnAuto.templateArgs = {"auto"};
+  def.transforms.push_back(returnAuto);
+
+  primec::Transform returnResult;
+  returnResult.name = "return";
+  returnResult.templateArgs = {"Result<i64, FileError>"};
+  def.transforms.push_back(returnResult);
+
+  primec::ir_lowerer::ReturnInfo info;
+  bool hasReturnTransform = false;
+  bool hasReturnAuto = false;
+  primec::ir_lowerer::analyzeDeclaredReturnTransforms(
+      def,
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, primec::ir_lowerer::StructArrayInfo &) { return false; },
+      info,
+      hasReturnTransform,
+      hasReturnAuto);
+
+  CHECK(hasReturnTransform);
+  CHECK(hasReturnAuto);
+  CHECK(info.isResult);
+  CHECK(info.resultHasValue);
+  CHECK(info.resultErrorType == "FileError");
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK_FALSE(info.returnsVoid);
+}
+
+TEST_CASE("ir lowerer return inference helper resolves declared array and struct returns") {
+  primec::Definition defArray;
+  primec::Transform returnArray;
+  returnArray.name = "return";
+  returnArray.templateArgs = {"array<i32>"};
+  defArray.transforms.push_back(returnArray);
+
+  primec::ir_lowerer::ReturnInfo info;
+  bool hasReturnTransform = false;
+  bool hasReturnAuto = false;
+  primec::ir_lowerer::analyzeDeclaredReturnTransforms(
+      defArray,
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, primec::ir_lowerer::StructArrayInfo &) { return false; },
+      info,
+      hasReturnTransform,
+      hasReturnAuto);
+
+  CHECK(hasReturnTransform);
+  CHECK_FALSE(hasReturnAuto);
+  CHECK(info.returnsArray);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Definition defStruct;
+  defStruct.namespacePrefix = "/pkg";
+  primec::Transform returnStruct;
+  returnStruct.name = "return";
+  returnStruct.templateArgs = {"VecLike"};
+  defStruct.transforms.push_back(returnStruct);
+
+  info = primec::ir_lowerer::ReturnInfo{};
+  hasReturnTransform = false;
+  hasReturnAuto = false;
+  primec::ir_lowerer::analyzeDeclaredReturnTransforms(
+      defStruct,
+      [](const std::string &typeName, const std::string &, std::string &pathOut) {
+        if (typeName == "VecLike") {
+          pathOut = "/pkg/VecLike";
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &path, primec::ir_lowerer::StructArrayInfo &infoOut) {
+        if (path == "/pkg/VecLike") {
+          infoOut.elementKind = primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+          return true;
+        }
+        return false;
+      },
+      info,
+      hasReturnTransform,
+      hasReturnAuto);
+
+  CHECK(hasReturnTransform);
+  CHECK_FALSE(hasReturnAuto);
+  CHECK(info.returnsArray);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+}
+
 TEST_CASE("ir lowerer setup type helper combines numeric kinds") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::combineNumericKinds(ValueKind::Int32, ValueKind::Int32) == ValueKind::Int32);
