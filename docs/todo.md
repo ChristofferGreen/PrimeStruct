@@ -217,6 +217,13 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add optional visual smoke checks for sample startup (headless where possible, interactive otherwise). Testing: automated startup checks with explicit skip rules per runner capability.
 - ✓ Document sample build/run instructions and expected runtime behavior for browser + native + macOS Metal targets (startup, controls, FPS/diagnostic overlay). Testing: scripted doc-command smoke checks to prevent instruction drift.
 
+**Spinning Cube Bring-Up (Reopened)**
+- ○ Fix `examples/web/spinning_cube/cube.prime` so `/main` and `/cubeRotationParity120` compile under current CLI defaults (currently blocked by unresolved `abs` without explicit math import). Testing: `primec --emit=wasm --wasm-profile browser ... --entry /main` and `primec --emit=native ... --entry /main` both succeed from repo root.
+- ○ Add a scripted browser startup smoke for the spinning-cube host that proves `cube.wasm` is loaded (not fallback mode). Testing: local HTTP serve + headless DOM check for `Host running with cube.wasm and cube.wgsl bootstrap.`.
+- ○ Add a native host runtime smoke that compiles `examples/native/spinning_cube/main.cpp`, executes it with the generated cube native binary, and asserts success marker output. Testing: host exit code `0` and output contains `native host verified cube simulation output`.
+- ○ Add a Metal full-path smoke that compiles shader + metallib and runs `metal_host` with the generated metallib, while skipping cleanly when `xcrun metal`/`metallib` are unavailable. Testing: when tools exist, host exit code `0` and output contains `frame_rendered=1`; otherwise emit explicit skip message.
+- ○ Add a single `scripts/run_spinning_cube_demo.sh` helper that runs web, native, and Metal checks in order with clear PASS/FAIL/SKIP summary and stable exit codes. Testing: script self-check in CI with deterministic summary text.
+
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
 - ✓ Add deterministic counter/debug dump output for instrumentation and optimization phases. Testing: dump-format snapshot tests with stable ordering.
