@@ -25,6 +25,7 @@
 #include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererSetupMathHelpers.h"
 #include "IrLowererStatementBindingHelpers.h"
+#include "IrLowererStatementCallHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructReturnPathHelpers.h"

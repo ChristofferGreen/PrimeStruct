@@ -12223,6 +12223,141 @@ TEST_CASE("ir lowerer statement binding helper validates if and match diagnostic
   CHECK(error == "match requires value, cases, else");
 }
 
+TEST_CASE("ir lowerer statement call helper emits buffer_store") {
+  using EmitResult = primec::ir_lowerer::BufferStoreStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr bufferExpr;
+  bufferExpr.kind = primec::Expr::Kind::Name;
+  bufferExpr.name = "bufferValue";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 2;
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 77;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "buffer_store";
+  stmt.args = {bufferExpr, indexExpr, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo bufferInfo;
+  bufferInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  bufferInfo.valueKind = ValueKind::Int32;
+  locals.emplace("bufferValue", bufferInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int nextLocal = 10;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitBufferStoreStatement(
+            stmt,
+            locals,
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return (&expr == &indexExpr) ? ValueKind::Int32 : ValueKind::Unknown;
+            },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(expr.literalValue)});
+              return true;
+            },
+            [&]() { return nextLocal++; },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 16);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[5].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[6].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[14].op == primec::IrOpcode::StoreIndirect);
+  CHECK(instructions[15].op == primec::IrOpcode::Pop);
+}
+
+TEST_CASE("ir lowerer statement call helper validates buffer_store diagnostics") {
+  using EmitResult = primec::ir_lowerer::BufferStoreStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr bufferExpr;
+  bufferExpr.kind = primec::Expr::Kind::Name;
+  bufferExpr.name = "bufferValue";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 1;
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 2;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "buffer_store";
+  stmt.args = {bufferExpr, indexExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitBufferStoreStatement(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "buffer_store requires buffer, index, and value");
+
+  stmt.args = {bufferExpr, indexExpr, valueExpr};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitBufferStoreStatement(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "buffer_store requires numeric/bool buffer");
+
+  primec::ir_lowerer::LocalInfo bufferInfo;
+  bufferInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Buffer;
+  bufferInfo.valueKind = ValueKind::Int32;
+  locals.emplace("bufferValue", bufferInfo);
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitBufferStoreStatement(
+            stmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Float32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "buffer_store requires integer index");
+
+  primec::Expr otherStmt;
+  otherStmt.kind = primec::Expr::Kind::Call;
+  otherStmt.name = "notify";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitBufferStoreStatement(
+            otherStmt,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            instructions,
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

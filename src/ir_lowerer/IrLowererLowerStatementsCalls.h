@@ -1,53 +1,15 @@
-    if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "buffer_store")) {
-      if (stmt.args.size() != 3) {
-        error = "buffer_store requires buffer, index, and value";
-        return false;
-      }
-      LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-      if (stmt.args[0].kind == Expr::Kind::Name) {
-        auto it = localsIn.find(stmt.args[0].name);
-        if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
-          elemKind = it->second.valueKind;
-        }
-      } else if (stmt.args[0].kind == Expr::Kind::Call) {
-        if (isSimpleCallName(stmt.args[0], "buffer") && stmt.args[0].templateArgs.size() == 1) {
-          elemKind = valueKindFromTypeName(stmt.args[0].templateArgs.front());
-        }
-      }
-      if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-        error = "buffer_store requires numeric/bool buffer";
-        return false;
-      }
-      LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
-      if (!isSupportedIndexKind(indexKind)) {
-        error = "buffer_store requires integer index";
-        return false;
-      }
-      const int32_t ptrLocal = allocTempLocal();
-      if (!emitExpr(stmt.args[0], localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-      const int32_t indexLocal = allocTempLocal();
-      if (!emitExpr(stmt.args[1], localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
-      const int32_t valueLocal = allocTempLocal();
-      if (!emitExpr(stmt.args[2], localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-      function.instructions.push_back({pushOneForIndex(indexKind), 1});
-      function.instructions.push_back({addForIndex(indexKind), 0});
-      function.instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
-      function.instructions.push_back({mulForIndex(indexKind), 0});
-      function.instructions.push_back({IrOpcode::AddI64, 0});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-      function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-      function.instructions.push_back({IrOpcode::Pop, 0});
+    const auto bufferStoreResult = ir_lowerer::tryEmitBufferStoreStatement(
+        stmt,
+        localsIn,
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        [&]() { return allocTempLocal(); },
+        function.instructions,
+        error);
+    if (bufferStoreResult == ir_lowerer::BufferStoreStatementEmitResult::Error) {
+      return false;
+    }
+    if (bufferStoreResult == ir_lowerer::BufferStoreStatementEmitResult::Emitted) {
       return true;
     }
     if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "dispatch")) {
