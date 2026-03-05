@@ -35,7 +35,8 @@ Legend:
 - ✓ Continue binding/storage refactor by extracting `match`/`if` statement lowering from `IrLowererLowerStatementsBindings.h` into compileable helpers with direct unit coverage.
 - ◐ Refactor complex statement-call lowering in `IrLowererLowerStatementsCalls.h`.
 - ✓ Continue statement-call refactor by extracting `buffer_store` statement lowering from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
-- ○ Continue statement-call refactor by extracting `dispatch` statement lowering from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
+- ✓ Continue statement-call refactor by extracting `dispatch` statement lowering from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
+- ○ Continue statement-call refactor by extracting direct method/definition call statement lowering (including return-value pop handling) from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
 - ◐ Refactor setup inference and adapter wiring in `IrLowererLowerSetupInference.h`.
 - ◐ Refactor inline-call and return handling in `IrLowererLowerInlineCalls.h` and `IrLowererLowerReturnInfo.h`.
 - ◐ Refactor remaining setup-locals orchestration in `IrLowererLowerSetupLocals.h`.

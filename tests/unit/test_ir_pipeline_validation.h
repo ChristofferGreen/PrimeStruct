@@ -12358,6 +12358,241 @@ TEST_CASE("ir lowerer statement call helper validates buffer_store diagnostics")
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer statement call helper emits dispatch statements") {
+  using EmitResult = primec::ir_lowerer::DispatchStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr kernelName;
+  kernelName.kind = primec::Expr::Kind::Name;
+  kernelName.name = "Kernel";
+  kernelName.namespacePrefix = "/main";
+
+  primec::Expr gx;
+  gx.kind = primec::Expr::Kind::Literal;
+  gx.intWidth = 32;
+  gx.literalValue = 2;
+  primec::Expr gy = gx;
+  gy.literalValue = 3;
+  primec::Expr gz = gx;
+  gz.literalValue = 4;
+  primec::Expr payload = gx;
+  payload.literalValue = 9;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "dispatch";
+  stmt.args = {kernelName, gx, gy, gz, payload};
+
+  primec::Definition kernelDef;
+  kernelDef.fullPath = "/main/Kernel";
+  kernelDef.transforms.push_back(primec::Transform{.name = "compute"});
+  kernelDef.parameters.resize(1);
+
+  std::vector<primec::IrInstruction> instructions;
+  int nextLocal = 20;
+  int inlineCallCount = 0;
+  primec::Expr observedCall;
+  primec::ir_lowerer::LocalMap observedLocals;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &path) -> const primec::Definition * {
+              return path == "/main/Kernel" ? &kernelDef : nullptr;
+            },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (&expr == &stmt.args[1] || &expr == &stmt.args[2] || &expr == &stmt.args[3]) {
+                return ValueKind::Int32;
+              }
+              return ValueKind::Unknown;
+            },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, expr.literalValue});
+              return true;
+            },
+            [&]() { return nextLocal++; },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &callLocals,
+                bool expectValue) {
+              ++inlineCallCount;
+              observedCall = callExpr;
+              observedLocals = callLocals;
+              CHECK_FALSE(expectValue);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCallCount == 1);
+  CHECK(observedCall.name == "/main/Kernel");
+  CHECK(observedCall.args.size() == 1);
+  CHECK(observedLocals.count(primec::ir_lowerer::kGpuGlobalIdXName) == 1);
+  CHECK(observedLocals.count(primec::ir_lowerer::kGpuGlobalIdYName) == 1);
+  CHECK(observedLocals.count(primec::ir_lowerer::kGpuGlobalIdZName) == 1);
+  int jumpIfZeroCount = 0;
+  for (const auto &inst : instructions) {
+    if (inst.op == primec::IrOpcode::JumpIfZero) {
+      ++jumpIfZeroCount;
+      CHECK(inst.imm > 0);
+    }
+  }
+  CHECK(jumpIfZeroCount == 3);
+}
+
+TEST_CASE("ir lowerer statement call helper validates dispatch diagnostics") {
+  using EmitResult = primec::ir_lowerer::DispatchStatementEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr kernelName;
+  kernelName.kind = primec::Expr::Kind::Name;
+  kernelName.name = "Kernel";
+
+  primec::Expr dim;
+  dim.kind = primec::Expr::Kind::Literal;
+  dim.intWidth = 32;
+  dim.literalValue = 1;
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "dispatch";
+  stmt.args = {kernelName, dim, dim};
+
+  primec::Definition kernelDef;
+  kernelDef.fullPath = "/main/Kernel";
+  kernelDef.parameters.resize(1);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &) -> const primec::Definition * { return &kernelDef; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "dispatch requires kernel and three dimension arguments");
+
+  primec::Expr badKernelArg;
+  badKernelArg.kind = primec::Expr::Kind::Literal;
+  badKernelArg.intWidth = 32;
+  badKernelArg.literalValue = 0;
+  stmt.args = {badKernelArg, dim, dim, dim};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &) -> const primec::Definition * { return &kernelDef; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "dispatch requires kernel name as first argument");
+
+  stmt.args = {kernelName, dim, dim, dim, dim};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/MissingKernel"); },
+            [](const std::string &) -> const primec::Definition * { return nullptr; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "dispatch requires known kernel: /main/MissingKernel");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &) -> const primec::Definition * { return &kernelDef; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "dispatch requires compute definition: /main/Kernel");
+
+  kernelDef.transforms.push_back(primec::Transform{.name = "compute"});
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &) -> const primec::Definition * { return &kernelDef; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Float32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "dispatch requires i32 dimensions");
+
+  kernelDef.parameters.resize(2);
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            stmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &) -> const primec::Definition * { return &kernelDef; },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (&expr == &stmt.args[1] || &expr == &stmt.args[2] || &expr == &stmt.args[3]) {
+                return ValueKind::Int32;
+              }
+              return ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Error);
+  CHECK(error == "dispatch argument count mismatch for /main/Kernel");
+
+  primec::Expr otherStmt;
+  otherStmt.kind = primec::Expr::Kind::Call;
+  otherStmt.name = "notify";
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitDispatchStatement(
+            otherStmt,
+            {},
+            [](const primec::Expr &) { return std::string("/main/Kernel"); },
+            [&](const std::string &) -> const primec::Definition * { return &kernelDef; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

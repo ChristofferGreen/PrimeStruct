@@ -12,148 +12,26 @@
     if (bufferStoreResult == ir_lowerer::BufferStoreStatementEmitResult::Emitted) {
       return true;
     }
-    if (stmt.kind == Expr::Kind::Call && isSimpleCallName(stmt, "dispatch")) {
-      if (stmt.args.size() < 4) {
-        error = "dispatch requires kernel and three dimension arguments";
-        return false;
-      }
-      if (stmt.args.front().kind != Expr::Kind::Name) {
-        error = "dispatch requires kernel name as first argument";
-        return false;
-      }
-      const Expr &kernelExpr = stmt.args.front();
-      const std::string kernelPath = resolveExprPath(kernelExpr);
-      auto defIt = defMap.find(kernelPath);
-      if (defIt == defMap.end() || !defIt->second) {
-        error = "dispatch requires known kernel: " + kernelPath;
-        return false;
-      }
-      bool isCompute = false;
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name == "compute") {
-          isCompute = true;
-          break;
-        }
-      }
-      if (!isCompute) {
-        error = "dispatch requires compute definition: " + kernelPath;
-        return false;
-      }
-      for (size_t i = 1; i <= 3; ++i) {
-        LocalInfo::ValueKind dimKind = inferExprKind(stmt.args[i], localsIn);
-        if (dimKind != LocalInfo::ValueKind::Int32) {
-          error = "dispatch requires i32 dimensions";
-          return false;
-        }
-      }
-      const auto &kernelParams = defIt->second->parameters;
-      if (stmt.args.size() != kernelParams.size() + 4) {
-        error = "dispatch argument count mismatch for " + kernelPath;
-        return false;
-      }
-      const int32_t gxLocal = allocTempLocal();
-      if (!emitExpr(stmt.args[1], localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gxLocal)});
-      const int32_t gyLocal = allocTempLocal();
-      if (!emitExpr(stmt.args[2], localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gyLocal)});
-      const int32_t gzLocal = allocTempLocal();
-      if (!emitExpr(stmt.args[3], localsIn)) {
-        return false;
-      }
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gzLocal)});
-
-      const int32_t xLocal = allocTempLocal();
-      const int32_t yLocal = allocTempLocal();
-      const int32_t zLocal = allocTempLocal();
-      const int32_t gidXLocal = allocTempLocal();
-      const int32_t gidYLocal = allocTempLocal();
-      const int32_t gidZLocal = allocTempLocal();
-
-      LocalMap dispatchLocals = localsIn;
-      LocalInfo gidInfo;
-      gidInfo.index = gidXLocal;
-      gidInfo.kind = LocalInfo::Kind::Value;
-      gidInfo.valueKind = LocalInfo::ValueKind::Int32;
-      dispatchLocals.emplace(kGpuGlobalIdXName, gidInfo);
-      gidInfo.index = gidYLocal;
-      dispatchLocals.emplace(kGpuGlobalIdYName, gidInfo);
-      gidInfo.index = gidZLocal;
-      dispatchLocals.emplace(kGpuGlobalIdZName, gidInfo);
-
-      function.instructions.push_back({IrOpcode::PushI32, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(zLocal)});
-      const size_t zCheck = function.instructions.size();
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gzLocal)});
-      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-      const size_t zJumpEnd = function.instructions.size();
-      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-
-      function.instructions.push_back({IrOpcode::PushI32, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(yLocal)});
-      const size_t yCheck = function.instructions.size();
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gyLocal)});
-      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-      const size_t yJumpEnd = function.instructions.size();
-      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-
-      function.instructions.push_back({IrOpcode::PushI32, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(xLocal)});
-      const size_t xCheck = function.instructions.size();
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gxLocal)});
-      function.instructions.push_back({IrOpcode::CmpLtI32, 0});
-      const size_t xJumpEnd = function.instructions.size();
-      function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidXLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidYLocal)});
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidZLocal)});
-
-      Expr kernelCall;
-      kernelCall.kind = Expr::Kind::Call;
-      kernelCall.name = kernelPath;
-      kernelCall.namespacePrefix = kernelExpr.namespacePrefix;
-      for (size_t i = 4; i < stmt.args.size(); ++i) {
-        kernelCall.args.push_back(stmt.args[i]);
-        kernelCall.argNames.push_back(std::nullopt);
-      }
-      if (!emitInlineDefinitionCall(kernelCall, *defIt->second, dispatchLocals, false)) {
-        return false;
-      }
-
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
-      function.instructions.push_back({IrOpcode::PushI32, 1});
-      function.instructions.push_back({IrOpcode::AddI32, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(xLocal)});
-      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(xCheck)});
-      const size_t xEnd = function.instructions.size();
-      function.instructions[xJumpEnd].imm = static_cast<int32_t>(xEnd);
-
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
-      function.instructions.push_back({IrOpcode::PushI32, 1});
-      function.instructions.push_back({IrOpcode::AddI32, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(yLocal)});
-      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(yCheck)});
-      const size_t yEnd = function.instructions.size();
-      function.instructions[yJumpEnd].imm = static_cast<int32_t>(yEnd);
-
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
-      function.instructions.push_back({IrOpcode::PushI32, 1});
-      function.instructions.push_back({IrOpcode::AddI32, 0});
-      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(zLocal)});
-      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(zCheck)});
-      const size_t zEnd = function.instructions.size();
-      function.instructions[zJumpEnd].imm = static_cast<int32_t>(zEnd);
+    const auto dispatchResult = ir_lowerer::tryEmitDispatchStatement(
+        stmt,
+        localsIn,
+        [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
+        [&](const std::string &path) -> const Definition * {
+          auto it = defMap.find(path);
+          return it == defMap.end() ? nullptr : it->second;
+        },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+        [&]() { return allocTempLocal(); },
+        [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
+          return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
+        },
+        function.instructions,
+        error);
+    if (dispatchResult == ir_lowerer::DispatchStatementEmitResult::Error) {
+      return false;
+    }
+    if (dispatchResult == ir_lowerer::DispatchStatementEmitResult::Emitted) {
       return true;
     }
     if (stmt.kind == Expr::Kind::Call) {

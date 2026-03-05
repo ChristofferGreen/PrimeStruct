@@ -71,4 +71,167 @@ BufferStoreStatementEmitResult tryEmitBufferStoreStatement(
   return BufferStoreStatementEmitResult::Emitted;
 }
 
+DispatchStatementEmitResult tryEmitDispatchStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<std::string(const Expr &)> &resolveExprPath,
+    const std::function<const Definition *(const std::string &)> &findDefinitionByPath,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::vector<IrInstruction> &instructions,
+    std::string &error) {
+  if (stmt.kind != Expr::Kind::Call || !isSimpleCallName(stmt, "dispatch")) {
+    return DispatchStatementEmitResult::NotMatched;
+  }
+  if (stmt.args.size() < 4) {
+    error = "dispatch requires kernel and three dimension arguments";
+    return DispatchStatementEmitResult::Error;
+  }
+  if (stmt.args.front().kind != Expr::Kind::Name) {
+    error = "dispatch requires kernel name as first argument";
+    return DispatchStatementEmitResult::Error;
+  }
+
+  const Expr &kernelExpr = stmt.args.front();
+  const std::string kernelPath = resolveExprPath(kernelExpr);
+  const Definition *kernelDef = findDefinitionByPath(kernelPath);
+  if (!kernelDef) {
+    error = "dispatch requires known kernel: " + kernelPath;
+    return DispatchStatementEmitResult::Error;
+  }
+
+  bool isCompute = false;
+  for (const auto &transform : kernelDef->transforms) {
+    if (transform.name == "compute") {
+      isCompute = true;
+      break;
+    }
+  }
+  if (!isCompute) {
+    error = "dispatch requires compute definition: " + kernelPath;
+    return DispatchStatementEmitResult::Error;
+  }
+
+  for (size_t i = 1; i <= 3; ++i) {
+    const LocalInfo::ValueKind dimKind = inferExprKind(stmt.args[i], localsIn);
+    if (dimKind != LocalInfo::ValueKind::Int32) {
+      error = "dispatch requires i32 dimensions";
+      return DispatchStatementEmitResult::Error;
+    }
+  }
+
+  if (stmt.args.size() != kernelDef->parameters.size() + 4) {
+    error = "dispatch argument count mismatch for " + kernelPath;
+    return DispatchStatementEmitResult::Error;
+  }
+
+  const int32_t gxLocal = allocTempLocal();
+  if (!emitExpr(stmt.args[1], localsIn)) {
+    return DispatchStatementEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gxLocal)});
+  const int32_t gyLocal = allocTempLocal();
+  if (!emitExpr(stmt.args[2], localsIn)) {
+    return DispatchStatementEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gyLocal)});
+  const int32_t gzLocal = allocTempLocal();
+  if (!emitExpr(stmt.args[3], localsIn)) {
+    return DispatchStatementEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gzLocal)});
+
+  const int32_t xLocal = allocTempLocal();
+  const int32_t yLocal = allocTempLocal();
+  const int32_t zLocal = allocTempLocal();
+  const int32_t gidXLocal = allocTempLocal();
+  const int32_t gidYLocal = allocTempLocal();
+  const int32_t gidZLocal = allocTempLocal();
+
+  LocalMap dispatchLocals = localsIn;
+  LocalInfo gidInfo;
+  gidInfo.index = gidXLocal;
+  gidInfo.kind = LocalInfo::Kind::Value;
+  gidInfo.valueKind = LocalInfo::ValueKind::Int32;
+  dispatchLocals.emplace(kGpuGlobalIdXName, gidInfo);
+  gidInfo.index = gidYLocal;
+  dispatchLocals.emplace(kGpuGlobalIdYName, gidInfo);
+  gidInfo.index = gidZLocal;
+  dispatchLocals.emplace(kGpuGlobalIdZName, gidInfo);
+
+  instructions.push_back({IrOpcode::PushI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(zLocal)});
+  const size_t zCheck = instructions.size();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gzLocal)});
+  instructions.push_back({IrOpcode::CmpLtI32, 0});
+  const size_t zJumpEnd = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+  instructions.push_back({IrOpcode::PushI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(yLocal)});
+  const size_t yCheck = instructions.size();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gyLocal)});
+  instructions.push_back({IrOpcode::CmpLtI32, 0});
+  const size_t yJumpEnd = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+  instructions.push_back({IrOpcode::PushI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(xLocal)});
+  const size_t xCheck = instructions.size();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(gxLocal)});
+  instructions.push_back({IrOpcode::CmpLtI32, 0});
+  const size_t xJumpEnd = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidXLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidYLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(gidZLocal)});
+
+  Expr kernelCall;
+  kernelCall.kind = Expr::Kind::Call;
+  kernelCall.name = kernelPath;
+  kernelCall.namespacePrefix = kernelExpr.namespacePrefix;
+  for (size_t i = 4; i < stmt.args.size(); ++i) {
+    kernelCall.args.push_back(stmt.args[i]);
+    kernelCall.argNames.push_back(std::nullopt);
+  }
+  if (!emitInlineDefinitionCall(kernelCall, *kernelDef, dispatchLocals, false)) {
+    return DispatchStatementEmitResult::Error;
+  }
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(xLocal)});
+  instructions.push_back({IrOpcode::PushI32, 1});
+  instructions.push_back({IrOpcode::AddI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(xLocal)});
+  instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(xCheck)});
+  const size_t xEnd = instructions.size();
+  instructions[xJumpEnd].imm = static_cast<int32_t>(xEnd);
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(yLocal)});
+  instructions.push_back({IrOpcode::PushI32, 1});
+  instructions.push_back({IrOpcode::AddI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(yLocal)});
+  instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(yCheck)});
+  const size_t yEnd = instructions.size();
+  instructions[yJumpEnd].imm = static_cast<int32_t>(yEnd);
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(zLocal)});
+  instructions.push_back({IrOpcode::PushI32, 1});
+  instructions.push_back({IrOpcode::AddI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(zLocal)});
+  instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(zCheck)});
+  const size_t zEnd = instructions.size();
+  instructions[zJumpEnd].imm = static_cast<int32_t>(zEnd);
+
+  return DispatchStatementEmitResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer
