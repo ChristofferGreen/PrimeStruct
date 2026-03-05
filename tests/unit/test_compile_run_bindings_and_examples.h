@@ -213,6 +213,65 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
   CHECK(readFile(metalErrPath).find("Usage: primec") != std::string::npos);
 }
 
+TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
+  std::filesystem::path sampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  if (!std::filesystem::exists(sampleDir)) {
+    sampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(sampleDir));
+
+  const std::filesystem::path cubePath = sampleDir / "cube.prime";
+  const std::filesystem::path indexPath = sampleDir / "index.html";
+  const std::filesystem::path mainJsPath = sampleDir / "main.js";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(indexPath));
+  REQUIRE(std::filesystem::exists(mainJsPath));
+
+  const std::string indexHtml = readFile(indexPath.string());
+  CHECK(indexHtml.find("id=\"cube-canvas\"") != std::string::npos);
+  CHECK(indexHtml.find("src=\"./main.js\"") != std::string::npos);
+
+  const std::string mainJs = readFile(mainJsPath.string());
+  CHECK(mainJs.find("./cube.wasm") != std::string::npos);
+  CHECK(mainJs.find("requestAnimationFrame") != std::string::npos);
+
+  const std::filesystem::path pipelineDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_assets";
+  std::error_code ec;
+  std::filesystem::remove_all(pipelineDir, ec);
+  std::filesystem::create_directories(pipelineDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path wasmPath = pipelineDir / "cube.wasm";
+  const std::string wasmBrowserCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmPath.string()) + " --entry /main";
+  CHECK(runCommand(wasmBrowserCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  std::filesystem::copy_file(indexPath, pipelineDir / "index.html",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(mainJsPath, pipelineDir / "main.js",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
+
+  CHECK(std::filesystem::exists(pipelineDir / "index.html"));
+  CHECK(std::filesystem::exists(pipelineDir / "main.js"));
+  CHECK(std::filesystem::exists(pipelineDir / "cube.wasm"));
+
+  if (runCommand("node --version > /dev/null 2>&1") == 0) {
+    const std::string nodeCheckSource = "node --check " + quoteShellArg(mainJsPath.string()) + " > /dev/null 2>&1";
+    CHECK(runCommand(nodeCheckSource) == 0);
+    const std::string nodeCheckStaged =
+        "node --check " + quoteShellArg((pipelineDir / "main.js").string()) + " > /dev/null 2>&1";
+    CHECK(runCommand(nodeCheckStaged) == 0);
+  }
+}
+
 TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
   REQUIRE(std::filesystem::exists(examplesDir));

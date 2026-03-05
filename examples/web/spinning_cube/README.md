@@ -23,6 +23,12 @@ This example is a milestone target for cross-platform backend work.
   - `CubeSimulationState`: deterministic tick + angle state.
   - `cubeInit`, `cubeTick`, and `wrapAngle`: shared fixed-step update helpers.
 
+## Current Browser Host Assets
+- `index.html` provides the canvas shell and module bootstrap.
+- `main.js` loads `cube.wasm` when present and renders a deterministic
+  wireframe cube proxy so host bootstrap can be smoke-tested before WebGPU
+  integration lands.
+
 ## Acceptance Criteria
 - The page shows a rotating cube without manual setup beyond launching a local static server.
 - A native desktop run shows the same rotating cube behavior from the same simulation source.

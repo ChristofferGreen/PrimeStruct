@@ -206,7 +206,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 **Web + Native + Metal 3D Target (Spinning Cube)**
 - ✓ Finalize and maintain the cross-backend graphics API contract in `docs/Graphics_API_Design.md` (Core API + profile gating, no backend extension namespace in v1). Testing: doc-linked conformance cases that exercise each locked Core/API constraint.
 - ✓ Add shared spinning-cube PrimeStruct simulation source and data layout (`cube.prime`) used by all hosts. Testing: compile-time smoke tests across all target profiles.
-- ○ Add browser host sample assets (`index.html`, `main.js`) under `examples/web/spinning_cube/`. Testing: sample-presence smoke tests plus browser build pipeline checks.
+- ✓ Add browser host sample assets (`index.html`, `main.js`) under `examples/web/spinning_cube/`. Testing: sample-presence smoke tests plus browser build pipeline checks.
 - ○ Define minimal browser graphics profile (`wasm-browser` + WebGPU shader path) with compile-time gating. Testing: positive/negative compile suites for browser profile rules.
 - ○ Add native desktop host target for the same sample (shared simulation logic + native host glue). Testing: native build-and-run integration test on supported CI runners.
 - ○ Add Apple Metal shader/output path for macOS (`metal-osx` profile) with compile-time gating. Testing: macOS shader compile tests (`xcrun metal`/`metallib`) and profile rejection tests.
