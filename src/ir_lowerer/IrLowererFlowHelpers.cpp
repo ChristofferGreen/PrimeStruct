@@ -422,6 +422,361 @@ bool emitForConditionBindingInit(
   return true;
 }
 
+VectorStatementHelperEmitResult tryEmitVectorStatementHelper(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::function<int32_t()> &allocTempLocal,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<void()> &emitVectorCapacityExceeded,
+    const std::function<void()> &emitVectorPopOnEmpty,
+    const std::function<void()> &emitVectorIndexOutOfBounds,
+    const std::function<void()> &emitVectorReserveNegative,
+    const std::function<void()> &emitVectorReserveExceeded,
+    std::string &error) {
+  std::string vectorHelper;
+  if (isSimpleCallName(stmt, "push")) {
+    vectorHelper = "push";
+  } else if (isSimpleCallName(stmt, "pop")) {
+    vectorHelper = "pop";
+  } else if (isSimpleCallName(stmt, "reserve")) {
+    vectorHelper = "reserve";
+  } else if (isSimpleCallName(stmt, "clear")) {
+    vectorHelper = "clear";
+  } else if (isSimpleCallName(stmt, "remove_at")) {
+    vectorHelper = "remove_at";
+  } else if (isSimpleCallName(stmt, "remove_swap")) {
+    vectorHelper = "remove_swap";
+  }
+
+  if (vectorHelper.empty()) {
+    return VectorStatementHelperEmitResult::NotMatched;
+  }
+  if (!stmt.templateArgs.empty()) {
+    error = vectorHelper + " does not accept template arguments";
+    return VectorStatementHelperEmitResult::Error;
+  }
+  if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+    error = vectorHelper + " does not accept block arguments";
+    return VectorStatementHelperEmitResult::Error;
+  }
+
+  const size_t expectedArgs = (vectorHelper == "pop" || vectorHelper == "clear") ? 1 : 2;
+  if (stmt.args.size() != expectedArgs) {
+    if (expectedArgs == 1) {
+      error = vectorHelper + " requires exactly one argument";
+    } else {
+      error = vectorHelper + " requires exactly two arguments";
+    }
+    return VectorStatementHelperEmitResult::Error;
+  }
+
+  const Expr &target = stmt.args.front();
+  if (target.kind != Expr::Kind::Name) {
+    error = vectorHelper + " requires mutable vector binding";
+    return VectorStatementHelperEmitResult::Error;
+  }
+  auto it = localsIn.find(target.name);
+  if (it == localsIn.end() || it->second.kind != LocalInfo::Kind::Vector || !it->second.isMutable) {
+    error = vectorHelper + " requires mutable vector binding";
+    return VectorStatementHelperEmitResult::Error;
+  }
+
+  auto pushIndexConst = [&](LocalInfo::ValueKind kind, int32_t value) {
+    if (kind == LocalInfo::ValueKind::Int32) {
+      instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(value)});
+    } else {
+      instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+    }
+  };
+
+  const int32_t ptrLocal = allocTempLocal();
+  const int32_t elementOffset = 2;
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+
+  if (vectorHelper == "clear") {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return VectorStatementHelperEmitResult::Emitted;
+  }
+
+  const int32_t countLocal = allocTempLocal();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadIndirect, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+  int32_t capacityLocal = -1;
+  if (vectorHelper == "push" || vectorHelper == "reserve") {
+    capacityLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal)});
+  }
+
+  if (vectorHelper == "reserve") {
+    LocalInfo::ValueKind capacityKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+    if (!isSupportedIndexKind(capacityKind)) {
+      error = "reserve requires integer capacity";
+      return VectorStatementHelperEmitResult::Error;
+    }
+
+    const int32_t desiredLocal = allocTempLocal();
+    if (!emitExpr(stmt.args[1], localsIn)) {
+      return VectorStatementHelperEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(desiredLocal)});
+
+    if (capacityKind != LocalInfo::ValueKind::UInt64) {
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+      instructions.push_back({pushZeroForIndex(capacityKind), 0});
+      instructions.push_back({cmpLtForIndex(capacityKind), 0});
+      size_t jumpNonNegative = instructions.size();
+      instructions.push_back({IrOpcode::JumpIfZero, 0});
+      emitVectorReserveNegative();
+      size_t nonNegativeIndex = instructions.size();
+      instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+    }
+
+    IrOpcode cmpLtOp =
+        (capacityKind == LocalInfo::ValueKind::Int32)
+            ? IrOpcode::CmpLtI32
+            : (capacityKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtU64);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(desiredLocal)});
+    instructions.push_back({cmpLtOp, 0});
+    size_t jumpWithinCapacity = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitVectorReserveExceeded();
+    size_t withinCapacityIndex = instructions.size();
+    instructions[jumpWithinCapacity].imm = static_cast<int32_t>(withinCapacityIndex);
+    return VectorStatementHelperEmitResult::Emitted;
+  }
+
+  if (vectorHelper == "push") {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal)});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    size_t jumpHasSpace = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+    const int32_t valueLocal = allocTempLocal();
+    if (!emitExpr(stmt.args[1], localsIn)) {
+      return VectorStatementHelperEmitResult::Error;
+    }
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+
+    const int32_t destPtrLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(elementOffset)});
+    instructions.push_back({IrOpcode::AddI32, 0});
+    instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+    instructions.push_back({IrOpcode::MulI32, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::AddI32, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+
+    size_t jumpEnd = instructions.size();
+    instructions.push_back({IrOpcode::Jump, 0});
+    size_t errorIndex = instructions.size();
+    emitVectorCapacityExceeded();
+    size_t endIndex = instructions.size();
+    instructions[jumpHasSpace].imm = static_cast<int32_t>(errorIndex);
+    instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+    return VectorStatementHelperEmitResult::Emitted;
+  }
+
+  if (vectorHelper == "pop") {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::CmpEqI32, 0});
+    size_t jumpNonEmpty = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitVectorPopOnEmpty();
+    size_t nonEmptyIndex = instructions.size();
+    instructions[jumpNonEmpty].imm = static_cast<int32_t>(nonEmptyIndex);
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::SubI32, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return VectorStatementHelperEmitResult::Emitted;
+  }
+
+  LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(stmt.args[1], localsIn));
+  if (!isSupportedIndexKind(indexKind)) {
+    error = vectorHelper + " requires integer index";
+    return VectorStatementHelperEmitResult::Error;
+  }
+
+  IrOpcode cmpLtOp =
+      (indexKind == LocalInfo::ValueKind::Int32)
+          ? IrOpcode::CmpLtI32
+          : (indexKind == LocalInfo::ValueKind::Int64 ? IrOpcode::CmpLtI64 : IrOpcode::CmpLtU64);
+  IrOpcode addOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::AddI32 : IrOpcode::AddI64;
+  IrOpcode subOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::SubI32 : IrOpcode::SubI64;
+  IrOpcode mulOp = (indexKind == LocalInfo::ValueKind::Int32) ? IrOpcode::MulI32 : IrOpcode::MulI64;
+
+  const int32_t indexLocal = allocTempLocal();
+  if (!emitExpr(stmt.args[1], localsIn)) {
+    return VectorStatementHelperEmitResult::Error;
+  }
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+
+  if (indexKind != LocalInfo::ValueKind::UInt64) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+    instructions.push_back({pushZeroForIndex(indexKind), 0});
+    instructions.push_back({cmpLtForIndex(indexKind), 0});
+    size_t jumpNonNegative = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitVectorIndexOutOfBounds();
+    size_t nonNegativeIndex = instructions.size();
+    instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+  }
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  instructions.push_back({cmpGeForIndex(indexKind), 0});
+  size_t jumpInRange = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+  emitVectorIndexOutOfBounds();
+  size_t inRangeIndex = instructions.size();
+  instructions[jumpInRange].imm = static_cast<int32_t>(inRangeIndex);
+
+  const int32_t lastIndexLocal = allocTempLocal();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  pushIndexConst(indexKind, 1);
+  instructions.push_back({subOp, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
+
+  if (vectorHelper == "remove_swap") {
+    const int32_t destPtrLocal = allocTempLocal();
+    const int32_t srcPtrLocal = allocTempLocal();
+    const int32_t tempValueLocal = allocTempLocal();
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+    pushIndexConst(indexKind, elementOffset);
+    instructions.push_back({addOp, 0});
+    pushIndexConst(indexKind, IrSlotBytesI32);
+    instructions.push_back({mulOp, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
+    pushIndexConst(indexKind, elementOffset);
+    instructions.push_back({addOp, 0});
+    pushIndexConst(indexKind, IrSlotBytesI32);
+    instructions.push_back({mulOp, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValueLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::SubI32, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return VectorStatementHelperEmitResult::Emitted;
+  }
+
+  const int32_t destPtrLocal = allocTempLocal();
+  const int32_t srcPtrLocal = allocTempLocal();
+  const int32_t tempValueLocal = allocTempLocal();
+
+  const size_t loopStart = instructions.size();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(lastIndexLocal)});
+  instructions.push_back({cmpLtOp, 0});
+  size_t jumpLoopEnd = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+  pushIndexConst(indexKind, elementOffset);
+  instructions.push_back({addOp, 0});
+  pushIndexConst(indexKind, IrSlotBytesI32);
+  instructions.push_back({mulOp, 0});
+  instructions.push_back({IrOpcode::AddI64, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+  pushIndexConst(indexKind, elementOffset + 1);
+  instructions.push_back({addOp, 0});
+  pushIndexConst(indexKind, IrSlotBytesI32);
+  instructions.push_back({mulOp, 0});
+  instructions.push_back({IrOpcode::AddI64, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+  instructions.push_back({IrOpcode::LoadIndirect, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValueLocal)});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValueLocal)});
+  instructions.push_back({IrOpcode::StoreIndirect, 0});
+  instructions.push_back({IrOpcode::Pop, 0});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+  pushIndexConst(indexKind, 1);
+  instructions.push_back({addOp, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+  instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+
+  size_t loopEndIndex = instructions.size();
+  instructions[jumpLoopEnd].imm = static_cast<int32_t>(loopEndIndex);
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  instructions.push_back({IrOpcode::PushI32, 1});
+  instructions.push_back({IrOpcode::SubI32, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+  instructions.push_back({IrOpcode::StoreIndirect, 0});
+  instructions.push_back({IrOpcode::Pop, 0});
+  return VectorStatementHelperEmitResult::Emitted;
+}
+
 bool resolveBufferInitInfo(const Expr &expr,
                            const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
                            BufferInitInfo &out,

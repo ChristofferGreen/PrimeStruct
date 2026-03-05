@@ -14592,6 +14592,275 @@ TEST_CASE("ir lowerer flow helpers init for-condition bindings") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
+  using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
+  using Kind = primec::ir_lowerer::LocalInfo::Kind;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto makeTarget = [] {
+    primec::Expr target;
+    target.kind = primec::Expr::Kind::Name;
+    target.name = "v";
+    return target;
+  };
+  auto makeI32Literal = [](uint64_t value) {
+    primec::Expr literal;
+    literal.kind = primec::Expr::Kind::Literal;
+    literal.intWidth = 32;
+    literal.literalValue = value;
+    return literal;
+  };
+  auto makeCall = [&](const std::string &name, const std::vector<primec::Expr> &args) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.name = name;
+    call.args = args;
+    return call;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = Kind::Vector;
+  vectorInfo.valueKind = ValueKind::Int32;
+  vectorInfo.isMutable = true;
+  vectorInfo.index = 6;
+  locals.emplace("v", vectorInfo);
+
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      if (expr.isUnsigned || expr.intWidth == 64) {
+        return ValueKind::UInt64;
+      }
+      return ValueKind::Int32;
+    }
+    return ValueKind::Unknown;
+  };
+
+  auto runHelper = [&](const primec::Expr &stmt,
+                       int &capacityExceededCalls,
+                       int &popOnEmptyCalls,
+                       int &indexOutOfBoundsCalls,
+                       int &reserveNegativeCalls,
+                       int &reserveExceededCalls,
+                       std::string &error) {
+    std::vector<primec::IrInstruction> instructions;
+    int32_t nextTempLocal = 20;
+    const EmitResult result = primec::ir_lowerer::tryEmitVectorStatementHelper(
+        stmt,
+        locals,
+        instructions,
+        [&]() { return nextTempLocal++; },
+        inferExprKind,
+        [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+          if (expr.kind == primec::Expr::Kind::Literal && expr.intWidth == 32 && !expr.isUnsigned) {
+            instructions.push_back({primec::IrOpcode::PushI32, expr.literalValue});
+          } else {
+            instructions.push_back({primec::IrOpcode::PushI64, expr.literalValue});
+          }
+          return true;
+        },
+        [&]() {
+          ++capacityExceededCalls;
+          instructions.push_back({primec::IrOpcode::PushI32, 901});
+        },
+        [&]() {
+          ++popOnEmptyCalls;
+          instructions.push_back({primec::IrOpcode::PushI32, 902});
+        },
+        [&]() {
+          ++indexOutOfBoundsCalls;
+          instructions.push_back({primec::IrOpcode::PushI32, 903});
+        },
+        [&]() {
+          ++reserveNegativeCalls;
+          instructions.push_back({primec::IrOpcode::PushI32, 904});
+        },
+        [&]() {
+          ++reserveExceededCalls;
+          instructions.push_back({primec::IrOpcode::PushI32, 905});
+        },
+        error);
+    return result;
+  };
+
+  int capacityExceededCalls = 0;
+  int popOnEmptyCalls = 0;
+  int indexOutOfBoundsCalls = 0;
+  int reserveNegativeCalls = 0;
+  int reserveExceededCalls = 0;
+  std::string error;
+
+  CHECK(runHelper(
+            makeCall("clear", {makeTarget()}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(capacityExceededCalls == 0);
+  CHECK(popOnEmptyCalls == 0);
+  CHECK(indexOutOfBoundsCalls == 0);
+  CHECK(reserveNegativeCalls == 0);
+  CHECK(reserveExceededCalls == 0);
+
+  CHECK(runHelper(
+            makeCall("push", {makeTarget(), makeI32Literal(7)}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(capacityExceededCalls == 1);
+
+  CHECK(runHelper(
+            makeCall("pop", {makeTarget()}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(popOnEmptyCalls == 1);
+
+  CHECK(runHelper(
+            makeCall("reserve", {makeTarget(), makeI32Literal(12)}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(reserveNegativeCalls == 1);
+  CHECK(reserveExceededCalls == 1);
+
+  CHECK(runHelper(
+            makeCall("remove_at", {makeTarget(), makeI32Literal(1)}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+
+  CHECK(runHelper(
+            makeCall("remove_swap", {makeTarget(), makeI32Literal(1)}),
+            capacityExceededCalls,
+            popOnEmptyCalls,
+            indexOutOfBoundsCalls,
+            reserveNegativeCalls,
+            reserveExceededCalls,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(indexOutOfBoundsCalls == 4);
+}
+
+TEST_CASE("ir lowerer flow helpers validate vector statement helper diagnostics") {
+  using EmitResult = primec::ir_lowerer::VectorStatementHelperEmitResult;
+  using Kind = primec::ir_lowerer::LocalInfo::Kind;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  auto makeName = [](const std::string &name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = Kind::Vector;
+  vectorInfo.valueKind = ValueKind::Int32;
+  vectorInfo.isMutable = false;
+  vectorInfo.index = 4;
+  locals.emplace("v", vectorInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 30;
+  std::string error;
+
+  primec::Expr nonHelperCall;
+  nonHelperCall.kind = primec::Expr::Kind::Call;
+  nonHelperCall.name = "count";
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            nonHelperCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::NotMatched);
+  CHECK(error.empty());
+
+  primec::Expr pushCall;
+  pushCall.kind = primec::Expr::Kind::Call;
+  pushCall.name = "push";
+  pushCall.args = {makeName("v"), makeName("value")};
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            pushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "push requires mutable vector binding");
+
+  locals.at("v").isMutable = true;
+  pushCall.templateArgs = {"i32"};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            pushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "push does not accept template arguments");
+
+  primec::Expr reserveCall;
+  reserveCall.kind = primec::Expr::Kind::Call;
+  reserveCall.name = "reserve";
+  reserveCall.args = {makeName("v"), makeName("cap")};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            reserveCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Float32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Error);
+  CHECK(error == "reserve requires integer capacity");
+}
+
 TEST_CASE("ir lowerer flow helpers resolve buffer init info") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
 
