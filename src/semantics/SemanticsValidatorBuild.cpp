@@ -127,6 +127,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
     const std::string parent = def.fullPath.substr(0, slash);
     return structNames_.count(parent) > 0;
   };
+  std::vector<SemanticDiagnosticRecord> transformDiagnosticRecords;
+  const bool collectTransformDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
@@ -153,19 +155,49 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool sawVisibility = false;
     bool isPublic = false;
     bool sawStatic = false;
+    bool definitionTransformError = false;
+    auto addTransformDiagnostic = [&](const std::string &message) -> bool {
+      if (!collectTransformDiagnostics) {
+        error_ = message;
+        return true;
+      }
+      SemanticDiagnosticRecord record;
+      record.message = message;
+      if (def.sourceLine > 0 && def.sourceColumn > 0) {
+        record.line = def.sourceLine;
+        record.column = def.sourceColumn;
+      }
+      SemanticDiagnosticRelatedSpan related;
+      related.line = def.sourceLine;
+      related.column = def.sourceColumn;
+      related.label = "definition: " + def.fullPath;
+      record.relatedSpans.push_back(std::move(related));
+      if (error_.empty()) {
+        error_ = message;
+      }
+      transformDiagnosticRecords.push_back(std::move(record));
+      definitionTransformError = true;
+      return false;
+    };
     for (const auto &transform : def.transforms) {
       if (transform.name == "public" || transform.name == "private") {
         if (!transform.templateArgs.empty()) {
-          error_ = transform.name + " transform does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic(transform.name + " transform does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (!transform.arguments.empty()) {
-          error_ = transform.name + " transform does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic(transform.name + " transform does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (sawVisibility) {
-          error_ = "definition visibility transforms are mutually exclusive: " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("definition visibility transforms are mutually exclusive: " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawVisibility = true;
         isPublic = (transform.name == "public");
@@ -173,159 +205,232 @@ bool SemanticsValidator::buildDefinitionMaps() {
       }
       if (transform.name == "static") {
         if (!transform.templateArgs.empty()) {
-          error_ = "static transform does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("static transform does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (!transform.arguments.empty()) {
-          error_ = "static transform does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("static transform does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (sawStatic) {
-          error_ = "duplicate static transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate static transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawStatic = true;
         if (!isStructHelper || isLifecycleHelper) {
-          error_ = "binding visibility/static transforms are only valid on bindings: " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("binding visibility/static transforms are only valid on bindings: " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         continue;
       }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
         if (!transform.templateArgs.empty()) {
-          error_ = transform.name + " transform does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic(transform.name + " transform does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (!transform.arguments.empty()) {
-          error_ = transform.name + " transform does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic(transform.name + " transform does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (transform.name == "no_padding") {
           if (sawNoPadding) {
-            error_ = "duplicate no_padding transform on " + def.fullPath;
-            return false;
+            if (addTransformDiagnostic("duplicate no_padding transform on " + def.fullPath)) {
+              return false;
+            }
+            break;
           }
           sawNoPadding = true;
         } else {
           if (sawPlatformPadding) {
-            error_ = "duplicate platform_independent_padding transform on " + def.fullPath;
-            return false;
+            if (addTransformDiagnostic("duplicate platform_independent_padding transform on " + def.fullPath)) {
+              return false;
+            }
+            break;
           }
           sawPlatformPadding = true;
         }
         continue;
       }
       if (isBindingQualifierName(transform.name)) {
-        error_ = "binding visibility/static transforms are only valid on bindings: " + def.fullPath;
-        return false;
+        if (addTransformDiagnostic("binding visibility/static transforms are only valid on bindings: " + def.fullPath)) {
+          return false;
+        }
+        break;
       }
       if (transform.name == "copy") {
-        error_ = "copy transform is only supported on bindings and parameters: " + def.fullPath;
-        return false;
+        if (addTransformDiagnostic("copy transform is only supported on bindings and parameters: " + def.fullPath)) {
+          return false;
+        }
+        break;
       }
       if (transform.name == "restrict") {
-        error_ = "restrict transform is only supported on bindings and parameters: " + def.fullPath;
-        return false;
+        if (addTransformDiagnostic("restrict transform is only supported on bindings and parameters: " + def.fullPath)) {
+          return false;
+        }
+        break;
       }
       if (transform.name == "return") {
         if (!transform.arguments.empty()) {
-          error_ = "return transform does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("return transform does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
       } else if (transform.name == "on_error") {
         if (sawOnError) {
-          error_ = "duplicate on_error transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate on_error transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawOnError = true;
         if (transform.templateArgs.size() != 2) {
-          error_ = "on_error requires exactly two template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("on_error requires exactly two template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
       } else if (transform.name == "compute") {
         if (sawCompute) {
-          error_ = "duplicate compute transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate compute transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawCompute = true;
         if (!transform.templateArgs.empty()) {
-          error_ = "compute does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("compute does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (!transform.arguments.empty()) {
-          error_ = "compute does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("compute does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
       } else if (transform.name == "unsafe") {
         if (sawUnsafe) {
-          error_ = "duplicate unsafe transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate unsafe transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawUnsafe = true;
         if (!transform.templateArgs.empty()) {
-          error_ = "unsafe does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("unsafe does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (!transform.arguments.empty()) {
-          error_ = "unsafe does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("unsafe does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
       } else if (transform.name == "workgroup_size") {
         if (sawWorkgroupSize) {
-          error_ = "duplicate workgroup_size transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate workgroup_size transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawWorkgroupSize = true;
         if (!transform.templateArgs.empty()) {
-          error_ = "workgroup_size does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("workgroup_size does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (transform.arguments.size() != 3) {
-          error_ = "workgroup_size requires three arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("workgroup_size requires three arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         int value = 0;
         for (const auto &arg : transform.arguments) {
           if (!parsePositiveIntArg(arg, value)) {
-            error_ = "workgroup_size requires positive integer arguments on " + def.fullPath;
-            return false;
+            if (addTransformDiagnostic("workgroup_size requires positive integer arguments on " + def.fullPath)) {
+              return false;
+            }
+            break;
           }
         }
+        if (definitionTransformError) {
+          break;
+        }
       } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
-        error_ = "placement transforms are not supported: " + def.fullPath;
-        return false;
+        if (addTransformDiagnostic("placement transforms are not supported: " + def.fullPath)) {
+          return false;
+        }
+        break;
       } else if (transform.name == "effects") {
         if (sawEffects) {
-          error_ = "duplicate effects transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate effects transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawEffects = true;
         if (!validateEffectsTransform(transform, def.fullPath, error_)) {
-          return false;
+          if (addTransformDiagnostic(error_)) {
+            return false;
+          }
+          break;
         }
       } else if (transform.name == "capabilities") {
         if (sawCapabilities) {
-          error_ = "duplicate capabilities transform on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("duplicate capabilities transform on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         sawCapabilities = true;
         if (!validateCapabilitiesTransform(transform, def.fullPath, error_)) {
-          return false;
+          if (addTransformDiagnostic(error_)) {
+            return false;
+          }
+          break;
         }
       } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
         if (!validateAlignTransform(transform, def.fullPath, error_)) {
-          return false;
+          if (addTransformDiagnostic(error_)) {
+            return false;
+          }
+          break;
         }
       } else if (isStructTransformName(transform.name)) {
         if (!transform.templateArgs.empty()) {
-          error_ = "struct transform does not accept template arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("struct transform does not accept template arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
         if (!transform.arguments.empty()) {
-          error_ = "struct transform does not accept arguments on " + def.fullPath;
-          return false;
+          if (addTransformDiagnostic("struct transform does not accept arguments on " + def.fullPath)) {
+            return false;
+          }
+          break;
         }
       }
+    }
+    if (definitionTransformError) {
+      continue;
     }
     if (sawWorkgroupSize && !sawCompute) {
       bool hasCompute = false;
@@ -336,13 +441,17 @@ bool SemanticsValidator::buildDefinitionMaps() {
         }
       }
       if (!hasCompute) {
-        error_ = "workgroup_size is only valid on compute definitions: " + def.fullPath;
-        return false;
+        if (addTransformDiagnostic("workgroup_size is only valid on compute definitions: " + def.fullPath)) {
+          return false;
+        }
+        continue;
       }
     }
     if (sawNoPadding && sawPlatformPadding) {
-      error_ = "no_padding and platform_independent_padding are mutually exclusive on " + def.fullPath;
-      return false;
+      if (addTransformDiagnostic("no_padding and platform_independent_padding are mutually exclusive on " + def.fullPath)) {
+        return false;
+      }
+      continue;
     }
     bool isStruct = false;
     bool hasReturnTransform = false;
@@ -449,6 +558,15 @@ bool SemanticsValidator::buildDefinitionMaps() {
       publicDefinitions_.insert(def.fullPath);
     }
     defMap_[def.fullPath] = &def;
+  }
+  if (collectTransformDiagnostics && !transformDiagnosticRecords.empty()) {
+    diagnosticInfo_->records = std::move(transformDiagnosticRecords);
+    if (!diagnosticInfo_->records.empty()) {
+      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
+      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
+      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
+    }
+    return false;
   }
 
   importAliases_.clear();

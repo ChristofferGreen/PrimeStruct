@@ -568,6 +568,104 @@ main() {
   CHECK(secondMessage < thirdMessage);
 }
 
+TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for invalid transforms") {
+  const std::string source = R"(
+[static return<int>]
+one() {
+  return(1i32)
+}
+[effects(io_out) effects(io_out) return<int>]
+two() {
+  return(2i32)
+}
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_invalid_transforms.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_invalid_transforms_err.json")
+          .string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"binding visibility/static transforms are only valid on bindings: /one\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate effects transform on /two\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /one\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /two\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage =
+      diagnostics.find("\"message\":\"binding visibility/static transforms are only valid on bindings: /one\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"duplicate effects transform on /two\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits stable multi-semantic payload for invalid transforms") {
+  const std::string source = R"(
+[static return<int>]
+one() {
+  return(1i32)
+}
+[effects(io_out) effects(io_out) return<int>]
+two() {
+  return(2i32)
+}
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_invalid_transforms.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_invalid_transforms_err.json")
+          .string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"binding visibility/static transforms are only valid on bindings: /one\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"duplicate effects transform on /two\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /one\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /two\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 2);
+
+  const size_t firstMessage =
+      diagnostics.find("\"message\":\"binding visibility/static transforms are only valid on bindings: /one\"");
+  const size_t secondMessage = diagnostics.find("\"message\":\"duplicate effects transform on /two\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+}
+
 TEST_CASE("primevm emit-diagnostics reports structured semantic payload") {
   const std::string source = R"(
 [return<int>]
