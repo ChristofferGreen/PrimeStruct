@@ -457,6 +457,99 @@ TEST_CASE("ir inlining pass rejects invalid call targets") {
   CHECK(error.find("invalid call target") != std::string::npos);
 }
 
+TEST_CASE("virtual-register lowering preserves vm behavior across control flow and calls") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 12});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpGtI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40400000u}); // 3.0f
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  helperFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  primec::Vm vm;
+  std::string error;
+  uint64_t baselineResult = 0;
+  REQUIRE(vm.execute(module, baselineResult, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+  REQUIRE(virtualModule.functions.size() == module.functions.size());
+  const auto &virtualMain = virtualModule.functions[0];
+  REQUIRE(virtualMain.blocks.size() >= 2);
+  CHECK(virtualMain.blocks[0].reachable);
+
+  bool sawConditionalSplit = false;
+  bool sawUseDefAssignments = false;
+  for (const auto &block : virtualMain.blocks) {
+    if (block.successorEdges.size() == 2) {
+      sawConditionalSplit = true;
+    }
+    for (const auto &instruction : block.instructions) {
+      if (!instruction.useRegisters.empty() || !instruction.defRegisters.empty()) {
+        sawUseDefAssignments = true;
+      }
+    }
+    for (const auto &edge : block.successorEdges) {
+      REQUIRE(edge.successorBlockIndex < virtualMain.blocks.size());
+      const auto &successor = virtualMain.blocks[edge.successorBlockIndex];
+      CHECK(edge.stackMoves.size() == successor.entryRegisters.size());
+    }
+  }
+  CHECK(sawConditionalSplit);
+  CHECK(sawUseDefAssignments);
+
+  primec::IrModule loweredBackModule;
+  REQUIRE(primec::liftBlockVirtualRegistersToIrModule(virtualModule, loweredBackModule, error));
+  CHECK(error.empty());
+  REQUIRE(primec::validateIrModule(loweredBackModule, primec::IrValidationTarget::Vm, error));
+  CHECK(error.empty());
+
+  uint64_t roundTripResult = 0;
+  REQUIRE(vm.execute(loweredBackModule, roundTripResult, error));
+  CHECK(error.empty());
+  CHECK(roundTripResult == baselineResult);
+}
+
+TEST_CASE("virtual-register lowering rejects inconsistent stack depth merges") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  primec::IrVirtualRegisterModule virtualModule;
+  std::string error;
+  CHECK_FALSE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.find("inconsistent stack depth") != std::string::npos);
+}
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 namespace {
 std::string quoteIrPipelineShellArg(const std::string &value) {
@@ -576,6 +669,65 @@ TEST_CASE("native backend rejects invalid callable IR target") {
       (std::filesystem::temp_directory_path() / "primec_native_ir_invalid_call_exec").string();
   CHECK_FALSE(emitter.emitExecutable(module, exePath, error));
   CHECK(error.find("invalid call target") != std::string::npos);
+}
+
+TEST_CASE("virtual-register lowering preserves native baseline parity") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 12});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpGtI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40400000u}); // 3.0f
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  helperFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  primec::Vm vm;
+  std::string error;
+  uint64_t vmResult = 0;
+  REQUIRE(vm.execute(module, vmResult, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+
+  primec::IrModule loweredBackModule;
+  REQUIRE(primec::liftBlockVirtualRegistersToIrModule(virtualModule, loweredBackModule, error));
+  CHECK(error.empty());
+
+  primec::NativeEmitter emitter;
+  const std::string baselinePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_virtual_baseline_exec").string();
+  const std::string loweredPath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_virtual_lowered_exec").string();
+  REQUIRE(emitter.emitExecutable(module, baselinePath, error));
+  CHECK(error.empty());
+  REQUIRE(emitter.emitExecutable(loweredBackModule, loweredPath, error));
+  CHECK(error.empty());
+
+  const int baselineExit = runIrPipelineNativeBinary(baselinePath);
+  const int loweredExit = runIrPipelineNativeBinary(loweredPath);
+  CHECK(baselineExit == static_cast<int>(vmResult));
+  CHECK(loweredExit == static_cast<int>(vmResult));
+  CHECK(loweredExit == baselineExit);
 }
 
 TEST_CASE("native backend reports instrumentation counters per function") {
