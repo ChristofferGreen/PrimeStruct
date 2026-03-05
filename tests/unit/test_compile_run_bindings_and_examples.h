@@ -1218,7 +1218,7 @@ main() {
   CHECK(std::filesystem::file_size(metallibPath) > 0);
 }
 
-TEST_CASE("spinning cube metal host glue renders frame smoke") {
+TEST_CASE("spinning cube metal full-path smoke renders frame") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
   if (!std::filesystem::exists(metalSampleDir)) {
@@ -1232,7 +1232,15 @@ TEST_CASE("spinning cube metal host glue renders frame smoke") {
   REQUIRE(std::filesystem::exists(metalHostPath));
 
   if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
-    INFO("xcrun not available; skipping macOS metal host runtime smoke");
+    INFO("SKIP: xcrun unavailable; cannot run spinning cube metal full-path smoke");
+    return;
+  }
+  if (runCommand("xcrun --find metal > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metal unavailable; skipping spinning cube metal full-path smoke");
+    return;
+  }
+  if (runCommand("xcrun --find metallib > /dev/null 2>&1") != 0) {
+    INFO("SKIP: xcrun metallib unavailable; skipping spinning cube metal full-path smoke");
     return;
   }
 
