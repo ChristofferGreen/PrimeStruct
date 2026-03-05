@@ -57,6 +57,7 @@ class Arm64Emitter {
 
   bool beginFunction(uint64_t frameSize, bool resetValueStack, std::string &error) {
     (void)error;
+    hasValueStackCache_ = false;
     frameSize_ = frameSize;
     if (frameSize_ > 0) {
       emitAdjustSp(frameSize_, false);
@@ -383,12 +384,14 @@ class Arm64Emitter {
   }
 
   size_t emitJumpPlaceholder() {
+    flushValueStackCache();
     size_t index = currentWordIndex();
     emit(encodeB(0));
     return index;
   }
 
   size_t emitCallPlaceholder() {
+    flushValueStackCache();
     size_t index = currentWordIndex();
     emit(encodeBl(0));
     return index;
@@ -429,6 +432,7 @@ class Arm64Emitter {
   }
 
   void emitReturnVoid() {
+    flushValueStackCache();
     emitMovImm64(0, 0);
     if (frameSize_ > 0) {
       emitAdjustSp(frameSize_, true);
@@ -446,6 +450,7 @@ class Arm64Emitter {
   }
 
   void emitReturnVoidWithLink(uint32_t linkLocalIndex) {
+    flushValueStackCache();
     emitMovImm64(0, 0);
     emitLoadLocalToReg(30, linkLocalIndex);
     if (frameSize_ > 0) {
@@ -465,6 +470,7 @@ class Arm64Emitter {
   }
 
   void emitReturnVoidWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex) {
+    flushValueStackCache();
     emitMovImm64(0, 0);
     emitLoadLocalToReg(30, linkLocalIndex);
     emitLoadLocalToReg(27, frameLocalIndex);
@@ -880,6 +886,7 @@ class Arm64Emitter {
   }
 
   size_t emitCondBranchPlaceholder(CondCode cond) {
+    flushValueStackCache();
     size_t index = currentWordIndex();
     emit(encodeBCond(0, static_cast<uint8_t>(cond)));
     emit(encodeB(0));
@@ -923,16 +930,25 @@ class Arm64Emitter {
 
   void emitPushReg(uint8_t reg) {
     counters_.valueStackPushCount += 1;
-    counters_.spillCount += 1;
-    emit(encodeSubRegImm(28, 28, 16));
-    emit(encodeStrRegBase(reg, 28, 8));
+    if (hasValueStackCache_) {
+      emitSpillReg(valueStackCacheReg_);
+    }
+    if (reg != valueStackCacheReg_) {
+      emitMovReg(valueStackCacheReg_, reg);
+    }
+    hasValueStackCache_ = true;
   }
 
   void emitPopReg(uint8_t reg) {
     counters_.valueStackPopCount += 1;
-    counters_.reloadCount += 1;
-    emit(encodeLdrRegBase(reg, 28, 8));
-    emit(encodeAddRegImm(28, 28, 16));
+    if (hasValueStackCache_) {
+      if (reg != valueStackCacheReg_) {
+        emitMovReg(reg, valueStackCacheReg_);
+      }
+      hasValueStackCache_ = false;
+      return;
+    }
+    emitReloadReg(reg);
   }
 
   void emitMovImm64(uint8_t rd, uint64_t value) {
@@ -1298,10 +1314,32 @@ class Arm64Emitter {
     return static_cast<uint64_t>(index) * 16u + 8u;
   }
 
+  void emitSpillReg(uint8_t reg) {
+    counters_.spillCount += 1;
+    emit(encodeSubRegImm(28, 28, 16));
+    emit(encodeStrRegBase(reg, 28, 8));
+  }
+
+  void emitReloadReg(uint8_t reg) {
+    counters_.reloadCount += 1;
+    emit(encodeLdrRegBase(reg, 28, 8));
+    emit(encodeAddRegImm(28, 28, 16));
+  }
+
+  void flushValueStackCache() {
+    if (!hasValueStackCache_) {
+      return;
+    }
+    emitSpillReg(valueStackCacheReg_);
+    hasValueStackCache_ = false;
+  }
+
   std::vector<uint32_t> code_;
   uint64_t frameSize_ = 0;
   uint64_t codeBaseOffset_ = 0;
   Arm64InstrumentationCounters counters_;
+  static constexpr uint8_t valueStackCacheReg_ = 26;
+  bool hasValueStackCache_ = false;
 };
 
 bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);

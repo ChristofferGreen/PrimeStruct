@@ -610,21 +610,21 @@ TEST_CASE("native backend reports instrumentation counters per function") {
   CHECK(instrumentation.perFunction[0].instructionTotal == 4u);
   CHECK(instrumentation.perFunction[0].valueStackPushCount == 3u);
   CHECK(instrumentation.perFunction[0].valueStackPopCount == 3u);
-  CHECK(instrumentation.perFunction[0].spillCount == 3u);
-  CHECK(instrumentation.perFunction[0].reloadCount == 3u);
+  CHECK(instrumentation.perFunction[0].spillCount == 1u);
+  CHECK(instrumentation.perFunction[0].reloadCount == 1u);
 
   CHECK(instrumentation.perFunction[1].functionName == "/helper");
   CHECK(instrumentation.perFunction[1].instructionTotal == 2u);
   CHECK(instrumentation.perFunction[1].valueStackPushCount == 1u);
   CHECK(instrumentation.perFunction[1].valueStackPopCount == 1u);
-  CHECK(instrumentation.perFunction[1].spillCount == 1u);
-  CHECK(instrumentation.perFunction[1].reloadCount == 1u);
+  CHECK(instrumentation.perFunction[1].spillCount == 0u);
+  CHECK(instrumentation.perFunction[1].reloadCount == 0u);
 
   CHECK(instrumentation.totalInstructionCount == 6u);
   CHECK(instrumentation.totalValueStackPushCount == 4u);
   CHECK(instrumentation.totalValueStackPopCount == 4u);
-  CHECK(instrumentation.totalSpillCount == 4u);
-  CHECK(instrumentation.totalReloadCount == 4u);
+  CHECK(instrumentation.totalSpillCount == 1u);
+  CHECK(instrumentation.totalReloadCount == 1u);
 }
 
 TEST_CASE("native backend instrumentation counts local load and store ops") {
@@ -651,13 +651,47 @@ TEST_CASE("native backend instrumentation counts local load and store ops") {
   CHECK(instrumentation.perFunction[0].instructionTotal == 4u);
   CHECK(instrumentation.perFunction[0].valueStackPushCount == 2u);
   CHECK(instrumentation.perFunction[0].valueStackPopCount == 2u);
-  CHECK(instrumentation.perFunction[0].spillCount == 2u);
-  CHECK(instrumentation.perFunction[0].reloadCount == 2u);
+  CHECK(instrumentation.perFunction[0].spillCount == 0u);
+  CHECK(instrumentation.perFunction[0].reloadCount == 0u);
   CHECK(instrumentation.totalInstructionCount == 4u);
   CHECK(instrumentation.totalValueStackPushCount == 2u);
   CHECK(instrumentation.totalValueStackPopCount == 2u);
-  CHECK(instrumentation.totalSpillCount == 2u);
-  CHECK(instrumentation.totalReloadCount == 2u);
+  CHECK(instrumentation.totalSpillCount == 0u);
+  CHECK(instrumentation.totalReloadCount == 0u);
+}
+
+TEST_CASE("native backend integer stack cache preserves parity and reduces spills") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterInstrumentation instrumentation;
+  std::string error;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_stack_cache_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
+  CHECK(error.empty());
+  CHECK(runIrPipelineNativeBinary(exePath) == 13);
+  REQUIRE(instrumentation.perFunction.size() == 1);
+  const auto &mainStats = instrumentation.perFunction[0];
+  CHECK(mainStats.valueStackPushCount == 7u);
+  CHECK(mainStats.valueStackPopCount == 7u);
+  CHECK(mainStats.spillCount == 3u);
+  CHECK(mainStats.reloadCount == 3u);
+  CHECK(mainStats.spillCount < mainStats.valueStackPushCount);
+  CHECK(mainStats.reloadCount < mainStats.valueStackPopCount);
 }
 #endif
 
