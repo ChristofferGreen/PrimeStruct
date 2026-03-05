@@ -249,6 +249,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic diagnostics when the fallback default `build-debug/primec` path is a directory in `scripts/run_spinning_cube_demo.sh` (`exit 2` + stable `primec binary not found` text with the computed default path).
 - ✓ Add a regression test that locks deterministic argument parsing/quoting for `--primec` values containing spaces in `scripts/run_spinning_cube_demo.sh` (stub-run PASS with expected `WEB/NATIVE/METAL` SKIP summary lines).
 - ✓ Add a regression test that locks deterministic `--work-dir` handling for paths containing spaces in `scripts/run_spinning_cube_demo.sh` (stub-run PASS with expected `WEB/NATIVE/METAL` SKIP summary lines and work-dir native artifact directory creation).
+- ✓ Add a regression test that locks deterministic web-skip behavior when browser commands exist but are unavailable in `scripts/run_spinning_cube_demo.sh` (`WEB: SKIP (headless browser unavailable)` with overall PASS under stubbed native/metal skip paths).
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
