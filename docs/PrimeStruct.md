@@ -125,6 +125,7 @@ module {
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
   - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).
   - `--debug-json-snapshots=none|stop|all` adds on-demand `snapshot_payload` fields (`instruction_pointer`, `call_stack`, `current_frame_locals`, `operand_stack`) to debug-json events.
+  - `--debug-dap` runs a stdio DAP endpoint using `Content-Length` framing and routes debugger requests to `VmDebugAdapter`.
 - `--ir-inline`
   - Enables the optional IR inlining optimization pass after IR validation and before VM/native/IR output.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
@@ -1258,6 +1259,7 @@ module {
 - Stack-frame responses use source-map metadata when available (`line`, `column`, provenance) and keep the same call-site mapping behavior used by VM fault stack traces.
 - Adapter calls append deterministic transcript lines through `transcript()` to support protocol transcript tests and replay checks.
 - Current payload limit: concrete local/operand values are available for the active frame; non-top-frame locals are exposed as metadata with `<unavailable>` values until deeper-frame snapshots are added.
+- `primevm --debug-dap` adds stdio JSON-RPC (`Content-Length`) framing and a request router for `initialize`, `launch`, `setBreakpoints`, `setInstructionBreakpoints`, `threads`, `stackTrace`, `scopes`, `variables`, `continue`, `next`, `pause`, and `disconnect`.
 
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
@@ -1289,7 +1291,7 @@ Milestones:
 - M4: rename/code actions backed by reference indexing and stable IDs.
 
 Out of scope (initial):
-- External DAP transport wiring (`stdio`/JSON-RPC) and full editor integration surface.
+- Full editor integration packaging (for example VS Code extension manifests and launch profile templates).
 - GPU-specific editor features beyond diagnostics and symbol navigation.
 
 ## Dependencies & Related Work

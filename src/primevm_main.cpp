@@ -7,6 +7,7 @@
 #include "primec/OptionsParser.h"
 #include "primec/TransformRegistry.h"
 #include "primec/Vm.h"
+#include "primec/VmDebugDap.h"
 
 #include <algorithm>
 #include <iostream>
@@ -236,7 +237,7 @@ int main(int argc, char **argv) {
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
-                   "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--collect-diagnostics] "
+                   "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--debug-dap] [--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
     }
@@ -361,6 +362,18 @@ int main(int argc, char **argv) {
     args.push_back(arg);
   }
   uint64_t result = 0;
+  if (options.debugDap) {
+    primec::VmDebugDapRunResult dapResult;
+    if (!primec::runVmDebugDapSession(ir, args, options.inputPath, std::cin, std::cout, dapResult, error)) {
+      return emitFailure(options,
+                         primec::DiagnosticCode::RuntimeError,
+                         "VM error: ",
+                         error,
+                         3,
+                         {"backend: vm", "stage: debug-dap"});
+    }
+    return 0;
+  }
   if (options.debugJson) {
     primec::VmDebugSession debugSession;
     if (!debugSession.start(ir, error, args)) {

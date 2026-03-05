@@ -410,6 +410,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.emitDiagnostics = true;
     } else if (!isPrimecMode && arg == "--debug-json") {
       out.debugJson = true;
+    } else if (!isPrimecMode && arg == "--debug-dap") {
+      out.debugDap = true;
     } else if (!isPrimecMode && arg == "--debug-json-snapshots") {
       out.debugJsonSnapshotMode = DebugJsonSnapshotMode::All;
     } else if (!isPrimecMode && arg.rfind("--debug-json-snapshots=", 0) == 0) {
@@ -542,6 +544,10 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     return false;
   }
   if (!isPrimecMode) {
+    if (out.debugDap && out.debugJson) {
+      error = "--debug-dap cannot be combined with --debug-json";
+      return false;
+    }
     if (out.debugJsonSnapshotMode != DebugJsonSnapshotMode::None && !out.debugJson) {
       error = "--debug-json-snapshots requires --debug-json";
       return false;

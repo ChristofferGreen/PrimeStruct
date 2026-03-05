@@ -13,6 +13,7 @@ struct Options {
   bool listTransforms = false;
   bool emitDiagnostics = false;
   bool debugJson = false;
+  bool debugDap = false;
   DebugJsonSnapshotMode debugJsonSnapshotMode = DebugJsonSnapshotMode::None;
   bool collectDiagnostics = false;
   std::string inputPath;

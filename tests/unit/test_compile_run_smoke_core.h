@@ -240,6 +240,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primevmErr.find("[--ir-inline]") != std::string::npos);
   CHECK(primevmErr.find("[--debug-json]") != std::string::npos);
   CHECK(primevmErr.find("[--debug-json-snapshots [none|stop|all]]") != std::string::npos);
+  CHECK(primevmErr.find("[--debug-dap]") != std::string::npos);
   CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
 }
 
@@ -488,6 +489,122 @@ TEST_CASE("primec rejects debug-json option") {
   CHECK(runCommand(snapshotCmd) == 2);
   const std::string snapshotDiagnostics = readFile(snapshotErrPath);
   CHECK(snapshotDiagnostics.find("unknown option: --debug-json-snapshots=all") != std::string::npos);
+
+  const std::string dapErrPath =
+      (std::filesystem::temp_directory_path() / "primec_reject_debug_dap_err.txt").string();
+  const std::string dapCmd = "./primec --debug-dap 2> " + quoteShellArg(dapErrPath);
+  CHECK(runCommand(dapCmd) == 2);
+  const std::string dapDiagnostics = readFile(dapErrPath);
+  CHECK(dapDiagnostics.find("unknown option: --debug-dap") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-dap rejects incompatible debug-json mode") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_dap_conflict.prime", source);
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primevm_debug_dap_conflict.err").string();
+  const std::string cmd =
+      "./primevm " + quoteShellArg(srcPath) + " --debug-dap --debug-json 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("--debug-dap cannot be combined with --debug-json") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-dap emits deterministic framed transcripts") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [int mut] value{1i32}
+  assign(value, plus(value, 1i32))
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_dap_transcript.prime", source);
+
+  const std::string requests = makeDapFrame(R"({"seq":1,"type":"request","command":"initialize","arguments":{}})") +
+                               makeDapFrame(R"({"seq":2,"type":"request","command":"launch","arguments":{}})") +
+                               makeDapFrame(R"({"seq":3,"type":"request","command":"setBreakpoints","arguments":{"breakpoints":[{"line":4,"column":3}]}})") +
+                               makeDapFrame(R"({"seq":4,"type":"request","command":"configurationDone","arguments":{}})") +
+                               makeDapFrame(R"({"seq":5,"type":"request","command":"continue","arguments":{"threadId":1}})") +
+                               makeDapFrame(R"({"seq":6,"type":"request","command":"stackTrace","arguments":{"threadId":1}})") +
+                               makeDapFrame(R"({"seq":7,"type":"request","command":"scopes","arguments":{"frameId":1}})") +
+                               makeDapFrame(R"({"seq":8,"type":"request","command":"variables","arguments":{"variablesReference":257}})") +
+                               makeDapFrame(R"({"seq":9,"type":"request","command":"disconnect","arguments":{}})");
+  const std::string requestPath = writeTemp("primevm_debug_dap_transcript.requests", requests);
+  const std::string outPathA =
+      (std::filesystem::temp_directory_path() / "primevm_debug_dap_transcript_a.out").string();
+  const std::string outPathB =
+      (std::filesystem::temp_directory_path() / "primevm_debug_dap_transcript_b.out").string();
+
+  const std::string cmdA = "./primevm " + quoteShellArg(srcPath) +
+                           " --entry /main --debug-dap < " + quoteShellArg(requestPath) + " > " + quoteShellArg(outPathA);
+  const std::string cmdB = "./primevm " + quoteShellArg(srcPath) +
+                           " --entry /main --debug-dap < " + quoteShellArg(requestPath) + " > " + quoteShellArg(outPathB);
+  CHECK(runCommand(cmdA) == 0);
+  CHECK(runCommand(cmdB) == 0);
+
+  const std::string outA = readFile(outPathA);
+  const std::string outB = readFile(outPathB);
+  CHECK(outA == outB);
+
+  bool framingOk = false;
+  const std::vector<std::string> frames = parseDapFrames(outA, framingOk);
+  CHECK(framingOk);
+  REQUIRE(frames.size() == 12);
+
+  CHECK(frames[0].find("\"type\":\"response\"") != std::string::npos);
+  CHECK(frames[0].find("\"command\":\"initialize\"") != std::string::npos);
+  CHECK(frames[1].find("\"command\":\"launch\"") != std::string::npos);
+  CHECK(frames[2].find("\"type\":\"event\"") != std::string::npos);
+  CHECK(frames[2].find("\"event\":\"initialized\"") != std::string::npos);
+  CHECK(frames[3].find("\"type\":\"event\"") != std::string::npos);
+  CHECK(frames[3].find("\"event\":\"stopped\"") != std::string::npos);
+  CHECK(frames[3].find("\"reason\":\"entry\"") != std::string::npos);
+  CHECK(frames[4].find("\"command\":\"setBreakpoints\"") != std::string::npos);
+  CHECK(frames[4].find("\"verified\":true") != std::string::npos);
+  CHECK(frames[6].find("\"command\":\"continue\"") != std::string::npos);
+  CHECK(frames[7].find("\"event\":\"stopped\"") != std::string::npos);
+  CHECK(frames[7].find("\"reason\":\"breakpoint\"") != std::string::npos);
+  CHECK(frames[8].find("\"command\":\"stackTrace\"") != std::string::npos);
+  CHECK(frames[8].find("\"stackFrames\":[") != std::string::npos);
+  CHECK(frames[9].find("\"command\":\"scopes\"") != std::string::npos);
+  CHECK(frames[9].find("\"scopes\":[") != std::string::npos);
+  CHECK(frames[10].find("\"command\":\"variables\"") != std::string::npos);
+  CHECK(frames[10].find("\"variables\":[") != std::string::npos);
+  CHECK(frames[11].find("\"command\":\"disconnect\"") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-dap end-to-end process smoke emits exit events") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(9i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_dap_smoke.prime", source);
+  const std::string requests = makeDapFrame(R"({"seq":1,"type":"request","command":"initialize","arguments":{}})") +
+                               makeDapFrame(R"({"seq":2,"type":"request","command":"launch","arguments":{}})") +
+                               makeDapFrame(R"({"seq":3,"type":"request","command":"continue","arguments":{"threadId":1}})") +
+                               makeDapFrame(R"({"seq":4,"type":"request","command":"disconnect","arguments":{}})");
+  const std::string requestPath = writeTemp("primevm_debug_dap_smoke.requests", requests);
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primevm_debug_dap_smoke.out").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --entry /main --debug-dap < " + quoteShellArg(requestPath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(cmd) == 0);
+
+  const std::string output = readFile(outPath);
+  bool framingOk = false;
+  const std::vector<std::string> frames = parseDapFrames(output, framingOk);
+  CHECK(framingOk);
+  REQUIRE(frames.size() == 8);
+  CHECK(frames[5].find("\"event\":\"exited\"") != std::string::npos);
+  CHECK(frames[5].find("\"exitCode\":9") != std::string::npos);
+  CHECK(frames[6].find("\"event\":\"terminated\"") != std::string::npos);
 }
 
 TEST_CASE("primevm rejects primec output flags") {
