@@ -40,6 +40,18 @@ uint64_t f64ToBits(double value) {
   return bits;
 }
 
+const char *sourceMapProvenanceName(IrSourceMapProvenance provenance) {
+  switch (provenance) {
+    case IrSourceMapProvenance::CanonicalAst:
+      return "canonical_ast";
+    case IrSourceMapProvenance::SyntheticIr:
+      return "synthetic_ir";
+    case IrSourceMapProvenance::Unknown:
+      break;
+  }
+  return "unknown";
+}
+
 bool executeImpl(const IrModule &module,
                  uint64_t &result,
                  std::string &error,
@@ -1334,6 +1346,51 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     }
     return 0;
   };
+  auto appendMappedStackTrace = [&]() {
+    if (!module_ || module_->instructionSourceMap.empty() || frames_.empty()) {
+      return;
+    }
+    std::unordered_map<uint32_t, const IrInstructionSourceMapEntry *> sourceByDebugId;
+    sourceByDebugId.reserve(module_->instructionSourceMap.size());
+    for (const auto &entry : module_->instructionSourceMap) {
+      sourceByDebugId.emplace(entry.debugId, &entry);
+    }
+
+    std::ostringstream trace;
+    bool emittedAnyFrame = false;
+    size_t frameOrdinal = 0;
+    for (size_t reverseIndex = 0; reverseIndex < frames_.size(); ++reverseIndex) {
+      const Frame &currentFrame = frames_[frames_.size() - reverseIndex - 1];
+      if (!currentFrame.function) {
+        continue;
+      }
+      const IrFunction &function = *currentFrame.function;
+      size_t traceIp = currentFrame.ip;
+      if (reverseIndex > 0 && traceIp > 0 && traceIp <= function.instructions.size()) {
+        const IrInstruction &callSite = function.instructions[traceIp - 1];
+        if (callSite.op == IrOpcode::Call || callSite.op == IrOpcode::CallVoid) {
+          traceIp -= 1;
+        }
+      }
+
+      trace << (emittedAnyFrame ? "\n" : "\nstack trace:\n");
+      trace << "  #" << frameOrdinal << " " << function.name << " ip " << traceIp;
+      if (traceIp < function.instructions.size()) {
+        const IrInstruction &instruction = function.instructions[traceIp];
+        trace << " debug_id " << instruction.debugId;
+        auto sourceIt = sourceByDebugId.find(instruction.debugId);
+        if (sourceIt != sourceByDebugId.end() && sourceIt->second->line > 0 && sourceIt->second->column > 0) {
+          trace << " at " << sourceIt->second->line << ":" << sourceIt->second->column
+                << " [" << sourceMapProvenanceName(sourceIt->second->provenance) << "]";
+        }
+      }
+      emittedAnyFrame = true;
+      ++frameOrdinal;
+    }
+    if (emittedAnyFrame) {
+      error += trace.str();
+    }
+  };
   if (frames_.empty()) {
     error = "debug session has no active frame";
     return StepOutcome::Fault;
@@ -1348,6 +1405,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     } else {
       error = "missing return in IR function " + fn.name;
     }
+    appendMappedStackTrace();
     return StepOutcome::Fault;
   }
   const IrInstruction &inst = fn.instructions[ip];
@@ -1378,6 +1436,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     return outcome;
   };
   auto finishFault = [&]() {
+    appendMappedStackTrace();
     if (hooks_.fault) {
       VmDebugFaultHookEvent event;
       event.sequence = nextHookSequence_++;

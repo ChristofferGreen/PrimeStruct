@@ -411,6 +411,44 @@ TEST_CASE("vm debug runtime hooks cover all event kinds") {
   CHECK(faultRecorder.faultMessages.front() == "unknown IR opcode");
 }
 
+TEST_CASE("vm debug fault diagnostics include mapped source stack traces") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1, 101});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 102});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 1, 201});
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 0, 202});
+  helperFn.instructions.push_back({primec::IrOpcode::DivI32, 0, 203});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0, 204});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+  module.entryIndex = 0;
+  module.instructionSourceMap.push_back({101u, 40u, 5u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({102u, 41u, 3u, primec::IrSourceMapProvenance::SyntheticIr});
+  module.instructionSourceMap.push_back({201u, 90u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({202u, 91u, 2u, primec::IrSourceMapProvenance::CanonicalAst});
+  module.instructionSourceMap.push_back({203u, 92u, 7u, primec::IrSourceMapProvenance::CanonicalAst});
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  primec::VmDebugStopReason stopReason = primec::VmDebugStopReason::Step;
+  CHECK_FALSE(session.continueExecution(stopReason, error));
+  CHECK(stopReason == primec::VmDebugStopReason::Fault);
+  CHECK(error.find("division by zero in IR") != std::string::npos);
+  CHECK(error.find("stack trace:") != std::string::npos);
+  CHECK(error.find("#0 /helper ip 2 debug_id 203 at 92:7 [canonical_ast]") != std::string::npos);
+  CHECK(error.find("#1 /main ip 0 debug_id 101 at 40:5 [canonical_ast]") != std::string::npos);
+}
+
 TEST_CASE("vm debug hook event ordering is deterministic and replayable") {
   auto collectEventSequence = [&](std::vector<std::string> &out, std::string &error) {
     primec::VmDebugSession session;

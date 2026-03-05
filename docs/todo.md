@@ -176,7 +176,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Refine source-map granularity to statement/expression token spans across text/semantic transforms (replace definition-level fallback spans). Testing: source-map golden tests and transform-provenance assertions.
 - ✓ Extend source-map coverage for synthetic IR-only instructions (cleanup/implicit returns) with explicit provenance tagging separate from canonical AST statement spans. Testing: source-map provenance snapshots for mixed AST/synthetic instruction streams.
 - ✓ Add source-level breakpoint resolution on top of IR/source maps. Testing: breakpoint mapping tests (single/multi-hit and ambiguous-span diagnostics).
-- ○ Map runtime stack traces back to source spans in VM diagnostics. Testing: stack-trace mapping assertions for nested calls and faults.
+- ✓ Map runtime stack traces back to source spans in VM diagnostics. Testing: stack-trace mapping assertions for nested calls and faults.
 - ○ Add a DAP/LSP debug adapter that translates VM debug events into debugger primitives (threads/stack frames/scopes/variables/breakpoints). Testing: protocol transcript tests and adapter integration smoke tests.
 - ○ Add optional deterministic trace capture (event log) behind an explicit debug flag. Testing: trace completeness/ordering regression tests.
 - ○ Add checkpointed replay/time-travel on top of trace capture. Testing: checkpoint/restore equivalence tests and replay determinism regression suites.

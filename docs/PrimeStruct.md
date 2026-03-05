@@ -1245,6 +1245,11 @@ module {
 - Breakpoints are checked in `continueExecution` before instruction execution and stop with reason `Breakpoint`.
 - Continuing from a breakpoint resumes past that same location once (prevents immediate repeat-stops at the same `(functionIndex, instructionPointer)`), then normal breakpoint checks resume.
 
+### VM Fault Stack Traces
+- `VmDebugSession` fault diagnostics append a deterministic mapped stack trace when source-map metadata is available.
+- Stack frames are listed from faulting frame to caller frames and include function path, instruction pointer, instruction debug ID, and mapped source span (`line:column`) with provenance.
+- Caller-frame mapping reports call-site instructions (the `Call`/`CallVoid` slot) rather than the post-call instruction pointer.
+
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
 deterministic diagnostics pipeline. See `docs/Semantics_Multithreaded_Pass.md`
