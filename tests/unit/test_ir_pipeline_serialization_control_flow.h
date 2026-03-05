@@ -920,6 +920,92 @@ TEST_CASE("spill insertion verifier rejects missing reload ops") {
   CHECK(error.find("missing reload op") != std::string::npos);
 }
 
+TEST_CASE("scheduler is dependency-safe and latency-aware") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 12});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 100});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::DivI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  REQUIRE(primec::buildIrVirtualRegisterLiveness(virtualModule, liveness, error));
+  CHECK(error.empty());
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 2;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+  primec::IrLinearScanModuleAllocation allocation;
+  REQUIRE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterScheduledModule scheduledOnce;
+  REQUIRE(primec::scheduleIrVirtualRegisters(virtualModule, allocation, scheduledOnce, error));
+  CHECK(error.empty());
+  REQUIRE(scheduledOnce.functions.size() == 1);
+  REQUIRE(scheduledOnce.functions[0].blocks.size() == 1);
+  const auto &scheduledBlock = scheduledOnce.functions[0].blocks[0];
+  REQUIRE(scheduledBlock.instructions.size() == 8);
+
+  std::vector<size_t> scheduledOrder;
+  for (const auto &instruction : scheduledBlock.instructions) {
+    scheduledOrder.push_back(instruction.originalInstructionIndex);
+  }
+  CHECK(scheduledOrder == std::vector<size_t>{0, 1, 3, 4, 5, 2, 6, 7});
+
+  std::vector<size_t> positionByInstruction(8, 0);
+  for (size_t position = 0; position < scheduledBlock.instructions.size(); ++position) {
+    positionByInstruction[scheduledBlock.instructions[position].originalInstructionIndex] = position;
+  }
+  for (const auto &instruction : scheduledBlock.instructions) {
+    const size_t instructionPos = positionByInstruction[instruction.originalInstructionIndex];
+    for (size_t dependency : instruction.dependencyInstructionIndices) {
+      CHECK(positionByInstruction[dependency] < instructionPos);
+    }
+  }
+
+  primec::IrVirtualRegisterScheduledModule scheduledAgain;
+  REQUIRE(primec::scheduleIrVirtualRegisters(virtualModule, allocation, scheduledAgain, error));
+  CHECK(error.empty());
+  REQUIRE(scheduledAgain.functions.size() == 1);
+  REQUIRE(scheduledAgain.functions[0].blocks.size() == 1);
+  REQUIRE(scheduledAgain.functions[0].blocks[0].instructions.size() == 8);
+  for (size_t index = 0; index < 8; ++index) {
+    CHECK(scheduledAgain.functions[0].blocks[0].instructions[index].originalInstructionIndex ==
+          scheduledBlock.instructions[index].originalInstructionIndex);
+  }
+}
+
+TEST_CASE("scheduler rejects allocation name mismatch") {
+  primec::IrVirtualRegisterModule module;
+  primec::IrVirtualRegisterFunction function;
+  function.name = "/main";
+  module.functions.push_back(std::move(function));
+
+  primec::IrLinearScanModuleAllocation allocation;
+  primec::IrLinearScanFunctionAllocation functionAllocation;
+  functionAllocation.functionName = "/other";
+  allocation.functions.push_back(std::move(functionAllocation));
+
+  primec::IrVirtualRegisterScheduledModule scheduled;
+  std::string error;
+  CHECK_FALSE(primec::scheduleIrVirtualRegisters(module, allocation, scheduled, error));
+  CHECK(error.find("matching function names") != std::string::npos);
+}
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 namespace {
 std::string quoteIrPipelineShellArg(const std::string &value) {
