@@ -443,26 +443,22 @@
         if (fileErrorWhyResult == ir_lowerer::FileErrorWhyCallEmitResult::Error) {
           return false;
         }
-        if (!expr.isMethodCall && isSimpleCallName(expr, "File")) {
-          if (expr.templateArgs.size() != 1) {
-            error = "File requires exactly one template argument";
-            return false;
-          }
-          if (expr.args.size() != 1) {
-            error = "File requires exactly one path argument";
-            return false;
-          }
-          int32_t stringIndex = -1;
-          size_t length = 0;
-          if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
-            error = "native backend only supports File() with string literals or literal-backed bindings";
-            return false;
-          }
-          return ir_lowerer::emitFileOpenCall(
-              expr.templateArgs.front(),
-              stringIndex,
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              error);
+        const auto fileConstructorResult = ir_lowerer::tryEmitFileConstructorCall(
+            expr,
+            localsIn,
+            [&](const Expr &valueExpr,
+                const ir_lowerer::LocalMap &localMap,
+                int32_t &stringIndexOut,
+                size_t &lengthOut) {
+              return resolveStringTableTarget(valueExpr, localMap, stringIndexOut, lengthOut);
+            },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            error);
+        if (fileConstructorResult == ir_lowerer::FileConstructorCallEmitResult::Emitted) {
+          return true;
+        }
+        if (fileConstructorResult == ir_lowerer::FileConstructorCallEmitResult::Error) {
+          return false;
         }
         const auto fileHandleCallResult = ir_lowerer::tryEmitFileHandleMethodCall(
             expr,

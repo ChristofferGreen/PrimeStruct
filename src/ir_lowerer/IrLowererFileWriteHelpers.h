@@ -30,12 +30,23 @@ enum class FileHandleMethodCallEmitResult {
   Emitted,
   Error,
 };
+enum class FileConstructorCallEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
 
 bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut);
 bool emitFileOpenCall(const std::string &mode,
                       int32_t stringIndex,
                       const EmitInstructionForWriteFn &emitInstruction,
                       std::string &error);
+FileConstructorCallEmitResult tryEmitFileConstructorCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const EmitInstructionForWriteFn &emitInstruction,
+    std::string &error);
 bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut);
 bool emitFileWriteStep(const Expr &arg,
                        int32_t handleIndex,

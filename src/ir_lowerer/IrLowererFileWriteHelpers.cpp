@@ -31,6 +31,36 @@ bool emitFileOpenCall(const std::string &mode,
   return true;
 }
 
+FileConstructorCallEmitResult tryEmitFileConstructorCall(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
+    const EmitInstructionForWriteFn &emitInstruction,
+    std::string &error) {
+  if (expr.isMethodCall || !isSimpleCallName(expr, "File")) {
+    return FileConstructorCallEmitResult::NotMatched;
+  }
+  if (expr.templateArgs.size() != 1) {
+    error = "File requires exactly one template argument";
+    return FileConstructorCallEmitResult::Error;
+  }
+  if (expr.args.size() != 1) {
+    error = "File requires exactly one path argument";
+    return FileConstructorCallEmitResult::Error;
+  }
+
+  int32_t stringIndex = -1;
+  size_t length = 0;
+  if (!resolveStringTableTarget(expr.args.front(), localsIn, stringIndex, length)) {
+    error = "native backend only supports File() with string literals or literal-backed bindings";
+    return FileConstructorCallEmitResult::Error;
+  }
+  if (!emitFileOpenCall(expr.templateArgs.front(), stringIndex, emitInstruction, error)) {
+    return FileConstructorCallEmitResult::Error;
+  }
+  return FileConstructorCallEmitResult::Emitted;
+}
+
 bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut) {
   if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool) {
     opcodeOut = IrOpcode::FileWriteI32;

@@ -14377,6 +14377,112 @@ TEST_CASE("ir lowerer file write helpers resolve and emit file open modes") {
   CHECK(instructions.size() == 3);
 }
 
+TEST_CASE("ir lowerer file write helpers dispatch File constructor calls") {
+  using Result = primec::ir_lowerer::FileConstructorCallEmitResult;
+
+  primec::Expr fileCallExpr;
+  fileCallExpr.kind = primec::Expr::Kind::Call;
+  fileCallExpr.name = "File";
+  fileCallExpr.templateArgs = {"Read"};
+  primec::Expr pathArg;
+  pathArg.kind = primec::Expr::Kind::StringLiteral;
+  pathArg.stringValue = "\"out.txt\"";
+  fileCallExpr.args = {pathArg};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
+    instructions.push_back({op, imm});
+  };
+
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            locals,
+            [&](const primec::Expr &valueExpr,
+                const primec::ir_lowerer::LocalMap &localMap,
+                int32_t &stringIndexOut,
+                size_t &lengthOut) {
+              CHECK(valueExpr.kind == primec::Expr::Kind::StringLiteral);
+              CHECK(localMap.empty());
+              stringIndexOut = 41;
+              lengthOut = 7;
+              return true;
+            },
+            emitInstruction,
+            error) ==
+        Result::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::FileOpenRead);
+  CHECK(instructions[0].imm == 41);
+
+  instructions.clear();
+  primec::Expr nonMatchExpr = fileCallExpr;
+  nonMatchExpr.name = "open_file";
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            nonMatchExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            emitInstruction,
+            error) == Result::NotMatched);
+  CHECK(instructions.empty());
+
+  primec::Expr badTemplateExpr = fileCallExpr;
+  badTemplateExpr.templateArgs.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            badTemplateExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return true;
+            },
+            emitInstruction,
+            error) == Result::Error);
+  CHECK(error == "File requires exactly one template argument");
+
+  primec::Expr badArityExpr = fileCallExpr;
+  badArityExpr.args.push_back(pathArg);
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            badArityExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return true;
+            },
+            emitInstruction,
+            error) == Result::Error);
+  CHECK(error == "File requires exactly one path argument");
+
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            fileCallExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            emitInstruction,
+            error) == Result::Error);
+  CHECK(error == "native backend only supports File() with string literals or literal-backed bindings");
+
+  primec::Expr invalidModeExpr = fileCallExpr;
+  invalidModeExpr.templateArgs = {"BadMode"};
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            invalidModeExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &stringIndexOut, size_t &lengthOut) {
+              stringIndexOut = 9;
+              lengthOut = 3;
+              return true;
+            },
+            emitInstruction,
+            error) == Result::Error);
+  CHECK(error == "File requires Read, Write, or Append mode");
+}
+
 TEST_CASE("ir lowerer file write helpers emit write steps") {
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
