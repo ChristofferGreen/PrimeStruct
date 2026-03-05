@@ -24,60 +24,12 @@
 
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
   inferPointerTargetKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    if (expr.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.name);
-      if (it == localsIn.end()) {
-        return LocalInfo::ValueKind::Unknown;
-      }
-      if (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) {
-        if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-          return LocalInfo::ValueKind::Unknown;
-        }
-        return it->second.valueKind;
-      }
-      return LocalInfo::ValueKind::Unknown;
-    }
-    if (expr.kind == Expr::Kind::Call) {
-      if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
-        const Expr &target = expr.args.front();
-        if (target.kind == Expr::Kind::Name) {
-          auto it = localsIn.find(target.name);
-          if (it != localsIn.end()) {
-            if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-              return LocalInfo::ValueKind::Unknown;
-            }
-            return it->second.valueKind;
-          }
-        }
-        return LocalInfo::ValueKind::Unknown;
-      }
-      std::string builtin;
-      if (getBuiltinOperatorName(expr, builtin) && (builtin == "plus" || builtin == "minus") &&
-          expr.args.size() == 2) {
-        std::function<bool(const Expr &)> isPointerExpr;
-        isPointerExpr = [&](const Expr &candidate) -> bool {
-          if (candidate.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(candidate.name);
-            return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Pointer;
-          }
-          if (candidate.kind == Expr::Kind::Call && isSimpleCallName(candidate, "location")) {
-            return true;
-          }
-          if (candidate.kind == Expr::Kind::Call) {
-            std::string innerName;
-            if (getBuiltinOperatorName(candidate, innerName) && (innerName == "plus" || innerName == "minus") &&
-                candidate.args.size() == 2) {
-              return isPointerExpr(candidate.args[0]) && !isPointerExpr(candidate.args[1]);
-            }
-          }
-          return false;
-        };
-        if (isPointerExpr(expr.args[0]) && !isPointerExpr(expr.args[1])) {
-          return inferPointerTargetKind(expr.args[0], localsIn);
-        }
-      }
-    }
-    return LocalInfo::ValueKind::Unknown;
+    return inferPointerTargetValueKind(
+        expr,
+        localsIn,
+        [&](const Expr &candidate, std::string &builtinName) {
+          return getBuiltinOperatorName(candidate, builtinName);
+        });
   };
 
   inferBufferElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {

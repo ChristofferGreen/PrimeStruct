@@ -11085,6 +11085,113 @@ TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding ad
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers pointer target kinds") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("ptr", pointerInfo);
+
+  primec::ir_lowerer::LocalInfo referenceInfo;
+  referenceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  referenceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+  locals.emplace("refValue", referenceInfo);
+
+  primec::Expr ptrName;
+  ptrName.kind = primec::Expr::Kind::Name;
+  ptrName.name = "ptr";
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            ptrName,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr refName;
+  refName.kind = primec::Expr::Kind::Name;
+  refName.name = "refValue";
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            refName,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.args = {refName};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            locationCall,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  primec::Expr one;
+  one.kind = primec::Expr::Kind::Literal;
+  one.literalValue = 1;
+  primec::Expr plusCall;
+  plusCall.kind = primec::Expr::Kind::Call;
+  plusCall.name = "plus";
+  plusCall.args = {ptrName, one};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            plusCall,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE("ir lowerer setup inference helper rejects invalid pointer targets") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("ptr", pointerInfo);
+
+  primec::ir_lowerer::LocalInfo arrayRefInfo;
+  arrayRefInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  arrayRefInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  arrayRefInfo.referenceToArray = true;
+  locals.emplace("arrayRef", arrayRefInfo);
+
+  primec::Expr arrayRefName;
+  arrayRefName.kind = primec::Expr::Kind::Name;
+  arrayRefName.name = "arrayRef";
+  primec::Expr locationArrayRef;
+  locationArrayRef.kind = primec::Expr::Kind::Call;
+  locationArrayRef.name = "location";
+  locationArrayRef.args = {arrayRefName};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            locationArrayRef,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr ptrName;
+  ptrName.kind = primec::Expr::Kind::Name;
+  ptrName.name = "ptr";
+  primec::Expr one;
+  one.kind = primec::Expr::Kind::Literal;
+  one.literalValue = 1;
+  primec::Expr ptrOffset;
+  ptrOffset.kind = primec::Expr::Kind::Call;
+  ptrOffset.name = "plus";
+  ptrOffset.args = {ptrName, one};
+  primec::Expr nestedInvalid;
+  nestedInvalid.kind = primec::Expr::Kind::Call;
+  nestedInvalid.name = "plus";
+  nestedInvalid.args = {ptrOffset, ptrName};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            nestedInvalid,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

@@ -41,7 +41,9 @@ Legend:
 - ✓ Continue statement-call refactor by extracting remaining callable-definition lowering orchestration from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
 - ✓ Continue statement-call refactor by extracting entry callable execution/cleanup orchestration from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
 - ✓ Continue statement-call refactor by extracting entry/function table finalization wiring (`appendReturnForDefinition`, entry append/index, callable append flow) from `IrLowererLowerStatementsCalls.h` into compileable helpers with direct unit coverage.
-- ◐ Refactor setup inference and adapter wiring in `IrLowererLowerSetupInference.h`.
+- ◐ Refactor setup inference and adapter wiring in `IrLowererLowerSetupInference.h` (phase 1 extracted pointer-target kind inference to compileable `IrLowererSetupInferenceHelpers.{h,cpp}` with helper-unit coverage).
+- ✓ Continue setup inference refactor by extracting pointer-target kind inference from `IrLowererLowerSetupInference.h` into compileable helpers with direct unit coverage.
+- ○ Continue setup inference refactor by extracting array/buffer element kind inference from `IrLowererLowerSetupInference.h` into compileable helpers with direct unit coverage.
 - ◐ Refactor inline-call and return handling in `IrLowererLowerInlineCalls.h` and `IrLowererLowerReturnInfo.h`.
 - ◐ Refactor remaining setup-locals orchestration in `IrLowererLowerSetupLocals.h`.
 - ✓ Continue return/call split by extracting `on_error` transform parsing/definition-map wiring out of `IrLowererLowerSetupLocals.h` into compileable units (`IrLowererOnErrorHelpers.{h,cpp}` now own transform parsing and definition wiring).
