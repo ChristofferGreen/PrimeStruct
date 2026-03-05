@@ -1,10 +1,59 @@
 #include "primec/NativeEmitter.h"
 #include "NativeEmitterInternals.h"
 
+#include <algorithm>
 #include <fcntl.h>
+#include <sstream>
 
 namespace primec {
 using namespace native_emitter;
+
+std::string formatNativeEmitterDebugDump(
+    const NativeEmitterInstrumentation &instrumentation,
+    const NativeEmitterOptimizationInstrumentation &optimization) {
+  std::vector<NativeEmitterFunctionInstrumentation> orderedFunctions = instrumentation.perFunction;
+  std::stable_sort(orderedFunctions.begin(), orderedFunctions.end(),
+                   [](const NativeEmitterFunctionInstrumentation &lhs,
+                      const NativeEmitterFunctionInstrumentation &rhs) {
+                     if (lhs.functionIndex != rhs.functionIndex) {
+                       return lhs.functionIndex < rhs.functionIndex;
+                     }
+                     return lhs.functionName < rhs.functionName;
+                   });
+
+  std::ostringstream out;
+  out << "native_emitter_debug_v1\n";
+  out << "[instrumentation]\n";
+  out << "total_instruction_count=" << instrumentation.totalInstructionCount << '\n';
+  out << "total_value_stack_push_count=" << instrumentation.totalValueStackPushCount << '\n';
+  out << "total_value_stack_pop_count=" << instrumentation.totalValueStackPopCount << '\n';
+  out << "total_spill_count=" << instrumentation.totalSpillCount << '\n';
+  out << "total_reload_count=" << instrumentation.totalReloadCount << '\n';
+  out << "function_count=" << orderedFunctions.size() << '\n';
+  for (size_t i = 0; i < orderedFunctions.size(); ++i) {
+    const auto &functionStats = orderedFunctions[i];
+    out << "function[" << i << "].index=" << functionStats.functionIndex << '\n';
+    out << "function[" << i << "].name=" << functionStats.functionName << '\n';
+    out << "function[" << i << "].instruction_total=" << functionStats.instructionTotal << '\n';
+    out << "function[" << i << "].value_stack_push_count=" << functionStats.valueStackPushCount << '\n';
+    out << "function[" << i << "].value_stack_pop_count=" << functionStats.valueStackPopCount << '\n';
+    out << "function[" << i << "].spill_count=" << functionStats.spillCount << '\n';
+    out << "function[" << i << "].reload_count=" << functionStats.reloadCount << '\n';
+  }
+  out << "[optimization]\n";
+  out << "applied=" << (optimization.applied ? 1 : 0) << '\n';
+  out << "instruction_total_before=" << optimization.instructionTotalBefore << '\n';
+  out << "instruction_total_after=" << optimization.instructionTotalAfter << '\n';
+  out << "value_stack_push_count_before=" << optimization.valueStackPushCountBefore << '\n';
+  out << "value_stack_push_count_after=" << optimization.valueStackPushCountAfter << '\n';
+  out << "value_stack_pop_count_before=" << optimization.valueStackPopCountBefore << '\n';
+  out << "value_stack_pop_count_after=" << optimization.valueStackPopCountAfter << '\n';
+  out << "spill_count_before=" << optimization.spillCountBefore << '\n';
+  out << "spill_count_after=" << optimization.spillCountAfter << '\n';
+  out << "reload_count_before=" << optimization.reloadCountBefore << '\n';
+  out << "reload_count_after=" << optimization.reloadCountAfter << '\n';
+  return out.str();
+}
 
 bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const {
   return emitExecutable(module, outputPath, error, nullptr);
@@ -149,6 +198,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     instrumentation->perFunction.resize(module.functions.size());
     for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
       auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
+      functionInstrumentation.functionIndex = functionIndex;
       functionInstrumentation.functionName = module.functions[functionIndex].name;
       functionInstrumentation.instructionTotal = module.functions[functionIndex].instructions.size();
     }
