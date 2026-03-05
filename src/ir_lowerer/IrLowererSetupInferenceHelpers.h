@@ -17,11 +17,16 @@ using ResolveSetupInferenceArrayReturnKindFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>;
 using ResolveSetupInferenceCallReturnKindFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &, bool &)>;
+using IsSetupInferenceEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 enum class CallExpressionReturnKindResolution {
   NotResolved,
   Resolved,
   MatchedButUnsupported,
+};
+enum class ArrayMapAccessElementKindResolution {
+  NotMatched,
+  Resolved,
 };
 
 LocalInfo::ValueKind inferPointerTargetValueKind(
@@ -47,6 +52,11 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
     const ResolveSetupInferenceCallReturnKindFn &resolveDefinitionCallReturnKind,
     const ResolveSetupInferenceCallReturnKindFn &resolveCountMethodCallReturnKind,
     const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKind,
+    LocalInfo::ValueKind &kindOut);
+ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer

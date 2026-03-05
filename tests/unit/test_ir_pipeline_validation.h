@@ -11527,6 +11527,116 @@ TEST_CASE("ir lowerer setup inference helper handles unresolved call return kind
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper resolves array and map access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64;
+  locals.emplace("scores", mapInfo);
+
+  primec::ir_lowerer::LocalInfo arrayInfo;
+  arrayInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  arrayInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+  locals.emplace("values", arrayInfo);
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::Expr stringTarget;
+  stringTarget.kind = primec::Expr::Kind::StringLiteral;
+  stringTarget.stringValue = "text";
+  primec::Expr stringAccess;
+  stringAccess.kind = primec::Expr::Kind::Call;
+  stringAccess.name = "at";
+  stringAccess.args = {stringTarget, indexExpr};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            stringAccess,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr mapTarget;
+  mapTarget.kind = primec::Expr::Kind::Name;
+  mapTarget.name = "scores";
+  primec::Expr mapAccess;
+  mapAccess.kind = primec::Expr::Kind::Call;
+  mapAccess.name = "at";
+  mapAccess.args = {mapTarget, indexExpr};
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            mapAccess,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::UInt64);
+
+  primec::Expr arrayTarget;
+  arrayTarget.kind = primec::Expr::Kind::Name;
+  arrayTarget.name = "values";
+  primec::Expr arrayAccess;
+  arrayAccess.kind = primec::Expr::Kind::Call;
+  arrayAccess.name = "at_unsafe";
+  arrayAccess.args = {arrayTarget, indexExpr};
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            arrayAccess,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles invalid access kinds") {
+  using Resolution = primec::ir_lowerer::ArrayMapAccessElementKindResolution;
+
+  primec::Expr nonAccess;
+  nonAccess.kind = primec::Expr::Kind::Call;
+  nonAccess.name = "plus";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            nonAccess,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr entryArgsTarget;
+  entryArgsTarget.kind = primec::Expr::Kind::Name;
+  entryArgsTarget.name = "entry_args";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 1;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {entryArgsTarget, indexExpr};
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              return expr.kind == primec::Expr::Kind::Name && expr.name == "entry_args";
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr vectorTarget;
+  vectorTarget.kind = primec::Expr::Kind::Call;
+  vectorTarget.name = "vector";
+  vectorTarget.templateArgs = {"string"};
+  accessExpr.args = {vectorTarget, indexExpr};
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

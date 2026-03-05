@@ -191,4 +191,77 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
   return CallExpressionReturnKindResolution::NotResolved;
 }
 
+ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  std::string accessName;
+  if (!getBuiltinArrayAccessName(expr, accessName)) {
+    return ArrayMapAccessElementKindResolution::NotMatched;
+  }
+  if (expr.args.size() != 2) {
+    return ArrayMapAccessElementKindResolution::Resolved;
+  }
+
+  const Expr &target = expr.args.front();
+  if (target.kind == Expr::Kind::StringLiteral) {
+    kindOut = LocalInfo::ValueKind::Int32;
+    return ArrayMapAccessElementKindResolution::Resolved;
+  }
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+      kindOut = LocalInfo::ValueKind::Int32;
+      return ArrayMapAccessElementKindResolution::Resolved;
+    }
+  }
+  if (isEntryArgsName(target, localsIn)) {
+    return ArrayMapAccessElementKindResolution::Resolved;
+  }
+
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map &&
+        it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
+        it->second.mapValueKind != LocalInfo::ValueKind::String) {
+      kindOut = it->second.mapValueKind;
+      return ArrayMapAccessElementKindResolution::Resolved;
+    }
+  } else if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
+      const LocalInfo::ValueKind valueKind = valueKindFromTypeName(target.templateArgs[1]);
+      if (valueKind != LocalInfo::ValueKind::Unknown && valueKind != LocalInfo::ValueKind::String) {
+        kindOut = valueKind;
+        return ArrayMapAccessElementKindResolution::Resolved;
+      }
+    }
+  }
+
+  LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end()) {
+      if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
+        elementKind = it->second.valueKind;
+      } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
+        elementKind = it->second.valueKind;
+      }
+    }
+  } else if (target.kind == Expr::Kind::Call) {
+    std::string collection;
+    if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
+        target.templateArgs.size() == 1) {
+      elementKind = valueKindFromTypeName(target.templateArgs.front());
+    }
+  }
+  if (elementKind != LocalInfo::ValueKind::Unknown && elementKind != LocalInfo::ValueKind::String) {
+    kindOut = elementKind;
+  }
+  return ArrayMapAccessElementKindResolution::Resolved;
+}
+
 } // namespace primec::ir_lowerer

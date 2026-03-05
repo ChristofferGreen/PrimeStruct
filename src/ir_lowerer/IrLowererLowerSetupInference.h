@@ -264,62 +264,15 @@
         if (isVectorCapacityCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;
         }
-        std::string accessName;
-        if (getBuiltinArrayAccessName(expr, accessName)) {
-          if (expr.args.size() != 2) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          const Expr &target = expr.args.front();
-          if (target.kind == Expr::Kind::StringLiteral) {
-            return LocalInfo::ValueKind::Int32;
-          }
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
-              return LocalInfo::ValueKind::Int32;
-            }
-          }
-          if (isEntryArgsName(target, localsIn)) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
-              if (it->second.mapValueKind != LocalInfo::ValueKind::Unknown &&
-                  it->second.mapValueKind != LocalInfo::ValueKind::String) {
-                return it->second.mapValueKind;
-              }
-            }
-          } else if (target.kind == Expr::Kind::Call) {
-            std::string collection;
-            if (getBuiltinCollectionName(target, collection) && collection == "map" && target.templateArgs.size() == 2) {
-              LocalInfo::ValueKind kind = valueKindFromTypeName(target.templateArgs[1]);
-              if (kind != LocalInfo::ValueKind::Unknown && kind != LocalInfo::ValueKind::String) {
-                return kind;
-              }
-            }
-          }
-          LocalInfo::ValueKind elemKind = LocalInfo::ValueKind::Unknown;
-          if (target.kind == Expr::Kind::Name) {
-            auto it = localsIn.find(target.name);
-            if (it != localsIn.end()) {
-              if (it->second.kind == LocalInfo::Kind::Array || it->second.kind == LocalInfo::Kind::Vector) {
-                elemKind = it->second.valueKind;
-              } else if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-                elemKind = it->second.valueKind;
-              }
-            }
-          } else if (target.kind == Expr::Kind::Call) {
-            std::string collection;
-            if (getBuiltinCollectionName(target, collection) && (collection == "array" || collection == "vector") &&
-                target.templateArgs.size() == 1) {
-              elemKind = valueKindFromTypeName(target.templateArgs.front());
-            }
-          }
-          if (elemKind == LocalInfo::ValueKind::Unknown || elemKind == LocalInfo::ValueKind::String) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          return elemKind;
+        LocalInfo::ValueKind accessElementKind = LocalInfo::ValueKind::Unknown;
+        if (resolveArrayMapAccessElementKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidate, const LocalMap &candidateLocals) {
+                  return isEntryArgsName(candidate, candidateLocals);
+                },
+                accessElementKind) == ArrayMapAccessElementKindResolution::Resolved) {
+          return accessElementKind;
         }
         std::string gpuBuiltin;
         if (getBuiltinGpuName(expr, gpuBuiltin)) {
