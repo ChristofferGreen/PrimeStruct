@@ -20773,12 +20773,34 @@ TEST_CASE("ir validator wasm target accepts integer control-flow subset") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir validator wasm target accepts float and conversion subset") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  fn.instructions.push_back({primec::IrOpcode::ConvertI32ToF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushF32, 0x3fc00000u});
+  fn.instructions.push_back({primec::IrOpcode::AddF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+  fn.instructions.push_back({primec::IrOpcode::SubF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF64ToF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, 1});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
 

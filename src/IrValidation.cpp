@@ -130,10 +130,42 @@ bool validateFunction(const IrModule &module,
         case IrOpcode::CmpLeI32:
         case IrOpcode::CmpGtI32:
         case IrOpcode::CmpGeI32:
+        case IrOpcode::PushF32:
+        case IrOpcode::PushF64:
+        case IrOpcode::AddF32:
+        case IrOpcode::SubF32:
+        case IrOpcode::MulF32:
+        case IrOpcode::DivF32:
+        case IrOpcode::NegF32:
+        case IrOpcode::AddF64:
+        case IrOpcode::SubF64:
+        case IrOpcode::MulF64:
+        case IrOpcode::DivF64:
+        case IrOpcode::NegF64:
+        case IrOpcode::CmpEqF32:
+        case IrOpcode::CmpNeF32:
+        case IrOpcode::CmpLtF32:
+        case IrOpcode::CmpLeF32:
+        case IrOpcode::CmpGtF32:
+        case IrOpcode::CmpGeF32:
+        case IrOpcode::CmpEqF64:
+        case IrOpcode::CmpNeF64:
+        case IrOpcode::CmpLtF64:
+        case IrOpcode::CmpLeF64:
+        case IrOpcode::CmpGtF64:
+        case IrOpcode::CmpGeF64:
+        case IrOpcode::ConvertI32ToF32:
+        case IrOpcode::ConvertI32ToF64:
+        case IrOpcode::ConvertF32ToI32:
+        case IrOpcode::ConvertF64ToI32:
+        case IrOpcode::ConvertF32ToF64:
+        case IrOpcode::ConvertF64ToF32:
         case IrOpcode::JumpIfZero:
         case IrOpcode::Jump:
         case IrOpcode::ReturnVoid:
         case IrOpcode::ReturnI32:
+        case IrOpcode::ReturnF32:
+        case IrOpcode::ReturnF64:
           break;
         default:
           return failInstruction(

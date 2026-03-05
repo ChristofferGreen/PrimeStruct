@@ -233,6 +233,37 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for float ops with tolerance-gated conversions") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(less_than(abs(minus(convert<f32>(convert<f64>(plus(1.25f32, 0.5f32))), 1.75f32)), 0.0001f32)) {
+    return(convert<int>(multiply(convert<f32>(2i32), 2.5f32)))
+  } else {
+    return(0i32)
+  }
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_float_subset.prime", source);
+  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_float_subset.wasm").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_float_subset_err.txt").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_float_subset_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("5") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec emits wasm bytecode for repeat while and for loops") {
   const std::string source = R"(
 [return<int>]
@@ -299,8 +330,7 @@ TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [f32] value{1.5f32}
-  return(convert<int>(value))
+  return(convert<int>(convert<f32>(1i64)))
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);

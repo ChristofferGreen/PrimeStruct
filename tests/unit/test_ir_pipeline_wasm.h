@@ -304,6 +304,44 @@ TEST_CASE("wasm emitter rejects malformed backward jump targets deterministicall
   CHECK(error == "wasm emitter malformed jump target in function: /main");
 }
 
+TEST_CASE("wasm emitter lowers float ops and conversions to deterministic opcodes") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertI32ToF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3fc00000u});
+  mainFn.instructions.push_back({primec::IrOpcode::AddF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToF64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::SubF64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> opPattern = {
+      0x41, 0x02,                   // i32.const 2
+      0xb2,                         // f32.convert_i32_s
+      0x43, 0x00, 0x00, 0xc0, 0x3f, // f32.const 1.5
+      0x92,                         // f32.add
+      0xbb,                         // f64.promote_f32
+      0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, // f64.const 1.0
+      0xa1,                                                      // f64.sub
+      0xb6,                                                      // f32.demote_f64
+      0xa8,                                                      // i32.trunc_f32_s
+  };
+  CHECK(containsByteSequence(bytes, opPattern));
+}
+
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
   primec::WasmEmitter emitter;
   primec::IrModule module;
@@ -311,7 +349,7 @@ TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
 
   primec::IrFunction mainFn;
   mainFn.name = "/main";
-  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI64, 1});
   mainFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(mainFn);
 

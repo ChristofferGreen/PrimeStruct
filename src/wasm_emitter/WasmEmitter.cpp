@@ -23,6 +23,8 @@ constexpr uint8_t WasmSectionCode = 10;
 constexpr uint8_t WasmSectionData = 11;
 
 constexpr uint8_t WasmValueTypeI32 = 0x7f;
+constexpr uint8_t WasmValueTypeF32 = 0x7d;
+constexpr uint8_t WasmValueTypeF64 = 0x7c;
 constexpr uint8_t WasmBlockTypeVoid = 0x40;
 
 constexpr uint8_t WasmOpIf = 0x04;
@@ -49,6 +51,36 @@ constexpr uint8_t WasmOpI32Add = 0x6a;
 constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
 constexpr uint8_t WasmOpI32DivS = 0x6d;
+constexpr uint8_t WasmOpF32Const = 0x43;
+constexpr uint8_t WasmOpF64Const = 0x44;
+constexpr uint8_t WasmOpF32Eq = 0x5b;
+constexpr uint8_t WasmOpF32Ne = 0x5c;
+constexpr uint8_t WasmOpF32Lt = 0x5d;
+constexpr uint8_t WasmOpF32Gt = 0x5e;
+constexpr uint8_t WasmOpF32Le = 0x5f;
+constexpr uint8_t WasmOpF32Ge = 0x60;
+constexpr uint8_t WasmOpF64Eq = 0x61;
+constexpr uint8_t WasmOpF64Ne = 0x62;
+constexpr uint8_t WasmOpF64Lt = 0x63;
+constexpr uint8_t WasmOpF64Gt = 0x64;
+constexpr uint8_t WasmOpF64Le = 0x65;
+constexpr uint8_t WasmOpF64Ge = 0x66;
+constexpr uint8_t WasmOpF32Add = 0x92;
+constexpr uint8_t WasmOpF32Sub = 0x93;
+constexpr uint8_t WasmOpF32Mul = 0x94;
+constexpr uint8_t WasmOpF32Div = 0x95;
+constexpr uint8_t WasmOpF32Neg = 0x8c;
+constexpr uint8_t WasmOpF64Add = 0xa0;
+constexpr uint8_t WasmOpF64Sub = 0xa1;
+constexpr uint8_t WasmOpF64Mul = 0xa2;
+constexpr uint8_t WasmOpF64Div = 0xa3;
+constexpr uint8_t WasmOpF64Neg = 0x9a;
+constexpr uint8_t WasmOpI32TruncF32S = 0xa8;
+constexpr uint8_t WasmOpI32TruncF64S = 0xaa;
+constexpr uint8_t WasmOpF32ConvertI32S = 0xb2;
+constexpr uint8_t WasmOpF32DemoteF64 = 0xb6;
+constexpr uint8_t WasmOpF64ConvertI32S = 0xb7;
+constexpr uint8_t WasmOpF64PromoteF32 = 0xbb;
 
 struct WasmFunctionType {
   std::vector<uint8_t> params;
@@ -102,6 +134,19 @@ void appendS32Leb(int32_t value, std::vector<uint8_t> &out) {
       byte |= 0x80;
     }
     out.push_back(byte);
+  }
+}
+
+void appendFixedU32Le(uint32_t value, std::vector<uint8_t> &out) {
+  out.push_back(static_cast<uint8_t>(value & 0xff));
+  out.push_back(static_cast<uint8_t>((value >> 8) & 0xff));
+  out.push_back(static_cast<uint8_t>((value >> 16) & 0xff));
+  out.push_back(static_cast<uint8_t>((value >> 24) & 0xff));
+}
+
+void appendFixedU64Le(uint64_t value, std::vector<uint8_t> &out) {
+  for (size_t byte = 0; byte < 8; ++byte) {
+    out.push_back(static_cast<uint8_t>((value >> (byte * 8)) & 0xff));
   }
 }
 
@@ -271,15 +316,23 @@ std::string wasmExportName(const std::string &path) {
 
 bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, std::string &error) {
   bool hasReturnI32 = false;
+  bool hasReturnF32 = false;
+  bool hasReturnF64 = false;
   bool hasReturnVoid = false;
   for (const IrInstruction &inst : function.instructions) {
     if (inst.op == IrOpcode::ReturnI32) {
       hasReturnI32 = true;
+    } else if (inst.op == IrOpcode::ReturnF32) {
+      hasReturnF32 = true;
+    } else if (inst.op == IrOpcode::ReturnF64) {
+      hasReturnF64 = true;
     } else if (inst.op == IrOpcode::ReturnVoid) {
       hasReturnVoid = true;
     }
   }
-  if (hasReturnI32 && hasReturnVoid) {
+  const uint32_t returnKindCount =
+      (hasReturnI32 ? 1u : 0u) + (hasReturnF32 ? 1u : 0u) + (hasReturnF64 ? 1u : 0u) + (hasReturnVoid ? 1u : 0u);
+  if (returnKindCount > 1u) {
     error = "wasm emitter does not support mixed return kinds in function: " + function.name;
     return false;
   }
@@ -287,6 +340,10 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
   outType.results.clear();
   if (hasReturnI32) {
     outType.results.push_back(WasmValueTypeI32);
+  } else if (hasReturnF32) {
+    outType.results.push_back(WasmValueTypeF32);
+  } else if (hasReturnF64) {
+    outType.results.push_back(WasmValueTypeF64);
   }
   return true;
 }
@@ -335,6 +392,14 @@ bool emitSimpleInstruction(const IrInstruction &inst,
     case IrOpcode::PushI32:
       out.push_back(WasmOpI32Const);
       appendS32Leb(static_cast<int32_t>(inst.imm), out);
+      return true;
+    case IrOpcode::PushF32:
+      out.push_back(WasmOpF32Const);
+      appendFixedU32Le(static_cast<uint32_t>(inst.imm & 0xffffffffu), out);
+      return true;
+    case IrOpcode::PushF64:
+      out.push_back(WasmOpF64Const);
+      appendFixedU64Le(inst.imm, out);
       return true;
     case IrOpcode::LoadLocal:
       if (inst.imm >= localCount) {
@@ -400,7 +465,93 @@ bool emitSimpleInstruction(const IrInstruction &inst,
     case IrOpcode::CmpGeI32:
       out.push_back(WasmOpI32GeS);
       return true;
+    case IrOpcode::AddF32:
+      out.push_back(WasmOpF32Add);
+      return true;
+    case IrOpcode::SubF32:
+      out.push_back(WasmOpF32Sub);
+      return true;
+    case IrOpcode::MulF32:
+      out.push_back(WasmOpF32Mul);
+      return true;
+    case IrOpcode::DivF32:
+      out.push_back(WasmOpF32Div);
+      return true;
+    case IrOpcode::NegF32:
+      out.push_back(WasmOpF32Neg);
+      return true;
+    case IrOpcode::AddF64:
+      out.push_back(WasmOpF64Add);
+      return true;
+    case IrOpcode::SubF64:
+      out.push_back(WasmOpF64Sub);
+      return true;
+    case IrOpcode::MulF64:
+      out.push_back(WasmOpF64Mul);
+      return true;
+    case IrOpcode::DivF64:
+      out.push_back(WasmOpF64Div);
+      return true;
+    case IrOpcode::NegF64:
+      out.push_back(WasmOpF64Neg);
+      return true;
+    case IrOpcode::CmpEqF32:
+      out.push_back(WasmOpF32Eq);
+      return true;
+    case IrOpcode::CmpNeF32:
+      out.push_back(WasmOpF32Ne);
+      return true;
+    case IrOpcode::CmpLtF32:
+      out.push_back(WasmOpF32Lt);
+      return true;
+    case IrOpcode::CmpLeF32:
+      out.push_back(WasmOpF32Le);
+      return true;
+    case IrOpcode::CmpGtF32:
+      out.push_back(WasmOpF32Gt);
+      return true;
+    case IrOpcode::CmpGeF32:
+      out.push_back(WasmOpF32Ge);
+      return true;
+    case IrOpcode::CmpEqF64:
+      out.push_back(WasmOpF64Eq);
+      return true;
+    case IrOpcode::CmpNeF64:
+      out.push_back(WasmOpF64Ne);
+      return true;
+    case IrOpcode::CmpLtF64:
+      out.push_back(WasmOpF64Lt);
+      return true;
+    case IrOpcode::CmpLeF64:
+      out.push_back(WasmOpF64Le);
+      return true;
+    case IrOpcode::CmpGtF64:
+      out.push_back(WasmOpF64Gt);
+      return true;
+    case IrOpcode::CmpGeF64:
+      out.push_back(WasmOpF64Ge);
+      return true;
+    case IrOpcode::ConvertI32ToF32:
+      out.push_back(WasmOpF32ConvertI32S);
+      return true;
+    case IrOpcode::ConvertI32ToF64:
+      out.push_back(WasmOpF64ConvertI32S);
+      return true;
+    case IrOpcode::ConvertF32ToI32:
+      out.push_back(WasmOpI32TruncF32S);
+      return true;
+    case IrOpcode::ConvertF64ToI32:
+      out.push_back(WasmOpI32TruncF64S);
+      return true;
+    case IrOpcode::ConvertF32ToF64:
+      out.push_back(WasmOpF64PromoteF32);
+      return true;
+    case IrOpcode::ConvertF64ToF32:
+      out.push_back(WasmOpF32DemoteF64);
+      return true;
     case IrOpcode::ReturnI32:
+    case IrOpcode::ReturnF32:
+    case IrOpcode::ReturnF64:
     case IrOpcode::ReturnVoid:
       out.push_back(WasmOpReturn);
       return true;
