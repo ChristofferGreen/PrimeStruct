@@ -170,6 +170,8 @@ bool validateFunction(const IrModule &module,
         case IrOpcode::ConvertF64ToF32:
         case IrOpcode::JumpIfZero:
         case IrOpcode::Jump:
+        case IrOpcode::Call:
+        case IrOpcode::CallVoid:
         case IrOpcode::ReturnVoid:
         case IrOpcode::ReturnI32:
         case IrOpcode::ReturnF32:

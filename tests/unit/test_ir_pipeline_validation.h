@@ -20817,6 +20817,36 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   CHECK(error.find("unsupported opcode for wasm target") != std::string::npos);
 }
 
+TEST_CASE("ir validator wasm target accepts call opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 2;
+
+  primec::IrFunction voidFn;
+  voidFn.name = "/void_fn";
+  voidFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+
+  primec::IrFunction valueFn;
+  valueFn.name = "/value_fn";
+  valueFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  valueFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(voidFn));
+  module.functions.push_back(std::move(valueFn));
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir validator wasm target rejects unsupported effects and capabilities") {
   primec::IrModule module;
   module.entryIndex = 0;

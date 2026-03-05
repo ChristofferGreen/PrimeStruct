@@ -30,6 +30,7 @@ constexpr uint8_t WasmBlockTypeVoid = 0x40;
 constexpr uint8_t WasmOpIf = 0x04;
 constexpr uint8_t WasmOpElse = 0x05;
 constexpr uint8_t WasmOpEnd = 0x0b;
+constexpr uint8_t WasmOpCall = 0x10;
 constexpr uint8_t WasmOpReturn = 0x0f;
 constexpr uint8_t WasmOpDrop = 0x1a;
 constexpr uint8_t WasmOpBlock = 0x02;
@@ -392,6 +393,7 @@ void appendLocalDecls(uint32_t localCount, bool needsDupTempLocal, std::vector<u
 bool emitSimpleInstruction(const IrInstruction &inst,
                            uint32_t localCount,
                            bool needsDupTempLocal,
+                           const std::vector<WasmFunctionType> &functionTypes,
                            std::vector<uint8_t> &out,
                            std::string &error,
                            const std::string &functionName) {
@@ -581,6 +583,19 @@ bool emitSimpleInstruction(const IrInstruction &inst,
     case IrOpcode::ConvertF64ToF32:
       out.push_back(WasmOpF32DemoteF64);
       return true;
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid: {
+      if (inst.imm >= functionTypes.size()) {
+        error = "wasm emitter invalid call target in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpCall);
+      appendU32Leb(static_cast<uint32_t>(inst.imm), out);
+      if (inst.op == IrOpcode::CallVoid && !functionTypes[static_cast<size_t>(inst.imm)].results.empty()) {
+        out.push_back(WasmOpDrop);
+      }
+      return true;
+    }
     case IrOpcode::ReturnI32:
     case IrOpcode::ReturnF32:
     case IrOpcode::ReturnF64:
@@ -602,6 +617,7 @@ bool emitInstructionRange(const IrFunction &function,
                           size_t end,
                           uint32_t localCount,
                           bool needsDupTempLocal,
+                          const std::vector<WasmFunctionType> &functionTypes,
                           std::vector<uint8_t> &out,
                           std::string &error);
 
@@ -685,17 +701,19 @@ bool emitIfRegion(const IrFunction &function,
                   size_t falseEnd,
                   uint32_t localCount,
                   bool needsDupTempLocal,
+                  const std::vector<WasmFunctionType> &functionTypes,
                   std::vector<uint8_t> &out,
                   std::string &error) {
   (void)conditionIndex;
   out.push_back(WasmOpIf);
   out.push_back(WasmBlockTypeVoid);
-  if (!emitInstructionRange(function, trueStart, trueEnd, localCount, needsDupTempLocal, out, error)) {
+  if (!emitInstructionRange(function, trueStart, trueEnd, localCount, needsDupTempLocal, functionTypes, out, error)) {
     return false;
   }
   if (falseStart < falseEnd) {
     out.push_back(WasmOpElse);
-    if (!emitInstructionRange(function, falseStart, falseEnd, localCount, needsDupTempLocal, out, error)) {
+    if (!emitInstructionRange(
+            function, falseStart, falseEnd, localCount, needsDupTempLocal, functionTypes, out, error)) {
       return false;
     }
   }
@@ -708,6 +726,7 @@ bool emitInstructionRange(const IrFunction &function,
                           size_t end,
                           uint32_t localCount,
                           bool needsDupTempLocal,
+                          const std::vector<WasmFunctionType> &functionTypes,
                           std::vector<uint8_t> &out,
                           std::string &error) {
   size_t index = start;
@@ -720,7 +739,14 @@ bool emitInstructionRange(const IrFunction &function,
       out.push_back(WasmBlockTypeVoid);
 
       if (!emitInstructionRange(
-              function, index, loopRegion.guardIndex, localCount, needsDupTempLocal, out, error)) {
+              function,
+              index,
+              loopRegion.guardIndex,
+              localCount,
+              needsDupTempLocal,
+              functionTypes,
+              out,
+              error)) {
         return false;
       }
       out.push_back(WasmOpI32Eqz);
@@ -728,7 +754,14 @@ bool emitInstructionRange(const IrFunction &function,
       appendU32Leb(1, out);
 
       if (!emitInstructionRange(
-              function, loopRegion.guardIndex + 1, loopRegion.tailJumpIndex, localCount, needsDupTempLocal, out, error)) {
+              function,
+              loopRegion.guardIndex + 1,
+              loopRegion.tailJumpIndex,
+              localCount,
+              needsDupTempLocal,
+              functionTypes,
+              out,
+              error)) {
         return false;
       }
       out.push_back(WasmOpBr);
@@ -775,6 +808,7 @@ bool emitInstructionRange(const IrFunction &function,
                             jumpTarget,
                             localCount,
                             needsDupTempLocal,
+                            functionTypes,
                             out,
                             error)) {
             return false;
@@ -793,6 +827,7 @@ bool emitInstructionRange(const IrFunction &function,
                         target,
                         localCount,
                         needsDupTempLocal,
+                        functionTypes,
                         out,
                         error)) {
         return false;
@@ -812,7 +847,7 @@ bool emitInstructionRange(const IrFunction &function,
       return false;
     }
 
-    if (!emitSimpleInstruction(inst, localCount, needsDupTempLocal, out, error, function.name)) {
+    if (!emitSimpleInstruction(inst, localCount, needsDupTempLocal, functionTypes, out, error, function.name)) {
       return false;
     }
     ++index;
@@ -821,7 +856,10 @@ bool emitInstructionRange(const IrFunction &function,
   return true;
 }
 
-bool lowerFunctionCode(const IrFunction &function, WasmCodeBody &outBody, std::string &error) {
+bool lowerFunctionCode(const IrFunction &function,
+                       const std::vector<WasmFunctionType> &functionTypes,
+                       WasmCodeBody &outBody,
+                       std::string &error) {
   bool needsDupTempLocal = false;
   const uint32_t localCount = computeLocalCount(function, needsDupTempLocal, error);
   if (!error.empty()) {
@@ -833,7 +871,14 @@ bool lowerFunctionCode(const IrFunction &function, WasmCodeBody &outBody, std::s
   appendLocalDecls(localCount, needsDupTempLocal, outBody.localDecls);
 
   if (!emitInstructionRange(
-          function, 0, function.instructions.size(), localCount, needsDupTempLocal, outBody.instructions, error)) {
+          function,
+          0,
+          function.instructions.size(),
+          localCount,
+          needsDupTempLocal,
+          functionTypes,
+          outBody.instructions,
+          error)) {
     return false;
   }
   outBody.instructions.push_back(WasmOpEnd);
@@ -870,9 +915,10 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     }
     types.push_back(std::move(functionType));
     functionTypeIndexes.push_back(static_cast<uint32_t>(functionIndex));
-
+  }
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     WasmCodeBody codeBody;
-    if (!lowerFunctionCode(module.functions[functionIndex], codeBody, error)) {
+    if (!lowerFunctionCode(module.functions[functionIndex], types, codeBody, error)) {
       return false;
     }
     codeBodies.push_back(std::move(codeBody));

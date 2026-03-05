@@ -374,6 +374,76 @@ TEST_CASE("wasm emitter lowers i64 and u64 conversion opcodes deterministically"
   CHECK(containsByteSequence(bytes, opPattern));
 }
 
+TEST_CASE("wasm emitter lowers direct call and callvoid opcodes") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 2;
+
+  primec::IrFunction voidFn;
+  voidFn.name = "/void_fn";
+  voidFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+
+  primec::IrFunction valueFn;
+  valueFn.name = "/value_fn";
+  valueFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  valueFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(voidFn));
+  module.functions.push_back(std::move(valueFn));
+  module.functions.push_back(std::move(mainFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> callPattern = {
+      0x10, 0x01, // call value_fn
+      0x41, 0x03, // i32.const 3
+      0x6a,       // i32.add
+  };
+  const std::vector<uint8_t> callVoidPattern = {
+      0x10, 0x00, // call void_fn
+      0x10, 0x01, // call value_fn
+      0x1a,       // drop callvoid result
+      0x10, 0x01, // call value_fn
+  };
+  CHECK(containsByteSequence(bytes, callPattern));
+  CHECK(containsByteSequence(bytes, callVoidPattern));
+}
+
+TEST_CASE("wasm emitter lowers recursive call opcode in canonical IR") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> recursiveCallPattern = {
+      0x10, 0x00, // call self
+      0x0f,       // return
+  };
+  CHECK(containsByteSequence(bytes, recursiveCallPattern));
+}
+
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
   primec::WasmEmitter emitter;
   primec::IrModule module;

@@ -299,6 +299,38 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for direct callable definitions") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(9i32)
+}
+
+[return<int>]
+main() {
+  return(plus(helper(), 2i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_direct_call.prime", source);
+  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_direct_call.wasm").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_direct_call_err.txt").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_direct_call_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("11") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec wasm i64 and u64 conversion edge cases trap in runtime") {
   const std::string negativeSource = R"(
 [return<int>]
@@ -403,7 +435,8 @@ TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(convert<int>(convert<f32>(1i64)))
+  [i64] value{plus(1i64, 2i64)}
+  return(3i32)
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
