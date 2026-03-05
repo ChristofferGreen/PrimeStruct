@@ -91,7 +91,7 @@ bool sectionPayloadIsEmptyVector(const std::vector<uint8_t> &bytes, uint8_t sect
 
 } // namespace
 
-TEST_CASE("wasm emitter writes deterministic section snapshots") {
+TEST_CASE("wasm emitter writes deterministic empty-module section snapshots") {
   primec::WasmEmitter emitter;
   primec::IrModule module;
   module.entryIndex = -1;
@@ -118,7 +118,7 @@ TEST_CASE("wasm emitter writes deterministic section snapshots") {
   CHECK(first == expected);
 }
 
-TEST_CASE("wasm emitter passes structural section validation") {
+TEST_CASE("wasm emitter passes structural section validation for empty module") {
   primec::WasmEmitter emitter;
   primec::IrModule module;
   module.entryIndex = -1;
@@ -159,20 +159,66 @@ TEST_CASE("wasm emitter rejects invalid empty-module entry index") {
   CHECK(error == "invalid IR entry index");
 }
 
-TEST_CASE("wasm emitter rejects function lowering before codegen support") {
+TEST_CASE("wasm emitter lowers simple integer function to deterministic bytes") {
   primec::WasmEmitter emitter;
   primec::IrModule module;
   module.entryIndex = 0;
 
-  primec::IrFunction entry;
-  entry.name = "/main";
-  entry.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
-  module.functions.push_back(entry);
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> expected = {
+      0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+      0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f,
+      0x02, 0x01, 0x00,
+      0x03, 0x02, 0x01, 0x00,
+      0x07, 0x08, 0x01, 0x04, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x00,
+      0x0a, 0x07, 0x01, 0x05, 0x00, 0x41, 0x07, 0x0f, 0x0b,
+      0x0b, 0x01, 0x00,
+  };
+  CHECK(bytes == expected);
+}
+
+TEST_CASE("wasm emitter rejects unsupported backward jump control flow") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 0});
+  module.functions.push_back(mainFn);
 
   std::vector<uint8_t> bytes;
   std::string error;
   CHECK_FALSE(emitter.emitModule(module, bytes, error));
-  CHECK(error.find("function lowering is not implemented yet") != std::string::npos);
+  CHECK(error.find("unsupported control-flow pattern") != std::string::npos);
+}
+
+TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(emitter.emitModule(module, bytes, error));
+  CHECK(error.find("unsupported opcode") != std::string::npos);
 }
 
 TEST_SUITE_END();

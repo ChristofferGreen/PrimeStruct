@@ -135,6 +135,10 @@ bool hasSpirvTools() {
          runCommand("glslc --version > /dev/null 2>&1") == 0;
 }
 
+bool hasWasmtime() {
+  return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
+}
+
 bool hasPython3() {
   return runCommand("python3 --version > /dev/null 2>&1") == 0;
 }

@@ -201,23 +201,36 @@ main() {
   CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
 }
 
-TEST_CASE("primec accepts wasm emit flag and reports wasm emit errors") {
+TEST_CASE("primec emits wasm bytecode for integer local control-flow subset") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(0i32)
+  [i32] value{plus(2i32, 5i32)}
+  if(equal(value, 7i32)) {
+    return(7i32)
+  } else {
+    return(3i32)
+  }
 }
 )";
-  const std::string srcPath = writeTemp("compile_emit_wasm_option.prime", source);
-  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_option.wasm").string();
+  const std::string srcPath = writeTemp("compile_emit_wasm_subset.prime", source);
+  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_subset.wasm").string();
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_option_err.txt").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_subset_out.txt").string();
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("Wasm emit error: wasm emitter function lowering is not implemented yet") != std::string::npos);
-  CHECK(diagnostics.find("Usage: primec") == std::string::npos);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("7") != std::string::npos);
+  }
 }
 
 TEST_CASE("primec options default to wasm extension for emit kind") {
@@ -245,7 +258,8 @@ TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 [return<int>]
 main() {
-  return(0i32)
+  [f32] value{1.5f32}
+  return(convert<int>(value))
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
@@ -258,8 +272,8 @@ main() {
   CHECK(runCommand(wasmCmd) == 2);
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"wasm emitter function lowering is not implemented yet\"") != std::string::npos);
-  CHECK(diagnostics.find("\"notes\":[\"backend: wasm\"]") != std::string::npos);
+  CHECK(diagnostics.find("unsupported opcode for wasm target") != std::string::npos);
+  CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);
 }
 

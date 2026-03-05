@@ -1,5 +1,7 @@
 #include "primec/WasmEmitter.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -19,6 +21,30 @@ constexpr uint8_t WasmSectionFunction = 3;
 constexpr uint8_t WasmSectionExport = 7;
 constexpr uint8_t WasmSectionCode = 10;
 constexpr uint8_t WasmSectionData = 11;
+
+constexpr uint8_t WasmValueTypeI32 = 0x7f;
+constexpr uint8_t WasmBlockTypeVoid = 0x40;
+
+constexpr uint8_t WasmOpIf = 0x04;
+constexpr uint8_t WasmOpElse = 0x05;
+constexpr uint8_t WasmOpEnd = 0x0b;
+constexpr uint8_t WasmOpReturn = 0x0f;
+constexpr uint8_t WasmOpDrop = 0x1a;
+constexpr uint8_t WasmOpLocalGet = 0x20;
+constexpr uint8_t WasmOpLocalSet = 0x21;
+constexpr uint8_t WasmOpLocalTee = 0x22;
+constexpr uint8_t WasmOpI32Const = 0x41;
+constexpr uint8_t WasmOpI32Eqz = 0x45;
+constexpr uint8_t WasmOpI32Eq = 0x46;
+constexpr uint8_t WasmOpI32Ne = 0x47;
+constexpr uint8_t WasmOpI32LtS = 0x48;
+constexpr uint8_t WasmOpI32GtS = 0x4a;
+constexpr uint8_t WasmOpI32LeS = 0x4c;
+constexpr uint8_t WasmOpI32GeS = 0x4e;
+constexpr uint8_t WasmOpI32Add = 0x6a;
+constexpr uint8_t WasmOpI32Sub = 0x6b;
+constexpr uint8_t WasmOpI32Mul = 0x6c;
+constexpr uint8_t WasmOpI32DivS = 0x6d;
 
 struct WasmFunctionType {
   std::vector<uint8_t> params;
@@ -60,6 +86,21 @@ void appendU32Leb(uint32_t value, std::vector<uint8_t> &out) {
   } while (value != 0);
 }
 
+void appendS32Leb(int32_t value, std::vector<uint8_t> &out) {
+  bool more = true;
+  while (more) {
+    uint8_t byte = static_cast<uint8_t>(value & 0x7f);
+    value >>= 7;
+    const bool signBit = (byte & 0x40) != 0;
+    if ((value == 0 && !signBit) || (value == -1 && signBit)) {
+      more = false;
+    } else {
+      byte |= 0x80;
+    }
+    out.push_back(byte);
+  }
+}
+
 bool appendLength(size_t value, std::vector<uint8_t> &out, std::string &error) {
   if (value > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
     error = "wasm section exceeds 32-bit size limit";
@@ -77,7 +118,10 @@ bool appendName(const std::string &name, std::vector<uint8_t> &out, std::string 
   return true;
 }
 
-bool appendSection(uint8_t sectionId, const std::vector<uint8_t> &payload, std::vector<uint8_t> &out, std::string &error) {
+bool appendSection(uint8_t sectionId,
+                   const std::vector<uint8_t> &payload,
+                   std::vector<uint8_t> &out,
+                   std::string &error) {
   out.push_back(sectionId);
   if (!appendLength(payload.size(), out, error)) {
     return false;
@@ -86,7 +130,9 @@ bool appendSection(uint8_t sectionId, const std::vector<uint8_t> &payload, std::
   return true;
 }
 
-bool encodeTypeSection(const std::vector<WasmFunctionType> &types, std::vector<uint8_t> &payload, std::string &error) {
+bool encodeTypeSection(const std::vector<WasmFunctionType> &types,
+                       std::vector<uint8_t> &payload,
+                       std::string &error) {
   payload.clear();
   if (!appendLength(types.size(), payload, error)) {
     return false;
@@ -105,7 +151,9 @@ bool encodeTypeSection(const std::vector<WasmFunctionType> &types, std::vector<u
   return true;
 }
 
-bool encodeImportSection(const std::vector<WasmImport> &imports, std::vector<uint8_t> &payload, std::string &error) {
+bool encodeImportSection(const std::vector<WasmImport> &imports,
+                         std::vector<uint8_t> &payload,
+                         std::string &error) {
   payload.clear();
   if (!appendLength(imports.size(), payload, error)) {
     return false;
@@ -136,7 +184,9 @@ bool encodeFunctionSection(const std::vector<uint32_t> &functionTypeIndexes,
   return true;
 }
 
-bool encodeExportSection(const std::vector<WasmExport> &exports, std::vector<uint8_t> &payload, std::string &error) {
+bool encodeExportSection(const std::vector<WasmExport> &exports,
+                         std::vector<uint8_t> &payload,
+                         std::string &error) {
   payload.clear();
   if (!appendLength(exports.size(), payload, error)) {
     return false;
@@ -151,14 +201,15 @@ bool encodeExportSection(const std::vector<WasmExport> &exports, std::vector<uin
   return true;
 }
 
-bool encodeCodeSection(const std::vector<WasmCodeBody> &bodies, std::vector<uint8_t> &payload, std::string &error) {
+bool encodeCodeSection(const std::vector<WasmCodeBody> &bodies,
+                       std::vector<uint8_t> &payload,
+                       std::string &error) {
   payload.clear();
   if (!appendLength(bodies.size(), payload, error)) {
     return false;
   }
   for (const WasmCodeBody &body : bodies) {
-    std::vector<uint8_t> bodyPayload;
-    bodyPayload = body.localDecls;
+    std::vector<uint8_t> bodyPayload = body.localDecls;
     bodyPayload.insert(bodyPayload.end(), body.instructions.begin(), body.instructions.end());
     if (!appendLength(bodyPayload.size(), payload, error)) {
       return false;
@@ -168,7 +219,9 @@ bool encodeCodeSection(const std::vector<WasmCodeBody> &bodies, std::vector<uint
   return true;
 }
 
-bool encodeDataSection(const std::vector<WasmDataSegment> &segments, std::vector<uint8_t> &payload, std::string &error) {
+bool encodeDataSection(const std::vector<WasmDataSegment> &segments,
+                       std::vector<uint8_t> &payload,
+                       std::string &error) {
   payload.clear();
   if (!appendLength(segments.size(), payload, error)) {
     return false;
@@ -189,39 +242,359 @@ bool encodeDataSection(const std::vector<WasmDataSegment> &segments, std::vector
   return true;
 }
 
+std::string wasmExportName(const std::string &path) {
+  std::string name;
+  name.reserve(path.size());
+  for (char c : path) {
+    if (c == '/') {
+      if (!name.empty()) {
+        name.push_back('_');
+      }
+      continue;
+    }
+    const unsigned char uc = static_cast<unsigned char>(c);
+    if (std::isalnum(uc) != 0 || c == '_' || c == '$' || c == '.') {
+      name.push_back(c);
+    } else {
+      name.push_back('_');
+    }
+  }
+  if (name.empty()) {
+    return "main";
+  }
+  return name;
+}
+
+bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, std::string &error) {
+  bool hasReturnI32 = false;
+  bool hasReturnVoid = false;
+  for (const IrInstruction &inst : function.instructions) {
+    if (inst.op == IrOpcode::ReturnI32) {
+      hasReturnI32 = true;
+    } else if (inst.op == IrOpcode::ReturnVoid) {
+      hasReturnVoid = true;
+    }
+  }
+  if (hasReturnI32 && hasReturnVoid) {
+    error = "wasm emitter does not support mixed return kinds in function: " + function.name;
+    return false;
+  }
+  outType.params.clear();
+  outType.results.clear();
+  if (hasReturnI32) {
+    outType.results.push_back(WasmValueTypeI32);
+  }
+  return true;
+}
+
+uint32_t computeLocalCount(const IrFunction &function, bool &needsDupTempLocal, std::string &error) {
+  uint64_t maxLocalIndex = 0;
+  bool hasLocal = false;
+  needsDupTempLocal = false;
+  for (const IrInstruction &inst : function.instructions) {
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal) {
+      maxLocalIndex = std::max(maxLocalIndex, inst.imm);
+      hasLocal = true;
+    }
+    if (inst.op == IrOpcode::Dup) {
+      needsDupTempLocal = true;
+    }
+  }
+  const uint64_t baseCount = hasLocal ? (maxLocalIndex + 1) : 0;
+  const uint64_t totalCount = baseCount + (needsDupTempLocal ? 1 : 0);
+  if (totalCount > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+    error = "wasm emitter local count exceeds 32-bit limit in function: " + function.name;
+    return 0;
+  }
+  return static_cast<uint32_t>(baseCount);
+}
+
+void appendLocalDecls(uint32_t localCount, bool needsDupTempLocal, std::vector<uint8_t> &out) {
+  const uint32_t totalLocals = localCount + (needsDupTempLocal ? 1u : 0u);
+  if (totalLocals == 0) {
+    appendU32Leb(0, out);
+    return;
+  }
+  appendU32Leb(1, out);
+  appendU32Leb(totalLocals, out);
+  out.push_back(WasmValueTypeI32);
+}
+
+bool emitSimpleInstruction(const IrInstruction &inst,
+                           uint32_t localCount,
+                           bool needsDupTempLocal,
+                           std::vector<uint8_t> &out,
+                           std::string &error,
+                           const std::string &functionName) {
+  const uint32_t dupTempIndex = localCount;
+  switch (inst.op) {
+    case IrOpcode::PushI32:
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(inst.imm), out);
+      return true;
+    case IrOpcode::LoadLocal:
+      if (inst.imm >= localCount) {
+        error = "wasm emitter local index out of range in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(static_cast<uint32_t>(inst.imm), out);
+      return true;
+    case IrOpcode::StoreLocal:
+      if (inst.imm >= localCount) {
+        error = "wasm emitter local index out of range in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(static_cast<uint32_t>(inst.imm), out);
+      return true;
+    case IrOpcode::Dup:
+      if (!needsDupTempLocal) {
+        error = "wasm emitter internal error: missing dup temp local";
+        return false;
+      }
+      out.push_back(WasmOpLocalTee);
+      appendU32Leb(dupTempIndex, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(dupTempIndex, out);
+      return true;
+    case IrOpcode::Pop:
+      out.push_back(WasmOpDrop);
+      return true;
+    case IrOpcode::AddI32:
+      out.push_back(WasmOpI32Add);
+      return true;
+    case IrOpcode::SubI32:
+      out.push_back(WasmOpI32Sub);
+      return true;
+    case IrOpcode::MulI32:
+      out.push_back(WasmOpI32Mul);
+      return true;
+    case IrOpcode::DivI32:
+      out.push_back(WasmOpI32DivS);
+      return true;
+    case IrOpcode::NegI32:
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(-1, out);
+      out.push_back(WasmOpI32Mul);
+      return true;
+    case IrOpcode::CmpEqI32:
+      out.push_back(WasmOpI32Eq);
+      return true;
+    case IrOpcode::CmpNeI32:
+      out.push_back(WasmOpI32Ne);
+      return true;
+    case IrOpcode::CmpLtI32:
+      out.push_back(WasmOpI32LtS);
+      return true;
+    case IrOpcode::CmpLeI32:
+      out.push_back(WasmOpI32LeS);
+      return true;
+    case IrOpcode::CmpGtI32:
+      out.push_back(WasmOpI32GtS);
+      return true;
+    case IrOpcode::CmpGeI32:
+      out.push_back(WasmOpI32GeS);
+      return true;
+    case IrOpcode::ReturnI32:
+    case IrOpcode::ReturnVoid:
+      out.push_back(WasmOpReturn);
+      return true;
+    case IrOpcode::Jump:
+    case IrOpcode::JumpIfZero:
+      error = "wasm emitter internal error: control flow opcode escaped structured lowering";
+      return false;
+    default:
+      error = "wasm emitter unsupported opcode in function " + functionName + ": " + std::to_string(static_cast<uint32_t>(inst.op));
+      return false;
+  }
+}
+
+bool emitInstructionRange(const IrFunction &function,
+                          size_t start,
+                          size_t end,
+                          uint32_t localCount,
+                          bool needsDupTempLocal,
+                          std::vector<uint8_t> &out,
+                          std::string &error);
+
+bool emitIfRegion(const IrFunction &function,
+                  size_t conditionIndex,
+                  size_t trueStart,
+                  size_t trueEnd,
+                  size_t falseStart,
+                  size_t falseEnd,
+                  uint32_t localCount,
+                  bool needsDupTempLocal,
+                  std::vector<uint8_t> &out,
+                  std::string &error) {
+  (void)conditionIndex;
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  if (!emitInstructionRange(function, trueStart, trueEnd, localCount, needsDupTempLocal, out, error)) {
+    return false;
+  }
+  if (falseStart < falseEnd) {
+    out.push_back(WasmOpElse);
+    if (!emitInstructionRange(function, falseStart, falseEnd, localCount, needsDupTempLocal, out, error)) {
+      return false;
+    }
+  }
+  out.push_back(WasmOpEnd);
+  return true;
+}
+
+bool emitInstructionRange(const IrFunction &function,
+                          size_t start,
+                          size_t end,
+                          uint32_t localCount,
+                          bool needsDupTempLocal,
+                          std::vector<uint8_t> &out,
+                          std::string &error) {
+  size_t index = start;
+  while (index < end) {
+    const IrInstruction &inst = function.instructions[index];
+
+    if (inst.op == IrOpcode::JumpIfZero) {
+      const size_t target = static_cast<size_t>(inst.imm);
+      if (target <= index || target > end) {
+        error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+        return false;
+      }
+
+      if (target > 0 && target - 1 > index) {
+        const IrInstruction &tail = function.instructions[target - 1];
+        if (tail.op == IrOpcode::Jump) {
+          const size_t jumpTarget = static_cast<size_t>(tail.imm);
+          if (jumpTarget <= target - 1) {
+            error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+            return false;
+          }
+          if (jumpTarget > end) {
+            error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+            return false;
+          }
+
+          out.push_back(WasmOpI32Eqz);
+          if (!emitIfRegion(function,
+                            index,
+                            index + 1,
+                            target - 1,
+                            target,
+                            jumpTarget,
+                            localCount,
+                            needsDupTempLocal,
+                            out,
+                            error)) {
+            return false;
+          }
+          index = jumpTarget;
+          continue;
+        }
+      }
+
+      out.push_back(WasmOpI32Eqz);
+      if (!emitIfRegion(function,
+                        index,
+                        index + 1,
+                        target,
+                        target,
+                        target,
+                        localCount,
+                        needsDupTempLocal,
+                        out,
+                        error)) {
+        return false;
+      }
+      index = target;
+      continue;
+    }
+
+    if (inst.op == IrOpcode::Jump) {
+      error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+      return false;
+    }
+
+    if (!emitSimpleInstruction(inst, localCount, needsDupTempLocal, out, error, function.name)) {
+      return false;
+    }
+    ++index;
+  }
+
+  return true;
+}
+
+bool lowerFunctionCode(const IrFunction &function, WasmCodeBody &outBody, std::string &error) {
+  bool needsDupTempLocal = false;
+  const uint32_t localCount = computeLocalCount(function, needsDupTempLocal, error);
+  if (!error.empty()) {
+    return false;
+  }
+
+  outBody.localDecls.clear();
+  outBody.instructions.clear();
+  appendLocalDecls(localCount, needsDupTempLocal, outBody.localDecls);
+
+  if (!emitInstructionRange(
+          function, 0, function.instructions.size(), localCount, needsDupTempLocal, outBody.instructions, error)) {
+    return false;
+  }
+  outBody.instructions.push_back(WasmOpEnd);
+  return true;
+}
+
 } // namespace
 
 bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, std::string &error) const {
   error.clear();
   out.clear();
 
-  if (!module.functions.empty()) {
-    if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
-      error = "invalid IR entry index";
-      return false;
-    }
-    error = "wasm emitter function lowering is not implemented yet";
+  if (!module.functions.empty() &&
+      (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size())) {
+    error = "invalid IR entry index";
     return false;
   }
-
-  if (module.entryIndex != -1) {
+  if (module.functions.empty() && module.entryIndex != -1) {
     error = "invalid IR entry index";
     return false;
   }
 
-  for (uint8_t byte : WasmMagic) {
-    out.push_back(byte);
-  }
-  for (uint8_t byte : WasmVersion) {
-    out.push_back(byte);
+  std::vector<WasmFunctionType> types;
+  std::vector<uint32_t> functionTypeIndexes;
+  std::vector<WasmCodeBody> codeBodies;
+  types.reserve(module.functions.size());
+  functionTypeIndexes.reserve(module.functions.size());
+  codeBodies.reserve(module.functions.size());
+
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    WasmFunctionType functionType;
+    if (!inferFunctionType(module.functions[functionIndex], functionType, error)) {
+      return false;
+    }
+    types.push_back(std::move(functionType));
+    functionTypeIndexes.push_back(static_cast<uint32_t>(functionIndex));
+
+    WasmCodeBody codeBody;
+    if (!lowerFunctionCode(module.functions[functionIndex], codeBody, error)) {
+      return false;
+    }
+    codeBodies.push_back(std::move(codeBody));
   }
 
-  const std::vector<WasmFunctionType> types;
+  std::vector<WasmExport> exports;
+  if (module.entryIndex >= 0) {
+    WasmExport exportEntry;
+    exportEntry.name = wasmExportName(module.functions[static_cast<size_t>(module.entryIndex)].name);
+    exportEntry.kind = WasmFunctionKind;
+    exportEntry.index = static_cast<uint32_t>(module.entryIndex);
+    exports.push_back(std::move(exportEntry));
+  }
+
   const std::vector<WasmImport> imports;
-  const std::vector<uint32_t> functions;
-  const std::vector<WasmExport> exports;
-  const std::vector<WasmCodeBody> codeBodies;
   const std::vector<WasmDataSegment> dataSegments;
+
+  out.insert(out.end(), std::begin(WasmMagic), std::end(WasmMagic));
+  out.insert(out.end(), std::begin(WasmVersion), std::end(WasmVersion));
 
   std::vector<uint8_t> payload;
   if (!encodeTypeSection(types, payload, error) || !appendSection(WasmSectionType, payload, out, error)) {
@@ -230,7 +603,8 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
   if (!encodeImportSection(imports, payload, error) || !appendSection(WasmSectionImport, payload, out, error)) {
     return false;
   }
-  if (!encodeFunctionSection(functions, payload, error) || !appendSection(WasmSectionFunction, payload, out, error)) {
+  if (!encodeFunctionSection(functionTypeIndexes, payload, error) ||
+      !appendSection(WasmSectionFunction, payload, out, error)) {
     return false;
   }
   if (!encodeExportSection(exports, payload, error) || !appendSection(WasmSectionExport, payload, out, error)) {
