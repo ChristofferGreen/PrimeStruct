@@ -53,6 +53,10 @@ enum class ControlFlowCallReturnKindResolution {
   NotMatched,
   Resolved,
 };
+enum class PointerBuiltinCallReturnKindResolution {
+  NotMatched,
+  Resolved,
+};
 
 LocalInfo::ValueKind inferPointerTargetValueKind(
     const Expr &expr,
@@ -117,6 +121,11 @@ ControlFlowCallReturnKindResolution inferControlFlowCallReturnKind(
     const InferSetupInferenceBodyValueKindFn &inferBodyValueKind,
     const IsSetupInferenceKnownDefinitionPathFn &isKnownDefinitionPath,
     std::string &error,
+    LocalInfo::ValueKind &kindOut);
+PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferPointerTargetKind,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer

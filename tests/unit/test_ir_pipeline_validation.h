@@ -12218,6 +12218,63 @@ TEST_CASE("ir lowerer setup inference helper handles invalid control-flow calls"
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers pointer builtin call return kinds") {
+  using Resolution = primec::ir_lowerer::PointerBuiltinCallReturnKindResolution;
+
+  primec::Expr pointerName;
+  pointerName.kind = primec::Expr::Kind::Name;
+  pointerName.name = "ptr";
+
+  primec::Expr dereferenceExpr;
+  dereferenceExpr.kind = primec::Expr::Kind::Call;
+  dereferenceExpr.name = "dereference";
+  dereferenceExpr.args = {pointerName};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::inferPointerBuiltinCallReturnKind(
+            dereferenceExpr,
+            {},
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "ptr") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles invalid pointer builtin calls") {
+  using Resolution = primec::ir_lowerer::PointerBuiltinCallReturnKindResolution;
+
+  primec::Expr nonPointerCall;
+  nonPointerCall.kind = primec::Expr::Kind::Call;
+  nonPointerCall.name = "plus";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  CHECK(primec::ir_lowerer::inferPointerBuiltinCallReturnKind(
+            nonPointerCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr invalidDereference;
+  invalidDereference.kind = primec::Expr::Kind::Call;
+  invalidDereference.name = "dereference";
+  invalidDereference.args = {};
+  CHECK(primec::ir_lowerer::inferPointerBuiltinCallReturnKind(
+            invalidDereference,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

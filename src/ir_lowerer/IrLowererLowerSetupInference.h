@@ -368,14 +368,15 @@
                 controlFlowKind) == ControlFlowCallReturnKindResolution::Resolved) {
           return controlFlowKind;
         }
-        if (getBuiltinPointerName(expr, builtin)) {
-          if (builtin == "dereference") {
-            if (expr.args.size() != 1) {
-              return LocalInfo::ValueKind::Unknown;
-            }
-            return inferPointerTargetKind(expr.args.front(), localsIn);
-          }
-          return LocalInfo::ValueKind::Unknown;
+        LocalInfo::ValueKind pointerBuiltinKind = LocalInfo::ValueKind::Unknown;
+        if (inferPointerBuiltinCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferPointerTargetKind(candidateExpr, candidateLocals);
+                },
+                pointerBuiltinKind) == PointerBuiltinCallReturnKindResolution::Resolved) {
+          return pointerBuiltinKind;
         }
         return LocalInfo::ValueKind::Unknown;
       }

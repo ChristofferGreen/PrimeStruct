@@ -512,4 +512,27 @@ ControlFlowCallReturnKindResolution inferControlFlowCallReturnKind(
   return ControlFlowCallReturnKindResolution::NotMatched;
 }
 
+PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferPointerTargetKind,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  std::string builtin;
+  if (!getBuiltinPointerName(expr, builtin)) {
+    return PointerBuiltinCallReturnKindResolution::NotMatched;
+  }
+
+  if (builtin == "dereference") {
+    if (expr.args.size() != 1) {
+      return PointerBuiltinCallReturnKindResolution::Resolved;
+    }
+    kindOut = inferPointerTargetKind(expr.args.front(), localsIn);
+    return PointerBuiltinCallReturnKindResolution::Resolved;
+  }
+
+  return PointerBuiltinCallReturnKindResolution::Resolved;
+}
+
 } // namespace primec::ir_lowerer
