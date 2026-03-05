@@ -13082,6 +13082,131 @@ TEST_CASE("ir lowerer statement call helper validates entry execution diagnostic
   CHECK(error == "native backend requires an explicit return statement");
 }
 
+TEST_CASE("ir lowerer statement call helper finalizes function table wiring") {
+  using Result = primec::ir_lowerer::FunctionTableFinalizationResult;
+
+  primec::Program program;
+  primec::Definition entry;
+  entry.fullPath = "/main/entry";
+  primec::Definition target;
+  target.fullPath = "/main/target";
+  program.definitions = {entry, target};
+
+  primec::IrFunction entryFunction;
+  entryFunction.name = "/main/entry";
+  entryFunction.instructions.push_back({primec::IrOpcode::PushI32, 7});
+
+  std::unordered_set<std::string> loweredCallTargets = {"/main/target"};
+  int32_t nextLocal = 17;
+  std::vector<primec::IrFunction> outFunctions;
+  int32_t entryIndex = -1;
+  int resetCalls = 0;
+  int buildCalls = 0;
+  int emitInlineCalls = 0;
+  bool sawBuildStartAtZero = false;
+  bool sawExpectValueFalse = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::finalizeEntryFunctionTableAndLowerCallables(
+            program,
+            program.definitions.front(),
+            entryFunction,
+            loweredCallTargets,
+            [](const primec::Definition &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = true;
+              return true;
+            },
+            {},
+            {},
+            [](const primec::Expr &) { return false; },
+            [&]() { ++resetCalls; },
+            [&](const primec::Definition &def,
+                int32_t &localCursor,
+                primec::ir_lowerer::LocalMap &locals,
+                primec::Expr &callExpr,
+                std::string &) {
+              ++buildCalls;
+              sawBuildStartAtZero = (localCursor == 0);
+              localCursor = 1;
+              locals.clear();
+              callExpr = {};
+              callExpr.kind = primec::Expr::Kind::Call;
+              callExpr.name = def.fullPath;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool expectValue) {
+              ++emitInlineCalls;
+              sawExpectValueFalse = !expectValue;
+              return true;
+            },
+            nextLocal,
+            outFunctions,
+            entryIndex,
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(entryIndex == 0);
+  CHECK(resetCalls == 1);
+  CHECK(buildCalls == 1);
+  CHECK(emitInlineCalls == 1);
+  CHECK(sawBuildStartAtZero);
+  CHECK(sawExpectValueFalse);
+  REQUIRE(outFunctions.size() == 2);
+  CHECK(outFunctions[0].name == "/main/entry");
+  REQUIRE(outFunctions[0].instructions.size() == 1);
+  CHECK(outFunctions[0].instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(outFunctions[1].name == "/main/target");
+  REQUIRE(outFunctions[1].instructions.size() == 1);
+  CHECK(outFunctions[1].instructions[0].op == primec::IrOpcode::ReturnVoid);
+}
+
+TEST_CASE("ir lowerer statement call helper validates function table diagnostics") {
+  using Result = primec::ir_lowerer::FunctionTableFinalizationResult;
+
+  primec::Program program;
+  primec::Definition entry;
+  entry.fullPath = "/main/entry";
+  primec::Definition target;
+  target.fullPath = "/main/target";
+  program.definitions = {entry, target};
+
+  primec::IrFunction entryFunction;
+  entryFunction.name = "/main/entry";
+  std::unordered_set<std::string> loweredCallTargets = {"/main/target"};
+  int32_t nextLocal = 4;
+  std::vector<primec::IrFunction> outFunctions;
+  int32_t entryIndex = -1;
+  std::string error;
+  CHECK(primec::ir_lowerer::finalizeEntryFunctionTableAndLowerCallables(
+            program,
+            program.definitions.front(),
+            entryFunction,
+            loweredCallTargets,
+            [](const primec::Definition &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
+              info.returnsVoid = false;
+              info.kind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              return true;
+            },
+            {},
+            {},
+            [](const primec::Expr &) { return false; },
+            []() {},
+            [](const primec::Definition &, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
+              return true;
+            },
+            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
+              return true;
+            },
+            nextLocal,
+            outFunctions,
+            entryIndex,
+            error) == Result::Error);
+  CHECK(error == "native backend does not support return type on /main/target");
+  CHECK(entryIndex == 0);
+  REQUIRE(outFunctions.size() == 1);
+  CHECK(outFunctions[0].name == "/main/entry");
+}
+
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

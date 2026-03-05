@@ -92,15 +92,10 @@
     return false;
   }
 
-  auto appendReturnForDefinition = [&](const std::string &defPath, const ReturnInfo &returnInfo) -> bool {
-    return ir_lowerer::emitReturnForDefinition(function.instructions, defPath, returnInfo, error);
-  };
-  out.functions.push_back(std::move(function));
-  out.entryIndex = 0;
-
-  const auto callableLoweringResult = ir_lowerer::lowerCallableDefinitionOrchestration(
+  const auto functionTableResult = ir_lowerer::finalizeEntryFunctionTableAndLowerCallables(
       program,
       *entryDef,
+      function,
       loweredCallTargets,
       [&](const Definition &def) { return isStructDefinition(def); },
       [&](const std::string &definitionPath, ReturnInfo &returnInfo) { return getReturnInfo(definitionPath, returnInfo); },
@@ -143,14 +138,11 @@
       [&](const Expr &callExpr, const Definition &def, const LocalMap &definitionLocals, bool expectValue) {
         return emitInlineDefinitionCall(callExpr, def, definitionLocals, expectValue);
       },
-      [&](const std::string &definitionPath, const ReturnInfo &returnInfo) {
-        return appendReturnForDefinition(definitionPath, returnInfo);
-      },
-      function,
       nextLocal,
       out.functions,
+      out.entryIndex,
       error);
-  if (callableLoweringResult == ir_lowerer::CallableDefinitionOrchestrationResult::Error) {
+  if (functionTableResult == ir_lowerer::FunctionTableFinalizationResult::Error) {
     return false;
   }
 

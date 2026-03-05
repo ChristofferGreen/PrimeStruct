@@ -466,4 +466,50 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
   return EntryCallableExecutionResult::Emitted;
 }
 
+FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
+    const Program &program,
+    const Definition &entryDef,
+    IrFunction &entryFunction,
+    const std::unordered_set<std::string> &loweredCallTargets,
+    const std::function<bool(const Definition &)> &isStructDefinition,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::function<bool(const Expr &)> &isTailCallCandidate,
+    const std::function<void()> &resetDefinitionLoweringState,
+    const std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> &buildDefinitionCallContext,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    int32_t &nextLocal,
+    std::vector<IrFunction> &outFunctions,
+    int32_t &entryIndex,
+    std::string &error) {
+  outFunctions.push_back(std::move(entryFunction));
+  entryIndex = 0;
+
+  IrFunction callableFunction;
+  const auto callableLoweringResult = lowerCallableDefinitionOrchestration(
+      program,
+      entryDef,
+      loweredCallTargets,
+      isStructDefinition,
+      getReturnInfo,
+      defaultEffects,
+      entryDefaultEffects,
+      isTailCallCandidate,
+      resetDefinitionLoweringState,
+      buildDefinitionCallContext,
+      emitInlineDefinitionCall,
+      [&](const std::string &definitionPath, const ReturnInfo &returnInfo) {
+        return emitReturnForDefinition(callableFunction.instructions, definitionPath, returnInfo, error);
+      },
+      callableFunction,
+      nextLocal,
+      outFunctions,
+      error);
+  if (callableLoweringResult == CallableDefinitionOrchestrationResult::Error) {
+    return FunctionTableFinalizationResult::Error;
+  }
+  return FunctionTableFinalizationResult::Emitted;
+}
+
 } // namespace primec::ir_lowerer
