@@ -6,7 +6,7 @@
 namespace primec {
 namespace {
 constexpr uint32_t IrMagic = 0x50534952; // "PSIR"
-constexpr uint32_t IrVersion = 16;
+constexpr uint32_t IrVersion = 17;
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -131,6 +131,26 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     appendU64(out, fn.metadata.capabilityMask);
     appendU32(out, static_cast<uint32_t>(fn.metadata.schedulingScope));
     appendU32(out, fn.metadata.instrumentationFlags);
+    if (fn.localDebugSlots.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+      error = "too many local debug slots for IR serialization";
+      return false;
+    }
+    appendU32(out, static_cast<uint32_t>(fn.localDebugSlots.size()));
+    for (const auto &slot : fn.localDebugSlots) {
+      appendU32(out, slot.slotIndex);
+      if (slot.name.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+        error = "local debug slot name too long for IR serialization";
+        return false;
+      }
+      appendU32(out, static_cast<uint32_t>(slot.name.size()));
+      out.insert(out.end(), slot.name.begin(), slot.name.end());
+      if (slot.typeName.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+        error = "local debug slot type too long for IR serialization";
+        return false;
+      }
+      appendU32(out, static_cast<uint32_t>(slot.typeName.size()));
+      out.insert(out.end(), slot.typeName.begin(), slot.typeName.end());
+    }
     if (fn.instructions.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
       error = "too many IR instructions";
       return false;
@@ -289,9 +309,9 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       error = "truncated IR function metadata";
       return false;
     }
-    uint32_t instCount = 0;
-    if (!readU32(data, offset, instCount)) {
-      error = "truncated IR instruction count";
+    uint32_t localDebugCount = 0;
+    if (!readU32(data, offset, localDebugCount)) {
+      error = "truncated IR local debug metadata count";
       return false;
     }
     IrFunction fn;
@@ -300,6 +320,43 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     fn.metadata.capabilityMask = capabilityMask;
     fn.metadata.schedulingScope = static_cast<IrSchedulingScope>(schedulingScope);
     fn.metadata.instrumentationFlags = instrumentationFlags;
+    fn.localDebugSlots.reserve(localDebugCount);
+    for (uint32_t localIndex = 0; localIndex < localDebugCount; ++localIndex) {
+      uint32_t slotIndex = 0;
+      uint32_t localNameLen = 0;
+      uint32_t typeNameLen = 0;
+      if (!readU32(data, offset, slotIndex) || !readU32(data, offset, localNameLen)) {
+        error = "truncated IR local debug metadata entry";
+        return false;
+      }
+      if (offset + localNameLen > data.size()) {
+        error = "truncated IR local debug metadata name";
+        return false;
+      }
+      std::string localName(reinterpret_cast<const char *>(data.data() + offset), localNameLen);
+      offset += localNameLen;
+      if (!readU32(data, offset, typeNameLen)) {
+        error = "truncated IR local debug metadata type length";
+        return false;
+      }
+      if (offset + typeNameLen > data.size()) {
+        error = "truncated IR local debug metadata type";
+        return false;
+      }
+      std::string typeName(reinterpret_cast<const char *>(data.data() + offset), typeNameLen);
+      offset += typeNameLen;
+
+      IrLocalDebugSlot slot;
+      slot.slotIndex = slotIndex;
+      slot.name = std::move(localName);
+      slot.typeName = std::move(typeName);
+      fn.localDebugSlots.push_back(std::move(slot));
+    }
+    uint32_t instCount = 0;
+    if (!readU32(data, offset, instCount)) {
+      error = "truncated IR instruction count";
+      return false;
+    }
     fn.instructions.reserve(instCount);
     for (uint32_t instIndex = 0; instIndex < instCount; ++instIndex) {
       if (offset >= data.size()) {

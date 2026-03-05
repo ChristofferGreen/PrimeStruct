@@ -211,6 +211,7 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   offset += 4;     // struct count
   offset += 4 + nameLen; // function name length + bytes
   offset += 8 + 8 + 4 + 4; // effect mask, capability mask, scheduling, instrumentation
+  offset += 4;          // local debug metadata count
   offset += 4;          // instruction count
   REQUIRE(offset < data.size());
 
@@ -605,6 +606,74 @@ TEST_CASE("ir serializes execution metadata") {
   CHECK(decodedFn.metadata.capabilityMask == fn.metadata.capabilityMask);
   CHECK(decodedFn.metadata.schedulingScope == fn.metadata.schedulingScope);
   CHECK(decodedFn.metadata.instrumentationFlags == fn.metadata.instrumentationFlags);
+}
+
+TEST_CASE("ir serializes local debug slot metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.localDebugSlots.push_back({0u, "value", "i32"});
+  fn.localDebugSlots.push_back({1u, "counter", "u64"});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  CHECK(error.empty());
+
+  primec::IrModule decoded;
+  REQUIRE(primec::deserializeIr(data, decoded, error));
+  CHECK(error.empty());
+  REQUIRE(decoded.functions.size() == 1);
+  const auto &decodedFn = decoded.functions.front();
+  REQUIRE(decodedFn.localDebugSlots.size() == 2);
+  CHECK(decodedFn.localDebugSlots[0].slotIndex == 0u);
+  CHECK(decodedFn.localDebugSlots[0].name == "value");
+  CHECK(decodedFn.localDebugSlots[0].typeName == "i32");
+  CHECK(decodedFn.localDebugSlots[1].slotIndex == 1u);
+  CHECK(decodedFn.localDebugSlots[1].name == "counter");
+  CHECK(decodedFn.localDebugSlots[1].typeName == "u64");
+}
+
+TEST_CASE("ir deserialization rejects malformed local debug metadata") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.localDebugSlots.push_back({0u, "value", "i32"});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(fn);
+
+  std::vector<uint8_t> data;
+  std::string error;
+  REQUIRE(primec::serializeIr(module, data, error));
+  REQUIRE(error.empty());
+
+  auto writeU32 = [&](size_t offset, uint32_t value) {
+    REQUIRE(offset + 4 <= data.size());
+    data[offset] = static_cast<uint8_t>(value & 0xFF);
+    data[offset + 1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+    data[offset + 2] = static_cast<uint8_t>((value >> 16) & 0xFF);
+    data[offset + 3] = static_cast<uint8_t>((value >> 24) & 0xFF);
+  };
+
+  size_t offset = 0;
+  offset += 4 * 5; // magic, version, function count, entry index, string count
+  offset += 4;     // struct count
+  offset += 4 + fn.name.size(); // function name length + bytes
+  offset += 8 + 8 + 4 + 4;      // function metadata
+  offset += 4;                  // local debug metadata count
+  offset += 4;                  // local slot index
+  offset += 4 + std::string("value").size(); // local name length + bytes
+  writeU32(offset, 0xFFFFFFFFu); // local type length
+
+  primec::IrModule decoded;
+  CHECK_FALSE(primec::deserializeIr(data, decoded, error));
+  CHECK(error == "truncated IR local debug metadata type");
 }
 
 TEST_CASE("ir deserialization rejects unsupported version") {

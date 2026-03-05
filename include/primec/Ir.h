@@ -200,9 +200,16 @@ struct IrInstruction {
   uint64_t imm = 0;
 };
 
+struct IrLocalDebugSlot {
+  uint32_t slotIndex = 0;
+  std::string name;
+  std::string typeName;
+};
+
 struct IrFunction {
   std::string name;
   IrExecutionMetadata metadata;
+  std::vector<IrLocalDebugSlot> localDebugSlots;
   std::vector<IrInstruction> instructions;
 };
 
