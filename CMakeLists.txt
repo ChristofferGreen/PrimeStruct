@@ -66,6 +66,7 @@ add_library(primec_lib
   src/IrVirtualRegisterAllocator.cpp
   src/IrVirtualRegisterLiveness.cpp
   src/IrVirtualRegisterLowering.cpp
+  src/IrVirtualRegisterSpillInsertion.cpp
   src/Lexer.cpp
   src/TransformRules.cpp
   src/TransformRegistry.cpp
