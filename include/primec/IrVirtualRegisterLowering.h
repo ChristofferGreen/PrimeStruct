@@ -18,6 +18,8 @@ struct IrVirtualRegisterInstruction {
 struct IrVirtualRegisterEdgeMove {
   uint32_t sourceRegister = 0;
   uint32_t destinationRegister = 0;
+
+  bool operator==(const IrVirtualRegisterEdgeMove &other) const = default;
 };
 
 struct IrVirtualRegisterEdge {

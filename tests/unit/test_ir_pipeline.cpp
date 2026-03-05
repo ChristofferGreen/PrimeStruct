@@ -18,6 +18,7 @@
 #include "primec/IrVirtualRegisterLowering.h"
 #include "primec/IrVirtualRegisterScheduler.h"
 #include "primec/IrVirtualRegisterSpillInsertion.h"
+#include "primec/IrVirtualRegisterVerifier.h"
 #include "primec/Lexer.h"
 #include "primec/NativeEmitter.h"
 #include "primec/Parser.h"

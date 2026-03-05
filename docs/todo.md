@@ -230,7 +230,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Implement deterministic linear-scan register allocator with explicit spill policy. Testing: allocator golden tests for deterministic allocation/spill placement.
 - ✓ Implement spill/reload insertion pass from allocator decisions. Testing: verifier-backed tests for spill correctness across branch edges/calls.
 - ✓ Implement block-local instruction scheduling (latency-aware, dependency-safe) after allocation. Testing: dependency-safety tests and deterministic-order snapshots.
-- ○ Add verifier checks ensuring scheduled/allocation output preserves stack/SSA-equivalent behavior and branch-edge value agreement. Testing: negative tests with intentionally invalid schedules plus verifier pass coverage.
+- ✓ Add verifier checks ensuring scheduled/allocation output preserves stack/SSA-equivalent behavior and branch-edge value agreement. Testing: negative tests with intentionally invalid schedules plus verifier pass coverage.
 - ○ Add conformance and perf-gate tests comparing pre/post optimization outputs (correctness parity required; measurable push/pop/spill reductions expected). Testing: CI perf gates with explicit thresholds and parity locks.
 - ○ Document allocator/scheduler design, heuristics, and debug dump formats in `docs/PrimeStruct.md`. Testing: doc-linked dump examples validated by snapshot tests.
 
