@@ -100,6 +100,62 @@ std::string encodeDebugSnapshotJson(const primec::VmDebugSnapshot &snapshot) {
          std::to_string(snapshot.result) + "}";
 }
 
+std::string encodeUint64ArrayJson(const std::vector<uint64_t> &values) {
+  std::string out = "[";
+  for (size_t i = 0; i < values.size(); ++i) {
+    if (i > 0) {
+      out += ",";
+    }
+    out += std::to_string(values[i]);
+  }
+  out += "]";
+  return out;
+}
+
+std::string encodeCallStackJson(const std::vector<primec::VmDebugStackFrameSnapshot> &frames) {
+  std::string out = "[";
+  for (size_t i = 0; i < frames.size(); ++i) {
+    if (i > 0) {
+      out += ",";
+    }
+    out += std::string("{\"function_index\":") + std::to_string(frames[i].functionIndex) +
+           ",\"instruction_pointer\":" + std::to_string(frames[i].instructionPointer) + "}";
+  }
+  out += "]";
+  return out;
+}
+
+std::string encodeDebugSnapshotPayloadJson(const primec::VmDebugSnapshotPayload &payload) {
+  return std::string("{\"instruction_pointer\":") + std::to_string(payload.instructionPointer) + ",\"call_stack\":" +
+         encodeCallStackJson(payload.callStack) + ",\"current_frame_locals\":" +
+         encodeUint64ArrayJson(payload.currentFrameLocals) + ",\"operand_stack\":" +
+         encodeUint64ArrayJson(payload.operandStack) + "}";
+}
+
+bool shouldIncludeDebugSnapshotPayload(primec::DebugJsonSnapshotMode mode, bool stopEvent) {
+  switch (mode) {
+    case primec::DebugJsonSnapshotMode::None:
+      return false;
+    case primec::DebugJsonSnapshotMode::Stop:
+      return stopEvent;
+    case primec::DebugJsonSnapshotMode::All:
+      return true;
+  }
+  return false;
+}
+
+struct DebugJsonEmitContext {
+  primec::VmDebugSession *session = nullptr;
+  primec::DebugJsonSnapshotMode snapshotMode = primec::DebugJsonSnapshotMode::None;
+};
+
+void appendDebugSnapshotPayloadField(std::string &line, const DebugJsonEmitContext *context, bool stopEvent) {
+  if (!context || !context->session || !shouldIncludeDebugSnapshotPayload(context->snapshotMode, stopEvent)) {
+    return;
+  }
+  line += ",\"snapshot_payload\":" + encodeDebugSnapshotPayloadJson(context->session->snapshotPayload());
+}
+
 void emitDebugJsonLine(const std::string &line) {
   std::cout << line << "\n";
 }
@@ -180,7 +236,7 @@ int main(int argc, char **argv) {
                    "[--text-transforms <list>] [--text-transform-rules <rules>] [--semantic-transform-rules <rules>] "
                    "[--semantic-transforms <list>] [--transform-list <list>] [--no-text-transforms] "
                    "[--no-semantic-transforms] [--no-transforms] [--list-transforms] [--emit-diagnostics] "
-                   "[--debug-json] [--collect-diagnostics] "
+                   "[--debug-json] [--debug-json-snapshots [none|stop|all]] [--collect-diagnostics] "
                    "[--default-effects <list>] [--ir-inline] [--dump-stage pre_ast|ast|ast-semantic|ir] "
                    "[-- <program args...>]\n";
     }
@@ -311,39 +367,67 @@ int main(int argc, char **argv) {
       return emitFailure(options, primec::DiagnosticCode::RuntimeError, "VM error: ", error, 3, {"backend: vm"});
     }
 
-    emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"session_start\",\"snapshot\":") +
-                      encodeDebugSnapshotJson(debugSession.snapshot()) + "}");
+    DebugJsonEmitContext emitContext;
+    emitContext.session = &debugSession;
+    emitContext.snapshotMode = options.debugJsonSnapshotMode;
+
+    std::string sessionStartLine =
+        std::string("{\"version\":1,\"event\":\"session_start\",\"snapshot\":") + encodeDebugSnapshotJson(debugSession.snapshot());
+    appendDebugSnapshotPayloadField(sessionStartLine, &emitContext, false);
+    sessionStartLine += "}";
+    emitDebugJsonLine(sessionStartLine);
 
     primec::VmDebugHooks hooks;
-    hooks.beforeInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *) {
-      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"before_instruction\",\"sequence\":") +
-                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
-                        ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
-                        std::to_string(event.immediate) + "}");
+    hooks.userData = &emitContext;
+    hooks.beforeInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      const auto *context = static_cast<const DebugJsonEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"before_instruction\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                         std::to_string(event.immediate);
+      appendDebugSnapshotPayloadField(line, context, false);
+      line += "}";
+      emitDebugJsonLine(line);
     };
-    hooks.afterInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *) {
-      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"after_instruction\",\"sequence\":") +
-                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
-                        ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
-                        std::to_string(event.immediate) + "}");
+    hooks.afterInstruction = [](const primec::VmDebugInstructionHookEvent &event, void *userData) {
+      const auto *context = static_cast<const DebugJsonEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"after_instruction\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"opcode\":" + std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                         std::to_string(event.immediate);
+      appendDebugSnapshotPayloadField(line, context, false);
+      line += "}";
+      emitDebugJsonLine(line);
     };
-    hooks.callPush = [](const primec::VmDebugCallHookEvent &event, void *) {
-      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"call_push\",\"sequence\":") +
-                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
-                        ",\"function_index\":" + std::to_string(event.functionIndex) +
-                        ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false") + "}");
+    hooks.callPush = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      const auto *context = static_cast<const DebugJsonEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"call_push\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"function_index\":" + std::to_string(event.functionIndex) +
+                         ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false");
+      appendDebugSnapshotPayloadField(line, context, false);
+      line += "}";
+      emitDebugJsonLine(line);
     };
-    hooks.callPop = [](const primec::VmDebugCallHookEvent &event, void *) {
-      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"call_pop\",\"sequence\":") +
-                        std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
-                        ",\"function_index\":" + std::to_string(event.functionIndex) +
-                        ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false") + "}");
+    hooks.callPop = [](const primec::VmDebugCallHookEvent &event, void *userData) {
+      const auto *context = static_cast<const DebugJsonEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"call_pop\",\"sequence\":") +
+                         std::to_string(event.sequence) + ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) +
+                         ",\"function_index\":" + std::to_string(event.functionIndex) +
+                         ",\"returns_value_to_caller\":" + (event.returnsValueToCaller ? "true" : "false");
+      appendDebugSnapshotPayloadField(line, context, false);
+      line += "}";
+      emitDebugJsonLine(line);
     };
-    hooks.fault = [](const primec::VmDebugFaultHookEvent &event, void *) {
-      emitDebugJsonLine(std::string("{\"version\":1,\"event\":\"fault\",\"sequence\":") + std::to_string(event.sequence) +
-                        ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) + ",\"opcode\":" +
-                        std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
-                        std::to_string(event.immediate) + ",\"message\":\"" + jsonEscape(event.message) + "\"}");
+    hooks.fault = [](const primec::VmDebugFaultHookEvent &event, void *userData) {
+      const auto *context = static_cast<const DebugJsonEmitContext *>(userData);
+      std::string line = std::string("{\"version\":1,\"event\":\"fault\",\"sequence\":") + std::to_string(event.sequence) +
+                         ",\"snapshot\":" + encodeDebugSnapshotJson(event.snapshot) + ",\"opcode\":" +
+                         std::to_string(static_cast<uint32_t>(event.opcode)) + ",\"immediate\":" +
+                         std::to_string(event.immediate) + ",\"message\":\"" + jsonEscape(event.message) + "\"";
+      appendDebugSnapshotPayloadField(line, context, false);
+      line += "}";
+      emitDebugJsonLine(line);
     };
     debugSession.setHooks(hooks);
 
@@ -355,6 +439,7 @@ int main(int argc, char **argv) {
       std::string stopLine = std::string("{\"version\":1,\"event\":\"stop\",\"reason\":\"") +
                              std::string(primec::vmDebugStopReasonName(stopReason)) + "\",\"snapshot\":" +
                              encodeDebugSnapshotJson(stopSnapshot);
+      appendDebugSnapshotPayloadField(stopLine, &emitContext, true);
       if (!ok && !error.empty()) {
         stopLine += ",\"message\":\"" + jsonEscape(error) + "\"";
       }

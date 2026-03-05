@@ -169,7 +169,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Make debug event ordering deterministic and document ordering guarantees. Testing: event-sequence snapshot tests and deterministic replay equivalence checks.
 - ✓ Add IR-level breakpoints keyed by `(functionIndex, ip)`. Testing: compile-run suites with single/multiple breakpoints and branch-path coverage.
 - ✓ Add `primevm --debug-json` NDJSON event streaming mode. Testing: CLI integration tests validate NDJSON schema/field stability, deterministic replay output across repeated runs, and `primec` rejection of `--debug-json`.
-- ○ Add on-demand snapshot payloads (call stack, current frame locals, operand stack, instruction pointer) to debug JSON mode. Testing: snapshot shape/value assertions across step boundaries.
+- ✓ Add on-demand snapshot payloads (call stack, current frame locals, operand stack, instruction pointer) to debug JSON mode (`--debug-json-snapshots=none|stop|all`). Testing: VM debug-session payload stepping assertions plus CLI debug-json payload shape/value assertions across step boundaries and option diagnostics.
 - ○ Extend IR debug metadata with local slot names/types (no runtime semantic change). Testing: IR serialize/deserialize round-trip tests and malformed-metadata rejection tests.
 - ○ Extend IR debug metadata with instruction debug IDs for source-map linkage. Testing: ID stability snapshots across deterministic builds.
 - ○ Implement source-map plumbing (AST/token span -> canonical AST -> IR instruction). Testing: source-map golden tests and transform-provenance assertions.

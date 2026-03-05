@@ -6,11 +6,14 @@
 #include "primec/TextFilterPipeline.h"
 
 namespace primec {
+enum class DebugJsonSnapshotMode { None, Stop, All };
+
 struct Options {
   std::string emitKind;
   bool listTransforms = false;
   bool emitDiagnostics = false;
   bool debugJson = false;
+  DebugJsonSnapshotMode debugJsonSnapshotMode = DebugJsonSnapshotMode::None;
   bool collectDiagnostics = false;
   std::string inputPath;
   std::string outputPath;

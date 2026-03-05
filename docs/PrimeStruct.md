@@ -124,6 +124,7 @@ module {
 - `primevm input.prime --entry /main -- <args>`
   - Runs the source via the PrimeStruct VM (equivalent to `primec --emit=vm`). `--entry` defaults to `/main` if omitted.
   - `--debug-json` streams VM debug events as NDJSON to stdout (`session_start`, hook events, and `stop` records with snapshots).
+  - `--debug-json-snapshots=none|stop|all` adds on-demand `snapshot_payload` fields (`instruction_pointer`, `call_stack`, `current_frame_locals`, `operand_stack`) to debug-json events.
 - `--ir-inline`
   - Enables the optional IR inlining optimization pass after IR validation and before VM/native/IR output.
 - Defaults: if `--emit` and `-o` are omitted, `primec input.prime` uses `--emit=native` and writes the output using the input filename stem (still under `--out-dir`).
@@ -1231,6 +1232,7 @@ module {
 - Faulted instructions emit `beforeInstruction` and then `fault`; they do not emit `afterInstruction`.
 - For identical IR + entry arguments + control flow (`step`/`continue` decisions), the emitted hook event stream is deterministic and replayable.
 - `primevm --debug-json` emits one JSON object per line (`version`, `event`, and event-specific fields). Hook records include `sequence` and `snapshot`; stop records include `reason` and a terminal snapshot.
+- `primevm --debug-json-snapshots=stop|all` adds `snapshot_payload` on demand; `stop` limits payloads to `stop` events, while `all` includes payloads on session/hook/stop events.
 
 ### VM IR Breakpoints
 - `VmDebugSession` supports IR-level breakpoints keyed by `(functionIndex, instructionPointer)` through `addBreakpoint`, `removeBreakpoint`, and `clearBreakpoints`.

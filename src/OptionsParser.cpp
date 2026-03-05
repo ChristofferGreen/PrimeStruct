@@ -24,6 +24,22 @@ std::vector<std::string> defaultEffectsList() {
   return {"io_out"};
 }
 
+bool parseDebugJsonSnapshotMode(std::string_view value, DebugJsonSnapshotMode &out) {
+  if (value == "none") {
+    out = DebugJsonSnapshotMode::None;
+    return true;
+  }
+  if (value == "stop") {
+    out = DebugJsonSnapshotMode::Stop;
+    return true;
+  }
+  if (value == "all") {
+    out = DebugJsonSnapshotMode::All;
+    return true;
+  }
+  return false;
+}
+
 std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
@@ -394,6 +410,14 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.emitDiagnostics = true;
     } else if (!isPrimecMode && arg == "--debug-json") {
       out.debugJson = true;
+    } else if (!isPrimecMode && arg == "--debug-json-snapshots") {
+      out.debugJsonSnapshotMode = DebugJsonSnapshotMode::All;
+    } else if (!isPrimecMode && arg.rfind("--debug-json-snapshots=", 0) == 0) {
+      const std::string value = arg.substr(std::string("--debug-json-snapshots=").size());
+      if (!parseDebugJsonSnapshotMode(value, out.debugJsonSnapshotMode)) {
+        error = "unsupported --debug-json-snapshots value: " + value + " (expected none|stop|all)";
+        return false;
+      }
     } else if (arg == "--collect-diagnostics") {
       out.collectDiagnostics = true;
     } else if (arg == "--list-transforms") {
@@ -518,6 +542,10 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     return false;
   }
   if (!isPrimecMode) {
+    if (out.debugJsonSnapshotMode != DebugJsonSnapshotMode::None && !out.debugJson) {
+      error = "--debug-json-snapshots requires --debug-json";
+      return false;
+    }
     return true;
   }
   return applyPrimecOutputDefaults(out);

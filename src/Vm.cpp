@@ -2504,4 +2504,19 @@ VmDebugSnapshot VmDebugSession::snapshot() const {
   return out;
 }
 
+VmDebugSnapshotPayload VmDebugSession::snapshotPayload() const {
+  VmDebugSnapshotPayload out;
+  out.operandStack = stack_;
+  out.callStack.reserve(frames_.size());
+  for (const Frame &frame : frames_) {
+    out.callStack.push_back({frame.functionIndex, frame.ip});
+  }
+  if (!frames_.empty()) {
+    const Frame &frame = frames_.back();
+    out.instructionPointer = frame.ip;
+    out.currentFrameLocals = frame.locals;
+  }
+  return out;
+}
+
 } // namespace primec

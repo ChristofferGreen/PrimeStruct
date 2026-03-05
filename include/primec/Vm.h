@@ -113,6 +113,18 @@ struct VmDebugSnapshot {
   uint64_t result = 0;
 };
 
+struct VmDebugStackFrameSnapshot {
+  size_t functionIndex = 0;
+  size_t instructionPointer = 0;
+};
+
+struct VmDebugSnapshotPayload {
+  size_t instructionPointer = 0;
+  std::vector<VmDebugStackFrameSnapshot> callStack;
+  std::vector<uint64_t> currentFrameLocals;
+  std::vector<uint64_t> operandStack;
+};
+
 struct VmDebugInstructionHookEvent {
   uint64_t sequence = 0;
   VmDebugSnapshot snapshot;
@@ -170,6 +182,7 @@ public:
   void setHooks(const VmDebugHooks &hooks);
   void clearHooks();
   VmDebugSnapshot snapshot() const;
+  VmDebugSnapshotPayload snapshotPayload() const;
 
 private:
   struct Frame {

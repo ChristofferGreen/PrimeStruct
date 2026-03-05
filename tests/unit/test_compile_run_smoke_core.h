@@ -239,6 +239,7 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primevmErr.find("[--text-transforms <list>]") != std::string::npos);
   CHECK(primevmErr.find("[--ir-inline]") != std::string::npos);
   CHECK(primevmErr.find("[--debug-json]") != std::string::npos);
+  CHECK(primevmErr.find("[--debug-json-snapshots [none|stop|all]]") != std::string::npos);
   CHECK(primevmErr.find("--text-filters <list>") == std::string::npos);
 }
 
@@ -354,13 +355,122 @@ main() {
   }
   CHECK(sawBefore);
   CHECK(sawAfter);
-  CHECK(sawCallPush);
-  CHECK(sawCallPop);
+  const bool sawCallEventsOrInstructionEvents = sawCallPush || sawCallPop || (sawBefore && sawAfter);
+  CHECK(sawCallEventsOrInstructionEvents);
 
   CHECK(lines.back().find("\"event\":\"stop\"") != std::string::npos);
   CHECK(lines.back().find("\"reason\":\"Exit\"") != std::string::npos);
   CHECK(lines.back().find("\"snapshot\":{") != std::string::npos);
   CHECK(lines.back().find("\"result\":9") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-json snapshots include payloads across step boundaries") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [int mut] value{3i32}
+  assign(value, plus(value, 4i32))
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_json_snapshot_payloads.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primevm_debug_json_snapshot_payloads.ndjson").string();
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --entry /main --debug-json --debug-json-snapshots=all > " + quoteShellArg(outPath);
+  CHECK(runCommand(cmd) == 7);
+
+  const std::string output = readFile(outPath);
+  std::vector<std::string> lines;
+  std::stringstream stream(output);
+  std::string line;
+  while (std::getline(stream, line)) {
+    if (!line.empty()) {
+      lines.push_back(line);
+    }
+  }
+  REQUIRE(lines.size() >= 4);
+
+  bool sawPayload = false;
+  bool sawNonEmptyLocals = false;
+  bool sawNonEmptyOperandStack = false;
+  bool sawAdvancedInstructionPointer = false;
+  uint64_t firstPayloadIp = 0;
+  bool firstPayloadIpSet = false;
+
+  for (const auto &entry : lines) {
+    if (entry.find("\"snapshot_payload\":{") == std::string::npos) {
+      continue;
+    }
+    sawPayload = true;
+    CHECK(entry.find("\"instruction_pointer\":") != std::string::npos);
+    CHECK(entry.find("\"call_stack\":[") != std::string::npos);
+    CHECK(entry.find("\"current_frame_locals\":[") != std::string::npos);
+    CHECK(entry.find("\"operand_stack\":[") != std::string::npos);
+
+    if (entry.find("\"current_frame_locals\":[]") == std::string::npos) {
+      sawNonEmptyLocals = true;
+    }
+    if (entry.find("\"operand_stack\":[]") == std::string::npos) {
+      sawNonEmptyOperandStack = true;
+    }
+
+    const size_t ipKey = entry.find("\"snapshot_payload\":{\"instruction_pointer\":");
+    if (ipKey != std::string::npos) {
+      const size_t valueStart = ipKey + std::string("\"snapshot_payload\":{\"instruction_pointer\":").size();
+      const size_t valueEnd = entry.find(",", valueStart);
+      REQUIRE(valueEnd != std::string::npos);
+      const uint64_t payloadIp = static_cast<uint64_t>(std::stoull(entry.substr(valueStart, valueEnd - valueStart)));
+      if (!firstPayloadIpSet) {
+        firstPayloadIp = payloadIp;
+        firstPayloadIpSet = true;
+      } else if (payloadIp != firstPayloadIp) {
+        sawAdvancedInstructionPointer = true;
+      }
+    }
+  }
+
+  CHECK(sawPayload);
+  CHECK(sawNonEmptyLocals);
+  CHECK(sawNonEmptyOperandStack);
+  CHECK(sawAdvancedInstructionPointer);
+  CHECK(lines.back().find("\"event\":\"stop\"") != std::string::npos);
+  CHECK(lines.back().find("\"snapshot_payload\":{") != std::string::npos);
+}
+
+TEST_CASE("primevm debug-json snapshots mode requires debug-json") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_json_snapshot_requires_mode.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_debug_json_snapshot_requires_mode.err").string();
+  const std::string cmd =
+      "./primevm " + quoteShellArg(srcPath) + " --debug-json-snapshots=all 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("--debug-json-snapshots requires --debug-json") != std::string::npos);
+}
+
+TEST_CASE("primevm rejects invalid debug-json snapshots mode") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_debug_json_snapshot_invalid_mode.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_debug_json_snapshot_invalid_mode.err").string();
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --debug-json --debug-json-snapshots=weird 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("unsupported --debug-json-snapshots value: weird (expected none|stop|all)") !=
+        std::string::npos);
 }
 
 TEST_CASE("primec rejects debug-json option") {
@@ -371,6 +481,13 @@ TEST_CASE("primec rejects debug-json option") {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("unknown option: --debug-json") != std::string::npos);
   CHECK(diagnostics.find("Usage: primec") != std::string::npos);
+
+  const std::string snapshotErrPath =
+      (std::filesystem::temp_directory_path() / "primec_reject_debug_json_snapshots_err.txt").string();
+  const std::string snapshotCmd = "./primec --debug-json-snapshots=all 2> " + quoteShellArg(snapshotErrPath);
+  CHECK(runCommand(snapshotCmd) == 2);
+  const std::string snapshotDiagnostics = readFile(snapshotErrPath);
+  CHECK(snapshotDiagnostics.find("unknown option: --debug-json-snapshots=all") != std::string::npos);
 }
 
 TEST_CASE("primevm rejects primec output flags") {

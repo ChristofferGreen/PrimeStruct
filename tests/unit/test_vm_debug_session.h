@@ -206,6 +206,63 @@ TEST_CASE("vm debug session continue and pause controls are deterministic") {
   CHECK(exited.result == 3);
 }
 
+TEST_CASE("vm debug snapshot payload tracks locals and operand stack across steps") {
+  primec::IrModule module;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.entryIndex = 0;
+
+  primec::VmDebugSession session;
+  std::string error;
+  REQUIRE(session.start(module, error));
+  CHECK(error.empty());
+
+  auto payload = session.snapshotPayload();
+  REQUIRE(payload.callStack.size() == 1);
+  CHECK(payload.callStack[0].functionIndex == 0);
+  CHECK(payload.callStack[0].instructionPointer == 0);
+  REQUIRE(payload.currentFrameLocals.size() == 1);
+  CHECK(payload.currentFrameLocals[0] == 0);
+  CHECK(payload.operandStack.empty());
+  CHECK(payload.instructionPointer == 0);
+
+  primec::VmDebugStopReason reason = primec::VmDebugStopReason::Step;
+  REQUIRE(session.step(reason, error));
+  CHECK(reason == primec::VmDebugStopReason::Step);
+  payload = session.snapshotPayload();
+  REQUIRE(payload.currentFrameLocals.size() == 1);
+  CHECK(payload.currentFrameLocals[0] == 0);
+  REQUIRE(payload.operandStack.size() == 1);
+  CHECK(static_cast<int32_t>(payload.operandStack.back()) == 3);
+  CHECK(payload.instructionPointer == 1);
+
+  REQUIRE(session.step(reason, error));
+  CHECK(reason == primec::VmDebugStopReason::Step);
+  payload = session.snapshotPayload();
+  REQUIRE(payload.currentFrameLocals.size() == 1);
+  CHECK(static_cast<int32_t>(payload.currentFrameLocals[0]) == 3);
+  CHECK(payload.operandStack.empty());
+  CHECK(payload.instructionPointer == 2);
+
+  REQUIRE(session.step(reason, error));
+  CHECK(reason == primec::VmDebugStopReason::Step);
+  payload = session.snapshotPayload();
+  REQUIRE(payload.operandStack.size() == 1);
+  CHECK(static_cast<int32_t>(payload.operandStack.back()) == 3);
+  CHECK(payload.instructionPointer == 3);
+}
+
 TEST_CASE("vm debug session validates control-state preconditions") {
   primec::VmDebugSession session;
   std::string error;
