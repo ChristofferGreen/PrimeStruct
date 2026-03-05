@@ -92,6 +92,10 @@ Release build:
 
     ./scripts/compile.sh --release
 
+Optional Wasm runtime checks (auto-skip when `wasmtime` is unavailable):
+
+    ./scripts/compile.sh --wasm-runtime-checks
+
 ### Run
 
 Compile to a native executable:

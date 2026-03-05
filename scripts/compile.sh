@@ -8,6 +8,7 @@ RUN_TESTS=1
 CONFIGURE_ONLY=0
 COVERAGE=0
 RUN_BENCHMARK=0
+RUN_WASM_RUNTIME_CHECKS=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -30,6 +31,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --benchmark)
       RUN_BENCHMARK=1
+      shift
+      ;;
+    --wasm-runtime-checks)
+      RUN_WASM_RUNTIME_CHECKS=1
       shift
       ;;
     *)
@@ -138,6 +143,10 @@ if [[ $RUN_TESTS -eq 1 ]]; then
   else
     (cd "$BUILD_DIR" && ctest --output-on-failure --progress)
   fi
+fi
+
+if [[ $RUN_WASM_RUNTIME_CHECKS -eq 1 ]]; then
+  "$ROOT_DIR/scripts/run_wasm_runtime_checks.sh" --build-dir "$BUILD_DIR" --primec "$BUILD_DIR/primec"
 fi
 
 if [[ $RUN_BENCHMARK -eq 1 ]]; then

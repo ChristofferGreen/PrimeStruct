@@ -201,7 +201,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add negative conformance tests rejecting unsupported IR features in Wasm mode with stable diagnostics. Testing: diagnostics snapshot tests with code + notes + stage metadata.
 - ✓ Split Wasm backend profiles (`wasm-wasi` and `wasm-browser`) and gate unsupported operations per profile. Testing: profile-matrix compile tests (accept/reject) for effects/opcodes.
 - ✓ Document Wasm backend limits (memory model, imports, unsupported ops/effects) in `docs/PrimeStruct.md` and syntax/spec references. Testing: doc-linked conformance cases that exercise every documented limit.
-- ○ Add tooling/CI hooks to optionally execute Wasm outputs when a runtime is available. Testing: CI coverage with runtime-detected execution and explicit skip assertions when unavailable.
+- ✓ Add tooling/CI hooks to optionally execute Wasm outputs when a runtime is available. Testing: CI coverage with runtime-detected execution and explicit skip assertions when unavailable.
 
 **Web + Native + Metal 3D Target (Spinning Cube)**
 - ○ Finalize and maintain the cross-backend graphics API contract in `docs/Graphics_API_Design.md` (Core API + profile gating, no backend extension namespace in v1). Testing: doc-linked conformance cases that exercise each locked Core/API constraint.

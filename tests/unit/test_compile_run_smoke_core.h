@@ -1995,6 +1995,31 @@ main() {
   CHECK(outDirErr.find("Usage: primevm") != std::string::npos);
 }
 
+TEST_CASE("wasm runtime tooling hook executes or reports explicit skip") {
+  const std::filesystem::path scriptPath =
+      std::filesystem::current_path().parent_path() / "scripts" / "run_wasm_runtime_checks.sh";
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_wasm_runtime_hook_out.txt").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_wasm_runtime_hook_err.txt").string();
+
+  const std::string command = quoteShellArg(scriptPath.string()) + " --build-dir " +
+                              quoteShellArg(std::filesystem::current_path().string()) + " --primec ./primec > " +
+                              quoteShellArg(outPath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(command) == 0);
+
+  const std::string output = readFile(outPath);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.empty());
+  if (hasWasmtime()) {
+    CHECK(output.find("PASS: executed wasm runtime checks with wasmtime.") != std::string::npos);
+  } else {
+    CHECK(output.find("SKIP: wasmtime unavailable; wasm runtime checks not executed.") != std::string::npos);
+  }
+}
+
 TEST_CASE("defaults to native output with stem name") {
   const std::string source = R"(
 [return<int>]
