@@ -1647,6 +1647,51 @@ TEST_CASE("spinning cube demo script rejects unexecutable default primec path") 
   CHECK(readFile(errPath.string()).find(expectedError) != std::string::npos);
 }
 
+TEST_CASE("spinning cube demo script rejects default primec directory path") {
+  std::filesystem::path scriptPath =
+      std::filesystem::path("..") / "scripts" / "run_spinning_cube_demo.sh";
+  if (!std::filesystem::exists(scriptPath)) {
+    scriptPath = std::filesystem::current_path() / "scripts" / "run_spinning_cube_demo.sh";
+  }
+  REQUIRE(std::filesystem::exists(scriptPath));
+
+  const std::filesystem::path tempRoot =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_dir_root";
+  std::error_code ec;
+  std::filesystem::remove_all(tempRoot, ec);
+  std::filesystem::create_directories(tempRoot / "scripts", ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path isolatedScriptPath = tempRoot / "scripts" / "run_spinning_cube_demo.sh";
+  {
+    std::ofstream isolatedScript(isolatedScriptPath);
+    isolatedScript << readFile(scriptPath.string());
+  }
+  REQUIRE(runCommand("chmod +x " + quoteShellArg(isolatedScriptPath.string())) == 0);
+
+  const std::filesystem::path defaultPrimecPath = tempRoot / "build-debug" / "primec";
+  std::filesystem::create_directories(defaultPrimecPath, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_demo_script_default_primec_dir";
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path outPath = outDir / "script.out.txt";
+  const std::filesystem::path errPath = outDir / "script.err.txt";
+  const std::string command =
+      quoteShellArg(isolatedScriptPath.string()) + " --work-dir " + quoteShellArg((outDir / "work").string()) + " > " +
+      quoteShellArg(outPath.string()) + " 2> " + quoteShellArg(errPath.string());
+  CHECK(runCommand(command) == 2);
+  CHECK(readFile(outPath.string()).empty());
+
+  const std::string expectedError =
+      "[spinning-cube-demo] ERROR: primec binary not found: " + defaultPrimecPath.string();
+  CHECK(readFile(errPath.string()).find(expectedError) != std::string::npos);
+}
+
 TEST_CASE("spinning cube demo script rejects unexecutable primec path") {
   std::filesystem::path scriptPath =
       std::filesystem::path("..") / "scripts" / "run_spinning_cube_demo.sh";
