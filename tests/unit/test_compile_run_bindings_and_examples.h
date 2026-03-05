@@ -337,6 +337,60 @@ main([array<string>] args) {
   }
 }
 
+TEST_CASE("spinning cube native host target builds and runs") {
+  std::filesystem::path webSampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  std::filesystem::path nativeSampleDir =
+      std::filesystem::path("..") / "examples" / "native" / "spinning_cube";
+  if (!std::filesystem::exists(webSampleDir)) {
+    webSampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  if (!std::filesystem::exists(nativeSampleDir)) {
+    nativeSampleDir = std::filesystem::current_path() / "examples" / "native" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(webSampleDir));
+  REQUIRE(std::filesystem::exists(nativeSampleDir));
+
+  const std::filesystem::path cubePath = webSampleDir / "cube.prime";
+  const std::filesystem::path hostSourcePath = nativeSampleDir / "main.cpp";
+  const std::filesystem::path hostReadmePath = nativeSampleDir / "README.md";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(hostSourcePath));
+  REQUIRE(std::filesystem::exists(hostReadmePath));
+
+  const std::filesystem::path cubeNativePath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_target_sample";
+  const std::string compileCubeCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(cubeNativePath.string()) +
+      " --entry /main";
+  CHECK(runCommand(compileCubeCmd) == 0);
+  CHECK(std::filesystem::exists(cubeNativePath));
+  CHECK(runCommand(quoteShellArg(cubeNativePath.string())) == 36);
+
+  std::string cxx = "";
+  if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
+    cxx = "c++";
+  } else if (runCommand("clang++ --version > /dev/null 2>&1") == 0) {
+    cxx = "clang++";
+  } else if (runCommand("g++ --version > /dev/null 2>&1") == 0) {
+    cxx = "g++";
+  } else {
+    INFO("no C++ compiler found; skipping native host glue compile/run");
+    return;
+  }
+
+  const std::filesystem::path hostBinaryPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_native_host";
+  const std::string compileHostCmd = cxx + " -std=c++17 " + quoteShellArg(hostSourcePath.string()) + " -o " +
+                                     quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::string runHostCmd =
+      quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(cubeNativePath.string());
+  CHECK(runCommand(runHostCmd) == 0);
+}
+
 TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
   REQUIRE(std::filesystem::exists(examplesDir));
