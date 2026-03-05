@@ -805,18 +805,49 @@ bool SemanticsValidator::buildDefinitionMaps() {
     }
   }
 
+  std::vector<SemanticDiagnosticRecord> returnKindDiagnosticRecords;
+  const bool collectReturnKindDiagnostics = collectDiagnostics_ && diagnosticInfo_ != nullptr;
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
     ReturnKind kind = ReturnKind::Void;
     if (explicitStructs.count(def.fullPath) > 0) {
       kind = ReturnKind::Array;
     } else {
-      kind = getReturnKind(def, structNames_, importAliases_, error_);
-      if (!error_.empty()) {
-        return false;
+      std::string returnKindError;
+      kind = getReturnKind(def, structNames_, importAliases_, returnKindError);
+      if (!returnKindError.empty()) {
+        if (!collectReturnKindDiagnostics) {
+          error_ = returnKindError;
+          return false;
+        }
+        SemanticDiagnosticRecord record;
+        record.message = returnKindError;
+        if (def.sourceLine > 0 && def.sourceColumn > 0) {
+          record.line = def.sourceLine;
+          record.column = def.sourceColumn;
+        }
+        SemanticDiagnosticRelatedSpan related;
+        related.line = def.sourceLine;
+        related.column = def.sourceColumn;
+        related.label = "definition: " + def.fullPath;
+        record.relatedSpans.push_back(std::move(related));
+        if (error_.empty()) {
+          error_ = returnKindError;
+        }
+        returnKindDiagnosticRecords.push_back(std::move(record));
+        continue;
       }
     }
     returnKinds_[def.fullPath] = kind;
+  }
+  if (collectReturnKindDiagnostics && !returnKindDiagnosticRecords.empty()) {
+    diagnosticInfo_->records = std::move(returnKindDiagnosticRecords);
+    if (!diagnosticInfo_->records.empty()) {
+      diagnosticInfo_->line = diagnosticInfo_->records.front().line;
+      diagnosticInfo_->column = diagnosticInfo_->records.front().column;
+      diagnosticInfo_->relatedSpans = diagnosticInfo_->records.front().relatedSpans;
+    }
+    return false;
   }
 
   auto isLifecycleHelper =

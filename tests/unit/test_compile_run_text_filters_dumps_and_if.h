@@ -666,6 +666,120 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
+TEST_CASE("primec collect-diagnostics emits stable multi-semantic payload for return-kind errors") {
+  const std::string source = R"(
+[return]
+badNoType() {
+  return(1i32)
+}
+[return<array>]
+badArray() {
+  return(array<i32>(1i32))
+}
+[return<MissingType>]
+badUnknown() {
+  return(3i32)
+}
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_collect_diagnostics_semantic_return_kind.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_collect_diagnostics_semantic_return_kind_err.json").string();
+
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /badNoType\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /badArray\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /badUnknown\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 3);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"");
+  const size_t thirdMessage = diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  REQUIRE(thirdMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+  CHECK(secondMessage < thirdMessage);
+}
+
+TEST_CASE("primevm collect-diagnostics emits stable multi-semantic payload for return-kind errors") {
+  const std::string source = R"(
+[return]
+badNoType() {
+  return(1i32)
+}
+[return<array>]
+badArray() {
+  return(array<i32>(1i32))
+}
+[return<MissingType>]
+badUnknown() {
+  return(3i32)
+}
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primevm_collect_diagnostics_semantic_return_kind.prime", source);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primevm_collect_diagnostics_semantic_return_kind_err.json").string();
+
+  const std::string cmd = "./primevm " + quoteShellArg(srcPath) +
+                          " --emit-diagnostics --collect-diagnostics 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"version\":1") != std::string::npos);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /badNoType\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /badArray\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /badUnknown\"") != std::string::npos);
+
+  size_t semanticCount = 0;
+  size_t scan = 0;
+  while ((scan = diagnostics.find("\"code\":\"PSC1005\"", scan)) != std::string::npos) {
+    ++semanticCount;
+    scan += 16;
+  }
+  CHECK(semanticCount == 3);
+
+  const size_t firstMessage = diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"");
+  const size_t secondMessage =
+      diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"");
+  const size_t thirdMessage = diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"");
+  REQUIRE(firstMessage != std::string::npos);
+  REQUIRE(secondMessage != std::string::npos);
+  REQUIRE(thirdMessage != std::string::npos);
+  CHECK(firstMessage < secondMessage);
+  CHECK(secondMessage < thirdMessage);
+}
+
 TEST_CASE("primevm emit-diagnostics reports structured semantic payload") {
   const std::string source = R"(
 [return<int>]
