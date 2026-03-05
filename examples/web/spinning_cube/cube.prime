@@ -198,8 +198,9 @@ cubeRotationParity120() {
 main() {
   [CubeSimulationState] state0{cubeInit()}
   [CubeSimulationState] state1{cubeTick(state0, 0.016666667f32)}
+  [CubeMeshLayout] mesh{state1.mesh}
   if(greater_than(state1.angleRadians, state0.angleRadians)) {
-    return(state1.mesh.indexCount)
+    return(mesh.indexCount)
   } else {
     return(0i32)
   }
