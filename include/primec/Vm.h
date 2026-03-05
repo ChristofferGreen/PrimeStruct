@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -8,6 +9,99 @@
 #include "primec/Ir.h"
 
 namespace primec {
+
+enum class VmDebugSessionState { Idle, Running, Paused, Faulted, Exited };
+
+enum class VmDebugStopReason { Breakpoint, Step, Pause, Fault, Exit };
+
+enum class VmDebugSessionCommand { Start, Continue, Reset };
+
+struct VmDebugTransitionResult {
+  VmDebugSessionState state = VmDebugSessionState::Idle;
+  bool valid = false;
+};
+
+inline constexpr std::array<VmDebugStopReason, 5> vmDebugStopReasons() {
+  return {
+      VmDebugStopReason::Breakpoint,
+      VmDebugStopReason::Step,
+      VmDebugStopReason::Pause,
+      VmDebugStopReason::Fault,
+      VmDebugStopReason::Exit,
+  };
+}
+
+inline constexpr std::string_view vmDebugStopReasonName(VmDebugStopReason reason) {
+  switch (reason) {
+    case VmDebugStopReason::Breakpoint:
+      return "Breakpoint";
+    case VmDebugStopReason::Step:
+      return "Step";
+    case VmDebugStopReason::Pause:
+      return "Pause";
+    case VmDebugStopReason::Fault:
+      return "Fault";
+    case VmDebugStopReason::Exit:
+      return "Exit";
+  }
+  return "<invalid>";
+}
+
+inline constexpr std::string_view vmDebugSessionStateName(VmDebugSessionState state) {
+  switch (state) {
+    case VmDebugSessionState::Idle:
+      return "Idle";
+    case VmDebugSessionState::Running:
+      return "Running";
+    case VmDebugSessionState::Paused:
+      return "Paused";
+    case VmDebugSessionState::Faulted:
+      return "Faulted";
+    case VmDebugSessionState::Exited:
+      return "Exited";
+  }
+  return "<invalid>";
+}
+
+inline constexpr VmDebugTransitionResult vmDebugApplyCommand(VmDebugSessionState state,
+                                                             VmDebugSessionCommand command) {
+  switch (command) {
+    case VmDebugSessionCommand::Start:
+      if (state == VmDebugSessionState::Idle) {
+        return {VmDebugSessionState::Running, true};
+      }
+      break;
+    case VmDebugSessionCommand::Continue:
+      if (state == VmDebugSessionState::Paused) {
+        return {VmDebugSessionState::Running, true};
+      }
+      break;
+    case VmDebugSessionCommand::Reset:
+      if (state == VmDebugSessionState::Paused || state == VmDebugSessionState::Faulted ||
+          state == VmDebugSessionState::Exited) {
+        return {VmDebugSessionState::Idle, true};
+      }
+      break;
+  }
+  return {state, false};
+}
+
+inline constexpr VmDebugTransitionResult vmDebugApplyStopReason(VmDebugSessionState state, VmDebugStopReason reason) {
+  if (state != VmDebugSessionState::Running) {
+    return {state, false};
+  }
+  switch (reason) {
+    case VmDebugStopReason::Breakpoint:
+    case VmDebugStopReason::Step:
+    case VmDebugStopReason::Pause:
+      return {VmDebugSessionState::Paused, true};
+    case VmDebugStopReason::Fault:
+      return {VmDebugSessionState::Faulted, true};
+    case VmDebugStopReason::Exit:
+      return {VmDebugSessionState::Exited, true};
+  }
+  return {state, false};
+}
 
 class Vm {
 public:

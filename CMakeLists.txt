@@ -150,6 +150,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.pipeline.conversions
     primestruct.ir.pipeline.entry_args
     primestruct.ir.pipeline.validation
+    primestruct.vm.debug.session
     primestruct.lexer
     primestruct.parser.basic
     primestruct.parser.errors

@@ -162,7 +162,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add backend support-matrix conformance tests that enforce per-backend type/effect/opcode allowlists against the spec (VM/native/GLSL effect+type matrix compile-run tests plus an IR opcode allowlist lock test).
 
 **VM Debugger & Introspection**
-- ○ Define VM debug session state model and stop-reason enum (`Breakpoint`, `Step`, `Pause`, `Fault`, `Exit`) shared by CLI/tooling. Testing: unit tests for state transition legality and stop-reason coverage.
+- ✓ Define VM debug session state model and stop-reason enum (`Breakpoint`, `Step`, `Pause`, `Fault`, `Exit`) shared by CLI/tooling. Testing: unit tests for state transition legality and stop-reason coverage.
 - ○ Add a first-class VM debug session API (separate from `Vm::execute`) with deterministic controls: `step`, `continue`, and `pause`. Testing: golden step transcripts for representative IR programs.
 - ○ Add VM runtime debug hook plumbing (`beforeInstruction`, `afterInstruction`, `callPush`, `callPop`, `fault`). Testing: hook coverage tests for every event kind.
 - ○ Make debug event ordering deterministic and document ordering guarantees. Testing: event-sequence snapshot tests and deterministic replay equivalence checks.

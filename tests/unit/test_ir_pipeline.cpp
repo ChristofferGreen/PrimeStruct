@@ -97,5 +97,6 @@ bool validateProgram(primec::Program &program,
 #include "test_ir_pipeline_conversions.h"
 #include "test_ir_pipeline_entry_args.h"
 #include "test_ir_pipeline_validation.h"
+#include "test_vm_debug_session.h"
 #include "test_ir_pipeline_gpu.h"
 #include "test_ir_pipeline_external_tooling.h"
