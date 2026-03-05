@@ -13,6 +13,7 @@
 #include "primec/IrInliner.h"
 #include "primec/IrSerializer.h"
 #include "primec/IrValidation.h"
+#include "primec/IrVirtualRegisterLiveness.h"
 #include "primec/IrVirtualRegisterLowering.h"
 #include "primec/Lexer.h"
 #include "primec/NativeEmitter.h"

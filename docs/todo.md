@@ -226,7 +226,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add an emitter flag to toggle register cache for A/B comparisons and bisecting. Testing: dual-mode parity tests (`cache on/off` identical outputs).
 - ✓ Add correctness regressions for mixed int/float ops, calls/returns, branches, and conversions under register-cache mode. Testing: expanded compile-run matrix with branch/call depth coverage.
 - ✓ Lower stack-form IR to block-local virtual-register form (no semantic change). Testing: translation equivalence tests against interpreter/native baseline.
-- ○ Add liveness interval construction for virtual registers with deterministic tie-break ordering. Testing: liveness golden tests for representative control-flow graphs.
+- ✓ Add liveness interval construction for virtual registers with deterministic tie-break ordering. Testing: liveness golden tests for representative control-flow graphs.
 - ○ Implement deterministic linear-scan register allocator with explicit spill policy. Testing: allocator golden tests for deterministic allocation/spill placement.
 - ○ Implement spill/reload insertion pass from allocator decisions. Testing: verifier-backed tests for spill correctness across branch edges/calls.
 - ○ Implement block-local instruction scheduling (latency-aware, dependency-safe) after allocation. Testing: dependency-safety tests and deterministic-order snapshots.

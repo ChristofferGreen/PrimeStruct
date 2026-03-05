@@ -63,6 +63,7 @@ add_library(primec_lib
   src/IrPrinter.cpp
   src/IrSerializer.cpp
   src/IrValidation.cpp
+  src/IrVirtualRegisterLiveness.cpp
   src/IrVirtualRegisterLowering.cpp
   src/Lexer.cpp
   src/TransformRules.cpp

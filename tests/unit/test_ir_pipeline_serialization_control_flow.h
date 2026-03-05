@@ -550,6 +550,99 @@ TEST_CASE("virtual-register lowering rejects inconsistent stack depth merges") {
   CHECK(error.find("inconsistent stack depth") != std::string::npos);
 }
 
+TEST_CASE("virtual-register liveness builds deterministic loop intervals") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 6});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+  REQUIRE(virtualModule.functions.size() == 1);
+
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  REQUIRE(primec::buildIrVirtualRegisterLiveness(virtualModule, liveness, error));
+  CHECK(error.empty());
+  REQUIRE(liveness.functions.size() == 1);
+
+  const auto &functionLiveness = liveness.functions[0];
+  REQUIRE(functionLiveness.blocks.size() == 4);
+  CHECK(functionLiveness.blocks[0].liveInRegisters.empty());
+  CHECK(functionLiveness.blocks[0].liveOutRegisters == std::vector<uint32_t>{3});
+  CHECK(functionLiveness.blocks[1].liveInRegisters == std::vector<uint32_t>{0});
+  CHECK(functionLiveness.blocks[1].liveOutRegisters == std::vector<uint32_t>{0});
+  CHECK(functionLiveness.blocks[2].liveInRegisters == std::vector<uint32_t>{1});
+  CHECK(functionLiveness.blocks[2].liveOutRegisters == std::vector<uint32_t>{6});
+  CHECK(functionLiveness.blocks[3].liveInRegisters == std::vector<uint32_t>{2});
+  CHECK(functionLiveness.blocks[3].liveOutRegisters.empty());
+
+  REQUIRE(functionLiveness.intervals.size() == 7);
+  CHECK(functionLiveness.intervals[0].virtualRegister == 3);
+  CHECK(functionLiveness.intervals[0].ranges[0].startPosition == 1u);
+  CHECK(functionLiveness.intervals[0].ranges[0].endPosition == 1u);
+  CHECK(functionLiveness.intervals[1].virtualRegister == 0);
+  CHECK(functionLiveness.intervals[1].ranges[0].startPosition == 2u);
+  CHECK(functionLiveness.intervals[1].ranges[0].endPosition == 5u);
+  CHECK(functionLiveness.intervals[2].virtualRegister == 4);
+  CHECK(functionLiveness.intervals[2].ranges[0].startPosition == 3u);
+  CHECK(functionLiveness.intervals[2].ranges[0].endPosition == 4u);
+  CHECK(functionLiveness.intervals[3].virtualRegister == 1);
+  CHECK(functionLiveness.intervals[3].ranges[0].startPosition == 6u);
+  CHECK(functionLiveness.intervals[3].ranges[0].endPosition == 8u);
+  CHECK(functionLiveness.intervals[4].virtualRegister == 5);
+  CHECK(functionLiveness.intervals[4].ranges[0].startPosition == 7u);
+  CHECK(functionLiveness.intervals[4].ranges[0].endPosition == 8u);
+  CHECK(functionLiveness.intervals[5].virtualRegister == 6);
+  CHECK(functionLiveness.intervals[5].ranges[0].startPosition == 9u);
+  CHECK(functionLiveness.intervals[5].ranges[0].endPosition == 11u);
+  CHECK(functionLiveness.intervals[6].virtualRegister == 2);
+  CHECK(functionLiveness.intervals[6].ranges[0].startPosition == 12u);
+  CHECK(functionLiveness.intervals[6].ranges[0].endPosition == 12u);
+}
+
+TEST_CASE("virtual-register liveness tie-breaks equal intervals by register id") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 8});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  REQUIRE(primec::buildIrVirtualRegisterLiveness(virtualModule, liveness, error));
+  CHECK(error.empty());
+  REQUIRE(liveness.functions.size() == 1);
+  const auto &intervals = liveness.functions[0].intervals;
+
+  REQUIRE(intervals.size() == 5);
+  CHECK(intervals[2].virtualRegister == 0);
+  CHECK(intervals[3].virtualRegister == 1);
+  CHECK(intervals[2].ranges[0].startPosition == intervals[3].ranges[0].startPosition);
+  CHECK(intervals[2].ranges[0].endPosition == intervals[3].ranges[0].endPosition);
+}
+
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 namespace {
 std::string quoteIrPipelineShellArg(const std::string &value) {
