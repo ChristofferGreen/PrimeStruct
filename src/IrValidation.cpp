@@ -156,8 +156,16 @@ bool validateFunction(const IrModule &module,
         case IrOpcode::CmpGeF64:
         case IrOpcode::ConvertI32ToF32:
         case IrOpcode::ConvertI32ToF64:
+        case IrOpcode::ConvertI64ToF32:
+        case IrOpcode::ConvertI64ToF64:
+        case IrOpcode::ConvertU64ToF32:
+        case IrOpcode::ConvertU64ToF64:
         case IrOpcode::ConvertF32ToI32:
+        case IrOpcode::ConvertF32ToI64:
+        case IrOpcode::ConvertF32ToU64:
         case IrOpcode::ConvertF64ToI32:
+        case IrOpcode::ConvertF64ToI64:
+        case IrOpcode::ConvertF64ToU64:
         case IrOpcode::ConvertF32ToF64:
         case IrOpcode::ConvertF64ToF32:
         case IrOpcode::JumpIfZero:

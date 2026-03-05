@@ -264,6 +264,79 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for i64 and u64 conversion opcodes") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  if(equal(convert<int>(convert<f64>(convert<i64>(7.9f32))), 7i32)) {
+    if(equal(convert<int>(convert<f32>(convert<u64>(9.9f32))), 9i32)) {
+      return(1i32)
+    }
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_i64_u64_conversions.prime", source);
+  const std::string wasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_i64_u64_conversions.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_i64_u64_conversions_err.txt").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_i64_u64_conversions_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("1") != std::string::npos);
+  }
+}
+
+TEST_CASE("primec wasm i64 and u64 conversion edge cases trap in runtime") {
+  const std::string negativeSource = R"(
+[return<int>]
+main() {
+  return(convert<int>(convert<u64>(-1.0f32)))
+}
+)";
+  const std::string nanSource = R"(
+[return<int>]
+main() {
+  return(convert<int>(convert<i64>(0.0f32 / 0.0f32)))
+}
+)";
+
+  const std::string negativePath = writeTemp("compile_emit_wasm_u64_negative.prime", negativeSource);
+  const std::string nanPath = writeTemp("compile_emit_wasm_i64_nan.prime", nanSource);
+  const std::string negativeWasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_u64_negative.wasm").string();
+  const std::string nanWasmPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_i64_nan.wasm").string();
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_emit_wasm_convert_edges_err.txt").string();
+
+  const std::string compileNegativeCmd = "./primec --emit=wasm " + quoteShellArg(negativePath) + " -o " +
+                                         quoteShellArg(negativeWasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  const std::string compileNanCmd = "./primec --emit=wasm " + quoteShellArg(nanPath) + " -o " +
+                                    quoteShellArg(nanWasmPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileNegativeCmd) == 0);
+  CHECK(runCommand(compileNanCmd) == 0);
+
+  if (hasWasmtime()) {
+    const std::string runNegativeCmd = "wasmtime --invoke main " + quoteShellArg(negativeWasmPath);
+    const std::string runNanCmd = "wasmtime --invoke main " + quoteShellArg(nanWasmPath);
+    CHECK(runCommand(runNegativeCmd) != 0);
+    CHECK(runCommand(runNanCmd) != 0);
+  }
+}
+
 TEST_CASE("primec emits wasm bytecode for repeat while and for loops") {
   const std::string source = R"(
 [return<int>]

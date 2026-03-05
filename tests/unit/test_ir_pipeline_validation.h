@@ -20786,6 +20786,14 @@ TEST_CASE("ir validator wasm target accepts float and conversion subset") {
   fn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
   fn.instructions.push_back({primec::IrOpcode::SubF64, 0});
   fn.instructions.push_back({primec::IrOpcode::ConvertF64ToF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertI64ToF32, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF32ToU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertU64ToF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF64ToI64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertI64ToF64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertF64ToU64, 0});
+  fn.instructions.push_back({primec::IrOpcode::ConvertU64ToF32, 0});
   fn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
   module.functions.push_back(fn);

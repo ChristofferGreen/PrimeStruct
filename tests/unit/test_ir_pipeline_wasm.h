@@ -342,6 +342,38 @@ TEST_CASE("wasm emitter lowers float ops and conversions to deterministic opcode
   CHECK(containsByteSequence(bytes, opPattern));
 }
 
+TEST_CASE("wasm emitter lowers i64 and u64 conversion opcodes deterministically") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x41200000u}); // 10.0f32
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertI64ToF64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToU64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertU64ToF32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> opPattern = {
+      0x43, 0x00, 0x00, 0x20, 0x41, // f32.const 10.0
+      0xae,                         // i64.trunc_f32_s
+      0xb9,                         // f64.convert_i64_s
+      0xb1,                         // i64.trunc_f64_u
+      0xb5,                         // f32.convert_i64_u
+      0xa8,                         // i32.trunc_f32_s
+  };
+  CHECK(containsByteSequence(bytes, opPattern));
+}
+
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
   primec::WasmEmitter emitter;
   primec::IrModule module;

@@ -77,9 +77,17 @@ constexpr uint8_t WasmOpF64Div = 0xa3;
 constexpr uint8_t WasmOpF64Neg = 0x9a;
 constexpr uint8_t WasmOpI32TruncF32S = 0xa8;
 constexpr uint8_t WasmOpI32TruncF64S = 0xaa;
+constexpr uint8_t WasmOpI64TruncF32S = 0xae;
+constexpr uint8_t WasmOpI64TruncF32U = 0xaf;
+constexpr uint8_t WasmOpI64TruncF64S = 0xb0;
+constexpr uint8_t WasmOpI64TruncF64U = 0xb1;
 constexpr uint8_t WasmOpF32ConvertI32S = 0xb2;
+constexpr uint8_t WasmOpF32ConvertI64S = 0xb4;
+constexpr uint8_t WasmOpF32ConvertI64U = 0xb5;
 constexpr uint8_t WasmOpF32DemoteF64 = 0xb6;
 constexpr uint8_t WasmOpF64ConvertI32S = 0xb7;
+constexpr uint8_t WasmOpF64ConvertI64S = 0xb9;
+constexpr uint8_t WasmOpF64ConvertI64U = 0xba;
 constexpr uint8_t WasmOpF64PromoteF32 = 0xbb;
 
 struct WasmFunctionType {
@@ -537,11 +545,35 @@ bool emitSimpleInstruction(const IrInstruction &inst,
     case IrOpcode::ConvertI32ToF64:
       out.push_back(WasmOpF64ConvertI32S);
       return true;
+    case IrOpcode::ConvertI64ToF32:
+      out.push_back(WasmOpF32ConvertI64S);
+      return true;
+    case IrOpcode::ConvertI64ToF64:
+      out.push_back(WasmOpF64ConvertI64S);
+      return true;
+    case IrOpcode::ConvertU64ToF32:
+      out.push_back(WasmOpF32ConvertI64U);
+      return true;
+    case IrOpcode::ConvertU64ToF64:
+      out.push_back(WasmOpF64ConvertI64U);
+      return true;
     case IrOpcode::ConvertF32ToI32:
       out.push_back(WasmOpI32TruncF32S);
       return true;
     case IrOpcode::ConvertF64ToI32:
       out.push_back(WasmOpI32TruncF64S);
+      return true;
+    case IrOpcode::ConvertF32ToI64:
+      out.push_back(WasmOpI64TruncF32S);
+      return true;
+    case IrOpcode::ConvertF32ToU64:
+      out.push_back(WasmOpI64TruncF32U);
+      return true;
+    case IrOpcode::ConvertF64ToI64:
+      out.push_back(WasmOpI64TruncF64S);
+      return true;
+    case IrOpcode::ConvertF64ToU64:
+      out.push_back(WasmOpI64TruncF64U);
       return true;
     case IrOpcode::ConvertF32ToF64:
       out.push_back(WasmOpF64PromoteF32);
