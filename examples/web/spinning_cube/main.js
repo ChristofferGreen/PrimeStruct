@@ -11,6 +11,7 @@ if (ctx === null) {
 }
 
 const wasmUrl = new URL("./cube.wasm", import.meta.url);
+const shaderUrl = new URL("./cube.wgsl", import.meta.url);
 
 async function instantiateCubeModule() {
   try {
@@ -31,6 +32,19 @@ async function instantiateCubeModule() {
   } catch (error) {
     statusNode.textContent = `Wasm load skipped: ${String(error)}`;
     return null;
+  }
+}
+
+async function loadWebGpuShaderText() {
+  try {
+    const response = await fetch(shaderUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch cube.wgsl (${response.status})`);
+    }
+    return await response.text();
+  } catch (error) {
+    statusNode.textContent = `Shader load skipped: ${String(error)}`;
+    return "";
   }
 }
 
@@ -111,14 +125,19 @@ function createTicker(exportedMain) {
 }
 
 async function run() {
-  const wasm = await instantiateCubeModule();
+  const [wasm, shaderText] = await Promise.all([instantiateCubeModule(), loadWebGpuShaderText()]);
   const exportedMain = wasm?.instance?.exports?.main;
   const nextTick = createTicker(exportedMain);
+  const hasShader = shaderText.includes("@vertex") && shaderText.includes("@fragment");
 
   statusNode.textContent =
     wasm === null
-      ? "Host running without wasm output (compile cube.prime to cube.wasm)."
-      : "Host running with cube.wasm bootstrap.";
+      ? hasShader
+          ? "Host running with shader path; compile cube.prime to cube.wasm."
+          : "Host running without wasm output (compile cube.prime to cube.wasm)."
+      : hasShader
+          ? "Host running with cube.wasm and cube.wgsl bootstrap."
+          : "Host running with cube.wasm bootstrap.";
 
   const frame = () => {
     drawWireCubeProxy(nextTick());

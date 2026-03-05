@@ -28,6 +28,14 @@ This example is a milestone target for cross-platform backend work.
 - `main.js` loads `cube.wasm` when present and renders a deterministic
   wireframe cube proxy so host bootstrap can be smoke-tested before WebGPU
   integration lands.
+- `cube.wgsl` is the minimal WebGPU shader path for the browser profile.
+
+## Minimal Browser Profile (Current)
+- Emit target: `--emit=wasm --wasm-profile browser` (alias: `wasm-browser`).
+- Shader path: `examples/web/spinning_cube/cube.wgsl` is the canonical browser
+  shader artifact for this sample.
+- Compile-time gating: browser profile must reject WASI-only effects/opcodes
+  (for example `effects(io_out)` and argv-dependent entry signatures).
 
 ## Acceptance Criteria
 - The page shows a rotating cube without manual setup beyond launching a local static server.

@@ -224,9 +224,11 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   const std::filesystem::path cubePath = sampleDir / "cube.prime";
   const std::filesystem::path indexPath = sampleDir / "index.html";
   const std::filesystem::path mainJsPath = sampleDir / "main.js";
+  const std::filesystem::path shaderPath = sampleDir / "cube.wgsl";
   REQUIRE(std::filesystem::exists(cubePath));
   REQUIRE(std::filesystem::exists(indexPath));
   REQUIRE(std::filesystem::exists(mainJsPath));
+  REQUIRE(std::filesystem::exists(shaderPath));
 
   const std::string indexHtml = readFile(indexPath.string());
   CHECK(indexHtml.find("id=\"cube-canvas\"") != std::string::npos);
@@ -234,7 +236,11 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
 
   const std::string mainJs = readFile(mainJsPath.string());
   CHECK(mainJs.find("./cube.wasm") != std::string::npos);
+  CHECK(mainJs.find("./cube.wgsl") != std::string::npos);
   CHECK(mainJs.find("requestAnimationFrame") != std::string::npos);
+  const std::string shaderText = readFile(shaderPath.string());
+  CHECK(shaderText.find("@vertex") != std::string::npos);
+  CHECK(shaderText.find("@fragment") != std::string::npos);
 
   const std::filesystem::path pipelineDir =
       std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_assets";
@@ -258,9 +264,14 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
   std::filesystem::copy_file(mainJsPath, pipelineDir / "main.js",
                              std::filesystem::copy_options::overwrite_existing, ec);
   CHECK(!ec);
+  ec.clear();
+  std::filesystem::copy_file(shaderPath, pipelineDir / "cube.wgsl",
+                             std::filesystem::copy_options::overwrite_existing, ec);
+  CHECK(!ec);
 
   CHECK(std::filesystem::exists(pipelineDir / "index.html"));
   CHECK(std::filesystem::exists(pipelineDir / "main.js"));
+  CHECK(std::filesystem::exists(pipelineDir / "cube.wgsl"));
   CHECK(std::filesystem::exists(pipelineDir / "cube.wasm"));
 
   if (runCommand("node --version > /dev/null 2>&1") == 0) {
@@ -269,6 +280,60 @@ TEST_CASE("spinning cube browser host assets pass pipeline smoke checks") {
     const std::string nodeCheckStaged =
         "node --check " + quoteShellArg((pipelineDir / "main.js").string()) + " > /dev/null 2>&1";
     CHECK(runCommand(nodeCheckStaged) == 0);
+  }
+}
+
+TEST_CASE("spinning cube browser profile rules gate unsupported code") {
+  std::filesystem::path sampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  if (!std::filesystem::exists(sampleDir)) {
+    sampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(sampleDir));
+
+  const std::filesystem::path cubePath = sampleDir / "cube.prime";
+  REQUIRE(std::filesystem::exists(cubePath));
+
+  {
+    const std::filesystem::path wasmPath =
+        std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_profile_ok.wasm";
+    const std::string cmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) +
+                            " -o " + quoteShellArg(wasmPath.string()) + " --entry /main";
+    CHECK(runCommand(cmd) == 0);
+    CHECK(std::filesystem::exists(wasmPath));
+  }
+
+  {
+    const std::string source = R"(
+[return<int> effects(io_out)]
+main() {
+  print_line("browser"utf8)
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("spinning_cube_browser_profile_reject_io.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_profile_reject_io.json").string();
+    const std::string cmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(srcPath) +
+                            " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(cmd) == 2);
+    CHECK(readFile(errPath).find("unsupported effect mask bits for wasm-browser target") != std::string::npos);
+  }
+
+  {
+    const std::string source = R"(
+[return<int>]
+main([array<string>] args) {
+  return(args.count())
+}
+)";
+    const std::string srcPath = writeTemp("spinning_cube_browser_profile_reject_argv.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_spinning_cube_browser_profile_reject_argv.json").string();
+    const std::string cmd = "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(srcPath) +
+                            " -o /dev/null --entry /main --emit-diagnostics 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(cmd) == 2);
+    CHECK(readFile(errPath).find("unsupported opcode for wasm-browser target") != std::string::npos);
   }
 }
 
