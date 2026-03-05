@@ -26,6 +26,8 @@ This example is a milestone target for cross-platform backend work.
     accumulator + max-step guard.
   - `cubeFixedStepSnapshot120` and `cubeFixedStepSnapshot120Chunked`: golden
     deterministic tick-state snapshot entries used by smoke tests.
+  - `cubeRotationParity120`: tolerance-based transform/rotation parity entry
+    shared across backend parity suites.
 
 ## Current Browser Host Assets
 - `index.html` provides the canvas shell and module bootstrap.

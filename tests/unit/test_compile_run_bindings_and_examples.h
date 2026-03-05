@@ -439,6 +439,93 @@ TEST_CASE("spinning cube fixed-step snapshots stay deterministic") {
   CHECK(std::filesystem::exists(wasmSnapshotPath));
 }
 
+TEST_CASE("spinning cube transform rotation parity stays aligned across backends") {
+  std::filesystem::path webSampleDir =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube";
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(webSampleDir)) {
+    webSampleDir = std::filesystem::current_path() / "examples" / "web" / "spinning_cube";
+  }
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(webSampleDir));
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path cubePath = webSampleDir / "cube.prime";
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(cubePath));
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  constexpr int ExpectedParityPass = 1;
+  constexpr int ExpectedSnapshotCode = 45;
+
+  const std::string vmParityCmd =
+      "./primec --emit=vm " + quoteShellArg(cubePath.string()) + " --entry /cubeRotationParity120";
+  CHECK(runCommand(vmParityCmd) == ExpectedParityPass);
+
+  const std::filesystem::path nativeParityPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity_native";
+  const std::string compileNativeParityCmd =
+      "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " + quoteShellArg(nativeParityPath.string()) +
+      " --entry /cubeRotationParity120";
+  CHECK(runCommand(compileNativeParityCmd) == 0);
+  CHECK(std::filesystem::exists(nativeParityPath));
+  CHECK(runCommand(quoteShellArg(nativeParityPath.string())) == ExpectedParityPass);
+
+  const std::filesystem::path wasmParityPath =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity.wasm";
+  const std::string compileWasmParityCmd =
+      "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
+      quoteShellArg(wasmParityPath.string()) + " --entry /cubeRotationParity120";
+  CHECK(runCommand(compileWasmParityCmd) == 0);
+  CHECK(std::filesystem::exists(wasmParityPath));
+
+  if (hasWasmtime()) {
+    const std::filesystem::path wasmOutPath =
+        std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity_wasm.out.txt";
+    const std::string runWasmParityCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmParityPath.string()) + " > " + quoteShellArg(wasmOutPath.string());
+    CHECK(runCommand(runWasmParityCmd) == 0);
+    const std::string wasmOutput = readFile(wasmOutPath.string());
+    CHECK(wasmOutput.find("1") != std::string::npos);
+  }
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("xcrun not available; skipping metal-hosted rotation parity smoke");
+    return;
+  }
+
+  const std::filesystem::path hostBuildDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_rotation_parity_metal_host";
+  std::error_code ec;
+  std::filesystem::remove_all(hostBuildDir, ec);
+  std::filesystem::create_directories(hostBuildDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path hostBinaryPath = hostBuildDir / "metal_host";
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(metalHostPath.string()) +
+      " -framework Foundation -framework Metal -o " + quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::filesystem::path hostParityOutPath = hostBuildDir / "parity.out.txt";
+  const std::string runHostParityCmd = quoteShellArg(hostBinaryPath.string()) +
+                                       " --parity-check 120 > " + quoteShellArg(hostParityOutPath.string());
+  CHECK(runCommand(runHostParityCmd) == 0);
+  const std::string hostParityOutput = readFile(hostParityOutPath.string());
+  CHECK(hostParityOutput.find("parity_ok=1") != std::string::npos);
+
+  const std::filesystem::path hostSnapshotOutPath = hostBuildDir / "snapshot.out.txt";
+  const std::string runHostSnapshotCmd = quoteShellArg(hostBinaryPath.string()) +
+                                         " --snapshot-code 120 > " + quoteShellArg(hostSnapshotOutPath.string());
+  CHECK(runCommand(runHostSnapshotCmd) == 0);
+  const std::string hostSnapshotOutput = readFile(hostSnapshotOutPath.string());
+  CHECK(hostSnapshotOutput.find("snapshot_code=" + std::to_string(ExpectedSnapshotCode)) != std::string::npos);
+}
+
 TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
   std::filesystem::path metalSampleDir =
       std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";

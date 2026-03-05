@@ -20,6 +20,11 @@ spinning-cube sample.
 
 The host prints `frame_rendered=1` and exits 0 when frame submission completes.
 
+## Parity Helpers
+- `./metal_host --snapshot-code 120` prints the fixed-step snapshot code.
+- `./metal_host --parity-check 120` runs tolerance-based transform/rotation
+  parity checks against chunked stepping (`parity_ok=1` means pass).
+
 ## Profile Gating
 - Browser profile remains `--emit=wasm --wasm-profile browser`.
 - `metal-osx` is a design-profile identifier; attempting to pass it as a Wasm

@@ -177,6 +177,22 @@ cubeFixedStepSnapshot120Chunked() {
 }
 
 [return<int>]
+cubeRotationParity120() {
+  [CubeSimulationState] fixed{cubeRunFixedTicks(120i32)}
+  [CubeSimulationState] chunked{cubeRunFixedTicksChunked(120i32)}
+  [f32] angleDiff{abs(minus(fixed.angleRadians, chunked.angleRadians))}
+  [f32] axisXDiff{abs(minus(fixed.axisX, chunked.axisX))}
+  [f32] axisYDiff{abs(minus(fixed.axisY, chunked.axisY))}
+  if(and(less_equal(angleDiff, 0.020000000f32),
+         and(less_equal(axisXDiff, 0.020000000f32),
+             less_equal(axisYDiff, 0.020000000f32)))) {
+    return(1i32)
+  } else {
+    return(0i32)
+  }
+}
+
+[return<int>]
 main() {
   [CubeSimulationState] state0{cubeInit()}
   [CubeSimulationState] state1{cubeTick(state0, 0.016666667f32)}
