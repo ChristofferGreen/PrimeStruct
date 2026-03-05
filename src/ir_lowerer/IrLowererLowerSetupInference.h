@@ -33,83 +33,47 @@
   };
 
   inferBufferElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    if (expr.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.name);
-      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
-        return it->second.valueKind;
-      }
-      return LocalInfo::ValueKind::Unknown;
-    }
-    if (expr.kind == Expr::Kind::Call) {
-      if (isSimpleCallName(expr, "buffer") && expr.templateArgs.size() == 1) {
-        return valueKindFromTypeName(expr.templateArgs.front());
-      }
-      if (isSimpleCallName(expr, "upload") && expr.args.size() == 1) {
-        return inferArrayElementKind(expr.args.front(), localsIn);
-      }
-    }
-    return LocalInfo::ValueKind::Unknown;
+    return inferBufferElementValueKind(
+        expr,
+        localsIn,
+        [&](const Expr &candidate, const LocalMap &candidateLocals) {
+          return inferArrayElementKind(candidate, candidateLocals);
+        });
   };
 
   inferArrayElementKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
-    if (expr.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(expr.name);
-      if (it != localsIn.end()) {
-        if (it->second.kind == LocalInfo::Kind::Array) {
-          return it->second.valueKind;
-        }
-        if (it->second.kind == LocalInfo::Kind::Buffer) {
-          return it->second.valueKind;
-        }
-        if (it->second.kind == LocalInfo::Kind::Reference && it->second.referenceToArray) {
-          return it->second.valueKind;
-        }
-      }
-      return LocalInfo::ValueKind::Unknown;
-    }
-    if (expr.kind == Expr::Kind::Call) {
-      if (!expr.isMethodCall && isSimpleCallName(expr, "readback") && expr.args.size() == 1) {
-        LocalInfo::ValueKind bufferKind = inferBufferElementKind(expr.args.front(), localsIn);
-        if (bufferKind != LocalInfo::ValueKind::Unknown && bufferKind != LocalInfo::ValueKind::String) {
-          return bufferKind;
-        }
-      }
-      std::string collection;
-      if (getBuiltinCollectionName(expr, collection) && collection == "array" && expr.templateArgs.size() == 1) {
-        return valueKindFromTypeName(expr.templateArgs.front());
-      }
-      if (!expr.isMethodCall) {
-        StructArrayInfo structInfo;
-        if (resolveStructArrayInfoFromPath(resolveExprPath(expr), structInfo)) {
-          return structInfo.elementKind;
-        }
-      }
-      if (!expr.isMethodCall) {
-        LocalInfo::ValueKind directCallKind = LocalInfo::ValueKind::Unknown;
-        if (resolveDefinitionCallReturnKind(
-                expr, defMap, resolveExprPath, getReturnInfo, true, directCallKind)) {
-          return directCallKind;
-        }
-        LocalInfo::ValueKind countMethodKind = LocalInfo::ValueKind::Unknown;
-        if (resolveCountMethodCallReturnKind(expr,
-                                             localsIn,
-                                             isArrayCountCall,
-                                             isStringCountCall,
-                                             resolveMethodCallDefinition,
-                                             getReturnInfo,
-                                             true,
-                                             countMethodKind)) {
-          return countMethodKind;
-        }
-      } else {
-        LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-        if (resolveMethodCallReturnKind(
-                expr, localsIn, resolveMethodCallDefinition, getReturnInfo, true, returnKind)) {
-          return returnKind;
-        }
-      }
-    }
-    return LocalInfo::ValueKind::Unknown;
+    return inferArrayElementValueKind(
+        expr,
+        localsIn,
+        [&](const Expr &candidate, const LocalMap &candidateLocals) {
+          return inferBufferElementKind(candidate, candidateLocals);
+        },
+        [&](const Expr &candidate) { return resolveExprPath(candidate); },
+        [&](const std::string &structPath, LocalInfo::ValueKind &kindOut) {
+          StructArrayInfo structInfo;
+          if (!resolveStructArrayInfoFromPath(structPath, structInfo)) {
+            return false;
+          }
+          kindOut = structInfo.elementKind;
+          return true;
+        },
+        [&](const Expr &candidate, const LocalMap &, LocalInfo::ValueKind &kindOut) {
+          return resolveDefinitionCallReturnKind(candidate, defMap, resolveExprPath, getReturnInfo, true, kindOut);
+        },
+        [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
+          return resolveCountMethodCallReturnKind(candidate,
+                                                  candidateLocals,
+                                                  isArrayCountCall,
+                                                  isStringCountCall,
+                                                  resolveMethodCallDefinition,
+                                                  getReturnInfo,
+                                                  true,
+                                                  kindOut);
+        },
+        [&](const Expr &candidate, const LocalMap &candidateLocals, LocalInfo::ValueKind &kindOut) {
+          return resolveMethodCallReturnKind(
+              candidate, candidateLocals, resolveMethodCallDefinition, getReturnInfo, true, kindOut);
+        });
   };
 
   inferExprKind = [&](const Expr &expr, const LocalMap &localsIn) -> LocalInfo::ValueKind {
