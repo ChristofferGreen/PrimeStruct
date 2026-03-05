@@ -399,6 +399,154 @@ main([array<string>] args) {
   }
 }
 
+TEST_CASE("primec wasm parity corpus matches vm outputs and exits deterministically") {
+  struct ParityCase {
+    std::string name;
+    std::string source;
+    int expectedExit = 0;
+    std::string expectedStdout;
+    std::string expectedStderr;
+  };
+
+  const std::vector<ParityCase> cases = {
+      {
+          "arith_calls_loops",
+          R"(
+[return<int>]
+double([i32] value) {
+  return(multiply(value, 2i32))
+}
+
+[return<int>]
+main() {
+  [i32 mut] total{1i32}
+  repeat(3i32) {
+    assign(total, plus(total, 1i32))
+  }
+  return(plus(double(total), 11i32))
+}
+)",
+          19,
+          "",
+          "",
+      },
+      {
+          "stdout_stderr",
+          R"(
+[return<int> effects(io_out, io_err)]
+main() {
+  print_line("alpha"utf8)
+  print("beta"utf8)
+  print_error("warn"utf8)
+  print_line_error("!"utf8)
+  return(0i32)
+}
+)",
+          0,
+          "alpha\nbeta",
+          "warn!\n",
+      },
+      {
+          "branching",
+          R"(
+[return<int>]
+one() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  if(equal(plus(one(), one()), 2i32)) {
+    return(7i32)
+  } else {
+    return(3i32)
+  }
+}
+)",
+          7,
+          "",
+          "",
+      },
+  };
+
+  struct RunResult {
+    int exitCode = -1;
+    std::string stdoutText;
+    std::string stderrText;
+  };
+
+  const auto runAndCapture = [](const std::string &commandBase, const std::string &outPath, const std::string &errPath) {
+    RunResult result;
+    const std::string command = commandBase + " > " + quoteShellArg(outPath) + " 2> " + quoteShellArg(errPath);
+    result.exitCode = runCommand(command);
+    result.stdoutText = readFile(outPath);
+    result.stderrText = readFile(errPath);
+    return result;
+  };
+
+  const bool hasRuntime = hasWasmtime();
+  for (const auto &parity : cases) {
+    CAPTURE(parity.name);
+
+    const std::string srcPath = writeTemp("compile_emit_wasm_vm_parity_" + parity.name + ".prime", parity.source);
+    const std::string wasmPath =
+        (std::filesystem::temp_directory_path() / ("primec_emit_wasm_vm_parity_" + parity.name + ".wasm")).string();
+    const std::string compileErrPath =
+        (std::filesystem::temp_directory_path() / ("primec_emit_wasm_vm_parity_" + parity.name + "_compile.err")).string();
+
+    const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                                " --entry /main 2> " + quoteShellArg(compileErrPath);
+    CHECK(runCommand(wasmCmd) == 0);
+    CHECK(std::filesystem::exists(wasmPath));
+
+    const std::string vmOutA =
+        (std::filesystem::temp_directory_path() / ("primec_vm_parity_" + parity.name + "_a.out")).string();
+    const std::string vmErrA =
+        (std::filesystem::temp_directory_path() / ("primec_vm_parity_" + parity.name + "_a.err")).string();
+    const std::string vmOutB =
+        (std::filesystem::temp_directory_path() / ("primec_vm_parity_" + parity.name + "_b.out")).string();
+    const std::string vmErrB =
+        (std::filesystem::temp_directory_path() / ("primec_vm_parity_" + parity.name + "_b.err")).string();
+
+    const std::string vmCmdBase = "./primevm " + quoteShellArg(srcPath) + " --entry /main";
+    const RunResult vmRunA = runAndCapture(vmCmdBase, vmOutA, vmErrA);
+    const RunResult vmRunB = runAndCapture(vmCmdBase, vmOutB, vmErrB);
+    CHECK(vmRunA.exitCode == parity.expectedExit);
+    CHECK(vmRunA.stdoutText == parity.expectedStdout);
+    CHECK(vmRunA.stderrText == parity.expectedStderr);
+    CHECK(vmRunB.exitCode == vmRunA.exitCode);
+    CHECK(vmRunB.stdoutText == vmRunA.stdoutText);
+    CHECK(vmRunB.stderrText == vmRunA.stderrText);
+
+    if (!hasRuntime) {
+      continue;
+    }
+
+    const std::string wasmOutA =
+        (std::filesystem::temp_directory_path() / ("primec_wasm_parity_" + parity.name + "_a.out")).string();
+    const std::string wasmErrA =
+        (std::filesystem::temp_directory_path() / ("primec_wasm_parity_" + parity.name + "_a.err")).string();
+    const std::string wasmOutB =
+        (std::filesystem::temp_directory_path() / ("primec_wasm_parity_" + parity.name + "_b.out")).string();
+    const std::string wasmErrB =
+        (std::filesystem::temp_directory_path() / ("primec_wasm_parity_" + parity.name + "_b.err")).string();
+
+    const std::string wasmCmdBase = "wasmtime --invoke main " + quoteShellArg(wasmPath);
+    const RunResult wasmRunA = runAndCapture(wasmCmdBase, wasmOutA, wasmErrA);
+    const RunResult wasmRunB = runAndCapture(wasmCmdBase, wasmOutB, wasmErrB);
+    CHECK(wasmRunA.exitCode == parity.expectedExit);
+    CHECK(wasmRunA.stdoutText == parity.expectedStdout);
+    CHECK(wasmRunA.stderrText == parity.expectedStderr);
+    CHECK(wasmRunB.exitCode == wasmRunA.exitCode);
+    CHECK(wasmRunB.stdoutText == wasmRunA.stdoutText);
+    CHECK(wasmRunB.stderrText == wasmRunA.stderrText);
+
+    CHECK(wasmRunA.exitCode == vmRunA.exitCode);
+    CHECK(wasmRunA.stdoutText == vmRunA.stdoutText);
+    CHECK(wasmRunA.stderrText == vmRunA.stderrText);
+  }
+}
+
 TEST_CASE("primec wasm i64 and u64 conversion edge cases trap in runtime") {
   const std::string negativeSource = R"(
 [return<int>]
