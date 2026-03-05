@@ -236,6 +236,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic `unknown arg` diagnostics when an unknown flag appears first (before any valid options) in `scripts/run_spinning_cube_demo.sh`.
 - ✓ Add a regression test that locks deterministic `unknown arg` diagnostics for a positional token (for example `foo`) passed to `scripts/run_spinning_cube_demo.sh`.
 - ✓ Add a regression test that locks deterministic missing-value diagnostics when `--port-base` is followed by bare `--` in `scripts/run_spinning_cube_demo.sh`.
+- ✓ Add a regression test that locks deterministic `unknown arg` diagnostics for bare `--` passed directly to `scripts/run_spinning_cube_demo.sh`.
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
