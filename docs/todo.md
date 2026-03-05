@@ -241,6 +241,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add a regression test that locks deterministic missing-value diagnostics when `--work-dir` is followed by bare `--` in `scripts/run_spinning_cube_demo.sh`.
 - ✓ Add a regression test that locks deterministic missing-value diagnostics when `--primec` is followed by bare `--` in `scripts/run_spinning_cube_demo.sh`.
 - ✓ Classify deterministic native compile failures that report `backend does not support return type` as `SKIP` (known backend limitation) in `scripts/run_spinning_cube_demo.sh` instead of hard `FAIL`. Testing: script regression with stub `primec` locks `NATIVE: SKIP (native backend limitation: backend does not support return type)`.
+- ✓ Add a regression test that locks deterministic diagnostics for an unexecutable `--primec` path in `scripts/run_spinning_cube_demo.sh` (`exit 2` + stable `primec binary not found` text).
 
 **Native Register Allocation & Scheduling**
 - ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
