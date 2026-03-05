@@ -31,6 +31,8 @@ This example is a milestone target for cross-platform backend work.
 - `cube.wgsl` is the minimal WebGPU shader path for the browser profile.
 - `examples/metal/spinning_cube/cube.metal` is the minimal macOS Metal shader
   path (`metal-osx` profile artifact path).
+- `examples/metal/spinning_cube/metal_host.mm` is the minimal macOS host glue
+  that submits one frame using the generated Metal shader library.
 
 ## Minimal Browser Profile (Current)
 - Emit target: `--emit=wasm --wasm-profile browser` (alias: `wasm-browser`).

@@ -468,6 +468,61 @@ main() {
   CHECK(std::filesystem::file_size(metallibPath) > 0);
 }
 
+TEST_CASE("spinning cube metal host glue renders frame smoke") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalShaderPath = metalSampleDir / "cube.metal";
+  const std::filesystem::path metalHostPath = metalSampleDir / "metal_host.mm";
+  REQUIRE(std::filesystem::exists(metalShaderPath));
+  REQUIRE(std::filesystem::exists(metalHostPath));
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("xcrun not available; skipping macOS metal host runtime smoke");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_host_runtime";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path airPath = outDir / "cube.air";
+  const std::filesystem::path metallibPath = outDir / "cube.metallib";
+  const std::filesystem::path hostBinaryPath = outDir / "metal_host";
+  const std::filesystem::path hostStdoutPath = outDir / "metal_host.stdout.txt";
+  const std::filesystem::path hostStderrPath = outDir / "metal_host.stderr.txt";
+
+  const std::string compileMetalCmd = "xcrun metal -std=metal3.0 -c " + quoteShellArg(metalShaderPath.string()) +
+                                      " -o " + quoteShellArg(airPath.string());
+  CHECK(runCommand(compileMetalCmd) == 0);
+  CHECK(std::filesystem::exists(airPath));
+
+  const std::string compileLibraryCmd =
+      "xcrun metallib " + quoteShellArg(airPath.string()) + " -o " + quoteShellArg(metallibPath.string());
+  CHECK(runCommand(compileLibraryCmd) == 0);
+  CHECK(std::filesystem::exists(metallibPath));
+
+  const std::string compileHostCmd =
+      "xcrun clang++ -std=c++17 -fobjc-arc " + quoteShellArg(metalHostPath.string()) +
+      " -framework Foundation -framework Metal -o " + quoteShellArg(hostBinaryPath.string());
+  CHECK(runCommand(compileHostCmd) == 0);
+  CHECK(std::filesystem::exists(hostBinaryPath));
+
+  const std::string runHostCmd = quoteShellArg(hostBinaryPath.string()) + " " + quoteShellArg(metallibPath.string()) +
+                                 " > " + quoteShellArg(hostStdoutPath.string()) + " 2> " +
+                                 quoteShellArg(hostStderrPath.string());
+  CHECK(runCommand(runHostCmd) == 0);
+  const std::string hostStdout = readFile(hostStdoutPath.string());
+  CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
+}
+
 TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
   REQUIRE(std::filesystem::exists(examplesDir));
