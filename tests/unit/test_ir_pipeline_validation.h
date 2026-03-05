@@ -12395,6 +12395,93 @@ TEST_CASE("ir lowerer setup inference helper handles invalid comparison/operator
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper infers GPU/buffer call return kinds") {
+  using Resolution = primec::ir_lowerer::GpuBufferCallReturnKindResolution;
+
+  primec::Expr gpuExpr;
+  gpuExpr.kind = primec::Expr::Kind::Call;
+  gpuExpr.name = "global_id_x";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::inferGpuBufferCallReturnKind(
+            gpuExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  primec::Expr bufferName;
+  bufferName.kind = primec::Expr::Kind::Name;
+  bufferName.name = "buf";
+  primec::Expr index;
+  index.kind = primec::Expr::Kind::Literal;
+  index.literalValue = 0;
+  primec::Expr bufferLoadExpr;
+  bufferLoadExpr.kind = primec::Expr::Kind::Call;
+  bufferLoadExpr.name = "buffer_load";
+  bufferLoadExpr.args = {bufferName, index};
+  CHECK(primec::ir_lowerer::inferGpuBufferCallReturnKind(
+            bufferLoadExpr,
+            {},
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "buf") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles invalid GPU/buffer calls") {
+  using Resolution = primec::ir_lowerer::GpuBufferCallReturnKindResolution;
+
+  primec::Expr nonGpuBuffer;
+  nonGpuBuffer.kind = primec::Expr::Kind::Call;
+  nonGpuBuffer.name = "plus";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::inferGpuBufferCallReturnKind(
+            nonGpuBuffer,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::NotMatched);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr bufferLoadExpr;
+  bufferLoadExpr.kind = primec::Expr::Kind::Call;
+  bufferLoadExpr.name = "buffer_load";
+  bufferLoadExpr.args = {};
+  CHECK(primec::ir_lowerer::inferGpuBufferCallReturnKind(
+            bufferLoadExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr bufferName;
+  bufferName.kind = primec::Expr::Kind::Name;
+  bufferName.name = "buf";
+  primec::Expr index;
+  index.kind = primec::Expr::Kind::Literal;
+  index.literalValue = 0;
+  bufferLoadExpr.args = {bufferName, index};
+  CHECK(primec::ir_lowerer::inferGpuBufferCallReturnKind(
+            bufferLoadExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::String;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

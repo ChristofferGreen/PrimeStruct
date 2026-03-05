@@ -274,16 +274,15 @@
                 accessElementKind) == ArrayMapAccessElementKindResolution::Resolved) {
           return accessElementKind;
         }
-        std::string gpuBuiltin;
-        if (getBuiltinGpuName(expr, gpuBuiltin)) {
-          return LocalInfo::ValueKind::Int32;
-        }
-        if (!expr.isMethodCall && isSimpleCallName(expr, "buffer_load") && expr.args.size() == 2) {
-          LocalInfo::ValueKind elemKind = inferBufferElementKind(expr.args.front(), localsIn);
-          if (elemKind != LocalInfo::ValueKind::Unknown && elemKind != LocalInfo::ValueKind::String) {
-            return elemKind;
-          }
-          return LocalInfo::ValueKind::Unknown;
+        LocalInfo::ValueKind gpuBufferKind = LocalInfo::ValueKind::Unknown;
+        if (inferGpuBufferCallReturnKind(
+                expr,
+                localsIn,
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferBufferElementKind(candidateExpr, candidateLocals);
+                },
+                gpuBufferKind) == GpuBufferCallReturnKindResolution::Resolved) {
+          return gpuBufferKind;
         }
         LocalInfo::ValueKind comparisonOperatorKind = LocalInfo::ValueKind::Unknown;
         if (inferComparisonOperatorCallReturnKind(

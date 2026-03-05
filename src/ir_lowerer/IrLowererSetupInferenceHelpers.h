@@ -61,6 +61,10 @@ enum class ComparisonOperatorCallReturnKindResolution {
   NotMatched,
   Resolved,
 };
+enum class GpuBufferCallReturnKindResolution {
+  NotMatched,
+  Resolved,
+};
 
 LocalInfo::ValueKind inferPointerTargetValueKind(
     const Expr &expr,
@@ -136,6 +140,11 @@ ComparisonOperatorCallReturnKindResolution inferComparisonOperatorCallReturnKind
     const LocalMap &localsIn,
     const InferSetupInferenceValueKindFn &inferExprKind,
     const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
+    LocalInfo::ValueKind &kindOut);
+GpuBufferCallReturnKindResolution inferGpuBufferCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferBufferElementKind,
     LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer

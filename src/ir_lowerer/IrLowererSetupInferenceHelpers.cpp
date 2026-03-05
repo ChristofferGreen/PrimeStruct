@@ -570,4 +570,31 @@ ComparisonOperatorCallReturnKindResolution inferComparisonOperatorCallReturnKind
   return ComparisonOperatorCallReturnKindResolution::Resolved;
 }
 
+GpuBufferCallReturnKindResolution inferGpuBufferCallReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const InferSetupInferenceValueKindFn &inferBufferElementKind,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  std::string gpuBuiltin;
+  if (getBuiltinGpuName(expr, gpuBuiltin)) {
+    kindOut = LocalInfo::ValueKind::Int32;
+    return GpuBufferCallReturnKindResolution::Resolved;
+  }
+
+  if (!expr.isMethodCall && isSimpleCallName(expr, "buffer_load")) {
+    if (expr.args.size() != 2) {
+      return GpuBufferCallReturnKindResolution::Resolved;
+    }
+    LocalInfo::ValueKind elemKind = inferBufferElementKind(expr.args.front(), localsIn);
+    if (elemKind != LocalInfo::ValueKind::Unknown && elemKind != LocalInfo::ValueKind::String) {
+      kindOut = elemKind;
+    }
+    return GpuBufferCallReturnKindResolution::Resolved;
+  }
+
+  return GpuBufferCallReturnKindResolution::NotMatched;
+}
+
 } // namespace primec::ir_lowerer
