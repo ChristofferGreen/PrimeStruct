@@ -577,6 +577,88 @@ TEST_CASE("native backend rejects invalid callable IR target") {
   CHECK_FALSE(emitter.emitExecutable(module, exePath, error));
   CHECK(error.find("invalid call target") != std::string::npos);
 }
+
+TEST_CASE("native backend reports instrumentation counters per function") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterInstrumentation instrumentation;
+  std::string error;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_instrumentation_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
+  CHECK(error.empty());
+  REQUIRE(instrumentation.perFunction.size() == 2);
+
+  CHECK(instrumentation.perFunction[0].functionName == "/main");
+  CHECK(instrumentation.perFunction[0].instructionTotal == 4u);
+  CHECK(instrumentation.perFunction[0].valueStackPushCount == 3u);
+  CHECK(instrumentation.perFunction[0].valueStackPopCount == 3u);
+  CHECK(instrumentation.perFunction[0].spillCount == 3u);
+  CHECK(instrumentation.perFunction[0].reloadCount == 3u);
+
+  CHECK(instrumentation.perFunction[1].functionName == "/helper");
+  CHECK(instrumentation.perFunction[1].instructionTotal == 2u);
+  CHECK(instrumentation.perFunction[1].valueStackPushCount == 1u);
+  CHECK(instrumentation.perFunction[1].valueStackPopCount == 1u);
+  CHECK(instrumentation.perFunction[1].spillCount == 1u);
+  CHECK(instrumentation.perFunction[1].reloadCount == 1u);
+
+  CHECK(instrumentation.totalInstructionCount == 6u);
+  CHECK(instrumentation.totalValueStackPushCount == 4u);
+  CHECK(instrumentation.totalValueStackPopCount == 4u);
+  CHECK(instrumentation.totalSpillCount == 4u);
+  CHECK(instrumentation.totalReloadCount == 4u);
+}
+
+TEST_CASE("native backend instrumentation counts local load and store ops") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  primec::NativeEmitter emitter;
+  primec::NativeEmitterInstrumentation instrumentation;
+  std::string error;
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_ir_instrumentation_locals_exec").string();
+  REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
+  CHECK(error.empty());
+  REQUIRE(instrumentation.perFunction.size() == 1);
+
+  CHECK(instrumentation.perFunction[0].instructionTotal == 4u);
+  CHECK(instrumentation.perFunction[0].valueStackPushCount == 2u);
+  CHECK(instrumentation.perFunction[0].valueStackPopCount == 2u);
+  CHECK(instrumentation.perFunction[0].spillCount == 2u);
+  CHECK(instrumentation.perFunction[0].reloadCount == 2u);
+  CHECK(instrumentation.totalInstructionCount == 4u);
+  CHECK(instrumentation.totalValueStackPushCount == 2u);
+  CHECK(instrumentation.totalValueStackPopCount == 2u);
+  CHECK(instrumentation.totalSpillCount == 2u);
+  CHECK(instrumentation.totalReloadCount == 2u);
+}
 #endif
 
 TEST_CASE("ir serializes execution metadata") {

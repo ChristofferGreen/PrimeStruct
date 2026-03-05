@@ -44,6 +44,13 @@ inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
   return (value + mask) & ~mask;
 }
 
+struct Arm64InstrumentationCounters {
+  uint64_t valueStackPushCount = 0;
+  uint64_t valueStackPopCount = 0;
+  uint64_t spillCount = 0;
+  uint64_t reloadCount = 0;
+};
+
 class Arm64Emitter {
  public:
   static constexpr uint32_t MaxLdrStrOffsetBytes = 0xFFFu * 8u;
@@ -712,6 +719,10 @@ class Arm64Emitter {
     return bytes;
   }
 
+  const Arm64InstrumentationCounters &instrumentationCounters() const {
+    return counters_;
+  }
+
  private:
   enum class CondCode : uint8_t {
     Eq = 0x0,
@@ -911,11 +922,15 @@ class Arm64Emitter {
   }
 
   void emitPushReg(uint8_t reg) {
+    counters_.valueStackPushCount += 1;
+    counters_.spillCount += 1;
     emit(encodeSubRegImm(28, 28, 16));
     emit(encodeStrRegBase(reg, 28, 8));
   }
 
   void emitPopReg(uint8_t reg) {
+    counters_.valueStackPopCount += 1;
+    counters_.reloadCount += 1;
     emit(encodeLdrRegBase(reg, 28, 8));
     emit(encodeAddRegImm(28, 28, 16));
   }
@@ -1286,6 +1301,7 @@ class Arm64Emitter {
   std::vector<uint32_t> code_;
   uint64_t frameSize_ = 0;
   uint64_t codeBaseOffset_ = 0;
+  Arm64InstrumentationCounters counters_;
 };
 
 bool computeMaxStackDepth(const IrFunction &fn, int64_t &maxDepth, std::string &error);

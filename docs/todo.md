@@ -218,7 +218,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Document sample build/run instructions and expected runtime behavior for browser + native + macOS Metal targets (startup, controls, FPS/diagnostic overlay). Testing: scripted doc-command smoke checks to prevent instruction drift.
 
 **Native Register Allocation & Scheduling**
-- ○ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
+- ✓ Add native-emitter instrumentation counters for value-stack pushes/pops, spills/reloads, and per-function instruction totals. Testing: unit tests on known IR programs with fixed counter expectations.
 - ○ Add deterministic counter/debug dump output for instrumentation and optimization phases. Testing: dump-format snapshot tests with stable ordering.
 - ○ Add baseline performance/size benchmarks for representative IR workloads before allocator/scheduler changes. Testing: benchmark harness regression in CI with stored baseline artifacts.
 - ○ Implement top-of-stack register cache for arm64 integer stack values (spill only on pressure). Testing: runtime parity tests plus instruction-count and spill-count deltas.

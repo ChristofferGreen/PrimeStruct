@@ -5,7 +5,18 @@
 
 namespace primec {
 using namespace native_emitter;
+
 bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const {
+  return emitExecutable(module, outputPath, error, nullptr);
+}
+
+bool NativeEmitter::emitExecutable(const IrModule &module,
+                                   const std::string &outputPath,
+                                   std::string &error,
+                                   NativeEmitterInstrumentation *instrumentation) const {
+  if (instrumentation != nullptr) {
+    *instrumentation = NativeEmitterInstrumentation{};
+  }
 #if !defined(__APPLE__)
   (void)module;
   (void)outputPath;
@@ -134,8 +145,17 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
       emitOrder.push_back(functionIndex);
     }
   }
+  if (instrumentation != nullptr) {
+    instrumentation->perFunction.resize(module.functions.size());
+    for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+      auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
+      functionInstrumentation.functionName = module.functions[functionIndex].name;
+      functionInstrumentation.instructionTotal = module.functions[functionIndex].instructions.size();
+    }
+  }
 
   for (size_t functionIndex : emitOrder) {
+    const Arm64InstrumentationCounters countersBefore = emitter.instrumentationCounters();
     const IrFunction &fn = module.functions[functionIndex];
     const FunctionLayout &layout = layouts[functionIndex];
     const bool isEntryFunction = functionIndex == entryIndex;
@@ -573,6 +593,25 @@ bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &ou
     }
 
     instOffsets[functionIndex][fn.instructions.size()] = emitter.currentWordIndex();
+    if (instrumentation != nullptr) {
+      const Arm64InstrumentationCounters countersAfter = emitter.instrumentationCounters();
+      auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
+      functionInstrumentation.valueStackPushCount =
+          countersAfter.valueStackPushCount - countersBefore.valueStackPushCount;
+      functionInstrumentation.valueStackPopCount =
+          countersAfter.valueStackPopCount - countersBefore.valueStackPopCount;
+      functionInstrumentation.spillCount = countersAfter.spillCount - countersBefore.spillCount;
+      functionInstrumentation.reloadCount = countersAfter.reloadCount - countersBefore.reloadCount;
+    }
+  }
+  if (instrumentation != nullptr) {
+    for (const auto &functionInstrumentation : instrumentation->perFunction) {
+      instrumentation->totalInstructionCount += functionInstrumentation.instructionTotal;
+      instrumentation->totalValueStackPushCount += functionInstrumentation.valueStackPushCount;
+      instrumentation->totalValueStackPopCount += functionInstrumentation.valueStackPopCount;
+      instrumentation->totalSpillCount += functionInstrumentation.spillCount;
+      instrumentation->totalReloadCount += functionInstrumentation.reloadCount;
+    }
   }
 
   constexpr int64_t kImm26Min = -(1LL << 25);
