@@ -89,6 +89,25 @@ bool sectionPayloadIsEmptyVector(const std::vector<uint8_t> &bytes, uint8_t sect
   return false;
 }
 
+bool containsByteSequence(const std::vector<uint8_t> &haystack, const std::vector<uint8_t> &needle) {
+  if (needle.empty() || needle.size() > haystack.size()) {
+    return false;
+  }
+  for (size_t start = 0; start + needle.size() <= haystack.size(); ++start) {
+    bool match = true;
+    for (size_t offset = 0; offset < needle.size(); ++offset) {
+      if (haystack[start + offset] != needle[offset]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 TEST_CASE("wasm emitter writes deterministic empty-module section snapshots") {
@@ -202,6 +221,87 @@ TEST_CASE("wasm emitter rejects unsupported backward jump control flow") {
   std::string error;
   CHECK_FALSE(emitter.emitModule(module, bytes, error));
   CHECK(error.find("unsupported control-flow pattern") != std::string::npos);
+}
+
+TEST_CASE("wasm emitter lowers canonical backward-branch loops") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpGtI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 11});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> loopHeaderPattern = {
+      0x02, 0x40, // block void
+      0x03, 0x40, // loop void
+  };
+  const std::vector<uint8_t> breakPattern = {
+      0x45,       // i32.eqz
+      0x0d, 0x01, // br_if 1
+  };
+  const std::vector<uint8_t> continuePattern = {
+      0x0c, 0x00, // br 0
+      0x0b, 0x0b, // end loop + end block
+  };
+  CHECK(containsByteSequence(bytes, loopHeaderPattern));
+  CHECK(containsByteSequence(bytes, breakPattern));
+  CHECK(containsByteSequence(bytes, continuePattern));
+}
+
+TEST_CASE("wasm emitter rejects malformed jump targets deterministically") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 999});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(emitter.emitModule(module, bytes, error));
+  CHECK(error == "wasm emitter malformed jump target in function: /main");
+}
+
+TEST_CASE("wasm emitter rejects malformed backward jump targets deterministically") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 999});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(emitter.emitModule(module, bytes, error));
+  CHECK(error == "wasm emitter malformed jump target in function: /main");
 }
 
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {

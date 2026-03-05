@@ -233,6 +233,47 @@ main() {
   }
 }
 
+TEST_CASE("primec emits wasm bytecode for repeat while and for loops") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  repeat(2i32) {
+    assign(total, plus(total, 2i32))
+  }
+
+  [i32 mut] i{0i32}
+  while(less_than(i, 3i32)) {
+    assign(total, plus(total, i))
+    assign(i, plus(i, 1i32))
+  }
+
+  for([i32 mut] j{0i32} less_than(j, 2i32) assign(j, plus(j, 1i32))) {
+    assign(total, plus(total, j))
+  }
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("compile_emit_wasm_loops.prime", source);
+  const std::string wasmPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_loops.wasm").string();
+  const std::string errPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_loops_err.txt").string();
+  const std::string outPath = (std::filesystem::temp_directory_path() / "primec_emit_wasm_loops_out.txt").string();
+
+  const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                              " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  CHECK(std::filesystem::file_size(wasmPath) > 8);
+
+  if (hasWasmtime()) {
+    const std::string runCmd =
+        "wasmtime --invoke main " + quoteShellArg(wasmPath) + " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    const std::string output = readFile(outPath);
+    CHECK(output.find("8") != std::string::npos);
+  }
+}
+
 TEST_CASE("primec options default to wasm extension for emit kind") {
   std::vector<std::string> args = {
       "primec",
