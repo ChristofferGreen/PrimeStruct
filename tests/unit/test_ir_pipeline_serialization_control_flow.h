@@ -1362,6 +1362,20 @@ TEST_CASE("scheduler rejects allocation name mismatch") {
   CHECK(error.find("matching function names") != std::string::npos);
 }
 
+TEST_CASE("scheduler rejects allocation function count mismatch") {
+  primec::IrVirtualRegisterModule module;
+  primec::IrVirtualRegisterFunction function;
+  function.name = "/main";
+  module.functions.push_back(std::move(function));
+
+  primec::IrLinearScanModuleAllocation allocation;
+
+  primec::IrVirtualRegisterScheduledModule scheduled;
+  std::string error;
+  CHECK_FALSE(primec::scheduleIrVirtualRegisters(module, allocation, scheduled, error));
+  CHECK(error.find("matching function counts") != std::string::npos);
+}
+
 TEST_CASE("virtual-register verifier accepts valid scheduled allocation output") {
   primec::IrModule module;
   module.entryIndex = 0;
