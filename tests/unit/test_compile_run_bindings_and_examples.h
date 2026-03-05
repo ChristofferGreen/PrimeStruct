@@ -391,6 +391,83 @@ TEST_CASE("spinning cube native host target builds and runs") {
   CHECK(runCommand(runHostCmd) == 0);
 }
 
+TEST_CASE("spinning cube metal shader path compiles and enforces profile gating") {
+  std::filesystem::path metalSampleDir =
+      std::filesystem::path("..") / "examples" / "metal" / "spinning_cube";
+  if (!std::filesystem::exists(metalSampleDir)) {
+    metalSampleDir = std::filesystem::current_path() / "examples" / "metal" / "spinning_cube";
+  }
+  REQUIRE(std::filesystem::exists(metalSampleDir));
+
+  const std::filesystem::path metalShaderPath = metalSampleDir / "cube.metal";
+  const std::filesystem::path metalReadmePath = metalSampleDir / "README.md";
+  REQUIRE(std::filesystem::exists(metalShaderPath));
+  REQUIRE(std::filesystem::exists(metalReadmePath));
+
+  const std::string shaderText = readFile(metalShaderPath.string());
+  CHECK(shaderText.find("vertex") != std::string::npos);
+  CHECK(shaderText.find("fragment") != std::string::npos);
+
+  {
+    const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("spinning_cube_metal_profile_reject.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_profile_reject.err.txt").string();
+    const std::string cmd = "./primec --emit=wasm --wasm-profile metal-osx " + quoteShellArg(srcPath) +
+                            " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(cmd) == 2);
+    CHECK(readFile(errPath).find("unsupported --wasm-profile value: metal-osx (expected wasi|browser)") !=
+          std::string::npos);
+  }
+
+  {
+    const std::string source = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("spinning_cube_metal_emit_reject.prime", source);
+    const std::string errPath =
+        (std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_emit_reject.err.txt").string();
+    const std::string cmd = "./primec --emit=metal " + quoteShellArg(srcPath) +
+                            " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+    CHECK(runCommand(cmd) == 2);
+    CHECK(readFile(errPath).find("Usage: primec") != std::string::npos);
+  }
+
+  if (runCommand("xcrun --version > /dev/null 2>&1") != 0) {
+    INFO("xcrun not available; skipping macOS metal/metallib shader compile smoke");
+    return;
+  }
+
+  const std::filesystem::path outDir =
+      std::filesystem::temp_directory_path() / "primec_spinning_cube_metal_shader_path";
+  std::error_code ec;
+  std::filesystem::remove_all(outDir, ec);
+  std::filesystem::create_directories(outDir, ec);
+  REQUIRE(!ec);
+
+  const std::filesystem::path airPath = outDir / "cube.air";
+  const std::filesystem::path metallibPath = outDir / "cube.metallib";
+  const std::string compileMetalCmd = "xcrun metal -std=metal3.0 -c " + quoteShellArg(metalShaderPath.string()) +
+                                      " -o " + quoteShellArg(airPath.string());
+  CHECK(runCommand(compileMetalCmd) == 0);
+  CHECK(std::filesystem::exists(airPath));
+  CHECK(std::filesystem::file_size(airPath) > 0);
+
+  const std::string compileLibraryCmd =
+      "xcrun metallib " + quoteShellArg(airPath.string()) + " -o " + quoteShellArg(metallibPath.string());
+  CHECK(runCommand(compileLibraryCmd) == 0);
+  CHECK(std::filesystem::exists(metallibPath));
+  CHECK(std::filesystem::file_size(metallibPath) > 0);
+}
+
 TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
   const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
   REQUIRE(std::filesystem::exists(examplesDir));

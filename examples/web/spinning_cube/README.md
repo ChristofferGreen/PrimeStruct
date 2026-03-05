@@ -29,6 +29,8 @@ This example is a milestone target for cross-platform backend work.
   wireframe cube proxy so host bootstrap can be smoke-tested before WebGPU
   integration lands.
 - `cube.wgsl` is the minimal WebGPU shader path for the browser profile.
+- `examples/metal/spinning_cube/cube.metal` is the minimal macOS Metal shader
+  path (`metal-osx` profile artifact path).
 
 ## Minimal Browser Profile (Current)
 - Emit target: `--emit=wasm --wasm-profile browser` (alias: `wasm-browser`).

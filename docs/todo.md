@@ -209,7 +209,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add browser host sample assets (`index.html`, `main.js`) under `examples/web/spinning_cube/`. Testing: sample-presence smoke tests plus browser build pipeline checks.
 - ✓ Define minimal browser graphics profile (`wasm-browser` + WebGPU shader path) with compile-time gating. Testing: positive/negative compile suites for browser profile rules.
 - ✓ Add native desktop host target for the same sample (shared simulation logic + native host glue). Testing: native build-and-run integration test on supported CI runners.
-- ○ Add Apple Metal shader/output path for macOS (`metal-osx` profile) with compile-time gating. Testing: macOS shader compile tests (`xcrun metal`/`metallib`) and profile rejection tests.
+- ✓ Add Apple Metal shader/output path for macOS (`metal-osx` profile) with compile-time gating. Testing: macOS shader compile tests (`xcrun metal`/`metallib`) and profile rejection tests.
 - ○ Add minimal macOS Metal host glue for drawing the cube using generated shader artifacts. Testing: macOS runtime smoke test with frame-render assertion.
 - ○ Implement deterministic fixed-step simulation loop shared by browser/native/Metal hosts. Testing: deterministic tick-state tests with golden angle/transform snapshots.
 - ○ Add transform/rotation math parity tests across VM/native/Wasm/Metal-hosted paths. Testing: backend parity corpus with tolerance-checked numeric outputs.
