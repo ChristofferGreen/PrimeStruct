@@ -18,6 +18,7 @@ constexpr uint8_t WasmFunctionTypeTag = 0x60;
 constexpr uint8_t WasmSectionType = 1;
 constexpr uint8_t WasmSectionImport = 2;
 constexpr uint8_t WasmSectionFunction = 3;
+constexpr uint8_t WasmSectionMemory = 5;
 constexpr uint8_t WasmSectionExport = 7;
 constexpr uint8_t WasmSectionCode = 10;
 constexpr uint8_t WasmSectionData = 11;
@@ -30,6 +31,7 @@ constexpr uint8_t WasmBlockTypeVoid = 0x40;
 constexpr uint8_t WasmOpIf = 0x04;
 constexpr uint8_t WasmOpElse = 0x05;
 constexpr uint8_t WasmOpEnd = 0x0b;
+constexpr uint8_t WasmOpUnreachable = 0x00;
 constexpr uint8_t WasmOpCall = 0x10;
 constexpr uint8_t WasmOpReturn = 0x0f;
 constexpr uint8_t WasmOpDrop = 0x1a;
@@ -40,6 +42,8 @@ constexpr uint8_t WasmOpBrIf = 0x0d;
 constexpr uint8_t WasmOpLocalGet = 0x20;
 constexpr uint8_t WasmOpLocalSet = 0x21;
 constexpr uint8_t WasmOpLocalTee = 0x22;
+constexpr uint8_t WasmOpI32Load = 0x28;
+constexpr uint8_t WasmOpI32Store = 0x36;
 constexpr uint8_t WasmOpI32Const = 0x41;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
 constexpr uint8_t WasmOpI32Eq = 0x46;
@@ -48,6 +52,7 @@ constexpr uint8_t WasmOpI32LtS = 0x48;
 constexpr uint8_t WasmOpI32GtS = 0x4a;
 constexpr uint8_t WasmOpI32LeS = 0x4c;
 constexpr uint8_t WasmOpI32GeS = 0x4e;
+constexpr uint8_t WasmOpI32GeU = 0x4f;
 constexpr uint8_t WasmOpI32Add = 0x6a;
 constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
@@ -118,6 +123,48 @@ struct WasmDataSegment {
   uint32_t memoryIndex = 0;
   std::vector<uint8_t> offsetExpression;
   std::vector<uint8_t> bytes;
+};
+
+struct WasmMemoryLimit {
+  uint32_t minPages = 0;
+  bool hasMax = false;
+  uint32_t maxPages = 0;
+};
+
+struct WasmLocalLayout {
+  uint32_t irLocalCount = 0;
+  bool needsDupTempLocal = false;
+  uint32_t dupTempIndex = 0;
+  bool hasArgvHelpers = false;
+  uint32_t argvIndexLocal = 0;
+  uint32_t argvCountLocal = 0;
+  uint32_t argvPtrLocal = 0;
+  uint32_t argvLenLocal = 0;
+  uint32_t argvNextPtrLocal = 0;
+  uint32_t totalLocals = 0;
+};
+
+struct WasmRuntimeContext {
+  bool enabled = false;
+  bool hasArgvOps = false;
+  bool hasOutputOps = false;
+  uint32_t functionIndexOffset = 0;
+  uint32_t fdWriteImportIndex = 0;
+  uint32_t argsSizesGetImportIndex = 0;
+  uint32_t argsGetImportIndex = 0;
+  uint32_t argcAddr = 0;
+  uint32_t argvBufSizeAddr = 0;
+  uint32_t nwrittenAddr = 0;
+  uint32_t iovAddr = 0;
+  uint32_t argvPtrsBase = 0;
+  uint32_t argvBufferBase = 0;
+  uint32_t argvPtrsCapacityBytes = 0;
+  uint32_t argvBufferCapacityBytes = 0;
+  uint32_t newlineAddr = 0;
+  std::vector<uint32_t> stringPtrs;
+  std::vector<uint32_t> stringLens;
+  std::vector<WasmMemoryLimit> memories;
+  std::vector<WasmDataSegment> dataSegments;
 };
 
 void appendU32Leb(uint32_t value, std::vector<uint8_t> &out) {
@@ -242,6 +289,21 @@ bool encodeFunctionSection(const std::vector<uint32_t> &functionTypeIndexes,
   return true;
 }
 
+bool encodeMemorySection(const std::vector<WasmMemoryLimit> &memories, std::vector<uint8_t> &payload, std::string &error) {
+  payload.clear();
+  if (!appendLength(memories.size(), payload, error)) {
+    return false;
+  }
+  for (const WasmMemoryLimit &memory : memories) {
+    payload.push_back(memory.hasMax ? 0x01 : 0x00);
+    appendU32Leb(memory.minPages, payload);
+    if (memory.hasMax) {
+      appendU32Leb(memory.maxPages, payload);
+    }
+  }
+  return true;
+}
+
 bool encodeExportSection(const std::vector<WasmExport> &exports,
                          std::vector<uint8_t> &payload,
                          std::string &error) {
@@ -357,47 +419,243 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
   return true;
 }
 
-uint32_t computeLocalCount(const IrFunction &function, bool &needsDupTempLocal, std::string &error) {
+bool opcodeNeedsWasiRuntime(IrOpcode op) {
+  switch (op) {
+    case IrOpcode::PushArgc:
+    case IrOpcode::PrintString:
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe:
+      return true;
+    default:
+      return false;
+  }
+}
+
+WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &error) {
+  WasmLocalLayout layout;
   uint64_t maxLocalIndex = 0;
   bool hasLocal = false;
-  needsDupTempLocal = false;
   for (const IrInstruction &inst : function.instructions) {
     if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal) {
       maxLocalIndex = std::max(maxLocalIndex, inst.imm);
       hasLocal = true;
     }
     if (inst.op == IrOpcode::Dup) {
-      needsDupTempLocal = true;
+      layout.needsDupTempLocal = true;
+    }
+    if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
+      layout.hasArgvHelpers = true;
     }
   }
   const uint64_t baseCount = hasLocal ? (maxLocalIndex + 1) : 0;
-  const uint64_t totalCount = baseCount + (needsDupTempLocal ? 1 : 0);
+  layout.irLocalCount = static_cast<uint32_t>(baseCount);
+  uint64_t totalCount = baseCount;
+  if (layout.needsDupTempLocal) {
+    layout.dupTempIndex = static_cast<uint32_t>(totalCount);
+    totalCount += 1;
+  }
+  if (layout.hasArgvHelpers) {
+    layout.argvIndexLocal = static_cast<uint32_t>(totalCount);
+    layout.argvCountLocal = static_cast<uint32_t>(totalCount + 1);
+    layout.argvPtrLocal = static_cast<uint32_t>(totalCount + 2);
+    layout.argvLenLocal = static_cast<uint32_t>(totalCount + 3);
+    layout.argvNextPtrLocal = static_cast<uint32_t>(totalCount + 4);
+    totalCount += 5;
+  }
   if (totalCount > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
     error = "wasm emitter local count exceeds 32-bit limit in function: " + function.name;
-    return 0;
+    return WasmLocalLayout{};
   }
-  return static_cast<uint32_t>(baseCount);
+  layout.totalLocals = static_cast<uint32_t>(totalCount);
+  return layout;
 }
 
-void appendLocalDecls(uint32_t localCount, bool needsDupTempLocal, std::vector<uint8_t> &out) {
-  const uint32_t totalLocals = localCount + (needsDupTempLocal ? 1u : 0u);
-  if (totalLocals == 0) {
+void appendLocalDecls(const WasmLocalLayout &layout, std::vector<uint8_t> &out) {
+  if (layout.totalLocals == 0) {
     appendU32Leb(0, out);
     return;
   }
   appendU32Leb(1, out);
-  appendU32Leb(totalLocals, out);
+  appendU32Leb(layout.totalLocals, out);
   out.push_back(WasmValueTypeI32);
 }
 
+void appendI32MemArg(uint32_t offset, std::vector<uint8_t> &out) {
+  appendU32Leb(2, out);
+  appendU32Leb(offset, out);
+}
+
+void emitI32LoadAtAddress(uint32_t address, std::vector<uint8_t> &out) {
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(address), out);
+  out.push_back(WasmOpI32Load);
+  appendI32MemArg(0, out);
+}
+
+void emitWasiWritePtrLen(uint32_t fd,
+                         uint32_t ptrLocal,
+                         uint32_t lenLocal,
+                         const WasmRuntimeContext &runtime,
+                         std::vector<uint8_t> &out) {
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(ptrLocal, out);
+  out.push_back(WasmOpI32Store);
+  appendI32MemArg(0, out);
+
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr + 4), out);
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(lenLocal, out);
+  out.push_back(WasmOpI32Store);
+  appendI32MemArg(0, out);
+
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(fd), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(1, out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.nwrittenAddr), out);
+  out.push_back(WasmOpCall);
+  appendU32Leb(runtime.fdWriteImportIndex, out);
+  out.push_back(WasmOpDrop);
+}
+
+void emitWasiWriteLiteral(uint32_t fd, uint32_t ptr, uint32_t len, const WasmRuntimeContext &runtime, std::vector<uint8_t> &out) {
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(ptr), out);
+  out.push_back(WasmOpI32Store);
+  appendI32MemArg(0, out);
+
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr + 4), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(len), out);
+  out.push_back(WasmOpI32Store);
+  appendI32MemArg(0, out);
+
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(fd), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.iovAddr), out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(1, out);
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(runtime.nwrittenAddr), out);
+  out.push_back(WasmOpCall);
+  appendU32Leb(runtime.fdWriteImportIndex, out);
+  out.push_back(WasmOpDrop);
+}
+
+void appendDataSegmentAt(uint32_t address, const std::vector<uint8_t> &bytes, std::vector<WasmDataSegment> &segments) {
+  WasmDataSegment segment;
+  segment.memoryIndex = 0;
+  segment.offsetExpression.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(address), segment.offsetExpression);
+  segment.offsetExpression.push_back(WasmOpEnd);
+  segment.bytes = bytes;
+  segments.push_back(std::move(segment));
+}
+
+bool buildWasiRuntimeContext(const IrModule &module,
+                             std::vector<WasmImport> &imports,
+                             std::vector<WasmFunctionType> &types,
+                             WasmRuntimeContext &runtime,
+                             std::string &error) {
+  runtime = WasmRuntimeContext{};
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &inst : function.instructions) {
+      if (!opcodeNeedsWasiRuntime(inst.op)) {
+        continue;
+      }
+      runtime.enabled = true;
+      if (inst.op == IrOpcode::PushArgc || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
+        runtime.hasArgvOps = true;
+      }
+      if (inst.op == IrOpcode::PrintString || inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
+        runtime.hasOutputOps = true;
+      }
+    }
+  }
+  if (!runtime.enabled) {
+    return true;
+  }
+
+  runtime.argcAddr = 0;
+  runtime.argvBufSizeAddr = 4;
+  runtime.nwrittenAddr = 8;
+  runtime.iovAddr = 16;
+  runtime.argvPtrsBase = 64;
+  runtime.argvPtrsCapacityBytes = 4096;
+  runtime.argvBufferBase = runtime.argvPtrsBase + runtime.argvPtrsCapacityBytes;
+  runtime.argvBufferCapacityBytes = 16384;
+  runtime.newlineAddr = runtime.argvBufferBase + runtime.argvBufferCapacityBytes;
+  uint32_t stringBase = runtime.newlineAddr + 1;
+
+  runtime.stringPtrs.assign(module.stringTable.size(), 0);
+  runtime.stringLens.assign(module.stringTable.size(), 0);
+  std::vector<uint8_t> stringBlob;
+  for (size_t i = 0; i < module.stringTable.size(); ++i) {
+    runtime.stringPtrs[i] = stringBase + static_cast<uint32_t>(stringBlob.size());
+    runtime.stringLens[i] = static_cast<uint32_t>(module.stringTable[i].size());
+    stringBlob.insert(stringBlob.end(), module.stringTable[i].begin(), module.stringTable[i].end());
+  }
+
+  runtime.memories.push_back(WasmMemoryLimit{1, false, 0});
+  if (!stringBlob.empty()) {
+    appendDataSegmentAt(stringBase, stringBlob, runtime.dataSegments);
+  }
+  appendDataSegmentAt(runtime.newlineAddr, std::vector<uint8_t>{'\n'}, runtime.dataSegments);
+
+  WasmFunctionType fdWriteType;
+  fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
+  fdWriteType.results = {WasmValueTypeI32};
+  runtime.fdWriteImportIndex = static_cast<uint32_t>(imports.size());
+  imports.push_back({"wasi_snapshot_preview1", "fd_write", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+  types.push_back(std::move(fdWriteType));
+
+  WasmFunctionType argsSizesType;
+  argsSizesType.params = {WasmValueTypeI32, WasmValueTypeI32};
+  argsSizesType.results = {WasmValueTypeI32};
+  runtime.argsSizesGetImportIndex = static_cast<uint32_t>(imports.size());
+  imports.push_back(
+      {"wasi_snapshot_preview1", "args_sizes_get", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+  types.push_back(std::move(argsSizesType));
+
+  WasmFunctionType argsGetType;
+  argsGetType.params = {WasmValueTypeI32, WasmValueTypeI32};
+  argsGetType.results = {WasmValueTypeI32};
+  runtime.argsGetImportIndex = static_cast<uint32_t>(imports.size());
+  imports.push_back({"wasi_snapshot_preview1", "args_get", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+  types.push_back(std::move(argsGetType));
+
+  runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
+
+  const uint32_t memoryEnd = stringBase + static_cast<uint32_t>(stringBlob.size());
+  const uint32_t requiredPages = (memoryEnd / 65536u) + 1u;
+  if (requiredPages > runtime.memories[0].minPages) {
+    runtime.memories[0].minPages = requiredPages;
+  }
+  if (runtime.memories[0].minPages == 0) {
+    error = "wasm emitter invalid memory layout";
+    return false;
+  }
+  return true;
+}
+
 bool emitSimpleInstruction(const IrInstruction &inst,
-                           uint32_t localCount,
-                           bool needsDupTempLocal,
+                           const WasmLocalLayout &localLayout,
                            const std::vector<WasmFunctionType> &functionTypes,
+                           const WasmRuntimeContext &runtime,
                            std::vector<uint8_t> &out,
                            std::string &error,
                            const std::string &functionName) {
-  const uint32_t dupTempIndex = localCount;
+  const uint32_t dupTempIndex = localLayout.dupTempIndex;
   switch (inst.op) {
     case IrOpcode::PushI32:
       out.push_back(WasmOpI32Const);
@@ -412,7 +670,7 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       appendFixedU64Le(inst.imm, out);
       return true;
     case IrOpcode::LoadLocal:
-      if (inst.imm >= localCount) {
+      if (inst.imm >= localLayout.irLocalCount) {
         error = "wasm emitter local index out of range in function: " + functionName;
         return false;
       }
@@ -420,7 +678,7 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       appendU32Leb(static_cast<uint32_t>(inst.imm), out);
       return true;
     case IrOpcode::StoreLocal:
-      if (inst.imm >= localCount) {
+      if (inst.imm >= localLayout.irLocalCount) {
         error = "wasm emitter local index out of range in function: " + functionName;
         return false;
       }
@@ -428,7 +686,7 @@ bool emitSimpleInstruction(const IrInstruction &inst,
       appendU32Leb(static_cast<uint32_t>(inst.imm), out);
       return true;
     case IrOpcode::Dup:
-      if (!needsDupTempLocal) {
+      if (!localLayout.needsDupTempLocal) {
         error = "wasm emitter internal error: missing dup temp local";
         return false;
       }
@@ -583,6 +841,162 @@ bool emitSimpleInstruction(const IrInstruction &inst,
     case IrOpcode::ConvertF64ToF32:
       out.push_back(WasmOpF32DemoteF64);
       return true;
+    case IrOpcode::PushArgc:
+      if (!runtime.enabled || !runtime.hasArgvOps) {
+        error = "wasm emitter missing argv runtime support in function: " + functionName;
+        return false;
+      }
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argcAddr), out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvBufSizeAddr), out);
+      out.push_back(WasmOpCall);
+      appendU32Leb(runtime.argsSizesGetImportIndex, out);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmValueTypeI32);
+      emitI32LoadAtAddress(runtime.argcAddr, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(0, out);
+      out.push_back(WasmOpEnd);
+      return true;
+    case IrOpcode::PrintString: {
+      if (!runtime.enabled || !runtime.hasOutputOps) {
+        error = "wasm emitter missing output runtime support in function: " + functionName;
+        return false;
+      }
+      const uint64_t stringIndex = decodePrintStringIndex(inst.imm);
+      if (stringIndex >= runtime.stringPtrs.size()) {
+        error = "wasm emitter invalid string index in function: " + functionName;
+        return false;
+      }
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      const uint32_t fd = (flags & PrintFlagStderr) ? 2u : 1u;
+      emitWasiWriteLiteral(
+          fd, runtime.stringPtrs[static_cast<size_t>(stringIndex)], runtime.stringLens[static_cast<size_t>(stringIndex)], runtime, out);
+      if ((flags & PrintFlagNewline) != 0) {
+        emitWasiWriteLiteral(fd, runtime.newlineAddr, 1, runtime, out);
+      }
+      return true;
+    }
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe: {
+      if (!runtime.enabled || !runtime.hasArgvOps || !localLayout.hasArgvHelpers) {
+        error = "wasm emitter missing argv runtime helpers in function: " + functionName;
+        return false;
+      }
+      const bool safePrint = (inst.op == IrOpcode::PrintArgv);
+      const uint64_t flags = decodePrintFlags(inst.imm);
+      const uint32_t fd = (flags & PrintFlagStderr) ? 2u : 1u;
+
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvIndexLocal, out);
+
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argcAddr), out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvBufSizeAddr), out);
+      out.push_back(WasmOpCall);
+      appendU32Leb(runtime.argsSizesGetImportIndex, out);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmBlockTypeVoid);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvBufferBase), out);
+      out.push_back(WasmOpCall);
+      appendU32Leb(runtime.argsGetImportIndex, out);
+      out.push_back(WasmOpI32Eqz);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmBlockTypeVoid);
+
+      emitI32LoadAtAddress(runtime.argcAddr, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvCountLocal, out);
+
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvIndexLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvCountLocal, out);
+      out.push_back(WasmOpI32GeU);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmBlockTypeVoid);
+      if (safePrint) {
+        out.push_back(WasmOpUnreachable);
+      }
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvIndexLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(4, out);
+      out.push_back(WasmOpI32Mul);
+      out.push_back(WasmOpI32Add);
+      out.push_back(WasmOpI32Load);
+      appendI32MemArg(0, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvPtrLocal, out);
+
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvIndexLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvCountLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(1, out);
+      out.push_back(WasmOpI32Sub);
+      out.push_back(WasmOpI32Eq);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmBlockTypeVoid);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvBufferBase), out);
+      emitI32LoadAtAddress(runtime.argvBufSizeAddr, out);
+      out.push_back(WasmOpI32Add);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvPtrLocal, out);
+      out.push_back(WasmOpI32Sub);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvLenLocal, out);
+      out.push_back(WasmOpElse);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvIndexLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(1, out);
+      out.push_back(WasmOpI32Add);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(4, out);
+      out.push_back(WasmOpI32Mul);
+      out.push_back(WasmOpI32Add);
+      out.push_back(WasmOpI32Load);
+      appendI32MemArg(0, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvNextPtrLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvNextPtrLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvPtrLocal, out);
+      out.push_back(WasmOpI32Sub);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvLenLocal, out);
+      out.push_back(WasmOpEnd);
+
+      emitWasiWritePtrLen(fd, localLayout.argvPtrLocal, localLayout.argvLenLocal, runtime, out);
+      if ((flags & PrintFlagNewline) != 0) {
+        emitWasiWriteLiteral(fd, runtime.newlineAddr, 1, runtime, out);
+      }
+      out.push_back(WasmOpEnd);
+      out.push_back(WasmOpEnd);
+      out.push_back(WasmOpElse);
+      if (safePrint) {
+        out.push_back(WasmOpUnreachable);
+      }
+      out.push_back(WasmOpEnd);
+      return true;
+    }
     case IrOpcode::Call:
     case IrOpcode::CallVoid: {
       if (inst.imm >= functionTypes.size()) {
@@ -590,7 +1004,7 @@ bool emitSimpleInstruction(const IrInstruction &inst,
         return false;
       }
       out.push_back(WasmOpCall);
-      appendU32Leb(static_cast<uint32_t>(inst.imm), out);
+      appendU32Leb(runtime.functionIndexOffset + static_cast<uint32_t>(inst.imm), out);
       if (inst.op == IrOpcode::CallVoid && !functionTypes[static_cast<size_t>(inst.imm)].results.empty()) {
         out.push_back(WasmOpDrop);
       }
@@ -615,9 +1029,9 @@ bool emitSimpleInstruction(const IrInstruction &inst,
 bool emitInstructionRange(const IrFunction &function,
                           size_t start,
                           size_t end,
-                          uint32_t localCount,
-                          bool needsDupTempLocal,
+                          const WasmLocalLayout &localLayout,
                           const std::vector<WasmFunctionType> &functionTypes,
+                          const WasmRuntimeContext &runtime,
                           std::vector<uint8_t> &out,
                           std::string &error);
 
@@ -699,21 +1113,21 @@ bool emitIfRegion(const IrFunction &function,
                   size_t trueEnd,
                   size_t falseStart,
                   size_t falseEnd,
-                  uint32_t localCount,
-                  bool needsDupTempLocal,
+                  const WasmLocalLayout &localLayout,
                   const std::vector<WasmFunctionType> &functionTypes,
+                  const WasmRuntimeContext &runtime,
                   std::vector<uint8_t> &out,
                   std::string &error) {
   (void)conditionIndex;
   out.push_back(WasmOpIf);
   out.push_back(WasmBlockTypeVoid);
-  if (!emitInstructionRange(function, trueStart, trueEnd, localCount, needsDupTempLocal, functionTypes, out, error)) {
+  if (!emitInstructionRange(function, trueStart, trueEnd, localLayout, functionTypes, runtime, out, error)) {
     return false;
   }
   if (falseStart < falseEnd) {
     out.push_back(WasmOpElse);
     if (!emitInstructionRange(
-            function, falseStart, falseEnd, localCount, needsDupTempLocal, functionTypes, out, error)) {
+            function, falseStart, falseEnd, localLayout, functionTypes, runtime, out, error)) {
       return false;
     }
   }
@@ -724,9 +1138,9 @@ bool emitIfRegion(const IrFunction &function,
 bool emitInstructionRange(const IrFunction &function,
                           size_t start,
                           size_t end,
-                          uint32_t localCount,
-                          bool needsDupTempLocal,
+                          const WasmLocalLayout &localLayout,
                           const std::vector<WasmFunctionType> &functionTypes,
+                          const WasmRuntimeContext &runtime,
                           std::vector<uint8_t> &out,
                           std::string &error) {
   size_t index = start;
@@ -742,9 +1156,9 @@ bool emitInstructionRange(const IrFunction &function,
               function,
               index,
               loopRegion.guardIndex,
-              localCount,
-              needsDupTempLocal,
+              localLayout,
               functionTypes,
+              runtime,
               out,
               error)) {
         return false;
@@ -757,9 +1171,9 @@ bool emitInstructionRange(const IrFunction &function,
               function,
               loopRegion.guardIndex + 1,
               loopRegion.tailJumpIndex,
-              localCount,
-              needsDupTempLocal,
+              localLayout,
               functionTypes,
+              runtime,
               out,
               error)) {
         return false;
@@ -806,9 +1220,9 @@ bool emitInstructionRange(const IrFunction &function,
                             target - 1,
                             target,
                             jumpTarget,
-                            localCount,
-                            needsDupTempLocal,
+                            localLayout,
                             functionTypes,
+                            runtime,
                             out,
                             error)) {
             return false;
@@ -825,9 +1239,9 @@ bool emitInstructionRange(const IrFunction &function,
                         target,
                         target,
                         target,
-                        localCount,
-                        needsDupTempLocal,
+                        localLayout,
                         functionTypes,
+                        runtime,
                         out,
                         error)) {
         return false;
@@ -847,7 +1261,7 @@ bool emitInstructionRange(const IrFunction &function,
       return false;
     }
 
-    if (!emitSimpleInstruction(inst, localCount, needsDupTempLocal, functionTypes, out, error, function.name)) {
+    if (!emitSimpleInstruction(inst, localLayout, functionTypes, runtime, out, error, function.name)) {
       return false;
     }
     ++index;
@@ -858,25 +1272,25 @@ bool emitInstructionRange(const IrFunction &function,
 
 bool lowerFunctionCode(const IrFunction &function,
                        const std::vector<WasmFunctionType> &functionTypes,
+                       const WasmRuntimeContext &runtime,
                        WasmCodeBody &outBody,
                        std::string &error) {
-  bool needsDupTempLocal = false;
-  const uint32_t localCount = computeLocalCount(function, needsDupTempLocal, error);
+  const WasmLocalLayout localLayout = computeLocalLayout(function, error);
   if (!error.empty()) {
     return false;
   }
 
   outBody.localDecls.clear();
   outBody.instructions.clear();
-  appendLocalDecls(localCount, needsDupTempLocal, outBody.localDecls);
+  appendLocalDecls(localLayout, outBody.localDecls);
 
   if (!emitInstructionRange(
           function,
           0,
           function.instructions.size(),
-          localCount,
-          needsDupTempLocal,
+          localLayout,
           functionTypes,
+          runtime,
           outBody.instructions,
           error)) {
     return false;
@@ -901,24 +1315,40 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     return false;
   }
 
-  std::vector<WasmFunctionType> types;
-  std::vector<uint32_t> functionTypeIndexes;
-  std::vector<WasmCodeBody> codeBodies;
-  types.reserve(module.functions.size());
-  functionTypeIndexes.reserve(module.functions.size());
-  codeBodies.reserve(module.functions.size());
-
+  std::vector<WasmFunctionType> functionTypes;
+  functionTypes.reserve(module.functions.size());
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     WasmFunctionType functionType;
     if (!inferFunctionType(module.functions[functionIndex], functionType, error)) {
       return false;
     }
-    types.push_back(std::move(functionType));
-    functionTypeIndexes.push_back(static_cast<uint32_t>(functionIndex));
+    functionTypes.push_back(std::move(functionType));
+  }
+
+  std::vector<WasmImport> imports;
+  std::vector<WasmFunctionType> types;
+  WasmRuntimeContext runtime;
+  if (!buildWasiRuntimeContext(module, imports, types, runtime, error)) {
+    return false;
+  }
+  if (!runtime.enabled) {
+    runtime.functionIndexOffset = 0;
+  }
+
+  std::vector<uint32_t> functionTypeIndexes;
+  std::vector<WasmCodeBody> codeBodies;
+  types.reserve(types.size() + module.functions.size());
+  functionTypeIndexes.reserve(module.functions.size());
+  codeBodies.reserve(module.functions.size());
+
+  const uint32_t firstFunctionTypeIndex = static_cast<uint32_t>(types.size());
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    types.push_back(functionTypes[functionIndex]);
+    functionTypeIndexes.push_back(firstFunctionTypeIndex + static_cast<uint32_t>(functionIndex));
   }
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     WasmCodeBody codeBody;
-    if (!lowerFunctionCode(module.functions[functionIndex], types, codeBody, error)) {
+    if (!lowerFunctionCode(module.functions[functionIndex], functionTypes, runtime, codeBody, error)) {
       return false;
     }
     codeBodies.push_back(std::move(codeBody));
@@ -929,12 +1359,12 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     WasmExport exportEntry;
     exportEntry.name = wasmExportName(module.functions[static_cast<size_t>(module.entryIndex)].name);
     exportEntry.kind = WasmFunctionKind;
-    exportEntry.index = static_cast<uint32_t>(module.entryIndex);
+    exportEntry.index = runtime.functionIndexOffset + static_cast<uint32_t>(module.entryIndex);
     exports.push_back(std::move(exportEntry));
   }
 
-  const std::vector<WasmImport> imports;
-  const std::vector<WasmDataSegment> dataSegments;
+  const std::vector<WasmMemoryLimit> &memories = runtime.memories;
+  const std::vector<WasmDataSegment> &dataSegments = runtime.dataSegments;
 
   out.insert(out.end(), std::begin(WasmMagic), std::end(WasmMagic));
   out.insert(out.end(), std::begin(WasmVersion), std::end(WasmVersion));
@@ -948,6 +1378,10 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
   }
   if (!encodeFunctionSection(functionTypeIndexes, payload, error) ||
       !appendSection(WasmSectionFunction, payload, out, error)) {
+    return false;
+  }
+  if (!memories.empty() &&
+      (!encodeMemorySection(memories, payload, error) || !appendSection(WasmSectionMemory, payload, out, error))) {
     return false;
   }
   if (!encodeExportSection(exports, payload, error) || !appendSection(WasmSectionExport, payload, out, error)) {

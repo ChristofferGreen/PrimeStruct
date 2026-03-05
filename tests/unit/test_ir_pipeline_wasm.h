@@ -444,6 +444,53 @@ TEST_CASE("wasm emitter lowers recursive call opcode in canonical IR") {
   CHECK(containsByteSequence(bytes, recursiveCallPattern));
 }
 
+TEST_CASE("wasm emitter adds wasi imports memory and argv output lowering") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("hello");
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushArgc, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PrintArgv, primec::PrintFlagNewline});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PrintArgvUnsafe, primec::PrintFlagStderr});
+  mainFn.instructions.push_back(
+      {primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, primec::PrintFlagStderr | primec::PrintFlagNewline)});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  std::vector<uint8_t> sectionIds;
+  std::vector<uint32_t> sectionLengths;
+  REQUIRE(parseSections(bytes, sectionIds, sectionLengths, error));
+  CHECK(error.empty());
+  const std::vector<uint8_t> expectedSectionIds = {1, 2, 3, 5, 7, 10, 11};
+  CHECK(sectionIds == expectedSectionIds);
+  CHECK_FALSE(sectionPayloadIsEmptyVector(bytes, 5));
+
+  const auto textBytes = [](const std::string &text) {
+    return std::vector<uint8_t>(text.begin(), text.end());
+  };
+  CHECK(containsByteSequence(bytes, textBytes("wasi_snapshot_preview1")));
+  CHECK(containsByteSequence(bytes, textBytes("fd_write")));
+  CHECK(containsByteSequence(bytes, textBytes("args_sizes_get")));
+  CHECK(containsByteSequence(bytes, textBytes("args_get")));
+
+  CHECK(containsByteSequence(bytes, {0x10, 0x00}));
+  CHECK(containsByteSequence(bytes, {0x10, 0x01}));
+  CHECK(containsByteSequence(bytes, {0x10, 0x02}));
+  CHECK(containsByteSequence(bytes, {0x36, 0x02, 0x00}));
+  CHECK(containsByteSequence(bytes, {0x28, 0x02, 0x00}));
+}
+
 TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
   primec::WasmEmitter emitter;
   primec::IrModule module;

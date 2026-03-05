@@ -194,7 +194,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Implement initial `wasm32-wasi` codegen for float ops and core numeric conversions (`i32<->f32/f64`, `f32<->f64`). Testing: float/conversion conformance corpus with tolerance checks.
 - ✓ Extend `wasm32-wasi` numeric conversion lowering to `i64/u64` conversion opcodes with deterministic diagnostics for unsupported signedness edges. Testing: i64/u64 conversion corpus (including negative and non-finite cases) under Wasm runtime checks.
 - ✓ Implement call/return lowering for callable IR in Wasm backend. Testing: direct/recursive call parity tests where semantics permit recursion.
-- ○ Implement WASI import mapping for stdout/stderr/argv paths (`wasi_snapshot_preview1`). Testing: integration tests for argv and output parity.
+- ✓ Implement WASI import mapping for stdout/stderr/argv paths (`wasi_snapshot_preview1`). Testing: integration tests for argv and output parity.
 - ○ Implement WASI import mapping for file operations. Testing: file behavior integration tests (open/write/flush/close/error paths).
 - ○ Add deterministic compile-run parity tests comparing VM vs Wasm behavior for supported programs. Testing: locked parity corpus with stable outputs and exit codes.
 - ○ Add negative conformance tests rejecting unsupported IR features in Wasm mode with stable diagnostics. Testing: diagnostics snapshot tests with code + notes + stage metadata.

@@ -13,7 +13,7 @@ constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallVoid);
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule;
-constexpr uint64_t KnownWasmEffectMask = 0;
+constexpr uint64_t KnownWasmEffectMask = EffectIoOut | EffectIoErr;
 
 bool failFunction(size_t functionIndex,
                   const std::string &functionName,
@@ -168,6 +168,10 @@ bool validateFunction(const IrModule &module,
         case IrOpcode::ConvertF64ToU64:
         case IrOpcode::ConvertF32ToF64:
         case IrOpcode::ConvertF64ToF32:
+        case IrOpcode::PushArgc:
+        case IrOpcode::PrintString:
+        case IrOpcode::PrintArgv:
+        case IrOpcode::PrintArgvUnsafe:
         case IrOpcode::JumpIfZero:
         case IrOpcode::Jump:
         case IrOpcode::Call:

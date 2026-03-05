@@ -20847,12 +20847,38 @@ TEST_CASE("ir validator wasm target accepts call opcodes") {
   CHECK(error.empty());
 }
 
+TEST_CASE("ir validator wasm target accepts wasi output and argv opcodes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.stringTable.push_back("ok");
+
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.metadata.effectMask = primec::EffectIoOut | primec::EffectIoErr;
+  fn.metadata.capabilityMask = primec::EffectIoOut | primec::EffectIoErr;
+  fn.instructions.push_back({primec::IrOpcode::PushArgc, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back({primec::IrOpcode::PrintArgv, primec::PrintFlagNewline});
+  fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  fn.instructions.push_back(
+      {primec::IrOpcode::PrintArgvUnsafe, primec::PrintFlagStderr | primec::PrintFlagNewline});
+  fn.instructions.push_back(
+      {primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, primec::PrintFlagStderr)});
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(std::move(fn));
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir validator wasm target rejects unsupported effects and capabilities") {
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.metadata.effectMask = primec::EffectIoOut;
+  fn.metadata.effectMask = primec::EffectHeapAlloc;
   fn.metadata.capabilityMask = primec::EffectIoOut;
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
@@ -20861,8 +20887,8 @@ TEST_CASE("ir validator wasm target rejects unsupported effects and capabilities
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
   CHECK(error.find("unsupported effect mask bits for wasm target") != std::string::npos);
 
-  fn.metadata.effectMask = 0;
-  fn.metadata.capabilityMask = primec::EffectIoOut;
+  fn.metadata.effectMask = primec::EffectIoOut;
+  fn.metadata.capabilityMask = primec::EffectFileWrite;
   module.functions[0] = fn;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
   CHECK(error.find("unsupported capability mask bits for wasm target") != std::string::npos);
