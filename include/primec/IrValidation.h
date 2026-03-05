@@ -10,6 +10,7 @@ enum class IrValidationTarget {
   Any,
   Vm,
   Native,
+  Wasm,
 };
 
 bool validateIrModule(const IrModule &module, IrValidationTarget target, std::string &error);

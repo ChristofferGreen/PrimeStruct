@@ -123,6 +123,7 @@ module {
   - Requires `glslangValidator` or `glslc` on `PATH`.
 - `primec --emit=wasm input.prime -o module`
   - Routes through canonical IR into `WasmEmitter`.
+  - Runs `IrValidationTarget::Wasm` before emission to enforce the current Wasm opcode/effect/capability allowlist.
   - Current state: CLI and diagnostics wiring is in place; non-empty function lowering still reports a backend emit diagnostic until Wasm codegen TODOs land.
   - When `-o` is omitted, output defaults to `<input-stem>.wasm`.
 - `primevm input.prime --entry /main -- <args>`

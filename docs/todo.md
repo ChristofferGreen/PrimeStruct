@@ -188,7 +188,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add Wasm module section encoders (type/function/code/data/import/export) with deterministic emission order. Testing: binary snapshot tests and validator-based structural checks.
 - ✓ Add `--emit=wasm` CLI support in `primec` (option parsing + diagnostics parity). Testing: options-parser regression tests and diagnostics-mode argument tests.
 - ✓ Add default `.wasm` output extension and usage/help text updates. Testing: usage-text lock tests and output-path default tests.
-- ○ Add `IrValidationTarget::Wasm` with explicit opcode/effect/capability allowlist. Testing: positive/negative IR validation suites for Wasm constraints.
+- ✓ Add `IrValidationTarget::Wasm` with explicit opcode/effect/capability allowlist. Testing: positive/negative IR validation suites for Wasm constraints.
 - ○ Implement `wasm32-wasi` codegen for integer/control-flow/local ops. Testing: compile-run tests under a Wasm runtime (for example `wasmtime`) for control-flow/math programs.
 - ○ Implement `wasm32-wasi` codegen for float ops and numeric conversions. Testing: float/conversion conformance corpus with tolerance checks.
 - ○ Implement call/return lowering for callable IR in Wasm backend. Testing: direct/recursive call parity tests where semantics permit recursion.

@@ -690,7 +690,7 @@ int main(int argc, char **argv) {
       return emitFailure(
           options, primec::DiagnosticCode::LoweringError, "Wasm lowering error: ", error, 2, {"backend: wasm"});
     }
-    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+    if (!primec::validateIrModule(ir, primec::IrValidationTarget::Wasm, error)) {
       return emitFailure(options,
                          primec::DiagnosticCode::LoweringError,
                          "Wasm IR validation error: ",
@@ -707,7 +707,7 @@ int main(int argc, char **argv) {
                            2,
                            {"backend: wasm", "stage: ir-inline"});
       }
-      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Any, error)) {
+      if (!primec::validateIrModule(ir, primec::IrValidationTarget::Wasm, error)) {
         return emitFailure(options,
                            primec::DiagnosticCode::LoweringError,
                            "Wasm IR validation error: ",

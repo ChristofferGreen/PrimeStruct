@@ -13,6 +13,7 @@ constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallVoid);
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule;
+constexpr uint64_t KnownWasmEffectMask = 0;
 
 bool failFunction(size_t functionIndex,
                   const std::string &functionName,
@@ -98,12 +99,46 @@ bool validateFunction(const IrModule &module,
   if ((function.metadata.capabilityMask & ~KnownEffectMask) != 0u) {
     return failFunction(functionIndex, function.name, "unsupported capability mask bits", error);
   }
+  if (target == IrValidationTarget::Wasm && (function.metadata.effectMask & ~KnownWasmEffectMask) != 0u) {
+    return failFunction(functionIndex, function.name, "unsupported effect mask bits for wasm target", error);
+  }
+  if (target == IrValidationTarget::Wasm && (function.metadata.capabilityMask & ~KnownWasmEffectMask) != 0u) {
+    return failFunction(functionIndex, function.name, "unsupported capability mask bits for wasm target", error);
+  }
 
   for (size_t instructionIndex = 0; instructionIndex < function.instructions.size(); ++instructionIndex) {
     const IrInstruction &inst = function.instructions[instructionIndex];
     const uint8_t opcodeValue = static_cast<uint8_t>(inst.op);
     if (opcodeValue < MinOpcode || opcodeValue > MaxOpcode) {
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
+    }
+    if (target == IrValidationTarget::Wasm) {
+      switch (inst.op) {
+        case IrOpcode::PushI32:
+        case IrOpcode::LoadLocal:
+        case IrOpcode::StoreLocal:
+        case IrOpcode::Dup:
+        case IrOpcode::Pop:
+        case IrOpcode::AddI32:
+        case IrOpcode::SubI32:
+        case IrOpcode::MulI32:
+        case IrOpcode::DivI32:
+        case IrOpcode::NegI32:
+        case IrOpcode::CmpEqI32:
+        case IrOpcode::CmpNeI32:
+        case IrOpcode::CmpLtI32:
+        case IrOpcode::CmpLeI32:
+        case IrOpcode::CmpGtI32:
+        case IrOpcode::CmpGeI32:
+        case IrOpcode::JumpIfZero:
+        case IrOpcode::Jump:
+        case IrOpcode::ReturnVoid:
+        case IrOpcode::ReturnI32:
+          break;
+        default:
+          return failInstruction(
+              functionIndex, function.name, instructionIndex, "unsupported opcode for wasm target", error);
+      }
     }
     switch (inst.op) {
       case IrOpcode::JumpIfZero:
