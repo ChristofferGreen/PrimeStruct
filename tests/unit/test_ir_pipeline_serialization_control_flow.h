@@ -1097,6 +1097,61 @@ TEST_CASE("spill insertion verifier rejects successor index mismatch") {
   CHECK(error.find("mismatched successor block index") != std::string::npos);
 }
 
+TEST_CASE("spill insertion verifier rejects edge spill-op mismatch") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::CmpGtI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 6});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  std::string error;
+  primec::IrVirtualRegisterModule virtualModule;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, virtualModule, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterModuleLiveness liveness;
+  REQUIRE(primec::buildIrVirtualRegisterLiveness(virtualModule, liveness, error));
+  CHECK(error.empty());
+
+  primec::IrLinearScanAllocatorOptions options;
+  options.physicalRegisterCount = 0;
+  options.spillPolicy = primec::IrLinearScanSpillPolicy::SpillFarthestEnd;
+  primec::IrLinearScanModuleAllocation allocation;
+  REQUIRE(primec::allocateIrVirtualRegistersLinearScan(liveness, options, allocation, error));
+  CHECK(error.empty());
+
+  primec::IrVirtualRegisterSpillPlan plan;
+  REQUIRE(primec::insertIrVirtualRegisterSpills(virtualModule, allocation, plan, error));
+  CHECK(error.empty());
+  REQUIRE(primec::verifyIrVirtualRegisterSpillPlan(virtualModule, allocation, plan, error));
+  CHECK(error.empty());
+  REQUIRE(plan.functions.size() == 1);
+  REQUIRE(!plan.functions[0].blocks.empty());
+
+  bool mutatedEdgeOps = false;
+  for (auto &blockPlan : plan.functions[0].blocks) {
+    if (!blockPlan.successorEdges.empty()) {
+      blockPlan.successorEdges[0].edgeOps.push_back(
+          {primec::IrVirtualRegisterSpillOpKind::ReloadFromSpill, 999u, 999u});
+      mutatedEdgeOps = true;
+      break;
+    }
+  }
+  REQUIRE(mutatedEdgeOps);
+
+  CHECK_FALSE(primec::verifyIrVirtualRegisterSpillPlan(virtualModule, allocation, plan, error));
+  CHECK(error.find("mismatched edge spill ops") != std::string::npos);
+}
+
 TEST_CASE("scheduler is dependency-safe and latency-aware") {
   primec::IrModule module;
   module.entryIndex = 0;

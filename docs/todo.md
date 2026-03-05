@@ -245,6 +245,7 @@ Borrow-checker status: core non-lexical lifetime rules, no-escape validation, an
 - ✓ Add linear-scan allocator regression coverage for zero-register mode to lock deterministic all-spill behavior and spill-slot numbering. Testing: direct allocator call with `physicalRegisterCount = 0` and stable spilled assignment/slot assertions.
 - ✓ Add spill-plan verifier negative regression coverage for missing spill ops on spilled def registers to lock deterministic diagnostics. Testing: direct verifier call after removing def-side spill ops and checking the stable error substring.
 - ✓ Add spill-plan verifier negative regression coverage for successor-block index mismatches to lock deterministic diagnostics. Testing: mutate one planned successor index after insertion and assert the stable verifier error substring.
+- ✓ Add spill-plan verifier negative regression coverage for edge spill-op mismatches to lock deterministic diagnostics. Testing: mutate one planned successor edge-op list after insertion and assert the stable verifier error substring.
 
 **Docs Alignment**
 - ✓ Audit and remove remaining `include` terminology from user-facing docs/diagnostics/tests/tooling so `import` is the only language surface term (CLI/docs now require `--import-path` and reject `--include-path`; pipeline/import-resolver diagnostics and import-conformance tests/docs use `import` wording).
