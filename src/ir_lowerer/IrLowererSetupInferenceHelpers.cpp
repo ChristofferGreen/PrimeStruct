@@ -149,4 +149,46 @@ LocalInfo::ValueKind inferArrayElementValueKind(
   return LocalInfo::ValueKind::Unknown;
 }
 
+CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveSetupInferenceCallReturnKindFn &resolveDefinitionCallReturnKind,
+    const ResolveSetupInferenceCallReturnKindFn &resolveCountMethodCallReturnKind,
+    const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKind,
+    LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+  bool matched = false;
+
+  if (!expr.isMethodCall) {
+    if (resolveDefinitionCallReturnKind(expr, localsIn, returnKind, matched)) {
+      kindOut = returnKind;
+      return CallExpressionReturnKindResolution::Resolved;
+    }
+    if (matched) {
+      return CallExpressionReturnKindResolution::MatchedButUnsupported;
+    }
+
+    matched = false;
+    if (resolveCountMethodCallReturnKind(expr, localsIn, returnKind, matched)) {
+      kindOut = returnKind;
+      return CallExpressionReturnKindResolution::Resolved;
+    }
+    if (matched) {
+      return CallExpressionReturnKindResolution::MatchedButUnsupported;
+    }
+
+    return CallExpressionReturnKindResolution::NotResolved;
+  }
+
+  if (resolveMethodCallReturnKind(expr, localsIn, returnKind, matched)) {
+    kindOut = returnKind;
+    return CallExpressionReturnKindResolution::Resolved;
+  }
+  if (matched) {
+    return CallExpressionReturnKindResolution::MatchedButUnsupported;
+  }
+  return CallExpressionReturnKindResolution::NotResolved;
+}
+
 } // namespace primec::ir_lowerer

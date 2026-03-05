@@ -11379,6 +11379,154 @@ TEST_CASE("ir lowerer setup inference helper infers and validates array element 
             }) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer setup inference helper resolves call expression return kinds") {
+  using Resolution = primec::ir_lowerer::CallExpressionReturnKindResolution;
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "/pkg/load";
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "load";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            directCall,
+            {},
+            [](const primec::Expr &expr,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &kindOut,
+               bool &matchedOut) {
+              matchedOut = (expr.name == "/pkg/load");
+              if (!matchedOut) {
+                return false;
+              }
+              kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            countCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &expr,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &kindOut,
+               bool &matchedOut) {
+              matchedOut = (expr.name == "count");
+              if (!matchedOut) {
+                return false;
+              }
+              kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            methodCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &expr,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &kindOut,
+               bool &matchedOut) {
+              matchedOut = expr.isMethodCall && expr.name == "load";
+              if (!matchedOut) {
+                return false;
+              }
+              kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Float64;
+              return true;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+}
+
+TEST_CASE("ir lowerer setup inference helper handles unresolved call return kinds") {
+  using Resolution = primec::ir_lowerer::CallExpressionReturnKindResolution;
+
+  primec::Expr unsupportedDirectCall;
+  unsupportedDirectCall.kind = primec::Expr::Kind::Call;
+  unsupportedDirectCall.name = "/pkg/unsupported";
+
+  primec::Expr unknownCall;
+  unknownCall.kind = primec::Expr::Kind::Call;
+  unknownCall.name = "noop";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            unsupportedDirectCall,
+            {},
+            [](const primec::Expr &expr,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &,
+               bool &matchedOut) {
+              matchedOut = (expr.name == "/pkg/unsupported");
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            kindOut) == Resolution::MatchedButUnsupported);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            unknownCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            kindOut) == Resolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper infers vector kind from initializer call") {
   primec::Expr stmt;
   stmt.name = "values";

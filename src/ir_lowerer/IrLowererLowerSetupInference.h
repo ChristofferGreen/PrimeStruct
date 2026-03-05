@@ -207,42 +207,53 @@
             }
           }
         }
-        if (!expr.isMethodCall) {
-          LocalInfo::ValueKind directCallKind = LocalInfo::ValueKind::Unknown;
-          bool definitionMatched = false;
-          if (resolveDefinitionCallReturnKind(
-                  expr, defMap, resolveExprPath, getReturnInfo, false, directCallKind, &definitionMatched)) {
-            return directCallKind;
-          }
-          if (definitionMatched) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-          LocalInfo::ValueKind countMethodKind = LocalInfo::ValueKind::Unknown;
-          bool countMethodResolved = false;
-          if (resolveCountMethodCallReturnKind(expr,
-                                               localsIn,
-                                               isArrayCountCall,
-                                               isStringCountCall,
-                                               resolveMethodCallDefinition,
-                                               getReturnInfo,
-                                               false,
-                                               countMethodKind,
-                                               &countMethodResolved)) {
-            return countMethodKind;
-          }
-          if (countMethodResolved) {
-            return LocalInfo::ValueKind::Unknown;
-          }
-        } else {
-          LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-          bool methodResolved = false;
-          if (resolveMethodCallReturnKind(
-                  expr, localsIn, resolveMethodCallDefinition, getReturnInfo, false, returnKind, &methodResolved)) {
-            return returnKind;
-          }
-          if (methodResolved) {
-            return LocalInfo::ValueKind::Unknown;
-          }
+        LocalInfo::ValueKind callReturnKind = LocalInfo::ValueKind::Unknown;
+        const auto callReturnResolution = resolveCallExpressionReturnKind(
+            expr,
+            localsIn,
+            [&](const Expr &candidate,
+                const LocalMap &,
+                LocalInfo::ValueKind &kindOut,
+                bool &matchedOut) {
+              bool definitionMatched = false;
+              const bool resolved = resolveDefinitionCallReturnKind(
+                  candidate, defMap, resolveExprPath, getReturnInfo, false, kindOut, &definitionMatched);
+              matchedOut = definitionMatched;
+              return resolved;
+            },
+            [&](const Expr &candidate,
+                const LocalMap &candidateLocals,
+                LocalInfo::ValueKind &kindOut,
+                bool &matchedOut) {
+              bool countMethodResolved = false;
+              const bool resolved = resolveCountMethodCallReturnKind(candidate,
+                                                                    candidateLocals,
+                                                                    isArrayCountCall,
+                                                                    isStringCountCall,
+                                                                    resolveMethodCallDefinition,
+                                                                    getReturnInfo,
+                                                                    false,
+                                                                    kindOut,
+                                                                    &countMethodResolved);
+              matchedOut = countMethodResolved;
+              return resolved;
+            },
+            [&](const Expr &candidate,
+                const LocalMap &candidateLocals,
+                LocalInfo::ValueKind &kindOut,
+                bool &matchedOut) {
+              bool methodResolved = false;
+              const bool resolved = resolveMethodCallReturnKind(
+                  candidate, candidateLocals, resolveMethodCallDefinition, getReturnInfo, false, kindOut, &methodResolved);
+              matchedOut = methodResolved;
+              return resolved;
+            },
+            callReturnKind);
+        if (callReturnResolution == CallExpressionReturnKindResolution::Resolved) {
+          return callReturnKind;
+        }
+        if (callReturnResolution == CallExpressionReturnKindResolution::MatchedButUnsupported) {
+          return LocalInfo::ValueKind::Unknown;
         }
         if (isArrayCountCall(expr, localsIn)) {
           return LocalInfo::ValueKind::Int32;

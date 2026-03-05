@@ -15,6 +15,14 @@ using ResolveSetupInferenceArrayElementKindByPathFn =
     std::function<bool(const std::string &, LocalInfo::ValueKind &)>;
 using ResolveSetupInferenceArrayReturnKindFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>;
+using ResolveSetupInferenceCallReturnKindFn =
+    std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &, bool &)>;
+
+enum class CallExpressionReturnKindResolution {
+  NotResolved,
+  Resolved,
+  MatchedButUnsupported,
+};
 
 LocalInfo::ValueKind inferPointerTargetValueKind(
     const Expr &expr,
@@ -33,5 +41,12 @@ LocalInfo::ValueKind inferArrayElementValueKind(
     const ResolveSetupInferenceArrayReturnKindFn &resolveDirectCallArrayReturnKind,
     const ResolveSetupInferenceArrayReturnKindFn &resolveCountMethodArrayReturnKind,
     const ResolveSetupInferenceArrayReturnKindFn &resolveMethodCallArrayReturnKind);
+CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const ResolveSetupInferenceCallReturnKindFn &resolveDefinitionCallReturnKind,
+    const ResolveSetupInferenceCallReturnKindFn &resolveCountMethodCallReturnKind,
+    const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKind,
+    LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer
